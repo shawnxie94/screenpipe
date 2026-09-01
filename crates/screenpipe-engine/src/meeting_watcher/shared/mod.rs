@@ -11,6 +11,7 @@ pub(crate) mod profiles;
 pub(crate) mod scanner;
 pub(crate) mod signal_match;
 pub(crate) mod state;
+pub(crate) mod telemetry;
 
 pub(crate) use calendar::*;
 pub(crate) use ignore::*;
