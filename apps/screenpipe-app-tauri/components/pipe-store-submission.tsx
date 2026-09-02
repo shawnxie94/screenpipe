@@ -63,7 +63,7 @@ export function PipeStoreSubmissionDialog({
 
           <div className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
             <ShieldCheck className="h-4 w-4 mt-0.5 flex-shrink-0 text-foreground" />
-            <p>Never include API keys, credentials, or private data.</p>
+            <p>切勿包含 API 密钥、凭据或私人数据。</p>
           </div>
         </div>
 

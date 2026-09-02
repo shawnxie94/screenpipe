@@ -1214,7 +1214,7 @@ export const TimelineSlider = ({
 								expandedFilterSection === "monitor" && "bg-foreground/10",
 								selectedDeviceId !== "all" && "ring-1 ring-primary/50",
 							)}
-							title="Monitors"
+							title="显示器"
 						>
 							<Monitor className="w-3.5 h-3.5 text-foreground/70" />
 						</button>
@@ -1310,7 +1310,7 @@ export const TimelineSlider = ({
 								expandedFilterSection === "domain" && "bg-foreground/10",
 								selectedDomain !== "all" && "ring-1 ring-primary/50",
 							)}
-							title="Domains"
+							title="域名"
 						>
 							<Globe className="w-3.5 h-3.5 text-foreground/70" />
 						</button>
@@ -1358,7 +1358,7 @@ export const TimelineSlider = ({
 								expandedFilterSection === "speaker" && "bg-foreground/10",
 								selectedSpeaker !== "all" && "ring-1 ring-primary/50",
 							)}
-							title="Speakers"
+							title="说话人"
 						>
 							<Mic className="w-3.5 h-3.5 text-foreground/70" />
 						</button>

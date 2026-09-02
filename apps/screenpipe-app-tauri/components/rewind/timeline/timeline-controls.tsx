@@ -366,7 +366,7 @@ export function TimelineControls({
 							size="icon"
 							onClick={onSearchClick}
 							className="h-10 w-10 bg-background border border-border text-foreground hover:bg-foreground hover:text-background transition-colors duration-150"
-							title="Search"
+							title="搜索"
 						>
 							<Search className="h-4 w-4" />
 						</Button>

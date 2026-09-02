@@ -666,7 +666,7 @@ function ObsidianPicker({ onAdd }: { onAdd: (s: TriggerSource) => void }) {
 
   return (
     <div>
-      <p className="text-xs text-muted-foreground mb-3">Fires when a new note appears in the folder you watch.</p>
+      <p className="text-xs text-muted-foreground mb-3">当所监控文件夹中出现新笔记时触发。</p>
       <label className={LABEL}>要监控的文件夹</label>
       <div className="flex items-center gap-2 mt-1">
         <input value={folder} onChange={(e) => setFolder(e.target.value)} placeholder={vault || "/path/to/vault/folder"} className={INPUT} />

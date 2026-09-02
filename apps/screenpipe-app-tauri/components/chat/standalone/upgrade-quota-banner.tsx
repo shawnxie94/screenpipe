@@ -182,7 +182,7 @@ export function UpgradeQuotaBanner({
                     or switch to a local or own-key AI preset.
                   </>
                 ) : (
-                  <>Switch to a local or own-key AI preset to keep working.</>
+                  <>切换到本地或自带密钥的 AI 预设以继续使用。</>
                 )
               ) : blockedUpgrade ? (
                 <>

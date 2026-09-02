@@ -1062,7 +1062,7 @@ function ServerEditor({
           checked={enabled}
           onChange={(e) => setEnabled(e.target.checked)}
         />
-        <span>Enabled — make tools available to scheduled tasks and chat</span>
+        <span>已启用 — 让工具对定时任务和聊天可用</span>
       </label>
 
       {testResult && (
