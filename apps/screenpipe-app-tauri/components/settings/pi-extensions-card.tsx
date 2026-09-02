@@ -59,7 +59,7 @@ function compatibilityClass(item: PiExtensionCatalogItem): string {
 function packageErrorMessage(error: unknown): string {
   if (typeof error === "string") return error;
   if (error instanceof Error) return error.message;
-  return "Something went wrong while changing this tool.";
+  return "更改此工具时出现问题。";
 }
 
 function packageDisplayName(source: string): string {
@@ -425,7 +425,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
           title: checked ? `${item.name} enabled` : `${item.name} disabled`,
           description:
             checked && changedPackage?.acpCompatible
-              ? "Ready to use in new agent chats."
+              ? "可在新的代理聊天中随时使用。"
               : checked
                 ? "Ready to use in new Pi chats."
                 : "Removed from new Pi chats.",
@@ -465,7 +465,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
         onChanged?.();
         toast({
           title: "Tool removed",
-          description: "It will no longer be available in new Pi chats.",
+          description: "在新的 Pi 聊天中将不再可用。",
         });
       } catch (err) {
         const message = packageErrorMessage(err);
@@ -634,7 +634,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
             </div>
             {registryError && (
               <div className="border border-border bg-muted/25 p-3 text-xs text-muted-foreground">
-                Could not search for tools right now. Recommended tools are still available.
+                现在无法搜索工具。推荐工具仍然可用。
               </div>
             )}
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">

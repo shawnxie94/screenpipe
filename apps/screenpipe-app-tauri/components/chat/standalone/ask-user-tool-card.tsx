@@ -142,7 +142,7 @@ function answerLabels(question: AskUserQuestion, answer: AskUserAnswer): string[
 }
 
 export function formatAskUserReply(parsed: ParsedAskUserToolCall, answers: AskUserAnswers): string {
-  const lines = ["Here are my answers to your ask_user questions:"];
+  const lines = ["以下是我对你 ask_user 问题的回答："];
   for (const question of parsed.questions) {
     const answer = answers[question.id];
     if (!answer) continue;
@@ -247,9 +247,9 @@ export function AskUserToolCard({
             {submitted
               ? "Answer sent"
               : toolCall.isRunning
-                ? "Pi is waiting for your input"
+                ? "Pi 正在等待你的输入"
                 : needsManualFollowup
-                  ? "Pi needs this as a chat reply"
+                  ? "Pi 需要以聊天回复形式获取此信息"
                   : "Ready to answer"}
           </div>
         </div>
@@ -368,7 +368,7 @@ export function AskUserToolCard({
           value={activeAnswer.customText}
           onChange={(event) => updateAnswer(activeQuestion.id, { customText: event.target.value })}
           rows={2}
-          placeholder={activeQuestion.options.length > 0 ? "Type your own answer or add nuance..." : "Type your answer..."}
+          placeholder={activeQuestion.options.length > 0 ? "输入你自己的回答或补充细节..." : "Type your answer..."}
           className="min-h-16 w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/70 focus:border-foreground"
         />
       </div>
@@ -377,7 +377,7 @@ export function AskUserToolCard({
         <div className="min-w-0 text-[11px] text-muted-foreground">
           {needsManualFollowup
             ? "Screenpipe will send this as the next chat message."
-            : "Your selection is sent back into this chat."}
+            : "你的选择会被发送回此聊天。"}
         </div>
         <button
           type="submit"

@@ -1455,7 +1455,7 @@ export function LiveViewCanvas({
         ref={surfaceRef}
         data-testid="live-view-canvas-surface"
         role="application"
-        aria-label="Whiteboard canvas. Use the toolbar to select, pan, add notes, connect Blocks, or draw."
+        aria-label="白板画布。使用工具栏进行选择、平移、添加笔记、连接区块或绘图。"
         tabIndex={0}
         className="live-view-process-canvas absolute inset-0 outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-inset"
         onPointerEnter={(event) => {

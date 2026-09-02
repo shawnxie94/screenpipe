@@ -64,7 +64,7 @@ export function WebsiteRuleList(props: WebsiteRuleListProps) {
 					) === domain,
 			)
 		) {
-			setError("That hostname is already listed");
+			setError("该主机名已在列表中");
 			return;
 		}
 		commit([

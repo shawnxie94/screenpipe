@@ -144,8 +144,8 @@ export function ContextUsagePanel({
         )}
         <div>
           {detailed
-            ? "Total is reported by the model; breakdown values are estimated."
-            : "This harness reports context totals without a category breakdown."}
+            ? "总量由模型报告；细分数值为估算值。"
+            : "此运行环境报告上下文总量，不提供类别细分。"}
         </div>
       </div>
     </section>

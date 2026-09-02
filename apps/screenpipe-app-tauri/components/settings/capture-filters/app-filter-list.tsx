@@ -197,7 +197,7 @@ export function AppFilterList({
 							? "No apps match your search."
 							: status === "ignored"
 								? "No apps are excluded."
-								: "No apps found yet. They appear here once recorded."}
+								: "尚未找到应用。录制后它们会出现在这里。"}
 					</p>
 				) : (
 					visible.map((row) => (

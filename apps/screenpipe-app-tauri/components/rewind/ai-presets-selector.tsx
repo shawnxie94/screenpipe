@@ -625,7 +625,7 @@ export function AIProviderConfig({
     }
 
     if (connectionTestRequired && !connectionTestPassed) {
-      toast.error("Test the connection before saving");
+      toast.error("保存前测试连接");
       return;
     }
 
@@ -1415,8 +1415,8 @@ export const AIPresetDialog = ({
           </DialogTitle>
           <DialogDescription>
             {preset
-              ? "Modify your AI preset settings here. Click save when you're done."
-              : "Configure your AI preset settings here. Click continue when you're done."}
+              ? "在此修改你的 AI 预设设置。完成后点击保存。"
+              : "在此配置你的 AI 预设设置。完成后点击继续。"}
           </DialogDescription>
         </DialogHeader>
         <AIProviderConfig
@@ -1565,7 +1565,7 @@ export const AIPresetsSelector = ({
     }
 
     if (!preset.id) {
-      toast.error("Please enter a name for this preset", {
+      toast.error("请为此预设输入名称", {
         description: "名称必填",
       });
       return;
@@ -1611,7 +1611,7 @@ export const AIPresetsSelector = ({
         });
 
         toast.success("Preset copied", {
-          description: "New preset has been created from copy",
+          description: "已从副本创建新预设",
         });
       } else {
         // Normal edit operation
@@ -1745,7 +1745,7 @@ export const AIPresetsSelector = ({
     if (preset.defaultPreset) return;
     if (isManagedDeployment && aiPresetPolicy.lock_default_preset) {
       toast.error("默认预设已锁定", {
-        description: "Your admin controls the default AI preset",
+        description: "你的管理员控制默认 AI 预设",
       });
       return;
     }

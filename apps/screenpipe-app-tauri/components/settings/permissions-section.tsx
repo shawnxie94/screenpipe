@@ -236,7 +236,7 @@ function RequiredPermissions() {
       permission: "screenRecording",
       title: "Screen Recording",
       description:
-        "Required to capture what's on your screen for timeline and AI context.",
+        "用于捕获屏幕内容，为时间线和 AI 上下文提供数据。",
       statusKey: "screenRecording",
     },
     {
@@ -244,7 +244,7 @@ function RequiredPermissions() {
       permission: "microphone",
       title: "Microphone",
       description:
-        "Required to record your voice during meetings and conversations.",
+        "用于在会议和对话中录制你的声音。",
       statusKey: "microphone",
     },
     {
@@ -252,7 +252,7 @@ function RequiredPermissions() {
       permission: "accessibility",
       title: "Accessibility",
       description:
-        "Required to read app and window context, meeting controls, and UI text.",
+        "用于读取应用和窗口上下文、会议控件和界面文本。",
       statusKey: "accessibility",
     },
   ];
@@ -380,7 +380,7 @@ function CalendarPermissionRow() {
     <PermissionRow
       id="calendar"
       title="Calendar"
-      description="Sync Apple Calendar events for meeting context."
+      description="同步 Apple 日历事件以提供会议上下文。"
       status={status}
       busy={busy}
       onEnable={() => void run("request")}

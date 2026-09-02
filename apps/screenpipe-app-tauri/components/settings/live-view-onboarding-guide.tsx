@@ -104,9 +104,9 @@ export function LiveViewOnboardingGuide({
   if (visibleStep === "waiting") {
     const needsRetry = activation.setupStatus === "needs_retry";
     const description = needsRetry
-      ? "Setup paused before it finished. Your dashboard is safe. Finish here instead of starting over."
+      ? "设置未完成即已暂停。你的仪表盘是安全的。请在这里完成，而不是重新开始。"
       : hasResult
-        ? "Your first result is ready. Open it next and check if it matches what you actually did."
+        ? "你的第一个结果已就绪。接下来打开它，检查是否与你实际做的事情相符。"
         : "This shows what is ready and what Screenpipe still needs before your first result appears. You can leave this page while it works.";
     return (
       <FocusedSpotlight

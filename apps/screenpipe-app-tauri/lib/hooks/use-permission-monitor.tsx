@@ -60,7 +60,7 @@ export function usePermissionMonitor() {
       try {
         await commands.showWindow("PermissionRecovery");
       } catch (error) {
-        console.error("Failed to show permission recovery window:", error);
+        console.error("显示权限恢复窗口失败：", error);
       }
 
       if (cooldownRef.current) clearTimeout(cooldownRef.current);
@@ -74,7 +74,7 @@ export function usePermissionMonitor() {
     // When a restart is blocked by cooldown, the backend schedules a deferred check
     // and emits this event if the server is still dead after cooldown expires.
     const unlistenRestart = listen("request-server-restart", async () => {
-      console.log("Deferred server restart requested by backend");
+      console.log("后端请求延迟服务器重启");
       try {
         await commands.spawnScreenpipe(null);
       } catch (error) {
@@ -95,7 +95,7 @@ export function usePermissionMonitor() {
         try {
           await commands.showWindow("PermissionRecovery");
         } catch (error) {
-          console.error("Failed to show permission recovery window:", error);
+          console.error("显示权限恢复窗口失败：", error);
         }
       }
     });

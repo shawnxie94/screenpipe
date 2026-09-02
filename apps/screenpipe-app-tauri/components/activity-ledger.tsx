@@ -125,13 +125,13 @@ type ActivityLedgerArtifactsResponse = {
 function noActivityMessage(dataStatus: string): string {
   switch (dataStatus) {
     case "not_recording":
-      return "No recorded activity is available yet. Start recording, then try again.";
+      return "尚无录制的活动。请开始录制后再试。";
     case "no_capture_in_range":
-      return "No recorded activity was found in this range. Choose another range and try again.";
+      return "此范围内未找到录制的活动。请选择其他范围重试。";
     case "empty_but_recording":
       return "Recording is active, but this range does not have enough activity yet. Keep working for a moment, then try again.";
     default:
-      return "There is not enough recorded activity in this range to generate a history yet.";
+      return "此范围内的录制活动不足以生成历史记录。";
   }
 }
 
@@ -1753,9 +1753,9 @@ export function ActivityLedger({
           noDataStatus
             ? noActivityMessage(noDataStatus)
             : qualityFailure
-              ? "Some recorded activity could not be validated. Your existing history was preserved; try again."
+              ? "部分录制的活动无法验证。现有历史已保留；请重试。"
               : rawError.toLowerCase().includes("hosted_ai_allowance_exceeded")
-                ? "This AI preset has no usage left. Choose a different AI preset, then try again."
+                ? "此 AI 预设额度已用完。请选择其他 AI 预设后重试。"
                 : quota.kind !== "none"
                   ? quota.message
                   : agentFailure
@@ -1823,7 +1823,7 @@ export function ActivityLedger({
         activitiesEnabled: true,
       });
     } catch {
-      setHistoryError("Automatic activities could not be enabled. Try again.");
+      setHistoryError("无法启用自动活动记录，请重试。");
       return;
     }
     await generateHistory(clickedRange, "enable", clickedRange);
@@ -2135,7 +2135,7 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
                     <span role={historyError ? "alert" : undefined}>
                       {historyError ||
-                        "Generate this time range now, then keep activities updated automatically."}
+                        "立即生成此时间范围，然后保持活动自动更新。"}
                     </span>
                   </p>
                   <Button

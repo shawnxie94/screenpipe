@@ -296,7 +296,7 @@ const getAudioEngineResolution = (
 const getAudioFallbackMessage = (reason: AudioEngineFallbackReason) => {
   switch (reason) {
     case "notLoggedIn":
-      return "You are not logged in, so audio is being transcribed locally.";
+      return "你未登录，因此音频在本地转写。";
     case "missingDeepgramKey":
       return "Deepgram has no API key configured, so audio is being transcribed locally.";
   }
@@ -1692,7 +1692,7 @@ function HighFpsCard({
                 [
                   { v: "ask" as const, label: "Ask me", hint: "Adds an “open note + HD” action to the meeting-start notification — one click opens the note and starts HD (recommended)" },
                   { v: "always" as const, label: "Always record at HD", hint: "Auto-start every detected meeting — more disk + CPU per call" },
-                  { v: "never" as const, label: "Never", hint: "No prompt; only the tray timer can start a session" },
+                  { v: "never" as const, label: "Never", hint: "无提示；只有托盘计时器可以开始会话" },
                 ] satisfies Array<{ v: HdDefaultMode; label: string; hint: string }>
               ).map(({ v, label, hint }) => (
                 <label key={v} className="flex items-start gap-2 cursor-pointer">
@@ -2004,7 +2004,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
         ? `${settings.languages.length} supported selected for ${languageSupportLabel}`
         : languageSupportIsLimited
           ? `Restricts transcription to selected languages supported by ${languageSupportLabel}`
-          : "Restricts transcription to selected";
+          : "仅对所选内容进行转写";
   const selectedLanguageNames = settings.languages
     .map((code) => supportedLanguageOptions.find((language) => language.code === code)?.name ?? code)
     .join(", ");
@@ -2330,7 +2330,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     if (Object.keys(validationErrors).length > 0) {
       toast({
         title: "Validation errors",
-        description: "Please fix all validation errors before applying changes",
+        description: "请先修正所有校验错误再应用更改",
         variant: "destructive",
       });
       return;
@@ -2341,7 +2341,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     
     toast({
       title: "Updating recording settings",
-      description: "This may take a few moments...",
+      description: "这可能需要片刻...",
     });
 
     try {
@@ -2393,13 +2393,13 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
         title: "Settings updated successfully",
         description: needsServerRestart
           ? "Screenpipe server restarted with new settings"
-          : "Recording restarted with new settings",
+          : "已用新设置重启录制",
       });
     } catch (error) {
       console.error("Failed to update settings:", error);
       toast({
         title: "Error updating settings",
-        description: "Please try again or check the logs for more information",
+        description: "请重试或查看日志以获取更多信息",
         variant: "destructive",
       });
       setHasUnsavedChanges(true);
@@ -2420,7 +2420,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     if (hasUnsavedChanges) {
       return {
         variant: "secondary" as const,
-        message: "Unsaved changes - restart required",
+        message: "有未保存的更改 - 需要重启",
       };
     }
     return {
@@ -2528,7 +2528,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
       setIsOpenAICompatibleSetupOpen(false);
       toast({
         title: "OpenAI Compatible enabled",
-        description: "The endpoint accepted a real transcription request.",
+        description: "端点已接受真实的转写请求。",
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2708,8 +2708,8 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
     >
       <p className="text-muted-foreground text-sm mb-4">
         {section === "audio"
-          ? "Audio capture, transcription, and meeting notes"
-          : "Screen capture quality, monitors, and power"}
+          ? "音频采集、转写和会议记录"
+          : "屏幕采集质量、显示器和电源"}
       </p>
 
       <div className="flex items-center justify-end">
@@ -3453,7 +3453,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     size="sm"
                     className="h-7 text-[11px] gap-1.5"
                     onClick={() => setMeetingAppsPickerOpen(true)}
-                    title="Choose apps that should never auto-start a meeting"
+                    title="选择不应自动开始会议的应用程序"
                     data-testid="settings-ignore-meeting-apps-button"
                   >
                     <UserX className="h-3.5 w-3.5" />

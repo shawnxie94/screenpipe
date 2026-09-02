@@ -306,8 +306,8 @@ export function AppleCalendarCard({
             {busy === "connect"
               ? "Waiting for macOS approval…"
               : hasAttemptedConnect
-                ? "If the prompt does not appear, revoke permission and connect again."
-                : "Click Connect and approve the macOS Calendar prompt."}
+                ? "如果提示未出现，请撤销权限并重新连接。"
+                : "点击连接并批准 macOS 日历提示。"}
           </p>
         )}
       </CardContent>

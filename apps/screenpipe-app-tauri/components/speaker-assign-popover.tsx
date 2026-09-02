@@ -197,7 +197,7 @@ export function SpeakerAssignPopover({
 				console.error("Error assigning speaker:", error);
 				toast({
 					title: "Error",
-					description: "Failed to assign speaker. Please try again.",
+					description: "说话人分配失败，请重试。",
 					variant: "destructive",
 				});
 				setIsAssigning(false);
@@ -223,7 +223,7 @@ export function SpeakerAssignPopover({
 
 			toast({
 				title: "Marked as noise",
-				description: "This audio will be ignored in future processing.",
+				description: "此音频将在后续处理中被忽略。",
 			});
 
 			setOpen(false);
@@ -231,7 +231,7 @@ export function SpeakerAssignPopover({
 			console.error("Error marking hallucination:", error);
 			toast({
 				title: "Error",
-				description: "Failed to mark as noise. Please try again.",
+				description: "标记为噪音失败，请重试。",
 				variant: "destructive",
 			});
 		} finally {

@@ -20,31 +20,31 @@ const PATH_COPY: Record<
     firstAction:
       "Work normally for a few minutes. A useful resume point appears only after Screenpipe observes real work and a loose end.",
     reviewAction:
-      "Open one result and check whether it helps you resume the right task.",
+      "打开一个结果，检查它是否帮助你恢复正确的任务。",
   },
   meeting_follow_through: {
     firstAction:
       "Finish a real call with microphone and system audio enabled. Decisions and next steps appear only after a meeting is captured.",
     reviewAction:
-      "Review one decision or action item and correct it if the owner or next step is wrong.",
+      "审查一个决定或行动项，如果负责人或下一步有误请更正。",
   },
   work_patterns: {
     firstAction:
       "Use a few work apps for 10–15 minutes. A useful pattern needs enough captured activity to compare.",
     reviewAction:
-      "Check one pattern against what you remember doing, then mark the result useful or not useful.",
+      "将某个模式与你记忆中的做法核对，然后将结果标记为有用或无用的。",
   },
   process_automation: {
     firstAction:
       "Complete one repeated workflow from start to finish. A process map needs an observed run before it can suggest steps.",
     reviewAction:
-      "Confirm or correct one observed process step before acting on an automation suggestion.",
+      "在采纳自动化建议前，确认或更正一个观察到的流程步骤。",
   },
   custom: {
     firstAction:
       "Use Screenpipe normally. Your first result appears when it has enough activity to answer your request.",
     reviewAction:
-      "Review one result and mark it useful or not useful so future updates can improve.",
+      "审查一个结果并标记为有用或无用的，以便将来的更新不断改进。",
   },
 };
 

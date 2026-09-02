@@ -574,7 +574,7 @@ export function UsageSection() {
         <div className="rounded-lg border border-dashed p-6 text-center">
           <p className="text-sm text-muted-foreground">
             {timeRange === "all"
-              ? "No model data yet — tracking starts from your next conversation"
+              ? "暂无模型数据 — 从你下一次对话开始统计"
               : `No usage in the last ${timeRange === "day" ? "24 hours" : timeRange === "week" ? "7 days" : "30 days"}`}
           </p>
           {timeRange === "all" && untrackedMessages > 0 && (

@@ -30,12 +30,12 @@ function describeConsumerStatus(status: RemoteSupportStatus): StatusMessage {
   switch (status) {
     case "ready":
       return {
-        text: "Consent synced. Support can request one upload while this device is online.",
+        text: "同意已同步。设备在线期间，支持团队可以请求一次上传。",
         className: "text-emerald-700",
       };
     case "uploading":
       return {
-        text: "Uploading the requested filtered diagnostics...",
+        text: "正在上传所请求的筛选诊断信息...",
         className: "text-blue-700",
       };
     case "sync_error":
@@ -46,12 +46,12 @@ function describeConsumerStatus(status: RemoteSupportStatus): StatusMessage {
       };
     case "signed_out":
       return {
-        text: "The signed-in session is not ready, so no remote request can run.",
+        text: "登录会话尚未就绪，无法执行远程请求。",
         className: "text-red-700",
       };
     case "checking":
       return {
-        text: "Remote consent is enabled locally; checking the support connection.",
+        text: "远程同意已在本地开启；正在检查支持连接。",
         className: "text-muted-foreground",
       };
     case "syncing":
@@ -61,7 +61,7 @@ function describeConsumerStatus(status: RemoteSupportStatus): StatusMessage {
       };
     case "disabled":
       return {
-        text: "Remote support log collection is disabled.",
+        text: "远程支持日志收集已禁用。",
         className: "text-muted-foreground",
       };
   }
@@ -144,7 +144,7 @@ export function RemoteSupportLogsCard() {
                   {!isManagedDeploymentResolved
                     ? managedDeploymentResolutionError
                       ? "Could not verify whether this device is managed. Remote log controls stay locked and will retry automatically."
-                      : "Checking whether remote log collection is managed by your organization..."
+                      : "正在检查远程日志收集是否由你的组织管理..."
                     : isManagedDeployment
                       ? "Your organization can request diagnostic logs from this managed device. Nothing is uploaded unless an administrator sends a request. Logs are filtered locally for common secrets and personal data, but automated filtering can miss secrets and logs can still contain names, file paths, URLs, and error messages. They go to your organization's configured support service, which controls retention. Screenshots, recordings, audio files, chat history, settings, and the timeline database are never included."
                       : `Allow screenpipe support to request recent diagnostic logs from this device. Before upload, logs are filtered locally on this device for common secrets and personal data, but automated filtering can miss secrets and logs can still contain names, file paths, URLs, and error messages. Screenshots, recordings, audio files, chat history, settings, and the timeline database are never included. Nothing is uploaded unless support sends a short-lived request. You can turn this off at any time; previously shared diagnostics are deleted after 30 days.${requiresSignIn ? " Sign in to enable this." : ""}`}

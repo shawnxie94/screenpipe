@@ -38,19 +38,19 @@ const COPY: Record<
   // Copy still lives here so the map stays exhaustive over CardAskTrigger and
   // a remote payload cannot route `onboarding` to the modal and find nothing.
   onboarding: {
-    title: "Start your 7-day Business trial",
+    title: "开始 7 天 Business 试用",
     body: "Full access to AI, unlimited pipes, and cloud transcription. Cancel anytime before day 7 and you are not charged.",
     cta: "开始试用",
   },
   login: {
-    title: "Start your 7-day Business trial",
+    title: "开始 7 天 Business 试用",
     body: "Full access to AI, unlimited pipes, and cloud transcription. Cancel anytime before day 7 and you are not charged.",
     cta: "开始试用",
   },
   // Mid-journey placement: the user is deep in a session and has seen the app
   // work, so the ask leads with continuity rather than setup.
   mid_session: {
-    title: "Keep Business features running",
+    title: "保持 Business 功能运行",
     body: "A 7-day Business trial keeps AI, pipes, and cloud transcription at full capacity while you work. Cancel anytime before day 7 and you are not charged.",
     cta: "开始试用",
   },
@@ -60,7 +60,7 @@ const COPY: Record<
     cta: "开始试用",
   },
   limit: {
-    title: "You have hit today's AI limit",
+    title: "你已达到今日 AI 用量上限",
     body: "A 7-day Business trial lifts the cap and keeps your pipes running. Cancel anytime before day 7 and you are not charged.",
     cta: "开始试用",
   },

@@ -257,7 +257,7 @@ const NotificationHandler: React.FC = () => {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 title: "HD recording started",
-                body: "Capturing this meeting at high frame rate. Stops automatically when the call ends.",
+                body: "正在以高帧率录制此会议。通话结束时自动停止。",
               }),
             }).catch(() => {});
 

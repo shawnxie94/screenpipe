@@ -220,7 +220,7 @@ export default function RootLayout({
     let idbReloadPending = false;
     const handleUnhandledRejection = (e: PromiseRejectionEvent) => {
       const msg = String(e.reason?.message || e.reason || "");
-      if (msg.includes("Connection to Indexed Database server lost")) {
+      if (msg.includes("与 Indexed Database 服务器的连接已丢失")) {
         // Prevent the error from reaching Sentry — we handle it via reload
         e.preventDefault();
         if (idbReloadPending) return; // debounce: only one reload

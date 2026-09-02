@@ -388,7 +388,7 @@ export function DeeplinkHandler() {
                 await emit("onboarding-read-complete", url);
               }
             } catch (error) {
-              console.error("Failed to show onboarding window:", error);
+              console.error("显示引导窗口失败：", error);
             }
           }
 
@@ -417,7 +417,7 @@ export function DeeplinkHandler() {
               throw new Error("Invalid date");
             }
           } catch (error) {
-            console.error("Failed to parse timeline timestamp:", error);
+            console.error("解析时间线时间戳失败：", error);
             toast({
               title: "invalid timestamp",
               description: "could not parse the timeline link",
@@ -616,8 +616,8 @@ export function DeeplinkHandler() {
         await commands.stopCapture();
 
         toast({
-          title: "recording paused",
-          description: "capture paused — scheduled tasks and search still available",
+          title: "录制已暂停",
+          description: "采集已暂停 — 定时任务和搜索仍然可用",
         });
       }),
 
@@ -627,9 +627,9 @@ export function DeeplinkHandler() {
       listen<string>("tray-recording-state-changed", (event) => {
         const started = event.payload === "started";
         toast({
-          title: started ? "recording started" : "recording paused",
+          title: started ? "录制已开始" : "录制已暂停",
           description: started
-            ? "screen recording has been initiated"
+            ? "屏幕录制已启动"
             : "capture paused — scheduled tasks and search still available",
         });
       }),

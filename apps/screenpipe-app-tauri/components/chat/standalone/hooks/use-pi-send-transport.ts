@@ -191,7 +191,7 @@ export async function checkLivePiSession(
     setPiInfo(result.data);
     if (!result.data.running) {
       // Definitive: the backend says the process is not running.
-      return { running: false, error: "The AI assistant is not running", indeterminate: false };
+      return { running: false, error: "AI 助手未在运行", indeterminate: false };
     }
     return { running: true, info: result.data };
   } catch (error) {

@@ -68,10 +68,10 @@ export function calendarProviderOptions(platform: {
       id: "native",
       label: nativeLabel,
       description: platform.isMac
-        ? "Use calendars synced through macOS Internet Accounts."
+        ? "使用通过 macOS 互联网账户同步的日历。"
         : platform.isWindows
-          ? "Use calendars available through Windows Calendar."
-          : "Use calendars available through your operating system.",
+          ? "使用通过 Windows 日历提供的日历。"
+          : "使用通过操作系统提供的日历。",
     },
     {
       id: "google",
@@ -81,7 +81,7 @@ export function calendarProviderOptions(platform: {
     {
       id: "ics",
       label: "ICS",
-      description: "Paste a read-only webcal or ICS feed URL.",
+      description: "粘贴只读的 webcal 或 ICS 订阅 URL。",
     },
   ];
 }
@@ -250,7 +250,7 @@ function NativeCalendarConnect({
       } else {
         await commands.openPermissionSettings("calendar");
         setStatusText(
-          "Calendar permission was not granted. Open Privacy & Security → Calendars.",
+          "未授予日历权限。请打开 隐私与安全 → 日历。",
         );
       }
     } catch (err) {
@@ -271,7 +271,7 @@ function NativeCalendarConnect({
           ? "For Google, Outlook, or Exchange via Apple Calendar, add the account in macOS Internet Accounts first."
           : platform.isWindows
             ? "For Google, Outlook, or Exchange via Windows Calendar, add the account in Windows Email & accounts first."
-            : "Use your operating system's calendar account settings to choose which calendars are available."}
+            : "使用操作系统的日历账户设置来选择可用的日历。"}
       </div>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

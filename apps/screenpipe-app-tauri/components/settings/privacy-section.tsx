@@ -112,9 +112,9 @@ function EncryptDataCard({
       if (res.status === "ok" && res.data.state === "enabled") {
         setKeychainState("enabled");
         onEncryptStoreChange(true);
-        toast({ title: "Encryption enabled", description: "Credentials and settings are now encrypted at rest." });
+        toast({ title: "Encryption enabled", description: "凭据和设置现已静态加密。" });
       } else {
-        toast({ title: "Keychain access denied", description: "Could not enable encryption. Try again later.", variant: "destructive" });
+        toast({ title: "Keychain access denied", description: "无法启用加密，请稍后重试。", variant: "destructive" });
       }
     } else {
       // Disable: decrypt credentials first, then turn off store.bin encryption.
@@ -124,12 +124,12 @@ function EncryptDataCard({
         onEncryptStoreChange(false);
         toast({
           title: "Encryption disabled",
-          description: "Credentials and settings are now stored without keychain encryption.",
+          description: "凭据和设置现以未加密形式存储（无钥匙串加密）。",
         });
       } else {
         toast({
           title: "Could not disable encryption",
-          description: "Encrypted credentials could not be decrypted. Check keychain access and try again.",
+          description: "无法解密加密的凭据。请检查钥匙串访问权限后重试。",
           variant: "destructive",
         });
       }
@@ -153,7 +153,7 @@ function EncryptDataCard({
               <p className="text-xs text-muted-foreground mt-0.5">
                 {keychainState === "unavailable"
                   ? "OS keychain not available on this system."
-                  : "Encrypt credentials and settings with your OS keychain."}
+                  : "使用系统钥匙串加密凭据和设置。"}
               </p>
             </div>
           </div>
@@ -443,7 +443,7 @@ export function PrivacySection() {
     if (Object.keys(validationErrors).length > 0) {
       toast({
         title: "Validation errors",
-        description: "Please fix all validation errors before applying changes",
+        description: "请先修正所有校验错误再应用更改",
         variant: "destructive",
       });
       return;
@@ -454,7 +454,7 @@ export function PrivacySection() {
 
     toast({
       title: "Updating privacy settings",
-      description: "This may take a few moments...",
+      description: "这可能需要片刻...",
     });
 
     try {
@@ -501,7 +501,7 @@ export function PrivacySection() {
       console.error("Failed to update settings:", error);
       toast({
         title: "Error updating settings",
-        description: "Please try again or check the logs for more information",
+        description: "请重试或查看日志以获取更多信息",
         variant: "destructive",
       });
       setHasUnsavedChanges(true);
@@ -782,7 +782,7 @@ export function PrivacySection() {
       if (permissionPlan.kind === "arc-only") {
         toast({
           title: "basic detection is enough",
-          description: "Arc private windows are already detected without extra access",
+          description: "Arc 隐私窗口无需额外权限即可被检测到",
         });
         return;
       }
@@ -814,7 +814,7 @@ export function PrivacySection() {
         description: "apply changes to use browser-native incognito detection",
       });
     } catch (error) {
-      console.error("Failed to enable enhanced incognito detection:", error);
+      console.error("启用增强的隐身检测失败：", error);
       toast({
         title: "couldn't enable enhanced detection",
         description: "check macOS Automation settings and try again",
@@ -1046,7 +1046,7 @@ export function PrivacySection() {
                       setHasUnsavedChanges(true);
                       toast({
                         title: "API key regenerated",
-                        description: "Click Apply & Restart. Browser extensions will need to reconnect after restart.",
+                        description: "点击应用并重启。浏览器扩展将在重启后重新连接。",
                       });
                     } catch (e: any) {
                       toast({
@@ -1266,7 +1266,7 @@ export function PrivacySection() {
                 <p className="text-xs text-muted-foreground">
                   {managedClickCapture !== undefined
                     ? "Managed by your organization."
-                    : "On by default. Click events power workflow analysis; no text is recorded."}
+                    : "默认开启。点击事件驱动工作流分析；不记录文本。"}
                 </p>
               </div>
             </div>
@@ -1362,10 +1362,10 @@ export function PrivacySection() {
                   </h3>
                   <p className="text-xs text-muted-foreground">
                     {piiMode === "off"
-                      ? "Off — captures store raw text and pixels."
+                      ? "关闭 — 采集存储原始文本和像素。"
                       : piiMode === "basic"
-                      ? "Basic — regex on capture. Emails, phones, SSNs, cards, API keys."
-                      : "Smart — AI background worker. Adds names, addresses, image redaction."}
+                      ? "基础 — 对采集内容做正则匹配。邮箱、电话、社保号、银行卡、API 密钥。"
+                      : "智能 — AI 后台处理。增加姓名、地址、图片打码。"}
                   </p>
                 </div>
               </div>

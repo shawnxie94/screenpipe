@@ -728,12 +728,12 @@ export function AccountSection() {
           <p className="text-sm text-muted-foreground mt-2">
             {policy.orgName
               ? `${policy.orgName} manages this deployment and its recording policy.`
-              : "Your organization manages this deployment and its recording policy."}
+              : "你的组织管理此部署及其录制策略。"}
           </p>
           <p className="text-xs text-muted-foreground mt-3">
             {isManagedAuthenticated
-              ? "Enterprise access has been verified for this session."
-              : "Verify the enterprise key or sign in with an authorized organization account to enable recording."}
+              ? "本次会话的企业访问权限已验证。"
+              : "请验证企业密钥或使用经授权的组织账户登录以启用录制。"}
           </p>
         </Card>
       ) : isSignedInBusinessSubscriber ? (

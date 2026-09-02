@@ -36,7 +36,7 @@ export function getTemplatePipeReadiness(
       missingPipes,
       label: `${required} local starting point${required === 1 ? "" : "s"} available`,
       explanation:
-        "The agent can reuse these helpers when they fit, or choose a better approach.",
+        "代理可以在合适时复用这些辅助工具，或选择更好的方法。",
     };
   }
 

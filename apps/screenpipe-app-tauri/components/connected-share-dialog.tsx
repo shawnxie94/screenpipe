@@ -536,7 +536,7 @@ export function ConnectedShareDialog({
         const body = await response.json();
         if (!response.ok || body?.ok === false) {
           throw new Error(
-            responseError(body, "Slack channels aren't available."),
+            responseError(body, "Slack 频道不可用。"),
           );
         }
         return (Array.isArray(body?.channels) ? body.channels : [])
@@ -576,7 +576,7 @@ export function ConnectedShareDialog({
         setSlackChannelsError(
           error instanceof Error
             ? error.message
-            : "Slack channels aren't available.",
+            : "Slack 频道不可用。",
         );
       })
       .finally(() => {

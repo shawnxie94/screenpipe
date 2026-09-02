@@ -112,7 +112,7 @@ export function ModelDownloadTracker() {
 
       // Check for ffmpeg installation
       if (ffmpegStartPattern.test(line) && !ffmpegInstalling) {
-        console.log("Detected ffmpeg installation starting");
+        console.log("检测到 ffmpeg 安装开始");
 
         const toastRef = toast({
           title: "installing ffmpeg",
@@ -133,7 +133,7 @@ export function ModelDownloadTracker() {
 
       // Check for ffmpeg installation completion
       if (ffmpegEndPattern.test(line) && ffmpegInstalling) {
-        console.log("Detected ffmpeg installation completed");
+        console.log("检测到 ffmpeg 安装完成");
 
         // Close the "installing" toast
         if (ffmpegToastRef) {

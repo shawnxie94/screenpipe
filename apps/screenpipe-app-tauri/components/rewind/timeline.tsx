@@ -542,7 +542,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 					}, 500); // Check every 500ms
 				}
 			} catch (e) {
-				console.warn("Failed to init screen bounds check:", e);
+				console.warn("屏幕边界检查初始化失败：", e);
 			}
 		};
 
@@ -1266,7 +1266,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 										}
 									}
 								} catch (error) {
-									console.error("Failed to find next valid frame:", error);
+									console.error("找不到下一个有效帧：", error);
 								}
 
 								// Fallback: try sequential approach with device snapping

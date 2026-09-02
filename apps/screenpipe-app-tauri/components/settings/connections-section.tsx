@@ -113,7 +113,7 @@ async function getLatestMcpRelease(): Promise<{ url: string; version: string }> 
     // the wrapper's minimum deadline — otherwise "one 30s budget" could still
     // run ~1s per remaining page past it.
     const remainingMs = deadlineAt - Date.now();
-    if (remainingMs <= 0) throw new Error("Timed out looking for an MCP release");
+    if (remainingMs <= 0) throw new Error("查找 MCP 发布时超时");
     const response = await tauriFetchWithDeadline(
       `${GITHUB_RELEASES_API}?per_page=50&page=${page}`,
       { method: "GET", headers: { "Accept": "application/vnd.github.v3+json" } },
@@ -125,7 +125,7 @@ async function getLatestMcpRelease(): Promise<{ url: string; version: string }> 
     const mcpRelease = releases.find(r => r.tag_name.startsWith("mcp-v"));
     if (mcpRelease) {
       const mcpbAsset = mcpRelease.assets.find(a => a.name.endsWith(".mcpb"));
-      if (!mcpbAsset) throw new Error("No .mcpb file found in release");
+      if (!mcpbAsset) throw new Error("发布中未找到 .mcpb 文件");
       return { url: mcpbAsset.browser_download_url, version: mcpRelease.tag_name.replace("mcp-v", "") };
     }
   }
@@ -770,33 +770,33 @@ export const TRY_IN_CHAT_PROMPTS: Record<string, string> = {
   slack: "Summarize recent Slack discussions",
   "google-calendar": "What's on my calendar this week?",
   "google-docs": "Summarize my recent documents",
-  obsidian: "What did I write about recently in my notes?",
-  notion: "Find recent project notes in my Notion",
+  obsidian: "我最近在笔记里写了什么？",
+  notion: "在 Notion 中查找最近的项目笔记",
   linear: "Show my open issues and tasks",
-  claude: "What have I been working on based on my screen history?",
-  cursor: "Summarize my recent coding sessions",
-  chatgpt: "What topics did I discuss with AI recently?",
-  "apple-calendar": "What meetings do I have this week?",
-  "ics-calendar": "What events are coming up this week?",
-  granola: "Show notes from my recent meetings",
+  claude: "根据屏幕历史，我最近在做什么？",
+  cursor: "总结我最近的编码会话",
+  chatgpt: "我最近与 AI 讨论了哪些主题？",
+  "apple-calendar": "这周我有什么会议？",
+  "ics-calendar": "这周有什么活动？",
+  granola: "显示最近会议的笔记",
   imap: "Summarize my recent emails",
   zoom: "Summarize my recent Zoom calls",
   gmail: "Summarize my recent emails",
   "google-drive": "Find my recent files in Google Drive",
   "google-sheets": "What's in my latest spreadsheet?",
-  krisp: "Search my meeting transcripts for action items",
+  krisp: "在我的会议记录中搜索行动项",
   excalidraw: "What's on my recent Excalidraw boards?",
-  whatsapp: "What were the latest messages in my WhatsApp?",
-  discord: "What was discussed in my Discord servers recently?",
-  teams: "Show me recent Microsoft Teams messages",
-  jira: "What are my assigned Jira issues?",
-  asana: "What tasks do I have due soon?",
-  todoist: "What tasks do I have due today?",
-  github: "Show my recent GitHub activity",
-  "browser-url": "What websites have I been visiting today?",
-  fireflies: "Show action items from my recent meetings",
+  whatsapp: "我的 WhatsApp 最新消息是什么？",
+  discord: "我的 Discord 服务器最近讨论了什么？",
+  teams: "显示最近的 Microsoft Teams 消息",
+  jira: "分配给我的 Jira 问题有哪些？",
+  asana: "我最近有什么到期任务？",
+  todoist: "我今天有什么到期任务？",
+  github: "显示我最近的 GitHub 活动",
+  "browser-url": "我今天访问了哪些网站？",
+  fireflies: "显示最近会议的行动项",
   otter: "Search my meeting recordings",
-  "voice-memos": "What did I record in Voice Memos recently?",
+  "voice-memos": "我最近在语音备忘录里录了什么？",
 };
 
 function tryInChat(tile: ConnectionTile) {
@@ -2228,7 +2228,7 @@ const OAUTH_SCOPE_VARIANTS: Record<
 > = {
   slack: [
     { id: "send", label: "Send only", description: "Post messages as you. Screenpipe can't read your Slack." },
-    { id: "read_write", label: "Send + read", description: "Also search & read your messages, DMs and channels." },
+    { id: "read_write", label: "Send + read", description: "还可以搜索和阅读你的消息、私信和频道。" },
   ],
 };
 
@@ -2264,7 +2264,7 @@ export function getOAuthFallbackMessage(
   ) {
     return "Zendesk OAuth is not available for this subdomain yet. Use advanced: connect with a token instead.";
   }
-  return "Zendesk OAuth failed. Use advanced: connect with a token instead.";
+  return "Zendesk OAuth 失败。请使用高级选项：改用令牌连接。";
 }
 
 export function OAuthPanel({

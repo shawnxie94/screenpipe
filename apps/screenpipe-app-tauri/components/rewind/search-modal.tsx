@@ -2648,7 +2648,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           {selectedApp && !isLoadingAppFrames && appFrames.length === 0 && (
             <EmptyMessage
               title={`No screen history for ${selectedApp.name}`}
-              hint="Frames may have been removed by a retention policy"
+              hint="帧可能已被保留策略移除"
             />
           )}
 

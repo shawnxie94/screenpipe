@@ -150,7 +150,7 @@ export function ConversationBubble({
 									"cursor-pointer hover:text-foreground hover:underline transition-colors duration-150"
 							)}
 							onClick={onTimestampClick}
-							title={onTimestampClick ? "Jump to this moment in timeline" : undefined}
+							title={onTimestampClick ? "跳转到时间线中的这一时刻" : undefined}
 						>
 							{formatTime(timestamp)}
 						</span>

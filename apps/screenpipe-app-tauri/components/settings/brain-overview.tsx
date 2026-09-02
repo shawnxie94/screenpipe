@@ -1169,7 +1169,7 @@ export function BrainOverview({
           unconfiguredCount,
           total: targetSlots.length,
           message:
-            "No data source is connected yet. Choose a template, ask AI, or connect a scheduled task.",
+            "尚未连接数据源。请选择模板、询问 AI 或连接定时任务。",
           blockedReason: "not_configured",
         });
         return;
@@ -1305,9 +1305,9 @@ export function BrainOverview({
         quotaFailure.kind !== "none"
           ? quotaFailure.message
           : failures.length === pipeNames.length
-            ? "The data refresh could not start. Existing results are still shown."
+            ? "数据刷新无法启动。仍显示现有结果。"
             : failures.length > 0
-              ? "Some data sources could not start. Other sources are still refreshing."
+              ? "部分数据源无法启动。其他数据源仍在刷新。"
               : undefined;
 
       setDataRefresh((current) =>
@@ -1412,7 +1412,7 @@ export function BrainOverview({
       toast({
         title: "setup could not resume",
         description:
-          "Create or customize this Live View directly from Brain instead.",
+          "请改为直接从库中创建或自定义此实时视图。",
         variant: "destructive",
       });
       return;
@@ -2645,7 +2645,7 @@ export function BrainOverview({
       toast({
         title: "this dashboard uses a fixed period",
         description:
-          "Choose another dashboard or template for a different period.",
+          "选择其他仪表盘或模板以查看不同的时间段。",
         variant: "destructive",
       });
       return;
@@ -3183,7 +3183,7 @@ export function BrainOverview({
                 size="icon"
                 className="h-9 w-9 shrink-0 rounded-none"
                 aria-label="undo last Live View change"
-                title={`Undo last Live View change (${isMac ? "⌘Z" : "Ctrl+Z"})`}
+                title={`撤销上次实时视图更改 (${isMac ? "⌘Z" : "Ctrl+Z"})`}
                 disabled={saving}
                 onClick={() => void restorePreviousView()}
               >

@@ -30,11 +30,11 @@ const TIME_RANGES = [
 ];
 
 const QUICK_TEMPLATES = [
-  { label: "Status Update", prompt: "Generate a brief status update of what I accomplished" },
-  { label: "Key Decisions", prompt: "What key decisions did I make or encounter?" },
-  { label: "Action Items", prompt: "Extract all action items and to-dos from my activity" },
-  { label: "Meeting Prep", prompt: "Summarize context I'll need for upcoming meetings" },
-  { label: "Blockers", prompt: "What problems, errors, or blockers did I encounter?" },
+  { label: "Status Update", prompt: "生成我已完成工作的简短状态更新" },
+  { label: "Key Decisions", prompt: "我做出或遇到了哪些关键决定？" },
+  { label: "Action Items", prompt: "从我的活动中提取所有行动项和待办" },
+  { label: "Meeting Prep", prompt: "总结我为即将到来的会议所需的上下文" },
+  { label: "Blockers", prompt: "我遇到了什么问题、错误或阻碍？" },
 ];
 
 interface CustomSummaryBuilderProps {
@@ -309,7 +309,7 @@ export function CustomSummaryBuilder({
             <Textarea
               value={instructions}
               onChange={(e) => setInstructions(e.target.value.slice(0, 1000))}
-              placeholder={hasValidTime ? `Type your custom instructions for ${getTimeLabel().toLowerCase()}...` : "Type your custom instructions..."}
+              placeholder={hasValidTime ? `Type your custom instructions for ${getTimeLabel().toLowerCase()}...` : "输入你的自定义指令..."}
               className="flex-1 min-h-[208px] text-[12px] resize-none border border-border/30"
             />
             <div className="text-[10px] text-muted-foreground/50 text-right mt-1 font-mono">

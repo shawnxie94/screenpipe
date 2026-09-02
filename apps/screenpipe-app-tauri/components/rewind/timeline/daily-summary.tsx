@@ -99,7 +99,7 @@ export function presentGenerationError(
 	if (!(error instanceof Error)) {
 		return {
 			kind: "unknown",
-			message: "Daily summary could not be generated.",
+			message: "无法生成每日摘要。",
 			upgrade: null,
 		};
 	}
@@ -110,20 +110,20 @@ export function presentGenerationError(
 	if (/401|403/.test(error.message)) {
 		return {
 			kind: "auth",
-			message: "Your session expired. Sign in again to continue.",
+			message: "你的会话已过期，请重新登录以继续。",
 			upgrade: null,
 		};
 	}
 	if (/timed out/i.test(error.message)) {
 		return {
 			kind: "timeout",
-			message: "The AI took too long to read this day. Try again.",
+			message: "AI 读取这一天耗时过长，请重试。",
 			upgrade: null,
 		};
 	}
 	return {
 		kind: "unknown",
-		message: "Daily summary could not be generated. Try again.",
+		message: "无法生成每日摘要，请重试。",
 		upgrade: null,
 	};
 }
@@ -196,7 +196,7 @@ export function TimelineDailySummary({
 			if (!dailySummaryPreset) {
 				setPanelOpen(true);
 				setStatus("error");
-				setError("No AI model is configured. Choose one in Settings.");
+				setError("未配置 AI 模型。请在设置中选择一个。");
 				setErrorUpgrade(null);
 				return;
 			}
@@ -350,7 +350,7 @@ export function TimelineDailySummary({
 			setEnableDialogOpen(false);
 			setPanelOpen(true);
 			setStatus("error");
-			setError("Enhanced AI could not be turned on. Try again from Settings.");
+			setError("无法开启增强 AI。请从设置中重试。");
 		} finally {
 			setIsEnabling(false);
 		}
@@ -427,7 +427,7 @@ export function TimelineDailySummary({
 	const tooltipText = summary
 		? "Open this day's summary"
 		: !enhancedAI
-			? "Turn on Enhanced AI to generate a summary for this day"
+			? "开启增强 AI 以生成这一天的摘要"
 			: isGenerating
 				? "Generating this day's summary"
 				: "Generate a summary for this day";

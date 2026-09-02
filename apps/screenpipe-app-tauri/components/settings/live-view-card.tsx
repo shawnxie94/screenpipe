@@ -56,11 +56,11 @@ const SOURCE_STATUS_LABELS: Record<LiveViewSourceStatus, string | null> = {
 const SOURCE_STATUS_TITLES: Record<LiveViewSourceStatus, string | null> = {
   auto: null,
   manual:
-    "This task has no schedule, so this block only changes when you press refresh.",
+    "此任务没有计划，因此此区块仅在点击刷新时更新。",
   paused:
-    "This task is turned off, so this block only changes when you press refresh.",
+    "此任务已关闭，因此此区块仅在点击刷新时更新。",
   unconfigured:
-    "This block is not connected to a scheduled task, so refresh cannot update it.",
+    "此区块未连接到定时任务，因此刷新无法更新它。",
   unknown: null,
 };
 

@@ -33,8 +33,8 @@ export function MeetingSummaryTransition({
   const label = phase === "finalizing" ? "meeting saved" : "writing summary";
   const detail =
     phase === "finalizing"
-      ? "Your notes are saved. Finishing the transcript before the summary starts."
-      : "Your notes and transcript are safe. The draft appears in Summary as it is written.";
+      ? "你的笔记已保存。在摘要开始前完成文字记录。"
+      : "你的笔记和文字记录是安全的。草稿会随书写出现在摘要中。";
 
   // Capture and resume replace the summary transition immediately. Letting
   // AnimatePresence hold the old card for its exit frame briefly recreates

@@ -254,7 +254,7 @@ export function LiveViewItemControls({
                             Remove from inbox
                           </span>
                           <span className="mt-0.5 block whitespace-normal text-[10px] font-normal leading-snug text-muted-foreground">
-                            Move to Handled; you can reopen it
+                            移至已处理；你可以重新打开它
                           </span>
                         </span>
                       </Button>

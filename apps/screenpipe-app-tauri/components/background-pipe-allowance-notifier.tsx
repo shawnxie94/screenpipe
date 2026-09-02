@@ -93,7 +93,7 @@ export function BackgroundPipeAllowanceNotifier() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: "Background Pipes are using most of your AI allowance",
+        title: "后台管道正在消耗你大部分 AI 额度",
         body: advisory.message,
         type: "pipe",
         priority: "normal",

@@ -384,7 +384,7 @@ export default function PermissionsStep({
           Unlock the full experience
         </h1>
         <p className="font-mono text-[10px] text-muted-foreground mt-1 text-center max-w-xs">
-          Three permissions turn on recording.
+          开启录制需要三项权限。
         </p>
       </div>
 

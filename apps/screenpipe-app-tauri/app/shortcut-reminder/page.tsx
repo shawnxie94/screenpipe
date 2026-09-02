@@ -190,7 +190,7 @@ export default function ShortcutReminderPage() {
       // Error objects don't survive JSON.stringify — extract the human-readable parts
       // so the report isn't just "{}".
       const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-      console.error("Failed to read shortcuts from store:", msg);
+      console.error("从存储读取快捷键失败：", msg);
     }
   }, [applyReminderSettings]);
 
@@ -448,7 +448,7 @@ export default function ShortcutReminderPage() {
         snooze_hours: 1,
       });
     } catch (error) {
-      console.error("Failed to snooze shortcut reminder:", error);
+      console.error("延时快捷键提醒失败：", error);
     }
   }, []);
 

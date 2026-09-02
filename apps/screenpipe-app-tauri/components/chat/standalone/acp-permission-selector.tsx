@@ -57,7 +57,7 @@ const CLIENT_FULL_ACCESS_VALUE = "screenpipe-full-access";
 const CLIENT_FULL_ACCESS_OPTION: AcpConfigValue = {
   value: CLIENT_FULL_ACCESS_VALUE,
   name: "完全访问",
-  description: "Run every requested tool without asking for approval.",
+  description: "运行每个请求的工具，无需请求批准。",
 };
 
 function withClientFullAccess(values: AcpConfigValue[]): {
@@ -106,7 +106,7 @@ function permissionControl(
         {
           value: "true",
           name: "完全访问",
-          description: "Run every requested tool without asking for approval.",
+          description: "运行每个请求的工具，无需请求批准。",
         },
       ],
       hasClientFullAccess: false,
@@ -159,7 +159,7 @@ function permissionPresentation(mode: AcpConfigValue): PermissionPresentation {
         label: "完全访问",
         description:
           mode.description ||
-          "Run every requested tool without asking for approval.",
+          "运行每个请求的工具，无需请求批准。",
         icon: ShieldAlert,
         warning: true,
       };
@@ -174,7 +174,7 @@ function permissionPresentation(mode: AcpConfigValue): PermissionPresentation {
     case "agent":
       return {
         label: "替我批准",
-        description: "Work in this workspace and ask before elevated actions.",
+        description: "在此工作区工作，并在提权操作前询问。",
         icon: ShieldCheck,
       };
     case "acceptEdits":
@@ -201,7 +201,7 @@ function permissionPresentation(mode: AcpConfigValue): PermissionPresentation {
       return {
         label: "完全访问",
         description:
-          "Unrestricted access to the internet and any file on your computer.",
+          "不受限制地访问互联网和你电脑上的任何文件。",
         icon: ShieldAlert,
         warning: true,
       };

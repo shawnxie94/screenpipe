@@ -64,7 +64,7 @@ export function parseWhatsAppStatus(value: unknown): BackendStatus {
       message:
         typeof reconnecting.message === "string"
           ? reconnecting.message
-          : "Connection interrupted. Reconnecting to WhatsApp…",
+          : "连接中断。正在重新连接 WhatsApp...",
     };
   }
 
@@ -178,7 +178,7 @@ export function WhatsAppPanel() {
   const readStatus = useCallback(async (): Promise<BackendStatus> => {
     const response = await localFetch("/connections/whatsapp/status");
     if (!response.ok) {
-      throw new Error(await responseError(response, "Could not check WhatsApp status"));
+      throw new Error(await responseError(response, "无法检查 WhatsApp 状态"));
     }
     const body = await response.json();
     return parseWhatsAppStatus(body?.status);
@@ -193,7 +193,7 @@ export function WhatsAppPanel() {
 
     const startedAt = pairingStartedAtRef.current;
     if (startedAt && Date.now() - startedAt >= WHATSAPP_PAIRING_TIMEOUT_MS) {
-      showError("The WhatsApp QR code did not arrive. Check your connection and try again.");
+      showError("WhatsApp 二维码未到达。请检查连接后重试。");
       return;
     }
 
@@ -207,7 +207,7 @@ export function WhatsAppPanel() {
       if (!pollingRef.current || generation !== pollGenerationRef.current) return;
       statusFailuresRef.current += 1;
       if (statusFailuresRef.current >= MAX_CONSECUTIVE_STATUS_FAILURES) {
-        showError(error instanceof Error ? error.message : "Could not check WhatsApp status.");
+        showError(error instanceof Error ? error.message : "无法检查 WhatsApp 状态。");
         return;
       }
     }
@@ -238,7 +238,7 @@ export function WhatsAppPanel() {
         if (shouldPoll) startPolling();
       } catch (error) {
         if (mountedRef.current) {
-          showError(error instanceof Error ? error.message : "Could not check WhatsApp status.");
+          showError(error instanceof Error ? error.message : "无法检查 WhatsApp 状态。");
         }
       }
     };
@@ -262,11 +262,11 @@ export function WhatsAppPanel() {
         body: JSON.stringify({ bun_path: "" }),
       });
       if (!response.ok) {
-        throw new Error(await responseError(response, "Failed to start WhatsApp pairing"));
+        throw new Error(await responseError(response, "启动 WhatsApp 配对失败"));
       }
       startPolling();
     } catch (error) {
-      showError(error instanceof Error ? error.message : "Failed to start WhatsApp pairing.");
+      showError(error instanceof Error ? error.message : "启动 WhatsApp 配对失败。");
     }
   };
 
@@ -277,12 +277,12 @@ export function WhatsAppPanel() {
     try {
       const response = await localFetch("/connections/whatsapp/disconnect", { method: "POST" });
       if (!response.ok) {
-        throw new Error(await responseError(response, "Failed to reset the old WhatsApp session"));
+        throw new Error(await responseError(response, "重置旧 WhatsApp 会话失败"));
       }
       notifyConnectionsUpdated();
       await beginPairing();
     } catch (error) {
-      showError(error instanceof Error ? error.message : "Failed to reset the old WhatsApp session.");
+      showError(error instanceof Error ? error.message : "重置旧 WhatsApp 会话失败。");
     }
   };
 

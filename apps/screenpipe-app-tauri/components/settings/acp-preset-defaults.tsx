@@ -299,7 +299,7 @@ export function AcpPresetDefaults({
         <p className={hintClass}>
           {compact
             ? "enter the agent command to load its model and mode choices"
-            : "Enter the agent command to load its model and mode choices."}
+            : "输入代理命令以加载其模型和模式选项。"}
         </p>
       );
     }
@@ -451,7 +451,7 @@ export function AcpPresetDefaults({
             ? `could not load choices: ${probeError}`
             : compact
               ? "model and mode choices unavailable"
-              : "Model and mode choices are unavailable for this agent."}
+              : "此代理的模型和模式选项不可用。"}
         </span>
         <button
           type="button"
@@ -559,7 +559,7 @@ export function AcpPresetDefaults({
       <p className={hintClass}>
         {compact
           ? "applied when the agent starts"
-          : "Applied whenever this agent starts. The composer can still change them mid-conversation."}
+          : "在此代理启动时应用。对话中仍可通过 composer 更改。"}
       </p>
     </div>
   );

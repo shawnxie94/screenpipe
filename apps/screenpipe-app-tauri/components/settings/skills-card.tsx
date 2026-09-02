@@ -97,7 +97,7 @@ export function SkillsCard({ onChanged }: { onChanged?: () => void }) {
     const selected = await openDialog({
       directory: true,
       multiple: false,
-      title: "Choose a skill folder (must contain SKILL.md)",
+      title: "选择技能文件夹（必须包含 SKILL.md）",
     });
     if (typeof selected !== "string") return;
     await doImport(selected, selected);

@@ -525,7 +525,7 @@ export default function FinalSetupStep({
         userToken,
         controller.signal,
       );
-      if (!connected) throw new Error("Gmail connection was not completed.");
+      if (!connected) throw new Error("Gmail 连接未完成。");
       setGmailConnected(true);
       notifyConnectionsUpdated();
       posthog.capture("connection_saved", {

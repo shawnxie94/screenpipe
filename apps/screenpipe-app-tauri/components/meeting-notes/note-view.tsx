@@ -1650,7 +1650,7 @@ export function NoteView({
       }
       toast({
         title: "microphone capture resumed",
-        description: "Transcript should start once speech is detected.",
+        description: "检测到语音后即开始文字记录。",
       });
     } catch (err) {
       toast({

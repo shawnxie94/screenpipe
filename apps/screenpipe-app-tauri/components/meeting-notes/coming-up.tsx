@@ -175,7 +175,7 @@ function ComingUpEmptyState({
       ? "calendar needs attention"
       : "no upcoming meetings";
   const body = needsAttention
-    ? "Review your calendar connections."
+    ? "检查你的日历连接。"
     : connectedLabel
       ? `${connectedLabel} connected. Nothing in the next 8h.`
       : "Nothing in the next 8h.";

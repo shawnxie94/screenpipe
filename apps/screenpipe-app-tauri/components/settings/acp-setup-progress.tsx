@@ -35,15 +35,15 @@ const phaseTitle = (phase: AcpSetupPhase, agentName: string) => {
 const phaseDescription = (phase: AcpSetupPhase) => {
   switch (phase) {
     case "checking":
-      return "Checking what is already available on this computer.";
+      return "正在检查这台电脑上已有哪些可用项。";
     case "downloading":
-      return "Fetching the official ACP adapter. The first install can take a minute.";
+      return "正在获取官方 ACP 适配器。首次安装可能需要一分钟。";
     case "installing":
-      return "Running the official installer in the background.";
+      return "正在后台运行官方安装程序。";
     case "starting":
-      return "The adapter is installed. Starting it now.";
+      return "适配器已安装，正在启动。";
     case "connecting":
-      return "The adapter is running. Loading its model and mode choices.";
+      return "适配器正在运行。正在加载其模型和模式选项。";
     case "ready":
       return "Connected. Finishing the preset setup.";
   }

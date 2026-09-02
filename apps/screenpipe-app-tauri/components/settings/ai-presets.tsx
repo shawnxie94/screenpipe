@@ -407,8 +407,8 @@ const AISection = ({
       toast({
         title: needsConnectionTest ? "Test the connection" : "Validation errors",
         description: needsConnectionTest
-          ? "The current provider, URL, model, and API key must pass the connection test before saving"
-          : "Please fix all validation errors before saving",
+          ? "提供商、URL、模型和 API 密钥必须通过连接测试才能保存"
+          : "请先修正所有校验错误再保存",
         variant: "destructive",
       });
       return;
@@ -448,7 +448,7 @@ const AISection = ({
 
         toast({
           title: "Preset created",
-          description: "Default preset has been created successfully",
+          description: "默认预设已成功创建",
         });
 
         setDialog(false);
@@ -475,7 +475,7 @@ const AISection = ({
 
         toast({
           title: "Preset updated",
-          description: "Changes have been saved successfully",
+          description: "更改已成功保存",
         });
       } else {
         // Handle create case (new preset or duplicate)
@@ -499,8 +499,8 @@ const AISection = ({
         toast({
           title: isDuplicating ? "Preset duplicated" : "Preset created",
           description: isDuplicating
-            ? "Duplicate has been saved successfully"
-            : "New preset has been added successfully",
+            ? "副本已成功保存"
+            : "新预设已成功添加",
         });
       }
 
@@ -508,7 +508,7 @@ const AISection = ({
     } catch (error) {
       toast({
         title: "Error saving preset",
-        description: "Something went wrong while saving the preset",
+        description: "保存预设时出现问题",
         variant: "destructive",
       });
     } finally {
@@ -784,7 +784,7 @@ const AISection = ({
         if (tokenResult.status === "ok") {
           headers["Authorization"] = `Bearer ${tokenResult.data}`;
         } else {
-          skipRemaining("auth", "Could not get ChatGPT token. Try signing out and back in.");
+          skipRemaining("auth", "无法获取 ChatGPT 令牌。请尝试退出并重新登录。");
           return;
         }
       } catch (err) {
@@ -827,9 +827,9 @@ const AISection = ({
         if (abort.signal.aborted) return;
         const hint =
           settingsPreset?.provider === "native-ollama"
-            ? "Is Ollama running? Try: `ollama serve`"
+            ? "Ollama 正在运行吗？试试：`ollama serve`"
             : settingsPreset?.provider === "custom"
-            ? "Verify the URL is correct and the server is running"
+            ? "请确认 URL 正确且服务器正在运行"
             : "Check your network connection";
         skipRemaining("endpoint", `Connection failed: ${hint}`);
         return;
@@ -850,7 +850,7 @@ const AISection = ({
         setTestResults((prev) => ({
           ...prev,
           auth: { status: "pass", message: "OAuth token present" },
-          models: { status: "pass", message: "Using known models (API scope limited)" },
+          models: { status: "pass", message: "使用已知模型（API 范围有限）" },
           chat: { status: "running", message: "Sending test message..." },
         }));
       } else if (modelsResponse!.status === 401 || modelsResponse!.status === 403) {
@@ -858,7 +858,7 @@ const AISection = ({
         const hint =
           settingsPreset?.provider === "openai"
             ? "Check your API key at platform.openai.com"
-            : "Check your API key is valid and has credits";
+            : "请检查 API 密钥是否有效且有余量";
         const message = `${modelsResponse!.status}: ${extractAiProviderErrorMessage(responseBody, hint)}`;
         if (settingsPreset?.provider === "custom") {
           setTestResults((prev) => ({
@@ -917,7 +917,7 @@ const AISection = ({
           if (abort.signal.aborted) return;
           setTestResults((prev) => ({
             ...prev,
-            models: { status: "skip", message: "Models endpoint returned an unfamiliar response" },
+            models: { status: "skip", message: "模型端点返回了无法识别的响应" },
             chat: { status: "running", message: "Sending test message..." },
           }));
         }
@@ -1088,7 +1088,7 @@ const AISection = ({
             );
           } catch (error) {
             console.error(
-              "Failed to fetch custom models, allowing manual input:",
+              "获取自定义模型失败，允许手动输入：",
               error
             );
             setModels([]);
@@ -1350,7 +1350,7 @@ const AISection = ({
         autoCorrect="off"
         onBlur={refillEmptyName}
         disabled={!!preset && !isDuplicating && preset.id !== undefined}
-        helperText="Follows your selection automatically, or type your own"
+        helperText="自动跟随你的选择，或自行输入"
       />
 
       {settingsPreset?.provider === "acp" && (
@@ -1478,7 +1478,7 @@ const AISection = ({
                           toast({
                             title: "ChatGPT sign-in failed",
                             description: msg.includes("invalid_state")
-                              ? "Auth session expired — please try signing in again."
+                              ? "登录会话已过期 — 请重新登录。"
                               : msg.includes("not logged in") || msg.includes("timed out")
                               ? "Sign-in timed out or was cancelled. Please try again."
                               : msg.slice(0, 120),
@@ -1489,7 +1489,7 @@ const AISection = ({
                         console.error("chatgpt oauth failed:", e);
                         toast({
                           title: "ChatGPT sign-in failed",
-                          description: "An unexpected error occurred. Please try again.",
+                          description: "发生意外错误，请重试。",
                           variant: "destructive",
                         });
                       }
@@ -1748,7 +1748,7 @@ const AISection = ({
         onChange={handleCustomPromptChange}
         validation={(value) => {
           if (value.length < 10) {
-            return { isValid: false, error: "Prompt must be at least 10 characters" };
+            return { isValid: false, error: "提示词至少需要 10 个字符" };
           }
           return { isValid: true };
         }}
@@ -1757,7 +1757,7 @@ const AISection = ({
         minLength={10}
         maxLength={5000}
         className="min-h-[100px] resize-none"
-        helperText="This prompt will be used to guide the AI's responses"
+        helperText="此提示词将用于引导 AI 的回复"
       />
 
       {settingsPreset?.provider !== "screenpipe-cloud" &&
@@ -1984,12 +1984,12 @@ const AISection = ({
                   : !settingsPreset?.model && settingsPreset.provider !== "acp"
                   ? "Select a model to continue"
                   : Object.keys(formErrors).length > 0
-                  ? "Fix validation errors to continue"
+                  ? "修正校验错误以继续"
                   : connectionTestRequired && !connectionTestPassed
                   ? testStatus === "testing"
-                    ? "Testing this connection before saving"
-                    : "Test this connection before saving"
-                  : "Complete the required fields to continue"}
+                    ? "保存前正在测试此连接"
+                    : "保存前测试此连接"
+                  : "填写必填字段以继续"}
               </TooltipContent>
             )}
           </Tooltip>
@@ -2270,7 +2270,7 @@ useEffect(() => {
       if (settings.aiPresets.length <= 1) {
         toast({
           title: "Cannot delete preset",
-          description: "At least one AI preset is required",
+          description: "至少需要一个 AI 预设",
           variant: "destructive",
         });
         return;
@@ -2287,7 +2287,7 @@ useEffect(() => {
       if (!checkIfIDPresent) {
         toast({
           title: "Preset not found",
-          description: "The preset you're trying to delete doesn't exist",
+          description: "你要删除的预设不存在",
           variant: "destructive",
         });
         return;
@@ -2313,12 +2313,12 @@ useEffect(() => {
 
       toast({
         title: "Preset deleted",
-        description: "The preset has been removed successfully",
+        description: "预设已成功删除",
       });
     } catch (error) {
       toast({
         title: "Error deleting preset",
-        description: "Something went wrong while deleting the preset",
+        description: "删除预设时出现问题",
         variant: "destructive",
       });
     } finally {
@@ -2333,7 +2333,7 @@ useEffect(() => {
       if (isManagedDeployment && aiPresetPolicy.lock_default_preset) {
         toast({
           title: "Default preset is locked",
-          description: "Your admin controls the default AI preset",
+          description: "你的管理员控制默认 AI 预设",
           variant: "destructive",
         });
         return;
@@ -2363,12 +2363,12 @@ useEffect(() => {
 
       toast({
         title: "Default preset updated",
-        description: "The preset has been set as default",
+        description: "预设已设为默认",
       });
     } catch (error) {
       toast({
         title: "Error updating default preset",
-        description: "Something went wrong while updating the default preset",
+        description: "更新默认预设时出现问题",
         variant: "destructive",
       });
     } finally {
@@ -2427,7 +2427,7 @@ useEffect(() => {
           <p className="text-sm text-muted-foreground text-center max-w-md">
             {canManageEmployeePresets
               ? "Create your first AI preset to get started with intelligent features. Presets allow you to quickly switch between different AI configurations."
-              : "Your organization has not made any AI presets available on this device."}
+              : "你的组织未在此设备上提供任何 AI 预设。"}
           </p>
           {canManageEmployeePresets && (
             <Button onClick={() => setCreatePresentDialog(true)} size="lg">

@@ -77,12 +77,12 @@ export const useOnboarding = create<OnboardingState>((set, get) => ({
         throw new Error(result.error);
       }
     } catch (error) {
-      console.error("Error loading onboarding status:", error);
+      console.error("加载引导状态时出错：", error);
       set({
         error:
           error instanceof Error
             ? error.message
-            : "Failed to load onboarding status",
+            : "加载引导状态失败",
         isLoading: false,
       });
     }

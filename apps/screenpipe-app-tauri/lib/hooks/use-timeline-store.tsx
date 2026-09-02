@@ -773,7 +773,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 								isLoading: false,
 								pendingDateSwap: false,
 								message: currentFrames.length === 0
-									? "Timeline is still warming up. Try again in a moment."
+									? "时间线仍在预热，请稍等片刻再试。"
 									: null,
 							});
 							return;

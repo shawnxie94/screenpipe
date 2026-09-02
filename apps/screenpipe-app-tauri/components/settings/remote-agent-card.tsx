@@ -49,7 +49,7 @@ function skillVariants(skillsDir: string): AgentCardProps["skills"] {
       id: "api",
       label: "API",
       blurb:
-        "Read screen history, meetings, and memories over the local REST API (read-only queries).",
+        "通过本地 REST API 读取屏幕历史、会议和记忆（只读查询）。",
       md: SCREENPIPE_API_SKILL_MD,
       downloadName: "screenpipe-api-SKILL.md",
       localPath: `${skillsDir}/screenpipe-api/SKILL.md`,
@@ -58,7 +58,7 @@ function skillVariants(skillsDir: string): AgentCardProps["skills"] {
       id: "cli",
       label: "CLI",
       blurb:
-        "Manage scheduled tasks and connections (Telegram, Slack, ...) from the shell.",
+        "从终端管理定时任务和连接（Telegram、Slack 等）。",
       md: SCREENPIPE_CLI_SKILL_MD,
       downloadName: "screenpipe-cli-SKILL.md",
       localPath: `${skillsDir}/screenpipe-cli/SKILL.md`,

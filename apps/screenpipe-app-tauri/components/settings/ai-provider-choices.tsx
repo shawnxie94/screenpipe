@@ -177,7 +177,7 @@ export function AIProviderChoices({
               <AIProviderCard
                 type="openai-chatgpt"
                 title="ChatGPT"
-                description="Sign in with your ChatGPT subscription."
+                description="使用你的 ChatGPT 订阅登录。"
                 imageSrc="/images/openai.png"
                 selected={selectedProvider === "openai-chatgpt"}
                 onClick={() => onSelectProvider("openai-chatgpt")}
@@ -195,7 +195,7 @@ export function AIProviderChoices({
               <AIProviderCard
                 type="native-ollama"
                 title="Ollama"
-                description="Use AI models running on this computer."
+                description="使用运行在这台电脑上的 AI 模型。"
                 imageSrc="/images/ollama.png"
                 selected={selectedProvider === "native-ollama"}
                 onClick={() => onSelectProvider("native-ollama")}

@@ -203,11 +203,11 @@ export function ChatMainPane({
                   </p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
                     {continuousPipeChat.state === "on"
-                      ? "Future runs and your replies share context here."
+                      ? "未来的运行和你的回复将在此共享上下文。"
                       : continuousPipeChat.state === "off"
-                        ? "Future runs start separate chats. Saved context stays here until you clear it."
+                        ? "未来的运行将启动单独的聊天。保存的上下文会保留在此，直到你清除。"
                         : continuousPipeChat.state === "missing"
-                          ? "This transcript is kept, but replies are disabled until you reinstall the task."
+                          ? "此文字记录会保留，但在你重新安装任务前，回复会被禁用。"
                           : "The saved transcript is available while screenpipe checks the current task setting."}
                   </p>
                 </div>
@@ -254,7 +254,7 @@ export function ChatMainPane({
                             : "Setup Required"}
                     </h3>
                     <p className="text-sm text-muted-foreground max-w-sm">
-                      {needsLogin ? "Sign in to use the AI assistant" : disabledReason}
+                      {needsLogin ? "登录以使用 AI 助手" : disabledReason}
                     </p>
                   </div>
                   {needsLogin && (

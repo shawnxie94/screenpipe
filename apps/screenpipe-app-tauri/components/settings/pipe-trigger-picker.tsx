@@ -324,7 +324,7 @@ function Detail({
         )}
         {(option.id === "meeting_started" || option.id === "meeting_ended") && (
           <SimpleDetail
-            text={option.id === "meeting_started" ? "Runs whenever screenpipe detects a call starting." : "Runs whenever a call wraps up — great for summaries."}
+            text={option.id === "meeting_started" ? "Runs whenever screenpipe detects a call starting." : "通话结束时运行 — 非常适合生成摘要。"}
             onAdd={() => onAddEvent(option.id)}
           />
         )}
@@ -485,9 +485,9 @@ function SourceDetail({
 }
 
 const APP_META: Record<string, { name: string; blurb: string; examples: string[] }> = {
-  slack: { name: "Slack", blurb: "Give this scheduled task access to read messages in your channels.", examples: ["#general", "#support", "#eng"] },
-  notion: { name: "Notion", blurb: "Let this scheduled task watch pages and databases in your workspace.", examples: ["CRM", "Meetings", "Docs"] },
-  obsidian: { name: "Obsidian", blurb: "Point this scheduled task at a vault folder to watch for new notes.", examples: [] },
+  slack: { name: "Slack", blurb: "允许此定时任务读取你频道中的消息。", examples: ["#general", "#support", "#eng"] },
+  notion: { name: "Notion", blurb: "让此定时任务监控你工作区中的页面和数据库。", examples: ["CRM", "Meetings", "Docs"] },
+  obsidian: { name: "Obsidian", blurb: "将此定时任务指向一个 vault 文件夹，以监控新笔记。", examples: [] },
 };
 
 function ConnectCard({ app, connecting, onConnect }: { app: string; connecting: boolean; onConnect: () => void }) {

@@ -207,8 +207,8 @@ export function PipeInstallDialog() {
             <AlertDialogDescription className="text-xs">
               {isRegistry
                 ? registryRisk === "high"
-                  ? "Unverified publisher. Can access all your screen data."
-                  : "Review the requested access before installing."
+                  ? "未验证的发布者。可以访问你所有的屏幕数据。"
+                  : "安装前请审查请求的访问权限。"
                 : "an external link wants to install a scheduled task. these are AI agents that run on your screen data — review the prompt below before installing."}
             </AlertDialogDescription>
           </AlertDialogHeader>

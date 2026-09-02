@@ -89,7 +89,7 @@ export function useDiskUsage() {
         errorMessage.includes("access")
       ) {
         errorMessage =
-          "Permission denied. Please check file access permissions.";
+          "权限被拒绝。请检查文件访问权限。";
       } else if (
         errorMessage.includes("not found") ||
         errorMessage.includes("directory")
@@ -98,7 +98,7 @@ export function useDiskUsage() {
           "Screenpipe data directory not found. Make sure Screenpipe has been initialized.";
       } else if (errorMessage.includes("timeout")) {
         errorMessage =
-          "Calculation timed out. Try again or check for very large datasets.";
+          "计算超时。请重试或检查是否有非常大的数据集。";
       }
 
       setError(errorMessage);

@@ -148,7 +148,7 @@ export function ThinkingLevelSelector({
     return (
       <div
         data-testid="thinking-level-inline"
-        title={disabledReason || "Thinking level: controls reasoning depth"}
+        title={disabledReason || "思考深度：控制推理深度"}
       >
         {effortSlider}
       </div>
@@ -160,7 +160,7 @@ export function ThinkingLevelSelector({
   return (
     <ComposerSettingsPopover
       label={currentLabel}
-      title={disabledReason || "Thinking level: controls reasoning depth"}
+      title={disabledReason || "思考深度：控制推理深度"}
       ariaLabel={`Thinking level: ${currentLabel}`}
       triggerTestId="thinking-level-trigger"
       contentTestId="thinking-level-popover"

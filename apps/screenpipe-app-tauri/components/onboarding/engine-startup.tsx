@@ -697,7 +697,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
           os,
           os_version,
           app_version,
-          feedback_text: "Onboarding stuck - automatic log submission",
+          feedback_text: "引导卡住 - 自动提交日志",
         }),
       });
       setLogsSent(true);
@@ -714,7 +714,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
       const screenpipeDir = await join(home, ".screenpipe");
       await revealItemInDir(screenpipeDir);
     } catch (err) {
-      console.error("Failed to open logs folder:", err);
+      console.error("打开日志文件夹失败：", err);
     }
   };
 

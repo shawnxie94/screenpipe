@@ -185,15 +185,15 @@ function getPipeInstallDescription(pipe: { permissions?: PipePermissions; author
   const risk = getPipeInstallRisk(pipe);
   const unrestricted = isUnrestricted(pipe.permissions);
   if (risk === "high") {
-    return "Unverified publisher. Can access all your screen data.";
+    return "未验证的发布者。可以访问你所有的屏幕数据。";
   }
   if (unrestricted) {
-    return "Verified publisher. Can access all your screen data.";
+    return "已验证的发布者。可以访问你所有的屏幕数据。";
   }
   if (!pipe.author_verified) {
-    return "Unverified publisher. Review the requested access before installing.";
+    return "未验证的发布者。安装前请审查请求的访问权限。";
   }
-  return "Review the requested access before installing.";
+  return "安装前请审查请求的访问权限。";
 }
 
 function getAllowedAccessLabels(perms?: PipePermissions): string[] {
@@ -228,7 +228,7 @@ function getAllowedAccessLabels(perms?: PipePermissions): string[] {
 function getPipeAccessSummary(perms?: PipePermissions): string {
   const labels = getAllowedAccessLabels(perms);
   if (labels.length === 0) {
-    return "No explicit access was declared.";
+    return "未声明任何显式访问权限。";
   }
 
   if (labels.length === 1) {
@@ -380,7 +380,7 @@ export function PipeStoreView() {
       <p className="text-sm text-muted-foreground">
         {activeTab === "discover"
           ? "browse, install, and review community automations"
-          : "Run tasks on a schedule, after meetings, or when events happen."}
+          : "按计划、会议后或在事件发生时运行任务。"}
       </p>
 
       {/* Tab bar */}
@@ -1659,7 +1659,7 @@ export function InstallRiskSummary({
             ) : (
               <Shield className="h-4 w-4" />
             )}
-            {unrestricted ? "Can access all your screen data" : "Requested access"}
+            {unrestricted ? "可以访问你所有的屏幕数据" : "Requested access"}
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
             {unrestricted

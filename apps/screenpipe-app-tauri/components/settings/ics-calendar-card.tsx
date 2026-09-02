@@ -334,7 +334,7 @@ export function IcsCalendarCard() {
             <span>
               {enabledCount > 0
                 ? `${enabledCount} feed${enabledCount !== 1 ? "s" : ""} active, polls every 10m`
-                : "Paste an ICS/webcal URL to subscribe to a calendar feed"}
+                : "粘贴 ICS/webcal URL 以订阅日历源"}
             </span>
             <span className="ml-auto">
               {entries.length > 0 ? "● connected" : "○ not connected"}

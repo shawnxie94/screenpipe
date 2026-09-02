@@ -263,8 +263,8 @@ export function MeetingSummarySurface({
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {attention
                 ? savedSummary
-                  ? "The existing summary is unchanged."
-                  : "Generation stopped before a summary was written."
+                  ? "现有摘要未发生变化。"
+                  : "生成在写出摘要前停止了。"
                 : detail}
             </p>
           </div>

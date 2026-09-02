@@ -221,8 +221,8 @@ export function LiveViewAiComposer({
             hostedUsageExhausted
               ? "AI limit reached"
               : compact
-                ? "Ask AI to change this Live View..."
-                : "For example: show how I spend my time and what changed this week"
+                ? "让 AI 更改此实时视图..."
+                : "例如：展示我的时间分配方式以及本周的变化"
           }
           onChange={(event) => {
             setPrompt(event.target.value);

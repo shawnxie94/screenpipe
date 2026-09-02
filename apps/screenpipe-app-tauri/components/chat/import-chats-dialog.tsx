@@ -99,7 +99,7 @@ export function ImportChatsDialog({
           result.updated > 0 ? `${result.updated} updated` : "",
           result.skipped > 0 ? `${result.skipped} skipped` : "",
           result.failed > 0 ? `${result.failed} failed` : "",
-        ].filter(Boolean).join(" · ") || "No visible conversations were found.",
+        ].filter(Boolean).join(" · ") || "未找到可见的对话。",
         ...(result.failed > 0 && completed === 0 ? { variant: "destructive" as const } : {}),
       });
       onImported(result);

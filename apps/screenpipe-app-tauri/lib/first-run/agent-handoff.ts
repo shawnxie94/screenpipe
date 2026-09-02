@@ -112,7 +112,7 @@ const HANDOFF_TARGETS: AgentHandoffTarget[] = [
     // The ChatGPT/Codex desktop app accepts exactly one `prompt` parameter on
     // its new-thread route. CLI-only installs fall back to the copied prompt.
     deeplink: `codex://threads/new?prompt=${ENCODED_HANDOFF_PROMPT}`,
-    hint: "Question ready in ChatGPT. Review and send it.",
+    hint: "ChatGPT 中的问题已就绪。请审查并发送。",
   },
 ];
 

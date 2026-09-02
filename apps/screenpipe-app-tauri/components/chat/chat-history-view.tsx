@@ -863,7 +863,7 @@ export function ChatHistoryView({
                                 setBulkPending(null);
                                 if (result.failed.length > 0) {
                                   toast({
-                                    title: "Some chats could not be restored",
+                                    title: "部分聊天无法恢复",
                                     description: `${result.failed.length} failed.`,
                                   });
                                   return;
@@ -1070,7 +1070,7 @@ export function ChatHistoryView({
                 setBulkPending(null);
                 if (failed.length > 0) {
                   toast({
-                    title: "Some chats could not be deleted",
+                    title: "部分聊天无法删除",
                     description: `${failed.length} failed.`,
                   });
                   // Keep dialog open + selection intact so the user can retry.

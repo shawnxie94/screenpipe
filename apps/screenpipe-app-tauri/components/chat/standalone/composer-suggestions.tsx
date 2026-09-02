@@ -211,7 +211,7 @@ function SuggestionActionButtons({
         type="button"
         onClick={onHide}
         className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center text-muted-foreground/40 transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground"
-        title="Hide chat suggestions — re-enable in Settings → Display"
+        title="隐藏聊天建议 — 可在 设置 → 显示 中重新启用"
         aria-label="隐藏聊天建议"
       >
         <X className="h-2.5 w-2.5" strokeWidth={1.5} />

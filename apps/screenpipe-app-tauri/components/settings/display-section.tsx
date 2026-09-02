@@ -435,7 +435,7 @@ export function DisplaySection() {
                   <div>
                     <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
                       Translucent Sidebar
-                      <HelpTooltip text="Apply a macOS vibrancy effect to the sidebar for a frosted glass look." />
+                      <HelpTooltip text="为侧边栏应用 macOS 活力效果，呈现磨砂玻璃外观。" />
                     </h3>
                     <p className="text-xs text-muted-foreground">毛玻璃侧边栏效果</p>
                   </div>
@@ -531,8 +531,8 @@ export function DisplaySection() {
                     handleSettingsChange({ minimizeToTrayOnClose: checked });
                     toast({
                       title: checked
-                        ? "Close button will hide to system tray"
-                        : "Close button will minimize to taskbar",
+                        ? "关闭按钮将隐藏到系统托盘"
+                        : "关闭按钮将最小化到任务栏",
                       description: checked
                         ? "Click the tray icon to bring screenpipe back."
                         : undefined,

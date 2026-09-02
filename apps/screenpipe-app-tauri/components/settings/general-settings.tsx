@@ -272,8 +272,8 @@ export default function GeneralSettings() {
                     <h3 className="text-sm font-medium text-foreground">自动更新</h3>
                     <p className="text-xs text-muted-foreground">
                       {autoUpdateForcedByRemote
-                        ? "Required temporarily so this installation receives reliability fixes."
-                        : "Restart automatically when an update is downloaded. Off: a \"restart to update\" banner appears instead."}
+                        ? "临时必需，以便此安装接收可靠性修复。"
+                        : "下载更新后自动重启。关闭：改为显示“重启以更新”横幅。"}
                     </p>
                   </div>
                 </div>
@@ -411,7 +411,7 @@ export default function GeneralSettings() {
                   </h3>
                   <p className="text-xs text-muted-foreground">
                     {isManagedDeployment
-                      ? "Open builds managed by your organization"
+                      ? "打开由你的组织管理的构建"
                       : "Open recent stable versions on screenpipe.com"}
                   </p>
                 </div>
