@@ -56,7 +56,7 @@ async function renameTo(name: string) {
     />,
   );
   fireEvent.click(screen.getByText("speaker"));
-  const input = await screen.findByPlaceholderText("Type speaker name...");
+  const input = await screen.findByPlaceholderText("输入说话人名称...");
   fireEvent.change(input, { target: { value: name } });
   fireEvent.keyDown(input, { key: "Enter" });
 }

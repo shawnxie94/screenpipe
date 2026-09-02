@@ -114,7 +114,7 @@ describe("ChatTabStrip", () => {
     const onActivate = vi.fn();
     render(<ChatTabStrip activeId="chat-b" onActivate={onActivate} onNewChat={vi.fn()} />);
 
-    fireEvent.click(screen.getByLabelText("Close middle"));
+    fireEvent.click(screen.getByLabelText("关闭 middle"));
 
     expect(onActivate).toHaveBeenCalledWith("chat-c");
     expect(useChatStore.getState().openChatIds).toEqual(["chat-a", "chat-c"]);
@@ -133,7 +133,7 @@ describe("ChatTabStrip", () => {
     fireEvent.click(await screen.findByText("Open in split"));
     expect(useChatStore.getState().splitChatId).toBe("chat-b");
     expect(useChatStore.getState().splitChatPosition).toBe("right");
-    expect(screen.getByLabelText("split pane")).toBeInTheDocument();
+    expect(screen.getByLabelText("分屏")).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.queryByText("Open in split")).not.toBeInTheDocument(),
     );
@@ -183,12 +183,12 @@ describe("ChatTabStrip", () => {
       />,
     );
 
-    const tab = screen.getByRole("tab", { name: "temporary side chat" });
+    const tab = screen.getByRole("tab", { name: "临时副聊天" });
     expect(tab).toHaveAttribute(
       "title",
-      "temporary side chat · not saved to history",
+      "临时副聊天 · 未保存到历史",
     );
-    fireEvent.click(screen.getByLabelText("Close temporary side chat"));
+    fireEvent.click(screen.getByLabelText("关闭 临时副聊天"));
     expect(onClose).toHaveBeenCalledWith("temporary-side");
   });
 
@@ -202,7 +202,7 @@ describe("ChatTabStrip", () => {
     const onActivate = vi.fn();
     render(<ChatTabStrip activeId="chat-a" onActivate={onActivate} onNewChat={vi.fn()} />);
 
-    fireEvent.click(screen.getByLabelText("Close primary"));
+    fireEvent.click(screen.getByLabelText("关闭 primary"));
 
     expect(useChatStore.getState().openChatIds).toEqual(["chat-b"]);
     expect(useChatStore.getState().splitChatId).toBeNull();
@@ -225,7 +225,7 @@ describe("ChatTabStrip", () => {
     );
     const view = render(<ChatTabStrip activeId="chat-a" onActivate={vi.fn()} onNewChat={onNewChat} />);
 
-    fireEvent.click(screen.getByLabelText("Close only"));
+    fireEvent.click(screen.getByLabelText("关闭 only"));
     view.rerender(<ChatTabStrip activeId="chat-a" onActivate={vi.fn()} onNewChat={onNewChat} />);
     expect(useChatStore.getState().openChatIds).toEqual([]);
 
@@ -275,9 +275,9 @@ describe("ChatTabStrip", () => {
     expect(useChatStore.getState().openChatIds).toEqual(["chat-a"]);
     expect(onActivate).toHaveBeenCalledWith("chat-a");
     expect(closeWindowMock).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Close first")).toHaveAttribute(
+    expect(screen.getByLabelText("关闭 first")).toHaveAttribute(
       "title",
-      "Close first (Ctrl+W)",
+      "关闭 first (Ctrl+W)",
     );
   });
 
@@ -436,7 +436,7 @@ describe("ChatTabStrip", () => {
     expect(screen.getByTestId("chat-tab-worktree-chat-a")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "isolated fix" })).toHaveAttribute(
       "title",
-      "isolated fix · worktree · screenpipe",
+      "isolated fix · 工作树 · screenpipe",
     );
   });
 
@@ -471,12 +471,12 @@ describe("ChatTabStrip", () => {
 
     expect(useChatStore.getState().sessions["chat-a"].unread).toBe(true);
     expect(useChatStore.getState().sessions["chat-b"].unread).toBe(true);
-    expect(screen.queryByLabelText("unread")).toBeInTheDocument();
+    expect(screen.queryByLabelText("未读")).toBeInTheDocument();
     expect(
-      screen.getByRole("tab", { name: "front" }).querySelector("[aria-label='unread']"),
+      screen.getByRole("tab", { name: "front" }).querySelector("[aria-label='未读']"),
     ).toBeNull();
     expect(
-      screen.getByRole("tab", { name: "background" }).querySelector("[aria-label='unread']"),
+      screen.getByRole("tab", { name: "background" }).querySelector("[aria-label='未读']"),
     ).not.toBeNull();
   });
 
@@ -504,7 +504,7 @@ describe("ChatTabStrip", () => {
       />,
     );
 
-    expect(screen.getByLabelText("working")).toBeInTheDocument();
+    expect(screen.getByLabelText("处理中")).toBeInTheDocument();
     expect(screen.queryByTestId("chat-tab-worktree-chat-a")).not.toBeInTheDocument();
   });
 
@@ -524,7 +524,7 @@ describe("ChatTabStrip", () => {
       />,
     );
 
-    expect(screen.getByLabelText("working")).toBeInTheDocument();
+    expect(screen.getByLabelText("处理中")).toBeInTheDocument();
     expect(screen.queryByLabelText("split pane")).not.toBeInTheDocument();
   });
 
@@ -557,7 +557,7 @@ describe("ChatTabStrip", () => {
     expect(await screen.findByText("Pin")).toBeVisible();
     expect(screen.getByText("Rename")).toBeVisible();
     expect(screen.getByText("Archive")).toBeVisible();
-    expect(screen.getByText("Copy")).toBeVisible();
+    expect(screen.getByText("复制")).toBeVisible();
     expect(screen.getByText("Open in split")).toBeVisible();
 
     fireEvent.click(screen.getByText("Pin"));
@@ -581,10 +581,10 @@ describe("ChatTabStrip", () => {
     );
 
     fireEvent.contextMenu(screen.getByRole("tab", { name: "crm" }));
-    const copy = await screen.findByText("Copy");
+    const copy = await screen.findByText("复制");
     fireEvent.focus(copy);
     fireEvent.keyDown(copy, { key: "ArrowRight" });
-    fireEvent.click(await screen.findByText("Copy link"));
+    fireEvent.click(await screen.findByText("复制链接"));
 
     await waitFor(() =>
       expect(copyTextToClipboard).toHaveBeenCalledWith(
@@ -614,10 +614,10 @@ describe("ChatTabStrip", () => {
     );
 
     fireEvent.contextMenu(screen.getByRole("tab", { name: "isolated fix" }));
-    const copy = await screen.findByText("Copy");
+    const copy = await screen.findByText("复制");
     fireEvent.focus(copy);
     fireEvent.keyDown(copy, { key: "ArrowRight" });
-    fireEvent.click(await screen.findByText("Copy worktree path"));
+    fireEvent.click(await screen.findByText("复制工作树路径"));
 
     await waitFor(() =>
       expect(copyTextToClipboard).toHaveBeenCalledWith("/worktrees/chat-a"),
@@ -681,11 +681,11 @@ describe("ChatTabStrip", () => {
     );
 
     fireEvent.contextMenu(
-      screen.getByRole("tab", { name: "temporary side chat" }),
+      screen.getByRole("tab", { name: "临时副聊天" }),
     );
     expect(await screen.findByText("Close tab")).toBeVisible();
     expect(screen.queryByText("Pin")).not.toBeInTheDocument();
     expect(screen.queryByText("Archive")).not.toBeInTheDocument();
-    expect(screen.queryByText("Copy")).not.toBeInTheDocument();
+    expect(screen.queryByText("复制")).not.toBeInTheDocument();
   });
 });

@@ -334,7 +334,7 @@ describe("recording health hover detail", () => {
 
     render(<ShortcutReminderPage />);
 
-    expect(await screen.findByRole("status", { name: "Meeting live" })).toBeVisible();
+    expect(await screen.findByRole("status", { name: "会议进行中" })).toBeVisible();
     fireEvent.mouseEnter(screen.getByTestId("shortcut-reminder-root"));
     expect(screen.getByText("meeting live · zoom")).toBeVisible();
     expect(screen.getByText("the live transcript keeps moving")).toBeVisible();
@@ -351,8 +351,8 @@ describe("recording health hover detail", () => {
 
     render(<ShortcutReminderPage />);
 
-    const meetingDot = await screen.findByRole("status", { name: "Meeting live" });
-    expect(screen.getByTitle("Open timeline")).toContainElement(meetingDot);
+    const meetingDot = await screen.findByRole("status", { name: "会议进行中" });
+    expect(screen.getByTitle("打开时间线")).toContainElement(meetingDot);
     expect(screen.queryByTitle("notifications")).toBeNull();
     expect(meetingDot.className).toContain("pointer-events-none");
   });
@@ -364,23 +364,23 @@ describe("recording health hover detail", () => {
     render(<ShortcutReminderPage />);
 
     fireEvent.mouseEnter(await screen.findByTestId("shortcut-reminder-root"));
-    const brand = await screen.findByTitle("screenpipe — right-click for options");
+    const brand = await screen.findByTitle("screenpipe — 右键查看选项");
     expect(brand).toBeVisible();
     expect(brand.parentElement?.lastElementChild).toBe(brand);
     fireEvent.contextMenu(brand);
 
-    expect(screen.getByRole("menu", { name: "Shortcut reminder options" })).toBeVisible();
-    fireEvent.click(screen.getByTitle("Hide for 1 hour"));
+    expect(screen.getByRole("menu", { name: "快捷键提醒选项" })).toBeVisible();
+    fireEvent.click(screen.getByTitle("隐藏 1 小时"));
 
     await waitFor(() =>
       expect(mocks.snoozeShortcutReminderForHour).toHaveBeenCalledTimes(1),
     );
 
     fireEvent.mouseEnter(screen.getByTestId("shortcut-reminder-root"));
-    fireEvent.contextMenu(screen.getByTitle("screenpipe — right-click for options"));
-    fireEvent.click(screen.getByTitle("Open overlay settings"));
+    fireEvent.contextMenu(screen.getByTitle("screenpipe — 右键查看选项"));
+    fireEvent.click(screen.getByTitle("打开悬浮层设置"));
     expect(mocks.showWindow).toHaveBeenCalledWith({ Home: { page: "display" } });
-    expect(screen.queryByRole("menu", { name: "Shortcut reminder options" })).toBeNull();
+    expect(screen.queryByRole("menu", { name: "快捷键提醒选项" })).toBeNull();
     expect(screen.queryByTitle("Overlay settings")).toBeNull();
   });
 
@@ -393,7 +393,7 @@ describe("recording health hover detail", () => {
 
     render(<ShortcutReminderPage />);
 
-    await screen.findByRole("status", { name: "Meeting live" });
+    await screen.findByRole("status", { name: "会议进行中" });
     fireEvent.mouseEnter(screen.getByTestId("shortcut-reminder-root"));
 
     const preview = screen.getByTestId("shortcut-reminder-meeting-preview");
@@ -404,12 +404,12 @@ describe("recording health hover detail", () => {
     expect(screen.queryByTestId("shortcut-reminder-meeting-preview")).toBeNull();
 
     fireEvent.mouseEnter(screen.getByTestId("shortcut-reminder-root"));
-    fireEvent.click(screen.getByRole("button", { name: "Pin transcript" }));
+    fireEvent.click(screen.getByRole("button", { name: "固定文字记录" }));
 
     const pinned = screen.getByTestId("shortcut-reminder-meeting-preview");
     expect(pinned).toHaveAttribute("data-pinned", "true");
     expect(
-      screen.getByRole("button", { name: "Unpin transcript" }),
+      screen.getByRole("button", { name: "取消固定文字记录" }),
     ).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.mouseLeave(pinned);
@@ -419,7 +419,7 @@ describe("recording health hover detail", () => {
     // The transcript is what the pin is for — it has to survive the exit too.
     expect(screen.getByText("meeting live · zoom")).toBeVisible();
 
-    fireEvent.click(screen.getByRole("button", { name: "Unpin transcript" }));
+    fireEvent.click(screen.getByRole("button", { name: "取消固定文字记录" }));
     expect(screen.queryByTestId("shortcut-reminder-meeting-preview")).toBeNull();
   });
 
@@ -431,9 +431,9 @@ describe("recording health hover detail", () => {
 
     const view = render(<ShortcutReminderPage />);
 
-    await screen.findByRole("status", { name: "Meeting live" });
+    await screen.findByRole("status", { name: "会议进行中" });
     fireEvent.mouseEnter(screen.getByTestId("shortcut-reminder-root"));
-    fireEvent.click(screen.getByRole("button", { name: "Pin transcript" }));
+    fireEvent.click(screen.getByRole("button", { name: "固定文字记录" }));
     expect(
       screen.getByTestId("shortcut-reminder-meeting-preview"),
     ).toHaveAttribute("data-pinned", "true");
@@ -445,7 +445,7 @@ describe("recording health hover detail", () => {
     view.rerender(<ShortcutReminderPage />);
 
     expect(screen.queryByTestId("shortcut-reminder-meeting-preview")).toBeNull();
-    expect(screen.queryByRole("status", { name: "Meeting live" })).toBeNull();
+    expect(screen.queryByRole("status", { name: "会议进行中" })).toBeNull();
 
     // A later meeting starts. The retired pin must not reopen the card on its
     // own — the user has to ask for it again.
@@ -467,7 +467,7 @@ describe("recording health hover detail", () => {
     render(<ShortcutReminderPage />);
 
     fireEvent.mouseEnter(await screen.findByTestId("shortcut-reminder-root"));
-    fireEvent.mouseEnter(screen.getByTitle("Open timeline"));
+    fireEvent.mouseEnter(screen.getByTitle("打开时间线"));
 
     expect(
       await screen.findByText(formatShortcut("Super+Ctrl+S", "macos"), {
@@ -492,7 +492,7 @@ describe("recording health hover detail", () => {
     expect(labelRow.style.background).toBe("transparent");
     expect(labelRow.style.border).toContain("transparent");
 
-    fireEvent.mouseEnter(screen.getByTitle("Open search"));
+    fireEvent.mouseEnter(screen.getByTitle("打开搜索"));
     expect(labelRow.style.background).not.toBe("transparent");
   });
 
@@ -504,7 +504,7 @@ describe("recording health hover detail", () => {
     render(<ShortcutReminderPage />);
 
     expect(await screen.findByText("recording needs help")).toBeVisible();
-    expect(screen.queryByRole("status", { name: "Meeting live" })).toBeNull();
+    expect(screen.queryByRole("status", { name: "会议进行中" })).toBeNull();
     expect(
       screen.queryByTestId("shortcut-reminder-meeting-preview"),
     ).toBeNull();
@@ -638,7 +638,7 @@ describe("drag to pin", () => {
   const grabPill = async () => {
     render(<ShortcutReminderPage />);
     const pill = await screen.findByRole("button", {
-      name: /open timeline/i,
+      name: /打开时间线/,
     });
     // Grab the middle of the 22x16 resting pill.
     firePointer(pill, "pointerdown", { clientX: 11, clientY: 8 });
@@ -775,7 +775,7 @@ describe("drag to pin", () => {
     mocks.windowOuterSize = { width: 160, height: 62 };
     render(<ShortcutReminderPage />);
     fireEvent.mouseEnter(await screen.findByTestId("shortcut-reminder-root"));
-    const dock = await screen.findByTitle("Open search");
+    const dock = await screen.findByTitle("打开搜索");
     firePointer(dock.parentElement!, "pointerdown", { clientX: 80, clientY: 15 });
 
     // The move that opens the stage is still reported against the dock window

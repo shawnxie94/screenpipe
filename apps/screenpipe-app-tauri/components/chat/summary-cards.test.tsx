@@ -91,7 +91,7 @@ describe("SummaryCards", () => {
     );
 
     expect(screen.getAllByTestId(/^summary-card-/)).toHaveLength(4);
-    expect(screen.getByText("Meeting Prep")).toBeInTheDocument();
+    expect(screen.getByText("会议准备")).toBeInTheDocument();
     expect(screen.queryByTestId("summary-cards-more")).not.toBeInTheDocument();
   });
 
@@ -131,9 +131,9 @@ describe("SummaryCards", () => {
       );
     }
     expect(
-      screen.getByRole("button", { name: "Meeting Prep" }),
+      screen.getByRole("button", { name: "会议准备" }),
     ).toHaveAttribute("data-home-card-agent", "meeting-prep");
-    expect(screen.getByRole("button", { name: "Blockers" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "阻碍项" })).toHaveAttribute(
       "data-home-card-agent",
       "blockers",
     );
@@ -195,7 +195,7 @@ describe("SummaryCards", () => {
       expect(screen.getByTestId(`home-card-arrow-${slug}`)).toBeInTheDocument();
     }
 
-    const quickAction = screen.getByRole("button", { name: "Time Breakdown" });
+    const quickAction = screen.getByRole("button", { name: "⏱ 时间分配" });
     expect(quickAction).toHaveClass("bg-card", "text-foreground/75");
     expect(quickAction.className).toContain("focus-visible:ring-1");
   });
@@ -268,10 +268,10 @@ describe("SummaryCards", () => {
     );
 
     const cards = [
-      ["automate-my-work", "⚡ Automate My Work"],
-      ["day-recap", "📋 Day Recap"],
-      ["time-breakdown", "⏱ Time Breakdown"],
-      ["missed-todos", "✅ Missed To-Dos"],
+      ["automate-my-work", "⚡ 自动化我的工作"],
+      ["day-recap", "📋 每日回顾"],
+      ["time-breakdown", "⏱ 时间分配"],
+      ["missed-todos", "✅ 遗漏的待办"],
     ] as const;
     for (const [slug] of cards) {
       fireEvent.click(screen.getByTestId(`summary-card-${slug}`));
@@ -316,7 +316,7 @@ describe("SummaryCards", () => {
 
     expect(onSendMessage).toHaveBeenCalledWith(
       expect.stringContaining("Focus Pulse (focus-pulse; enabled; every 1h)"),
-      "⚡ Automate My Work",
+      "⚡ 自动化我的工作",
       "home_card",
       "automate_my_work",
     );
@@ -380,7 +380,7 @@ describe("SummaryCards", () => {
     expect(onStartWithAgent).toHaveBeenCalledWith(
       "codex-acp",
       expect.stringContaining("Focus Pulse (focus-pulse; enabled; every 1h)"),
-      "⚡ Automate My Work",
+      "⚡ 自动化我的工作",
       "automate_my_work",
     );
   });
@@ -404,7 +404,7 @@ describe("SummaryCards", () => {
 
     expect(onSendMessage).toHaveBeenCalledWith(
       expect.stringContaining("Analyze my screen and audio recordings"),
-      "📋 Day Recap",
+      "📋 每日回顾",
       "home_card",
       "day_recap",
     );

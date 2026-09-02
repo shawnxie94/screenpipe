@@ -893,7 +893,7 @@ export default function ShortcutReminderPage() {
         <div className="my-1 bg-white/25" style={{ width: "1px" }} />
         <button
           title="screenpipe — 右键查看选项"
-          aria-label="screenpipe — open timeline; right-click for options"
+          aria-label="screenpipe — 打开时间线；右键查看选项"
           className={dockButtonClass}
           style={dockButtonStyle}
           onMouseEnter={() => setHoveredControl("brand")}

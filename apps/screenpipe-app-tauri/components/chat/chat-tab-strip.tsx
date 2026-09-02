@@ -385,10 +385,10 @@ export function ChatTabStrip({
                       title={[
                         title,
                         codingWorkspace
-                          ? `worktree · ${codingWorkspace.repoName}`
+                          ? `工作树 · ${codingWorkspace.repoName}`
                           : null,
-                        temporary ? "not saved to history" : null,
-                        split ? "split pane" : null,
+                        temporary ? "未保存到历史" : null,
+                        split ? "分屏" : null,
                       ]
                         .filter(Boolean)
                         .join(" · ")}
@@ -426,8 +426,8 @@ export function ChatTabStrip({
                   )}
                   <button
                     type="button"
-                    aria-label={`Close ${title}`}
-                    title={`Close ${title} (${closeShortcut})`}
+                    aria-label={`关闭 ${title}`}
+                    title={`关闭 ${title} (${closeShortcut})`}
                     data-testid={`chat-tab-close-${session.id}`}
                     className={cn(
                       "mr-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none transition-opacity hover:bg-background/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
@@ -483,7 +483,7 @@ export function ChatTabStrip({
                             );
                           }}
                         >
-                          Copy link
+                          复制链接
                         </ContextMenuItem>
                         <ContextMenuItem
                           onSelect={() => {
@@ -491,7 +491,7 @@ export function ChatTabStrip({
                             void (async () => {
                               const messages = await messagesForExport(session);
                               if (messages.length === 0) {
-                                toast({ title: "no messages to copy" });
+                                toast({ title: "没有可复制的消息" });
                                 return;
                               }
                               await copyText(
@@ -504,7 +504,7 @@ export function ChatTabStrip({
                             })();
                           }}
                         >
-                          Copy as Markdown
+                          复制为 Markdown
                         </ContextMenuItem>
                         <ContextMenuItem
                           onSelect={() => {
@@ -512,7 +512,7 @@ export function ChatTabStrip({
                             void copyText(session.id, "copied chat ID");
                           }}
                         >
-                          Copy chat ID
+                          复制会话 ID
                         </ContextMenuItem>
                         {codingWorkspace ? (
                           <ContextMenuItem
@@ -524,7 +524,7 @@ export function ChatTabStrip({
                               );
                             }}
                           >
-                            Copy worktree path
+                            复制工作树路径
                           </ContextMenuItem>
                         ) : null}
                       </ContextMenuSubContent>
