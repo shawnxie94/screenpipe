@@ -2772,7 +2772,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 onValueChange={(value) => handleSettingsChange({ audioCaptureMode: value as "always" | "meetings-only" | "disabled" }, true)}
               >
                 <SelectTrigger className="w-[200px] h-7 text-xs">
-                  <SelectValue placeholder="Select mode" />
+                  <SelectValue placeholder="选择模式" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="always">始终（连续）</SelectItem>

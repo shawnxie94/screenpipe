@@ -275,7 +275,7 @@ export function SpeakerAssignPopover({
 					{/* Search input */}
 					<div className="relative">
 						<Input
-							placeholder="Type speaker name..."
+							placeholder="输入说话人名称..."
 							value={searchTerm}
 							onChange={(e) => setSearchTerm(e.target.value)}
 							onKeyDown={(e) => {

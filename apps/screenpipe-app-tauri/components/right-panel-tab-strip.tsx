@@ -161,7 +161,7 @@ export function RightPanelTabStrip({
         <button
           type="button"
           className="flex w-9 shrink-0 items-center justify-center border-l border-border/45 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-          aria-label="New browser tab"
+          aria-label="新建浏览器标签页"
           title="新建浏览器标签页"
           onClick={onNewBrowserTab}
         >

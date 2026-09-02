@@ -1553,7 +1553,7 @@ const AISection = ({
               <Command>
                 <CommandInput
                   value={modelSearch}
-                  placeholder="Select or type model name" 
+                  placeholder="选择或输入模型名称" 
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       const input = modelSearch.trim();
