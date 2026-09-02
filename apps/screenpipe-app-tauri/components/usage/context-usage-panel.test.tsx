@@ -34,10 +34,10 @@ describe("ContextUsagePanel", () => {
     render(<ContextUsagePanel snapshot={detailedSnapshot} />);
 
     expect(screen.getByText(/15% · ~38.8K \/ 256K/)).toBeInTheDocument();
-    const disclosure = screen.getByText("breakdown").closest("details");
+    const disclosure = screen.getByText("分类明细").closest("details");
     expect(disclosure).not.toHaveAttribute("open");
 
-    fireEvent.click(screen.getByText("breakdown"));
+    fireEvent.click(screen.getByText("分类明细"));
     expect(disclosure).toHaveAttribute("open");
     expect(screen.getByText("Tool definitions")).toBeInTheDocument();
     expect(screen.getByText("10.1K")).toBeInTheDocument();
@@ -62,18 +62,18 @@ describe("ContextUsagePanel", () => {
 
     expect(screen.getByText(/27% · ~53K \/ 200K/)).toBeInTheDocument();
     expect(
-      screen.getByRole("progressbar", { name: "Context window usage" }),
+      screen.getByRole("progressbar", { name: "上下文窗口用量" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("breakdown")).not.toBeInTheDocument();
+    expect(screen.queryByText("分类明细")).not.toBeInTheDocument();
     expect(
-      screen.getByText(/reports context totals without a category breakdown/i),
+      screen.getByText(/此运行环境报告上下文总量，不提供类别细分/),
     ).toBeInTheDocument();
   });
 
   it("degrades to one quiet status line before a harness reports usage", () => {
     render(<ContextUsagePanel snapshot={null} />);
     expect(
-      screen.getByText(/usage appears after this agent reports/i),
+      screen.getByText(/在此智能体报告其上下文窗口后显示用量/),
     ).toBeInTheDocument();
   });
 });

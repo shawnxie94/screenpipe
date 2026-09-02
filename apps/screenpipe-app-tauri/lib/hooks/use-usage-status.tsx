@@ -332,35 +332,35 @@ export function formatUsagePercent(percent: number): string {
 
 export function formatAllowanceWindow(seconds: number): string {
   const days = seconds / 86_400;
-  if (Number.isInteger(days)) return `${days}-day`;
+  if (Number.isInteger(days)) return `${days} 天`;
   const hours = seconds / 3_600;
-  if (Number.isInteger(hours)) return `${hours}-hour`;
-  return "current";
+  if (Number.isInteger(hours)) return `${hours} 小时`;
+  return "当前";
 }
 
 export function allowanceScopeLabel(lane: HostedAiLane): string {
   switch (lane) {
     case "combined":
-      return "all models";
+      return "所有模型";
     case "auto":
-      return "Auto";
+      return "自动";
     case "frontier":
-      return "frontier models";
+      return "前沿模型";
     case "explicit":
-      return "explicit models";
+      return "指定模型";
   }
 }
 
 export function formatAllowanceLabel(allowance: HostedAiAllowance): string {
   if (allowance.window_seconds === 7 * 86_400) {
     if (allowance.lane === "combined") return "每周 AI 额度";
-    if (allowance.lane === "frontier") return "Frontier models";
-    return `Weekly · ${allowanceScopeLabel(allowance.lane)}`;
+    if (allowance.lane === "frontier") return "前沿模型 · 每周";
+    return `每周 · ${allowanceScopeLabel(allowance.lane)}`;
   }
   const scope = allowanceScopeLabel(allowance.lane);
   const period = formatAllowanceWindow(allowance.window_seconds);
   return allowance.lane === "combined"
-    ? `${period} limit`
+    ? `${period} 限制`
     : `${period} · ${scope}`;
 }
 
@@ -420,17 +420,17 @@ export function formatAllowanceResetPhrase(
 
   if (remaining < HOUR_MS) {
     const minutes = Math.max(1, Math.round(remaining / MINUTE_MS));
-    return `resets in ${minutes} min`;
+    return `${minutes} 分钟后重置`;
   }
 
   if (remaining < DAY_MS) {
     const hours = Math.floor(remaining / HOUR_MS);
     const minutes = Math.round((remaining % HOUR_MS) / MINUTE_MS);
     // 59.7 minutes rounds to 60; roll it into the hour instead of "1 hr 60 min".
-    if (minutes === 60) return `resets in ${hours + 1} hr`;
+    if (minutes === 60) return `${hours + 1} 小时后重置`;
     return minutes > 0
-      ? `resets in ${hours} hr ${minutes} min`
-      : `resets in ${hours} hr`;
+      ? `${hours} 小时 ${minutes} 分钟后重置`
+      : `${hours} 小时后重置`;
   }
 
   try {
@@ -438,7 +438,7 @@ export function formatAllowanceResetPhrase(
       remaining < 7 * DAY_MS
         ? { weekday: "short", hour: "numeric", minute: "2-digit" }
         : { month: "short", day: "numeric" };
-    return `resets ${new Date(target).toLocaleString([], options)}`;
+    return `${new Date(target).toLocaleString([], options)} 重置`;
   } catch {
     return "";
   }
@@ -455,12 +455,12 @@ export function formatUsageUpdatedAt(
   if (!Number.isFinite(fetched)) return "";
 
   const elapsed = now - fetched;
-  if (elapsed < MINUTE_MS) return "updated just now";
+  if (elapsed < MINUTE_MS) return "刚刚更新";
   const minutes = Math.floor(elapsed / MINUTE_MS);
-  if (minutes < 60) return `updated ${minutes}m ago`;
+  if (minutes < 60) return `${minutes} 分钟前更新`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `updated ${hours}h ago`;
-  return `updated ${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return `${hours} 小时前更新`;
+  return `${Math.floor(hours / 24)} 天前更新`;
 }
 
 /**

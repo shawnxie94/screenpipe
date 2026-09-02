@@ -168,11 +168,11 @@ export function HostedUsageLimits({ query }: { query: UsageStatusQuery }) {
           <div>
             <h2 className="text-sm font-medium lowercase">用量不可用</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              no balance was assumed. try refreshing.
+              未假设任何余额。请尝试刷新。
             </p>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={query.refresh}>
-            refresh
+            刷新
           </Button>
         </CardContent>
       </Card>
@@ -191,13 +191,13 @@ export function HostedUsageLimits({ query }: { query: UsageStatusQuery }) {
             <h2 className="text-sm font-medium lowercase">用量不可用</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               {hosted.plan === "unknown"
-                ? "sign in to view your usage limits."
-                : "no balance was assumed. try refreshing."}
+                ? "登录以查看你的用量限制。"
+                : "未假设任何余额。请尝试刷新。"}
             </p>
           </div>
           {hosted.plan !== "unknown" && (
             <Button type="button" variant="outline" size="sm" onClick={query.refresh}>
-              refresh
+              刷新
             </Button>
           )}
         </CardContent>
@@ -220,7 +220,7 @@ export function HostedUsageLimits({ query }: { query: UsageStatusQuery }) {
           <div>
             <h2 className="text-base font-medium lowercase">你的用量限制</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              each listed allowance applies independently.
+              每条列出的额度独立生效。
             </p>
           </div>
           {plan && (
@@ -241,7 +241,7 @@ export function HostedUsageLimits({ query }: { query: UsageStatusQuery }) {
 
         <div className="flex items-center justify-between border-t border-border pt-4 text-[11px] text-muted-foreground">
           <span className="font-mono">
-            {updatedAt ? `last updated ${updatedAt}` : "last updated unavailable"}
+            {updatedAt ? `最后更新于 ${updatedAt}` : "最后更新时间未知"}
           </span>
           <Button
             type="button"
@@ -255,7 +255,7 @@ export function HostedUsageLimits({ query }: { query: UsageStatusQuery }) {
               className={`h-3.5 w-3.5 ${query.isRefreshing ? "animate-spin" : ""}`}
               aria-hidden
             />
-            refresh
+            刷新
           </Button>
         </div>
 

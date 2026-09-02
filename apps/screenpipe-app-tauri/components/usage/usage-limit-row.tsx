@@ -30,12 +30,12 @@ export function UsageLimitRow({
 
   const meta =
     formatAllowanceResetPhrase(allowance.resets_at) ||
-    (allowance.technique === "sliding" ? "rolling window" : "");
+    (allowance.technique === "sliding" ? "滚动窗口" : "");
   const status =
     state === "reached"
-      ? "limit reached"
+      ? "额度已用完"
       : state === "approaching"
-        ? "approaching limit"
+        ? "额度即将用尽"
         : null;
 
   return (

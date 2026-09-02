@@ -50,8 +50,8 @@ describe("HostedUsageLimits", () => {
 
     render(<HostedUsageLimits query={query} />);
 
-    expect(screen.getByText("30-day limit")).toBeTruthy();
-    expect(screen.getByText("Weekly AI allowance")).toBeTruthy();
+    expect(screen.getByText("30 天 限制")).toBeTruthy();
+    expect(screen.getByText("每周 AI 额度")).toBeTruthy();
     expect(screen.getByText("42%")).toBeTruthy();
     expect(screen.getByText("9%")).toBeTruthy();
     expect(document.body.textContent).not.toContain("$");
@@ -77,7 +77,7 @@ describe("HostedUsageLimits", () => {
     render(<HostedUsageLimits query={query as never} />);
 
     expect(screen.getByTestId("hosted-usage-limits")).toBeTruthy();
-    expect(screen.getByText("usage unavailable")).toBeTruthy();
+    expect(screen.getByText("用量不可用")).toBeTruthy();
     expect(document.body.textContent).not.toContain("$");
   });
 });

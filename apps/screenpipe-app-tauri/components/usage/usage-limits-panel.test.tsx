@@ -50,18 +50,18 @@ describe("UsageLimitsPanel meters", () => {
     expect(row).toHaveAttribute("data-state", "reached");
 
     const meter = screen.getByRole("progressbar", {
-      name: "Weekly AI allowance",
+      name: "每周 AI 额度",
     });
     // The colour is additive; the spoken value carries the same fact.
     expect(meter.getAttribute("aria-valuetext")).toContain("100%");
-    expect(meter.getAttribute("aria-valuetext")).toContain("limit reached");
+    expect(meter.getAttribute("aria-valuetext")).toContain("额度已用完");
     expect(meter.firstElementChild?.className).toContain("bg-red-500");
   });
 
   it("stays quiet below the approaching threshold", () => {
     renderPanel({ allowances: [allowance({ used_percent: 21 })] });
     const meter = screen.getByRole("progressbar", {
-      name: "Weekly AI allowance",
+      name: "每周 AI 额度",
     });
     expect(meter.firstElementChild?.className).toContain("bg-blue-500");
   });
@@ -69,7 +69,7 @@ describe("UsageLimitsPanel meters", () => {
   it("warns in amber once four fifths is gone", () => {
     renderPanel({ allowances: [allowance({ used_percent: 80 })] });
     const meter = screen.getByRole("progressbar", {
-      name: "Weekly AI allowance",
+      name: "每周 AI 额度",
     });
     expect(meter.firstElementChild?.className).toContain("bg-amber-500");
   });

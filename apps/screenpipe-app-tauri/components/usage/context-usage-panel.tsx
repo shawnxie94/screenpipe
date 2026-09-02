@@ -39,7 +39,7 @@ export function ContextUsagePanel({
           context
         </div>
         <p className="mt-1.5 text-xs text-muted-foreground">
-          usage appears after this agent reports its context window.
+          在此智能体报告其上下文窗口后显示用量。
         </p>
       </section>
     );
@@ -94,8 +94,8 @@ export function ContextUsagePanel({
             <UsageMeter
               percent={percent}
               state={contextUsageState(percent)}
-              label="Context window usage"
-              valueText={`${roundedPercent}% full`}
+              label="上下文窗口用量"
+              valueText={`已用 ${roundedPercent}%`}
             />
           </div>
         )}
@@ -104,7 +104,7 @@ export function ContextUsagePanel({
       {detailed && (
         <details className="group border-t border-border/70 pt-2">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs text-muted-foreground hover:text-foreground">
-            <span>breakdown</span>
+            <span>分类明细</span>
             <ChevronDown
               className="h-3.5 w-3.5 transition-transform group-open:rotate-180"
               aria-hidden

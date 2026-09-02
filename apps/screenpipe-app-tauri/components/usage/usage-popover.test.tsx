@@ -87,12 +87,12 @@ describe("UsagePopover", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Screenpipe Cloud usage, 62% used",
+        name: "Screenpipe Cloud 用量，已用 62%",
       }),
     );
 
-    expect(await screen.findByText("Frontier models")).toBeTruthy();
-    expect(screen.getByText("Weekly AI allowance")).toBeTruthy();
+    expect(await screen.findByText("前沿模型 · 每周")).toBeTruthy();
+    expect(screen.getByText("每周 AI 额度")).toBeTruthy();
     expect(screen.getByText("30%")).toBeTruthy();
     expect(document.body.textContent).not.toContain("$");
   });
@@ -101,16 +101,16 @@ describe("UsagePopover", () => {
     renderUsagePopover();
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Screenpipe Cloud usage, 62% used",
+        name: "Screenpipe Cloud 用量，已用 62%",
       }),
     );
 
     const header = await screen.findByRole("button", {
-      name: /screenpipe cloud usage · Business/i,
+      name: /Screenpipe Cloud 用量 · Business/i,
     });
-    expect(header.textContent).toContain("screenpipe cloud usage");
+    expect(header.textContent).toContain("Screenpipe Cloud 用量");
     expect(header.querySelector(".lowercase")?.textContent).toBe(
-      "screenpipe cloud usage",
+      "Screenpipe Cloud 用量",
     );
     // The plan is a product name and keeps its own casing.
     expect(header.textContent).toContain("Business");
@@ -120,7 +120,7 @@ describe("UsagePopover", () => {
     renderUsagePopover();
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Screenpipe Cloud usage, 62% used",
+        name: "Screenpipe Cloud 用量，已用 62%",
       }),
     );
 
@@ -129,7 +129,7 @@ describe("UsagePopover", () => {
     // Label, reset and percent share one line; the bar is the only other child.
     for (const row of rows) {
       expect(row.children).toHaveLength(2);
-      expect(row.textContent).toMatch(/resets/);
+      expect(row.textContent).toMatch(/重置/);
       expect(row.textContent).toMatch(/\d+%/);
     }
   });
@@ -138,12 +138,12 @@ describe("UsagePopover", () => {
     renderUsagePopover();
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Screenpipe Cloud usage, 62% used",
+        name: "Screenpipe Cloud 用量，已用 62%",
       }),
     );
     fireEvent.click(
       await screen.findByRole("button", {
-        name: /screenpipe cloud usage · Business/i,
+        name: /Screenpipe Cloud 用量 · Business/i,
       }),
     );
     expect(mocks.push).toHaveBeenCalledWith("/settings?section=usage");
@@ -155,12 +155,12 @@ describe("UsagePopover", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Screenpipe Cloud usage unavailable",
+        name: "Screenpipe Cloud 用量不可用",
       }),
     );
 
     expect(
-      await screen.findByText("usage data is unavailable. try refreshing."),
+      await screen.findByText("用量数据不可用。请尝试刷新。"),
     ).toBeTruthy();
     expect(document.body.textContent).not.toContain("$");
   });
@@ -170,7 +170,7 @@ describe("UsagePopover", () => {
   it("ignores hover and toggles on click", async () => {
     renderUsagePopover();
     const trigger = screen.getByRole("button", {
-      name: "Screenpipe Cloud usage, 62% used",
+      name: "Screenpipe Cloud 用量，已用 62%",
     });
 
     fireEvent.pointerEnter(trigger);
@@ -261,7 +261,7 @@ describe("UsagePopover", () => {
     renderUsagePopover();
 
     const trigger = screen.getByRole("button", {
-      name: /context usage, 15% full; screenpipe cloud usage, 62% used/i,
+      name: /上下文用量，已用 15%; Screenpipe Cloud 用量，已用 62%/i,
     });
     expect(screen.getAllByTestId("usage-ring")).toHaveLength(1);
     fireEvent.click(trigger);
@@ -275,13 +275,13 @@ describe("UsagePopover", () => {
       acpAgent: { id: "cursor", useScreenpipeCloud: false },
     } as AIPreset);
 
-    const trigger = screen.getByRole("button", { name: "Usage details" });
+    const trigger = screen.getByRole("button", { name: "用量详情" });
     expect(
       screen.getByTestId("usage-ring").querySelectorAll("circle"),
     ).toHaveLength(1);
     fireEvent.click(trigger);
     expect(
-      screen.getByText(/usage appears after this agent reports/i),
+      screen.getByText(/在此智能体报告其上下文窗口后显示用量/),
     ).toBeTruthy();
     // Cursor cannot route to Screenpipe Cloud at all, so the panel names the
     // plan and says who is actually billed rather than vanishing.
@@ -307,10 +307,10 @@ describe("UsagePopover trigger ring", () => {
 
     const trigger = screen.getByTestId("usage-popover-trigger");
     expect(trigger.getAttribute("aria-label")).toBe(
-      "Screenpipe Cloud usage, 62% used",
+      "Screenpipe Cloud 用量，已用 62%",
     );
     expect(trigger.getAttribute("title")).toBe(
-      "Screenpipe Cloud usage, 62% used",
+      "Screenpipe Cloud 用量，已用 62%",
     );
 
     const ring = screen.getByTestId("usage-ring");

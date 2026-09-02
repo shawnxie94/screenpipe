@@ -149,7 +149,7 @@ describe("useUsageStatus", () => {
       remaining_percent: 25,
     });
     expect(shouldWarnLowHostedAiAllowance(allowance)).toBe(true);
-    expect(formatAllowanceWindow(allowance!.window_seconds)).toBe("30-day");
+    expect(formatAllowanceWindow(allowance!.window_seconds)).toBe("30 天");
     expect(result.current?.hosted_ai?.upgrade).toEqual({
       requiredPlan: "business",
       upgradeUrl: "https://screenpi.pe/account/billing",
@@ -254,7 +254,7 @@ describe("useUsageStatus", () => {
       window_seconds: 2_592_000,
       technique: "fixed",
       resets_at: "2026-08-07T20:00:00.000Z",
-    })).toBe("30-day limit");
+    })).toBe("30 天 限制");
     expect(formatAllowanceLabel({
       lane: "combined",
       used_percent: 20,
@@ -262,7 +262,7 @@ describe("useUsageStatus", () => {
       window_seconds: 604_800,
       technique: "fixed",
       resets_at: "2026-08-13T00:00:00.000Z",
-    })).toBe("Weekly AI allowance");
+    })).toBe("每周 AI 额度");
     expect(formatAllowanceLabel({
       lane: "frontier",
       used_percent: 40,
@@ -270,22 +270,22 @@ describe("useUsageStatus", () => {
       window_seconds: 604_800,
       technique: "fixed",
       resets_at: "2026-08-13T00:00:00.000Z",
-    })).toBe("Frontier models");
+    })).toBe("前沿模型 · 每周");
   });
   it("phrases a reset at the precision that is useful to act on", () => {
     const now = Date.parse("2026-08-07T18:00:00.000Z");
     const at = (iso: string) => formatAllowanceResetPhrase(iso, now);
 
     // Imminent resets are a countdown, not a timestamp to subtract from.
-    expect(at("2026-08-07T18:45:00.000Z")).toBe("resets in 45 min");
-    expect(at("2026-08-07T19:23:00.000Z")).toBe("resets in 1 hr 23 min");
-    expect(at("2026-08-07T23:00:00.000Z")).toBe("resets in 5 hr");
+    expect(at("2026-08-07T18:45:00.000Z")).toBe("45 分钟后重置");
+    expect(at("2026-08-07T19:23:00.000Z")).toBe("1 小时 23 分钟后重置");
+    expect(at("2026-08-07T23:00:00.000Z")).toBe("5 小时后重置");
     // 59.7 minutes must roll into the hour rather than read "1 hr 60 min".
-    expect(at("2026-08-07T19:59:42.000Z")).toBe("resets in 2 hr");
+    expect(at("2026-08-07T19:59:42.000Z")).toBe("2 小时后重置");
     // Inside the week it becomes a weekday you can plan around.
-    expect(at("2026-08-10T05:59:00.000Z")).toMatch(/^resets \w{3} /);
+    expect(at("2026-08-10T05:59:00.000Z")).toMatch(/重置$/);
     // Beyond the week a clock time is noise, so only the date survives.
-    expect(at("2026-09-01T05:59:00.000Z")).toMatch(/^resets \w{3} \d+$/);
+    expect(at("2026-09-01T05:59:00.000Z")).toMatch(/重置$/);
     // Already-elapsed and missing resets never render a negative countdown, and
     // never claim a refill the gateway has not confirmed.
     expect(at("2026-08-07T17:00:00.000Z")).toBe("");
@@ -303,10 +303,10 @@ describe("useUsageStatus", () => {
 
   it("marks how stale the usage snapshot is", () => {
     const now = Date.parse("2026-08-07T18:00:00.000Z");
-    expect(formatUsageUpdatedAt("2026-08-07T17:59:30.000Z", now)).toBe("updated just now");
-    expect(formatUsageUpdatedAt("2026-08-07T17:45:00.000Z", now)).toBe("updated 15m ago");
-    expect(formatUsageUpdatedAt("2026-08-07T14:00:00.000Z", now)).toBe("updated 4h ago");
-    expect(formatUsageUpdatedAt("2026-08-05T18:00:00.000Z", now)).toBe("updated 2d ago");
+    expect(formatUsageUpdatedAt("2026-08-07T17:59:30.000Z", now)).toBe("刚刚更新");
+    expect(formatUsageUpdatedAt("2026-08-07T17:45:00.000Z", now)).toBe("15 分钟前更新");
+    expect(formatUsageUpdatedAt("2026-08-07T14:00:00.000Z", now)).toBe("4 小时前更新");
+    expect(formatUsageUpdatedAt("2026-08-05T18:00:00.000Z", now)).toBe("2 天前更新");
     expect(formatUsageUpdatedAt(null, now)).toBe("");
   });
 });

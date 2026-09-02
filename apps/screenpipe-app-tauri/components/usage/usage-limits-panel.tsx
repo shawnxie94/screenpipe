@@ -48,7 +48,7 @@ export function UsageLimitsPanel({
       >
         <span className="flex min-w-0 items-baseline gap-1.5 text-xs">
           <span className="shrink-0 font-medium lowercase text-foreground">
-            screenpipe cloud usage
+            Screenpipe Cloud 用量
           </span>
           {/* The plan is a product name, so it keeps its own casing while the
               heading around it stays lowercase like every other title. */}
@@ -98,7 +98,7 @@ export function UsageLimitsPanel({
                 className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`}
                 aria-hidden
               />
-              refresh
+              刷新
             </Button>
           )}
         </div>

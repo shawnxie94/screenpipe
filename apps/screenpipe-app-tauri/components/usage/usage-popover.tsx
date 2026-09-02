@@ -79,20 +79,20 @@ export function UsagePopover({
         : "ok";
   const readings = [
     contextPercent !== null
-      ? `Context usage, ${Math.round(contextPercent)}% full`
+      ? `上下文用量，已用 ${Math.round(contextPercent)}%`
       : null,
     cloudManaged
       ? cloudPercent
-        ? `Screenpipe Cloud usage, ${cloudPercent} used`
-        : "Screenpipe Cloud usage unavailable"
+        ? `Screenpipe Cloud 用量，已用 ${cloudPercent}`
+        : "Screenpipe Cloud 用量不可用"
       : null,
   ].filter((reading): reading is string => reading !== null);
   const accessibleLabel =
-    readings.length > 0 ? readings.join("; ") : "Usage details";
+    readings.length > 0 ? readings.join("; ") : "用量详情";
   const unavailableMessage =
     hosted?.plan === "unknown"
-      ? "sign in to view your usage limits."
-      : (allowanceExemption ?? "usage data is unavailable. try refreshing.");
+      ? "登录以查看你的用量限制。"
+      : (allowanceExemption ?? "用量数据不可用。请尝试刷新。");
 
   return (
     // Click, not hover: this panel is something you go and read, and a chip
