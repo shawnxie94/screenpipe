@@ -3778,7 +3778,7 @@ export function PipesSection() {
                       {/* Timeout */}
                       <div className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_11rem] sm:items-center">
                         <div>
-                          <Label className="cursor-help text-xs font-medium" title="max execution time before the scheduled task is stopped — increase for slow LLMs or complex tasks">timeout</Label>
+                          <Label className="cursor-help text-xs font-medium" title="max execution time before the scheduled task is stopped — increase for slow LLMs or complex tasks">超时</Label>
                           <p className="mt-0.5 text-[11px] text-muted-foreground">
                             stop a run if it exceeds this limit.
                           </p>
@@ -3951,7 +3951,7 @@ export function PipesSection() {
                           </span>
                         )}
                         {promptDrafts[pipe.config.name] !== undefined && !saveStatus[pipe.config.name] && (
-                          <span className="text-[11px] text-muted-foreground">unsaved</span>
+                          <span className="text-[11px] text-muted-foreground">未保存</span>
                         )}
                         </div>
                       </div>

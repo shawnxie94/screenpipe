@@ -413,7 +413,7 @@ const FrameThumbnail = ({
           role="img"
           aria-label={`${alt} unavailable`}
         >
-          <span className="text-xs text-muted-foreground">unavailable</span>
+          <span className="text-xs text-muted-foreground">不可用</span>
         </div>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
@@ -2715,7 +2715,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           {/* Tag autocomplete pills */}
           {isTagSearch && allTags.length > 0 && (
             <div className="mb-4">
-              <SectionLabel>tags</SectionLabel>
+              <SectionLabel>标签</SectionLabel>
               <div className="flex flex-wrap gap-1.5 mb-3">
                 {allTags.map((t) => {
                   const tagQuery = query.slice(1).trim().toLowerCase();
@@ -3031,7 +3031,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           {/* Screen results skeleton — keyword search still in flight but UI events already loaded */}
           {contentFilter !== "chats" && isSearching && searchResults.length === 0 && contentFilter !== "input" && uiEventResults.length > 0 && (
             <div className="mb-4">
-              <SectionLabel>screen</SectionLabel>
+              <SectionLabel>屏幕</SectionLabel>
               <div
                 className="grid gap-2.5"
                 style={{
@@ -3122,7 +3122,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                   only this section, so the heading is what scopes them — it
                   used to appear only when speaker or keyboard results happened
                   to exist, leaving the chips looking like global filters. */}
-              {contentFilter === "all" && <SectionLabel>screen</SectionLabel>}
+              {contentFilter === "all" && <SectionLabel>屏幕</SectionLabel>}
 
               {/* Facets on one scrollable row. Apps, sites and dates each had
                   their own full-width row before, so up to three rows of chips

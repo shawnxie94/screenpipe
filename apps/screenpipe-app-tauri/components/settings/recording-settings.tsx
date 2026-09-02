@@ -856,8 +856,8 @@ function BackgroundTranscriptionDialog({
                   <th className="w-[72px] px-2 py-1.5 font-medium">chunk</th>
                   <th className="w-[64px] px-2 py-1.5 font-medium">age</th>
                   <th className="w-[92px] px-2 py-1.5 font-medium">captured</th>
-                  <th className="px-2 py-1.5 font-medium">file</th>
-                  <th className="w-[92px] px-2 py-1.5 font-medium">status</th>
+                  <th className="px-2 py-1.5 font-medium">文件</th>
+                  <th className="w-[92px] px-2 py-1.5 font-medium">状态</th>
                   <th className="w-[120px] px-2 py-1.5 text-right font-medium">actions</th>
                 </tr>
               </thead>
@@ -4078,7 +4078,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   className="w-full"
                 />
                 <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
-                  <span>auto</span>
+                  <span>自动</span>
                   <span>every 10s</span>
                 </div>
                 <CaptureFrequencyPreview seconds={seconds} />

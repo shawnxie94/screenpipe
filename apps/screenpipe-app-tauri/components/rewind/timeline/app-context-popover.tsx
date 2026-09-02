@@ -396,7 +396,7 @@ export function AppContextPopover({
 						className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
 					>
 						<Search className="w-3 h-3" />
-						<span>search</span>
+						<span>搜索</span>
 					</button>
 				)}
 			</div>

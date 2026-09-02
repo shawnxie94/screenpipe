@@ -309,11 +309,11 @@ function RedactionWherePreview({
           <div className="flex gap-3">
             {region(
               "ui_element_name",
-              <span className="font-medium text-foreground">dashboard</span>,
+              <span className="font-medium text-foreground">仪表盘</span>,
             )}
             {region(
               "ui_element_name",
-              <span className="text-muted-foreground">settings</span>,
+              <span className="text-muted-foreground">设置</span>,
             )}
           </div>
 

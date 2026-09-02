@@ -635,7 +635,7 @@ export function RetentionSettings({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={confirmCompact}>
               compact now
             </AlertDialogAction>
@@ -662,7 +662,7 @@ export function RetentionSettings({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteRecent}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

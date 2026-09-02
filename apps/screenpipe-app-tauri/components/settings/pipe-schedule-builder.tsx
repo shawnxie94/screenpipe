@@ -248,7 +248,7 @@ export function PipeScheduleBuilder({
           {/* Timezone */}
           {showTimezone && (
             <div className="flex items-center justify-between gap-2">
-              <Label className="text-xs">timezone</Label>
+              <Label className="text-xs">时区</Label>
               <Select
                 value={cfg.timezone ?? detectTimezone()}
                 onValueChange={(v) => update({ timezone: v })}
@@ -269,7 +269,7 @@ export function PipeScheduleBuilder({
 
           {/* Starting / Ending */}
           <div className="flex items-center justify-between gap-2">
-            <Label className="text-xs">starting</Label>
+            <Label className="text-xs">开始</Label>
             <input
               type="date"
               aria-label="starting"

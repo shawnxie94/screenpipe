@@ -828,7 +828,7 @@ function RemoteSyncSection({
           )}
 
           <div className="flex items-center gap-1.5 ml-auto">
-            <span className="text-xs text-muted-foreground">auto</span>
+            <span className="text-xs text-muted-foreground">自动</span>
             <Switch
               checked={config.enabled}
               onCheckedChange={(val) => {
@@ -950,7 +950,7 @@ export function ConnectSection({ integrationId, fields }: { integrationId: strin
             {status === "connecting" ? (
               <><Loader2 className="h-3 w-3 animate-spin" />connecting…</>
             ) : (
-              <><Check className="h-3 w-3" />connect</>
+              <><Check className="h-3 w-3" />连接</>
             )}
           </Button>
         )}

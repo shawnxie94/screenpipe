@@ -379,7 +379,7 @@ export function TimelineControls({
 							{searchShortcutDisplay ? (
 								<span className="text-xs text-muted-foreground group-hover:text-background">{searchShortcutDisplay}</span>
 							) : null}
-							<span className="text-xs text-foreground group-hover:text-background">search</span>
+							<span className="text-xs text-foreground group-hover:text-background">搜索</span>
 						</button>
 					)
 				)}

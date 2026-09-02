@@ -1305,7 +1305,7 @@ export function ConnectedShareDialog({
         {destination === "linear" && (
           <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">team</label>
+              <label className="text-xs text-muted-foreground">团队</label>
               <Select
                 value={linearTeamId}
                 onValueChange={(value) => {

@@ -262,7 +262,7 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
         className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal"
       >
         {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />connecting…</>)
-          : status === "error" ? (<>retry</>)
+          : status === "error" ? (<>重试</>)
           : (<><Check className="h-3 w-3" />connect</>)}
       </Button>
     </div>

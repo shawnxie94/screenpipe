@@ -78,7 +78,7 @@ export function showChatArchiveUndoToast({
         className="h-6 gap-1.5 rounded-sm px-2 text-[11px] uppercase tracking-wide"
         onClick={() => void undo()}
       >
-        <span>undo</span>
+        <span>撤销</span>
         <kbd className="font-mono text-[10px] text-muted-foreground">
           {shortcutLabel()}
         </kbd>

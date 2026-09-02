@@ -430,7 +430,7 @@ export function CloudAgentRunner({
             {draft.provider === "cursor" && status?.configured && (
               <div className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_15rem] sm:items-center">
                 <div>
-                  <Label className="text-xs font-medium">use</Label>
+                  <Label className="text-xs font-medium">使用</Label>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
                     start fresh or continue an existing Cursor agent.
                   </p>

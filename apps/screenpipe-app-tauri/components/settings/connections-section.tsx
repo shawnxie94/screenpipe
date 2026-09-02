@@ -1201,7 +1201,7 @@ function ClaudePanel({
           </Button>
         ) : (
           <Button onClick={handleConnect} disabled={state === "connecting"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            {state === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />connecting...</>) : connectError ? (<><RotateCw className="h-3 w-3" />retry</>) : (<><Download className="h-3 w-3" />connect</>)}
+            {state === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在连接...</>) : connectError ? (<><RotateCw className="h-3 w-3" />重试</>) : (<><Download className="h-3 w-3" />连接</>)}
           </Button>
         )}
         {targets.includes("claude") && claudeAppInstalled === false ? (
@@ -1303,7 +1303,7 @@ function CursorPanel({ onConnected, onDisconnected }: { onConnected?: () => void
           </Button>
         ) : (
           <Button onClick={handleConnect} disabled={state === "installing"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            {state === "installing" ? (<><Loader2 className="h-3 w-3 animate-spin" />installing...</>) : connectError ? (<><RotateCw className="h-3 w-3" />retry</>) : (<><Download className="h-3 w-3" />connect</>)}
+            {state === "installing" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在安装...</>) : connectError ? (<><RotateCw className="h-3 w-3" />重试</>) : (<><Download className="h-3 w-3" />连接</>)}
           </Button>
         )}
         {cursorAppInstalled === false ? (
@@ -1381,7 +1381,7 @@ function CodexPanel({ onConnected, onDisconnected }: { onConnected?: () => void;
           </Button>
         ) : (
           <Button onClick={handleConnect} disabled={state === "installing"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            {state === "installing" ? (<><Loader2 className="h-3 w-3 animate-spin" />connecting...</>) : connectError ? (<><RotateCw className="h-3 w-3" />retry</>) : (<><Download className="h-3 w-3" />connect</>)}
+            {state === "installing" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在连接...</>) : connectError ? (<><RotateCw className="h-3 w-3" />重试</>) : (<><Download className="h-3 w-3" />连接</>)}
           </Button>
         )}
         <Button variant="outline" onClick={openCodex} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
@@ -1447,7 +1447,7 @@ function GrokPanel({ onConnected, onDisconnected }: { onConnected?: () => void; 
           </Button>
         ) : (
           <Button onClick={handleConnect} disabled={state === "installing"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            {state === "installing" ? (<><Loader2 className="h-3 w-3 animate-spin" />connecting...</>) : connectError ? (<><RotateCw className="h-3 w-3" />retry</>) : (<><Download className="h-3 w-3" />connect</>)}
+            {state === "installing" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在连接...</>) : connectError ? (<><RotateCw className="h-3 w-3" />重试</>) : (<><Download className="h-3 w-3" />连接</>)}
           </Button>
         )}
         <Button variant="outline" onClick={() => openUrl("https://github.com/superagent-ai/grok-cli")} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
@@ -1644,7 +1644,7 @@ function MemorySyncSubsection({
         <>
           <div className="p-2 bg-muted border border-border rounded-lg space-y-1">
             <div className="space-y-0.5">
-              <p className="text-xs text-muted-foreground">file</p>
+              <p className="text-xs text-muted-foreground">文件</p>
               <p className="text-xs text-foreground font-mono break-all">{persistedPath}/{targetFilename}</p>
             </div>
             {lastResult && (
@@ -2176,7 +2176,7 @@ function ChatGptPanel() {
             className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal"
           >
             <Loader2 className="h-3 w-3 animate-spin" />
-            {status === "checking" ? "checking session..." : "connecting..."}
+            {status === "checking" ? "checking session..." : "正在连接..."}
           </Button>
         )}
 
@@ -2491,7 +2491,7 @@ export function OAuthPanel({
         {status === "loading" ? (
           <div className="flex gap-2 items-center">
             <Button disabled size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal whitespace-nowrap">
-              <Loader2 className="h-3 w-3 animate-spin" />connecting...
+              <Loader2 className="h-3 w-3 animate-spin" />正在连接...
             </Button>
             <Button onClick={handleCancel} variant="outline" size="sm" className="h-7 text-xs normal-case font-sans tracking-normal">
               cancel
@@ -2715,9 +2715,9 @@ export function ConnectionCredentialForm({
       <div className="flex gap-2">
         {!isSaved && (
           <Button onClick={handleConnect} disabled={missingRequiredField || status === "connecting"} variant={status === "error" ? "outline" : "default"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />connecting...</>)
-             : status === "error" ? (<>retry</>)
-             : (<><Check className="h-3 w-3" />connect</>)}
+            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在连接...</>)
+             : status === "error" ? (<>重试</>)
+             : (<><Check className="h-3 w-3" />连接</>)}
           </Button>
         )}
         {isSaved && (
@@ -4617,7 +4617,7 @@ export function ConnectionsSection({
                     className="ml-auto text-muted-foreground transition-colors hover:text-foreground"
                   >
                     <X className="h-4 w-4" />
-                    <span className="sr-only">close</span>
+                    <span className="sr-only">关闭</span>
                   </button>
                 </DialogClose>
               </DialogHeader>

@@ -166,7 +166,7 @@ export function AIProviderChoices({
         ) : (
           <ChevronRight className="size-4" />
         )}
-        <span>advanced</span>
+        <span>高级</span>
       </button>
 
       {showAdvanced && (

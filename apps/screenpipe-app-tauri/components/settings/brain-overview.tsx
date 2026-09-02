@@ -3035,7 +3035,7 @@ export function BrainOverview({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={saving}>cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={saving}>取消</AlertDialogCancel>
               <AlertDialogAction
                 data-testid="overview-confirm-replace"
                 variant="destructive"

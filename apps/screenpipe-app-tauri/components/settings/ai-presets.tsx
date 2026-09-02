@@ -1650,7 +1650,7 @@ const AISection = ({
                                     </Badge>
                                   )}
                                   {!locked && costLabel && <Badge variant="outline" className="text-[10px]">{costLabel}</Badge>}
-                                  {!locked && model.speed === "fast" && <Badge variant="outline" className="text-[10px]">fast</Badge>}
+                                  {!locked && model.speed === "fast" && <Badge variant="outline" className="text-[10px]">快速</Badge>}
                                   {/* Cloudflare lanes always show percentage remaining; the badge
                                       turns yellow near exhaustion. Legacy counters stay quiet until
                                       they are low. Never render either beside a locked model. */}

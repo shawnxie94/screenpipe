@@ -783,7 +783,7 @@ export function AIProviderConfig({
               </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="model" className="text-xs">model</Label>
+              <Label htmlFor="model" className="text-xs">模型</Label>
               <ModelPicker
                 id="model"
                 value={formData.model}
@@ -815,7 +815,7 @@ export function AIProviderConfig({
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="model" className="text-xs">model</Label>
+              <Label htmlFor="model" className="text-xs">模型</Label>
               <ModelPicker
                 id="model"
                 value={formData.model}
@@ -878,7 +878,7 @@ export function AIProviderConfig({
               </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="model" className="text-xs">model</Label>
+              <Label htmlFor="model" className="text-xs">模型</Label>
               <ModelPicker
                 id="model"
                 value={formData.model}
@@ -902,7 +902,7 @@ export function AIProviderConfig({
               <ChatGptSignInButton />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="model" className="text-xs">model</Label>
+              <Label htmlFor="model" className="text-xs">模型</Label>
               <ModelPicker
                 id="model"
                 value={formData.model}
@@ -946,7 +946,7 @@ export function AIProviderConfig({
             )}
 
             <div className="space-y-1">
-              <Label htmlFor="model" className="text-xs">model</Label>
+              <Label htmlFor="model" className="text-xs">模型</Label>
               <Select
                 value={formData.model}
                 onValueChange={(value) => setFormData({ ...formData, model: value })}
@@ -967,7 +967,7 @@ export function AIProviderConfig({
 
         {selectedProvider === "screenpipe-cloud" && (
           <div className="space-y-1">
-            <Label htmlFor="model" className="text-xs">model</Label>
+            <Label htmlFor="model" className="text-xs">模型</Label>
             <Select
               value={formData.model}
               onValueChange={async (value) => {
@@ -989,7 +989,7 @@ export function AIProviderConfig({
                       {m.name}{m.free ? " (free)" : ""}
                       {locked && <span className="text-[9px] font-medium text-muted-foreground border rounded px-1">business</span>}
                       {!locked && costLabel && <span className="text-[9px] font-medium text-muted-foreground">{costLabel}</span>}
-                      {m.recommended_for?.includes('pipes') && <span className="text-[9px] text-muted-foreground bg-muted rounded px-1">tasks</span>}
+                      {m.recommended_for?.includes('pipes') && <span className="text-[9px] text-muted-foreground bg-muted rounded px-1">任务</span>}
                       {m.health?.status === 'down' && <span className="text-[9px] text-red-400 ml-1">overloaded</span>}
                     </span>
                   </SelectItem>
@@ -1094,7 +1094,7 @@ export function AIProviderConfig({
           onClick={() => setShowAdvanced(!showAdvanced)}
         >
           <span>{showAdvanced ? "▾" : "▸"}</span>
-          <span>advanced</span>
+          <span>高级</span>
         </button>
 
         {showAdvanced && (
