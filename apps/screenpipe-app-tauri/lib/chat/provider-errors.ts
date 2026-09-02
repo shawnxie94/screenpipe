@@ -16,7 +16,7 @@ type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Respo
 const MIN_AGENT_CONTEXT_TOKENS = 32_768;
 const tokenFormatter = new Intl.NumberFormat("en-US");
 const SAFETY_REFUSAL_MESSAGE =
-  "The selected model declined this request because of its safety policy. This is not a screenpipe outage. Start a new chat and revise the request with clear authorized context, or ask for high-level guidance.";
+  "所选模型因其安全策略拒绝了此请求。这不是 screenpipe 故障。请开新聊天，用明确的授权上下文重写请求，或请求高层指导。";
 
 export type ProviderErrorPresentation = {
   kind: "provider" | "safety_refusal";
@@ -78,9 +78,9 @@ export function normalizeOllamaBaseUrl(url?: string | null): string {
 
 export function buildOllamaConnectionMessage(model?: string | null): string {
   const suffix = model
-    ? ` and make sure "${model}" is pulled`
-    : " and make sure the model is pulled";
-  return `Cannot connect to Ollama. Start it with \`ollama serve\`${suffix}.`;
+    ? ` 并确保已拉取 "${model}"`
+    : " 并确保模型已拉取";
+  return `无法连接 Ollama。请用 \`ollama serve\` 启动它${suffix}。`;
 }
 
 export function buildOllamaModelMissingMessage(model: string): string {
@@ -122,7 +122,7 @@ export function isHostedScreenpipeProvider(provider?: string | null): boolean {
 }
 
 export function buildCloudConnectionMessage(): string {
-  return "Can't reach screenpipe cloud right now — this is usually a brief outage on our end, not your setup. Wait a few seconds and try again.";
+  return "现在无法连接 screenpipe 云端 — 这通常是我们这边的短暂中断，不是你的环境问题。稍等几秒后重试。";
 }
 
 export function buildRemoteConnectionMessage(provider?: string | null): string {
@@ -162,7 +162,7 @@ export function buildContextOverflowMessage(errorStr = ""): string {
     }
     return `This provider accepts ${tokenFormatter.format(available)} context tokens, but the request used ${tokenFormatter.format(requested)}. Set Settings → AI → Advanced → model context tokens to ${tokenFormatter.format(available)}, then start a new chat and retry.`;
   }
-  return "This chat is too long for the selected model. Match Settings → AI → Advanced → model context tokens to the provider's context window. Start a new chat or remove large attachments/screenshots, then retry.";
+  return "此聊天对所选模型来说太长了。请将 设置 → AI → 高级 → 模型上下文令牌 与提供商的上下文窗口匹配。开新聊天或移除大型附件/截图后重试。";
 }
 
 export function buildAccountStandingMessage(errorStr: string): string | null {
@@ -173,7 +173,7 @@ export function buildAccountStandingMessage(errorStr: string): string | null {
   ) {
     return null;
   }
-  return "screenpipe cloud AI is blocked for this account — it's flagged as not in good standing. Signing out and back in can refresh your account status. If you believe this is a mistake, contact screenpipe support. Local models and your own provider keys keep working in Settings → AI.";
+  return "screenpipe 云端 AI 已为此账户停用 — 标记为信用不良。退出并重新登录可以刷新账户状态。如果你认为这是误判，请联系 screenpipe 支持。本地模型和你自己的提供商密钥在 设置 → AI 中仍然可用。";
 }
 
 /**
@@ -253,7 +253,7 @@ export function buildAgentRefusalMessage(
 }
 
 export function buildChatGptAccountIdMessage(): string {
-  return "Your ChatGPT sign-in doesn't include chat access: the login token has no ChatGPT account id. This usually means an Enterprise/Business workspace where the admin hasn't enabled Codex local app access. Reconnect ChatGPT in Settings → AI with a personal account, or ask your workspace admin to enable access.";
+  return "你的 ChatGPT 登录不包含聊天访问权限：登录令牌没有 ChatGPT 账户 ID。这通常意味着企业/商业工作区的管理员未启用 Codex 本地应用访问。请在 设置 → AI 中使用个人账户重新连接 ChatGPT，或请工作区管理员启用访问。";
 }
 
 function buildGenericProviderErrorMessage(
@@ -289,16 +289,16 @@ function buildGenericProviderErrorMessage(
 
   if (isHostedScreenpipeProvider(provider)) {
     if (normalized.includes("free_chat_limit_exceeded")) {
-      return "You've used today's 2 free AI messages. Try again tomorrow, upgrade, or switch your AI preset to Ollama, Claude, Codex, or your own provider key.";
+      return "你已用完今日的 2 条免费 AI 消息。请明天再试、升级，或将 AI 预设切换到 Ollama、Claude、Codex 或你自己的提供商密钥。";
     }
     if (normalized.includes("free_chat_turn_request_limit_exceeded")) {
-      return "This free message reached its 8-step agent limit. Upgrade for longer agent runs, or switch your AI preset to your own provider.";
+      return "此免费消息已达到 8 步代理上限。请升级以获得更长的代理运行，或将 AI 预设切换到你自己的提供商。";
     }
     if (normalized.includes("free_plan_hosted_background_disabled")) {
-      return "screenpipe cloud AI for background scheduled tasks requires a paid plan. You can still run this scheduled task with Ollama or your own provider key.";
+      return "后台定时任务的 screenpipe 云端 AI 需要付费计划。你仍可使用 Ollama 或自己的提供商密钥运行此定时任务。";
     }
     if (normalized.includes("free_chat_client_update_required")) {
-      return "Update screenpipe to use your 2 daily free AI messages.";
+      return "请更新 screenpipe 以使用每日 2 条免费 AI 消息。";
     }
     if (normalized.includes("not allowed")) {
       return `Model is restricted on your current plan. Please switch to a free model or upgrade your account.`;

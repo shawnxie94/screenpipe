@@ -293,7 +293,7 @@ function normalizePipe(raw: any): any {
 
   return {
     ...raw,
-    title: raw.title || raw.slug || "untitled scheduled task",
+    title: raw.title || raw.slug || "未命名定时任务",
     author: publisher.name,
     author_id: raw.author_id || null,
     author_verified: publisher.verified,
@@ -1329,7 +1329,7 @@ function PipeDetailPanel({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold tracking-tight">{pipe.title || pipe.slug || "untitled scheduled task"}</h2>
+              <h2 className="text-xl font-semibold tracking-tight">{pipe.title || pipe.slug || "未命名定时任务"}</h2>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <PublisherIdentity publisher={publisher} />
                 {pipe.version ? (
