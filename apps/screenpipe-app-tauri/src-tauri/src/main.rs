@@ -255,11 +255,26 @@ fn get_env(name: &str) -> String {
 /// the interactive onboarding cannot complete (sandboxed WebView2, blocked
 /// egress, missing permissions dialog). When set, startup marks onboarding
 /// complete so the app lands on the main view.
+///
+/// Local/self-hosted builds (without the `official-build` feature, i.e. any
+/// build not produced by the Screenpipe CI release pipeline) default to
+/// skipping onboarding, which also disables the trial-activation paywall and
+/// the signup/login requirement. Official builds and enterprise builds keep
+/// the escape-hatch-only behavior. Set SCREENPIPE_SKIP_ONBOARDING=false to
+/// force the original behavior on a local build.
 fn should_skip_onboarding() -> bool {
-    std::env::var("SCREENPIPE_SKIP_ONBOARDING")
+    let env_override = std::env::var("SCREENPIPE_SKIP_ONBOARDING")
         .ok()
-        .map(|s| matches!(s.trim().to_lowercase().as_str(), "1" | "true" | "yes"))
-        .unwrap_or(false)
+        .map(|s| s.trim().to_lowercase());
+    if let Some(val) = env_override.as_deref() {
+        return match val {
+            "0" | "false" | "no" | "off" => false,
+            _ => matches!(val, "1" | "true" | "yes" | "on"),
+        };
+    }
+    // Local self-hosted builds skip onboarding (and thus paywall/login) by
+    // default. Official CI releases and enterprise builds keep stock behavior.
+    !cfg!(feature = "official-build") && !cfg!(feature = "enterprise-build")
 }
 
 fn should_prevent_window_close(label: &str) -> bool {
