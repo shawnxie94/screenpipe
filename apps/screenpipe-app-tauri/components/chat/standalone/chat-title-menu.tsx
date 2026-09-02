@@ -211,7 +211,7 @@ export function ChatTitleMenu({
           <button
             className="flex h-8 w-full items-center gap-2 px-2 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:bg-muted"
             onClick={() => void handleArchive()}
-            aria-label="Archive"
+            aria-label="归档"
           >
             <Archive className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Archive

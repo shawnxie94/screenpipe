@@ -1196,7 +1196,7 @@ export const TimelineSlider = ({
 							"bg-background/80 backdrop-blur-sm border border-border",
 						)}
 						onClick={onRefresh}
-						title="Refresh timeline"
+						title="刷新时间线"
 					>
 						<RotateCcw className="w-3.5 h-3.5 text-foreground/70" />
 					</button>
@@ -1508,7 +1508,7 @@ export const TimelineSlider = ({
 							expandedFilterSection === "zoom" && "bg-foreground/10",
 						)}
 						onClick={() => setTargetZoom((prev) => Math.min(MAX_ZOOM, prev * 1.5))}
-						title="Zoom in (or pinch/Cmd+scroll)"
+						title="放大（或捏合/Cmd+滚动）"
 					>
 						<ZoomIn className="w-3.5 h-3.5 text-foreground/70" />
 					</button>
@@ -1522,7 +1522,7 @@ export const TimelineSlider = ({
 						<button
 							onClick={() => setTargetZoom((prev) => Math.max(MIN_ZOOM, prev / 1.5))}
 							className="p-0.5 hover:bg-foreground/10 rounded transition-colors shrink-0"
-							title="Zoom out"
+							title="缩小"
 						>
 							<ZoomOut className="w-3.5 h-3.5 text-foreground" />
 						</button>

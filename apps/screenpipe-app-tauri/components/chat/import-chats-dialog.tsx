@@ -125,7 +125,7 @@ export function ImportChatsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="border-y border-border divide-y divide-border" role="group" aria-label="Chat sources">
+        <div className="border-y border-border divide-y divide-border" role="group" aria-label="聊天来源">
           {loading ? (
             <div className="flex items-center gap-2 px-3 py-5 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />

@@ -576,7 +576,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search tools..."
+          placeholder="搜索工具..."
           className="h-8 rounded-none pl-8 text-xs"
         />
       </div>

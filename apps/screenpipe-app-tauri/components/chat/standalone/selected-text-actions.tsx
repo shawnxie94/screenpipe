@@ -203,7 +203,7 @@ export function SelectedTextActions({
     <div
       ref={toolbarRef}
       role="toolbar"
-      aria-label="Selected text actions"
+      aria-label="选中文本操作"
       data-testid="selected-text-actions"
       className="fixed z-[100] flex max-w-[calc(100vw-1rem)] overflow-hidden rounded-md border border-border bg-surface font-sans text-xs shadow-[0_4px_18px_rgba(0,0,0,0.16)] dark:shadow-[0_4px_18px_rgba(0,0,0,0.36)]"
       style={{

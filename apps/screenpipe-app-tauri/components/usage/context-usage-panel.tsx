@@ -71,7 +71,7 @@ export function ContextUsagePanel({
           <div
             className="mt-2 flex h-1.5 w-full gap-px overflow-hidden rounded-full bg-muted"
             role="progressbar"
-            aria-label="Context window usage"
+            aria-label="上下文窗口使用量"
             aria-valuemin={0}
             aria-valuemax={snapshot.maxTokens}
             aria-valuenow={snapshot.totalUsedTokens}

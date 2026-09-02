@@ -120,7 +120,7 @@ one result directive on its own line after the human-readable answer. The app
 shows a compact card and hides the directive. Never emit a success card for an
 unverified action, normal tool progress, or a file you only intend to create.
 
-\`::screenpipe-result{kind="scheduled-task" state="created" title="Recheck deployment" subtitle="In 5 minutes" id="recheck-deployment"}\`
+\`::screenpipe-result{kind="scheduled-task" state="created" title="重新检查部署" subtitle="5 分钟后" id="recheck-deployment"}\`
 
 Supported shapes:
 - scheduled task: \`kind="scheduled-task"\`, installed Pipe slug in \`id\`

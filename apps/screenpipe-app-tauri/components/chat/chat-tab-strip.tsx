@@ -616,7 +616,7 @@ export function ChatTabStrip({
 
       <button
         type="button"
-        aria-label="New chat tab"
+        aria-label="新建聊天标签"
         title="新聊天"
         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => void onNewChat()}

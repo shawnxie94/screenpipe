@@ -131,7 +131,7 @@ export function StandaloneChatHeader({
             setShowHistory(!showHistory);
           }}
           className="relative z-10 h-7 w-7"
-          title="Chat history"
+          title="聊天历史"
         >
           <History size={14} />
         </Button>

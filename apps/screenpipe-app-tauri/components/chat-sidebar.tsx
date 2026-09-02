@@ -2144,7 +2144,7 @@ export function ChatSidebar({
                 "focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
               )}
               placeholder="聊天标题"
-              aria-label="Chat title"
+              aria-label="聊天标题"
             />
           </div>
           <DialogFooter>
@@ -2198,7 +2198,7 @@ export function ChatSidebar({
                 "focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
               )}
               placeholder="分组名称"
-              aria-label="Group name"
+              aria-label="分组名称"
             />
           </div>
           <DialogFooter>

@@ -238,7 +238,7 @@ export function SkillsCard({ onChanged }: { onChanged?: () => void }) {
             className="h-6 px-2 text-xs text-muted-foreground"
             onClick={refresh}
             disabled={!loaded}
-            aria-label="Rescan"
+            aria-label="重新扫描"
           >
             <RefreshCw className="h-3 w-3" />
           </Button>

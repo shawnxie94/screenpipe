@@ -107,8 +107,8 @@ export function ChatResponseFeedback({
         onClick={() => selectRating("positive")}
         disabled={saveState === "saving"}
         className={buttonClass("positive")}
-        title="Good response"
-        aria-label="Good response"
+        title="好回复"
+        aria-label="好回复"
         aria-pressed={rating === "positive"}
       >
         <ThumbsUp className="h-3 w-3" />

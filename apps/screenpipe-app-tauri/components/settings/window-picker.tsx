@@ -152,7 +152,7 @@ export function WindowPicker({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search apps or windows..."
+            placeholder="搜索应用或窗口..."
             className="pl-8 h-8 text-sm"
             autoFocus
           />

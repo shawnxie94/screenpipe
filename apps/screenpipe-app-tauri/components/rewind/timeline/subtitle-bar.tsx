@@ -147,7 +147,7 @@ export function SubtitleBar({ frames, currentIndex, isPlaying, onClick, transcri
 						setIsCollapsed(false);
 					}}
 					className="flex items-center gap-1.5 px-2.5 py-1 bg-background/80 backdrop-blur-sm rounded-full border border-border/50 shadow-sm hover:bg-background/90 hover:border-border hover:shadow-md transition-all duration-200 text-muted-foreground hover:text-foreground"
-					title="Show captions"
+					title="显示字幕"
 				>
 					<MessageSquareText className="w-3.5 h-3.5" />
 					<span className="text-[10px] font-medium">captions</span>
@@ -171,7 +171,7 @@ export function SubtitleBar({ frames, currentIndex, isPlaying, onClick, transcri
 						setIsCollapsed(true);
 					}}
 					className="px-2 py-0.5 rounded-full bg-black/60 hover:bg-black/80 text-white/70 hover:text-white text-[10px] font-medium backdrop-blur-sm transition-colors flex items-center gap-1"
-					title="Hide captions"
+					title="隐藏字幕"
 				>
 					<X className="w-3 h-3" />
 					<span>hide</span>

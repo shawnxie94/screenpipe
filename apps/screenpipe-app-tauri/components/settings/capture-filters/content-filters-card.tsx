@@ -262,7 +262,7 @@ export function ContentFiltersCard({
 												defaultValue={advancedIncluded}
 												value={advancedIncluded}
 												onValueChange={(next) => handleAdvancedChange(next, "included")}
-												placeholder="Optional allowlist..."
+												placeholder="可选白名单..."
 												allowCustomValues
 											/>
 										</div>

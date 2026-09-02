@@ -531,7 +531,7 @@ const INTEGRATION_ICONS: Record<string, React.ReactNode> = {
         viewBox="0 0 24 24"
         className="w-5 h-5 shrink-0 text-foreground"
         fill="currentColor"
-        aria-label="Apple Calendar"
+        aria-label="Apple 日历"
       >
         <path
           fillRule="evenodd"
@@ -4447,7 +4447,7 @@ export function ConnectionsSection({
             {...searchInputBehaviorProps}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Find an app"
+            placeholder="查找应用"
             className="pl-8 h-8 text-xs"
           />
         </div>

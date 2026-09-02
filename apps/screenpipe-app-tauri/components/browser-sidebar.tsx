@@ -1625,7 +1625,7 @@ export function BrowserSidebar({
                   <button
                     onClick={() => void moveHistory("back")}
                     title="后退"
-                    aria-label="Browser back"
+                    aria-label="浏览器后退"
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
@@ -1633,14 +1633,14 @@ export function BrowserSidebar({
                   <button
                     onClick={() => void moveHistory("forward")}
                     title="前进"
-                    aria-label="Browser forward"
+                    aria-label="浏览器前进"
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
                     <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                   <form className="min-w-0 flex-1" onSubmit={submitAddress}>
                     <input
-                      aria-label="Browser address"
+                      aria-label="浏览器地址"
                       value={addressDraft}
                       onChange={(event) => setAddressDraft(event.target.value)}
                       onFocus={(event) => event.currentTarget.select()}
@@ -1655,7 +1655,7 @@ export function BrowserSidebar({
                     <button
                       onClick={openCookieMenu}
                       title="浏览器会话 Cookie"
-                      aria-label="Browser session cookies"
+                      aria-label="浏览器会话 Cookie"
                       className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
                       <Cookie className="h-3.5 w-3.5" />
@@ -1664,7 +1664,7 @@ export function BrowserSidebar({
                   <button
                     onClick={reload}
                     title="重新加载"
-                    aria-label="Reload page"
+                    aria-label="重新加载页面"
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
                     <RotateCw className="h-3.5 w-3.5" />
@@ -1673,7 +1673,7 @@ export function BrowserSidebar({
                     <div
                       className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-0.5 overflow-hidden bg-border/25"
                       role="progressbar"
-                      aria-label="Page loading"
+                      aria-label="页面加载中"
                     >
                       <div className="h-full w-1/3 min-w-20 bg-foreground/70 animate-owned-browser-load" />
                     </div>

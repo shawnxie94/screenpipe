@@ -826,7 +826,7 @@ export function ConnectionToolIcon({ name }: { name: string }) {
     return <Plug className="w-3.5 h-3.5 text-foreground/70" aria-label="connections" />;
   }
   if (key === "windows-calendar") {
-    return <Calendar className="w-3.5 h-3.5 text-muted-foreground" aria-label="Windows Calendar" />;
+    return <Calendar className="w-3.5 h-3.5 text-muted-foreground" aria-label="Windows 日历" />;
   }
   if (key === "microsoft365" || key === "microsoft-365" || key === "office365" || key === "outlook") {
     return (

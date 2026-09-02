@@ -148,7 +148,7 @@ export function AppFilterList({
 					<Input
 						value={query}
 						onChange={(event) => setQuery(event.target.value)}
-						placeholder="Search apps..."
+						placeholder="搜索应用..."
 						className="h-8 pl-7 text-[13px]"
 						data-testid="privacy-app-search"
 					/>

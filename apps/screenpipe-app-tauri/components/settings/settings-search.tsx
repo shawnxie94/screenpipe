@@ -423,8 +423,8 @@ export const SettingsSearchInput = forwardRef<HTMLInputElement, InputProps>(
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Search settings"
-          aria-label="Search settings"
+          placeholder="搜索设置"
+          aria-label="搜索设置"
           data-testid="settings-search-input"
           className={cn(
             "w-full pl-8 pr-7 py-1.5 text-xs rounded-md border bg-transparent outline-none transition-colors",
@@ -437,7 +437,7 @@ export const SettingsSearchInput = forwardRef<HTMLInputElement, InputProps>(
           <button
             type="button"
             onClick={() => onChange("")}
-            aria-label="Clear search"
+            aria-label="清除搜索"
             className={cn(
               "absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded transition-colors",
               translucent ? "vibrant-sidebar-fg-muted hover:vibrant-sidebar-fg" : "text-muted-foreground/60 hover:text-foreground",

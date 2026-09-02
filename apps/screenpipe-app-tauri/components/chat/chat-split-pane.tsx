@@ -96,7 +96,7 @@ export function ChatSplitPane({
           size="icon"
           className="h-7 w-7"
           aria-label={`Work in ${title}`}
-          title="Make this the active chat"
+          title="设为当前聊天"
           onClick={() => void onPromote(sessionId)}
         >
           <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden />
@@ -105,7 +105,7 @@ export function ChatSplitPane({
           variant="ghost"
           size="icon"
           className="h-7 w-7"
-          aria-label="Close split view"
+          aria-label="关闭分屏"
           onClick={onClose}
         >
           <X className="h-3.5 w-3.5" aria-hidden />

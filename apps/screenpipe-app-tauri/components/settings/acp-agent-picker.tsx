@@ -196,7 +196,7 @@ export function AcpAgentPicker({
           </Label>
           <div
             role="radiogroup"
-            aria-label="Where the agent's model calls go"
+            aria-label="代理的模型调用去向"
             className="grid grid-cols-2 gap-1.5"
           >
             {[
@@ -314,7 +314,7 @@ export function AcpAgentPicker({
                 id="acpCommand"
                 value={agent?.command || ""}
                 onChange={(e) => merge({ command: e.target.value })}
-                placeholder="Path or command used to start your agent"
+                placeholder="用于启动代理的路径或命令"
                 spellCheck={false}
                 autoCorrect="off"
               />

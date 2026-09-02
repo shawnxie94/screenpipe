@@ -85,7 +85,7 @@ export function ComposerSuggestions({
           <button
             type="button"
             className="ph-no-capture flex h-6 cursor-pointer items-center gap-1 border border-border/40 bg-card px-2 font-mono text-[10px] text-foreground/75 transition-colors duration-150 hover:border-foreground hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-offset-1"
-            title="Suggested prompts"
+            title="建议提示词"
           >
             <Sparkles className="h-2.5 w-2.5" strokeWidth={1.5} />
             <span>suggestions</span>
@@ -200,7 +200,7 @@ function SuggestionActionButtons({
         disabled={isRefreshing}
         className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center text-muted-foreground/40 transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground disabled:cursor-default disabled:opacity-30"
         title="refresh suggestions"
-        aria-label="Refresh suggestions"
+        aria-label="刷新建议"
       >
         <RefreshCw
           className={`h-2.5 w-2.5 ${isRefreshing ? "animate-spin motion-reduce:animate-none" : ""}`}
@@ -212,7 +212,7 @@ function SuggestionActionButtons({
         onClick={onHide}
         className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center text-muted-foreground/40 transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground"
         title="Hide chat suggestions — re-enable in Settings → Display"
-        aria-label="Hide chat suggestions"
+        aria-label="隐藏聊天建议"
       >
         <X className="h-2.5 w-2.5" strokeWidth={1.5} />
       </button>

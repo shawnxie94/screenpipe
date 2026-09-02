@@ -223,7 +223,7 @@ export function AppSidebarLayout({ children }: { children: React.ReactNode }) {
             <div
               role="separator"
               aria-orientation="vertical"
-              aria-label="Resize sidebar"
+              aria-label="调整侧边栏大小"
               onPointerDown={beginResize}
               className={cn(
                 // 6px hit area straddling the right border so it's easy to

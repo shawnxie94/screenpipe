@@ -626,7 +626,7 @@ export function TimelineDailySummary({
 										type="button"
 										onClick={copySummary}
 										className="p-2 text-muted-foreground transition-colors hover:bg-foreground hover:text-background"
-										aria-label="Copy daily summary"
+										aria-label="复制每日摘要"
 									>
 										{copied ? (
 											<Check className="h-3.5 w-3.5" />
@@ -638,7 +638,7 @@ export function TimelineDailySummary({
 										type="button"
 										onClick={() => void generate()}
 										className="p-2 text-muted-foreground transition-colors hover:bg-foreground hover:text-background"
-										aria-label="Regenerate daily summary"
+										aria-label="重新生成每日摘要"
 									>
 										<RefreshCw className="h-3.5 w-3.5" />
 									</button>

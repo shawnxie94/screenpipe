@@ -48,7 +48,7 @@ export function ComposerInputBox({
             </div>
             <button
               type="button"
-              aria-label="Remove connection context"
+              aria-label="移除连接上下文"
               onClick={input.onClearConnectionChip}
               className="absolute right-2.5 top-2 z-10 text-muted-foreground/60 hover:text-foreground transition-colors shrink-0"
             >

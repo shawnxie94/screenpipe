@@ -941,7 +941,7 @@ export function ChatHistoryView({
                   variant="outline"
                   className="h-9 px-3 gap-2 shrink-0 rounded-none"
                   onClick={() => setImportDialogOpen(true)}
-                  title="Import chats"
+                  title="导入聊天"
                 >
                   <Download className="h-4 w-4" />
                   Import

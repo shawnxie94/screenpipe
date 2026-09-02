@@ -755,7 +755,7 @@ function RemoteSyncSection({
                 />
                 <div className="relative flex-1">
                   <Input
-                    placeholder="SSH key path"
+                    placeholder="SSH 密钥路径"
                     type={showKey ? "text" : "password"}
                     value={config.keyPath}
                     onChange={(e) => updateConfig({ keyPath: e.target.value })}

@@ -592,7 +592,7 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 							copyImage();
 							setContextMenuOpen(false);
 						}}
-						title="Copy frame image to clipboard"
+						title="将帧图片复制到剪贴板"
 					>
 						<ImageIcon className="w-4 h-4 shrink-0" />
 						<span className="flex-1 min-w-0 truncate">copy image</span>

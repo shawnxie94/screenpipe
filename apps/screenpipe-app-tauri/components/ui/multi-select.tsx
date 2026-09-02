@@ -397,7 +397,7 @@ export const MultiSelect = React.forwardRef<
             }}
           >
             <CommandInput
-              placeholder="Search..."
+              placeholder="搜索..."
               onKeyDown={handleInputKeyDown}
               value={inputValue}
               onValueChange={handleInputChange}

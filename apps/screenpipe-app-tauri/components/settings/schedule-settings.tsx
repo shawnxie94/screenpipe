@@ -421,7 +421,7 @@ function RuleEditor({ rule, onUpdate, onRemove }: RuleEditorProps) {
       <button
         className="text-muted-foreground hover:text-destructive transition-colors duration-100"
         onClick={onRemove}
-        title="Remove time range"
+        title="移除时间范围"
       >
         <Trash2 className="h-3 w-3" />
       </button>

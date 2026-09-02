@@ -288,7 +288,7 @@ export function TimelineControls({
 						size="icon"
 						onClick={onJumpToday}
 						className="h-8 w-8 text-foreground hover:bg-foreground hover:text-background transition-colors duration-150"
-						title="Jump to now"
+						title="跳转到现在"
 					>
 						<RefreshCw className="h-4 w-4" />
 					</Button>
@@ -316,7 +316,7 @@ export function TimelineControls({
 								type="button"
 								onClick={onCycleSpeed}
 								className="px-2 h-8 text-xs font-mono text-foreground hover:bg-foreground hover:text-background transition-colors duration-150 min-w-[36px] text-center"
-								title="Playback speed"
+								title="播放速度"
 							>
 								{playbackSpeed ?? 1}x
 							</button>

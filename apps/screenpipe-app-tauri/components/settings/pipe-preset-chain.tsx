@@ -96,7 +96,7 @@ export function PipePresetChain({
         </span>
       </div>
 
-      <ol className="mt-3 border border-border" aria-label="Model fallback order">
+      <ol className="mt-3 border border-border" aria-label="模型回退顺序">
         {rows.map((presetId, index) => (
           <li
             key={`${presetId ?? "empty"}-${index}`}

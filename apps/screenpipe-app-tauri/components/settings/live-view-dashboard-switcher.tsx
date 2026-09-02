@@ -92,7 +92,7 @@ export function LiveViewDashboardSwitcher({
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <select
             data-testid="overview-dashboard-selector"
-            aria-label="Dashboard"
+            aria-label="仪表盘"
             value={current.id}
             disabled={selectionDisabled}
             className="h-9 min-w-0 flex-1 border border-border bg-background px-3 text-sm font-medium outline-none focus:border-foreground disabled:opacity-50 sm:min-w-60"

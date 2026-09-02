@@ -2002,7 +2002,7 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
                   type="button"
                   variant="outline"
                   disabled
-                  aria-label="AI preset"
+                  aria-label="AI 预设"
                   className="h-9 w-[190px] max-w-[36vw] justify-start rounded-none text-xs"
                 >
                   {reviewPreset.model || "auto"}

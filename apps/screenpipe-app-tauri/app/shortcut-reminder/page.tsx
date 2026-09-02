@@ -921,7 +921,7 @@ export default function ShortcutReminderPage() {
       {settingsOpen ? (
         <div
           role="menu"
-          aria-label="Shortcut reminder options"
+          aria-label="快捷键提醒选项"
           className="flex w-full min-h-0 flex-1 flex-col overflow-hidden border border-white/40 font-mono text-white/85"
           style={{
             marginTop: dockAbove ? `${4 * overlayScale}px` : 0,

@@ -58,7 +58,7 @@ export function ActivitiesSettings() {
               </div>
             </div>
             <select
-              aria-label="Activity interval"
+              aria-label="活动间隔"
               value={intervalMinutes}
               disabled={!enabled}
               onChange={(event) =>

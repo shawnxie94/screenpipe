@@ -1344,7 +1344,7 @@ const AISection = ({
             ? validatePresetName(value, visiblePresets, preset?.id)
             : { isValid: true }
         }
-        placeholder="Preset name"
+        placeholder="预设名称"
         required={false}
         spellCheck={false}
         autoCorrect="off"
@@ -1401,7 +1401,7 @@ const AISection = ({
                           settingsPreset?.url,
                         )
                   }
-                  placeholder="Enter your AI API key"
+                  placeholder="输入你的 AI API 密钥"
                   required={apiKeyRequired}
                   className="pr-10"
                 />
@@ -1752,7 +1752,7 @@ const AISection = ({
           }
           return { isValid: true };
         }}
-        placeholder="Enter your custom prompt here"
+        placeholder="在此输入自定义提示词"
         required={true}
         minLength={10}
         maxLength={5000}

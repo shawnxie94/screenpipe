@@ -306,7 +306,7 @@ function InputMonitoringPermissionRow() {
   return (
     <PermissionRow
       id="input-monitoring"
-      title="Input Monitoring"
+      title="输入监控"
       description="Lets screenpipe capture keystrokes and clicks for full input replay."
       status={rowStatus}
       busy={requesting || resetting || managing}

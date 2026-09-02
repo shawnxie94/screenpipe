@@ -405,7 +405,7 @@ function CanvasNoteNode({ id, data }: NodeProps<NoteFlowNode>) {
       </button>
       <textarea
         data-testid={`canvas-note-text-${note.id}`}
-        aria-label="Canvas note"
+        aria-label="画布笔记"
         value={note.text}
         maxLength={4_000}
         placeholder="write a note"
@@ -1446,7 +1446,7 @@ export function LiveViewCanvas({
     <section
       data-testid="live-view-canvas"
       className="relative min-h-0 w-full flex-1 overflow-hidden border border-border bg-background"
-      aria-label="Live View process canvas"
+      aria-label="实时视图流程画布"
       onPointerDownCapture={() => cancelFocusAnimation()}
       onClickCapture={() => cancelFocusAnimation()}
       onKeyDownCapture={() => cancelFocusAnimation()}

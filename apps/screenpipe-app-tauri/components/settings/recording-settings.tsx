@@ -2813,7 +2813,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   onValueChange={(value) => handleAudioTranscriptionModelChange(value)}
                 >
                   <SelectTrigger className="w-[200px] h-7 text-xs">
-                    <SelectValue placeholder="Select engine" />
+                    <SelectValue placeholder="选择引擎" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -2907,7 +2907,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   value={settings.deepgramApiKey || ""}
                   onChange={handleDeepgramApiKeyChange}
                   validation={validateDeepgramApiKey}
-                  placeholder="Deepgram API key"
+                  placeholder="Deepgram API 密钥"
                   required={true}
                   className="pr-8 h-7 text-xs"
                 />
@@ -2939,7 +2939,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                       fetchOpenAIModels(openAICompatibleDraft.endpoint, openAICompatibleDraft.apiKey);
                     }
                   }}
-                  placeholder="API Endpoint (e.g., http://127.0.0.1:8080)"
+                  placeholder="API 端点（例如 http://127.0.0.1:8080）"
                   className="h-7 text-xs"
                 />
                 
@@ -2951,7 +2951,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     type={showOpenAIApiKey ? "text" : "password"}
                     value={openAICompatibleDraft.apiKey}
                     onChange={(value: string) => updateOpenAICompatibleDraft({ apiKey: value })}
-                    placeholder="API Key (optional)"
+                    placeholder="API 密钥（可选）"
                     className="pr-8 h-7 text-xs"
                   />
                   <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-7 w-7" onClick={() => setShowOpenAIApiKey(!showOpenAIApiKey)}>
@@ -3203,7 +3203,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     </PopoverTrigger>
                     <PopoverContent className="w-[250px] p-0">
                       <Command>
-                        <CommandInput placeholder="Search languages..." />
+                        <CommandInput placeholder="搜索语言..." />
                         <CommandList>
                           <CommandEmpty>未找到语言。</CommandEmpty>
                           <CommandGroup>
@@ -3804,7 +3804,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     <div className="min-w-0">
                       <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
                         Structured app context
-                        <Badge variant="secondary" aria-label="Experimental" className="px-1.5 py-0 text-[10px] font-medium">
+                        <Badge variant="secondary" aria-label="实验性" className="px-1.5 py-0 text-[10px] font-medium">
                           Experimental
                         </Badge>
                       </h3>

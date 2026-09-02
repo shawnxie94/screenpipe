@@ -504,7 +504,7 @@ export function LiveViewLayoutEditor({
                     type="button"
                     data-testid={`overview-drag-${slot.id}`}
                     aria-label={`Drag ${slot.title}. Use arrow keys to reorder.`}
-                    title="Drag to move"
+                    title="拖动移动"
                     onKeyDown={(event) => {
                       if (
                         event.key !== "ArrowUp" &&
@@ -571,7 +571,7 @@ export function LiveViewLayoutEditor({
                     <button
                       type="button"
                       aria-label={`Shrink ${slot.title}`}
-                      title="Make narrower"
+                      title="变窄"
                       disabled={!canShrink}
                       onClick={() =>
                         updateSlot(slot.id, (current) => ({
@@ -589,7 +589,7 @@ export function LiveViewLayoutEditor({
                     <button
                       type="button"
                       aria-label={`Grow ${slot.title}`}
-                      title="Make wider"
+                      title="变宽"
                       disabled={!canGrow}
                       onClick={() =>
                         updateSlot(slot.id, (current) => ({
@@ -605,7 +605,7 @@ export function LiveViewLayoutEditor({
                   <button
                     type="button"
                     aria-label={`Edit ${slot.title}`}
-                    title="Edit Block"
+                    title="编辑区块"
                     onClick={() => setSelectedSlotId(slot.id)}
                     className="inline-flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
                   >
@@ -614,7 +614,7 @@ export function LiveViewLayoutEditor({
                   <button
                     type="button"
                     aria-label={`Delete ${slot.title}`}
-                    title="Delete Block"
+                    title="删除区块"
                     onClick={() => {
                       changeSlots(
                         slots.filter((candidate) => candidate.id !== slot.id),
@@ -634,7 +634,7 @@ export function LiveViewLayoutEditor({
                 <button
                   type="button"
                   aria-label={`Resize ${slot.title}. Use left and right arrow keys.`}
-                  title="Drag to resize"
+                  title="拖动调整大小"
                   onKeyDown={(event) => {
                     if (
                       event.key !== "ArrowLeft" &&

@@ -1146,7 +1146,7 @@ export function AccountSection() {
               </div>
               <Switch
                 id="data-sync-toggle"
-                aria-label="Data Sync"
+                aria-label="数据同步"
                 checked={settings.dataSyncEnabled ?? false}
                 disabled={dataSyncSaving}
                 onCheckedChange={(checked) => void setDataSyncEnabled(checked)}
@@ -1158,7 +1158,7 @@ export function AccountSection() {
                 <Label htmlFor="data-sync-device-name">设备名称</Label>
                 <Input
                   id="data-sync-device-name"
-                  aria-label="Device name"
+                  aria-label="设备名称"
                   maxLength={96}
                   value={settings.dataSyncDeviceName ?? ""}
                   onChange={(event) =>

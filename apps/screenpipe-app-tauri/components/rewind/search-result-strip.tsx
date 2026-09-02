@@ -47,7 +47,7 @@ export function SearchResultStrip({
 			className="relative shrink-0"
 			style={{ width: STRIP_WIDTH, height: STRIP_HEIGHT }}
 			role="slider"
-			aria-label="Search result position"
+			aria-label="搜索结果位置"
 			aria-valuemin={1}
 			aria-valuemax={resultsLength}
 			aria-valuenow={activeIndex + 1}

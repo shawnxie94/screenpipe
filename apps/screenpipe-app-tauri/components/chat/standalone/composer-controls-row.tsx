@@ -76,8 +76,8 @@ export function ComposerControlsRow({
               "relative h-8 w-8 shrink-0 rounded-md text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground focus-visible:ring-1 focus-visible:ring-signal focus-visible:ring-offset-1 motion-reduce:transition-none",
               filters.hasActiveFilters && "text-foreground bg-muted/50",
             )}
-            title="Add attachments and filters"
-            aria-label="Add attachments and filters"
+            title="添加附件和筛选"
+            aria-label="添加附件和筛选"
           >
             <Plus className="h-4 w-4" />
             {filters.activeFilterCount > 0 && (

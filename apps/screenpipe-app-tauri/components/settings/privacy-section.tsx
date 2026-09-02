@@ -1003,7 +1003,7 @@ export function PrivacySection() {
                   variant="outline"
                   size="sm"
                   className="h-8 px-2 shrink-0"
-                  title="Copy key"
+                  title="复制密钥"
                   disabled={!liveApiKey}
                   data-testid="privacy-api-key-copy"
                   onClick={async () => {
@@ -1026,7 +1026,7 @@ export function PrivacySection() {
                   variant="outline"
                   size="sm"
                   className="h-8 px-2 shrink-0"
-                  title="Regenerate key"
+                  title="重新生成密钥"
                   disabled={regeneratingKey}
                   data-testid="privacy-api-key-regenerate"
                   onClick={async () => {
@@ -1907,7 +1907,7 @@ function AdminTeamTokenCard() {
             variant="outline"
             size="sm"
             className="h-8 px-2 shrink-0"
-            title="Copy token"
+            title="复制令牌"
             disabled={!liveToken}
             data-testid="privacy-admin-token-copy"
             onClick={async () => {

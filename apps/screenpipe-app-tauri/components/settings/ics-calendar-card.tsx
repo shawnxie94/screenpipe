@@ -217,7 +217,7 @@ export function IcsCalendarCard() {
                   className="text-xs h-7 flex-1"
                 />
                 <Input
-                  placeholder="Name (optional)"
+                  placeholder="名称（可选）"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="text-xs h-7 w-32"

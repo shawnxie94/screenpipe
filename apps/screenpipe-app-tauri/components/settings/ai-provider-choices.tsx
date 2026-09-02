@@ -203,7 +203,7 @@ export function AIProviderChoices({
 
               <AIProviderCard
                 type="custom"
-                title="Use an API key"
+                title="使用 API 密钥"
                 description="Connect another AI service."
                 imageSrc="/images/custom.png"
                 selected={selectedProvider === "custom"}
@@ -217,7 +217,7 @@ export function AIProviderChoices({
               <p className="text-sm font-medium">connect another agent</p>
               <AIProviderCard
                 type="acp"
-                title="Use a command"
+                title="使用命令"
                 description="Connect another coding agent."
                 imageSrc={customAcpAdapter.imageSrc}
                 imageClassName={
