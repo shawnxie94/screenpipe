@@ -47,9 +47,9 @@ export type {
 
 const SOURCE_STATUS_LABELS: Record<LiveViewSourceStatus, string | null> = {
   auto: null,
-  manual: "manual only",
-  paused: "paused",
-  unconfigured: "not configured",
+  manual: "仅手动",
+  paused: "已暂停",
+  unconfigured: "未配置",
   unknown: null,
 };
 
@@ -65,13 +65,13 @@ const SOURCE_STATUS_TITLES: Record<LiveViewSourceStatus, string | null> = {
 };
 
 const COMPONENT_LABELS: Record<BrainViewComponent, string> = {
-  "metric.v1": "Metric",
-  "list.v1": "List",
-  "bar-chart.v1": "Bar chart",
-  "line-chart.v1": "Line chart",
-  "table.v1": "Table",
-  "timeline.v1": "Timeline",
-  "markdown.v1": "Text",
+  "metric.v1": "指标",
+  "list.v1": "列表",
+  "bar-chart.v1": "柱状图",
+  "line-chart.v1": "折线图",
+  "table.v1": "表格",
+  "timeline.v1": "时间线",
+  "markdown.v1": "文本",
 };
 
 function slotClass(width: number): string {
@@ -109,7 +109,7 @@ function LiveViewCardBody({
     return (
       <div className="flex min-h-24 items-center justify-center border border-dashed border-border px-4 text-center text-xs text-muted-foreground">
         {preview ? (
-          "data loads after you apply this dashboard"
+          "应用此仪表盘后加载数据"
         ) : refreshing && slot.binding ? (
           <span className="inline-flex items-center gap-2">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -460,7 +460,7 @@ export function LiveViewCard({
         <div className={`min-w-0 ${hasActions ? "pr-32" : ""}`}>
           <h3 className="truncate text-sm font-medium">{slot.title}</h3>
           <p className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-            {COMPONENT_LABELS[slot.component]} · requested:{" "}
+            {COMPONENT_LABELS[slot.component]} · 请求：{" "}
             {getLiveViewTimeRangeOption(timeRange).label}
           </p>
         </div>
@@ -659,8 +659,8 @@ export function LiveViewCard({
       <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-[10px] text-muted-foreground">
         <span className="truncate">
           {slot.binding
-            ? `Scheduled task: ${slot.binding.pipeName}`
-            : "No scheduled task connected"}
+            ? `计划任务：${slot.binding.pipeName}`
+            : "未连接计划任务"}
         </span>
         {SOURCE_STATUS_LABELS[effectiveSourceStatus] && (
           <span

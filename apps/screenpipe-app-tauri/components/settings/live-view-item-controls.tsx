@@ -28,9 +28,9 @@ function snoozeOptions(now = new Date()) {
   nextWeek.setDate(nextWeek.getDate() + 7);
   nextWeek.setHours(9, 0, 0, 0);
   return [
-    { label: "In 1 hour", value: hour.toISOString() },
-    { label: "Tomorrow", value: tomorrow.toISOString() },
-    { label: "Next week", value: nextWeek.toISOString() },
+    { label: "1 小时后", value: hour.toISOString() },
+    { label: "明天", value: tomorrow.toISOString() },
+    { label: "下周", value: nextWeek.toISOString() },
   ];
 }
 
@@ -79,17 +79,17 @@ export function LiveViewItemControls({
               variant="outline"
               size="sm"
               data-testid={`live-view-item-${itemId}-snooze`}
-              aria-label={`snooze ${title}`}
+              aria-label={`稍后提醒：${title}`}
               className="h-7 rounded-none px-2 text-[11px]"
               disabled={itemActionDisabled}
             >
               <Clock3 className="mr-1.5 h-3 w-3" />
-              Later
+              稍后
             </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-44 rounded-none p-1">
             <p className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-              Remind me
+              提醒我
             </p>
             {snoozeOptions().map((option) => (
               <Button
@@ -119,7 +119,7 @@ export function LiveViewItemControls({
             size="sm"
             data-testid={`live-view-item-${itemId}-not-right`}
             data-state={notRightOpen ? "open" : "closed"}
-            aria-label={`not right ${title}`}
+            aria-label={`信息有误：${title}`}
             aria-expanded={notRightOpen}
             aria-controls={`live-view-item-${itemId}-not-right-panel`}
             className="h-7 rounded-none px-2 text-[11px] data-[state=open]:bg-foreground data-[state=open]:text-background"
@@ -132,7 +132,7 @@ export function LiveViewItemControls({
             }}
           >
             <X className="mr-1.5 h-3 w-3" />
-            Not right
+            信息有误
           </Button>
           {notRightOpen && (
             <div
@@ -167,7 +167,7 @@ export function LiveViewItemControls({
                   <div>
                     <p className="text-xs font-medium">修复此项目</p>
                     <p className="mt-0.5 text-[10px] text-muted-foreground">
-                      The connected scheduled task keeps your correction on later updates.
+                      已连接的计划任务会在后续更新中保留你的修正。
                     </p>
                   </div>
                   <Input
@@ -175,7 +175,7 @@ export function LiveViewItemControls({
                     data-testid={`live-view-item-${itemId}-correction-input`}
                     value={correction}
                     onChange={(event) => setCorrection(event.target.value)}
-                    placeholder="e.g. Sam owns this, due Friday"
+                    placeholder="例如：由 Sam 负责，周五到期"
                     className="h-8 rounded-none text-xs"
                     maxLength={500}
                   />
@@ -188,7 +188,7 @@ export function LiveViewItemControls({
                       disabled={itemActionDisabled}
                       onClick={() => setEditingCorrection(false)}
                     >
-                      Back
+                      返回
                     </Button>
                     <Button
                       type="submit"
@@ -200,17 +200,16 @@ export function LiveViewItemControls({
                       {saving === "correct" && (
                         <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                       )}
-                      Save correction
+                      保存修正
                     </Button>
                   </div>
                 </form>
               ) : (
                 <div className="space-y-2">
                   <div>
-                    <p className="text-xs font-medium">What’s not right?</p>
+                    <p className="text-xs font-medium">哪里不对？</p>
                     <p className="mt-0.5 text-[10px] text-muted-foreground">
-                      Fix the AI’s understanding or remove this item. Removed
-                      items can be reopened.
+                      修正 AI 的理解，或移除此项目。已移除的项目可以重新打开。
                     </p>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
@@ -226,7 +225,7 @@ export function LiveViewItemControls({
                         <span className="min-w-0">
                           <span className="block text-xs">修复详情</span>
                           <span className="mt-0.5 block whitespace-normal text-[10px] font-normal leading-snug text-muted-foreground">
-                            Teach the scheduled task what it misunderstood
+                            告诉计划任务它误解了什么
                           </span>
                         </span>
                       </Button>
@@ -251,7 +250,7 @@ export function LiveViewItemControls({
                         )}
                         <span className="min-w-0">
                           <span className="block text-xs">
-                            Remove from inbox
+                            从收件箱移除
                           </span>
                           <span className="mt-0.5 block whitespace-normal text-[10px] font-normal leading-snug text-muted-foreground">
                             移至已处理；你可以重新打开它
@@ -272,13 +271,13 @@ export function LiveViewItemControls({
           variant="ghost"
           size="sm"
           data-testid={`live-view-item-${itemId}-handoff`}
-          aria-label={`send ${title} to another app`}
+          aria-label={`发送 ${title} 到另一个应用`}
           className="h-7 rounded-none px-2 text-[11px]"
           disabled={busy}
           onClick={() => onHandoff(item)}
         >
           <Send className="mr-1.5 h-3 w-3" />
-          Send…
+          发送…
         </Button>
       )}
     </div>

@@ -51,7 +51,7 @@ describe("summarizeLiveViewFreshness", () => {
     expect(summary.filled).toBe(2);
     expect(summary.waiting).toBe(0);
     expect(summary.label).toBe(
-      "Sources checked 30m ago · oldest check 17h ago",
+      "数据源最近检查 30 分钟前 · 最早检查 17 小时前",
     );
   });
 
@@ -63,7 +63,7 @@ describe("summarizeLiveViewFreshness", () => {
 
     expect(summary.bound).toBe(2);
     expect(summary.waiting).toBe(1);
-    expect(summary.label).toBe("Sources checked 30m ago · 1 waiting");
+    expect(summary.label).toBe("数据源最近检查 30 分钟前 · 1 个等待中");
   });
 
   it("collapses to a single age when every block refreshed together", () => {
@@ -72,7 +72,7 @@ describe("summarizeLiveViewFreshness", () => {
       NOW,
     );
 
-    expect(summary.label).toBe("Sources checked 29m ago");
+    expect(summary.label).toBe("数据源最近检查 29 分钟前");
   });
 
   it("says so before any block has data", () => {
@@ -107,8 +107,8 @@ describe("summarizeLiveViewFreshness", () => {
 
     const summary = summarizeLiveViewFreshness([evidenceSlot], NOW, "today");
 
-    expect(summary.label).toContain("Data through Aug 3");
-    expect(summary.label).toContain("Sources checked 3m ago");
+    expect(summary.label).toContain("数据截至 8月3日");
+    expect(summary.label).toContain("数据源最近检查 3 分钟前");
     expect(summary.dataOutsideRange).toBe(true);
   });
 
@@ -127,9 +127,9 @@ describe("summarizeLiveViewFreshness", () => {
 
 describe("liveViewTimeAgo", () => {
   it("rounds down through minutes, hours, then days", () => {
-    expect(liveViewTimeAgo("2026-08-07T11:59:30Z", NOW)).toBe("just now");
-    expect(liveViewTimeAgo("2026-08-07T11:05:00Z", NOW)).toBe("55m ago");
-    expect(liveViewTimeAgo("2026-08-07T09:00:00Z", NOW)).toBe("3h ago");
-    expect(liveViewTimeAgo("2026-08-05T09:00:00Z", NOW)).toBe("2d ago");
+    expect(liveViewTimeAgo("2026-08-07T11:59:30Z", NOW)).toBe("刚刚");
+    expect(liveViewTimeAgo("2026-08-07T11:05:00Z", NOW)).toBe("55 分钟前");
+    expect(liveViewTimeAgo("2026-08-07T09:00:00Z", NOW)).toBe("3 小时前");
+    expect(liveViewTimeAgo("2026-08-05T09:00:00Z", NOW)).toBe("2 天前");
   });
 });

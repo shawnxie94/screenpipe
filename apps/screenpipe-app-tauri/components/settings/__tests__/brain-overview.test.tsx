@@ -571,11 +571,11 @@ describe("BrainOverview", () => {
     });
     render(<BrainOverview />);
 
-    expect(await screen.findByText("Dashboards")).toBeTruthy();
+    expect(await screen.findByText("仪表盘")).toBeTruthy();
     expect(await screen.findByText("How I worked today")).toBeTruthy();
     expect(screen.getByText("4.5")).toBeTruthy();
     expect(screen.getByText("hours")).toBeTruthy();
-    expect(screen.getByText("Scheduled task: daily-summary")).toBeTruthy();
+    expect(screen.getByText("计划任务：daily-summary")).toBeTruthy();
     expect(screen.getByText(/artifact #88 · v2/)).toBeTruthy();
   });
 
@@ -823,10 +823,10 @@ describe("BrainOverview", () => {
 
     expect(
       await screen.findByTestId("overview-unconfigured-blocks"),
-    ).toHaveTextContent("1 Block is not connected to a scheduled task");
+    ).toHaveTextContent("1 个区块未连接到计划任务");
     expect(
       screen.getByTestId("overview-card-source-status-meeting-commitments"),
-    ).toHaveTextContent("not configured");
+    ).toHaveTextContent("未配置");
 
     fireEvent.click(screen.getByTestId("overview-refresh-data"));
 
@@ -887,7 +887,7 @@ describe("BrainOverview", () => {
     expect(JSON.stringify(properties)).not.toContain("daily-summary");
     expect(JSON.stringify(properties)).not.toContain("private failure detail");
     expect(screen.getByTestId("live-view-data-status")).toHaveTextContent(
-      "The data refresh could not start",
+      "数据刷新无法启动。仍显示现有结果。",
     );
   });
 
@@ -938,7 +938,7 @@ describe("BrainOverview", () => {
     );
     expect(screen.getByTestId("overview-time-range")).toHaveAttribute(
       "title",
-      expect.stringMatching(/^Sources checked /),
+      expect.stringMatching(/^数据源最近检查 /),
     );
     expect(screen.getByTestId("overview-refresh-data").className).toContain(
       "w-9",
@@ -1057,7 +1057,7 @@ describe("BrainOverview", () => {
     render(<BrainOverview />);
 
     fireEvent.click(await screen.findByTestId("overview-time-range"));
-    fireEvent.click(await screen.findByRole("option", { name: "Last 7 days" }));
+    fireEvent.click(await screen.findByRole("option", { name: "最近 7 天" }));
 
     await waitFor(() =>
       expect(mocks.saveBrainView).toHaveBeenCalledWith(
@@ -1076,7 +1076,7 @@ describe("BrainOverview", () => {
     expect(payload.run_context.time_range).toEqual(
       expect.objectContaining({
         preset: "7d",
-        label: "Last 7 days",
+        label: "最近 7 天",
         timezone: expect.any(String),
         start: expect.any(String),
         end: expect.any(String),
@@ -1109,7 +1109,7 @@ describe("BrainOverview", () => {
     render(<BrainOverview />);
 
     fireEvent.click(await screen.findByTestId("overview-time-range"));
-    fireEvent.click(await screen.findByRole("option", { name: "Last 7 days" }));
+    fireEvent.click(await screen.findByRole("option", { name: "最近 7 天" }));
 
     await waitFor(() =>
       expect(screen.getByTestId("overview-refresh-data")).toBeDisabled(),
@@ -1162,9 +1162,9 @@ describe("BrainOverview", () => {
     // timestamp alone made a dashboard with much older and still-empty Blocks
     // read as current.
     const freshness = await screen.findByTestId("overview-freshness");
-    expect(freshness.textContent).toMatch(/^Sources checked /);
-    expect(freshness.textContent).toContain("oldest check");
-    expect(freshness.textContent).toContain("1 waiting");
+    expect(freshness.textContent).toMatch(/^数据源最近检查 /);
+    expect(freshness.textContent).toContain("最早检查");
+    expect(freshness.textContent).toContain("1 个等待中");
     expect(screen.getByTestId("overview-time-range")).toHaveAttribute(
       "title",
       freshness.textContent,
@@ -1206,12 +1206,12 @@ describe("BrainOverview", () => {
 
     expect(
       await screen.findByTestId("overview-data-warning"),
-    ).toHaveTextContent("showing data older than today");
+    ).toHaveTextContent(/显示的数据早于所选时间段/);
     expect(screen.getByTestId("overview-freshness")).toHaveTextContent(
-      "Data through",
+      "数据截至",
     );
     expect(screen.getByTestId("overview-freshness")).toHaveTextContent(
-      "Sources checked just now",
+      "数据源最近检查 刚刚",
     );
     await waitFor(() =>
       expect(mocks.capture).toHaveBeenCalledWith(
@@ -1361,7 +1361,7 @@ describe("BrainOverview", () => {
     expect(screen.queryByTestId("overview-freshness")).toBeNull();
     expect(
       screen.getByTestId("overview-unconfigured-blocks"),
-    ).toHaveTextContent("1 Block is not connected to a scheduled task");
+    ).toHaveTextContent("1 个区块未连接到计划任务");
   });
 
   it("keeps vertical scrolling on the dashboard while dense tables can scroll sideways", async () => {
@@ -1414,7 +1414,7 @@ describe("BrainOverview", () => {
       await screen.findByRole("img", { name: "Focus trend time series" }),
     ).toBeTruthy();
     expect(
-      screen.getByText("Line chart · requested: Last 7 days"),
+      screen.getByText("折线图 · 请求： 最近 7 天"),
     ).toBeTruthy();
     expect(screen.getByText("Project 30")).toBeTruthy();
     const trendBody = screen.getByTestId("overview-card-scroll-focus-trend");
@@ -1479,10 +1479,10 @@ describe("BrainOverview", () => {
       "overview-dashboard-selector",
     );
     expect(dashboardSelector).toHaveValue("my-dashboard");
-    expect(dashboardSelector).toHaveTextContent("My dashboard");
+    expect(dashboardSelector).toHaveTextContent("我的仪表盘");
     expect(mocks.saveBrainView).toHaveBeenNthCalledWith(1, {
       id: "my-dashboard",
-      title: "My dashboard",
+      title: "我的仪表盘",
       expectedRevision: null,
       timeRange: "today",
       periodPolicy: {
@@ -1495,7 +1495,7 @@ describe("BrainOverview", () => {
     expect(screen.getByText("choose an outcome")).toBeTruthy();
     expect(screen.getByTestId("live-view-template-daily-memory")).toBeTruthy();
     expect(
-      screen.getByPlaceholderText(/show how I spend my time/),
+      screen.getByPlaceholderText(/展示我的时间分配方式以及本周的变化/),
     ).toBeTruthy();
     expect(mocks.capture).toHaveBeenCalledWith(
       "live_view_empty_state_initialized",
@@ -2042,7 +2042,7 @@ describe("BrainOverview", () => {
 
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "done Send the customer recap",
+        name: "完成 Send the customer recap",
       }),
     );
 
@@ -2082,7 +2082,7 @@ describe("BrainOverview", () => {
     fireEvent.click(screen.getByText("1 handled · show"));
     expect(
       await screen.findByRole("button", {
-        name: "reopen Send the customer recap",
+        name: "重新打开：Send the customer recap",
       }),
     ).toBeTruthy();
   }, 15_000);
@@ -2250,7 +2250,7 @@ describe("BrainOverview", () => {
     // hint renders the Ctrl form (platform-correct hints, not hardcoded ⌘).
     expect(await screen.findByTestId("overview-undo")).toHaveAttribute(
       "title",
-      "Undo last Live View change (Ctrl+Z)",
+      "撤销上次实时视图更改 (Ctrl+Z)",
     );
 
     fireEvent.keyDown(window, { key: "z", metaKey: true });
@@ -2551,7 +2551,7 @@ describe("BrainOverview", () => {
     expect(screen.queryByTestId("overview-mode-dashboard")).toBeNull();
     expect(screen.queryByTestId("overview-mode-canvas")).toBeNull();
     expect(screen.getByTestId("canvas-block-focus-time")).toBeTruthy();
-    expect(screen.getByText("Scheduled task: daily-summary")).toBeTruthy();
+    expect(screen.getByText("计划任务：daily-summary")).toBeTruthy();
     expect(screen.getByText(/artifact #88 · v2/)).toBeTruthy();
     await waitFor(() =>
       expect(mocks.saveBrainViewCanvas).toHaveBeenCalledWith(

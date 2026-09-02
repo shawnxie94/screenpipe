@@ -64,7 +64,7 @@ export function InteractiveLiveViewListItem({
 }) {
   const itemId = stringValue(item.id);
   const title = stringValue(item.title);
-  const resolveLabel = stringValue(item.resolveLabel) || "done";
+  const resolveLabel = stringValue(item.resolveLabel) || "完成";
   const actions = itemActionNames(item);
   const disposition = getLiveViewItemDisposition(state);
   const handled = disposition !== "active";
@@ -87,8 +87,8 @@ export function InteractiveLiveViewListItem({
       disposition === "resolved"
         ? resolveLabel
         : disposition === "snoozed" && state?.snoozedUntil
-          ? `snoozed until ${readableDate(state.snoozedUntil)}`
-          : "removed";
+          ? `已延迟至 ${readableDate(state.snoozedUntil)}`
+          : "已移除";
     return (
       <div
         data-testid={`live-view-item-${itemId}`}
@@ -113,7 +113,7 @@ export function InteractiveLiveViewListItem({
           variant="ghost"
           size="sm"
           data-testid={`live-view-item-${itemId}-reopen`}
-          aria-label={`reopen ${title}`}
+          aria-label={`重新打开：${title}`}
           className="h-7 rounded-none px-2 text-[11px]"
           disabled={!onAction || saving !== null}
           onClick={() => void act({ action: "reopen" })}
@@ -123,7 +123,7 @@ export function InteractiveLiveViewListItem({
           ) : (
             <Undo2 className="mr-1.5 h-3 w-3" />
           )}
-          Reopen
+          重新打开
         </Button>
       </div>
     );
@@ -173,14 +173,14 @@ export function InteractiveLiveViewListItem({
           typeof item.source === "string") && (
           <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] text-muted-foreground">
             {typeof item.dueAt === "string" && (
-              <span>due {readableDate(item.dueAt)}</span>
+              <span>截止 {readableDate(item.dueAt)}</span>
             )}
-            {typeof item.source === "string" && <span>from {item.source}</span>}
+            {typeof item.source === "string" && <span>来自 {item.source}</span>}
           </div>
         )}
         {state?.correction && (
           <p className="mt-1.5 border-l-2 border-foreground pl-2 text-[10px] text-muted-foreground">
-            corrected: {state.correction}
+            已修正：{state.correction}
           </p>
         )}
         <LiveViewItemControls
@@ -195,7 +195,7 @@ export function InteractiveLiveViewListItem({
           onHandoff={onHandoff}
         />
         <span className="sr-only" aria-live="polite">
-          {saving ? `Updating ${title}` : ""}
+          {saving ? `正在更新 ${title}` : ""}
         </span>
       </div>
     </div>

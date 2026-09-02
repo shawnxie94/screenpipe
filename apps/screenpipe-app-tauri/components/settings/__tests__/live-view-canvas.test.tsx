@@ -461,7 +461,7 @@ describe("LiveViewCanvas", () => {
     expect(screen.getByText("Canvas review")).toBeTruthy();
     expect(
       screen.getByLabelText(
-        "Whiteboard canvas. Use the toolbar to select, pan, add notes, connect Blocks, or draw.",
+        "白板画布。使用工具栏进行选择、平移、添加笔记、连接区块或绘图。",
       ),
     ).toBeTruthy();
   });
@@ -617,7 +617,7 @@ describe("LiveViewCanvas", () => {
       pointerId: 7,
     });
 
-    const note = await screen.findByLabelText("Canvas note");
+    const note = await screen.findByLabelText("画布笔记");
     fireEvent.change(note, { target: { value: "compare these sources" } });
     fireEvent.blur(note);
     await waitFor(() => {
@@ -630,7 +630,7 @@ describe("LiveViewCanvas", () => {
 
     openCanvasTools();
     fireEvent.click(screen.getByTestId("canvas-delete-selection"));
-    expect(screen.queryByLabelText("Canvas note")).toBeNull();
+    expect(screen.queryByLabelText("画布笔记")).toBeNull();
     expect(onPersist).toHaveBeenLastCalledWith(
       expect.objectContaining({ notes: [] }),
     );

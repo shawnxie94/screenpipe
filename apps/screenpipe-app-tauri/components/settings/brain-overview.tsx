@@ -310,26 +310,24 @@ function DataRefreshBanner({ state }: { state: DataRefreshState }) {
   const active = state.status === "starting" || state.status === "running";
   const configurationNote =
     state.unconfiguredCount > 0
-      ? `${state.unconfiguredCount} section${
-          state.unconfiguredCount === 1 ? "" : "s"
-        } not configured`
+      ? `${state.unconfiguredCount} 个区块未配置`
       : null;
   const withConfigurationNote = (message: string) =>
     configurationNote ? `${message} · ${configurationNote}` : message;
   const message =
     state.status === "starting"
-      ? withConfigurationNote(`starting ${state.pipeNames.join(", ")}`)
+      ? withConfigurationNote(`正在启动 ${state.pipeNames.join(", ")}`)
       : state.status === "running"
         ? state.filled > 0
           ? withConfigurationNote(
-              `${state.filled} of ${state.refreshableTotal} connected sections updated`,
+              `已更新 ${state.filled} / ${state.refreshableTotal} 个已连接区块`,
             )
           : withConfigurationNote(
-              `${state.pipeNames.join(", ")} ${state.pipeNames.length === 1 ? "is" : "are"} building your live data`,
+              `${state.pipeNames.join(", ")} 正在生成你的实时数据`,
             )
         : state.status === "complete"
-          ? `${state.total} sections updated from source data`
-          : state.message || "some sections could not be updated";
+          ? `已从源数据更新 ${state.total} 个区块`
+          : state.message || "部分区块无法更新";
 
   return (
     <div
@@ -1518,14 +1516,12 @@ export function BrainOverview({
               blockedReason: filled > 0 ? "partial_result" : "no_new_result",
               message:
                 filled > 0
-                  ? `${filled} of ${current.refreshableTotal} connected sections updated. No new result arrived for the rest within two minutes.${
+                  ? `已更新 ${filled} / ${current.refreshableTotal} 个已连接区块。其余区块两分钟内没有新结果。${
                       current.unconfiguredCount > 0
-                        ? ` ${current.unconfiguredCount} section${
-                            current.unconfiguredCount === 1 ? " is" : "s are"
-                          } not configured.`
+                        ? ` ${current.unconfiguredCount} 个区块未配置。`
                         : ""
                     }`
-                  : "No new result arrived within two minutes. Existing data is still shown; try again or check the scheduled task.",
+                  : "两分钟内没有新结果。仍显示已有数据；请重试或检查计划任务。",
             };
           }
           if (current.filled === filled) return current;
@@ -3260,12 +3256,12 @@ export function BrainOverview({
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium">
                 {freshness.dataOutsideRange
-                  ? `showing data older than ${getLiveViewTimeRangeOption(view.timeRange).label.toLowerCase()}`
+                  ? `显示的数据早于所选时间段（${getLiveViewTimeRangeOption(view.timeRange).label}）`
                   : stalledSourceCount > 0
-                    ? "this view will not update by itself"
+                    ? "此视图不会自动更新"
                     : freshness.waiting > 0
-                      ? "some data is missing"
-                      : "some sources have not checked recently"}
+                      ? "部分数据缺失"
+                      : "部分数据源近期未检查"}
               </p>
               <p
                 data-testid="overview-freshness"
@@ -3309,9 +3305,7 @@ export function BrainOverview({
             data-testid="overview-unconfigured-blocks"
             className="mb-3 shrink-0 text-[11px] text-muted-foreground"
           >
-            {unconfiguredBlockCount} Block
-            {unconfiguredBlockCount === 1 ? " is" : "s are"} not connected to a
-            scheduled task
+            {unconfiguredBlockCount} 个区块未连接到计划任务
           </p>
         )}
         {canvasError && (
@@ -3321,7 +3315,7 @@ export function BrainOverview({
           >
             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
             <span>
-              Canvas could not be loaded. Reopen Live Views to try again.
+              无法加载画布。请重新打开实时视图重试。
             </span>
           </div>
         )}

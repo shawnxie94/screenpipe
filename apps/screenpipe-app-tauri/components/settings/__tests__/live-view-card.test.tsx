@@ -189,7 +189,7 @@ describe("LiveViewCard range and freshness", () => {
       />,
     );
 
-    expect(screen.getByText("List · requested: Last 7 days")).toBeTruthy();
+    expect(screen.getByText("列表 · 请求： 最近 7 天")).toBeTruthy();
     expect(
       screen.getByTestId("overview-card-updated-process-steps"),
     ).toHaveTextContent(/^updated .* · artifact #42 · v1$/);
@@ -198,15 +198,15 @@ describe("LiveViewCard range and freshness", () => {
   it("marks an unconfigured block as unable to refresh", () => {
     render(<LiveViewCard slot={{ ...listSlot, binding: null, value: null }} />);
 
-    expect(screen.getByText("No scheduled task connected")).toBeTruthy();
+    expect(screen.getByText("未连接计划任务")).toBeTruthy();
     expect(
       screen.getByTestId("overview-card-source-status-process-steps"),
-    ).toHaveTextContent("not configured");
+    ).toHaveTextContent("未配置");
     expect(
       screen.getByTestId("overview-card-source-status-process-steps"),
     ).toHaveAttribute(
       "title",
-      "This block is not connected to a scheduled task, so refresh cannot update it.",
+      "此区块未连接到定时任务，因此刷新无法更新它。",
     );
   });
 });

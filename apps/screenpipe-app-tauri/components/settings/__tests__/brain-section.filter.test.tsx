@@ -465,7 +465,7 @@ describe("BrainSection type filter", () => {
     await waitFor(() => {
       expect(screen.getByTestId("brain-artifacts-error")).toBeTruthy();
     });
-    expect(screen.getByText("failed to load artifacts")).toBeTruthy();
+    expect(screen.getByText("加载产物失败")).toBeTruthy();
     expect(screen.getByText("HTTP 500")).toBeTruthy();
     expect(
       screen.queryByText("no artifacts yet. create a chat note or run a pipe."),

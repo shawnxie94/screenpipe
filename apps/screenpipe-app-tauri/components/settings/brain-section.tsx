@@ -2121,7 +2121,7 @@ export function BrainSection() {
             className="h-7 text-xs"
             onClick={refreshArtifacts}
           >
-            retry
+            重试
           </Button>
         </div>
       ) : unifiedItems.length === 0 && !artifactRequestActive ? (

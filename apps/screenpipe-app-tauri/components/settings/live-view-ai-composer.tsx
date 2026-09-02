@@ -25,9 +25,9 @@ import type { AIPreset } from "@/lib/utils/tauri";
 import type { LiveViewGenerationScope } from "@/lib/live-views/generate-live-view-with-pi";
 
 const SUGGESTIONS = [
-  "show how I spend my time today",
-  "track meetings and follow-ups",
-  "find work I could automate",
+  "展示我今天的时间分配",
+  "跟踪会议和待办跟进",
+  "找出我可以自动化的工作",
 ];
 
 export type LiveViewAiFeedback = {

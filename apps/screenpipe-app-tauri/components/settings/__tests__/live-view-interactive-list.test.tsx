@@ -28,7 +28,7 @@ const interactiveSlot: BrainViewSlot = {
           status: "due",
           dueAt: "2026-07-30T16:00:00Z",
           source: "Zoom · Benjamin",
-          resolveLabel: "done",
+          resolveLabel: "完成",
           actions: ["resolve", "snooze", "correct", "dismiss", "handoff"],
         },
       ],
@@ -46,13 +46,13 @@ describe("Live View interactive list decisions", () => {
     render(<LiveViewCard slot={interactiveSlot} />);
 
     expect(
-      screen.getByRole("button", { name: "done Send the customer recap" }),
+      screen.getByRole("button", { name: "完成 Send the customer recap" }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "snooze Send the customer recap" }),
+      screen.getByRole("button", { name: "稍后提醒：Send the customer recap" }),
     ).toBeDisabled();
     expect(
-      screen.getByRole("button", { name: "not right Send the customer recap" }),
+      screen.getByRole("button", { name: "信息有误：Send the customer recap" }),
     ).toBeDisabled();
   });
 
@@ -68,22 +68,22 @@ describe("Live View interactive list decisions", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "done Send the customer recap" }),
+      screen.getByRole("button", { name: "完成 Send the customer recap" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "snooze Send the customer recap" }),
-    ).toHaveTextContent("Later");
+      screen.getByRole("button", { name: "稍后提醒：Send the customer recap" }),
+    ).toHaveTextContent("稍后");
     expect(
-      screen.getByRole("button", { name: "not right Send the customer recap" }),
-    ).toHaveTextContent("Not right");
+      screen.getByRole("button", { name: "信息有误：Send the customer recap" }),
+    ).toHaveTextContent("信息有误");
     expect(
       screen.getByRole("button", {
-        name: "send Send the customer recap to another app",
+        name: "发送 Send the customer recap 到另一个应用",
       }),
-    ).toHaveTextContent("Send…");
+    ).toHaveTextContent("发送…");
 
     fireEvent.click(
-      screen.getByRole("button", { name: "done Send the customer recap" }),
+      screen.getByRole("button", { name: "完成 Send the customer recap" }),
     );
     await waitFor(() =>
       expect(onItemAction).toHaveBeenCalledWith({
@@ -94,7 +94,7 @@ describe("Live View interactive list decisions", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "send Send the customer recap to another app",
+        name: "发送 Send the customer recap 到另一个应用",
       }),
     );
     expect(onItemHandoff).toHaveBeenCalledWith(
@@ -107,14 +107,14 @@ describe("Live View interactive list decisions", () => {
     render(<LiveViewCard slot={interactiveSlot} onItemAction={onItemAction} />);
 
     fireEvent.click(
-      screen.getByRole("button", { name: "snooze Send the customer recap" }),
+      screen.getByRole("button", { name: "稍后提醒：Send the customer recap" }),
     );
-    expect(await screen.findByText("Remind me")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "In 1 hour" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Tomorrow" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Next week" })).toBeTruthy();
+    expect(await screen.findByText("提醒我")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "1 小时后" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "明天" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "下周" })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Tomorrow" }));
+    fireEvent.click(screen.getByRole("button", { name: "明天" }));
     await waitFor(() =>
       expect(onItemAction).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -131,29 +131,29 @@ describe("Live View interactive list decisions", () => {
     render(<LiveViewCard slot={interactiveSlot} onItemAction={onItemAction} />);
 
     const notRight = screen.getByRole("button", {
-      name: "not right Send the customer recap",
+      name: "信息有误：Send the customer recap",
     });
     fireEvent.click(notRight);
     expect(notRight.getAttribute("aria-expanded")).toBe("true");
-    expect(await screen.findByText("What’s not right?")).toBeTruthy();
-    expect(screen.getByText("Fix details")).toBeTruthy();
-    expect(screen.getByText("Remove from inbox")).toBeTruthy();
-    expect(screen.getByText("Move to Handled; you can reopen it")).toBeTruthy();
+    expect(await screen.findByText("哪里不对？")).toBeTruthy();
+    expect(screen.getByText("修复详情")).toBeTruthy();
+    expect(screen.getByText("从收件箱移除")).toBeTruthy();
+    expect(screen.getByText("移至已处理；你可以重新打开它")).toBeTruthy();
 
     fireEvent.keyDown(
       screen.getByTestId("live-view-item-customer-recap-not-right-panel"),
       { key: "Escape" },
     );
-    expect(screen.queryByText("What’s not right?")).toBeNull();
+    expect(screen.queryByText("哪里不对？")).toBeNull();
     expect(notRight.getAttribute("aria-expanded")).toBe("false");
     fireEvent.click(notRight);
 
-    fireEvent.click(screen.getByText("Fix details"));
+    fireEvent.click(screen.getByText("修复详情"));
     const correction = await screen.findByTestId(
       "live-view-item-customer-recap-correction-input",
     );
     fireEvent.change(correction, { target: { value: "Sam owns this" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save correction" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存修正" }));
     await waitFor(() =>
       expect(onItemAction).toHaveBeenCalledWith({
         itemId: "customer-recap",
@@ -163,9 +163,9 @@ describe("Live View interactive list decisions", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: "not right Send the customer recap" }),
+      screen.getByRole("button", { name: "信息有误：Send the customer recap" }),
     );
-    fireEvent.click(await screen.findByText("Remove from inbox"));
+    fireEvent.click(await screen.findByText("从收件箱移除"));
     await waitFor(() =>
       expect(onItemAction).toHaveBeenCalledWith({
         itemId: "customer-recap",
@@ -179,11 +179,11 @@ describe("Live View interactive list decisions", () => {
     render(<LiveViewCard slot={interactiveSlot} onItemAction={onItemAction} />);
 
     fireEvent.click(
-      screen.getByRole("button", { name: "not right Send the customer recap" }),
+      screen.getByRole("button", { name: "信息有误：Send the customer recap" }),
     );
-    fireEvent.click(await screen.findByText("Remove from inbox"));
+    fireEvent.click(await screen.findByText("从收件箱移除"));
     await waitFor(() => expect(onItemAction).toHaveBeenCalledOnce());
-    expect(await screen.findByText("What’s not right?")).toBeTruthy();
+    expect(await screen.findByText("哪里不对？")).toBeTruthy();
   });
 
   it("moves handled items into a plain-language reversible receipt", async () => {
@@ -208,9 +208,9 @@ describe("Live View interactive list decisions", () => {
     fireEvent.click(screen.getByText("1 handled · show"));
     const handled = screen.getByTestId("live-view-item-customer-recap");
     expect(handled.getAttribute("data-item-state")).toBe("dismissed");
-    expect(screen.getByText("removed")).toBeTruthy();
+    expect(screen.getByText("已移除")).toBeTruthy();
     fireEvent.click(
-      screen.getByRole("button", { name: "reopen Send the customer recap" }),
+      screen.getByRole("button", { name: "重新打开：Send the customer recap" }),
     );
     await waitFor(() =>
       expect(onItemAction).toHaveBeenCalledWith({
