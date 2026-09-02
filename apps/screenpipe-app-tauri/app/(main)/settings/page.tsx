@@ -55,6 +55,7 @@ import { SpeakersSection, searchIndex as speakersSearchIndex } from "@/component
 import { ActivitiesSettings, searchIndex as activitiesSearchIndex } from "@/components/settings/activities-settings";
 import { searchIndex as powerSearchIndex } from "@/components/settings/battery-saver-section";
 import { ReferralCard } from "@/components/settings/referral-card";
+import { isDevLoginSkipEnabled } from "@/lib/app-entitlement";
 import { SettingsSearchInput, SettingsSearchPopover, searchSettingsNav, scrollToSettingsField, type IndexedSettingsField, type SettingsField } from "@/components/settings/settings-search";
 import { ExperimentalShortcutGuide } from "@/components/shortcut-guide";
 
@@ -207,29 +208,37 @@ function SettingsContent() {
         { id: "activities" as const, label: "Activities", icon: <ListChecks className="h-4 w-4" /> },
         { id: "ai-settings" as const, label: "AI features", icon: <SlidersHorizontal className="h-4 w-4" /> },
         { id: "ai" as const, label: "Models & keys", icon: <Brain className="h-4 w-4" /> },
-        { id: "usage" as const, label: "AI credits", icon: <BarChart3 className="h-4 w-4" /> },
+        // "AI credits" is a cloud-quota concept (purchased credits on the
+        // screenpipe cloud) — meaningless in a local/self-hosted build.
+        ...(isDevLoginSkipEnabled()
+          ? []
+          : [{ id: "usage" as const, label: "AI credits", icon: <BarChart3 className="h-4 w-4" /> }]),
       ].filter((s) => !isSettingsSectionHidden(s.id)),
     },
     {
       label: "Account",
-      items: [
-        { id: "account" as const, label: "Account", icon: <User className="h-4 w-4" /> },
-        // Hide "Team" on enterprise builds — those installs are already
-        // org-managed; the desktop has nothing to manage. Admins use the
-        // /enterprise dashboard on the web. On consumer builds we still
-        // surface Team as a marketing entry point to /team.
-        ...(isManagedDeployment
-          ? []
-          : [{ id: "team" as const, label: "Team", icon: <Users className="h-4 w-4" /> }]),
-        // Local/self-hosted builds (DEV_LOGIN_SKIP) skip the referral
-        // marketing entry — there's no signed-in account to earn/claim
-        // referral credit, so "Get free month" only invites confusion.
-        ...(() =>
-          process.env.NEXT_PUBLIC_SCREENPIPE_DEV_LOGIN_SKIP === "true"
-            ? []
-            : [{ id: "referral" as const, label: "Get free month", icon: <Gift className="h-4 w-4" /> }]
-        )(),
-      ].filter((s) => !isSectionHidden(s.id)),
+      // Local/self-hosted builds have no cloud account, team or referral
+      // program — the whole Account group is meaningless and gets dropped.
+      items: isDevLoginSkipEnabled()
+        ? []
+        : [
+            { id: "account" as const, label: "Account", icon: <User className="h-4 w-4" /> },
+            // Hide "Team" on enterprise builds — those installs are already
+            // org-managed; the desktop has nothing to manage. Admins use the
+            // /enterprise dashboard on the web. On consumer builds we still
+            // surface Team as a marketing entry point to /team.
+            ...(isManagedDeployment
+              ? []
+              : [{ id: "team" as const, label: "Team", icon: <Users className="h-4 w-4" /> }]),
+            // Local/self-hosted builds (DEV_LOGIN_SKIP) skip the referral
+            // marketing entry — there's no signed-in account to earn/claim
+            // referral credit, so "Get free month" only invites confusion.
+            ...(() =>
+              process.env.NEXT_PUBLIC_SCREENPIPE_DEV_LOGIN_SKIP === "true"
+                ? []
+                : [{ id: "referral" as const, label: "Get free month", icon: <Gift className="h-4 w-4" /> }]
+            )(),
+          ].filter((s) => !isSectionHidden(s.id)),
     },
     {
       label: "App",
@@ -260,9 +269,23 @@ function SettingsContent() {
   const flatItems = navGroups.flatMap((g) =>
     g.items.map((it) => ({ ...it, group: g.label })),
   );
-  const searchableFields = showPermissions
-    ? ALL_SETTINGS_FIELDS
-    : ALL_SETTINGS_FIELDS.filter((f) => f.section !== "permissions");
+  const searchableFields = (() => {
+    // Local/self-hosted builds: don't surface search results for sections
+    // that no longer exist in the nav (account/team/referral/usage).
+    if (isDevLoginSkipEnabled()) {
+      return ALL_SETTINGS_FIELDS.filter(
+        (f) =>
+          f.section !== "permissions" &&
+          f.section !== "account" &&
+          f.section !== "team" &&
+          f.section !== "referral" &&
+          f.section !== "usage",
+      );
+    }
+    return showPermissions
+      ? ALL_SETTINGS_FIELDS
+      : ALL_SETTINGS_FIELDS.filter((f) => f.section !== "permissions");
+  })();
   const results = searchSettingsNav(searchQuery, flatItems, searchableFields);
 
   useEffect(() => {
@@ -351,6 +374,18 @@ function SettingsContent() {
   }, []);
 
   const renderSection = () => {
+    // Local/self-hosted builds hide the cloud-account sections entirely
+    // (navigation entries are gone too); a stale deep link lands on nothing
+    // instead of a dead account/upgrade screen.
+    if (isDevLoginSkipEnabled()) {
+      switch (section) {
+        case "account":
+        case "team":
+        case "referral":
+        case "usage":
+          return null;
+      }
+    }
     switch (section) {
       case "general":       return <GeneralSettings />;
       case "display":       return <DisplaySection />;
