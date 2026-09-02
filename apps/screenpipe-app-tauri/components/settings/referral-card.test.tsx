@@ -69,7 +69,7 @@ describe("ReferralCard", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: /copy referral link/i }),
+      screen.getByRole("button", { name: /复制推荐链接/ }),
     );
     await waitFor(() =>
       expect(mocks.copyTextToClipboard).toHaveBeenCalledWith(referral.link),

@@ -52,7 +52,7 @@ const customAdapter: AcpAdapterInfo = {
   name: "Agent command",
   imageSrc: "/images/custom.png",
   presetName: "acp agent",
-  description: "Use a command.",
+  description: "连接其他编程代理。",
 };
 
 describe("AIProviderChoices", () => {
@@ -95,22 +95,22 @@ describe("AIProviderChoices", () => {
     expect(screen.queryByRole("button", { name: /ChatGPT/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Claude API/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Ollama/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Use an API key/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /使用 API 密钥/ })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "advanced" }));
 
-    expect(screen.getByText("use a model directly")).toBeInTheDocument();
+    expect(screen.getByText("直接使用模型")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /ChatGPT/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Claude API/ })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Ollama/ }).querySelector("img"),
     ).toHaveAttribute("src", "/images/ollama.png");
     expect(
-      screen.getByRole("button", { name: /Use an API key/ }),
+      screen.getByRole("button", { name: /使用 API 密钥/ }),
     ).toBeInTheDocument();
-    expect(screen.getByText("connect another agent")).toBeInTheDocument();
+    expect(screen.getByText("连接另一个代理")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Use a command/ }),
+      screen.getByRole("button", { name: /使用命令/ }),
     ).toBeInTheDocument();
   });
 
@@ -152,7 +152,7 @@ describe("AIProviderChoices", () => {
       />,
     );
 
-    expect(screen.getByText("use a model directly")).toBeInTheDocument();
+    expect(screen.getByText("直接使用模型")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /ChatGPT/ })).toHaveAttribute(
       "aria-pressed",
       "true",

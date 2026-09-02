@@ -17,12 +17,12 @@ vi.mock("@/components/share-logs-button", () => ({
 }));
 
 const resources = [
-  ["Documentation", "https://docs.screenpi.pe"],
-  ["Video tutorials", "https://www.youtube.com/@screen_pipe/videos"],
-  ["Feature ideas", "https://screenpipe.com/ideas"],
+  ["文档", "https://docs.screenpi.pe"],
+  ["视频教程", "https://www.youtube.com/@screen_pipe/videos"],
+  ["功能建议", "https://screenpipe.com/ideas"],
   ["GitHub issues", "https://github.com/screenpipe/screenpipe/issues"],
   ["Discord", "https://discord.com/invite/screenpipe"],
-  ["Changelog", "https://screenpipe.com/changelog"],
+  ["更新日志", "https://screenpipe.com/changelog"],
 ] as const;
 
 describe("FeedbackSection", () => {

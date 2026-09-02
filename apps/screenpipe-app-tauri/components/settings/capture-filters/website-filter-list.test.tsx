@@ -12,7 +12,7 @@ describe("WebsiteRuleList", () => {
 		const onChange = vi.fn();
 		render(<WebsiteRuleList rules={[]} observed={[]} mode="allow" onChange={onChange} />);
 
-		fireEvent.change(screen.getByLabelText("Hostname to allow"), {
+		fireEvent.change(screen.getByLabelText("要允许的主机名"), {
 			target: { value: " HTTPS://WWW.Example.COM/path " },
 		});
 		fireEvent.click(screen.getByRole("button", { name: "add" }));
@@ -30,7 +30,7 @@ describe("WebsiteRuleList", () => {
 		const onChange = vi.fn();
 		render(<WebsiteRuleList rules={[]} observed={[]} mode="block" onChange={onChange} />);
 
-		fireEvent.change(screen.getByLabelText("Hostname to block"), {
+		fireEvent.change(screen.getByLabelText("要阻止的主机名"), {
 			target: { value: "worktrace" },
 		});
 		fireEvent.click(screen.getByRole("button", { name: "add" }));
@@ -45,7 +45,7 @@ describe("WebsiteRuleList", () => {
 			<WebsiteRuleList rules={["legacy.example"]} observed={[]} mode="block" onChange={onChange} />,
 		);
 
-		fireEvent.change(screen.getByLabelText("Hostname to block"), {
+		fireEvent.change(screen.getByLabelText("要阻止的主机名"), {
 			target: { value: "docs.example.com" },
 		});
 		fireEvent.click(screen.getByRole("button", { name: "add" }));
@@ -72,13 +72,13 @@ describe("WebsiteRuleList", () => {
 		);
 
 		expect(screen.getByText("example.com")).toBeInTheDocument();
-		fireEvent.change(screen.getByLabelText("Hostname to block"), {
+		fireEvent.change(screen.getByLabelText("要阻止的主机名"), {
 			target: { value: "example.com" },
 		});
 		fireEvent.click(screen.getByRole("button", { name: "add" }));
 
 		expect(onChange).not.toHaveBeenCalled();
-		expect(screen.getByRole("alert")).toHaveTextContent("already listed");
+		expect(screen.getByRole("alert")).toHaveTextContent("该主机名已在列表中");
 	});
 
 	it("makes subdomain behavior explicit and clears exceptions when disabled", () => {

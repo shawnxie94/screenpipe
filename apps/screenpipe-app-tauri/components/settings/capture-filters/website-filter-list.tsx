@@ -93,7 +93,7 @@ export function WebsiteRuleList(props: WebsiteRuleListProps) {
 					list={listId}
 					placeholder="docs.google.com"
 					className="h-8 text-xs"
-					aria-label={mode === "allow" ? "Hostname to allow" : "要阻止的主机名"}
+					aria-label={mode === "allow" ? "要允许的主机名" : "要阻止的主机名"}
 				/>
 				<datalist id={listId}>
 					{observed.map((item) => (

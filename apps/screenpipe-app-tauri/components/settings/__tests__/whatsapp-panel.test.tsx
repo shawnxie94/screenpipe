@@ -96,7 +96,7 @@ describe("WhatsAppPanel", () => {
       await vi.advanceTimersByTimeAsync(WHATSAPP_PAIRING_TIMEOUT_MS + 2_000);
     });
 
-    expect(screen.getByRole("alert").textContent).toContain("QR code did not arrive");
+    expect(screen.getByRole("alert").textContent).toContain("二维码未到达");
   });
 
   it("does not expire while a QR code is already visible", async () => {
@@ -124,6 +124,6 @@ describe("WhatsAppPanel", () => {
     } as unknown as Response);
     render(<WhatsAppPanel />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Could not check WhatsApp status (503)");
+    expect(await screen.findByRole("alert")).toHaveTextContent("无法检查 WhatsApp 状态 (503)");
   });
 });

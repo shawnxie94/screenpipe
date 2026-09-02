@@ -218,7 +218,7 @@ export function AIProviderChoices({
               <AIProviderCard
                 type="acp"
                 title="使用命令"
-                description="Connect another coding agent."
+                description="连接其他编程代理。"
                 imageSrc={customAcpAdapter.imageSrc}
                 imageClassName={
                   customAcpAdapter.invertInDark ? "dark:invert" : undefined

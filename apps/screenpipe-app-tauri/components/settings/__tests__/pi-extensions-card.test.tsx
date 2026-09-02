@@ -65,16 +65,16 @@ describe("PiExtensionsCard", () => {
   it("loads configured packages and marks the matching catalog item enabled", async () => {
     render(<PiExtensionsCard />);
 
-    expect(await screen.findByText("Subagents")).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "Subagents always enabled" })).toHaveAttribute(
+    expect(await screen.findByText("子代理")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "子代理 始终启用" })).toHaveAttribute(
       "aria-checked",
       "true",
     );
-    expect(screen.getAllByText("screenpipe only").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("仅 screenpipe").length).toBeGreaterThan(0);
     expect(screen.queryByText("Pi only")).not.toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "Subagents always enabled" })).toBeDisabled();
-    expect(screen.getByText("required")).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "Enable Web agent" })).toHaveAttribute(
+    expect(screen.getByRole("switch", { name: "子代理 始终启用" })).toBeDisabled();
+    expect(screen.getByText("必需")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "启用 网页代理" })).toHaveAttribute(
       "aria-checked",
       "false",
     );
@@ -84,11 +84,11 @@ describe("PiExtensionsCard", () => {
   it("shows the common tool switches first in the modal content", async () => {
     render(<PiExtensionsCard />);
 
-    const recommended = await screen.findByText("Recommended");
-    const included = screen.getByText("Included");
-    expect(screen.getByRole("switch", { name: "Subagents always enabled" })).toBeDisabled();
-    expect(screen.getByRole("switch", { name: "Enable Web agent" })).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "Enable Ask user" })).toBeInTheDocument();
+    const recommended = await screen.findByText("推荐");
+    const included = screen.getByText("内置");
+    expect(screen.getByRole("switch", { name: "子代理 始终启用" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "启用 网页代理" })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "启用 询问用户" })).toBeInTheDocument();
     expect(
       recommended.compareDocumentPosition(included) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -97,11 +97,11 @@ describe("PiExtensionsCard", () => {
   it("shows included tools without protocol or package details", async () => {
     render(<PiExtensionsCard />);
 
-    expect(await screen.findByText("Screen history")).toBeInTheDocument();
+    expect(await screen.findByText("屏幕历史")).toBeInTheDocument();
     expect(
-      screen.getByText("Ready in every agent. Nothing to set up."),
+      screen.getByText("每个代理都可用。无需设置。"),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Screen history ready")).toBeInTheDocument();
+    expect(screen.getByLabelText("屏幕历史 已就绪")).toBeInTheDocument();
     expect(screen.queryByText("ACP client middleware · MCP")).not.toBeInTheDocument();
     expect(screen.queryByText("activity-summary")).not.toBeInTheDocument();
   });
@@ -110,7 +110,7 @@ describe("PiExtensionsCard", () => {
     commandMocks.piListExtensionPackages.mockResolvedValueOnce({ status: "ok", data: [] });
     render(<PiExtensionsCard />);
 
-    const subagents = await screen.findByRole("switch", { name: "Subagents always enabled" });
+    const subagents = await screen.findByRole("switch", { name: "子代理 始终启用" });
     expect(subagents).toHaveAttribute("aria-checked", "true");
     expect(subagents).toBeDisabled();
     fireEvent.click(subagents);
@@ -119,21 +119,21 @@ describe("PiExtensionsCard", () => {
 
   it("keeps the common tools visible while searching the community catalog", async () => {
     render(<PiExtensionsCard />);
-    await screen.findByText("Subagents");
+    await screen.findByText("子代理");
 
-    fireEvent.change(screen.getByPlaceholderText("Search tools..."), {
+    fireEvent.change(screen.getByPlaceholderText("搜索工具..."), {
       target: { value: "web" },
     });
 
-    expect(screen.getByText("Web agent")).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "Subagents always enabled" })).toBeInTheDocument();
+    expect(screen.getByText("网页代理")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "子代理 始终启用" })).toBeInTheDocument();
     expect(screen.getByText(/community tools can run code/i)).toBeInTheDocument();
   });
 
   it("installs a curated package and refreshes enabled state from the returned package list", async () => {
     const onChanged = vi.fn();
     render(<PiExtensionsCard onChanged={onChanged} />);
-    const webAgentSwitch = await screen.findByRole("switch", { name: "Enable Web agent" });
+    const webAgentSwitch = await screen.findByRole("switch", { name: "启用 网页代理" });
 
     fireEvent.click(webAgentSwitch);
 
@@ -143,7 +143,7 @@ describe("PiExtensionsCard", () => {
       ),
     );
     await waitFor(() =>
-      expect(screen.getByRole("switch", { name: "Disable Web agent" })).toHaveAttribute(
+      expect(screen.getByRole("switch", { name: "禁用 网页代理" })).toHaveAttribute(
         "aria-checked",
         "true",
       ),
@@ -176,7 +176,7 @@ describe("PiExtensionsCard", () => {
     expect(await screen.findByText("Community")).toBeInTheDocument();
     expect(await screen.findByText("Reflag")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("switch", { name: "Enable Reflag" }));
+    fireEvent.click(screen.getByRole("switch", { name: "启用 Reflag" }));
 
     await waitFor(() =>
       expect(commandMocks.piInstallExtensionPackage).toHaveBeenCalledWith(
@@ -234,8 +234,8 @@ describe("PiExtensionsCard", () => {
     );
     render(<PiExtensionsCard />);
 
-    const webAgentSwitch = await screen.findByRole("switch", { name: "Enable Web agent" });
-    const askUserSwitch = screen.getByRole("switch", { name: "Enable Ask user" });
+    const webAgentSwitch = await screen.findByRole("switch", { name: "启用 网页代理" });
+    const askUserSwitch = screen.getByRole("switch", { name: "启用 询问用户" });
 
     fireEvent.click(webAgentSwitch);
 
@@ -263,8 +263,8 @@ describe("PiExtensionsCard", () => {
     });
     render(<PiExtensionsCard />);
 
-    expect(await screen.findByText("Other installed tools")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("switch", { name: "Disable custom-pi-tool" }));
+    expect(await screen.findByText("其他已安装的工具")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("switch", { name: "禁用 custom-pi-tool" }));
 
     await waitFor(() =>
       expect(commandMocks.piRemoveExtensionPackage).toHaveBeenCalledWith("npm:custom-pi-tool"),
@@ -280,12 +280,12 @@ describe("PiExtensionsCard", () => {
       error: "Pi is still working in chat.",
     });
     render(<PiExtensionsCard />);
-    const askUserSwitch = await screen.findByRole("switch", { name: "Enable Ask user" });
+    const askUserSwitch = await screen.findByRole("switch", { name: "启用 询问用户" });
 
     fireEvent.click(askUserSwitch);
 
     expect(await screen.findByText("Pi is still working in chat.")).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "Enable Ask user" })).toHaveAttribute(
+    expect(screen.getByRole("switch", { name: "启用 询问用户" })).toHaveAttribute(
       "aria-checked",
       "false",
     );

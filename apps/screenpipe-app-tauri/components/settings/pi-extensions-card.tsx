@@ -43,10 +43,10 @@ const COMPATIBILITY_CLASS = {
 } as const;
 
 function compatibilityLabel(item: PiExtensionCatalogItem): string {
-  if (item.compatibility === "pi-only") return "screenpipe only";
+  if (item.compatibility === "pi-only") return "仅 screenpipe";
   return item.compatibilityVerified
-    ? "works with every agent"
-    : "may work with other agents";
+    ? "兼容所有代理"
+    : "可能兼容其他代理";
 }
 
 function compatibilityClass(item: PiExtensionCatalogItem): string {
@@ -112,12 +112,12 @@ function PiExtensionRow({
             )}
             {item.required && (
               <span className="border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                required
+                必需
               </span>
             )}
             {stale && (
               <span className="border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-800 dark:text-amber-300">
-                repair needed
+                需要修复
               </span>
             )}
             <span
@@ -136,7 +136,7 @@ function PiExtensionRow({
           <Switch
             checked
             disabled
-            aria-label={`${item.name} always enabled`}
+            aria-label={`${item.name} 始终启用`}
             className="shrink-0"
           />
         ) : (
@@ -144,7 +144,7 @@ function PiExtensionRow({
             checked={enabled}
             disabled={disabled || busy}
             onCheckedChange={onToggle}
-            aria-label={`${enabled ? "Disable" : "Enable"} ${item.name}`}
+            aria-label={`${enabled ? "禁用" : "启用"} ${item.name}`}
             className="shrink-0"
           />
         )}
@@ -196,11 +196,11 @@ function PortableExtensionRow({
       <div className="flex items-start justify-between gap-3">
         <h4 className="text-sm font-medium leading-tight text-foreground">{item.name}</h4>
         <span
-          aria-label={`${item.name} ready`}
+          aria-label={`${item.name} 已就绪`}
           className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-muted-foreground"
         >
           <CheckCircle2 className="h-3.5 w-3.5" />
-          ready
+          已就绪
         </span>
       </div>
       <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">{item.summary}</p>
@@ -427,8 +427,8 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
             checked && changedPackage?.acpCompatible
               ? "可在新的代理聊天中随时使用。"
               : checked
-                ? "Ready to use in new Pi chats."
-                : "Removed from new Pi chats.",
+                ? "已可在新的 Pi 会话中使用。"
+                : "已从新的 Pi 会话中移除。",
         });
       } catch (err) {
         const message = packageErrorMessage(err);
@@ -464,7 +464,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
         setPackages(res.data);
         onChanged?.();
         toast({
-          title: "Tool removed",
+          title: "工具已移除",
           description: "在新的 Pi 聊天中将不再可用。",
         });
       } catch (err) {
@@ -511,10 +511,10 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Recommended
+                推荐
               </h4>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Turn tools on or off for new chats.
+                为新会话开启或关闭工具。
               </p>
             </div>
             <span className="text-[11px] tabular-nums text-muted-foreground">
@@ -544,10 +544,10 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h4 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-              Included
+              内置
             </h4>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Ready in every agent. Nothing to set up.
+              每个代理都可用。无需设置。
             </p>
           </div>
           <span className="text-[11px] tabular-nums text-muted-foreground">
@@ -689,12 +689,12 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="text-[11px] text-muted-foreground">
                     {pkg.filtered
-                      ? "unavailable"
+                      ? "不可用"
                       : !pkg.installed
-                        ? "repair needed"
+                        ? "需要修复"
                         : pkg.acpCompatible
-                          ? "works with every agent"
-                          : "screenpipe only"}
+                          ? "兼容所有代理"
+                          : "仅 screenpipe"}
                   </span>
                   {busySource === pkg.source ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
@@ -705,7 +705,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
                       onCheckedChange={(checked) => {
                         if (!checked) removePackageSource(pkg.source);
                       }}
-                      aria-label={`Disable ${packageDisplayName(pkg.source)}`}
+                      aria-label={`禁用 ${packageDisplayName(pkg.source)}`}
                     />
                   )}
                 </div>

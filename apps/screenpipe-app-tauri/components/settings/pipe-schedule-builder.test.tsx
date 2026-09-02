@@ -104,7 +104,7 @@ describe("PipeScheduleBuilder", () => {
   test("weekly with no days disables save and warns", () => {
     renderBuilder(cfg({ frequency: "weeks", days_of_week: [] }));
     expect(saveButton()).toBeDisabled();
-    expect(screen.getByText("pick at least one day")).toBeInTheDocument();
+    expect(screen.getByText("至少选择一天")).toBeInTheDocument();
   });
 
   test("manual ('don't run') saves null", () => {
