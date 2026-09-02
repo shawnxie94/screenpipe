@@ -10,23 +10,23 @@ import type { SettingsField } from "./settings-search";
 /** Settings search index for this section. Co-located with the component so adding a field here means updating one file. See `SettingsField` in `./settings-search` for the schema. */
 export const searchIndex: SettingsField[] = [
   {
-    label: "Content filters",
+    label: "内容过滤",
     keywords: ["ignore", "exclude", "block", "blocklist", "allowlist", "apps", "windows"],
   },
   {
-    label: "Excluded websites",
+    label: "排除的网站",
     keywords: ["url", "domain", "site", "browser", "ignore", "exclude"],
   },
   {
-    label: "Ignore incognito windows",
+    label: "忽略隐私窗口",
     keywords: ["private", "browser", "enhanced", "automation"],
   },
-  { label: "PII masking", keywords: ["mask", "redact", "columns", "url", "fields"] },
+  { label: "PII 打码", keywords: ["mask", "redact", "columns", "url", "fields"] },
   {
-    label: "Remote support logs",
+    label: "远程支持日志",
     keywords: ["support", "diagnostic", "troubleshooting", "remote", "logs"],
   },
-  { label: "Telemetry" },
+  { label: "遥测" },
 ];
 import { LockedSetting, ManagedSwitch } from "@/components/enterprise-locked-setting";
 import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
@@ -112,9 +112,9 @@ function EncryptDataCard({
       if (res.status === "ok" && res.data.state === "enabled") {
         setKeychainState("enabled");
         onEncryptStoreChange(true);
-        toast({ title: "Encryption enabled", description: "凭据和设置现已静态加密。" });
+        toast({ title: "已启用加密", description: "凭据和设置现已静态加密。" });
       } else {
-        toast({ title: "Keychain access denied", description: "无法启用加密，请稍后重试。", variant: "destructive" });
+        toast({ title: "钥匙串访问被拒绝", description: "无法启用加密，请稍后重试。", variant: "destructive" });
       }
     } else {
       // Disable: decrypt credentials first, then turn off store.bin encryption.
@@ -123,12 +123,12 @@ function EncryptDataCard({
         setKeychainState("disabled");
         onEncryptStoreChange(false);
         toast({
-          title: "Encryption disabled",
+          title: "已禁用加密",
           description: "凭据和设置现以未加密形式存储（无钥匙串加密）。",
         });
       } else {
         toast({
-          title: "Could not disable encryption",
+          title: "无法禁用加密",
           description: "无法解密加密的凭据。请检查钥匙串访问权限后重试。",
           variant: "destructive",
         });
@@ -148,11 +148,11 @@ function EncryptDataCard({
             <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
             <div>
               <h3 className="text-sm font-medium text-foreground">
-                Encrypt Data at Rest
+                静态加密数据
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {keychainState === "unavailable"
-                  ? "OS keychain not available on this system."
+                  ? "此系统的操作系统钥匙串不可用。"
                   : "使用系统钥匙串加密凭据和设置。"}
               </p>
             </div>
@@ -453,7 +453,7 @@ export function PrivacySection() {
     setHasUnsavedChanges(false);
 
     toast({
-      title: "Updating privacy settings",
+      title: "正在更新隐私设置",
       description: "这可能需要片刻...",
     });
 
@@ -494,13 +494,13 @@ export function PrivacySection() {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       toast({
-        title: "Settings updated successfully",
-        description: "Screenpipe has been restarted with new settings",
+        title: "设置更新成功",
+        description: "Screenpipe 已使用新设置重启",
       });
     } catch (error) {
       console.error("Failed to update settings:", error);
       toast({
-        title: "Error updating settings",
+        title: "更新设置时出错",
         description: "请重试或查看日志以获取更多信息",
         variant: "destructive",
       });
@@ -596,15 +596,15 @@ export function PrivacySection() {
     desc: string;
     always?: boolean;
   }[] = [
-    { value: "secret", label: "Passwords & keys", desc: "passwords, API keys, tokens", always: true },
-    { value: "id", label: "ID numbers", desc: "SSNs, credit cards, account & license numbers" },
-    { value: "person", label: "Names", desc: "people's names" },
-    { value: "email", label: "Email addresses", desc: "email addresses" },
-    { value: "phone", label: "Phone numbers", desc: "phone numbers" },
-    { value: "address", label: "Mailing addresses", desc: "postal addresses" },
-    { value: "url", label: "Links with tokens", desc: "links carrying tokens or session IDs" },
-    { value: "date", label: "Dates", desc: "dates of birth, timestamps" },
-    { value: "sensitive", label: "Health & financial details", desc: "health, financial, identity context" },
+    { value: "secret", label: "密码与密钥", desc: "密码、API 密钥、令牌", always: true },
+    { value: "id", label: "证件号码", desc: "社保号、银行卡、账户与许可证号" },
+    { value: "person", label: "姓名", desc: "人名" },
+    { value: "email", label: "邮箱地址", desc: "电子邮箱" },
+    { value: "phone", label: "电话号码", desc: "手机号、座机号" },
+    { value: "address", label: "邮寄地址", desc: "邮政地址" },
+    { value: "url", label: "带令牌的链接", desc: "携带令牌或会话 ID 的链接" },
+    { value: "date", label: "日期", desc: "出生日期、时间戳" },
+    { value: "sensitive", label: "健康与财务信息", desc: "健康、财务、身份背景" },
   ];
 
   const piiRedactionLabels = useMemo<string[]>(() => {
@@ -685,29 +685,29 @@ export function PrivacySection() {
   }[] = [
     {
       value: "element_properties",
-      label: "Form field values",
-      desc: "what you type into forms — catches passwords and field contents that on-screen text misses",
+      label: "表单字段值",
+      desc: "你输入到表单的内容 — 捕获屏幕文字漏掉的密码和字段内容",
       recommended: true,
     },
     {
       value: "browser_url",
-      label: "Web addresses",
-      desc: "the address bar — usually not private, and hiding them breaks links",
+      label: "网址",
+      desc: "地址栏 — 通常不含隐私，隐藏它们会破坏链接",
     },
     {
       value: "ui_element_name",
-      label: "Button & menu labels",
-      desc: "names like “Submit” or “Search” — rarely private",
+      label: "按钮与菜单标签",
+      desc: "像“提交”“搜索”这样的名称 — 很少涉及隐私",
     },
     {
       value: "ui_element_description",
-      label: "Help text on controls",
-      desc: "the longer description some buttons and menus expose",
+      label: "控件帮助文本",
+      desc: "部分按钮和菜单暴露的较长描述",
     },
     {
       value: "a11y_url_field",
-      label: "Links inside app data",
-      desc: "URLs embedded in an app’s underlying structure",
+      label: "应用数据中的链接",
+      desc: "嵌入应用底层结构中的 URL",
     },
   ];
 
@@ -897,7 +897,7 @@ export function PrivacySection() {
   return (
     <div className="space-y-5">
       <p className="text-muted-foreground text-sm mb-4">
-        Content filtering, PII redaction, and telemetry
+        内容过滤、PII 打码和遥测
       </p>
 
       <div className="flex items-center justify-end">
@@ -914,7 +914,7 @@ export function PrivacySection() {
               ) : (
                 <RefreshCw className="h-3 w-3" />
               )}
-              Apply & Restart
+              应用并重启
             </Button>
           )}
       </div>
@@ -922,7 +922,7 @@ export function PrivacySection() {
       {/* Security */}
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-          Security
+          安全
         </h2>
         <LockedSetting settingKey="api_auth">
         <Card className="border-border bg-card">
@@ -932,10 +932,10 @@ export function PrivacySection() {
                 <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground">
-                    Require API Authentication
+                    要求 API 认证
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    All API requests require a valid token when enabled — including local ones. Most apps pair automatically; use this key only for manual API clients and troubleshooting.
+                    开启后，所有 API 请求都需要有效令牌 — 包括本地请求。大多数应用会自动配对；此密钥仅用于手动 API 客户端和排查问题。
                   </p>
                 </div>
               </div>
@@ -950,7 +950,7 @@ export function PrivacySection() {
             {hasUnsavedChanges && (
               <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
                 <RefreshCw className="h-3 w-3 shrink-0" />
-                click &quot;Apply &amp; Restart&quot; above for auth changes to take effect; existing browser connections keep using the old key until then
+                点击上方的“应用并重启”以使认证更改生效；在此之前，现有浏览器连接继续使用旧密钥
               </p>
             )}
             <LockedSetting settingKey="api_key">
@@ -959,7 +959,7 @@ export function PrivacySection() {
                 <Input
                   type="text"
                   readOnly={!revealApiKey}
-                  placeholder="e.g. sp-abc12345"
+                  placeholder="例如 sp-abc12345"
                   data-testid="privacy-api-key-input"
                   value={
                     liveApiKey
@@ -974,7 +974,7 @@ export function PrivacySection() {
                     setLiveApiKey(val);
                     setPendingApiKey(val);
                     if (!val.trim()) {
-                      setValidationErrors((prev) => ({ ...prev, apiKey: "API key cannot be empty" }));
+                      setValidationErrors((prev) => ({ ...prev, apiKey: "API 密钥不能为空" }));
                     } else {
                       setValidationErrors(({ apiKey: _, ...rest }) => rest);
                     }
@@ -992,7 +992,7 @@ export function PrivacySection() {
                   variant="outline"
                   size="sm"
                   className="h-8 px-2 shrink-0"
-                  title={revealApiKey ? "Hide key" : "Reveal key"}
+                  title={revealApiKey ? "隐藏密钥" : "显示密钥"}
                   onClick={() => setRevealApiKey((v) => !v)}
                   disabled={!liveApiKey}
                   data-testid="privacy-api-key-reveal"
@@ -1010,10 +1010,10 @@ export function PrivacySection() {
                     if (!liveApiKey) return;
                     try {
                       await commands.copyTextToClipboard(liveApiKey);
-                      toast({ title: "API key copied to clipboard" });
+                      toast({ title: "API 密钥已复制到剪贴板" });
                     } catch (error) {
                       toast({
-                        title: "couldn't copy API key",
+                        title: "无法复制 API 密钥",
                         description: error instanceof Error ? error.message : String(error),
                         variant: "destructive",
                       });
@@ -1032,7 +1032,7 @@ export function PrivacySection() {
                   onClick={async () => {
                     const { confirm } = await import("@tauri-apps/plugin-dialog");
                     const confirmed = await confirm(
-                      "Regenerate API key? Existing browser extensions stay connected until you Apply & Restart, then they must reconnect with the new key.",
+                      "重新生成 API 密钥？现有浏览器扩展在应用并重启之前保持连接，之后需要用新密钥重新连接。",
                       { title: "screenpipe", kind: "info" },
                     );
                     if (!confirmed) return;
@@ -1045,12 +1045,12 @@ export function PrivacySection() {
                       setRevealApiKey(true);
                       setHasUnsavedChanges(true);
                       toast({
-                        title: "API key regenerated",
+                        title: "API 密钥已重新生成",
                         description: "点击应用并重启。浏览器扩展将在重启后重新连接。",
                       });
                     } catch (e: any) {
                       toast({
-                        title: "Failed to regenerate API key",
+                        title: "重新生成 API 密钥失败",
                         description: String(e?.message ?? e),
                         variant: "destructive",
                       });
@@ -1081,12 +1081,11 @@ export function PrivacySection() {
                 <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground">
-                    Allow LAN access
+                    允许局域网访问
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Bind the API to <code className="text-[10px]">0.0.0.0</code> so other devices on your local
-                    network can query it. API authentication is force-enabled
-                    whenever this is on. Restart the app to apply.
+                    将 API 绑定到 <code className="text-[10px]">0.0.0.0</code>，让本地网络上的其他设备可以查询。
+                    开启此项会强制启用 API 认证。重启应用以应用。
                   </p>
                 </div>
               </div>
@@ -1119,7 +1118,7 @@ export function PrivacySection() {
       {/* Capture Rules */}
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-          Capture rules
+          采集规则
         </h2>
 
       {/* Incognito Detection */}
@@ -1130,11 +1129,11 @@ export function PrivacySection() {
               <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  Ignore Incognito Windows
-                  <HelpTooltip text="automatically detects and skips private/incognito browser windows in 20+ languages without extra access. on macOS, enhance enables browser-native detection for supported Chromium browsers." />
+                  忽略隐私窗口
+                  <HelpTooltip text="自动检测并跳过 20 多种语言中的隐私/隐身浏览器窗口，无需额外权限。在 macOS 上，增强模式会为受支持的 Chromium 浏览器启用浏览器原生检测。" />
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Skip private browsing sessions
+                  跳过隐私浏览会话
                 </p>
               </div>
             </div>
@@ -1148,14 +1147,14 @@ export function PrivacySection() {
                   onClick={handleEnhancedIncognitoDetection}
                   disabled={isEnhancingIncognito}
                   aria-pressed={enhancedIncognitoDetection}
-                  title="use browser-native detection; requires macOS Automation access"
+                  title="使用浏览器原生检测；需要 macOS 自动化权限"
                 >
                   {isEnhancingIncognito ? (
                     <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                   ) : (
                     <Shield className="mr-1 h-3 w-3" />
                   )}
-                  {enhancedIncognitoDetection ? "enhanced" : "enhance"}
+                  {enhancedIncognitoDetection ? "已增强" : "增强"}
                 </Button>
               )}
               <Switch
@@ -1177,11 +1176,11 @@ export function PrivacySection() {
               <Tv className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  Pause for DRM & Remote Desktop
-                  <HelpTooltip text="pauses all screen capture when a DRM-protected streaming app (netflix, disney+, hulu, prime video, apple tv, etc.) or a remote-desktop client (Omnissa/VMware Horizon) is focused. these apps blank their windows when any app is recording the screen — pausing capture while they're focused keeps them usable. capture resumes automatically when you switch away." />
+                  DRM 与远程桌面时暂停
+                  <HelpTooltip text="当 DRM 保护的流媒体应用（Netflix、Disney+、Hulu、Prime Video、Apple TV 等）或远程桌面客户端（Omnissa/VMware Horizon）处于焦点时，暂停所有屏幕采集。这些应用在检测到任何应用录制屏幕时会白屏/灰屏 — 在它们聚焦时暂停采集可保持其可用。切换离开后采集自动恢复。" />
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Avoid DRM black screens (Netflix, Disney+) and gray Horizon windows.
+                  避免 DRM 黑屏（Netflix、Disney+）和 Horizon 灰窗。
                 </p>
               </div>
             </div>
@@ -1202,12 +1201,12 @@ export function PrivacySection() {
               <ClipboardX className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  Capture clipboard
-                  <HelpTooltip text="when on, screenpipe records clipboard copy/paste events and contents. turn off if you ship ~/.screenpipe to a remote LLM or share it — passwords, API keys, and private keys frequently pass through the clipboard." />
+                  采集剪贴板
+                  <HelpTooltip text="开启后，screenpipe 记录剪贴板复制/粘贴事件和内容。如果你会把 ~/.screenpipe 发给远程 LLM 或与他人共享 — 密码、API 密钥和私钥经常经过剪贴板 — 请关闭。" />
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Skip if your data leaves the machine (passwords, keys often
-                  pass through copy/paste).
+                  如果数据会离开本机（密码、密钥经常
+                  经过复制/粘贴）。
                 </p>
               </div>
             </div>
@@ -1228,13 +1227,13 @@ export function PrivacySection() {
               <Keyboard className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  Capture keyboard
-                  <HelpTooltip text="when on, screenpipe records what you type (your keystrokes). off by default. the accessibility tree and OCR still capture on-screen text either way, so Rewind and Ask keep working — this only controls the raw keystroke stream, where passwords, API keys, and secrets you type would otherwise be logged." />
+                  采集键盘
+                  <HelpTooltip text="开启后，screenpipe 记录你输入的内容（击键）。默认关闭。无障碍树和 OCR 仍会采集屏幕上的文字，因此回放和问答照常工作 — 这里只控制原始击键流，否则你输入的密码、API 密钥和秘密会被记录。" />
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   {managedKeyboardCapture !== undefined
-                    ? "Managed by your organization."
-                    : "Off by default. Records the raw keystroke stream (secrets often get typed). On-screen text is still captured."}
+                    ? "由你的组织管理。"
+                    : "默认关闭。记录原始击键流（经常会输入秘密）。屏幕文字仍会被采集。"}
                 </p>
               </div>
             </div>
@@ -1260,12 +1259,12 @@ export function PrivacySection() {
               <MousePointerClick className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  Capture clicks
-                  <HelpTooltip text="when on, screenpipe records mouse click events (where and what you clicked). on by default — clicks carry no text payload and power workflow analysis and task mining. turning this off only skips the click rows; clicks still trigger screen captures." />
+                  采集点击
+                  <HelpTooltip text="开启后，screenpipe 记录鼠标点击事件（点击位置和对象）。默认开启 — 点击事件不含文本内容，驱动工作流分析和任务挖掘。关闭后只跳过点击行；点击仍会触发屏幕采集。" />
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   {managedClickCapture !== undefined
-                    ? "Managed by your organization."
+                    ? "由你的组织管理。"
                     : "默认开启。点击事件驱动工作流分析；不记录文本。"}
                 </p>
               </div>
@@ -1293,8 +1292,8 @@ export function PrivacySection() {
             <div className="flex items-center space-x-2.5">
               <Keyboard className="h-4 w-4 text-muted-foreground shrink-0" />
               <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                Input Monitoring permission
-                <HelpTooltip text="macOS permission that lets screenpipe capture keystrokes and mouse clicks. without it, capture runs in reduced mode — clipboard and app/window switches still work, but keyboard and click recording is dropped." />
+                输入监控权限
+                <HelpTooltip text="允许 screenpipe 采集击键和鼠标点击的 macOS 权限。没有它，采集会降级运行 — 剪贴板和应用/窗口切换仍可用，但键盘和点击录制会被丢弃。" />
               </h3>
             </div>
             <div className="mt-2 ml-[26px]">
@@ -1312,11 +1311,11 @@ export function PrivacySection() {
               <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  Record Audio While Locked
-                  <HelpTooltip text="when enabled, audio recording continues even when your screen is locked. by default, audio recording pauses when the screen is locked to save resources and protect privacy." />
+                  锁屏时继续录制音频
+                  <HelpTooltip text="开启后，即使屏幕锁定也会继续录音。默认情况下，屏幕锁定时录音会暂停，以节省资源并保护隐私。" />
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Continue audio capture when screen is locked
+                  屏幕锁定时继续音频采集
                 </p>
               </div>
             </div>
@@ -1343,7 +1342,7 @@ export function PrivacySection() {
       <LockedSetting settingKey="pii_removal">
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-          Data protection
+          数据保护
         </h2>
         {/* One PII Removal section with two modes — Basic (regex on the
             hot path) and Smart (regex + AI background worker, also
@@ -1357,8 +1356,8 @@ export function PrivacySection() {
                 <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    PII Removal
-                    <HelpTooltip text="Redacts emails, phones, secrets, and more from captures. Smart mode adds names, addresses, and image redaction." />
+                    PII 打码
+                    <HelpTooltip text="从采集中抹除邮箱、电话、秘密等。智能模式增加姓名、地址和图片打码。" />
                   </h3>
                   <p className="text-xs text-muted-foreground">
                     {piiMode === "off"
@@ -1393,9 +1392,9 @@ export function PrivacySection() {
                     <span>
                       <span className="font-medium text-foreground">基础</span>
                       <span className="text-muted-foreground">
-                        {" "}— regex on capture. Free, instant, deterministic.
-                        Catches emails, phones, SSNs, cards, JWTs, API keys,
-                        private keys, connection strings.
+                        {" "}— 对采集内容做正则匹配。免费、即时、确定性。
+                        捕获邮箱、电话、社保号、银行卡、JWT、API 密钥、
+                        私钥和连接字符串。
                       </span>
                     </span>
                   </label>
@@ -1410,13 +1409,13 @@ export function PrivacySection() {
                     <span>
                       <span className="font-medium text-foreground">智能</span>
                       <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded ml-1">
-                        Experimental
+                        实验性
                       </span>
                       <span className="text-muted-foreground">
-                        {" "}— includes Basic, plus an AI background worker
-                        for semantic PII (names, addresses, sensitive context)
-                        and image redaction on screen frames. Downloads a
-                        ~100 MB model on first run.
+                        {" "}— 包含基础模式，另加 AI 后台工作线程
+                        处理语义 PII（姓名、地址、敏感上下文）
+                        和屏幕帧的图片打码。首次运行会下载
+                        约 100 MB 的模型。
                       </span>
                     </span>
                   </label>
@@ -1424,7 +1423,7 @@ export function PrivacySection() {
                   {piiMode === "smart" && (
                     <div className="ml-6 space-y-1.5 pt-1">
                       <p className="text-xs font-medium text-foreground">
-                        Apply to
+                        应用于
                       </p>
                       <label className="flex items-start gap-2 text-xs cursor-pointer">
                         <input
@@ -1437,11 +1436,11 @@ export function PrivacySection() {
                         />
                         <span>
                           <span className="font-medium text-foreground">
-                            Text
+                            文本
                           </span>
                           <span className="text-muted-foreground">
-                            {" "}— scrub captured text (OCR, accessibility,
-                            transcripts, typed &amp; clipboard input)
+                            {" "}— 清洗采集到的文本（OCR、无障碍、
+                            转写、输入与剪贴板）
                           </span>
                         </span>
                       </label>
@@ -1456,11 +1455,11 @@ export function PrivacySection() {
                         />
                         <span>
                           <span className="font-medium text-foreground">
-                            Images
+                            图片
                           </span>
                           <span className="text-muted-foreground">
-                            {" "}— black out PII in screenshot frames (on-device
-                            vision model)
+                            {" "}— 在截图中将 PII 涂黑（设备端
+                            视觉模型）
                           </span>
                         </span>
                       </label>
@@ -1495,16 +1494,16 @@ export function PrivacySection() {
                   </label>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Local stays on-device — strongest privacy, slower on weak
-                  hardware. Cloud uses screenpipe&apos;s attested
-                  confidential-compute enclave — fast everywhere; your device
-                  verifies the open-source build before sending anything.
+                  本地模型留在设备端 — 隐私最强，在弱硬件上较慢。
+                  云端使用 screenpipe 经验证的
+                  机密计算 enclave — 处处快速；你的设备
+                  在发送任何数据前会验证开源构建。
                 </p>
 
                 {/* Axis 1 — WHAT to hide (PII categories). The primary knob:
                     content-type, applies wherever it's found. */}
                 <p className="text-xs font-medium text-foreground pt-2">
-                  What to hide
+                  隐藏什么
                 </p>
                 {PII_FIELD_OPTIONS.map((opt) => {
                   const checked =
@@ -1532,7 +1531,7 @@ export function PrivacySection() {
                         </span>
                         {opt.always && (
                           <span className="text-muted-foreground">
-                            {" "}(always on)
+                            {" "}（始终开启）
                           </span>
                         )}
                         <span className="text-muted-foreground">
@@ -1546,8 +1545,8 @@ export function PrivacySection() {
                   <RedactionExamplePreview labels={piiRedactionLabels} />
                 )}
                 <p className="text-[11px] text-muted-foreground pt-0.5">
-                  Unselected types stay visible so your timeline remains
-                  searchable. Secrets are always removed in both modes.
+                  未选中的类型保持可见，让你的时间线仍保持可搜索。
+                  两种模式下秘密都会被始终移除。
                 </p>
 
                 {/* Axis 2 — WHERE to look (captured surfaces). Advanced and
@@ -1559,17 +1558,16 @@ export function PrivacySection() {
                   <details className="group pt-3 mt-1.5 border-t border-border">
                     <summary className="flex cursor-pointer select-none items-center gap-1.5 text-xs font-medium text-foreground list-none [&::-webkit-details-marker]:hidden">
                       <ChevronRight className="h-3 w-3 shrink-0 transition-transform group-open:rotate-90" />
-                      Where we look
+                      在哪里查找
                       <span className="font-normal text-muted-foreground">
-                        — advanced
+                        — 高级
                       </span>
                     </summary>
                     <div className="mt-2 space-y-1.5">
                       <p className="text-[11px] text-muted-foreground">
-                        We always scan what you type, your clipboard,
-                        transcripts, window titles, and on-screen text. Turn on
-                        any of these extra places the same info can hide —
-                        hover a row to see what it covers.
+                        我们总会扫描你输入的内容、剪贴板、
+                        转写、窗口标题和屏幕文字。开启以下任何额外位置，
+                        同样的信息也可能藏在其中 — 悬停行可查看其覆盖范围。
                       </p>
                       <RedactionWherePreview
                         options={PII_COLUMN_OPTIONS}
@@ -1589,16 +1587,15 @@ export function PrivacySection() {
                   />
                   <span>
                     <span className="font-medium text-foreground">
-                      Consistent pseudonyms
+                      一致的假名
                     </span>
                     <span className="text-muted-foreground">
-                      {" "}— replace each value with a stable token like{" "}
-                      <code>[PERSON_1a2b3c4d5e6f]</code> instead of a generic{" "}
-                      <code>[PERSON]</code>, so the same person or value stays
-                      linkable across your timeline without being exposed.
-                      One-way and on-device — the original can&apos;t be
-                      recovered. Applies to newly-recorded activity going
-                      forward.
+                      {" "}— 用稳定的令牌（如 
+                      <code>[PERSON_1a2b3c4d5e6f]</code>）代替通用的 
+                      <code>[PERSON]</code>，使同一个人或值可以在
+                      你的时间线中保持关联而不暴露。单向且设备端
+                      处理 — 原始值不可恢复。仅对之后
+                      新记录的活动生效。
                     </span>
                   </span>
                 </label>
@@ -1611,7 +1608,7 @@ export function PrivacySection() {
 
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-          Agent logs
+          Agent 日志
         </h2>
 
         <Card className="border-border bg-card">
@@ -1626,14 +1623,13 @@ export function PrivacySection() {
               />
               <span>
                 <span className="font-medium text-foreground">
-                  Redact secrets in agent logs
+                  打码 Agent 日志中的秘密
                 </span>
                 <span className="text-muted-foreground">
-                  {" "}— coding agents (Pi) save full sessions, including any
-                  passwords, API keys, or tokens they touch, in plaintext on
-                  disk. When on, a background worker strips secrets from idle
-                  agent session logs. Secrets-only and on-device; never rewrites
-                  a session a run is still using.
+                  {" "}— 编码 Agent（Pi）会以明文在磁盘上保存完整会话，
+                  包括它接触过的任何密码、API 密钥或令牌。开启后，
+                  后台工作线程会清洗空闲 Agent 会话日志中的秘密。
+                  仅秘密、设备端处理；不会重写仍在使用的会话。
                 </span>
               </span>
             </label>
@@ -1643,7 +1639,7 @@ export function PrivacySection() {
 
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-          Content filters
+          内容过滤
         </h2>
 
         <ContentFiltersCard
@@ -1682,7 +1678,7 @@ export function PrivacySection() {
       {/* Telemetry */}
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-          Telemetry
+          遥测
         </h2>
         <LockedSetting settingKey="telemetry">
         <Card className="border-border bg-card">
@@ -1692,11 +1688,11 @@ export function PrivacySection() {
                 <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    Analytics
-                    <HelpTooltip text="Product usage events only — features used, errors, performance. Never your screen recordings, audio, transcripts, or OCR text. Signed out, events carry only a random device ID. Signed in, they are linked to your account, including your email." />
+                    分析
+                    <HelpTooltip text="仅产品使用事件 — 使用的功能、错误、性能。绝不会包含你的屏幕录制、音频、转写或 OCR 文本。退出登录后，事件仅携带随机设备 ID。登录状态下与你的账户关联，包括你的邮箱。" />
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Usage data, linked to your account when signed in
+                    使用数据，登录时与你的账户关联
                   </p>
                 </div>
               </div>
@@ -1718,7 +1714,7 @@ export function PrivacySection() {
         onApply={handleUpdate}
         isUpdating={isUpdating}
         disabled={Object.keys(validationErrors).length > 0}
-        message="unsaved privacy changes. restart to apply."
+        message="有未保存的隐私更改。重启以应用。"
         testId="privacy-apply-restart"
       />
       <WindowPicker
@@ -1779,13 +1775,13 @@ function AdminTeamTokenCard() {
   const handleSave = useCallback(async () => {
     const trimmed = (pendingToken ?? "").trim();
     if (!trimmed) {
-      toast({ title: "paste a token first" });
+      toast({ title: "请先粘贴令牌" });
       return;
     }
     if (!trimmed.startsWith("sk_ent_")) {
       toast({
-        title: "that doesn't look like an admin token",
-        description: "expected format: sk_ent_…",
+        title: "这看起来不像管理员令牌",
+        description: "预期格式：sk_ent_…",
       });
       return;
     }
@@ -1796,12 +1792,12 @@ function AdminTeamTokenCard() {
       setLiveToken(trimmed);
       setPendingToken(null);
       toast({
-        title: "admin token saved",
-        description: "open a new pi chat to use it — no app restart needed",
+        title: "管理员令牌已保存",
+        description: "打开新的 pi 聊天即可使用 — 无需重启应用",
       });
     } catch (e) {
       toast({
-        title: "failed to save",
+        title: "保存失败",
         description: e instanceof Error ? e.message : String(e),
         variant: "destructive",
       });
@@ -1818,10 +1814,10 @@ function AdminTeamTokenCard() {
       setLiveToken(null);
       setPendingToken(null);
       setRevealToken(false);
-      toast({ title: "admin token cleared" });
+      toast({ title: "管理员令牌已清除" });
     } catch (e) {
       toast({
-        title: "failed to clear",
+        title: "清除失败",
         description: e instanceof Error ? e.message : String(e),
         variant: "destructive",
       });
@@ -1848,20 +1844,20 @@ function AdminTeamTokenCard() {
             <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
             <div>
               <h3 className="text-sm font-medium text-foreground">
-                Admin Team API Token
+                管理员团队 API 令牌
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Lets the pi agent query org-wide team data (devices, search,
-                records). Mint at{" "}
+                让 pi agent 查询全组织的团队数据（设备、搜索、
+                记录）。在 
                 <button
                   className="underline text-foreground hover:text-foreground/80"
                   onClick={() =>
                     openUrl(screenpipeWebUrl("/enterprise?tab=tokens", "https://screenpipe.com"))
                   }
                 >
-                  screenpipe.com/enterprise → api tokens
+                  screenpipe.com/enterprise → API 令牌
                 </button>
-                .
+                颁发。
               </p>
             </div>
           </div>
@@ -1891,7 +1887,7 @@ function AdminTeamTokenCard() {
             variant="outline"
             size="sm"
             className="h-8 px-2 shrink-0"
-            title={revealToken ? "Hide token" : "Reveal token"}
+            title={revealToken ? "隐藏令牌" : "显示令牌"}
             onClick={() => {
               setRevealToken((v) => !v);
               if (pendingToken === null && liveToken) setPendingToken(liveToken);
@@ -1914,10 +1910,10 @@ function AdminTeamTokenCard() {
               if (!liveToken) return;
               try {
                 await commands.copyTextToClipboard(liveToken);
-                toast({ title: "admin token copied to clipboard" });
+                toast({ title: "管理员令牌已复制到剪贴板" });
               } catch (error) {
                 toast({
-                  title: "couldn't copy admin token",
+                  title: "无法复制管理员令牌",
                   description: error instanceof Error ? error.message : String(error),
                   variant: "destructive",
                 });
@@ -1934,7 +1930,7 @@ function AdminTeamTokenCard() {
               onClick={handleSave}
               data-testid="privacy-admin-token-save"
             >
-              save
+              保存
             </Button>
           )}
           {!hasPending && liveToken && (
@@ -1946,7 +1942,7 @@ function AdminTeamTokenCard() {
               onClick={handleClear}
               data-testid="privacy-admin-token-clear"
             >
-              clear
+              清除
             </Button>
           )}
         </div>

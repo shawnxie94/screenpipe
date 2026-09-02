@@ -62,27 +62,27 @@ describe("RemoteSupportLogsCard", () => {
     render(<RemoteSupportLogsCard />);
 
     expect(
-      screen.getByRole("switch", { name: "Allow remote support logs" }),
+      screen.getByRole("switch", { name: "允许远程支持日志" }),
     ).not.toBeChecked();
     expect(
       screen.getByText(
-        /Nothing is uploaded unless support sends a short-lived request/i,
+        /除非支持团队发送短期请求，否则不会上传任何内容/,
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/logs can still contain names, file paths, URLs/i),
+      screen.getByText(/日志仍可能包含姓名、文件路径、URL/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/automated filtering can miss secrets/i),
+      screen.getByText(/自动过滤可能遗漏秘密/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/deleted after 30 days/i)).toBeInTheDocument();
+    expect(screen.getByText(/在 30 天后删除/)).toBeInTheDocument();
   });
 
   it("persists an explicit consumer opt-in", async () => {
     render(<RemoteSupportLogsCard />);
 
     fireEvent.click(
-      screen.getByRole("switch", { name: "Allow remote support logs" }),
+      screen.getByRole("switch", { name: "允许远程支持日志" }),
     );
 
     await waitFor(() => {
@@ -103,10 +103,10 @@ describe("RemoteSupportLogsCard", () => {
     render(<RemoteSupportLogsCard />);
 
     expect(
-      screen.getByRole("switch", { name: "Allow remote support logs" }),
+      screen.getByRole("switch", { name: "允许远程支持日志" }),
     ).toBeChecked();
     expect(
-      screen.getByText(/checking the support connection/i),
+      screen.getByText(/正在检查支持连接/),
     ).toBeInTheDocument();
   });
 
@@ -123,7 +123,7 @@ describe("RemoteSupportLogsCard", () => {
     });
 
     expect(
-      screen.getByText(/No request will run until the connection recovers/i),
+      screen.getByText(/连接恢复之前不会执行任何请求/),
     ).toBeInTheDocument();
   });
 
@@ -137,7 +137,7 @@ describe("RemoteSupportLogsCard", () => {
     render(<RemoteSupportLogsCard />);
 
     expect(
-      screen.getByRole("switch", { name: "Allow remote support logs" }),
+      screen.getByRole("switch", { name: "允许远程支持日志" }),
     ).not.toBeChecked();
   });
 
@@ -150,7 +150,7 @@ describe("RemoteSupportLogsCard", () => {
 
     render(<RemoteSupportLogsCard />);
     fireEvent.click(
-      screen.getByRole("switch", { name: "Allow remote support logs" }),
+      screen.getByRole("switch", { name: "允许远程支持日志" }),
     );
 
     await waitFor(() => {
@@ -167,11 +167,11 @@ describe("RemoteSupportLogsCard", () => {
     render(<RemoteSupportLogsCard />);
 
     const toggle = screen.getByRole("switch", {
-      name: "Allow remote support logs",
+      name: "允许远程支持日志",
     });
     expect(toggle).not.toBeChecked();
     expect(toggle).toBeDisabled();
-    expect(screen.getByText(/Sign in to enable this/i)).toBeInTheDocument();
+    expect(screen.getByText(/需要登录才能启用/)).toBeInTheDocument();
   });
 
   it("treats an empty account id as signed out", () => {
@@ -180,7 +180,7 @@ describe("RemoteSupportLogsCard", () => {
     render(<RemoteSupportLogsCard />);
 
     expect(
-      screen.getByRole("switch", { name: "Allow remote support logs" }),
+      screen.getByRole("switch", { name: "允许远程支持日志" }),
     ).toBeDisabled();
   });
 
@@ -191,19 +191,19 @@ describe("RemoteSupportLogsCard", () => {
     render(<RemoteSupportLogsCard />);
 
     const toggle = screen.getByRole("switch", {
-      name: "Allow remote support logs",
+      name: "允许远程支持日志",
     });
     expect(toggle).toBeChecked();
     expect(toggle).toBeDisabled();
     expect(
-      screen.getByText("Managed by your organization"),
+      screen.getByText("由你的组织管理"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Your organization can request diagnostic logs/i),
+      screen.getByText(/你的组织可以从此受管理设备请求诊断日志/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Nothing is uploaded unless an administrator sends a request/i,
+        /除非管理员发送请求，否则不会上传任何内容/,
       ),
     ).toBeInTheDocument();
   });
@@ -214,12 +214,12 @@ describe("RemoteSupportLogsCard", () => {
     render(<RemoteSupportLogsCard />);
 
     const toggle = screen.getByRole("switch", {
-      name: "Allow remote support logs",
+      name: "允许远程支持日志",
     });
     expect(toggle).not.toBeChecked();
     expect(toggle).toBeDisabled();
     expect(
-      screen.getByText(/Checking whether remote log collection is managed/i),
+      screen.getByText(/正在检查远程日志收集是否由你的组织管理/),
     ).toBeInTheDocument();
   });
 
@@ -230,10 +230,10 @@ describe("RemoteSupportLogsCard", () => {
     render(<RemoteSupportLogsCard />);
 
     expect(
-      screen.getByRole("switch", { name: "Allow remote support logs" }),
+      screen.getByRole("switch", { name: "允许远程支持日志" }),
     ).toBeDisabled();
     expect(
-      screen.getByText(/controls stay locked and will retry/i),
+      screen.getByText(/控制保持锁定，会自动重试/),
     ).toBeInTheDocument();
   });
 });

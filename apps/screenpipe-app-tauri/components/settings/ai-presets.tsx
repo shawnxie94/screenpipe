@@ -7,11 +7,11 @@ import type { SettingsField } from "./settings-search";
 
 /** Settings search index for this section. Co-located with the component so adding a field here means updating one file. See `SettingsField` in `./settings-search` for the schema. */
 export const searchIndex: SettingsField[] = [
-  { label: "AI presets", keywords: ["preset"] },
-  { label: "API key", keywords: ["openai", "anthropic", "key"] },
-  { label: "Model", keywords: ["gpt", "claude", "gemini", "llm"] },
-  { label: "Agent harness", keywords: ["acp", "codex", "claude code", "opencode", "cursor"] },
-  { label: "Embedding" },
+  { label: "AI 预设", keywords: ["preset"] },
+  { label: "API 密钥", keywords: ["openai", "anthropic", "key"] },
+  { label: "模型", keywords: ["gpt", "claude", "gemini", "llm"] },
+  { label: "Agent 运行时", keywords: ["acp", "codex", "claude code", "opencode", "cursor"] },
+  { label: "嵌入", keywords: ["embedding"] },
 ];
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { tauriFetchWithDeadline } from "@/lib/http/tauri-fetch";
@@ -405,7 +405,7 @@ const AISection = ({
     if (!isFormValid) {
       const needsConnectionTest = connectionTestRequired && !connectionTestPassed;
       toast({
-        title: needsConnectionTest ? "Test the connection" : "Validation errors",
+        title: needsConnectionTest ? "请先测试连接" : "校验错误",
         description: needsConnectionTest
           ? "提供商、URL、模型和 API 密钥必须通过连接测试才能保存"
           : "请先修正所有校验错误再保存",
@@ -447,7 +447,7 @@ const AISection = ({
         });
 
         toast({
-          title: "Preset created",
+          title: "预设已创建",
           description: "默认预设已成功创建",
         });
 
@@ -474,7 +474,7 @@ const AISection = ({
         });
 
         toast({
-          title: "Preset updated",
+          title: "预设已更新",
           description: "更改已成功保存",
         });
       } else {
@@ -497,7 +497,7 @@ const AISection = ({
         });
 
         toast({
-          title: isDuplicating ? "Preset duplicated" : "Preset created",
+          title: isDuplicating ? "预设已复制" : "预设已创建",
           description: isDuplicating
             ? "副本已成功保存"
             : "新预设已成功添加",
@@ -507,7 +507,7 @@ const AISection = ({
       setDialog(false);
     } catch (error) {
       toast({
-        title: "Error saving preset",
+        title: "保存预设出错",
         description: "保存预设时出现问题",
         variant: "destructive",
       });
@@ -788,7 +788,7 @@ const AISection = ({
           return;
         }
       } catch (err) {
-        skipRemaining("auth", `Could not get ChatGPT token: ${err}. You may need to rebuild the app.`);
+        skipRemaining("auth", `无法获取 ChatGPT 令牌：${err}。可能需要重新构建应用。`);
         return;
       }
     } else if (isAnthropic && settingsPreset?.apiKey) {
@@ -802,7 +802,7 @@ const AISection = ({
     // Step 1+2+3: Fetch models endpoint (tests endpoint, auth, and models in one call)
     setTestResults((prev) => ({
       ...prev,
-      endpoint: { status: "running", message: "Connecting..." },
+      endpoint: { status: "running", message: "正在连接..." },
     }));
 
     // Anthropic: skip /v1/models (may not be available for all keys) and go straight to chat test
@@ -811,9 +811,9 @@ const AISection = ({
       setTestResults((prev) => ({
         ...prev,
         endpoint: { status: "pass", message: "api.anthropic.com" },
-        auth: { status: "pass", message: "Will verify with chat test" },
-        models: { status: "pass", message: "Using known models" },
-        chat: { status: "running", message: "Sending test message..." },
+        auth: { status: "pass", message: "将通过聊天测试验证" },
+        models: { status: "pass", message: "使用已知模型" },
+        chat: { status: "running", message: "正在发送测试消息..." },
       }));
     } else {
       // Custom endpoints use native HTTP so validation is not affected by the
@@ -830,7 +830,7 @@ const AISection = ({
             ? "Ollama 正在运行吗？试试：`ollama serve`"
             : settingsPreset?.provider === "custom"
             ? "请确认 URL 正确且服务器正在运行"
-            : "Check your network connection";
+            : "请检查网络连接";
         skipRemaining("endpoint", `Connection failed: ${hint}`);
         return;
       }
@@ -840,8 +840,8 @@ const AISection = ({
       // Step 1 pass
       setTestResults((prev) => ({
         ...prev,
-        endpoint: { status: "pass", message: isChatGpt ? "Reachable (OAuth)" : `GET ${modelsResponse!.status}` },
-        auth: { status: "running", message: "Checking..." },
+        endpoint: { status: "pass", message: isChatGpt ? "可达（OAuth）" : `GET ${modelsResponse!.status}` },
+        auth: { status: "running", message: "正在检查..." },
       }));
 
       // Step 2: Auth check
@@ -849,23 +849,23 @@ const AISection = ({
       if (settingsPreset?.provider === "openai-chatgpt" && (modelsResponse!.status === 403 || modelsResponse!.status === 401)) {
         setTestResults((prev) => ({
           ...prev,
-          auth: { status: "pass", message: "OAuth token present" },
+          auth: { status: "pass", message: "已存在 OAuth 令牌" },
           models: { status: "pass", message: "使用已知模型（API 范围有限）" },
-          chat: { status: "running", message: "Sending test message..." },
+          chat: { status: "running", message: "正在发送测试消息..." },
         }));
       } else if (modelsResponse!.status === 401 || modelsResponse!.status === 403) {
         const responseBody = await modelsResponse!.text().catch(() => "");
         const hint =
           settingsPreset?.provider === "openai"
-            ? "Check your API key at platform.openai.com"
+            ? "请在 platform.openai.com 检查 API 密钥"
             : "请检查 API 密钥是否有效且有余量";
         const message = `${modelsResponse!.status}: ${extractAiProviderErrorMessage(responseBody, hint)}`;
         if (settingsPreset?.provider === "custom") {
           setTestResults((prev) => ({
             ...prev,
-            auth: { status: "pass", message: "Will verify with chat test" },
+            auth: { status: "pass", message: "将通过聊天测试验证" },
             models: { status: "skip", message },
-            chat: { status: "running", message: "Sending test message..." },
+            chat: { status: "running", message: "正在发送测试消息..." },
           }));
         } else {
           skipRemaining("auth", message);
@@ -875,18 +875,18 @@ const AISection = ({
         const responseBody = await modelsResponse!.text().catch(() => "");
         setTestResults((prev) => ({
           ...prev,
-          auth: { status: "pass", message: "Will verify with chat test" },
+          auth: { status: "pass", message: "将通过聊天测试验证" },
           models: {
             status: "skip",
-            message: `${modelsResponse!.status}: ${extractAiProviderErrorMessage(responseBody, "Models endpoint unavailable")}`,
+            message: `${modelsResponse!.status}: ${extractAiProviderErrorMessage(responseBody, "模型端点不可用")}`,
           },
-          chat: { status: "running", message: "Sending test message..." },
+          chat: { status: "running", message: "正在发送测试消息..." },
         }));
       } else {
         setTestResults((prev) => ({
           ...prev,
-          auth: { status: "pass", message: "API key accepted" },
-          models: { status: "running", message: "Loading..." },
+          auth: { status: "pass", message: "API 密钥已接受" },
+          models: { status: "running", message: "正在加载..." },
         }));
       }
 
@@ -918,7 +918,7 @@ const AISection = ({
           setTestResults((prev) => ({
             ...prev,
             models: { status: "skip", message: "模型端点返回了无法识别的响应" },
-            chat: { status: "running", message: "Sending test message..." },
+            chat: { status: "running", message: "正在发送测试消息..." },
           }));
         }
 
@@ -927,8 +927,8 @@ const AISection = ({
         if (modelsParsed) {
           setTestResults((prev) => ({
             ...prev,
-            models: { status: "pass", message: `${modelCount} model${modelCount !== 1 ? "s" : ""} loaded` },
-            chat: { status: "running", message: "Sending test message..." },
+            models: { status: "pass", message: `已加载 ${modelCount} 个模型` },
+            chat: { status: "running", message: "正在发送测试消息..." },
           }));
         }
       }
@@ -976,7 +976,7 @@ const AISection = ({
             `${chatResponse.status}: ${extractAiProviderErrorMessage(errorBody)}`,
           );
         }
-        reply = "Stream started OK";
+        reply = "流启动成功";
       } else {
         const result = await testAiPresetConnection({
           provider: settingsPreset?.provider,
@@ -994,8 +994,8 @@ const AISection = ({
 
       setTestResults((prev) => ({
         ...prev,
-        endpoint: { status: "pass", message: "Chat endpoint reachable" },
-        auth: { status: "pass", message: "Credentials accepted" },
+        endpoint: { status: "pass", message: "聊天端点可达" },
+        auth: { status: "pass", message: "凭据已接受" },
         chat: {
           status: "pass",
           message: `OK (${latencyMs}ms): "${reply}"`,
@@ -1010,7 +1010,7 @@ const AISection = ({
         ...prev,
         chat: {
           status: "fail",
-          message: `Chat request failed: ${err.message || "未知错误"}`,
+          message: `聊天请求失败：${err.message || "未知错误"}`,
           latencyMs,
         },
       }));
@@ -1030,7 +1030,7 @@ const AISection = ({
           // WKWebView (mixed-content / cross-origin), leaving the model list empty.
           const ollamaResponse = await tauriFetchWithDeadline("http://localhost:11434/api/tags");
           if (!ollamaResponse.ok)
-            throw new Error("Failed to fetch Ollama models");
+            throw new Error("无法获取 Ollama 模型");
           const ollamaData = (await ollamaResponse.json()) as {
             models: OllamaModel[];
           };
@@ -1051,8 +1051,8 @@ const AISection = ({
           });
           if (!r.ok) {
             toast({
-              title: "Error fetching models",
-              description: "Please check your API key",
+              title: "获取模型出错",
+              description: "请检查你的 API 密钥",
               variant: "destructive",
             });
             return;
@@ -1306,17 +1306,17 @@ const AISection = ({
           variant={"link"}
           onClick={() => setDialog(false)}
         >
-          <ArrowLeft className="w-4 h-4" /> back
+          <ArrowLeft className="w-4 h-4" /> 返回
         </Button>
         <h1 className="text-xl font-semibold">
-          {preset ? "Update preset" : "Create preset"}
+          {preset ? "更新预设" : "创建预设"}
         </h1>
       </div>
 
       <div className="w-full">
         <div className="flex flex-col gap-2">
           <Label htmlFor="aiUrl" className="min-w-[80px]">
-            AI provider
+            AI 提供商
           </Label>
         </div>
         <div className="mb-4 mt-4">
@@ -1336,7 +1336,7 @@ const AISection = ({
 
       <ValidatedInput
         id="preset_id"
-        label="Preset Name"
+        label="预设名称"
         value={settingsPreset?.id || ""}
         onChange={(value, isValid) => updateSettingsPreset({ id: value })}
         validation={(value) =>
@@ -1364,13 +1364,13 @@ const AISection = ({
       {settingsPreset?.provider === "custom" && (
         <ValidatedInput
           id="customAiUrl"
-          label="Custom URL"
+          label="自定义 URL"
           value={settingsPreset?.url || ""}
           onChange={(value, isValid) => updateSettingsPreset({ url: value })}
           validation={(value) => validateAiProviderUrl(value, "custom")}
-          placeholder="e.g. https://integrate.api.nvidia.com/v1 or http://localhost:11434/v1"
+          placeholder="例如 https://integrate.api.nvidia.com/v1 或 http://localhost:11434/v1"
           required={true}
-          helperText={formErrors.url || "Base URL before /models and /chat/completions. Examples: Gemini https://generativelanguage.googleapis.com/v1beta/openai, NVIDIA NIM https://integrate.api.nvidia.com/v1, Ollama http://localhost:11434/v1"}
+          helperText={formErrors.url || "位于 /models 和 /chat/completions 之前的 Base URL。示例：Gemini https://generativelanguage.googleapis.com/v1beta/openai、NVIDIA NIM https://integrate.api.nvidia.com/v1、Ollama http://localhost:11434/v1"}
         />
       )}
 
@@ -1380,7 +1380,7 @@ const AISection = ({
           <div className="w-full">
             <div className="flex flex-col gap-4 mb-4 w-full">
               <Label htmlFor="aiApiKey" className="flex items-center gap-1">
-                API Key
+                API 密钥
                 {apiKeyRequired && <span className="text-destructive">*</span>}
                 {formErrors.apiKey && (
                   <AlertCircle className="h-4 w-4 text-destructive ml-1" />
@@ -1425,7 +1425,7 @@ const AISection = ({
                   className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 w-fit"
                   onClick={() => openUrl("https://console.anthropic.com/settings/keys")}
                 >
-                  Get your API key at console.anthropic.com
+                  在 console.anthropic.com 获取你的 API 密钥
                 </button>
               )}
             </div>
@@ -1443,13 +1443,13 @@ const AISection = ({
         <div className="w-full">
           <div className="flex flex-col gap-4 mb-4 w-full">
             <Label className="flex items-center gap-1">
-              ChatGPT Account
+              ChatGPT 账户
             </Label>
             <div className="flex items-center gap-3">
               {chatgptChecking ? (
                 <Button type="button" variant="outline" disabled>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Checking connection...
+                  正在检查连接...
                 </Button>
               ) : (
                 <Button
@@ -1469,8 +1469,8 @@ const AISection = ({
                         if (res.status === "ok" && res.data) {
                           setChatgptLoggedIn(true);
                           toast({
-                            title: "ChatGPT connected",
-                            description: "Click \"Create preset\" below to save and start using it.",
+                            title: "已连接 ChatGPT",
+                            description: "点击下方“创建预设”以保存并开始使用。",
                           });
                         } else if (res.status === "error") {
                           const msg = String(res.error || "unknown error");
@@ -1480,7 +1480,7 @@ const AISection = ({
                             description: msg.includes("invalid_state")
                               ? "登录会话已过期 — 请重新登录。"
                               : msg.includes("not logged in") || msg.includes("timed out")
-                              ? "Sign-in timed out or was cancelled. Please try again."
+                              ? "登录超时或已取消。请重试。"
                               : msg.slice(0, 120),
                             variant: "destructive",
                           });
@@ -1502,7 +1502,7 @@ const AISection = ({
                   ) : chatgptLoggedIn ? (
                     <CheckCircle2 className="h-4 w-4 mr-2" />
                   ) : null}
-                  {chatgptLoggedIn ? "Sign out" : "Sign in with ChatGPT"}
+                  {chatgptLoggedIn ? "退出登录" : "使用 ChatGPT 登录"}
                 </Button>
               )}
               {chatgptLoggedIn && !chatgptChecking && (
@@ -1517,7 +1517,7 @@ const AISection = ({
       <div className="w-full">
         <div className="flex flex-col gap-4 mb-4 w-full">
           <Label htmlFor="aiModel" className="flex items-center gap-1">
-            AI Model
+            AI 模型
             <span className="text-destructive">*</span>
           </Label>
           <Popover
@@ -1544,8 +1544,8 @@ const AISection = ({
               >
                 {settingsPreset?.provider === "openai" &&
                 !settingsPreset?.apiKey
-                  ? "API key required to fetch models"
-                  : settingsPreset?.model || "Select model..."}
+                  ? "需要 API 密钥才能获取模型"
+                  : settingsPreset?.model || "选择模型..."}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -1576,19 +1576,19 @@ const AISection = ({
                 />
                 <CommandList>
                   <CommandEmpty>
-                    Press enter to use &quot;{modelSearch || settingsPreset?.model}&quot;
+                    按回车使用 &quot;{modelSearch || settingsPreset?.model}&quot;
                   </CommandEmpty>
                   {isLoadingModels ? (
                     <CommandGroup>
                       <CommandItem value="loading" disabled>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Loading models...
+                        正在加载模型...
                       </CommandItem>
                     </CommandGroup>
                   ) : (
                     <>
                       {models?.some((m) => m.free) && (
-                        <CommandGroup heading="Free">
+                        <CommandGroup heading="免费">
                           {models.filter((m) => m.free).map((model) => (
                             <CommandItem
                               key={model.id}
@@ -1601,17 +1601,17 @@ const AISection = ({
                               <div className="flex flex-col gap-0.5 w-full">
                                 <div className="flex items-center justify-between">
                                   <span className="font-medium">{model.name}</span>
-                                  <Badge variant="outline" className="ml-2 text-[10px] bg-green-500/10 text-green-600 border-green-500/30">free</Badge>
+                                  <Badge variant="outline" className="ml-2 text-[10px] bg-green-500/10 text-green-600 border-green-500/30">免费</Badge>
                                 </div>
                                 {model.description && (
-                                  <span className="text-xs text-muted-foreground">{model.description}{model.context_window ? ` · ${Math.round(model.context_window / 1000)}K ctx` : ""}</span>
+                                  <span className="text-xs text-muted-foreground">{model.description}{model.context_window ? ` · ${Math.round(model.context_window / 1000)}K 上下文` : ""}</span>
                                 )}
                               </div>
                             </CommandItem>
                           ))}
                         </CommandGroup>
                       )}
-                      <CommandGroup heading={showUpsell && models?.some((m) => !m.free && m.locked) ? "More models" : models?.some((m) => m.free) ? "Included with Screenpipe" : "Available Models"}>
+                      <CommandGroup heading={showUpsell && models?.some((m) => !m.free && m.locked) ? "更多模型" : models?.some((m) => m.free) ? "随 Screenpipe 提供" : "可用模型"}>
                         {models?.filter((m) => !m.free).slice().sort((a, b) => ((showUpsell && a.locked) ? 1 : 0) - ((showUpsell && b.locked) ? 1 : 0)).map((model) => {
                           const costLabel = model.cost_tier === 'low' ? '$' : model.cost_tier === 'medium' ? '$$' : model.cost_tier === 'high' ? '$$$' : model.cost_tier === 'very_high' ? '$$$$' : '';
                           // Effective lock = gateway said so AND we're allowed to surface it.
@@ -1646,7 +1646,7 @@ const AISection = ({
                                   {locked && (
                                     <Badge variant="outline" className="text-[10px] gap-0.5 border-foreground/40 text-foreground/80">
                                       <Lock className="h-2.5 w-2.5" />
-                                      Business
+                                      商业版
                                     </Badge>
                                   )}
                                   {!locked && costLabel && <Badge variant="outline" className="text-[10px]">{costLabel}</Badge>}
@@ -1732,7 +1732,7 @@ const AISection = ({
                 (all support tool calling)
               </p>
               <p>
-                GPU strongly recommended. without a dedicated GPU, local models will be very slow and scheduled tasks may time out.
+                GPU 强烈建议使用。没有独立 GPU 时，本地模型会非常慢，计划任务可能会超时。
                 for best results consider screenpipe cloud or groq as custom provider.
               </p>
             </div>
@@ -1743,7 +1743,7 @@ const AISection = ({
 
       <ValidatedTextarea
         id="customPrompt"
-        label="Custom Prompt"
+        label="自定义提示词"
         value={settingsPreset?.prompt || DEFAULT_PROMPT}
         onChange={handleCustomPromptChange}
         validation={(value) => {
@@ -1784,7 +1784,7 @@ const AISection = ({
                       Model Context Tokens
                     </Label>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Only needed when the provider does not publish this model&apos;s context window.
+                      仅当提供商未公布该模型的上下文窗口时需要填写。
                     </p>
                     <Input
                       id="maxContextTokens"
@@ -1808,7 +1808,7 @@ const AISection = ({
                       Max Output Tokens
                     </Label>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Only needed when the provider does not publish this model&apos;s output limit.
+                      仅当提供商未公布该模型的最大输出时需要填写。
                     </p>
                     <Input
                       id="maxTokens"
@@ -1845,15 +1845,15 @@ const AISection = ({
               {testStatus === "done" && (
                 <span className="text-xs text-muted-foreground">
                   {testResults.chat.status === "pass"
-                    ? "Connection verified"
+                    ? "连接已验证"
                     : testResults.endpoint.status === "fail"
-                    ? "Connection failed"
+                    ? "连接失败"
                     : testResults.auth.status === "fail"
-                    ? "Auth failed"
+                    ? "认证失败"
                     : testResults.models.status === "fail"
-                    ? "Models failed"
+                    ? "模型加载失败"
                     : testResults.chat.status === "fail"
-                    ? "Chat failed"
+                    ? "聊天失败"
                     : ""}
                 </span>
               )}
@@ -1888,19 +1888,19 @@ const AISection = ({
                   <Zap className="h-3 w-3" />
                 )}
                 {testStatus === "testing"
-                  ? "Testing..."
+                  ? "正在测试..."
                   : Object.keys(connectionFieldErrors).length > 0
-                  ? "Fix fields to test"
-                  : "Run diagnostics"}
+                  ? "修正字段后测试"
+                  : "运行诊断"}
               </Button>
 
               <div className="space-y-2 text-sm">
                 {(
                   [
-                    ["endpoint", "1", "Endpoint reachable"],
-                    ["auth", "2", "Auth valid"],
-                    ["models", "3", "Models loaded"],
-                    ["chat", "4", "Test message"],
+                    ["endpoint", "1", "端点可达"],
+                    ["auth", "2", "认证有效"],
+                    ["models", "3", "模型已加载"],
+                    ["chat", "4", "测试消息"],
                   ] as const
                 ).map(([key, num, label]) => {
                   const result = testResults[key];
@@ -1973,16 +1973,16 @@ const AISection = ({
                   ) : (
                     <AlertCircle className="w-4 h-4" />
                   )}
-                  {preset ? "Update preset" : "Create preset"}
+                  {preset ? "更新预设" : "创建预设"}
                 </Button>
               </span>
             </TooltipTrigger>
             {!isFormValid && !isLoading && (
               <TooltipContent>
                 {!settingsPreset?.provider
-                  ? "Pick a provider to continue"
+                  ? "请选择提供商以继续"
                   : !settingsPreset?.model && settingsPreset.provider !== "acp"
-                  ? "Select a model to continue"
+                  ? "请选择模型以继续"
                   : Object.keys(formErrors).length > 0
                   ? "修正校验错误以继续"
                   : connectionTestRequired && !connectionTestPassed
@@ -2092,12 +2092,12 @@ function SortablePresetCard({
             </h3>
             {isDefault && (
               <Badge variant="default" className="text-[10px] px-1.5 py-0">
-                default
+                默认
               </Badge>
             )}
             {readOnly && (
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                managed
+                组织管理
               </Badge>
             )}
             {!hasValidation && (
@@ -2110,7 +2110,7 @@ function SortablePresetCard({
                     <AlertCircle className="h-3.5 w-3.5 text-yellow-500 shrink-0 cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    ChatGPT session expired — open Connections to reconnect
+                    ChatGPT 会话已过期 — 打开连接以重新连接
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -2123,18 +2123,18 @@ function SortablePresetCard({
           )}
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span className="font-mono bg-muted px-1.5 py-0.5 rounded truncate max-w-[180px]" title={preset.provider === "acp" ? preset.acpAgent?.id : (preset.model || "Not set")}>
+          <span className="font-mono bg-muted px-1.5 py-0.5 rounded truncate max-w-[180px]" title={preset.provider === "acp" ? preset.acpAgent?.id : (preset.model || "未设置")}>
             {preset.provider === "acp"
-              ? ACP_ADAPTERS.find((adapter) => adapter.id === preset.acpAgent?.id)?.name || preset.acpAgent?.id || "No agent"
-              : preset.model || "Not set"}
+              ? ACP_ADAPTERS.find((adapter) => adapter.id === preset.acpAgent?.id)?.name || preset.acpAgent?.id || "无 Agent"
+              : preset.model || "未设置"}
           </span>
         </div>
         <div className="flex items-center gap-0.5 pt-1.5 border-t border-border">
           <Button variant="ghost" size="sm" className="text-[11px] h-6 px-2" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} disabled={isLoading || readOnly}>
-            <Copy className="w-3 h-3 mr-1" />duplicate
+            <Copy className="w-3 h-3 mr-1" />复制
           </Button>
           <Button variant="ghost" size="sm" className="text-[11px] h-6 px-2" onClick={(e) => { e.stopPropagation(); onSetDefault(); }} disabled={isLoading || isDefault || defaultLocked}>
-            <Star className="w-3 h-3 mr-1" />{isDefault ? "default" : "set default"}
+            <Star className="w-3 h-3 mr-1" />{isDefault ? "默认" : "设为默认"}
           </Button>
           {isTeamAdmin && onShareToTeam && !readOnly && (
             <TooltipProvider>
@@ -2144,13 +2144,13 @@ function SortablePresetCard({
                     <Share2 className="w-3 h-3" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>share to team (e2e encrypted)</TooltipContent>
+                <TooltipContent>分享到团队（端到端加密）</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
           {!readOnly && onDelete && (
             <Button
-              aria-label={`Delete ${preset.id}`}
+              aria-label={`删除 ${preset.id}`}
               variant="ghost"
               size="sm"
               className="text-[11px] h-6 px-2 text-destructive hover:text-destructive ml-auto"
@@ -2193,9 +2193,9 @@ export const AIPresets = () => {
   const sharePresetToTeam = async (preset: AIPreset) => {
     try {
       await team.pushConfig("ai_provider", preset.id, preset);
-      toast({ title: "shared to team", description: `"${formatPresetName(preset.id)}" is now available to all team members (e2e encrypted)` });
+      toast({ title: "已分享到团队", description: `“${formatPresetName(preset.id)}” 现在对所有团队成员可用（端到端加密）` });
     } catch (err: any) {
-      toast({ title: "failed to share to team", description: err.message, variant: "destructive" });
+      toast({ title: "分享到团队失败", description: err.message, variant: "destructive" });
     }
   };
 
@@ -2269,7 +2269,7 @@ useEffect(() => {
       }
       if (settings.aiPresets.length <= 1) {
         toast({
-          title: "Cannot delete preset",
+          title: "无法删除预设",
           description: "至少需要一个 AI 预设",
           variant: "destructive",
         });
@@ -2286,7 +2286,7 @@ useEffect(() => {
 
       if (!checkIfIDPresent) {
         toast({
-          title: "Preset not found",
+          title: "未找到预设",
           description: "你要删除的预设不存在",
           variant: "destructive",
         });
@@ -2312,12 +2312,12 @@ useEffect(() => {
       });
 
       toast({
-        title: "Preset deleted",
+        title: "预设已删除",
         description: "预设已成功删除",
       });
     } catch (error) {
       toast({
-        title: "Error deleting preset",
+        title: "删除预设出错",
         description: "删除预设时出现问题",
         variant: "destructive",
       });
@@ -2332,7 +2332,7 @@ useEffect(() => {
     try {
       if (isManagedDeployment && aiPresetPolicy.lock_default_preset) {
         toast({
-          title: "Default preset is locked",
+          title: "默认预设已被锁定",
           description: "你的管理员控制默认 AI 预设",
           variant: "destructive",
         });
@@ -2362,12 +2362,12 @@ useEffect(() => {
       await updateSettings(updateData);
 
       toast({
-        title: "Default preset updated",
+        title: "默认预设已更新",
         description: "预设已设为默认",
       });
     } catch (error) {
       toast({
-        title: "Error updating default preset",
+        title: "更新默认预设出错",
         description: "更新默认预设时出现问题",
         variant: "destructive",
       });
@@ -2443,25 +2443,25 @@ useEffect(() => {
   return (
     <div className="space-y-5">
       <p className="text-muted-foreground text-sm mb-4">
-        Configure AI models and preferences
+        配置 AI 模型和偏好
       </p>
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Badge variant="outline" className="px-3 py-1">
-            {visiblePresets.length} preset{visiblePresets.length !== 1 ? 's' : ''}
+            {visiblePresets.length} 个预设
           </Badge>
           {settings.aiPresets.some(p => p.defaultPreset) && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 text-foreground/70" />
-              Default preset configured
+              已配置默认预设
             </div>
           )}
         </div>
         {canManageEmployeePresets && (
           <Button onClick={() => setCreatePresentDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Create Preset
+            创建预设
           </Button>
         )}
       </div>
@@ -2516,8 +2516,7 @@ useEffect(() => {
           <AlertDialogHeader>
             <AlertDialogTitle>确定吗？</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              preset &quot;{presetToDelete ? formatPresetName(presetToDelete) : ''}&quot;.
+              此操作无法撤销。这将永久删除预设 &quot;{presetToDelete ? formatPresetName(presetToDelete) : ''}&quot;。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2529,7 +2528,7 @@ useEffect(() => {
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                "Delete"
+                "删除"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -2544,8 +2543,8 @@ useEffect(() => {
           <AlertDialogHeader>
             <AlertDialogTitle>更改默认预设？</AlertDialogTitle>
             <AlertDialogDescription>
-              This will set &quot;{presetToSetDefault ? formatPresetName(presetToSetDefault) : ''}&quot; as the default preset and apply its settings.
-              The current default preset will remain but will no longer be the default.
+              这将把 &quot;{presetToSetDefault ? formatPresetName(presetToSetDefault) : ''}&quot; 设为默认预设并应用其设置。
+              当前默认预设仍会保留，但不再是默认。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2558,7 +2557,7 @@ useEffect(() => {
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                "Continue"
+                "继续"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

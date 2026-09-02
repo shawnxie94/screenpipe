@@ -41,7 +41,7 @@ function describeConsumerStatus(status: RemoteSupportStatus): StatusMessage {
     case "sync_error":
     case "request_error":
       return {
-        text: "Could not reach support. No request will run until the connection recovers; retrying automatically.",
+        text: "无法连接支持服务。连接恢复之前不会执行任何请求，正在自动重试。",
         className: "text-red-700",
       };
     case "signed_out":
@@ -56,7 +56,7 @@ function describeConsumerStatus(status: RemoteSupportStatus): StatusMessage {
       };
     case "syncing":
       return {
-        text: "Confirming consent with support...",
+        text: "正在与支持服务确认同意...",
         className: "text-muted-foreground",
       };
     case "disabled":
@@ -122,7 +122,7 @@ export function RemoteSupportLogsCard() {
   return (
     <div className="space-y-2">
       <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-        Support access
+        支持访问
       </h2>
       <Card className="border-border bg-card">
         <CardContent className="px-3 py-2.5">
@@ -132,22 +132,22 @@ export function RemoteSupportLogsCard() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-sm font-medium text-foreground">
-                    Remote support logs
+                    远程支持日志
                   </h3>
                   {isManagedDeployment && (
                     <span className="border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                      Managed by your organization
+                      由你的组织管理
                     </span>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5 max-w-2xl">
                   {!isManagedDeploymentResolved
                     ? managedDeploymentResolutionError
-                      ? "Could not verify whether this device is managed. Remote log controls stay locked and will retry automatically."
+                      ? "无法验证此设备是否受管理。远程日志控制保持锁定，会自动重试。"
                       : "正在检查远程日志收集是否由你的组织管理..."
                     : isManagedDeployment
-                      ? "Your organization can request diagnostic logs from this managed device. Nothing is uploaded unless an administrator sends a request. Logs are filtered locally for common secrets and personal data, but automated filtering can miss secrets and logs can still contain names, file paths, URLs, and error messages. They go to your organization's configured support service, which controls retention. Screenshots, recordings, audio files, chat history, settings, and the timeline database are never included."
-                      : `Allow screenpipe support to request recent diagnostic logs from this device. Before upload, logs are filtered locally on this device for common secrets and personal data, but automated filtering can miss secrets and logs can still contain names, file paths, URLs, and error messages. Screenshots, recordings, audio files, chat history, settings, and the timeline database are never included. Nothing is uploaded unless support sends a short-lived request. You can turn this off at any time; previously shared diagnostics are deleted after 30 days.${requiresSignIn ? " Sign in to enable this." : ""}`}
+                      ? "你的组织可以从此受管理设备请求诊断日志。除非管理员发送请求，否则不会上传任何内容。日志会在本地过滤常见的秘密和个人数据，但自动过滤可能遗漏秘密，日志仍可能包含姓名、文件路径、URL 和错误信息。它们会发送到你的组织配置的支持服务，由该服务控制保留策略。截图、录制、音频文件、聊天历史、设置和时间线数据库永远不会被包含。"
+                      : `允许 screenpipe 支持团队从此设备请求最近的诊断日志。上传前，日志会在本设备上本地过滤常见的秘密和个人数据，但自动过滤可能遗漏秘密，日志仍可能包含姓名、文件路径、URL 和错误信息。截图、录制、音频文件、聊天历史、设置和时间线数据库永远不会被包含。除非支持团队发送短期请求，否则不会上传任何内容。你可以随时关闭；之前共享的诊断会在 30 天后删除。${requiresSignIn ? "需要登录才能启用。" : ""}`}
                 </p>
                 {consumerStatus && (
                   <p className={`text-[11px] mt-1 ${consumerStatus.className}`}>
