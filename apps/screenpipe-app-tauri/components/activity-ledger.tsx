@@ -184,15 +184,15 @@ const DEFAULT_ACTIVITY_REVIEW_PRESET: AIPreset = {
 };
 
 const RANGE_COPY: Record<RangePreset, string> = {
-  today: "Today",
+  today: "今天",
   "24h": "最近 24 小时",
   "7d": "最近 7 天",
   custom: "自定义范围",
 };
 
 const RANGE_SHORT_COPY: Record<RangePreset, string> = {
-  today: "Today",
-  "24h": "24h",
+  today: "今天",
+  "24h": "24小时",
   "7d": "7d",
   custom: "Custom",
 };
@@ -1238,9 +1238,9 @@ function ActivityEntryArtifacts({
                 (evidence.kind === "audio" ? "文字记录" : "屏幕录制");
           const destination =
             evidence.kind === "meeting" && evidence.meeting_id
-              ? "Meetings"
-              : "Timeline";
-          const accessibleLabel = `Open ${artifactName} at ${formatEvidenceTime(evidence.at)} in ${destination}`;
+              ? "会议"
+              : "时间线";
+          const accessibleLabel = `在${destination}中打开 ${artifactName}（${formatEvidenceTime(evidence.at)}）`;
           return (
             <ArtifactPreviewTooltip
               key={artifactKey(evidence)}
@@ -1885,7 +1885,7 @@ export function ActivityLedger({
     posthog.capture("activity_skill_clicked");
     void showChatWithPrefill({
       context: compactEntryContext(entry),
-      displayLabel: `Make a skill from “${entry.title}”`,
+      displayLabel: `从 “${entry.title}” 创建技能`,
       prompt: `Turn the workflow I performed during this exact interval into a reusable skill.
 
 Re-query Screenpipe only inside the cited time range and use the cited frames and audio moments as anchors. Reconstruct the actual sequence of repeatable actions from accessibility, parsed, interaction, and audio evidence. Separate the durable procedure from customer-specific, project-specific, or one-off content; remove secrets and private values. Draft a focused SKILL.md with clear triggers, inputs, steps, and verification for my review. Do not install it yet.`,
@@ -1897,7 +1897,7 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
     posthog.capture("activity_chat_clicked");
     void showChatWithPrefill({
       context: compactEntryContext(entry),
-      displayLabel: `Ask about “${entry.title}”`,
+      displayLabel: `询问 “${entry.title}”`,
       prompt: "了解更多此活动的详情。",
       source: "activity-history-chat",
     });
@@ -1965,8 +1965,8 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
                 <SelectTrigger
                   className="h-9 w-auto min-w-0 shrink-0 justify-center gap-1.5 rounded-none px-2 text-xs [&>svg:last-child]:hidden"
                   data-testid="activity-range"
-                  aria-label={`Time range: ${RANGE_COPY[preset]}`}
-                  title={`Time range: ${RANGE_COPY[preset]}`}
+                  aria-label={`时间范围：${RANGE_COPY[preset]}`}
+                  title={`时间范围：${RANGE_COPY[preset]}`}
                 >
                   <CalendarRange className="h-4 w-4" aria-hidden="true" />
                   <span aria-hidden="true">{RANGE_SHORT_COPY[preset]}</span>
@@ -2177,7 +2177,7 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
                           });
                         }}
                         className="self-start justify-self-start font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
-                        aria-label={`Open ${entry.title} in timeline`}
+                        aria-label={`在时间线中打开 ${entry.title}`}
                       >
                         {formatEntryTime(entry)}
                       </a>

@@ -460,7 +460,7 @@ afterEach(() => {
 
 async function generateActivities(): Promise<void> {
   fireEvent.click(
-    await screen.findByRole("button", { name: "Generate activities" }),
+    await screen.findByRole("button", { name: "生成活动" }),
   );
 }
 
@@ -819,7 +819,7 @@ describe("activity history helpers", () => {
 
     render(<ActivityLedger />);
     const link = await screen.findByRole("link", {
-      name: /Open Cursor .* in Timeline/,
+      name: /在时间线中打开 Cursor（/,
     });
     const previewCalls = () =>
       mocks.localFetch.mock.calls.filter(([path]) =>
@@ -927,7 +927,7 @@ describe("activity history helpers", () => {
 
     render(<ActivityLedger />);
     const link = await screen.findByRole("link", {
-      name: /Open Cursor .* in Timeline/,
+      name: /在时间线中打开 Cursor（/,
     });
     fireEvent.pointerMove(link, { pointerType: "mouse" });
     await act(async () => {
@@ -1004,10 +1004,10 @@ describe("activity history helpers", () => {
 
     render(<ActivityLedger />);
     const cursor = await screen.findByRole("link", {
-      name: /Open Cursor .* in Timeline/,
+      name: /在时间线中打开 Cursor（/,
     });
     const github = screen.getByRole("link", {
-      name: /Open github.com .* in Timeline/,
+      name: /在时间线中打开 github.com（/,
     });
 
     fireEvent.pointerMove(cursor, {
@@ -1089,10 +1089,10 @@ describe("activity history helpers", () => {
       }),
     ).toBeVisible();
     expect(
-      screen.getByRole("link", { name: /Open Arc .* in Timeline/ }),
+      screen.getByRole("link", { name: /在时间线中打开 Arc（/}),
     ).toBeVisible();
     expect(
-      screen.getByRole("link", { name: /Open Transcript .* in Timeline/ }),
+      screen.getByRole("link", { name: /在时间线中打开 文字记录（/}),
     ).toBeVisible();
     expect(screen.queryByTestId("activity-ledger-skeleton")).toBeNull();
     expect(previewCalls()).toHaveLength(0);
@@ -1106,16 +1106,16 @@ describe("activity history helpers", () => {
     });
 
     expect(
-      await screen.findByRole("link", { name: /Open Arc .* in Timeline/ }),
+      await screen.findByRole("link", { name: /在时间线中打开 Arc（/}),
     ).toBeVisible();
     expect(
-      screen.getByRole("link", { name: /Open Cursor .* in Timeline/ }),
+      screen.getByRole("link", { name: /在时间线中打开 Cursor（/}),
     ).toBeVisible();
     expect(
-      screen.getByRole("link", { name: /Open github.com .* in Timeline/ }),
+      screen.getByRole("link", { name: /在时间线中打开 github.com（/ }),
     ).toBeVisible();
     expect(
-      screen.getByRole("link", { name: /Open Transcript .* in Timeline/ }),
+      screen.getByRole("link", { name: /在时间线中打开 文字记录（/}),
     ).toBeVisible();
     expect(previewCalls()).toHaveLength(0);
   });
@@ -1161,7 +1161,7 @@ describe("activity history helpers", () => {
 
     render(<ActivityLedger />);
     const link = await screen.findByRole("link", {
-      name: /Open Cursor .* in Timeline/,
+      name: /在时间线中打开 Cursor（/,
     });
     fireEvent.pointerMove(link, { pointerType: "mouse" });
     await act(async () => {
@@ -1219,7 +1219,7 @@ describe("activity history helpers", () => {
 
     render(<ActivityLedger />);
     const link = await screen.findByRole("link", {
-      name: /Open Cursor .* in Timeline/,
+      name: /在时间线中打开 Cursor（/,
     });
     fireEvent.pointerMove(link, { pointerType: "mouse" });
     await act(async () => {
@@ -1376,7 +1376,7 @@ describe("ActivityLedger", () => {
     await generateActivities();
 
     const appArtifact = await screen.findByRole("link", {
-      name: /Open Arc at .* in Timeline/,
+      name: /在时间线中打开 Arc（/,
     });
     await waitFor(() =>
       expect(appArtifact.querySelector("img")).toHaveAttribute(
@@ -1463,7 +1463,7 @@ describe("ActivityLedger", () => {
       await screen.findByText("Fixed a capture reliability regression"),
     ).toBeVisible();
     expect(
-      screen.queryByRole("button", { name: "Enable activities" }),
+      screen.queryByRole("button", { name: "启用活动记录" }),
     ).toBeNull();
     await waitFor(() =>
       expect(mocks.updateSettings).toHaveBeenCalledWith({
@@ -1488,7 +1488,7 @@ describe("ActivityLedger", () => {
     render(<ActivityLedger />);
 
     expect(
-      await screen.findByRole("button", { name: "Enable activities" }),
+      await screen.findByRole("button", { name: "启用活动记录" }),
     ).toBeVisible();
     expect(mocks.updateSettings).not.toHaveBeenCalled();
     expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
@@ -1499,13 +1499,13 @@ describe("ActivityLedger", () => {
     render(<ActivityLedger />);
 
     expect(
-      await screen.findByRole("button", { name: "Enable activities" }),
+      await screen.findByRole("button", { name: "启用活动记录" }),
     ).toBeVisible();
     expect(
-      screen.queryByRole("button", { name: "Generate activities" }),
+      screen.queryByRole("button", { name: "生成活动" }),
     ).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Enable activities" }));
+    fireEvent.click(screen.getByRole("button", { name: "启用活动记录" }));
 
     await waitFor(() =>
       expect(mocks.updateSettings).toHaveBeenCalledWith({
@@ -1524,11 +1524,11 @@ describe("ActivityLedger", () => {
     render(<ActivityLedger />);
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "Enable activities" }),
+      await screen.findByRole("button", { name: "启用活动记录" }),
     );
 
     expect(
-      await screen.findByText("History could not be updated. Try again."),
+      await screen.findByText("无法更新历史记录，请重试。"),
     ).toBeVisible();
     expect(mocks.updateSettings).toHaveBeenCalledWith({
       activitiesEnabled: true,
@@ -1550,21 +1550,21 @@ describe("ActivityLedger", () => {
     render(<ActivityLedger />);
 
     expect(
-      await screen.findByText("Loading generated activities…"),
+      await screen.findByText("正在生成活动…"),
     ).toBeVisible();
     expect(screen.getByTestId("activity-ledger-skeleton")).toBeVisible();
     expect(screen.getAllByTestId("activity-ledger-skeleton-row")).toHaveLength(
       3,
     );
     expect(
-      screen.queryByRole("button", { name: "Generate activities" }),
+      screen.queryByRole("button", { name: "生成活动" }),
     ).toBeNull();
     expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
 
     resolveCache({ entries: [], coverage: [] });
 
     expect(
-      await screen.findByRole("button", { name: "Generate activities" }),
+      await screen.findByRole("button", { name: "生成活动" }),
     ).toBeVisible();
   });
 
@@ -1572,7 +1572,7 @@ describe("ActivityLedger", () => {
     render(<ActivityLedger />);
 
     const generate = await screen.findByRole("button", {
-      name: "Generate activities",
+      name: "生成活动",
     });
     expect(screen.getByTestId("shared-ai-preset-selector")).toBeVisible();
     expect(screen.getByLabelText("AI preset")).toHaveTextContent(
@@ -1595,13 +1595,13 @@ describe("ActivityLedger", () => {
   it("keeps the controls but removes the redundant page heading", async () => {
     render(<ActivityLedger />);
 
-    await screen.findByRole("button", { name: "Generate activities" });
+    await screen.findByRole("button", { name: "生成活动" });
     expect(screen.queryByRole("heading", { name: "Activity" })).toBeNull();
     const timeRange = screen.getByRole("combobox", {
-      name: "Time range: Today",
+      name: "时间范围：今天",
     });
     expect(timeRange).toBeVisible();
-    expect(timeRange).toHaveTextContent("Today");
+    expect(timeRange).toHaveTextContent("今天");
     expect(screen.getByLabelText("AI preset")).toBeVisible();
   });
 
@@ -1614,21 +1614,21 @@ describe("ActivityLedger", () => {
       render(<ActivityLedger />);
 
       const timeRange = await screen.findByRole("combobox", {
-        name: "Time range: Last 24 hours",
+        name: "时间范围：最近 24 小时",
       });
       fireEvent.click(timeRange);
 
       expect(
-        await screen.findByRole("option", { name: "Today" }),
+        await screen.findByRole("option", { name: "今天" }),
       ).toBeVisible();
       expect(
-        screen.getByRole("option", { name: "Last 24 hours" }),
+        screen.getByRole("option", { name: "最近 24 小时" }),
       ).toBeVisible();
       expect(
-        screen.queryByRole("option", { name: "Last 7 days" }),
+        screen.queryByRole("option", { name: "最近 7 天" }),
       ).toBeNull();
       expect(
-        screen.queryByRole("option", { name: "Custom range" }),
+        screen.queryByRole("option", { name: "自定义范围" }),
       ).toBeNull();
       expect(window.localStorage.getItem("screenpipe:activity-history:range")).toBe(
         "24h",
@@ -1641,42 +1641,42 @@ describe("ActivityLedger", () => {
   it("uses one popover trigger instead of two native custom-date inputs", async () => {
     render(<ActivityLedger />);
 
-    await screen.findByRole("button", { name: "Generate activities" });
+    await screen.findByRole("button", { name: "生成活动" });
     fireEvent.click(
-      screen.getByRole("combobox", { name: "Time range: Today" }),
+      screen.getByRole("combobox", { name: "时间范围：今天" }),
     );
     fireEvent.click(
-      await screen.findByRole("option", { name: "Custom range" }),
+      await screen.findByRole("option", { name: "自定义范围" }),
     );
 
     expect(
       document.querySelectorAll('input[type="datetime-local"]'),
     ).toHaveLength(0);
     expect(
-      screen.getByRole("button", { name: "Choose custom date range" }),
+      screen.getByRole("button", { name: "选择自定义日期范围" }),
     ).toHaveAttribute("aria-haspopup", "dialog");
   });
 
   it("returns from Custom range to Today", async () => {
     render(<ActivityLedger />);
 
-    await screen.findByRole("button", { name: "Generate activities" });
+    await screen.findByRole("button", { name: "生成活动" });
     fireEvent.click(
-      screen.getByRole("combobox", { name: "Time range: Today" }),
+      screen.getByRole("combobox", { name: "时间范围：今天" }),
     );
     fireEvent.click(
-      await screen.findByRole("option", { name: "Custom range" }),
+      await screen.findByRole("option", { name: "自定义范围" }),
     );
     fireEvent.click(
-      screen.getByRole("combobox", { name: "Time range: Custom range" }),
+      screen.getByRole("combobox", { name: "时间范围：自定义范围" }),
     );
-    fireEvent.click(await screen.findByRole("option", { name: "Today" }));
+    fireEvent.click(await screen.findByRole("option", { name: "今天" }));
 
     expect(
-      screen.getByRole("combobox", { name: "Time range: Today" }),
+      screen.getByRole("combobox", { name: "时间范围：今天" }),
     ).toBeVisible();
     expect(
-      screen.queryByRole("button", { name: "Choose custom date range" }),
+      screen.queryByRole("button", { name: "选择自定义日期范围" }),
     ).toBeNull();
   });
 
@@ -1702,7 +1702,7 @@ describe("ActivityLedger", () => {
     render(<ActivityLedger />);
 
     const generate = await screen.findByRole("button", {
-      name: "Generate activities",
+      name: "生成活动",
     });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30_000);
@@ -1736,7 +1736,7 @@ describe("ActivityLedger", () => {
     render(<ActivityLedger />);
 
     expect(
-      await screen.findByRole("button", { name: "Generate activities" }),
+      await screen.findByRole("button", { name: "生成活动" }),
     ).toBeVisible();
   });
 
@@ -1767,7 +1767,7 @@ describe("ActivityLedger", () => {
     fireEvent.change(screen.getByLabelText("AI preset"), {
       target: { value: "pipes" },
     });
-    const refresh = screen.getByRole("button", { name: "Refresh history" });
+    const refresh = screen.getByRole("button", { name: "刷新历史记录" });
     await waitFor(() => expect(refresh).toBeEnabled());
     fireEvent.click(refresh);
 
@@ -1823,7 +1823,7 @@ describe("ActivityLedger", () => {
     );
     expect(document.body.textContent).not.toContain("activity_agent_error:");
     expect(
-      screen.queryByText("History could not be updated. Try again."),
+      screen.queryByText("无法更新历史记录，请重试。"),
     ).toBeNull();
   });
 
@@ -1838,9 +1838,9 @@ describe("ActivityLedger", () => {
     await generateActivities();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "This AI preset has no usage left. Choose a different AI preset, then try again.",
+      "此 AI 预设额度已用完。请选择其他 AI 预设后重试。",
     );
-    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "重试" })).toBeVisible();
     expect(document.body.textContent).not.toContain(
       "hosted_ai_allowance_exceeded",
     );
@@ -1887,7 +1887,7 @@ describe("ActivityLedger", () => {
       "Recording is active, but this range does not have enough activity yet.",
     );
     expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "重试" })).toBeVisible();
     expect(mocks.posthogCapture).toHaveBeenCalledWith(
       "activity_generation_completed",
       {
@@ -1919,7 +1919,7 @@ describe("ActivityLedger", () => {
     render(<ActivityLedger />);
     await generateActivities();
     expect(
-      await screen.findByText("Understanding what you worked on…"),
+      await screen.findByText("正在理解你做了什么…"),
     ).toBeVisible();
 
     await act(async () => {
@@ -1927,7 +1927,7 @@ describe("ActivityLedger", () => {
     });
 
     expect(
-      await screen.findByText("Understanding what you worked on…"),
+      await screen.findByText("正在理解你做了什么…"),
     ).toBeVisible();
 
     await act(async () => {
@@ -2070,26 +2070,26 @@ describe("ActivityLedger", () => {
     expect(screen.queryByText(/citations?/i)).toBeNull();
     expect(
       screen.getByRole("link", {
-        name: /Open Arc at .* in Timeline/,
+        name: /在时间线中打开 Arc（/,
       }),
     ).toBeVisible();
     expect(
       screen.getByRole("link", {
-        name: /Open Cursor at .* in Timeline/,
+        name: /在时间线中打开 Cursor（/,
       }),
     ).toBeVisible();
     expect(
       screen.getByRole("link", {
-        name: /Open github.com at .* in Timeline/,
+        name: /在时间线中打开 github.com（/,
       }),
     ).toBeVisible();
     expect(
       screen.getByRole("link", {
-        name: /Open Transcript at .* in Timeline/,
+        name: /在时间线中打开 文字记录（/,
       }),
     ).toBeVisible();
     const entryTime = screen.getByRole("link", {
-      name: "Open Fixed a capture reliability regression in timeline",
+      name: "在时间线中打开 Fixed a capture reliability regression",
     });
     expect(entryTime).toHaveClass("self-start", "justify-self-start");
     expect(entryTime).toHaveAttribute(
@@ -2171,7 +2171,7 @@ describe("ActivityLedger", () => {
     await generateActivities();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Some recorded activity could not be validated. Your existing history was preserved; try again.",
+      "部分录制的活动无法验证。现有历史已保留；请重试。",
     );
     expect(mocks.posthogCapture).toHaveBeenCalledWith(
       "activity_generation_failed",
@@ -2195,7 +2195,7 @@ describe("ActivityLedger", () => {
     ).toBeVisible();
     expect(mocks.generateActivityHistory).toHaveBeenCalledOnce();
     expect(
-      screen.queryByText("History could not be updated. Try again."),
+      screen.queryByText("无法更新历史记录，请重试。"),
     ).toBeNull();
   });
 
@@ -2206,10 +2206,10 @@ describe("ActivityLedger", () => {
 
     expect(screen.queryByRole("button", { name: "Ask" })).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Refresh history" }),
+      screen.getByRole("button", { name: "刷新历史记录" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("combobox", { name: "Time range: Today" }),
+      screen.getByRole("combobox", { name: "时间范围：今天" }),
     ).toBeVisible();
   });
 
@@ -2219,13 +2219,13 @@ describe("ActivityLedger", () => {
     await screen.findByText("Fixed a capture reliability regression");
 
     const appArtifact = screen.getByRole("link", {
-      name: /Open Arc at .* in Timeline/,
+      name: /在时间线中打开 Arc（/,
     });
     const transcriptArtifact = screen.getByRole("link", {
-      name: /Open Transcript at .* in Timeline/,
+      name: /在时间线中打开 文字记录（/,
     });
     const siteArtifact = screen.getByRole("link", {
-      name: /Open github.com at .* in Timeline/,
+      name: /在时间线中打开 github.com（/,
     });
     expect(appArtifact).toHaveAttribute(
       "href",
@@ -2289,7 +2289,7 @@ describe("ActivityLedger", () => {
     await screen.findByText("Fixed a capture reliability regression");
 
     const appArtifact = screen.getByRole("link", {
-      name: /Open Arc at .* in Timeline/,
+      name: /在时间线中打开 Arc（/,
     });
     await waitFor(() =>
       expect(appArtifact.querySelector("img")).not.toBeNull(),
@@ -2358,7 +2358,7 @@ describe("ActivityLedger", () => {
     await screen.findByText("Aligned on Workflow Studio");
 
     const meetingArtifact = screen.getByRole("link", {
-      name: /Open Meeting at .* in Meetings/,
+      name: /在会议中打开 Meeting（/,
     });
     expect(meetingArtifact).toHaveAttribute(
       "href",
@@ -2417,8 +2417,8 @@ describe("ActivityLedger", () => {
         expect.objectContaining({
           source: "activity-history-chat",
           context: expect.stringContaining("frame 67890"),
-          displayLabel: "Ask about “Unblocked a customer's onboarding”",
-          prompt: "Tell me more about this activity.",
+          displayLabel: "询问 “Unblocked a customer's onboarding”",
+          prompt: "了解更多此活动的详情。",
         }),
       ),
     );
