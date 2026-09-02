@@ -86,19 +86,19 @@ describe("CloudAgentRunner", () => {
     });
 
     expect(screen.getByTestId("cloud-agent-memory-select")).toHaveTextContent(
-      "not shared",
+      "未共享",
     );
 
     fireEvent.click(
       screen.getByRole("button", { name: "review shared context" }),
     );
     expect(
-      await screen.findByText(/screenshots, audio files, local paths/i),
+      await screen.findByText(/截图、\s*\n?\s*音频文件、本地路径/),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
 
     fireEvent.click(screen.getByTestId("cloud-agent-memory-select"));
-    fireEvent.click(await screen.findByText("share relevant context"));
+    fireEvent.click(await screen.findByText("共享相关上下文"));
 
     await waitFor(() => {
       const saveCall = fetchMock.mock.calls.find(([url]) =>
@@ -119,10 +119,10 @@ describe("CloudAgentRunner", () => {
         name: "Cursor settings",
       }),
     );
-    fireEvent.change(await screen.findByPlaceholderText("paste API key"), {
+    fireEvent.change(await screen.findByPlaceholderText("粘贴 API 密钥"), {
       target: { value: "cursor-user-key" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "save key" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存密钥" }));
 
     await waitFor(() => {
       const keyCall = fetchMock.mock.calls.find(([url]) =>
@@ -143,11 +143,11 @@ describe("CloudAgentRunner", () => {
   it("uses one plain-language choice for where a task runs", async () => {
     renderRunner(null);
 
-    expect(screen.getByText("runs with")).toBeInTheDocument();
+    expect(screen.getByText("使用…运行")).toBeInTheDocument();
     await waitFor(() =>
       expect(
         screen.getByTestId("cloud-agent-provider-select"),
-      ).toHaveTextContent("screenpipe on this device"),
+       ).toHaveTextContent("本设备上的 screenpipe"),
     );
     expect(screen.queryByText("run in")).not.toBeInTheDocument();
   });
@@ -317,7 +317,7 @@ describe("CloudAgentRunner", () => {
 
     const codebase = screen.getByTestId("cloud-agent-codebase-select");
     fireEvent.click(
-      await screen.findByRole("button", { name: "choose codebase" }),
+      await screen.findByRole("button", { name: "选择代码库" }),
     );
     expect(codebase).toHaveFocus();
     await waitFor(() =>
@@ -454,14 +454,14 @@ describe("CloudAgentRunner", () => {
 
     renderRunner({ environment_id: "env_screenpipe" });
     fireEvent.click(screen.getByTestId("cloud-agent-memory-select"));
-    fireEvent.click(await screen.findByText("share relevant context"));
+    fireEvent.click(await screen.findByText("共享相关上下文"));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "could not write pipe config",
     );
     await waitFor(() =>
       expect(screen.getByTestId("cloud-agent-memory-select")).toHaveTextContent(
-        "not shared",
+        "未共享",
       ),
     );
   });
@@ -481,7 +481,7 @@ describe("CloudAgentRunner", () => {
       send_screenpipe_context: true,
     });
     fireEvent.click(screen.getByTestId("cloud-agent-provider-select"));
-    fireEvent.click(await screen.findByText("Claude in the cloud"));
+    fireEvent.click(await screen.findByText("云端 Claude"));
 
     await waitFor(() => {
       const saveCall = fetchMock.mock.calls.find(([url, init]) => {

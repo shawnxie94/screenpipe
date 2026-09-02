@@ -296,8 +296,8 @@ export function CloudAgentRunner({
     (draft?.provider === "cursor" && draft.agent_id?.trim()),
   );
   const contextLabel = draft?.send_screenpipe_context
-    ? `shared · ${draft.context_lookback_hours ?? 24}h`
-    : "not shared";
+    ? `共享 · ${draft.context_lookback_hours ?? 24}小时`
+    : "未共享";
 
   return (
     <>
@@ -309,7 +309,7 @@ export function CloudAgentRunner({
           <div>
             <Label className="text-xs font-medium">使用…运行</Label>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              choose who handles each run.
+              选择每次运行的执行方。
             </p>
           </div>
           <Select
@@ -324,10 +324,10 @@ export function CloudAgentRunner({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="local">screenpipe on this device</SelectItem>
-              <SelectItem value="codex">Codex in the cloud</SelectItem>
-              <SelectItem value="claude">Claude in the cloud</SelectItem>
-              <SelectItem value="cursor">Cursor in the cloud</SelectItem>
+              <SelectItem value="local">本设备上的 screenpipe</SelectItem>
+              <SelectItem value="codex">云端 Codex</SelectItem>
+              <SelectItem value="claude">云端 Claude</SelectItem>
+              <SelectItem value="cursor">云端 Cursor</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -372,13 +372,13 @@ export function CloudAgentRunner({
                     {connecting ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : needsCodebase ? (
-                      "choose codebase"
+                      "选择代码库"
                     ) : draft.provider === "claude" &&
                       status &&
                       !status.available ? (
-                      "update"
+                      "更新"
                     ) : (
-                      "connect"
+                      "连接"
                     )}
                   </Button>
                 )}
@@ -489,9 +489,9 @@ export function CloudAgentRunner({
                     <SelectValue>{contextLabel}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">don&apos;t share</SelectItem>
+                    <SelectItem value="none">不共享</SelectItem>
                     <SelectItem value="relevant">
-                      share relevant context
+                      共享相关上下文
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -516,7 +516,7 @@ export function CloudAgentRunner({
             role={error ? "alert" : "status"}
           >
             {saving ? (
-              "saving..."
+              "保存中..."
             ) : (
               <span className="text-destructive">{error}</span>
             )}
@@ -532,7 +532,7 @@ export function CloudAgentRunner({
                 {definition.label}
               </DialogTitle>
               <DialogDescription className="text-xs">
-                Connect once. This task reuses your account for future runs.
+                连接一次，此任务将在后续运行中复用你的账户。
               </DialogDescription>
             </DialogHeader>
 
@@ -540,10 +540,10 @@ export function CloudAgentRunner({
               <div className="flex items-center justify-between gap-3 border border-border bg-muted/20 p-3">
                 <div className="min-w-0">
                   <p className="text-xs font-medium">
-                    {status?.configured ? "connected" : "connection required"}
+                    {status?.configured ? "已连接" : "需要连接"}
                   </p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {status?.detail ?? "checking connection..."}
+                    {status?.detail ?? "正在检查连接..."}
                   </p>
                 </div>
                 {!status?.configured && draft.provider !== "cursor" && (
@@ -559,9 +559,9 @@ export function CloudAgentRunner({
                     ) : draft.provider === "claude" &&
                       status &&
                       !status.available ? (
-                      "update"
+                      "更新"
                     ) : (
-                      "connect"
+                      "连接"
                     )}
                   </Button>
                 )}
@@ -570,7 +570,7 @@ export function CloudAgentRunner({
               {draft.provider === "claude" && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">
-                    Claude conversation · optional
+                    Claude 会话 · 可选
                   </Label>
                   <Input
                     value={draft.session_id ?? ""}
@@ -578,7 +578,7 @@ export function CloudAgentRunner({
                       patchDraft({ session_id: event.target.value }, false)
                     }
                     onBlur={() => void persist("cloud-agent", draft)}
-                    placeholder="leave blank to start a new conversation"
+                    placeholder="留空则开始新会话"
                     className="h-9 rounded-none text-xs"
                   />
                   <p className="text-[11px] text-muted-foreground">
@@ -611,8 +611,8 @@ export function CloudAgentRunner({
                         }}
                         placeholder={
                           status?.configured
-                            ? "saved in encrypted storage"
-                            : "paste API key"
+                            ? "已保存在加密存储中"
+                            : "粘贴 API 密钥"
                         }
                         className="h-9 rounded-none pl-8 text-xs"
                         autoComplete="off"
@@ -631,20 +631,19 @@ export function CloudAgentRunner({
                       ) : keySaved ? (
                         <Check className="h-3.5 w-3.5" />
                       ) : (
-                        "save key"
+                        "保存密钥"
                       )}
                     </Button>
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Stored in screenpipe&apos;s encrypted secret store, never in
-                    the scheduled task.
+                    存储在 screenpipe 的加密密钥库中，不会写入计划任务。
                   </p>
                 </div>
               )}
 
               {codebaseValue && !usesExistingConversation && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs">branch · optional</Label>
+                  <Label className="text-xs">分支 · 可选</Label>
                   <Input
                     value={
                       draft.provider === "cursor"
@@ -675,7 +674,7 @@ export function CloudAgentRunner({
                 className="rounded-none"
                 onClick={() => setSettingsOpen(false)}
               >
-                done
+                完成
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -688,8 +687,7 @@ export function CloudAgentRunner({
             <DialogHeader>
               <DialogTitle className="text-base">共享上下文</DialogTitle>
               <DialogDescription className="text-xs">
-                Control what screenpipe may send to {definition.label} for this
-                task.
+                控制 screenpipe 为此任务发送给 {definition.label} 的内容。
               </DialogDescription>
             </DialogHeader>
 
@@ -697,10 +695,8 @@ export function CloudAgentRunner({
               <div className="border border-border bg-muted/20 p-3">
                 <p className="text-xs font-medium">共享哪些内容</p>
                 <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                  A short, relevant summary of app activity, screen text,
-                  transcript excerpts, and saved memories. Screenshots, audio
-                  files, local paths, the raw database, and live access stay
-                  private.
+                  应用活动、屏幕文字、转写摘录和已保存记忆的简短相关摘要。截图、
+                  音频文件、本地路径、原始数据库和实时访问始终保密。
                 </p>
               </div>
               <div className="space-y-1.5">
@@ -716,15 +712,15 @@ export function CloudAgentRunner({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1">最近一小时</SelectItem>
-                    <SelectItem value="8">last 8 hours</SelectItem>
-                    <SelectItem value="24">last 24 hours</SelectItem>
-                    <SelectItem value="168">last 7 days</SelectItem>
+                    <SelectItem value="8">最近 8 小时</SelectItem>
+                    <SelectItem value="24">最近 24 小时</SelectItem>
+                    <SelectItem value="168">最近 7 天</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                screenpipe rebuilds this summary for every run. Your full
-                history is never copied into the provider.
+                screenpipe 会在每次运行时重建此摘要。你的完整历史
+                绝不会被复制到提供方。
               </p>
             </div>
 
@@ -735,7 +731,7 @@ export function CloudAgentRunner({
                 className="rounded-none"
                 onClick={() => setMemoryOpen(false)}
               >
-                done
+                完成
               </Button>
             </DialogFooter>
           </DialogContent>

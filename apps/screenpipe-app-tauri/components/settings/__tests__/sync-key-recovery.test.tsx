@@ -56,7 +56,7 @@ describe("SyncKeyRecovery", () => {
 
     rerender(<SyncKeyRecovery visible />);
     expect(screen.getByTestId("sync-key-recovery-card")).toBeInTheDocument();
-    expect(screen.getByText(/does not delete recordings/i)).toBeInTheDocument();
+    expect(screen.getByText(/不会删除任何电脑上的录制或数据库/)).toBeInTheDocument();
   });
 
   it("requires confirmation and sends the exact scoped reset request", async () => {
@@ -64,23 +64,23 @@ describe("SyncKeyRecovery", () => {
     render(<SyncKeyRecovery visible onRecovered={onRecovered} />);
 
     fireEvent.click(
-      screen.getByRole("button", { name: /start fresh with remote sync/i }),
+      screen.getByRole("button", { name: /重新开始远程同步/ }),
     );
     expect(
       screen.getByRole("heading", {
-        name: /delete remote sync content and start fresh/i,
+        name: /删除远程同步内容并重新开始？/,
       }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "取消" }));
     expect(mocks.syncFetchOrThrow).not.toHaveBeenCalled();
 
     fireEvent.click(
-      screen.getByRole("button", { name: /start fresh with remote sync/i }),
+      screen.getByRole("button", { name: /重新开始远程同步/ }),
     );
     fireEvent.click(
       screen.getByRole("button", {
-        name: /delete remote sync and start fresh/i,
+        name: /删除远程同步并重新开始/,
       }),
     );
 
@@ -105,18 +105,18 @@ describe("SyncKeyRecovery", () => {
     render(<SyncKeyRecovery visible onRecovered={onRecovered} />);
 
     fireEvent.click(
-      screen.getByRole("button", { name: /start fresh with remote sync/i }),
+      screen.getByRole("button", { name: /重新开始远程同步/ }),
     );
     fireEvent.click(
       screen.getByRole("button", {
-        name: /delete remote sync and start fresh/i,
+        name: /删除远程同步并重新开始/,
       }),
     );
 
     await waitFor(() => {
       expect(mocks.toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: "could not restart sync",
+          title: "无法重启同步",
           variant: "destructive",
         }),
       );

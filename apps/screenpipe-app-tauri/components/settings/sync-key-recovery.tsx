@@ -54,14 +54,14 @@ export function SyncKeyRecovery({
         body: JSON.stringify({ confirmation: RESET_CONFIRMATION }),
       });
       toast({
-        title: "sync is ready on this device",
+        title: "此设备上的同步已就绪",
         description:
-          "remote sync was restarted with a new account key. your local recordings and database were not changed.",
+          "已使用新的账户密钥重启远程同步。本地录制和数据库未被修改。",
       });
       onRecovered?.();
     } catch (error) {
       toast({
-        title: "could not restart sync",
+        title: "无法重启同步",
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -81,27 +81,23 @@ export function SyncKeyRecovery({
           <div className="space-y-3">
             <div>
               <p className="text-sm font-medium">
-                this device cannot open your older sync key
+                此设备无法打开你的旧同步密钥
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Your existing remote sync state was encrypted with a key from
-                another device. If that device still works, keep it and contact
-                support before resetting so you can preserve the remote sync
-                content.
+                你现有的远程同步状态是使用另一台设备的密钥加密的。如果那台设备
+                仍可用，请保留它并在重置前联系客服，以保留远程同步内容。
               </p>
             </div>
             <p className="text-xs text-muted-foreground">
-              Starting fresh deletes only remote copies of scheduled tasks and
-              configs, memories, and connected-account credentials. It does not
-              delete recordings or databases on any computer, and it does not
-              change your account, plan, or billing.
+              重新开始只会删除计划任务和配置、记忆、已连接账户凭证的远程副本。
+              不会删除任何电脑上的录制或数据库，也不会改变你的账户、套餐或计费。
             </p>
             <Button
               variant="destructive"
               size="sm"
               onClick={() => setDialogOpen(true)}
             >
-              start fresh with remote sync
+              重新开始远程同步
             </Button>
           </div>
         </div>
@@ -111,18 +107,16 @@ export function SyncKeyRecovery({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              delete remote sync content and start fresh?
+              删除远程同步内容并重新开始？
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p>
-                  This permanently deletes the encrypted sync copies stored for
-                  this account. They cannot be recovered after the reset.
+                  这将永久删除为此账户存储的加密同步副本。重置后无法恢复。
                 </p>
                 <p>
-                  Your local recordings and databases on every computer stay
-                  untouched. Your account, subscription, and billing also stay
-                  unchanged.
+                  每台电脑上的本地录制和数据库保持不变，你的账户、订阅和计费也
+                  不会改变。
                 </p>
               </div>
             </AlertDialogDescription>
@@ -135,8 +129,8 @@ export function SyncKeyRecovery({
               onClick={resetRemoteSync}
             >
               {resetting
-                ? "starting fresh..."
-                : "delete remote sync and start fresh"}
+                ? "正在重新开始..."
+                : "删除远程同步并重新开始"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
