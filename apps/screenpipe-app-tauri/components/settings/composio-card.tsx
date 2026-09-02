@@ -207,9 +207,9 @@ export function ComposioCard({
       setAliasInput("");
       await openUrl(redirectUrl);
     } catch (e: any) {
-      const msg = e?.message === "加载失败" || e?.name === "TypeError"
-        ? "couldn't reach screenpipe.com — check your internet connection and try again"
-        : e?.message || "could not start the connection";
+      const msg = e?.message === "Load failed" || e?.name === "TypeError"
+        ? "无法访问 screenpipe.com — 请检查网络连接后重试"
+        : e?.message || "无法启动连接";
       setError(msg);
     } finally {
       setBusy(false);
