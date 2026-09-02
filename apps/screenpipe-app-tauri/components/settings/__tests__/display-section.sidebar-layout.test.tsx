@@ -59,7 +59,7 @@ describe("DisplaySection sidebar layout", () => {
       "data-state",
       "checked",
     );
-    expect(screen.getByText("Labelled row in the sidebar")).toBeInTheDocument();
+    expect(screen.getByText("侧边栏中带标签的会议行")).toBeInTheDocument();
   });
 
   it("moves meetings out to the chrome strip", () => {
@@ -105,15 +105,15 @@ describe("DisplaySection sidebar layout", () => {
 
   it("explains how to customize the sidebar", () => {
     render(<DisplaySection />);
-    expect(screen.getByText(/Drag sidebar rows/i)).toBeInTheDocument();
+    expect(screen.getByText(/拖动侧边栏行/)).toBeInTheDocument();
     expect(screen.queryByText(/rolling out/i)).toBeNull();
   });
 
   // settings-search asserts every indexed label maps to a rendered heading.
   it("is indexed for settings search under a rendered heading", () => {
     render(<DisplaySection />);
-    expect(searchIndex.find((f) => f.label === "Meetings in Sidebar")).toBeDefined();
-    expect(screen.getByText("Meetings in Sidebar")).toBeInTheDocument();
+    expect(searchIndex.find((f) => f.label === "侧边栏会议")).toBeDefined();
+    expect(screen.getByText("侧边栏会议")).toBeInTheDocument();
   });
 
   it("shows overlays in recordings by default and hides them only when enabled", async () => {

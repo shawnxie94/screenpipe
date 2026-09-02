@@ -33,34 +33,34 @@ import {
 
 /** Search fields for the Audio & meetings destination. */
 export const audioSearchIndex: SettingsField[] = [
-  { label: "Audio Recording", keywords: ["mic", "microphone", "audio"] },
-  { label: "Capture audio", keywords: ["continuous", "meetings only"] },
-  { label: "Transcription engine", keywords: ["whisper", "cloud", "stt"] },
-  { label: "Live meeting notes", keywords: ["captions", "meeting", "live"], conditional: true },
-  { label: "Append typed text to note", keywords: ["note", "append"], conditional: true },
-  { label: "Automatic meeting detection", keywords: ["zoom", "teams", "meet"], conditional: true },
-  { label: "Auto-select audio devices", keywords: ["devices", "bluetooth"], conditional: true },
-  { label: "Languages", keywords: ["transcript language", "language"], conditional: true },
-  { label: "Custom Vocabulary", keywords: ["vocabulary", "names", "jargon", "replacement"], conditional: true },
-  { label: "Smart recording", keywords: ["smart recording", "beta", "meeting", "piggyback", "per-process", "meeting audio"], conditional: true },
-  { label: "Always record bluetooth mic", keywords: ["bluetooth", "airpods", "headset", "a2dp", "sco", "meeting"], conditional: true },
-  { label: "Your name", keywords: ["speaker", "voice training"], conditional: true },
+  { label: "音频录制", keywords: ["mic", "microphone", "audio"] },
+  { label: "采集音频", keywords: ["continuous", "meetings only"] },
+  { label: "转写引擎", keywords: ["whisper", "cloud", "stt"] },
+  { label: "会议实时笔记", keywords: ["captions", "meeting", "live"], conditional: true },
+  { label: "附加输入文本到笔记", keywords: ["note", "append"], conditional: true },
+  { label: "自动会议检测", keywords: ["zoom", "teams", "meet"], conditional: true },
+  { label: "自动选择音频设备", keywords: ["devices", "bluetooth"], conditional: true },
+  { label: "语言", keywords: ["transcript language", "language"], conditional: true },
+  { label: "自定义词汇", keywords: ["vocabulary", "names", "jargon", "replacement"], conditional: true },
+  { label: "智能录制", keywords: ["smart recording", "beta", "meeting", "piggyback", "per-process", "meeting audio"], conditional: true },
+  { label: "始终录制蓝牙麦克风", keywords: ["bluetooth", "airpods", "headset", "a2dp", "sco", "meeting"], conditional: true },
+  { label: "你的名字", keywords: ["speaker", "voice training"], conditional: true },
 ];
 
 /** Search fields for the Screen destination. */
 export const screenSearchIndex: SettingsField[] = [
-  { label: "Screen context capture", keywords: ["screen", "video", "accessibility"] },
-  { label: "Structured app context", keywords: ["semantic", "ai", "messages", "email", "tasks", "code"], conditional: true },
-  { label: "Use it for", keywords: ["memory", "computer use", "automation", "agent", "skills"], conditional: true },
-  { label: "Screen recording", keywords: ["screenshot", "pixels", "ocr", "jpeg", "capture"] },
-  { label: "Use all monitors", keywords: ["monitor", "display"], conditional: true },
-  // conditional: monitor picker only renders when "Use all monitors" is off — paired right under that toggle.
-  { label: "Monitors", conditional: true },
-  { label: "Recording quality", keywords: ["fps", "quality"], conditional: true },
-  // conditional: hidden when screen recording is off (same gate as Recording quality).
-  { label: "Capture frequency", keywords: ["screenshot", "interval", "idle", "cadence", "every", "minimum"], conditional: true },
-  { label: "HD recording for meetings", keywords: ["hd", "meeting"] },
-  { label: "Chinese mirror", keywords: ["china", "mirror"] },
+  { label: "屏幕上下文采集", keywords: ["screen", "video", "accessibility"] },
+  { label: "结构化应用上下文", keywords: ["semantic", "ai", "messages", "email", "tasks", "code"], conditional: true },
+  { label: "用途", keywords: ["memory", "computer use", "automation", "agent", "skills"], conditional: true },
+  { label: "屏幕录制", keywords: ["screenshot", "pixels", "ocr", "jpeg", "capture"] },
+  { label: "使用所有显示器", keywords: ["monitor", "display"], conditional: true },
+  // conditional: monitor picker only renders when "使用所有显示器" is off — paired right under that toggle.
+  { label: "显示器", conditional: true },
+  { label: "录制质量", keywords: ["fps", "quality"], conditional: true },
+  // conditional: hidden when screen recording is off (same gate as 录制质量).
+  { label: "采集频率", keywords: ["screenshot", "interval", "idle", "cadence", "every", "minimum"], conditional: true },
+  { label: "会议高清录制", keywords: ["hd", "meeting"] },
+  { label: "中国镜像", keywords: ["china", "mirror"] },
 ];
 
 /** Backward-compatible aggregate for callers that still treat capture as one area. */
@@ -237,7 +237,7 @@ const TRANSCRIPTION_ENGINE_LABELS: Record<string, string> = {
   "qwen3-asr": "Qwen3-ASR",
   parakeet: "Parakeet",
   "parakeet-mlx": "Parakeet MLX",
-  disabled: "Disabled (capture only)",
+  disabled: "已禁用（仅采集）",
 };
 
 type AudioEngineFallbackReason =
@@ -298,7 +298,7 @@ const getAudioFallbackMessage = (reason: AudioEngineFallbackReason) => {
     case "notLoggedIn":
       return "你未登录，因此音频在本地转写。";
     case "missingDeepgramKey":
-      return "Deepgram has no API key configured, so audio is being transcribed locally.";
+      return "未配置 Deepgram API 密钥，因此音频在本地转写。";
   }
 };
 
@@ -495,7 +495,7 @@ function BackgroundTranscriptionDialog({
       setPendingTotal(data.pending ?? data.items?.length ?? 0);
     } catch (error) {
       toast({
-        title: "could not load backlog",
+        title: "无法加载积压队列",
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -551,7 +551,7 @@ function BackgroundTranscriptionDialog({
       .catch((error) => {
         if (canceled) return;
         toast({
-          title: "could not load audio",
+          title: "无法加载音频",
           description: error instanceof Error ? error.message : String(error),
           variant: "destructive",
         });
@@ -640,8 +640,8 @@ function BackgroundTranscriptionDialog({
 
     void audio.play().catch(() => {
       toast({
-        title: "could not play audio",
-        description: "the audio file could not be opened for preview",
+        title: "无法播放音频",
+        description: "音频文件无法打开预览",
         variant: "destructive",
       });
     });
@@ -677,16 +677,16 @@ function BackgroundTranscriptionDialog({
       }
       const result = await response.json();
       toast({
-        title: result.chunks_processed > 0 ? "chunk transcribed" : "nothing processed",
+        title: result.chunks_processed > 0 ? "片段已转写" : "未处理任何内容",
         description:
           result.chunks_processed > 0
-            ? `audio chunk ${audioChunkId} was processed`
-            : `audio chunk ${audioChunkId} did not produce a transcript`,
+            ? `音频片段 ${audioChunkId} 已处理`
+            : `音频片段 ${audioChunkId} 未产生转写文本`,
       });
       await refreshItems({ showLoading: false });
     } catch (error) {
       toast({
-        title: "could not run transcription",
+        title: "无法执行转写",
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -697,7 +697,7 @@ function BackgroundTranscriptionDialog({
 
   const handleDrop = useCallback(async (item: AudioReconciliationBacklogItem) => {
     const ok = window.confirm(
-      `drop audio chunk ${item.audio_chunk_id} from the background transcription backlog?`
+      `将音频片段 ${item.audio_chunk_id} 从后台转写积压中丢弃？`
     );
     if (!ok) return;
 
@@ -715,12 +715,12 @@ function BackgroundTranscriptionDialog({
       );
       setPendingTotal((current) => Math.max(0, (current ?? visiblePending) - 1));
       toast({
-        title: "audio chunk dropped",
+        title: "已丢弃音频片段",
         description: getAudioFileName(item.file_path),
       });
     } catch (error) {
       toast({
-        title: "could not drop chunk",
+        title: "无法丢弃片段",
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -731,7 +731,7 @@ function BackgroundTranscriptionDialog({
 
   const oldestPending = pending > 0
     ? formatBacklogAge(audioPipeline?.oldest_pending_transcription_at)
-    : "none";
+    : "无";
   const showingLimitedRows = visiblePending > items.length;
   const showInitialSkeleton = loading && items.length === 0;
   const skeletonRows = Array.from({ length: 10 });
@@ -743,8 +743,8 @@ function BackgroundTranscriptionDialog({
         variant="ghost"
         size="icon"
         className="relative h-7 w-7 shrink-0 border border-border bg-background text-foreground hover:bg-muted hover:text-foreground active:bg-muted"
-        aria-label="open background transcription backlog"
-        title="background transcription backlog"
+        aria-label="打开后台转写积压"
+        title="后台转写积压"
         onClick={() => setOpen(true)}
       >
         <ListTodo className="h-3.5 w-3.5" />
@@ -775,11 +775,11 @@ function BackgroundTranscriptionDialog({
             <div>
               <DialogTitle>后台转写积压</DialogTitle>
               <DialogDescription className="mt-1 text-xs">
-                Audio chunks waiting for background transcription reconciliation.
+                等待后台转写对账的音频片段。
               </DialogDescription>
             </div>
             <Badge variant="outline" className="mt-0.5 shrink-0 rounded-none font-mono text-[10px]">
-              worker {workerState}
+              工作线程 {workerState}
             </Badge>
           </div>
 
@@ -808,7 +808,7 @@ function BackgroundTranscriptionDialog({
               <Input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="search chunk, time, or file..."
+                placeholder="搜索片段、时间或文件..."
                 className="h-8 pl-7 text-xs"
                 spellCheck={false}
               />
@@ -828,13 +828,13 @@ function BackgroundTranscriptionDialog({
               ) : (
                 <EyeOff className="h-3 w-3" />
               )}
-              {showQuietChunks ? "quiet shown" : "quiet hidden"}
+              {showQuietChunks ? "已显示静默片段" : "已隐藏静默片段"}
               <span className="font-mono text-[10px] text-muted-foreground">
                 {quietItems.length.toLocaleString()}
               </span>
             </Button>
             <Badge variant="secondary" className="h-8 shrink-0 rounded-none px-2 font-mono text-[10px]">
-              {filteredItems.length.toLocaleString()} shown
+              已显示 {filteredItems.length.toLocaleString()} 条
             </Badge>
             <Button
               type="button"
@@ -845,7 +845,7 @@ function BackgroundTranscriptionDialog({
               onClick={() => void refreshItems()}
             >
               <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
-              refresh
+              刷新
             </Button>
           </div>
 
@@ -853,12 +853,12 @@ function BackgroundTranscriptionDialog({
             <table className="w-full min-w-[720px] table-fixed text-xs">
               <thead className="sticky top-0 z-10 bg-background">
                 <tr className="border-b border-border/60 bg-muted/30 text-left text-muted-foreground">
-                  <th className="w-[72px] px-2 py-1.5 font-medium">chunk</th>
-                  <th className="w-[64px] px-2 py-1.5 font-medium">age</th>
-                  <th className="w-[92px] px-2 py-1.5 font-medium">captured</th>
+                  <th className="w-[72px] px-2 py-1.5 font-medium">片段</th>
+                  <th className="w-[64px] px-2 py-1.5 font-medium">等待</th>
+                  <th className="w-[92px] px-2 py-1.5 font-medium">采集于</th>
                   <th className="px-2 py-1.5 font-medium">文件</th>
                   <th className="w-[92px] px-2 py-1.5 font-medium">状态</th>
-                  <th className="w-[120px] px-2 py-1.5 text-right font-medium">actions</th>
+                  <th className="w-[120px] px-2 py-1.5 text-right font-medium">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -895,16 +895,16 @@ function BackgroundTranscriptionDialog({
                   <tr>
                     <td colSpan={6} className="px-2 py-6 text-center text-muted-foreground">
                       {items.length === 0
-                        ? "no waiting chunks"
+                        ? "没有等待中的片段"
                         : activeItems.length === 0 && !showQuietChunks
-                          ? "only quiet/no-speech chunks are loaded"
-                          : "no matching chunks"}
+                          ? "当前仅加载了静默/无语音片段"
+                          : "没有匹配的片段"}
                     </td>
                   </tr>
                 )}
                 {!showInitialSkeleton && filteredItems.map((item) => {
                   const isPreviewing = previewItem?.audio_chunk_id === item.audio_chunk_id;
-                  const statusLabel = item.likely_empty ? "quiet" : item.status;
+                  const statusLabel = item.likely_empty ? "静默" : item.status;
 
                   return (
                     <React.Fragment key={item.audio_chunk_id}>
@@ -964,7 +964,7 @@ function BackgroundTranscriptionDialog({
                                       "h-7 w-7 border border-border bg-background text-foreground hover:bg-muted hover:text-foreground active:bg-muted",
                                       isPreviewing && "bg-muted"
                                     )}
-                                    aria-label={`preview audio chunk ${item.audio_chunk_id}`}
+                                    aria-label={`预览音频片段 ${item.audio_chunk_id}`}
                                     disabled={droppingId === item.audio_chunk_id}
                                     onClick={(event) => {
                                       event.stopPropagation();
@@ -979,7 +979,7 @@ function BackgroundTranscriptionDialog({
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent side="top">
-                                  {isPreviewing ? "close audio controls" : "open audio controls"}
+                                  {isPreviewing ? "关闭音频控制" : "打开音频控制"}
                                 </TooltipContent>
                               </Tooltip>
                               <Tooltip>
@@ -989,7 +989,7 @@ function BackgroundTranscriptionDialog({
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 border border-border bg-background text-foreground hover:bg-muted hover:text-foreground active:bg-muted"
-                                    aria-label={`transcribe audio chunk ${item.audio_chunk_id}`}
+                                    aria-label={`转写音频片段 ${item.audio_chunk_id}`}
                                     disabled={runningId === item.audio_chunk_id || droppingId === item.audio_chunk_id}
                                     onClick={(event) => {
                                       event.stopPropagation();
@@ -1012,7 +1012,7 @@ function BackgroundTranscriptionDialog({
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 border border-border bg-background text-muted-foreground hover:bg-muted hover:text-destructive active:bg-muted"
-                                    aria-label={`drop audio chunk ${item.audio_chunk_id}`}
+                                    aria-label={`丢弃音频片段 ${item.audio_chunk_id}`}
                                     disabled={droppingId === item.audio_chunk_id || runningId === item.audio_chunk_id}
                                     onClick={(event) => {
                                       event.stopPropagation();
@@ -1049,14 +1049,14 @@ function BackgroundTranscriptionDialog({
                   </div>
                   <div className="font-mono text-[10px] text-muted-foreground">
                     {formatBacklogFileSize(previewItem.file_size_bytes)}
-                    {previewItem.likely_empty ? " - quiet" : ""}
+                    {previewItem.likely_empty ? " - 静默" : ""}
                   </div>
                 </div>
               </div>
               {previewLoadingId === previewItem.audio_chunk_id && !previewSrc ? (
                 <div className="flex h-9 items-center gap-2 bg-muted/60 px-3 text-[11px] text-muted-foreground">
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  loading audio
+                  正在加载音频
                 </div>
               ) : previewSrc ? (
                 <div className="flex h-9 min-w-0 items-center gap-2 bg-muted/60 px-2">
@@ -1088,7 +1088,7 @@ function BackgroundTranscriptionDialog({
                     size="icon"
                     className="h-7 w-7 shrink-0 border border-border bg-background text-foreground hover:bg-muted hover:text-foreground active:bg-muted"
                     onClick={handlePreviewPlayback}
-                    aria-label={previewPlaying ? "pause audio preview" : "play audio preview"}
+                    aria-label={previewPlaying ? "暂停音频预览" : "播放音频预览"}
                   >
                     {previewPlaying ? (
                       <Pause className="h-3.5 w-3.5" />
@@ -1102,7 +1102,7 @@ function BackgroundTranscriptionDialog({
                     size="icon"
                     className="h-7 w-7 shrink-0 border border-border bg-background text-foreground hover:bg-muted hover:text-foreground active:bg-muted"
                     onClick={() => stepPreview(-10)}
-                    aria-label="back 10 seconds"
+                    aria-label="后退 10 秒"
                     disabled={previewDuration <= 0}
                   >
                     <Rewind className="h-3.5 w-3.5" />
@@ -1116,7 +1116,7 @@ function BackgroundTranscriptionDialog({
                     onChange={(event) => seekPreview(Number(event.target.value))}
                     disabled={previewDuration <= 0}
                     className="h-1 min-w-[180px] flex-1 accent-foreground"
-                    aria-label="audio preview position"
+                    aria-label="音频预览位置"
                   />
                   <span className="w-[76px] shrink-0 text-right font-mono text-[10px] text-muted-foreground">
                     {formatAudioPreviewTime(previewCurrentTime)} / {formatAudioPreviewTime(previewDuration)}
@@ -1127,7 +1127,7 @@ function BackgroundTranscriptionDialog({
                     size="icon"
                     className="h-7 w-7 shrink-0 border border-border bg-background text-foreground hover:bg-muted hover:text-foreground active:bg-muted"
                     onClick={() => stepPreview(10)}
-                    aria-label="forward 10 seconds"
+                    aria-label="前进 10 秒"
                     disabled={previewDuration <= 0}
                   >
                     <FastForward className="h-3.5 w-3.5" />
@@ -1135,7 +1135,7 @@ function BackgroundTranscriptionDialog({
                 </div>
               ) : (
                 <div className="flex h-9 items-center bg-muted/60 px-3 text-[11px] text-muted-foreground">
-                  audio unavailable
+                  音频不可用
                 </div>
               )}
             </div>
@@ -1143,11 +1143,11 @@ function BackgroundTranscriptionDialog({
 
           <div className="flex shrink-0 items-center justify-between gap-3 text-xs text-muted-foreground">
             <span className="min-w-0 truncate">
-              showing {filteredItems.length.toLocaleString()} of{" "}
-              {(showQuietChunks ? items.length : readyItems.length).toLocaleString()}{" "}
-              {showQuietChunks ? "loaded chunks" : "ready loaded chunks"}
-              {!showQuietChunks && quietItems.length > 0 ? ` - ${quietItems.length.toLocaleString()} quiet hidden` : ""}
-              {showingLimitedRows ? ` - ${visiblePending.toLocaleString()} total candidates incl. quiet` : ""}
+              显示 {(showQuietChunks ? items.length : readyItems.length).toLocaleString()} 条中的{" "}
+              {filteredItems.length.toLocaleString()} 条
+              {showQuietChunks ? "（已加载片段）" : "（已就绪加载片段）"}
+              {!showQuietChunks && quietItems.length > 0 ? ` - ${quietItems.length.toLocaleString()} 条静默已隐藏` : ""}
+              {showingLimitedRows ? ` - 候选总数 ${visiblePending.toLocaleString()}（含静默）` : ""}
             </span>
           </div>
         </DialogContent>
@@ -1320,15 +1320,15 @@ function TranscriptionDictionary({
           <Languages className="h-4 w-4 text-muted-foreground shrink-0" />
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-              Custom Vocabulary
-              <HelpTooltip text="Add custom words (names, brands, jargon) to improve transcription accuracy. You can also add replacements to auto-correct common mistranscriptions." />
+              自定义词汇
+              <HelpTooltip text="添加自定义词汇（人名、品牌、术语）以提高转写准确率。还可以添加替换词来自动纠正常见误转写。" />
               {vocabularyWords.length > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                   {vocabularyWords.length} / {VOCAB_LIMIT}
                 </Badge>
               )}
             </h3>
-            <p className="text-xs text-muted-foreground">teach names, brands & jargon to your transcription</p>
+            <p className="text-xs text-muted-foreground">教会转写识别人名、品牌和专业术语</p>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <Button
@@ -1338,7 +1338,7 @@ function TranscriptionDictionary({
               onClick={() => setShowBulk(!showBulk)}
             >
               <Download className="h-3 w-3" />
-              bulk import
+              批量导入
             </Button>
             {vocabularyWords.length > 0 && (
               <Button
@@ -1346,7 +1346,7 @@ function TranscriptionDictionary({
                 variant="outline"
                 className="h-7 text-xs px-2 text-muted-foreground hover:text-destructive"
                 onClick={() => {
-                  if (confirm(`remove all ${vocabularyWords.length} terms?`)) {
+                  if (confirm(`删除全部 ${vocabularyWords.length} 个词汇？`)) {
                     onChange([]);
                   }
                 }}
@@ -1360,8 +1360,8 @@ function TranscriptionDictionary({
         {/* Engine limits info */}
         {vocabularyWords.length > 0 && (
           <div className="text-[10px] text-muted-foreground/60 font-mono mb-2 px-1 flex gap-3">
-            <span>offline: {Math.min(vocabularyWords.reduce((n, e) => n + (e.replacement || e.word).length + 2, 0), WHISPER_CHAR_LIMIT)}/{WHISPER_CHAR_LIMIT} chars</span>
-            <span>cloud: {Math.min(vocabularyWords.length, DEEPGRAM_LIMIT)}/{DEEPGRAM_LIMIT} keywords</span>
+            <span>离线: {Math.min(vocabularyWords.reduce((n, e) => n + (e.replacement || e.word).length + 2, 0), WHISPER_CHAR_LIMIT)}/{WHISPER_CHAR_LIMIT} 字符</span>
+            <span>云: {Math.min(vocabularyWords.length, DEEPGRAM_LIMIT)}/{DEEPGRAM_LIMIT} 关键词</span>
           </div>
         )}
 
@@ -1371,7 +1371,7 @@ function TranscriptionDictionary({
             <Textarea
               value={bulkText}
               onChange={(e) => setBulkText(e.target.value)}
-              placeholder={"paste terms separated by commas, newlines, semicolons, or tabs\n\ne.g. kubernetes, posthog, screenpipe, terraform"}
+              placeholder={"粘贴以逗号、换行、分号或制表符分隔的词汇\n\n例如：kubernetes, posthog, screenpipe, terraform"}
               className="text-xs font-mono min-h-[80px] resize-y"
               spellCheck={false}
               autoCorrect="off"
@@ -1380,15 +1380,15 @@ function TranscriptionDictionary({
               <span className="text-xs text-muted-foreground">
                 {parsed.length > 0 ? (
                   <>
-                    {parsed.length} terms detected
+                    检测到 {parsed.length} 个词汇
                     {overLimit && (
                       <span className="text-destructive ml-1">
-                        (exceeds limit by {totalAfterImport - VOCAB_LIMIT})
+                        （超出上限 {totalAfterImport - VOCAB_LIMIT}）
                       </span>
                     )}
                   </>
                 ) : (
-                  "paste or type terms above"
+                  "在上方粘贴或输入词汇"
                 )}
               </span>
               <div className="flex gap-1">
@@ -1398,7 +1398,7 @@ function TranscriptionDictionary({
                   className="h-7 text-xs px-2"
                   onClick={() => { setBulkText(""); setShowBulk(false); }}
                 >
-                  cancel
+                  取消
                 </Button>
                 <Button
                   size="sm"
@@ -1406,7 +1406,7 @@ function TranscriptionDictionary({
                   disabled={parsed.length === 0}
                   onClick={handleBulkImport}
                 >
-                  add {Math.min(parsed.length, VOCAB_LIMIT - vocabularyWords.length)} terms
+                  添加 {Math.min(parsed.length, VOCAB_LIMIT - vocabularyWords.length)} 个词汇
                 </Button>
               </div>
             </div>
@@ -1420,7 +1420,7 @@ function TranscriptionDictionary({
             <Input
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              placeholder="filter terms..."
+              placeholder="筛选词汇..."
               className="h-7 text-xs pl-7"
               spellCheck={false}
             />
@@ -1615,11 +1615,11 @@ function HighFpsCard({
       const outcome = await pushSettings(runtimePatch);
       if (outcome.kind === "engine-down") {
         setLastError(
-          `${label} saved — but the engine isn't reachable, so it'll only take effect on next start.`,
+          `${label} 已保存 — 但无法连接引擎，将在下次启动时生效。`,
         );
       } else if (outcome.kind === "engine-rejected") {
         setLastError(
-          `${label} saved — but the engine rejected the live update (HTTP ${outcome.status}). Restart to apply.`,
+          `${label} 已保存 — 但引擎拒绝了实时更新（HTTP ${outcome.status}）。请重启以应用。`,
         );
       }
     },
@@ -1641,9 +1641,9 @@ function HighFpsCard({
 
   const statusBadge = active
     ? sessionKind === "meeting"
-      ? `Recording at ~${fps} fps — stops when call ends`
-      : `Recording at ~${fps} fps — ${fmtRemaining(remaining)} left`
-    : "Idle";
+      ? `正以约 ${fps} fps 录制 — 通话结束后停止`
+      : `正以约 ${fps} fps 录制 — 剩余 ${fmtRemaining(remaining)}`
+    : "空闲";
 
   return (
     <Card className="border-border bg-card">
@@ -1654,13 +1654,11 @@ function HighFpsCard({
             <div className="min-w-0">
               <h3 className="text-sm font-medium text-foreground">会议高清录制</h3>
               <p className="text-xs text-muted-foreground">
-                Capture screen at higher rate during calls so you can rewatch
-                slides, demos, and shared docs. {statusBadge}.
+                通话时以更高频率采集屏幕，方便回看幻灯片、演示和共享文档。{statusBadge}。
               </p>
               <p className="text-[11px] text-muted-foreground mt-1">
-                Start from the meeting-start notification, the tray menu, or{" "}
-                <code>POST /capture/hd/start</code>. Every session has a
-                natural end — no indefinite mode.
+                从会议开始通知、托盘菜单或
+                <code>POST /capture/hd/start</code> 开始。每个会话都有自然结束 — 没有无限模式。
               </p>
             </div>
           </div>
@@ -1671,7 +1669,7 @@ function HighFpsCard({
               disabled={busy}
               onClick={stopSession}
             >
-              Stop now
+              立即停止
             </Button>
           )}
         </div>
@@ -1685,14 +1683,14 @@ function HighFpsCard({
         <div className="pt-3 border-t border-border space-y-2.5">
           <div>
             <h4 className="text-xs font-medium text-foreground mb-1.5">
-              When a meeting starts
+              会议开始时
             </h4>
             <div className="flex flex-col gap-1">
               {(
                 [
-                  { v: "ask" as const, label: "Ask me", hint: "Adds an “open note + HD” action to the meeting-start notification — one click opens the note and starts HD (recommended)" },
-                  { v: "always" as const, label: "Always record at HD", hint: "Auto-start every detected meeting — more disk + CPU per call" },
-                  { v: "never" as const, label: "Never", hint: "无提示；只有托盘计时器可以开始会话" },
+                  { v: "ask" as const, label: "询问我", hint: "在会议开始通知中增加“打开笔记 + HD”操作 — 一键打开笔记并开始 HD（推荐）" },
+                  { v: "always" as const, label: "始终以高清录制", hint: "自动开始每次检测到的会议 — 每次通话占用更多磁盘 + CPU" },
+                  { v: "never" as const, label: "从不", hint: "无提示；只有托盘计时器可以开始会话" },
                 ] satisfies Array<{ v: HdDefaultMode; label: string; hint: string }>
               ).map(({ v, label, hint }) => (
                 <label key={v} className="flex items-start gap-2 cursor-pointer">
@@ -1705,7 +1703,7 @@ function HighFpsCard({
                       persistAndPush(
                         { hdRecordingDefault: v },
                         { defaultMode: v },
-                        "Meeting default",
+                        "会议默认",
                       )
                     }
                   />
@@ -1722,7 +1720,7 @@ function HighFpsCard({
             <div className="min-w-0">
               <h4 className="text-xs font-medium text-foreground">质量</h4>
               <p className="text-[11px] text-muted-foreground">
-                Lower interval = smoother replay + more disk. ≥ 33 ms (30 fps).
+                间隔越小 = 回放更流畅 + 磁盘占用更多。≥ 33 ms（30 fps）。
               </p>
             </div>
             <Select
@@ -1732,7 +1730,7 @@ function HighFpsCard({
                 persistAndPush(
                   { hdRecordingIntervalMs: ms },
                   { intervalMs: ms },
-                  "Capture interval",
+                  "采集间隔",
                 );
               }}
             >
@@ -1740,10 +1738,10 @@ function HighFpsCard({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="200">200 ms — 5 fps (light)</SelectItem>
-                <SelectItem value="100">100 ms — 10 fps (default)</SelectItem>
+                <SelectItem value="200">200 ms — 5 fps（低）</SelectItem>
+                <SelectItem value="100">100 ms — 10 fps（默认）</SelectItem>
                 <SelectItem value="67">67 ms — 15 fps</SelectItem>
-                <SelectItem value="33">33 ms — 30 fps (max)</SelectItem>
+                <SelectItem value="33">33 ms — 30 fps（最高）</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1998,22 +1996,22 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
   const languageSupportDescription =
     settings.languages.length === 0
       ? languageSupportIsLimited
-        ? `Auto-detects among ${supportedLanguageOptions.length} languages supported by ${languageSupportLabel}`
-        : "Automatically detects spoken language"
+        ? `在 ${languageSupportLabel} 支持的 ${supportedLanguageOptions.length} 种语言中自动检测`
+        : "自动检测所说的语言"
       : !languageSelectionUsesHints
-        ? `${settings.languages.length} supported selected for ${languageSupportLabel}`
+        ? `已为 ${languageSupportLabel} 选择 ${settings.languages.length} 种支持的语言`
         : languageSupportIsLimited
-          ? `Restricts transcription to selected languages supported by ${languageSupportLabel}`
+          ? `将转写限制为 ${languageSupportLabel} 支持的语言（已选）`
           : "仅对所选内容进行转写";
   const selectedLanguageNames = settings.languages
     .map((code) => supportedLanguageOptions.find((language) => language.code === code)?.name ?? code)
     .join(", ");
   const languageTriggerLabel =
     settings.languages.length === 0
-      ? "Auto-detect"
+      ? "自动检测"
       : settings.languages.length <= 2
         ? selectedLanguageNames
-        : `${settings.languages.length} selected`;
+        : `已选 ${settings.languages.length} 种`;
 
   // Add new state to track if settings have changed
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -2041,7 +2039,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
       
       if (newSettings.deepgramApiKey !== undefined && newSettings.deepgramApiKey.trim()) {
         if (newSettings.deepgramApiKey.length < 10) {
-          errors.deepgramApiKey = "API key seems too short";
+          errors.deepgramApiKey = "API 密钥似乎太短";
         }
       }
       
@@ -2311,10 +2309,10 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
   // Enhanced validation for specific fields
   const validateDeepgramApiKey = useCallback((apiKey: string): FieldValidationResult => {
     if (!apiKey.trim()) {
-      return { isValid: false, error: "API key is required" };
+      return { isValid: false, error: "需要 API 密钥" };
     }
     if (apiKey.length < 10) {
-      return { isValid: false, error: "API key seems too short" };
+      return { isValid: false, error: "API 密钥似乎太短" };
     }
     return { isValid: true };
   }, []);
@@ -2340,7 +2338,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     setHasUnsavedChanges(false);
     
     toast({
-      title: "Updating recording settings",
+      title: "正在更新录制设置",
       description: "这可能需要片刻...",
     });
 
@@ -2390,15 +2388,15 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
       setPendingChanges({});
 
       toast({
-        title: "Settings updated successfully",
+        title: "设置更新成功",
         description: needsServerRestart
-          ? "Screenpipe server restarted with new settings"
+          ? "屏幕录制服务已使用新设置重启"
           : "已用新设置重启录制",
       });
     } catch (error) {
       console.error("Failed to update settings:", error);
       toast({
-        title: "Error updating settings",
+        title: "更新设置时出错",
         description: "请重试或查看日志以获取更多信息",
         variant: "destructive",
       });
@@ -2414,7 +2412,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     if (errorCount > 0) {
       return {
         variant: "destructive" as const,
-        message: `${errorCount} validation error${errorCount > 1 ? 's' : ''} found`,
+        message: `找到 ${errorCount} 个校验错误`,
       };
     }
     if (hasUnsavedChanges) {
@@ -2425,7 +2423,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     }
     return {
       variant: "default" as const,
-      message: "All settings valid",
+      message: "所有设置均有效",
     };
   };
 
@@ -2527,7 +2525,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
       await handleAudioTranscriptionModelChange("openai-compatible", false, true);
       setIsOpenAICompatibleSetupOpen(false);
       toast({
-        title: "OpenAI Compatible enabled",
+        title: "OpenAI 兼容已启用",
         description: "端点已接受真实的转写请求。",
       });
     } catch (error) {
@@ -2589,15 +2587,15 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     trainingIntervalRef,
   } = useVoiceTraining({ settings });
 
-  const VOICE_TRAINING_TEXT = `The human eye processes around ten million bits of visual information every single second. That's roughly the bandwidth of an ethernet connection, streaming directly into your brain through two tiny biological cameras.
+  const VOICE_TRAINING_TEXT = `人眼每秒钟处理大约一千万位的视觉信息。这大致相当于一根以太网线的带宽，通过两台微小的生物相机直接流进大脑。
 
-Most of this data gets quietly filtered away before you're even conscious of it. Your visual cortex silently discards ninety-nine percent of what hits your retina, keeping only the fragments it judges important: a familiar face in a crowd, a flash of movement at the edge of your peripheral vision, the subtle shift in someone's expression during a conversation.
+在大多数情况下，你甚至还没意识到，这些数据就已经被悄悄过滤掉了。你的视觉皮层默默丢弃落在视网膜上的百分之九十九内容，只保留它认为重要的碎片：人群中一张熟悉的脸，视野边缘一闪而过的动作，交谈中对方细微的表情变化。
 
-Screenpipe works on a similar philosophy. It watches everything that flows through your digital world — every window, every tab, every meeting, every notification — and distills it into searchable, meaningful memory. Think of it as a second brain that never forgets, never gets tired, and never loses track of that important thing someone said three weeks ago on a Tuesday afternoon.
+screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东西 — 每个窗口、每个标签页、每场会议、每条通知 — 并把它们提炼成可搜索、有意义的记忆。把它想象成一个永不遗忘、永不疲惫的第二大脑，不会错过三周前某个周二下午别人说的那件重要的事。
 
-The average knowledge worker switches between four hundred different windows per day and types roughly forty words per minute across dozens of applications. Without a system to capture and organize this firehose of information, most of it simply evaporates.
+平均每个知识工作者每天要在四百个不同窗口之间切换，以每分钟大约四十个词的速度在数十个应用中打字。如果没有一个系统来采集和组织这股信息洪流，大部分内容就会直接蒸发。
 
-Your screen is a pipe. Everything you see, hear, and type flows through it. Screenpipe just makes sure nothing valuable leaks away.`;
+你的屏幕就是一根管道。你看到、听到、输入的一切都流经它。screenpipe 要做的，就是确保没有有价值的东西漏掉。`;
 
   const handleIgnoredWindowsChange = (values: string[]) => {
     // Convert all values to lowercase for comparison
@@ -2763,8 +2761,8 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
               <div className="flex items-center space-x-2.5">
                 <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  Capture audio
-                  <HelpTooltip text="“During meetings only” records and transcribes audio just while a meeting is detected — saving battery, disk, and cloud transcription cost. “Always” captures continuously, 24/7. Requires meeting detection to be on." />
+                  采集音频
+                  <HelpTooltip text="“仅会议期间”只在检测到会议时录制并转写音频 — 节省电池、磁盘和云端转写费用。“始终”则 24/7 连续采集。需要开启会议检测。" />
                 </h3>
               </div>
               <Select
@@ -2800,8 +2798,8 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
               <div className="flex items-center space-x-2.5">
                 <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  Transcription engine
-                  <HelpTooltip text="Cloud engines send audio to a server for fast, accurate transcription. Offline engines run on your device — fully private but use more CPU/RAM." />
+                  转写引擎
+                  <HelpTooltip text="云端引擎将音频发送到服务器进行快速准确的转写。本地引擎在你的设备上运行 — 完全私密但占用更多 CPU/内存。" />
                 </h3>
               </div>
               <div className="flex items-center gap-2">
@@ -2817,14 +2815,14 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">cloud</SelectLabel>
+                      <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">云端</SelectLabel>
                       <SelectItem value="screenpipe-cloud">
                         Screenpipe Cloud{hwCapability?.recommendedEngine === "screenpipe-cloud" && " ★"}
                       </SelectItem>
                       <SelectItem value="deepgram">Deepgram</SelectItem>
                     </SelectGroup>
                     <SelectGroup>
-                      <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">offline</SelectLabel>
+                      <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">本地</SelectLabel>
                       <SelectItem value="whisper-large-v3-turbo">Whisper Turbo</SelectItem>
                       <SelectItem value="whisper-large-v3-turbo-quantized">Whisper Turbo（快）</SelectItem>
                       <SelectItem value="whisper-tiny">Whisper Tiny</SelectItem>
@@ -2848,19 +2846,19 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
               >
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle className="text-xs font-semibold">
-                  {getTranscriptionEngineLabel(audioEngineResolution.requested)} is not active
+                  {getTranscriptionEngineLabel(audioEngineResolution.requested)} 未处于激活状态
                 </AlertTitle>
                 <AlertDescription className="space-y-2 text-xs">
                   <p>{getAudioFallbackMessage(audioEngineResolution.fallbackReason)}</p>
                   <div className="grid gap-1">
                     <div>
-                      Saved choice:{" "}
+                      已保存的选择：
                       <span className="font-medium">
                         {getTranscriptionEngineLabel(audioEngineResolution.requested)}
                       </span>
                     </div>
                     <div>
-                      Active now:{" "}
+                      当前生效：
                       <span className="font-medium">
                         {getTranscriptionEngineLabel(audioEngineResolution.active)}
                       </span>
@@ -2876,7 +2874,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                         data-testid="audio-engine-fallback-login"
                         onClick={() => checkLogin(settings.user)}
                       >
-                        Log in
+                        登录
                       </Button>
                     )}
                     <Button
@@ -2923,7 +2921,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle className="text-xs font-semibold">需要端点验证</AlertTitle>
                     <AlertDescription className="text-xs">
-                      These edits are not saved or applied until this endpoint completes a test transcription. This prevents recordings that cannot be searched.
+                      在端点完成测试转写之前，这些更改不会被保存或应用。这样可以避免产生无法搜索的录制内容。
                     </AlertDescription>
                   </Alert>
                 )}
@@ -2965,7 +2963,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     <Input
                       value={openAICompatibleDraft.model}
                       onChange={(e) => updateOpenAICompatibleDraft({ model: e.target.value })}
-                      placeholder={isLoadingModels ? "Loading models..." : "Model name (e.g., whisper-large-v3-turbo)"}
+                      placeholder={isLoadingModels ? "正在加载模型..." : "模型名称（例如 whisper-large-v3-turbo）"}
                       className="h-7 text-xs pr-8"
                     />
                     {isLoadingModels && (
@@ -2976,7 +2974,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">
-                          Available models ({openAIModels.length})
+                          可用模型（{openAIModels.length}）
                         </span>
                         {allOpenAIModels.length > 0 && (
                           <button
@@ -2984,7 +2982,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                             onClick={() => setFilterTranscriptionModels(!filterTranscriptionModels)}
                           >
-                            {filterTranscriptionModels ? "show all" : "filter STT only"}
+                            {filterTranscriptionModels ? "显示全部" : "仅显示 STT"}
                           </button>
                         )}
                       </div>
@@ -3008,10 +3006,10 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     </div>
                   )}
                   {openAIModels.includes('!API_Error') && (
-                    <p className="text-xs text-muted-foreground">Could not list models from the API — type the model name manually.</p>
+                    <p className="text-xs text-muted-foreground">无法从 API 获取模型列表 — 请手动输入模型名称。</p>
                   )}
                   {allOpenAIModels.length === 0 && !openAIModels.includes('!API_Error') && !isLoadingModels && (
-                    <p className="text-xs text-muted-foreground">No models listed by the API — type the model name manually.</p>
+                    <p className="text-xs text-muted-foreground">API 未返回模型列表 — 请手动输入模型名称。</p>
                   )}
                 </div>
 
@@ -3023,12 +3021,12 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     onChange={(e) => updateOpenAICompatibleDraft({ rawAudio: e.target.checked })}
                     className="rounded border-border"
                   />
-                  <span>send raw WAV audio (instead of MP3)</span>
+                  <span>发送原始 WAV 音频（而非 MP3）</span>
                 </label>
 
                 {/* Custom Headers */}
                 <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">custom headers (JSON)</label>
+                  <label className="text-xs text-muted-foreground">自定义请求头（JSON）</label>
                   <Input
                     defaultValue={openAICompatibleDraft.headers ? JSON.stringify(openAICompatibleDraft.headers) : ""}
                     onBlur={(e) => {
@@ -3064,10 +3062,10 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     ) : (
                       <Zap className="mr-1.5 h-3 w-3" />
                     )}
-                    {isTestingOpenAICompatible ? "Testing endpoint..." : "Test and enable"}
+                    {isTestingOpenAICompatible ? "正在测试端点..." : "测试并启用"}
                   </Button>
                   <span className="text-xs text-muted-foreground">
-                    Sends a short silent sample using the configured model and audio format.
+                    使用已配置的模型和音频格式发送一段短静音样本。
                   </span>
                 </div>
                 {openAICompatibleTestError && (
@@ -3089,15 +3087,15 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                       {txTestStatus === "done" && (
                         <span className="text-xs text-muted-foreground">
                           {txTestResults.transcribe.status === "pass"
-                            ? "All checks passed"
+                            ? "全部检查通过"
                             : txTestResults.endpoint.status === "fail"
-                            ? "Connection failed"
+                            ? "连接失败"
                             : txTestResults.auth.status === "fail"
-                            ? "Auth failed"
+                            ? "认证失败"
                             : txTestResults.models.status === "fail"
-                            ? "Models failed"
+                            ? "模型加载失败"
                             : txTestResults.transcribe.status === "fail"
-                            ? "Transcription failed"
+                            ? "转写失败"
                             : ""}
                         </span>
                       )}
@@ -3128,16 +3126,16 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                         ) : (
                           <Zap className="h-3 w-3" />
                         )}
-                        {txTestStatus === "testing" ? "Testing..." : "Run diagnostics"}
+                        {txTestStatus === "testing" ? "正在测试..." : "运行诊断"}
                       </Button>
 
                       <div className="space-y-1.5 text-xs">
                         {(
                           [
-                            ["endpoint", "1", "Endpoint reachable"],
-                            ["auth", "2", "Auth valid"],
-                            ["models", "3", "Models loaded"],
-                            ["transcribe", "4", "Test transcription"],
+                            ["endpoint", "1", "端点可达"],
+                            ["auth", "2", "认证有效"],
+                            ["models", "3", "模型已加载"],
+                            ["transcribe", "4", "测试转写"],
                           ] as const
                         ).map(([key, num, label]) => {
                           const result = txTestResults[key];
@@ -3232,8 +3230,8 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   <div className="flex items-center space-x-2">
                     <Mic className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      Reduce echo in calls
-                      <HelpTooltip text="Reduces speaker audio leaking into microphone transcripts during calls. Auto-selects the best engine for your platform." />
+                      减少通话回声
+                      <HelpTooltip text="减少通话中扬声器声音泄漏到麦克风转写的情况。会自动为你的平台选择最佳引擎。" />
                     </span>
                   </div>
                   <Switch
@@ -3250,8 +3248,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 </div>
                 {aecModeRemotePolicy.forceDisabled && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Temporarily disabled by the remote safety control. Your
-                    preference is preserved.
+                    已临时禁用（远程安全控制）。你的偏好已保留。
                   </p>
                 )}
               </div>
@@ -3268,11 +3265,11 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
               <VolumeX className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground">
-                  Exclude apps from system audio
+                  从系统音频中排除应用
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Audio from these apps will be filtered out of system-audio capture.
-                  {isWindows && " Windows supports one excluded app at a time."}
+                  这些应用的音频将被从系统音频采集中过滤掉。
+                  {isWindows && " Windows 每次只支持排除一个应用。"}
                 </p>
               </div>
             </div>
@@ -3330,11 +3327,11 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   pickAppToExclude();
                 }}
               >
-                + add app
+                + 添加应用
               </Button>
               {effectiveAudioExclusions.length === 0 && (
                 <span className="text-xs text-muted-foreground italic self-center">
-                  No apps excluded. All system audio is captured.
+                  未排除任何应用。所有系统音频都会被采集。
                 </span>
               )}
             </div>
@@ -3358,10 +3355,10 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 <Headphones className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div className="min-w-0">
                   <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    Live meeting notes
-                    <HelpTooltip text="Streams only the active meeting into the live note. This is separate from background 24/7 recording and can use your selected transcription engine, screenpipe cloud, or a direct provider." />
+                    会议实时笔记
+                    <HelpTooltip text="仅将当前活动会议流入实时笔记。这独立于后台 24/7 录制，可使用你选择的转写引擎、screenpipe cloud 或直连提供商。" />
                   </h3>
-                  <p className="text-xs text-muted-foreground">Meeting-only live captions, separate from background transcription</p>
+                  <p className="text-xs text-muted-foreground">仅限会议的实时字幕，独立于后台转写</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -3379,7 +3376,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="selected-engine">当前转写引擎</SelectItem>
-                      <SelectItem value="screenpipe-cloud">screenpipe cloud live</SelectItem>
+                      <SelectItem value="screenpipe-cloud">screenpipe cloud 实时</SelectItem>
                       <SelectItem value="deepgram-live">Deepgram 实时直连</SelectItem>
                     </SelectContent>
                   </Select>
@@ -3404,20 +3401,20 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
               (settings.meetingLiveTranscriptionProvider ?? "selected-engine") === "screenpipe-cloud" &&
               !settings.user?.token && (
               <p className="mt-2 ml-[26px] text-xs text-muted-foreground">
-                Log in to screenpipe cloud to use the cloud live provider.
+                登录 screenpipe cloud 以使用云端实时提供商。
               </p>
             )}
             {(settings.meetingLiveTranscriptionEnabled ?? true) &&
               (settings.meetingLiveTranscriptionProvider ?? "selected-engine") === "selected-engine" &&
               settings.audioTranscriptionEngine === "disabled" && (
               <p className="mt-2 ml-[26px] text-xs text-muted-foreground">
-                Pick an audio transcription engine above, or choose a cloud/direct live provider.
+                在上方选择音频转写引擎，或选择云端/直连实时提供商。
               </p>
             )}
             <div className="mt-2 pt-2 border-t border-border/50 flex items-center justify-between">
               <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                Append typed text + edited files to note
-                <HelpTooltip text="When the meeting stops, screenpipe appends what you typed (and the files you edited) during the meeting to the meeting note. Turn off to keep notes clean." />
+                附加输入文本与编辑过的文件到笔记
+                <HelpTooltip text="会议结束时，screenpipe 会把你在会议期间输入的内容（以及编辑过的文件）追加到会议笔记。可关闭以保持笔记干净。" />
               </span>
               <Switch
                 id="appendTypedTextToMeetingNote"
@@ -3440,10 +3437,10 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 <Users className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    Automatic meeting detection
-                    <HelpTooltip text="Detects meeting apps (Zoom, Teams, Meet, Discord calls, etc.) to start and stop meetings and live notes automatically. Turn off if it starts meetings when it shouldn't, and start them yourself instead." />
+                    自动会议检测
+                    <HelpTooltip text="检测会议应用（Zoom、Teams、Meet、Discord 通话等），自动开始/结束会议和实时笔记。如果它在不该开始的时候开始了会议，可关闭并改为手动开始。" />
                   </h3>
-                  <p className="text-xs text-muted-foreground">Auto-start meetings when a call app is detected</p>
+                  <p className="text-xs text-muted-foreground">检测到通话应用时自动开始会议</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -3457,7 +3454,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     data-testid="settings-ignore-meeting-apps-button"
                   >
                     <UserX className="h-3.5 w-3.5" />
-                    ignore apps
+                    忽略应用
                     {(settings.ignoredMeetingApps?.length ?? 0) > 0 && (
                       <span
                         className="rounded bg-muted px-1.5 py-0.5 text-[10px] tabular-nums"
@@ -3478,7 +3475,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
             </div>
             {settings.disableMeetingDetector && (
               <p className="mt-2 ml-[26px] text-xs text-muted-foreground">
-                disabling this also stops live meeting notes, smart recording, and &quot;during meetings only&quot; capture mode.
+                关闭此功能也会停止会议实时笔记、智能录制和“仅会议期间”采集模式。
               </p>
             )}
           </CardContent>
@@ -3501,17 +3498,17 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    Smart recording
-                    <Badge variant="secondary" aria-label="beta" className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide">
-                      beta
+                    智能录制
+                    <Badge variant="secondary" aria-label="测试版" className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide">
+                      测试版
                     </Badge>
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    during meetings, records your meeting&apos;s audio and whichever microphone you pick in the meeting app — taking precedence over your other audio settings. falls back to your configured capture automatically if unavailable.
+                    会议期间，录制会议音频以及你在会议应用中选择的那个麦克风 — 优先于其他音频设置。不可用时会自动回退到你配置的采集。
                   </p>
                   {settings.disableMeetingDetector && (
                     <p className="text-xs text-amber-600 dark:text-amber-500">
-                      requires automatic meeting detection — turn it back on above to use this.
+                      需要自动会议检测 — 请在上方重新开启。
                     </p>
                   )}
                 </div>
@@ -3542,8 +3539,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
             </div>
             {smartRecordingRemotePolicy.forceDisabled && (
               <p className="mt-2 ml-[26px] text-xs text-muted-foreground">
-                Temporarily disabled by the remote safety control. Your
-                preference is preserved.
+                已临时禁用（远程安全控制）。你的偏好已保留。
               </p>
             )}
           </CardContent>
@@ -3552,7 +3548,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
 
         {!settings.disableAudio && (
           <div className="flex items-center gap-2 px-1 pt-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">devices & capture</span>
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">设备与采集</span>
             <div className="h-px flex-1 bg-border/60" />
           </div>
         )}
@@ -3566,7 +3562,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground">自动选择音频设备</h3>
-                  <p className="text-xs text-muted-foreground">Records all default devices. Turn off to exclude bluetooth headphones or pick specific devices.</p>
+                  <p className="text-xs text-muted-foreground">录制所有默认设备。关闭后可排除蓝牙耳机或选择特定设备。</p>
                 </div>
               </div>
               <Switch
@@ -3616,9 +3612,9 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                       <Badge
                         variant="outline"
                         className="text-[9px] h-3.5 px-1 shrink-0"
-                        title="only recorded during a detected meeting — turn on &quot;always record bluetooth mic&quot; to change this"
+                        title="仅在检测到会议时录制 — 打开“始终录制蓝牙麦克风”可更改"
                       >
-                        meetings only
+                        仅会议
                       </Badge>
                     )}
                   </div>
@@ -3680,7 +3676,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 <div>
                   <h3 className="text-sm font-medium text-foreground">始终录制蓝牙麦克风</h3>
                   <p className="text-xs text-muted-foreground">
-                    by default bluetooth mics are only recorded during meetings to avoid degrading headphone audio quality. turn on to record always.
+                    默认情况下，蓝牙麦克风仅在会议期间录制，以避免降低耳机音质。打开后可始终录制。
                   </p>
                 </div>
               </div>
@@ -3696,7 +3692,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
 
         {!settings.disableAudio && (
           <div className="flex items-center gap-2 px-1 pt-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">voice & vocabulary</span>
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">声音与词汇</span>
             <div className="h-px flex-1 bg-border/60" />
           </div>
         )}
@@ -3709,14 +3705,14 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
               <div className="flex items-center space-x-2.5">
                 <User className="h-4 w-4 text-muted-foreground shrink-0" />
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                  Your name
-                  <HelpTooltip text="Your name in transcripts. Click 'train' and speak for 30 seconds to teach screenpipe your voice — it will recognize you across all devices using voice matching." />
+                  你的名字
+                  <HelpTooltip text="你在转写文本中的名字。点击“训练”并说话 30 秒，教会 screenpipe 你的声音 — 之后通过声纹匹配在所有设备识别你。" />
                 </h3>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="relative">
                   <Input
-                    placeholder="e.g. Louis"
+                    placeholder="例如 小明"
                     value={settings.userName || ""}
                     onChange={(e) => handleSettingsChange({ userName: e.target.value }, false)}
                     onFocus={() => setSpeakerInputFocused(true)}
@@ -3749,7 +3745,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   onClick={handleStartTraining}
                   disabled={voiceTraining.active || !settings.userName?.trim()}
                 >
-                  train
+                  训练
                 </Button>
               </div>
             </div>
@@ -3803,13 +3799,13 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     <AppWindowMac className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className="min-w-0">
                       <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                        Structured app context
+                        结构化应用上下文
                         <Badge variant="secondary" aria-label="实验性" className="px-1.5 py-0 text-[10px] font-medium">
-                          Experimental
+                          实验性
                         </Badge>
                       </h3>
                       <p className="text-xs text-muted-foreground">
-                        Turn what Screenpipe already captures into a clearer view for AI. Nothing is recorded twice.
+                        把 Screenpipe 已采集的内容变成更清晰的 AI 视图。不会重复录制任何内容。
                       </p>
                     </div>
                   </div>
@@ -3841,8 +3837,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
 
                 {semanticContextRemotePolicy.forceDisabled && (
                   <p className="border-t border-border pt-3 text-xs text-muted-foreground">
-                    Temporarily disabled by the remote safety control. Your
-                    preference is preserved.
+                    已临时禁用（远程安全控制）。你的偏好已保留。
                   </p>
                 )}
 
@@ -3852,7 +3847,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     <div className="flex flex-col gap-3 border-t border-border pt-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                       <div className="min-w-0">
                         <label htmlFor="semanticContextMode" className="text-xs font-medium text-foreground">
-                          Use it for
+                          用途
                         </label>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {
@@ -3893,7 +3888,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
                     <h3 className="text-sm font-medium text-foreground">屏幕录制</h3>
-                    <p className="text-xs text-muted-foreground">Record screen pixels for the timeline and image-only text. Turn this off to stop screen recording; accessibility text stays searchable.</p>
+                    <p className="text-xs text-muted-foreground">为时间线和纯图像文字录制屏幕像素。关闭后将停止屏幕录制；无障碍文本仍保持可搜索。</p>
                   </div>
                 </div>
                 <ManagedSwitch
@@ -3957,7 +3952,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     )}
                   </svg>
                   <span className={cn("text-[11px] font-medium", settings.monitorIds.includes("default") ? "text-foreground" : "text-muted-foreground")}>
-                    Default
+                    默认
                   </span>
                 </button>
 
@@ -4007,7 +4002,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   <div className="min-w-0">
                     <h3 className="text-sm font-medium text-foreground">录制质量</h3>
                     <p className="text-xs text-muted-foreground">
-                      Pick "high" or "max" if your text looks blurry on a 4K / ultrawide. Higher = crisper + larger files.
+                      如果你的文字在 4K / 超宽屏上显得模糊，选“高”或“最高”。越高 = 越清晰 + 文件越大。
                     </p>
                   </div>
                 </div>
@@ -4019,10 +4014,10 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">low — 1280px, smallest</SelectItem>
-                    <SelectItem value="balanced">balanced — 1920px (default)</SelectItem>
-                    <SelectItem value="high">high — 3840px, ultrawide-safe</SelectItem>
-                    <SelectItem value="max">max — native, no downscale</SelectItem>
+                    <SelectItem value="low">低 — 1280px，最小</SelectItem>
+                    <SelectItem value="balanced">均衡 — 1920px（默认）</SelectItem>
+                    <SelectItem value="high">高 — 3840px，超宽屏安全</SelectItem>
+                    <SelectItem value="max">最高 — 原生分辨率，不缩放</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -4049,15 +4044,14 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   <div className="min-w-0">
                     <h3 className="text-sm font-medium text-foreground">采集频率</h3>
                     <p className="text-xs text-muted-foreground">
-                      Always take a screenshot at least this often, even when the screen
-                      isn&apos;t changing. Lower = fewer missed moments + more disk used.
+                      即使屏幕没有变化，也至少按此频率截图。越低 = 遗漏越少 + 磁盘占用更多。
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-muted-foreground">最小间隔</span>
                   <span className="text-xs font-mono text-foreground">
-                    {seconds === 0 ? "auto (power profile)" : `every ${seconds}s`}
+                    {seconds === 0 ? "自动（电源配置）" : `每 ${seconds} 秒`}
                   </span>
                 </div>
                 <Slider
@@ -4079,7 +4073,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 />
                 <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
                   <span>自动</span>
-                  <span>every 10s</span>
+                  <span>每 10 秒</span>
                 </div>
                 <CaptureFrequencyPreview seconds={seconds} />
               </CardContent>
@@ -4152,7 +4146,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
         <DialogContent className="max-w-lg">
           <DialogTitle className="text-sm font-medium">朗读此内容</DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            speak naturally at your normal pace — this helps screenpipe learn your voice
+            用正常语速自然朗读 — 这有助于 screenpipe 学习你的声音
           </DialogDescription>
           <div className="space-y-4">
 
@@ -4164,7 +4158,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
 
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{voiceTraining.secondsLeft > 0 ? `${voiceTraining.secondsLeft}s remaining` : "done — click finish"}</span>
+                <span>{voiceTraining.secondsLeft > 0 ? `剩余 ${voiceTraining.secondsLeft} 秒` : "完成 — 点击结束"}</span>
                 <span>{Math.round(((30 - voiceTraining.secondsLeft) / 30) * 100)}%</span>
               </div>
               <Progress value={((30 - voiceTraining.secondsLeft) / 30) * 100} className="h-1.5" />
@@ -4176,7 +4170,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 onClick={handleFinishTraining}
                 disabled={voiceTraining.secondsLeft > 25}
               >
-                {voiceTraining.secondsLeft > 25 ? "keep reading..." : voiceTraining.secondsLeft > 0 ? "finish early" : "done"}
+                {voiceTraining.secondsLeft > 25 ? "请继续阅读..." : voiceTraining.secondsLeft > 0 ? "提前结束" : "完成"}
               </Button>
             </div>
           </div>
@@ -4190,7 +4184,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
         onApply={handleUpdate}
         isUpdating={isUpdating}
         disabled={Object.keys(validationErrors).length > 0}
-        message="unsaved recording changes. restart to apply."
+        message="有未保存的录制更改。重启以应用。"
       />
     </div>
   );

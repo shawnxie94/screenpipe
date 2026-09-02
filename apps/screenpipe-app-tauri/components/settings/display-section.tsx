@@ -30,15 +30,15 @@ import {
 
 /** Settings search index for this section. Co-located with the component so adding a field here means updating one file. See `SettingsField` in `./settings-search` for the schema. */
 export const searchIndex: SettingsField[] = [
-  { label: "Theme", keywords: ["dark", "light", "appearance"] },
-  { label: "Font Size" },
-  { label: "Chat Always on Top", keywords: ["pin", "window"] },
-  { label: "Shortcut Reminder", keywords: ["overlay", "pill", "pin", "drag", "position"] },
-  { label: "Timeline / rewind", keywords: ["rewind", "timeline", "backend"] },
-  { label: "Overlay Size" },
-  { label: "Hide from screen recordings", keywords: ["capture", "obs", "screen share", "overlay"] },
-  { label: "Sidebar translucency", keywords: ["vibrancy", "translucent"] },
-  { label: "Meetings in Sidebar", keywords: ["meeting", "meetings", "sidebar", "toolbar", "nav", "navigation", "icon", "reorder", "customize"] },
+  { label: "主题", keywords: ["dark", "light", "appearance"] },
+  { label: "字体大小" },
+  { label: "聊天窗口置顶", keywords: ["pin", "window"] },
+  { label: "快捷键提醒", keywords: ["overlay", "pill", "pin", "drag", "position"] },
+  { label: "时间线 / 回放", keywords: ["rewind", "timeline", "backend"] },
+  { label: "悬浮层尺寸" },
+  { label: "从屏幕录制中隐藏", keywords: ["capture", "obs", "screen share", "overlay"] },
+  { label: "半透明侧边栏", keywords: ["vibrancy", "translucent"] },
+  { label: "侧边栏会议", keywords: ["meeting", "meetings", "sidebar", "toolbar", "nav", "navigation", "icon", "reorder", "customize"] },
 ];
 
 export function DisplaySection() {
@@ -62,16 +62,16 @@ export function DisplaySection() {
   };
 
   const themeOptions = [
-    { value: "system" as const, label: "System", icon: Monitor },
-    { value: "light" as const, label: "Light", icon: Sun },
-    { value: "dark" as const, label: "Dark", icon: Moon },
+    { value: "system" as const, label: "跟随系统", icon: Monitor },
+    { value: "light" as const, label: "浅色", icon: Sun },
+    { value: "dark" as const, label: "深色", icon: Moon },
   ];
 
 
   return (
     <div className="space-y-5">
       <p className="text-muted-foreground text-sm mb-4">
-        Theme, windows, and overlay appearance
+        主题、窗口和悬浮层外观
       </p>
 
       <div className="space-y-2">
@@ -164,8 +164,8 @@ export function DisplaySection() {
                 <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    Timeline / rewind
-                    <HelpTooltip text="Turn off the timeline / rewind feature. Skips the in-memory hot frame cache (warm-up + per-frame/audio buffering) that only the timeline uses, and disables the native macOS Live Text overlay that can otherwise leak a selection layer over other windows (e.g. the chat input) and block typing. Restarts screenpipe to apply." />
+                    时间线 / 回放
+                    <HelpTooltip text="关闭时间线/回放功能。跳过只有时间线使用的内存热帧缓存（预热 + 每帧/音频缓冲），并禁用原生 macOS Live Text 悬浮层 — 否则它可能会在其他窗口（例如聊天输入框）上泄漏选择层并阻止输入。应用时会重启 screenpipe。" />
                   </h3>
                   <p className="text-xs text-muted-foreground">显示回放并持续进行后台缓存工作</p>
                 </div>
@@ -202,13 +202,13 @@ export function DisplaySection() {
                       await new Promise((r) => setTimeout(r, 500));
                       await commands.spawnScreenpipe(null);
                       toast({
-                        title: disabled ? "timeline disabled" : "timeline enabled",
-                        description: "screenpipe restarted to apply the change.",
+                        title: disabled ? "时间线已禁用" : "时间线已启用",
+                        description: "已重启 screenpipe 以应用更改。",
                       });
                     } catch (e) {
                       toast({
-                        title: "failed to restart screenpipe",
-                        description: "restart screenpipe manually to apply the change.",
+                        title: "重启 screenpipe 失败",
+                        description: "请手动重启 screenpipe 以应用更改。",
                         variant: "destructive",
                       });
                     }
@@ -228,16 +228,16 @@ export function DisplaySection() {
                 <Layers className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    Timeline Mode
-                    <HelpTooltip text="Controls how the timeline overlay appears. 'Native' uses a system overlay, 'Tauri' uses the app window." />
+                    时间线模式
+                    <HelpTooltip text="控制时间线悬浮层如何显示。“原生”使用系统悬浮层，“Tauri”使用应用窗口。" />
                   </h3>
                   <p className="text-xs text-muted-foreground">重新打开时间线以应用</p>
                 </div>
               </div>
               <div className="flex gap-2 ml-[26px]">
                 {([
-                  { value: "fullscreen", label: "Overlay", desc: "Floating panel" },
-                  { value: "window", label: "Window", desc: "Resizable window" },
+                  { value: "fullscreen", label: "悬浮层", desc: "浮动面板" },
+                  { value: "window", label: "窗口", desc: "可调整大小的窗口" },
                 ]).map((option) => {
                   const isActive = (settings?.overlayMode ?? "fullscreen") === option.value;
                   return (
@@ -249,8 +249,8 @@ export function DisplaySection() {
                           await commands.resetMainWindow();
                         } catch (_) {}
                         toast({
-                          title: "overlay mode updated",
-                          description: `press the shortcut to open timeline in ${option.label.toLowerCase()} mode.`,
+                          title: "悬浮层模式已更新",
+                          description: `按快捷键以${option.label}模式打开时间线。`,
                         });
                       }}
                       type="button"
@@ -303,10 +303,10 @@ export function DisplaySection() {
                 <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    Show Chat Suggestions
-                    <HelpTooltip text="Show the follow-up questions and suggested-prompt chips above the chat input. The X on the chips hides them too." />
+                    显示聊天建议
+                    <HelpTooltip text="在聊天输入框上方显示追问和建议提示词芯片。点击芯片上的 X 也可以隐藏。" />
                   </h3>
-                  <p className="text-xs text-muted-foreground">Follow-up questions and suggested prompts above the input</p>
+                  <p className="text-xs text-muted-foreground">在输入框上方显示追问和建议提示词</p>
                 </div>
               </div>
               <Switch
@@ -327,11 +327,11 @@ export function DisplaySection() {
                 <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    Hide from screen recordings
-                    <HelpTooltip text="When enabled, only the screenpipe overlay is hidden from OBS, Screen Studio, screenshots, and screen sharing. Other screenpipe windows remain visible." />
+                    从屏幕录制中隐藏
+                    <HelpTooltip text="开启后，仅 screenpipe 悬浮层会对 OBS、Screen Studio、截图和屏幕共享隐藏。其他 screenpipe 窗口仍然可见。" />
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Hide the overlay from OBS, Screen Studio, and screen sharing
+                    让悬浮层对 OBS、Screen Studio 和屏幕共享隐藏
                   </p>
                 </div>
               </div>
@@ -347,13 +347,13 @@ export function DisplaySection() {
                     }
                     await commands.resetMainWindow().catch(() => {});
                     toast({
-                      title: hidden ? "overlay hidden from screen recordings" : "overlay visible in screen recordings",
-                      description: "press the shortcut to open the overlay with the new setting.",
+                      title: hidden ? "悬浮层已从屏幕录制中隐藏" : "悬浮层在屏幕录制中可见",
+                      description: "按快捷键以新设置打开悬浮层。",
                     });
                   } catch (error) {
                     await updateSettings({ hideOverlayInScreenRecording: !hidden });
                     toast({
-                      title: "could not update overlay capture visibility",
+                      title: "无法更新悬浮层采集可见性",
                       description: error instanceof Error ? error.message : String(error),
                       variant: "destructive",
                     });
@@ -375,13 +375,13 @@ export function DisplaySection() {
                   <CalendarClock className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
                     <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                      Meetings in Sidebar
-                      <HelpTooltip text="Show Meetings as a labelled row in the Home sidebar. Off keeps it as the compact icon in the top-left strip next to search. The live-recording dot shows either way." />
+                      侧边栏会议
+                      <HelpTooltip text="在主页侧边栏中显示为带标签的“会议”行。关闭后它保持为搜索框旁左上角条中的紧凑图标。实时录制指示点始终显示。" />
                     </h3>
                     <p className="text-xs text-muted-foreground">
                       {meetingsInSidebar
-                        ? "Labelled row in the sidebar"
-                        : "Compact icon next to search"}
+                        ? "侧边栏中带标签的会议行"
+                        : "搜索框旁的紧凑图标"}
                     </p>
                   </div>
                 </div>
@@ -402,8 +402,8 @@ export function DisplaySection() {
                 />
               </div>
               <p className="ml-[26px] text-xs text-muted-foreground">
-                Drag sidebar rows to reorder them, or right-click one to move,
-                hide, or restore it.
+                拖动侧边栏行以调整顺序，或右键单击某一行来移动、
+                隐藏或恢复它。
               </p>
               {!isSidebarNavLayoutDefault(sidebarLayout) && (
                 <div className="ml-[26px]">
@@ -416,10 +416,10 @@ export function DisplaySection() {
                       handleSettingsChange({
                         sidebarNavLayout: { ...DEFAULT_SIDEBAR_NAV_LAYOUT },
                       });
-                      toast({ title: "sidebar layout reset" });
+                      toast({ title: "侧边栏布局已重置" });
                     }}
                   >
-                    Reset sidebar layout
+                    重置侧边栏布局
                   </Button>
                 </div>
               )}
@@ -434,7 +434,7 @@ export function DisplaySection() {
                   <PanelLeft className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
                     <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                      Translucent Sidebar
+                      半透明侧边栏
                       <HelpTooltip text="为侧边栏应用 macOS 活力效果，呈现磨砂玻璃外观。" />
                     </h3>
                     <p className="text-xs text-muted-foreground">毛玻璃侧边栏效果</p>
@@ -445,7 +445,7 @@ export function DisplaySection() {
                   onCheckedChange={(checked) => {
                     handleSettingsChange({ translucentSidebar: checked });
                     toast({
-                      title: checked ? "translucent sidebar enabled" : "translucent sidebar disabled",
+                      title: checked ? "已启用半透明侧边栏" : "已禁用半透明侧边栏",
                     });
                   }}
                 />
@@ -470,11 +470,11 @@ export function DisplaySection() {
                   <EyeOff className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
                     <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                      Hide Dock Icon
-                      <HelpTooltip text="Run screenpipe as a menu-bar-only app with no icon in the Dock. The menu-bar (tray) icon stays — click it to open screenpipe. Useful if you only need the app occasionally and don't want it in the Dock." />
+                      隐藏 Dock 图标
+                      <HelpTooltip text="让 screenpipe 作为仅菜单栏应用运行，Dock 中不显示图标。菜单栏（托盘）图标会保留 — 点击它打开 screenpipe。如果你只是偶尔需要这个应用且不想它占用 Dock，会很有用。" />
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Menu bar only — keep screenpipe out of the Dock
+                      仅菜单栏 — 让 screenpipe 不占用 Dock
                     </p>
                   </div>
                 </div>
@@ -487,10 +487,10 @@ export function DisplaySection() {
                     commands.resetMainWindow().catch(() => {});
                     toast({
                       title: checked
-                        ? "dock icon hidden — menu bar only"
-                        : "dock icon visible",
+                        ? "Dock 图标已隐藏 — 仅菜单栏"
+                        : "Dock 图标已显示",
                       description: checked
-                        ? "open screenpipe from the menu bar icon."
+                        ? "从菜单栏图标打开 screenpipe。"
                         : undefined,
                     });
                   }}
@@ -517,11 +517,11 @@ export function DisplaySection() {
                   <MinusSquare className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
                     <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                      Minimize to System Tray on Close
-                      <HelpTooltip text="When enabled, clicking the X on the Home window hides it and removes it from the Windows taskbar. screenpipe keeps running in the system tray — click the tray icon to bring the window back." />
+                      关闭时最小化到系统托盘
+                      <HelpTooltip text="开启后，点击主窗口上的 X 会隐藏它并将其从 Windows 任务栏移除。screenpipe 会继续在系统托盘中运行 — 点击托盘图标可恢复窗口。" />
                     </h3>
                     <p className="text-xs text-muted-foreground">
-                      Keep running in the tray when the window is closed
+                      关闭窗口时继续保持在托盘中运行
                     </p>
                   </div>
                 </div>
@@ -534,7 +534,7 @@ export function DisplaySection() {
                         ? "关闭按钮将隐藏到系统托盘"
                         : "关闭按钮将最小化到任务栏",
                       description: checked
-                        ? "Click the tray icon to bring screenpipe back."
+                        ? "点击托盘图标以恢复 screenpipe。"
                         : undefined,
                     });
                   }}
@@ -556,7 +556,7 @@ export function DisplaySection() {
                 <div>
                   <h3 className="text-sm font-medium text-foreground">快捷键提醒</h3>
                   <p className="text-xs text-muted-foreground">
-                    Show the floating shortcut bar. Recording problems can still surface temporarily.
+                    显示悬浮快捷键栏。录制问题仍可能临时浮现。
                   </p>
                 </div>
               </div>
@@ -595,9 +595,9 @@ export function DisplaySection() {
               </div>
               <div className="flex gap-2 ml-[26px]">
                 {([
-                  { value: "small", label: "Small" },
-                  { value: "medium", label: "Medium" },
-                  { value: "large", label: "Large" },
+                  { value: "small", label: "小" },
+                  { value: "medium", label: "中" },
+                  { value: "large", label: "大" },
                 ]).map((option) => {
                   const isActive = (settings?.shortcutOverlaySize ?? "small") === option.value;
                   return (
