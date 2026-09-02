@@ -450,7 +450,7 @@ function SettingsContent() {
             )}
           >
             <ChevronLeft className="h-3.5 w-3.5 flex-shrink-0" />
-            <span className="font-medium">Back to app</span>
+            <span className="font-medium">返回应用</span>
           </button>
         </div>
 

@@ -880,7 +880,7 @@ function ServerEditor({
                 <>
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                    <span>Waiting for browser</span>
+                    <span>正在等待浏览器</span>
                   </div>
                   <Button
                     type="button"

@@ -1095,8 +1095,8 @@ export function ChatHistoryView({
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>New group</DialogTitle>
-            <DialogDescription>Enter a name for the sidebar group.</DialogDescription>
+            <DialogTitle>新建分组</DialogTitle>
+            <DialogDescription>为侧边栏分组输入一个名称。</DialogDescription>
           </DialogHeader>
           <div className="py-2">
             <input

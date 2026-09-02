@@ -81,18 +81,18 @@ export function AttachmentTray({
                       onClick={() => onShowPastedTextInField(doc, i)}
                       className="inline-flex max-w-full items-center gap-0.5 truncate text-[10px] text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-foreground"
                     >
-                      <span className="truncate">Show in text field</span>
+                      <span className="truncate">在文本字段中显示</span>
                       <ChevronRight className="h-3 w-3 shrink-0" />
                     </button>
                   ) : (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span className="inline-flex max-w-full cursor-not-allowed items-center gap-0.5 truncate text-[10px] text-muted-foreground/70 underline decoration-dotted underline-offset-2">
-                          <span className="truncate">Show in text field</span>
+                          <span className="truncate">在文本字段中显示</span>
                           <ChevronRight className="h-3 w-3 shrink-0" />
                         </span>
                       </TooltipTrigger>
-                      <TooltipContent side="top">Too long to show in text field</TooltipContent>
+                      <TooltipContent side="top">内容过长，无法在文本字段中显示</TooltipContent>
                     </Tooltip>
                   )
                 ) : (

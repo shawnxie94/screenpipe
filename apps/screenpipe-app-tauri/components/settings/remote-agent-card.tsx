@@ -273,7 +273,7 @@ that installs the screenpipe MCP server${hasSkills ? " + skill" : ""} so ${name}
 
         <p className="text-[11px] text-muted-foreground leading-relaxed">
           then push your screenpipe data to that box via the{" "}
-          <span className="font-medium">Sync (remote)</span> tab below.
+          <span className="font-medium">同步（远程）</span> tab below.
         </p>
       </div>
 

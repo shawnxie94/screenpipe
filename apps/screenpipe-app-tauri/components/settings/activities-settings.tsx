@@ -32,7 +32,7 @@ export function ActivitiesSettings() {
           <div className="flex items-start gap-3">
             <ListChecks className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <div>
-              <h3 className="text-sm font-medium text-foreground">Enable activities</h3>
+              <h3 className="text-sm font-medium text-foreground">启用活动记录</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Automatically create activity summaries from your screen history.
               </p>
@@ -66,10 +66,10 @@ export function ActivitiesSettings() {
               }
               className="h-9 min-w-40 border border-border bg-background px-3 font-mono text-xs text-foreground outline-none transition-colors focus:border-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value={5}>Every 5 minutes</option>
-              <option value={15}>Every 15 minutes</option>
-              <option value={30}>Every 30 minutes</option>
-              <option value={60}>Every hour</option>
+              <option value={5}>每 5 分钟</option>
+              <option value={15}>每 15 分钟</option>
+              <option value={30}>每 30 分钟</option>
+              <option value={60}>每小时</option>
             </select>
           </div>
         </div>

@@ -3716,7 +3716,7 @@ export function PipesSection() {
                       {/* Notification API permission */}
                       <div className="flex items-center justify-between gap-3 px-4 py-3">
                         <div className="min-w-0">
-                          <span className="text-xs font-medium cursor-help" title="allows this scheduled task to call POST /notify">Allow notification API</span>
+                          <span className="text-xs font-medium cursor-help" title="allows this scheduled task to call POST /notify">允许通知 API</span>
                           <p className="mt-0.5 text-[11px] text-muted-foreground">
                             Blocks hardcoded POST /notify calls when turned off.
                           </p>

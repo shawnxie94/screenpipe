@@ -81,13 +81,13 @@ export function MentionDropdown({
         {mentions.isLoadingSpeakers && (
           <div className="px-3 py-2 text-[10px] text-muted-foreground flex items-center gap-2">
             <Loader2 className="h-3 w-3 animate-spin" />
-            <span>Searching speakers...</span>
+            <span>正在搜索说话人...</span>
           </div>
         )}
         {mentions.isLoadingTagSearch && (
           <div className="px-3 py-2 text-[10px] text-muted-foreground flex items-center gap-2">
             <Loader2 className="h-3 w-3 animate-spin" />
-            <span>Searching tags...</span>
+            <span>正在搜索标签...</span>
           </div>
         )}
         </div>

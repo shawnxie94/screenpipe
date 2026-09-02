@@ -165,7 +165,7 @@ export function LiveViewItemControls({
                   }}
                 >
                   <div>
-                    <p className="text-xs font-medium">Fix this item</p>
+                    <p className="text-xs font-medium">修复此项目</p>
                     <p className="mt-0.5 text-[10px] text-muted-foreground">
                       The connected scheduled task keeps your correction on later updates.
                     </p>
@@ -224,7 +224,7 @@ export function LiveViewItemControls({
                       >
                         <Pencil className="mr-2 mt-0.5 h-3.5 w-3.5 shrink-0" />
                         <span className="min-w-0">
-                          <span className="block text-xs">Fix details</span>
+                          <span className="block text-xs">修复详情</span>
                           <span className="mt-0.5 block whitespace-normal text-[10px] font-normal leading-snug text-muted-foreground">
                             Teach the scheduled task what it misunderstood
                           </span>

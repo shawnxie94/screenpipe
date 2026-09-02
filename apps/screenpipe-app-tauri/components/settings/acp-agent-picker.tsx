@@ -323,7 +323,7 @@ export function AcpAgentPicker({
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="acpArgs">Startup options</Label>
+              <Label htmlFor="acpArgs">启动选项</Label>
               <Textarea
                 id="acpArgs"
                 value={(agent?.args || []).join("\n")}
@@ -336,14 +336,14 @@ export function AcpAgentPicker({
                 className="min-h-[80px] font-mono text-xs"
                 spellCheck={false}
               />
-              <p className="text-xs text-muted-foreground">Add one command-line option per line.</p>
+              <p className="text-xs text-muted-foreground">每行添加一个命令行选项。</p>
             </div>
           </div>
         ))}
 
       {!compact && agentConnected && (
         <div className="space-y-2 border-t pt-4">
-          <Label htmlFor="acpEnv">Additional environment variables</Label>
+          <Label htmlFor="acpEnv">附加环境变量</Label>
           <Textarea
             id="acpEnv"
             value={Object.keys(agent?.env || {}).join("\n")}

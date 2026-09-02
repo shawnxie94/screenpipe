@@ -76,7 +76,7 @@ export function LiveViewTemplateGallery({
       <div className="mb-3 flex items-center gap-2">
         <LayoutTemplate className="h-4 w-4" />
         <div>
-          <h3 className="text-sm font-medium">Starter templates</h3>
+          <h3 className="text-sm font-medium">入门模板</h3>
           <p className="text-[11px] text-muted-foreground">
             Pick an outcome. The agent checks your data, then chooses the Blocks
             and local helpers that fit.

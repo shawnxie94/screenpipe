@@ -396,7 +396,7 @@ export function LiveViewLayoutEditor({
                   }))
                 }
               >
-                <option value="">No scheduled task</option>
+                <option value="">没有定时任务</option>
                 {pipeNames.map((pipeName) => (
                   <option key={pipeName} value={pipeName}>
                     {pipeName}
@@ -464,7 +464,7 @@ export function LiveViewLayoutEditor({
           onClick={addSlot}
         >
           <Plus className="h-5 w-5" />
-          <span className="text-sm font-medium">Add your first Block</span>
+          <span className="text-sm font-medium">添加你的第一个区块</span>
           <span className="text-xs text-muted-foreground">
             Connect it to a scheduled task now or fill it with AI later.
           </span>

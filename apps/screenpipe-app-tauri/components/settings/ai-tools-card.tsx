@@ -400,7 +400,7 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
                   ) : (
                     <>
                       {isPartial && (
-                        <span className="text-xs text-muted-foreground">Needs repair</span>
+                        <span className="text-xs text-muted-foreground">需要修复</span>
                       )}
                       <Button
                         type="button"

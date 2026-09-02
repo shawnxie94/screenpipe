@@ -117,7 +117,7 @@ export function QueuedPromptsList({
                         <Trash2 className="h-3 w-3" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent side="top">Remove queued message</TooltipContent>
+                    <TooltipContent side="top">移除队列中的消息</TooltipContent>
                   </Tooltip>
                 </div>
               </div>

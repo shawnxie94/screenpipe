@@ -2094,7 +2094,7 @@ export function ChatSidebar({
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>删除聊天</DialogTitle>
-            <DialogDescription>Delete this chat? This cannot be undone.</DialogDescription>
+            <DialogDescription>删除此聊天？此操作无法撤销。</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeletingSessionId(null)}>

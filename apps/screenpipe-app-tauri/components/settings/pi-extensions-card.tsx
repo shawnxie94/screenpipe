@@ -676,7 +676,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
 
       {unknownPackages.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-xs font-medium text-muted-foreground">Other installed tools</h4>
+          <h4 className="text-xs font-medium text-muted-foreground">其他已安装的工具</h4>
           <div className="space-y-1.5">
             {unknownPackages.map((pkg) => (
               <div

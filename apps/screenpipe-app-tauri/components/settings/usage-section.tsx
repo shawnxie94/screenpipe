@@ -545,13 +545,13 @@ export function UsageSection() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{filteredChatMsgs}</div>
-            <p className="text-xs text-muted-foreground">Chat responses</p>
+            <p className="text-xs text-muted-foreground">聊天回复</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{filteredPipeExecs}</div>
-            <p className="text-xs text-muted-foreground">Task runs</p>
+            <p className="text-xs text-muted-foreground">任务运行</p>
           </CardContent>
         </Card>
       </div>

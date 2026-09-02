@@ -527,7 +527,7 @@ export function LiveViewCard({
                 }}
               >
                 <div>
-                  <p className="text-xs font-medium">What should improve?</p>
+                  <p className="text-xs font-medium">哪些地方需要改进？</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
                     Optional. The connected scheduled task will use this next time.
                   </p>
@@ -611,7 +611,7 @@ export function LiveViewCard({
             >
               <form onSubmit={submitAiEdit} className="space-y-2">
                 <div>
-                  <p className="text-xs font-medium">Edit this section</p>
+                  <p className="text-xs font-medium">编辑此部分</p>
                   <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
                     {slot.title}
                   </p>

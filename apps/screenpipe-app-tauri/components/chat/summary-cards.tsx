@@ -298,7 +298,7 @@ export function SummaryCards({
         />
       </div>
       <h3 className="text-sm font-medium mb-0.5 text-foreground">
-        {userName ? `How can I help, ${userName}?` : "How can I help today?"}
+        {userName ? `你好，${userName}，我能帮你什么？` : "今天我能帮你什么？"}
       </h3>
       <p className="text-xs text-muted-foreground mb-2">
         From everything you&apos;ve seen, said, or heard

@@ -81,7 +81,7 @@ export function FreePlanWallStrip() {
       <div className="flex items-center gap-3">
         <Zap className="h-4 w-4 shrink-0 text-foreground/70" />
         <div className="min-w-0 flex-1 text-[12px] leading-snug">
-          <span className="font-medium">Ran out of messages</span>
+          <span className="font-medium">消息用完了</span>
           <span className="text-muted-foreground">
             {resets ? ` · resets ${resets}` : ""} · local &amp; own-key models
             still work

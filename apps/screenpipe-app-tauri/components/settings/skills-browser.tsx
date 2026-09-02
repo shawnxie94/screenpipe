@@ -276,7 +276,7 @@ export function SkillsBrowser({
               {ranked.slice(0, RECOMMENDED_COUNT).map(renderRow)}
               {ranked.length > RECOMMENDED_COUNT && (
                 <>
-                  <SectionLabel className="pt-2">All skills</SectionLabel>
+                  <SectionLabel className="pt-2">所有技能</SectionLabel>
                   {ranked.slice(RECOMMENDED_COUNT).map(renderRow)}
                 </>
               )}

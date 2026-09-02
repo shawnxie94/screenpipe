@@ -113,7 +113,7 @@ const CodeBlock: FC<Props> = memo(({ language, value }) => {
             onClick={onCopy}
           >
             {isCopied ? <IconCheck /> : <IconCopy />}
-            <span className="sr-only">Copy code</span>
+            <span className="sr-only">复制代码</span>
           </Button>
         </div>
       </div>

@@ -398,7 +398,7 @@ function SkillVariantBody({ name, variant }: { name: string; variant: SkillVaria
           Copy the SKILL.md contents above and paste them into{" "}
           <code className="bg-muted px-1 rounded">{variant.localPath}</code> on the remote
           host. To let {name} reach the screenpipe data on <em>this</em> machine, use the{" "}
-          <strong>Sync (remote)</strong> tab to push it over, or point any{" "}
+          <strong>同步（远程）</strong> tab to push it over, or point any{" "}
           <code>localhost:3030</code> calls at this machine&apos;s IP/Tailscale name.
         </p>
       </div>
@@ -1104,7 +1104,7 @@ export function AgentCard({
             >
               <TabsTrigger value="mcp" className="text-xs">MCP</TabsTrigger>
               {skills.length > 0 && <TabsTrigger value="skill" className="text-xs">Skill</TabsTrigger>}
-              <TabsTrigger value="sync" className="text-xs">Sync (remote)</TabsTrigger>
+              <TabsTrigger value="sync" className="text-xs">同步（远程）</TabsTrigger>
               {connect && <TabsTrigger value="connect" className="text-xs">Connect</TabsTrigger>}
             </TabsList>
             <TabsContent value="mcp" className="mt-3">

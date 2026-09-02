@@ -1139,7 +1139,7 @@ export function AccountSection() {
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-6">
               <div>
-                <p className="text-sm font-medium">Data Sync</p>
+                <p className="text-sm font-medium">数据同步</p>
                 <p className="text-xs text-muted-foreground">
                   Sync screenpipe data from this device to your account
                 </p>
@@ -1155,7 +1155,7 @@ export function AccountSection() {
 
             {settings.dataSyncEnabled && (
               <div className="space-y-2 border-t border-border/50 pt-4">
-                <Label htmlFor="data-sync-device-name">Device name</Label>
+                <Label htmlFor="data-sync-device-name">设备名称</Label>
                 <Input
                   id="data-sync-device-name"
                   aria-label="Device name"
@@ -1174,7 +1174,7 @@ export function AccountSection() {
                   Ask Screenpipe: “What was I doing on {settings.dataSyncDeviceName || "this device"} this morning?”
                 </p>
                 <div className="space-y-1 pt-2">
-                  <p className="text-xs font-medium">Synced devices</p>
+                  <p className="text-xs font-medium">已同步设备</p>
                   {syncedDevices.length === 0 ? (
                     <p className="text-xs text-muted-foreground">
                       This device will appear after its first upload

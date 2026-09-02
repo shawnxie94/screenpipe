@@ -338,7 +338,7 @@ export function AskUserToolCard({
               }}
               className="h-9 w-full appearance-none rounded-md border border-border bg-background px-3 pr-8 text-sm text-foreground outline-none transition-colors focus:border-foreground"
             >
-              <option value="">Choose an answer...</option>
+              <option value="">选择一个答案...</option>
               {activeQuestion.options.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}

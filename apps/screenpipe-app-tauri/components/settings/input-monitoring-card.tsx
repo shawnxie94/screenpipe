@@ -87,7 +87,7 @@ export function InputMonitoringPanel({
             Permission could not be activated after requesting it. Toggle
             <strong> screenpipe </strong> on in System Settings → Privacy &amp;
             Security → Input Monitoring. If the toggle is already on but
-            capture still fails, click <strong>Reset &amp; try again</strong> to
+            capture still fails, click <strong>重置并重试</strong> to
             clear a stale TCC record and re-request.
           </p>
         </div>
@@ -96,7 +96,7 @@ export function InputMonitoringPanel({
       {grantedThisSession ? (
         <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
           <p className="text-xs text-amber-700 dark:text-amber-400">
-            <strong>Restart screenpipe</strong> to start capturing keystrokes
+            <strong>重启 screenpipe</strong> to start capturing keystrokes
             and clicks. The running recorder was started without Input
             Monitoring and won&apos;t pick up the change until next launch.
           </p>

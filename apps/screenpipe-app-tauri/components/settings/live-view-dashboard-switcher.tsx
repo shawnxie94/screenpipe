@@ -169,7 +169,7 @@ export function LiveViewDashboardSwitcher({
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Rename dashboard</DialogTitle>
+            <DialogTitle>重命名仪表盘</DialogTitle>
             <DialogDescription>
               Use a name that makes this dashboard easy to recognize.
             </DialogDescription>

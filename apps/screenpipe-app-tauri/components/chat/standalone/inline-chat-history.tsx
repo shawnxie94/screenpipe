@@ -56,7 +56,7 @@ export function InlineChatHistory({
           >
             <div className="p-3 border-b border-border/50 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Chat History</span>
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">聊天历史</span>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -162,8 +162,8 @@ export function InlineChatHistory({
       <Dialog open={!!deletingConvId} onOpenChange={(open) => !open && setDeletingConvId(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete chat</DialogTitle>
-            <p className="text-sm text-muted-foreground">Are you sure you want to delete this chat?</p>
+            <DialogTitle>删除聊天</DialogTitle>
+            <p className="text-sm text-muted-foreground">确定要删除此聊天吗？</p>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeletingConvId(null)}>
@@ -185,7 +185,7 @@ export function InlineChatHistory({
       <Dialog open={!!renamingConvId} onOpenChange={(open) => !open && setRenamingConvId(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Rename chat</DialogTitle>
+            <DialogTitle>重命名聊天</DialogTitle>
           </DialogHeader>
           <input
             autoFocus

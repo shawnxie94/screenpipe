@@ -179,7 +179,7 @@ export function StorageSection() {
             <div className="flex items-center space-x-2.5">
               <Trash2 className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
-                <h3 className="text-sm font-medium text-foreground">Clear Cache</h3>
+                <h3 className="text-sm font-medium text-foreground">清除缓存</h3>
                 <p className="text-xs text-muted-foreground">
                   Remove AI agent cache, old logs, and recovery artifacts
                 </p>

@@ -330,7 +330,7 @@ export function SkillsCard({ onChanged }: { onChanged?: () => void }) {
             className="flex flex-col items-center justify-center gap-1.5 text-center border border-dashed border-border rounded-lg p-2.5 min-h-[76px] hover:border-muted-foreground/50 hover:bg-accent/50 transition-colors"
           >
             <FolderPlus className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium">Add from folder…</span>
+            <span className="text-xs font-medium">从文件夹添加…</span>
             <span className="text-[10px] text-muted-foreground">
               any folder with a SKILL.md
             </span>

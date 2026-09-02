@@ -34,7 +34,7 @@ export function FeedbackSection() {
           <div className="flex items-center gap-2.5 mb-2.5">
             <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
             <div>
-              <h3 className="text-sm font-medium text-foreground">Send logs</h3>
+              <h3 className="text-sm font-medium text-foreground">发送日志</h3>
               <p className="text-xs text-muted-foreground">logs are included automatically</p>
             </div>
           </div>
@@ -61,7 +61,7 @@ export function FeedbackSection() {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium text-foreground">Getting started</h3>
+              <h3 className="text-sm font-medium text-foreground">开始使用</h3>
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border px-1 py-px">
                 11 min
               </span>
@@ -85,7 +85,7 @@ export function FeedbackSection() {
             <div className="flex items-center gap-2.5">
               <ClipboardList className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
-                <h3 className="text-sm font-medium text-foreground">Shape screenpipe</h3>
+                <h3 className="text-sm font-medium text-foreground">塑造 screenpipe</h3>
                 <p className="text-xs text-muted-foreground">90-second survey — tell us what&apos;s working and what&apos;s not</p>
               </div>
             </div>
@@ -123,7 +123,7 @@ export function FeedbackSection() {
             <div className="flex items-center gap-2.5">
               <Youtube className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
-                <h3 className="text-sm font-medium text-foreground">Video tutorials</h3>
+                <h3 className="text-sm font-medium text-foreground">视频教程</h3>
                 <p className="text-xs text-muted-foreground">watch demos and walkthroughs</p>
               </div>
             </div>
@@ -142,7 +142,7 @@ export function FeedbackSection() {
             <div className="flex items-center gap-2.5">
               <Lightbulb className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
-                <h3 className="text-sm font-medium text-foreground">Feature ideas</h3>
+                <h3 className="text-sm font-medium text-foreground">功能建议</h3>
                 <p className="text-xs text-muted-foreground">vote or submit requests</p>
               </div>
             </div>

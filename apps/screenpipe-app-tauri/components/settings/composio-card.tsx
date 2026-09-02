@@ -322,7 +322,7 @@ export function ComposioCard({
             "local option",
             <>
               prefer fully local? use the{" "}
-              <b className="font-medium text-foreground/80">Email Inbox (IMAP)</b> connection
+              <b className="font-medium text-foreground/80">电子邮件收件箱 (IMAP)</b> connection
               instead.
             </>,
           ],

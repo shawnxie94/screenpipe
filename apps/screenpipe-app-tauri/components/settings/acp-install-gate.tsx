@@ -162,7 +162,7 @@ export function AcpInstallGate({
                 Install the <code className="rounded bg-muted px-1">{command}</code> command, then retry.
               </>
             ) : (
-              <>Install it, then retry.</>
+              <>安装后重试。</>
             )}
             {onSwitchToDefault ? " Or use Screenpipe Cloud instead." : ""}
           </p>

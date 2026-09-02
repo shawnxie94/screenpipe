@@ -293,7 +293,7 @@ export function ContentFiltersCard({
 
 					<TabsContent value="websites" className="mt-0 space-y-2">
 						<div className="space-y-1.5">
-							<h4 className="text-[12px] font-medium">Only record these websites</h4>
+							<h4 className="text-[12px] font-medium">仅录制这些网站</h4>
 							<p className="text-[11px] text-muted-foreground">
 								When this list is non-empty, browser capture is restricted to matching hostnames.
 								Native apps and tabs whose URL cannot be verified are not recorded.
@@ -307,7 +307,7 @@ export function ContentFiltersCard({
 						</div>
 
 						<div className="space-y-1.5 border-t border-border pt-2">
-							<h4 className="text-[12px] font-medium">Always skip these websites</h4>
+							<h4 className="text-[12px] font-medium">始终跳过这些网站</h4>
 							<p className="text-[11px] text-muted-foreground">
 								Block rules take priority over the allowlist. Choose exact domain matching or
 								include its subdomains; optional exceptions stay visible on the rule.

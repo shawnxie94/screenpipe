@@ -232,7 +232,7 @@ export const MediaComponent = memo(function MediaComponent({
           className
         )}
       >
-        <span className="text-muted-foreground">Loading media...</span>
+        <span className="text-muted-foreground">正在加载媒体...</span>
       </div>
     );
   }

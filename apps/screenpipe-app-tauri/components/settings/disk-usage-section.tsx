@@ -210,7 +210,7 @@ export function DiskUsageSection() {
                 isLoading && "animate-pulse",
               )}
             />
-            <h3 className="text-sm font-medium text-foreground">Media Files</h3>
+            <h3 className="text-sm font-medium text-foreground">媒体文件</h3>
           </div>
           {isLoading ? (
             <div className="space-y-1.5 ml-[26px]">
@@ -279,7 +279,7 @@ export function DiskUsageSection() {
                 isLoading && "animate-pulse",
               )}
             />
-            <h3 className="text-sm font-medium text-foreground">Other Files</h3>
+            <h3 className="text-sm font-medium text-foreground">其他文件</h3>
           </div>
           {isLoading ? (
             <div className="space-y-1.5 ml-[26px]">
@@ -312,7 +312,7 @@ export function DiskUsageSection() {
                 </p>
               )}
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Scheduled tasks</span>
+                <span className="text-muted-foreground">定时任务</span>
                 <span className="font-medium">
                   {diskUsage?.other?.pipes_size || "0 KB"}
                 </span>
