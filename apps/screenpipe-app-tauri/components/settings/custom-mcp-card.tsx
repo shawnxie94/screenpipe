@@ -251,7 +251,7 @@ export function CustomMcpCard() {
                 disabled={!loaded}
               >
                 <Plus className="h-3 w-3 mr-1.5" />
-                {servers.length === 0 ? "Add manually" : "Add another"}
+                {servers.length === 0 ? "手动添加" : "再添加一个"}
               </Button>
               {!loaded && (
                 <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
@@ -266,7 +266,7 @@ export function CustomMcpCard() {
               {(() => {
                 const enabled = servers.filter((s) => s.enabled).length;
                 if (servers.length === 0)
-                  return "Supports HTTP and stdio MCP servers";
+                  return "支持 HTTP 和 stdio MCP 服务器";
                 if (enabled === 0)
                   return `${servers.length} server${servers.length === 1 ? "" : "s"} registered, none enabled`;
                 if (enabled === servers.length)
@@ -300,8 +300,8 @@ export function CustomMcpCard() {
               <DialogHeader className="flex-row items-center gap-3 space-y-0 border-b border-border p-4 pr-12 text-left">
                 <DialogTitle className="text-sm font-semibold font-sans normal-case">
                   {editing.mode === "create"
-                    ? "Add MCP Server"
-                    : "Edit MCP Server"}
+                    ? "添加 MCP 服务器"
+                    : "编辑 MCP 服务器"}
                 </DialogTitle>
                 <DialogClose asChild>
                   <button
@@ -754,7 +754,7 @@ function ServerEditor({
       }
       await openUrl(body.data.auth_url);
       setOauthWaiting(true);
-      setOauthMessage("Finish sign-in in the browser");
+      setOauthMessage("在浏览器中完成登录");
       setOauthStatus({ connected: false, has_refresh_token: false });
       const started = Date.now();
       const poll = async () => {
@@ -856,7 +856,7 @@ function ServerEditor({
           </Label>
           {serverInput.trim().length > 0 && (
             <span className="text-[10px] text-muted-foreground">
-              {transport === "http" ? "Remote URL" : "Local command"}
+              {transport === "http" ? "Remote URL" : "本地命令"}
             </span>
           )}
         </div>
@@ -1027,7 +1027,7 @@ function ServerEditor({
                       size="sm"
                       onClick={() => removeHeader(i)}
                       className="h-7 w-7 p-0 text-muted-foreground"
-                      aria-label="Remove header"
+                      aria-label="移除请求头"
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -1137,7 +1137,7 @@ function ServerEditor({
             {saving ? (
               <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
             ) : null}
-            {mode === "create" ? "Add server" : "Save changes"}
+            {mode === "create" ? "添加服务器" : "保存更改"}
           </Button>
         </div>
       </div>

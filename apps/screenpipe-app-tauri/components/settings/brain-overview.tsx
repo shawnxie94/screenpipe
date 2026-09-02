@@ -209,7 +209,7 @@ type AiBlockProposal = {
 };
 
 const STARTER_DASHBOARD_ID = "my-dashboard";
-const STARTER_DASHBOARD_TITLE = "My dashboard";
+const STARTER_DASHBOARD_TITLE = "我的仪表盘";
 const LIVE_VIEW_ANALYTICS_SCHEMA_VERSION = 3;
 
 function analyticsErrorType(error: unknown): string {
@@ -277,12 +277,12 @@ const COMPONENTS: Array<{
   { value: "list.v1", label: "List", schema: "ranked items with status" },
   {
     value: "bar-chart.v1",
-    label: "Bar chart",
+    label: "柱状图",
     schema: "labels and numeric values",
   },
   {
     value: "line-chart.v1",
-    label: "Line chart",
+    label: "折线图",
     schema: "numeric values changing over time",
   },
   {
@@ -1449,7 +1449,7 @@ export function BrainOverview({
         description:
           retryError instanceof Error
             ? retryError.message
-            : "Try again in a moment.",
+            : "稍后再试。",
         variant: "destructive",
       });
     } finally {
@@ -1631,7 +1631,7 @@ export function BrainOverview({
     setCreateDashboardOpen(false);
     setDraft({
       id: uniqueDashboardId("untitled-dashboard", views),
-      title: "Untitled dashboard",
+      title: "未命名仪表盘",
       revision: 0,
       timeRange: "today",
       periodPolicy: DEFAULT_LIVE_VIEW_PERIOD_POLICY,
@@ -1813,7 +1813,7 @@ export function BrainOverview({
           targetSlotId,
         );
         if (proposals.length === 0) {
-          throw new Error("The agent did not propose a visible change");
+          throw new Error("代理没有提出可见的更改");
         }
         setAiBlockProposals(proposals);
         setProposalTitle(target.scope === "dashboard" ? generated.title : null);
@@ -1865,7 +1865,7 @@ export function BrainOverview({
           ? quota.message
           : handoffError instanceof Error
             ? handoffError.message
-            : "The AI editor stopped before creating a review.";
+            : "AI 编辑器在生成审查前停止了。";
       setBuilderFeedback({
         tone: "error",
         label:
@@ -2112,7 +2112,7 @@ export function BrainOverview({
     if (!view || !selectedAiPreset) {
       toast({
         title: "choose an AI model first",
-        description: "Add an AI preset in Settings, then try again.",
+        description: "在设置中添加 AI 预设后再试。",
         variant: "destructive",
       });
       return false;
@@ -2813,7 +2813,7 @@ export function BrainOverview({
           <div className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
             <div>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                {templatePreview ? "Template preview" : "AI draft"}
+                {templatePreview ? "模板预览" : "AI draft"}
               </p>
               <h2 className="text-lg font-semibold tracking-tight">
                 {draft.title}
@@ -3203,7 +3203,7 @@ export function BrainOverview({
                   aria-label={
                     latestUpdate
                       ? `Live View time range. ${latestUpdate}`
-                      : "Live View time range"
+                      : "实时视图时间范围"
                   }
                   title={latestUpdate ?? undefined}
                   className="h-9 min-w-36 w-auto flex-1 text-xs sm:flex-none"
@@ -3378,7 +3378,7 @@ export function BrainOverview({
                 variant="ghost"
                 className="h-7 rounded-none px-2"
                 disabled={saving}
-                title="Accept and save every proposed change"
+                title="接受并保存所有提议的更改"
                 onClick={() => void acceptAllAiProposals()}
               >
                 <Check className="mr-1 h-3 w-3" /> accept all
@@ -3389,7 +3389,7 @@ export function BrainOverview({
                 variant="ghost"
                 className="h-7 rounded-none px-2"
                 disabled={saving}
-                title="Reject and discard every proposed change"
+                title="拒绝并丢弃所有提议的更改"
                 onClick={discardAiProposals}
               >
                 <X className="mr-1 h-3 w-3" /> reject all

@@ -83,7 +83,7 @@ export const NOTIFICATION_GROUPS: NotificationGroup[] = [
 export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   {
     id: "captureStalls",
-    label: "Recording health alerts",
+    label: "录制健康提醒",
     description:
       "Show “recording needs help” and notify when capture stops — may send false positives",
     group: "recording",
@@ -94,15 +94,15 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   },
   {
     id: "meetingLiveNotes",
-    label: "Meeting live notes",
-    description: "Prompt to open a live note when a meeting is detected",
+    label: "会议实时笔记",
+    description: "检测到会议时提示打开实时笔记",
     group: "meetings",
     default: true,
     keywords: ["live note", "meeting detected", "call"],
   },
   {
     id: "audioCaptureStalled",
-    label: "Meeting audio not capturing",
+    label: "会议音频未采集",
     description:
       "OS notification when a meeting is detected but no audio reaches the recorder within 60s",
     group: "meetings",
@@ -111,7 +111,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   },
   {
     id: "liveTranscriptStalled",
-    label: "Live transcript not flowing",
+    label: "实时文字记录未流动",
     description:
       "In-app alert when audio is captured but no live transcript arrives within 60s",
     group: "meetings",
@@ -120,7 +120,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   },
   {
     id: "displayChanges",
-    label: "Display changes",
+    label: "显示变化",
     description:
       "Tells you when a monitor is plugged in, unplugged, or switched (laptop lid closed, docking)",
     group: "system",
@@ -129,7 +129,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   },
   {
     id: "powerModeChanges",
-    label: "Power mode changes",
+    label: "电源模式变化",
     description:
       "Tells you when battery saver turns on (Balanced or Saver). You'll still get critical alerts if recording pauses on low battery.",
     group: "system",
@@ -138,8 +138,8 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   },
   {
     id: "pipeNotifications",
-    label: "Scheduled task alerts",
-    description: "Alerts from installed scheduled tasks",
+    label: "定时任务提醒",
+    description: "来自已安装定时任务的提醒",
     group: "automation",
     default: true,
     hasPerPipe: true,
@@ -147,7 +147,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   },
   {
     id: "pipeAllowanceWarnings",
-    label: "Scheduled task allowance warnings",
+    label: "定时任务额度警告",
     description:
       "Warn before background scheduled tasks use most of your hosted-AI allowance while the reset is still far away",
     group: "automation",
@@ -163,8 +163,8 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
   },
   {
     id: "appUpdates",
-    label: "App updates",
-    description: "New version available",
+    label: "应用更新",
+    description: "有新版本可用",
     group: "app",
     default: true,
     keywords: ["update", "upgrade", "what's new", "version"],

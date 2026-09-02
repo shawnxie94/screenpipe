@@ -17,8 +17,8 @@ import { PowerModePreview } from "./setting-previews";
 
 /** Settings search index for this section. Co-located with the component so adding a field here means updating one file. See `SettingsField` in `./settings-search` for the schema. */
 export const searchIndex: SettingsField[] = [
-  { label: "Power & battery", keywords: ["power", "battery", "performance", "saver"] },
-  { label: "Keep computer awake", keywords: ["sleep", "awake", "power"] },
+  { label: "电源与电池", keywords: ["power", "battery", "performance", "saver"] },
+  { label: "保持电脑唤醒", keywords: ["sleep", "awake", "power"] },
 ];
 
 interface PowerState {
@@ -46,27 +46,27 @@ type PowerMode = "auto" | "performance" | "battery_saver";
 const PROFILE_INFO: Record<ActiveProfile, { label: string; description: string; icon: typeof Zap }> = {
   performance: {
     label: "Performance",
-    description: "Full capture quality and frequency",
+    description: "完整采集质量与频率",
     icon: Zap,
   },
   balanced: {
     label: "Balanced",
-    description: "Reduced capture frequency, lower quality encoding",
+    description: "降低采集频率，低质量编码",
     icon: Gauge,
   },
   saver: {
-    label: "Battery Saver",
-    description: "Minimal capture, aggressive power saving",
+    label: "省电模式",
+    description: "最小化采集，激进省电",
     icon: Leaf,
   },
   audio_paused: {
-    label: "Audio Paused",
-    description: "Battery ≤20% — vision continues, audio + Whisper off",
+    label: "音频已暂停",
+    description: "电量 ≤20% — 视觉继续，音频和 Whisper 关闭",
     icon: MicOff,
   },
   full_pause: {
-    label: "Full Pause",
-    description: "Battery ≤10% or OS low-power — capture paused",
+    label: "完全暂停",
+    description: "电量 ≤10% 或系统低电量 — 已暂停采集",
     icon: PauseCircle,
   },
 };
@@ -74,7 +74,7 @@ const PROFILE_INFO: Record<ActiveProfile, { label: string; description: string; 
 // Fallback for any future Rust profile variant that lands before the UI knows about it.
 const UNKNOWN_PROFILE_INFO = {
   label: "Unknown",
-  description: "Reported by backend but not recognized by this app version",
+  description: "后端报告但当前应用版本无法识别",
   icon: Gauge,
 } as const;
 
@@ -162,17 +162,17 @@ export function BatterySaverSection() {
     {
       value: "auto",
       label: "Auto",
-      description: "Adjusts based on battery state",
+      description: "根据电池状态调整",
     },
     {
       value: "performance",
       label: "Performance",
-      description: "Full quality, ignore battery",
+      description: "完整质量，忽略电量",
     },
     {
       value: "battery_saver",
-      label: "Battery Saver",
-      description: "Maximum power saving",
+      label: "省电模式",
+      description: "最大省电",
     },
   ];
 

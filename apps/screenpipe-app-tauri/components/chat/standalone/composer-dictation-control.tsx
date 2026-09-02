@@ -112,8 +112,8 @@ export function ComposerDictationControl({
           variant="ghost"
           className="h-6 w-6 rounded-sm text-muted-foreground hover:bg-background/60 hover:text-foreground"
           onClick={dictation.cancel}
-          title="Cancel dictation (Esc)"
-          aria-label="Cancel dictation"
+          title="取消听写 (Esc)"
+          aria-label="取消听写"
         >
           <X className="h-3.5 w-3.5" />
         </Button>
@@ -122,8 +122,8 @@ export function ComposerDictationControl({
           size="icon"
           className="h-6 w-6 rounded-sm bg-signal text-signal-foreground hover:bg-signal/85"
           onClick={dictation.finish}
-          title="Finish dictation (Enter)"
-          aria-label="Finish dictation"
+          title="完成听写 (Enter)"
+          aria-label="完成听写"
         >
           <Check className="h-3.5 w-3.5" />
         </Button>
@@ -149,10 +149,10 @@ export function ComposerDictationControl({
           className="h-6 w-6 rounded-sm"
           onClick={dictation.cancel}
           title={
-            isTranscribing ? "Cancel transcription" : "Cancel microphone request"
+            isTranscribing ? "取消转写" : "取消麦克风请求"
           }
           aria-label={
-            isTranscribing ? "Cancel transcription" : "Cancel microphone request"
+            isTranscribing ? "取消转写" : "取消麦克风请求"
           }
         >
           <X className="h-3.5 w-3.5" />
@@ -178,10 +178,10 @@ export function ComposerDictationControl({
           className="h-6 w-6 shrink-0 rounded-sm hover:bg-destructive/10"
           onClick={dictation.canRetry ? dictation.retry : dictation.start}
           title={
-            dictation.canRetry ? "Retry transcription" : "Try dictation again"
+            dictation.canRetry ? "重试转写" : "再次尝试听写"
           }
           aria-label={
-            dictation.canRetry ? "Retry transcription" : "Try dictation again"
+            dictation.canRetry ? "重试转写" : "再次尝试听写"
           }
         >
           <RotateCcw className="h-3.5 w-3.5" />
@@ -192,8 +192,8 @@ export function ComposerDictationControl({
           variant="ghost"
           className="h-6 w-6 shrink-0 rounded-sm hover:bg-destructive/10"
           onClick={dictation.cancel}
-          title="Dismiss dictation error"
-          aria-label="Dismiss dictation error"
+          title="关闭听写错误"
+          aria-label="关闭听写错误"
         >
           <X className="h-3.5 w-3.5" />
         </Button>
@@ -222,7 +222,7 @@ export function ComposerDictationControl({
         </TooltipTrigger>
         <TooltipContent side="top" align="end" className="w-64 text-xs">
           <div className="flex items-center justify-between gap-3">
-            <span className="font-medium">Dictate</span>
+            <span className="font-medium">听写</span>
             <kbd className="rounded-sm border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
               {shortcut}
             </kbd>

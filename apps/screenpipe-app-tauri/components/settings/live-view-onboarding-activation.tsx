@@ -139,15 +139,15 @@ export function LiveViewOnboardingActivation({
 
   const captureStatus =
     captureReadiness === "ready"
-      ? { state: "ready" as const, detail: "Screenpipe capture is on." }
+      ? { state: "ready" as const, detail: "screenpipe 采集已开启。" }
       : captureReadiness === "blocked"
         ? {
             state: "blocked" as const,
-            detail: "Capture needs attention before this view can learn.",
+            detail: "采集需要关注后才能让此视图学习。",
           }
         : {
             state: "working" as const,
-            detail: "Checking local capture health.",
+            detail: "正在检查本地采集状态。",
           };
 
   return (
@@ -195,10 +195,10 @@ export function LiveViewOnboardingActivation({
           label="setup"
           detail={
             setupStatus === "needs_retry"
-              ? (setupError ?? "Setup paused before it finished.")
+              ? (setupError ?? "设置未完成即已暂停。")
               : pipesReady
-                ? "Screenpipe is ready to update this view."
-                : "Finishing setup for this view."
+                ? "screenpipe 已准备好更新此视图。"
+                : "正在完成此视图的设置。"
           }
         />
         <StatusRow
@@ -206,8 +206,8 @@ export function LiveViewOnboardingActivation({
           label="first result"
           detail={
             refreshing
-              ? "Reading recent activity now."
-              : "Waiting for enough real activity."
+              ? "正在读取近期活动。"
+              : "正在等待足够的真实活动。"
           }
         />
       </div>

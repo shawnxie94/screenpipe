@@ -78,7 +78,7 @@ export function sqlVerb(sql: string): string {
   if (s.startsWith("INSERT")) return "Inserted into";
   if (s.startsWith("UPDATE")) return "Updated";
   if (s.startsWith("DELETE")) return "Deleted from";
-  return "Ran SQL on";
+  return "在…上运行了 SQL";
 }
 
 export type WebTargetKind = "fetch" | "navigate" | "eval";
@@ -195,11 +195,11 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
     return { label: `${verb} ${tables.slice(0, 2).join(" + ")}${tables.length > 2 ? " +…" : ""}` };
   }
 
-  if (path === "/activity-summary") return { label: "Activity summary" };
+  if (path === "/activity-summary") return { label: "活动摘要" };
 
   if (path === "/memories") {
-    if (method === "POST") return { label: "Saved memory" };
-    return { label: "Listed memories" };
+    if (method === "POST") return { label: "保存了记忆" };
+    return { label: "列出了记忆" };
   }
   const memMatch = path.match(/^\/memories\/(\w+)$/);
   if (memMatch) {
@@ -209,7 +209,7 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
     return { label: `Got memory #${id}` };
   }
 
-  if (path === "/meetings") return { label: "Listed meetings" };
+  if (path === "/meetings") return { label: "列出了会议" };
   const meetingMatch = path.match(/^\/meetings\/(\w+)$/);
   if (meetingMatch) {
     const id = meetingMatch[1];
@@ -228,14 +228,14 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
 
   if (path === "/speakers/similar") {
     const name = url.searchParams.get("name") || url.searchParams.get("speaker_name");
-    return { label: name ? `Found similar speakers for "${trunc(name, 30)}"` : "Found similar speakers" };
+    return { label: name ? `Found similar speakers for "${trunc(name, 30)}"` : "找到相似说话人" };
   }
-  if (path === "/speakers/merge") return { label: "Merged speakers" };
+  if (path === "/speakers/merge") return { label: "合并了说话人" };
   if (path === "/speakers/search") {
     const q = url.searchParams.get("name") || url.searchParams.get("q");
-    return { label: q ? `Searched speakers "${trunc(q, 30)}"` : "Searched speakers" };
+    return { label: q ? `Searched speakers "${trunc(q, 30)}"` : "搜索了说话人" };
   }
-  if (path === "/speakers/unnamed") return { label: "Listed unnamed speakers" };
+  if (path === "/speakers/unnamed") return { label: "列出了未命名说话人" };
   if (path.startsWith("/speakers/")) {
     const id = path.split("/")[2];
     if (method === "PATCH" || method === "PUT") return { label: `Renamed speaker #${id}` };
@@ -248,7 +248,7 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
       const target = webTargetFromUrlString(body.url, "navigate");
       if (target) return { label: `Opened ${target.domain} in agent browser`, webTarget: target };
     }
-    return { label: "Navigated agent browser" };
+    return { label: "在代理浏览器中导航" };
   }
   if (path === "/connections/browsers/owned-default/eval") {
     const body = curlBodyJson(cmd);
@@ -256,7 +256,7 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
       const target = webTargetFromUrlString(body.url, "eval");
       if (target) return { label: `Ran JS on ${target.domain}`, webTarget: target };
     }
-    return { label: "Ran JS in agent browser" };
+    return { label: "在代理浏览器中运行了 JS" };
   }
   if (path.startsWith("/connections/browsers/") && path.endsWith("/act")) {
     const body = curlBodyJson(cmd);
@@ -265,10 +265,10 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
     const verb = action.charAt(0).toUpperCase() + action.slice(1);
     return { label: `${verb}${ref} in agent browser` };
   }
-  if (path.startsWith("/connections/browsers/")) return { label: "Agent browser action" };
+  if (path.startsWith("/connections/browsers/")) return { label: "代理浏览器操作" };
 
   if (path === "/connections") {
-    return { label: "Listed connections", connectionIconName: "connections" };
+    return { label: "列出了连接", connectionIconName: "connections" };
   }
   if (path.startsWith("/connections/")) {
     const segments = path.split("/").slice(2); // [name, ...sub]
@@ -279,10 +279,10 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
     // --- Google Calendar ---
     if (name === "google-calendar") {
       if (sub === "events") {
-        return { label: "Listed calendar events", connectionIconName: icon };
+        return { label: "列出了日历事件", connectionIconName: icon };
       }
       if (sub === "status") {
-        return { label: "Checked calendar connection", connectionIconName: icon };
+        return { label: "检查了日历连接", connectionIconName: icon };
       }
     }
 
@@ -292,20 +292,20 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
       // Google Docs API
       if (proxyPath.startsWith("docs/v1/documents")) {
         if (method === "POST" && proxyPath.endsWith(":batchUpdate")) {
-          return { label: "Edited Google Doc", connectionIconName: icon };
+          return { label: "编辑了 Google 文档", connectionIconName: icon };
         }
         if (method === "POST") {
-          return { label: "Created Google Doc", connectionIconName: icon };
+          return { label: "创建了 Google 文档", connectionIconName: icon };
         }
-        return { label: "Read Google Doc", connectionIconName: icon };
+        return { label: "读取了 Google 文档", connectionIconName: icon };
       }
       // Drive API (used by google-docs for file listing + creation)
       if (proxyPath.startsWith("drive/v3/files")) {
         if (proxyPath.includes("/export")) {
-          return { label: "Exported Drive file", connectionIconName: icon };
+          return { label: "导出了 Drive 文件", connectionIconName: icon };
         }
         if (method === "POST") {
-          return { label: "Created Drive file", connectionIconName: icon };
+          return { label: "创建了 Drive 文件", connectionIconName: icon };
         }
         return { label: "Listed Drive files", connectionIconName: icon };
       }
@@ -945,7 +945,7 @@ function kindActivity(kind: string): ToolActivityPresentation | null {
 }
 
 // Last-resort label from a raw tool name: strip an mcp__server__ prefix and
-// de-slugify (activity-summary → "Activity summary"). Beats a generic step.
+// de-slugify (activity-summary → "活动摘要"). Beats a generic step.
 function humanizeToolName(toolName: string): string {
   const bare = bareMcpName(toolName).replace(/[_-]+/g, " ").trim();
   if (!bare) return "";

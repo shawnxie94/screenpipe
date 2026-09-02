@@ -56,7 +56,7 @@ interface PermissionPresentation {
 const CLIENT_FULL_ACCESS_VALUE = "screenpipe-full-access";
 const CLIENT_FULL_ACCESS_OPTION: AcpConfigValue = {
   value: CLIENT_FULL_ACCESS_VALUE,
-  name: "Full access",
+  name: "完全访问",
   description: "Run every requested tool without asking for approval.",
 };
 
@@ -100,12 +100,12 @@ function permissionControl(
       values: [
         {
           value: "false",
-          name: "Ask for approval",
-          description: "Ask before running tools that need approval.",
+          name: "请求批准",
+          description: "在运行需要批准的工具前询问。",
         },
         {
           value: "true",
-          name: "Full access",
+          name: "完全访问",
           description: "Run every requested tool without asking for approval.",
         },
       ],
@@ -141,22 +141,22 @@ function permissionPresentation(mode: AcpConfigValue): PermissionPresentation {
   switch (mode.value) {
     case CLIENT_FULL_ACCESS_VALUE:
       return {
-        label: "Full access",
+        label: "完全访问",
         description:
-          mode.description || "Run every requested tool without asking.",
+          mode.description || "运行每个请求的工具而不询问。",
         icon: ShieldAlert,
         warning: true,
       };
     case "false":
       return {
-        label: "Ask for approval",
+        label: "请求批准",
         description:
-          mode.description || "Ask before running tools that need approval.",
+          mode.description || "在运行需要批准的工具前询问。",
         icon: Hand,
       };
     case "true":
       return {
-        label: "Full access",
+        label: "完全访问",
         description:
           mode.description ||
           "Run every requested tool without asking for approval.",
@@ -166,40 +166,40 @@ function permissionPresentation(mode: AcpConfigValue): PermissionPresentation {
     case "read-only":
     case "default":
       return {
-        label: "Ask for approval",
+        label: "请求批准",
         description:
-          mode.description || "Ask before editing files or running commands.",
+          mode.description || "在编辑文件或运行命令前询问。",
         icon: Hand,
       };
     case "agent":
       return {
-        label: "Approve for me",
+        label: "替我批准",
         description: "Work in this workspace and ask before elevated actions.",
         icon: ShieldCheck,
       };
     case "acceptEdits":
       return {
-        label: "Approve edits",
+        label: "批准编辑",
         description:
-          mode.description || "Automatically approve file edit operations.",
+          mode.description || "自动批准文件编辑操作。",
         icon: ShieldCheck,
       };
     case "plan":
       return {
         label: "Plan only",
-        description: mode.description || "Plan without changing files.",
+        description: mode.description || "规划而不修改文件。",
         icon: Shield,
       };
     case "dontAsk":
       return {
         label: "Don't ask",
         description:
-          mode.description || "Deny actions that are not already approved.",
+          mode.description || "拒绝未经批准的操作。",
         icon: Shield,
       };
     case "agent-full-access":
       return {
-        label: "Full access",
+        label: "完全访问",
         description:
           "Unrestricted access to the internet and any file on your computer.",
         icon: ShieldAlert,
@@ -207,15 +207,15 @@ function permissionPresentation(mode: AcpConfigValue): PermissionPresentation {
       };
     case "bypassPermissions":
       return {
-        label: "Full access",
-        description: mode.description || "Bypass all permission checks.",
+        label: "完全访问",
+        description: mode.description || "绕过所有权限检查。",
         icon: ShieldAlert,
         warning: true,
       };
     default:
       return {
         label: mode.name,
-        description: mode.description || "Use this agent permission mode.",
+        description: mode.description || "使用此代理权限模式。",
         icon: isUnrestrictedMode(mode) ? ShieldAlert : Shield,
         warning: isUnrestrictedMode(mode),
       };

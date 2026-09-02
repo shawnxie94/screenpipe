@@ -609,7 +609,7 @@ export function AIProviderConfig({
     e.preventDefault();
 
     if (!selectedProvider) {
-      toast.error("Choose an AI before continuing");
+      toast.error("继续前请先选择一个 AI");
       return;
     }
 
@@ -618,7 +618,7 @@ export function AIProviderConfig({
     }
 
     if (Object.keys(connectionFieldErrors).length > 0) {
-      toast.error("Fix the connection fields", {
+      toast.error("请修正连接字段", {
         description: Object.values(connectionFieldErrors)[0],
       });
       return;
@@ -1411,7 +1411,7 @@ export const AIPresetDialog = ({
       <DialogContent className="w-full max-w-md sm:max-w-lg max-h-[80vh] overflow-y-auto p-0">
         <DialogHeader className="sr-only">
           <DialogTitle>
-            {preset ? "Edit Preset" : "Create New Preset"}
+            {preset ? "编辑预设" : "新建预设"}
           </DialogTitle>
           <DialogDescription>
             {preset
@@ -1558,7 +1558,7 @@ export const AIPresetsSelector = ({
 
   const handleSavePreset = (preset: Partial<AIPreset>) => {
     if (!canManageEmployeePresets) {
-      toast.error("Managed by your organization", {
+      toast.error("由你的组织管理", {
         description: "Your admin controls which AI presets are available",
       });
       return;
@@ -1566,7 +1566,7 @@ export const AIPresetsSelector = ({
 
     if (!preset.id) {
       toast.error("Please enter a name for this preset", {
-        description: "Name is required",
+        description: "名称必填",
       });
       return;
     }
@@ -1593,7 +1593,7 @@ export const AIPresetsSelector = ({
         );
 
         if (existingPreset) {
-          toast.error("Name already exists", {
+          toast.error("名称已存在", {
             description: "Please choose a different name",
           });
           return;
@@ -1644,7 +1644,7 @@ export const AIPresetsSelector = ({
       );
 
       if (existingPreset) {
-        toast.error("Name already exists", {
+        toast.error("名称已存在", {
           description: "Please choose a different name",
         });
         return;
@@ -1676,7 +1676,7 @@ export const AIPresetsSelector = ({
       }
 
       toast.success("Preset created", {
-        description: "New preset has been added",
+        description: "新预设已添加",
       });
     }
 
@@ -1707,7 +1707,7 @@ export const AIPresetsSelector = ({
 
   const handleDuplicatePreset = (preset: AIPreset) => {
     if (!canManageEmployeePresets || isEnterpriseManagedPreset(preset)) {
-      toast.error("Managed by your organization", {
+      toast.error("由你的组织管理", {
         description: "Your admin controls which AI presets are available",
       });
       return;
@@ -1730,7 +1730,7 @@ export const AIPresetsSelector = ({
 
   const handleEditPreset = (preset: AIPreset) => {
     if (!canManageEmployeePresets || isEnterpriseManagedPreset(preset)) {
-      toast.error("Managed by your organization", {
+      toast.error("由你的组织管理", {
         description: "Your admin controls which AI presets are available",
       });
       return;
@@ -1744,7 +1744,7 @@ export const AIPresetsSelector = ({
     if (!settings?.aiPresets) return;
     if (preset.defaultPreset) return;
     if (isManagedDeployment && aiPresetPolicy.lock_default_preset) {
-      toast.error("Default preset is locked", {
+      toast.error("默认预设已锁定", {
         description: "Your admin controls the default AI preset",
       });
       return;
@@ -1764,7 +1764,7 @@ export const AIPresetsSelector = ({
       onPresetSaved(preset);
     }
 
-    toast.success("Default preset updated", {
+    toast.success("默认预设已更新", {
       description: `${preset.id} is now the default preset`,
     });
   };
@@ -1772,15 +1772,15 @@ export const AIPresetsSelector = ({
   const handleRemovePreset = (preset: AIPreset) => {
     if (!settings?.aiPresets) return;
     if (!canManageEmployeePresets || isEnterpriseManagedPreset(preset)) {
-      toast.error("Managed by your organization", {
+      toast.error("由你的组织管理", {
         description: "Your admin controls which AI presets are available",
       });
       return;
     }
 
     if (settings.aiPresets.length <= 1) {
-      toast.error("Cannot delete preset", {
-        description: "At least one AI preset is required",
+      toast.error("无法删除预设", {
+        description: "至少需要一个 AI 预设",
       });
       return;
     }

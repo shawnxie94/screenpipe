@@ -15,20 +15,20 @@ type ExtendedSettingsKeys =
 
 // Zod schemas for validation
 export const creditsSchema = z.object({
-  amount: z.number().min(0, "Credits amount cannot be negative"),
+  amount: z.number().min(0, "额度不能为负数"),
 });
 
 export const embeddedLLMSchema = z.object({
   enabled: z.boolean(),
-  model: z.string().min(1, "Model name is required"),
-  port: z.number().int().min(1024).max(65535, "Port must be between 1024-65535"),
+  model: z.string().min(1, "模型名称必填"),
+  port: z.number().int().min(1024).max(65535, "端口必须在 1024-65535 之间"),
 });
 
 export const userSchema = z.object({
   id: z.string().nullable(),
   name: z.string().nullable(),
-  email: z.string().email("Invalid email format").nullable(),
-  image: z.string().url("Invalid image URL").nullable(),
+  email: z.string().email("邮箱格式无效").nullable(),
+  image: z.string().url("图片 URL 无效").nullable(),
   token: z.string().nullable(),
   clerk_id: z.string().nullable(),
   api_key: z.string().nullable(),
@@ -37,7 +37,7 @@ export const userSchema = z.object({
   stripe_account_status: z.string().nullable(),
   github_username: z.string().nullable(),
   bio: z.string().nullable(),
-  website: z.string().url("Invalid website URL").nullable(),
+  website: z.string().url("网站 URL 无效").nullable(),
   contact: z.string().nullable(),
   cloud_subscribed: z.boolean().nullable(),
   credits_balance: z.number().nullable(),
@@ -49,17 +49,17 @@ export const userSchema = z.object({
 export const aiProviderTypeSchema = z.enum(["openai", "openai-chatgpt", "native-ollama", "custom", "screenpipe-cloud", "pi", "anthropic", "acp"]);
 
 export const aiPresetSchema = z.object({
-  id: z.string().min(1, "Preset name is required").regex(/^[a-zA-Z0-9\s\-_]+$/, "Only letters, numbers, spaces, hyphens, and underscores allowed").refine(
+  id: z.string().min(1, "预设名称必填").regex(/^[a-zA-Z0-9\s\-_]+$/, "Only letters, numbers, spaces, hyphens, and underscores allowed").refine(
     (val) => !val.trim().toLowerCase().endsWith("copy"),
-    "Preset name cannot end with 'copy'"
+    "预设名称不能以“copy”结尾"
   ),
-  prompt: z.string().min(10, "Prompt must be at least 10 characters"),
+  prompt: z.string().min(10, "提示词至少需要 10 个字符"),
   provider: aiProviderTypeSchema,
-  url: z.string().url("Invalid URL format"),
-  model: z.string().min(1, "Model is required"),
+  url: z.string().url("URL 格式无效"),
+  model: z.string().min(1, "模型必填"),
   defaultPreset: z.boolean(),
   apiKey: z.string().nullable(),
-  maxContextChars: z.number().int().min(1000, "Must be at least 1,000 characters").max(8000000, "Cannot exceed 8,000,000 characters"),
+  maxContextChars: z.number().int().min(1000, "至少需要 1,000 个字符").max(8000000, "不能超过 8,000,000 个字符"),
 });
 
 const aecModeSchema = z.enum(["off", "screenpipe", "macos", "windows"]);
@@ -97,9 +97,9 @@ export const settingsStoreSchema = z.object({
   openaiApiKey: z.string(),
   deepgramApiKey: z.string(),
   aiModel: z.string().min(1, "AI model is required"),
-  customPrompt: z.string().min(10, "Custom prompt must be at least 10 characters"),
+  customPrompt: z.string().min(10, "自定义提示词至少需要 10 个字符"),
   aiProviderType: aiProviderTypeSchema,
-  aiUrl: z.string().url("Invalid AI URL format"),
+  aiUrl: z.string().url("AI URL 格式无效"),
   aiMaxContextChars: z.number().int().min(1000).max(2000000),
   
   // Audio Settings
@@ -249,7 +249,7 @@ export const validateAiModel = (
 ): FieldValidationResult => {
   const normalized = model.trim();
   if (provider === "acp") return { isValid: true };
-  if (!normalized) return { isValid: false, error: "Model is required" };
+  if (!normalized) return { isValid: false, error: "模型必填" };
 
   if (provider === "custom" && isGeminiApiUrl(url) && normalized.startsWith("models/")) {
     return {
@@ -487,11 +487,11 @@ export const validatePresetName = (name: string, visiblePresets: AIPreset[], cur
   const normalizedName = name.trim();
 
   if (!normalizedName) {
-    return { isValid: false, error: "Preset name is required" };
+    return { isValid: false, error: "预设名称必填" };
   }
 
   if (normalizedName.toLowerCase().endsWith("copy")) {
-    return { isValid: false, error: "Preset name cannot end with 'copy'" };
+    return { isValid: false, error: "预设名称不能以“copy”结尾" };
   }
 
   const exists = visiblePresets.some(

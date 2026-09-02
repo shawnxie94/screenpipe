@@ -80,20 +80,20 @@ const PORTABLE_ACP_KEYWORDS = new Set([
 export const PORTABLE_AGENT_EXTENSION_CATALOG: PortableAgentExtensionCatalogItem[] = [
   {
     id: "screen-history",
-    name: "Screen history",
+    name: "屏幕历史",
     summary: "Search, summarize, and query local screen and audio history.",
     tools: ["activity-summary", "search-content", "query_recordings"],
   },
   {
     id: "web-search",
-    name: "Web search",
+    name: "网页搜索",
     summary: "Search the public web with sources when a task needs current information.",
     tools: ["sp_web_search"],
   },
   {
     id: "connections",
     name: "Connections",
-    summary: "Find and use the apps you've connected to screenpipe.",
+    summary: "查找并使用你已连接到 screenpipe 的应用。",
     tools: ["list_connections", "screenpipe_connect_app", "sp_mcp_call"],
   },
   {
@@ -104,7 +104,7 @@ export const PORTABLE_AGENT_EXTENSION_CATALOG: PortableAgentExtensionCatalogItem
   },
   {
     id: "live-views",
-    name: "Live Views",
+    name: "实时视图",
     summary: "Read or update saved dashboards when the user asks for them.",
     tools: ["live_view"],
   },
@@ -115,10 +115,10 @@ export const PI_EXTENSION_CATALOG: PiExtensionCatalogItem[] = [
     id: "pi-subagents",
     name: "Subagents",
     source: "npm:pi-subagents",
-    summary: "Delegate work to focused child agents.",
+    summary: "将工作委派给专注的子代理。",
     details: "Useful for review, scouting, parallel audits, and implementation tasks that benefit from separate context windows.",
     modelFit: "cloud-preferred",
-    modelFitLabel: "Cloud model recommended",
+    modelFitLabel: "建议使用云端模型",
     modelFitCopy: "Subagents amplify planning mistakes. Use a strong cloud model first; small local models may over-spawn or lose tool boundaries.",
     risk: "Runs extra AI sessions locally and can multiply tool calls.",
     npmUrl: "https://www.npmjs.com/package/pi-subagents",
@@ -129,12 +129,12 @@ export const PI_EXTENSION_CATALOG: PiExtensionCatalogItem[] = [
   },
   {
     id: "pi-web-agent",
-    name: "Web agent",
+    name: "网页代理",
     source: "npm:@demigodmode/pi-web-agent",
-    summary: "Adds web research to your AI.",
+    summary: "为你的 AI 添加网页研究能力。",
     details: "Searches, fetches, ranks sources, and can use a local Chromium-family browser for pages that need rendering.",
     modelFit: "strong-model",
-    modelFitLabel: "Strong model",
+    modelFitLabel: "强模型",
     modelFitCopy: "Works best with models that can compare sources and preserve citations. Local models can run it, but expect weaker source judgment.",
     risk: "May read public web pages and use an installed browser for rendering.",
     npmUrl: "https://www.npmjs.com/package/@demigodmode/pi-web-agent",
@@ -146,10 +146,10 @@ export const PI_EXTENSION_CATALOG: PiExtensionCatalogItem[] = [
     id: "pi-ask",
     name: "Ask user",
     source: "npm:@eko24ive/pi-ask",
-    summary: "Lets your AI pause and ask structured questions.",
+    summary: "让 AI 暂停并提出结构化问题。",
     details: "Good when a task needs human confirmation before it keeps changing files or spending tokens.",
     modelFit: "local-friendly",
-    modelFitLabel: "Local friendly",
+    modelFitLabel: "适合本地",
     modelFitCopy: "Small models benefit from explicit clarification gates; this is a low-risk first extension for local setups.",
     risk: "Adds an interactive prompt flow; no external service is required.",
     npmUrl: "https://www.npmjs.com/package/@eko24ive/pi-ask",
@@ -158,12 +158,12 @@ export const PI_EXTENSION_CATALOG: PiExtensionCatalogItem[] = [
   },
   {
     id: "pi-package-search",
-    name: "Package search",
+    name: "包搜索",
     source: "npm:pi-package-search",
-    summary: "Find more tools from inside screenpipe.",
+    summary: "在 screenpipe 内部查找更多工具。",
     details: "Adds package discovery tools and install prompts that point at npm packages tagged for Pi.",
     modelFit: "local-friendly",
-    modelFitLabel: "Local friendly",
+    modelFitLabel: "适合本地",
     modelFitCopy: "Useful with any model because it narrows package discovery before install decisions.",
     risk: "Can suggest third-party package installs; review sources before enabling new packages.",
     npmUrl: "https://www.npmjs.com/package/pi-package-search",
@@ -175,12 +175,12 @@ export const PI_EXTENSION_CATALOG: PiExtensionCatalogItem[] = [
     id: "pi-research",
     name: "Research",
     source: "npm:pi-research",
-    summary: "Adds a focused research workflow.",
+    summary: "添加一个专注的研究工作流。",
     details: "A lightweight research package surfaced in the Pi package catalog for users who want broader investigation tools.",
     modelFit: "strong-model",
-    modelFitLabel: "Strong model",
+    modelFitLabel: "强模型",
     modelFitCopy: "Research workflows need source comparison and careful uncertainty handling; stronger models give better results.",
-    risk: "Review package source before using it on sensitive work.",
+    risk: "在敏感工作上使用前，请先审查包源码。",
     npmUrl: "https://www.npmjs.com/package/pi-research",
     sourceUrl: "https://pi.dev/packages/pi-research",
     tags: ["research", "analysis"],
@@ -256,7 +256,7 @@ function registryPackageToCatalogItem(pkg: NpmSearchPackage): PiExtensionCatalog
   const name = pkg.name?.trim();
   if (!name || !looksLikePiPackage(pkg)) return null;
 
-  const description = pkg.description?.trim() || "Community Pi package from npm.";
+  const description = pkg.description?.trim() || "来自 npm 的社区 Pi 包。";
   const tags = packageTags(pkg);
   const portable = (pkg.keywords ?? []).some(
     (keyword) => typeof keyword === "string" && PORTABLE_ACP_KEYWORDS.has(keyword.toLowerCase()),
@@ -270,7 +270,7 @@ function registryPackageToCatalogItem(pkg: NpmSearchPackage): PiExtensionCatalog
     summary: description,
     details: "Community package from npm. Review the package, source, and behavior before enabling it.",
     modelFit: "strong-model",
-    modelFitLabel: "Community package",
+    modelFitLabel: "社区包",
     modelFitCopy: "Model fit depends on the package. Prefer stronger models for tools that browse, spawn agents, or change files.",
     risk: portable
       ? "Third-party package. It runs locally in screenpipe and can be used by other AI apps."
