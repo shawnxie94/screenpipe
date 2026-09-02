@@ -1120,13 +1120,13 @@ function HomeContent() {
     // The Chat row doubles as "go to chat view + start a fresh conversation".
     // Each click allocates a new session id (empty rows are not reused — that
     // felt like opening an old recent).
-    home: { label: "Chat", icon: <Plus className="h-3.5 w-3.5" /> },
-    meetings: { label: "Meetings", icon: <CalendarClock className="h-3.5 w-3.5" /> },
-    timeline: { label: "Timeline", icon: <MonitorPlay className="h-3.5 w-3.5" /> },
-    activity: { label: "Activity", icon: <ListTree className="h-3.5 w-3.5" /> },
-    brain: { label: "Library", icon: <Brain className="h-3.5 w-3.5" /> },
-    pipes: { label: "Automations", icon: <TimerReset className="h-3.5 w-3.5" /> },
-    connections: { label: "Connections", icon: <Plug className="h-3.5 w-3.5" /> },
+    home: { label: "聊天", icon: <Plus className="h-3.5 w-3.5" /> },
+    meetings: { label: "会议", icon: <CalendarClock className="h-3.5 w-3.5" /> },
+    timeline: { label: "时间线", icon: <MonitorPlay className="h-3.5 w-3.5" /> },
+    activity: { label: "活动", icon: <ListTree className="h-3.5 w-3.5" /> },
+    brain: { label: "库", icon: <Brain className="h-3.5 w-3.5" /> },
+    pipes: { label: "自动化", icon: <TimerReset className="h-3.5 w-3.5" /> },
+    connections: { label: "连接", icon: <Plug className="h-3.5 w-3.5" /> },
   };
 
   const sidebarLayout = normalizeSidebarNavLayout(settings.sidebarNavLayout);

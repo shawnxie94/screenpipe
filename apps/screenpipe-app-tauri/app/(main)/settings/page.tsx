@@ -188,68 +188,68 @@ function SettingsContent() {
   // off the id, not the label.
   const navGroups = [
     {
-      label: "Capture & data",
+      label: "采集与数据",
       items: [
-        { id: "recording" as const, label: "Screen", icon: <Video className="h-4 w-4" /> },
-        { id: "audio" as const, label: "Audio & meetings", icon: <Mic className="h-4 w-4" /> },
+        { id: "recording" as const, label: "屏幕", icon: <Video className="h-4 w-4" /> },
+        { id: "audio" as const, label: "音频与会议", icon: <Mic className="h-4 w-4" /> },
         // Speaker identification is meeting work; it does not deserve a group
         // of its own directly below the one it belongs to.
-        { id: "speakers" as const, label: "Speakers", icon: <Users className="h-4 w-4" /> },
-        { id: "storage" as const, label: "Disk & retention", icon: <HardDrive className="h-4 w-4" /> },
-        { id: "privacy" as const, label: "Privacy", icon: <Shield className="h-4 w-4" /> },
+        { id: "speakers" as const, label: "说话人", icon: <Users className="h-4 w-4" /> },
+        { id: "storage" as const, label: "磁盘与保留", icon: <HardDrive className="h-4 w-4" /> },
+        { id: "privacy" as const, label: "隐私", icon: <Shield className="h-4 w-4" /> },
         ...(showPermissions
-          ? [{ id: "permissions" as const, label: "Permissions", icon: <KeyRound className="h-4 w-4" /> }]
+          ? [{ id: "permissions" as const, label: "权限", icon: <KeyRound className="h-4 w-4" /> }]
           : []),
       ].filter((s) => !isSettingsSectionHidden(s.id)),
     },
     {
-      label: "AI",
+      label: "AI 智能",
       items: [
-        { id: "activities" as const, label: "Activities", icon: <ListChecks className="h-4 w-4" /> },
-        { id: "ai-settings" as const, label: "AI features", icon: <SlidersHorizontal className="h-4 w-4" /> },
-        { id: "ai" as const, label: "Models & keys", icon: <Brain className="h-4 w-4" /> },
+        { id: "activities" as const, label: "活动记录", icon: <ListChecks className="h-4 w-4" /> },
+        { id: "ai-settings" as const, label: "AI 功能", icon: <SlidersHorizontal className="h-4 w-4" /> },
+        { id: "ai" as const, label: "模型与密钥", icon: <Brain className="h-4 w-4" /> },
         // "AI credits" is a cloud-quota concept (purchased credits on the
         // screenpipe cloud) — meaningless in a local/self-hosted build.
         ...(isDevLoginSkipEnabled()
           ? []
-          : [{ id: "usage" as const, label: "AI credits", icon: <BarChart3 className="h-4 w-4" /> }]),
+          : [{ id: "usage" as const, label: "AI 额度", icon: <BarChart3 className="h-4 w-4" /> }]),
       ].filter((s) => !isSettingsSectionHidden(s.id)),
     },
     {
-      label: "Account",
+      label: "账户",
       // Local/self-hosted builds have no cloud account, team or referral
       // program — the whole Account group is meaningless and gets dropped.
       items: isDevLoginSkipEnabled()
         ? []
         : [
-            { id: "account" as const, label: "Account", icon: <User className="h-4 w-4" /> },
+            { id: "account" as const, label: "账户", icon: <User className="h-4 w-4" /> },
             // Hide "Team" on enterprise builds — those installs are already
             // org-managed; the desktop has nothing to manage. Admins use the
             // /enterprise dashboard on the web. On consumer builds we still
             // surface Team as a marketing entry point to /team.
             ...(isManagedDeployment
               ? []
-              : [{ id: "team" as const, label: "Team", icon: <Users className="h-4 w-4" /> }]),
+              : [{ id: "team" as const, label: "团队", icon: <Users className="h-4 w-4" /> }]),
             // Local/self-hosted builds (DEV_LOGIN_SKIP) skip the referral
             // marketing entry — there's no signed-in account to earn/claim
             // referral credit, so "Get free month" only invites confusion.
             ...(() =>
               process.env.NEXT_PUBLIC_SCREENPIPE_DEV_LOGIN_SKIP === "true"
                 ? []
-                : [{ id: "referral" as const, label: "Get free month", icon: <Gift className="h-4 w-4" /> }]
+                : [{ id: "referral" as const, label: "推荐奖励", icon: <Gift className="h-4 w-4" /> }]
             )(),
           ].filter((s) => !isSectionHidden(s.id)),
     },
     {
-      label: "App",
+      label: "应用",
       items: [
         // Keep the legacy `general` section id so existing deep links and
         // automated tests continue to work. The user-facing label is the
         // familiar Apple-style category name.
-        { id: "general" as const, label: "General", icon: <SettingsIcon className="h-4 w-4" /> },
-        { id: "display" as const, label: "Appearance", icon: <Layout className="h-4 w-4" /> },
-        { id: "notifications" as const, label: "Notifications", icon: <Bell className="h-4 w-4" /> },
-        { id: "shortcuts" as const, label: "Shortcuts", icon: <Keyboard className="h-4 w-4" /> },
+        { id: "general" as const, label: "通用", icon: <SettingsIcon className="h-4 w-4" /> },
+        { id: "display" as const, label: "外观", icon: <Layout className="h-4 w-4" /> },
+        { id: "notifications" as const, label: "通知", icon: <Bell className="h-4 w-4" /> },
+        { id: "shortcuts" as const, label: "快捷键", icon: <Keyboard className="h-4 w-4" /> },
       ].filter((s) => !isSectionHidden(s.id)),
     },
   ];
