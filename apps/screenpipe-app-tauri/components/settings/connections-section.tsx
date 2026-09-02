@@ -1919,7 +1919,7 @@ function MstyPanel() {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        3. Give the tool a name (e.g. <strong>screenpipe</strong>) and click <strong>Add</strong>
+        3. Give the tool a name (e.g. <strong>screenpipe</strong>) and click <strong>添加</strong>
       </p>
       <Button variant="outline" onClick={() => openUrl("https://msty.app")} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
         <ExternalLink className="h-3 w-3" />open msty

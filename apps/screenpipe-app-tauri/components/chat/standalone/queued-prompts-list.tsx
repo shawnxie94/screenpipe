@@ -96,7 +96,7 @@ export function QueuedPromptsList({
                         ) : (
                           <>
                             <CornerDownRight className="h-2.5 w-2.5" />
-                            <span className="text-[10px] font-medium">Steer</span>
+                            <span className="text-[10px] font-medium">引导</span>
                           </>
                         )}
                       </button>

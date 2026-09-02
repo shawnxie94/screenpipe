@@ -412,7 +412,7 @@ function RuleEditor({ rule, onUpdate, onRemove }: RuleEditorProps) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All</SelectItem>
+          <SelectItem value="all">全部</SelectItem>
           <SelectItem value="audio_only">仅音频</SelectItem>
           <SelectItem value="screen_only">仅屏幕</SelectItem>
         </SelectContent>

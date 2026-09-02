@@ -100,7 +100,7 @@ export function AgentHandoffPicker({
       className="group inline-flex h-7 items-center gap-1.5"
       data-testid="first-run-ask-agent-picker"
     >
-      <span className="shrink-0 text-[11px] text-muted-foreground">Ask</span>
+      <span className="shrink-0 text-[11px] text-muted-foreground">询问</span>
       <span className="flex items-center">
         {targets.map((target, index) => (
           <button

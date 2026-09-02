@@ -125,7 +125,7 @@ export function AcpAgentPicker({
             <Label className="text-xs">agent</Label>
           ) : (
             <div className="space-y-1">
-              <Label htmlFor="acpAgent">Agent</Label>
+              <Label htmlFor="acpAgent">代理</Label>
               <p className="text-xs text-muted-foreground">
                 Choose the coding agent Screenpipe should run. It runs as its own
                 program with its own account — see the split below.

@@ -26,7 +26,7 @@ export function GoogleOAuthUnverifiedAppHint() {
           <span className="block leading-relaxed">
             Google may show a blocked-app warning. Click{" "}
             <span className="whitespace-nowrap">
-              <span className="font-medium text-foreground">Advanced</span>{" "}
+              <span className="font-medium text-foreground">高级</span>{" "}
               <ArrowRight className="mx-1 inline h-3 w-3 align-[-2px] text-muted-foreground" />
               <span className="font-medium text-foreground">
                 Go to Screenpipe

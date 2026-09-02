@@ -419,9 +419,9 @@ export function LiveViewLayoutEditor({
                   }))
                 }
               >
-                <option value={3}>Quarter</option>
-                <option value={6}>Half</option>
-                <option value={12}>Full</option>
+                <option value={3}>四分之一</option>
+                <option value={6}>一半</option>
+                <option value={12}>完整</option>
               </select>
             </label>
             <label className="space-y-1 md:col-span-2 xl:col-span-4">

@@ -141,7 +141,7 @@ export function WindowPicker({
           <DialogDescription className="text-xs">
             Last 7 days · {totalApps} apps · {formatCount(totalWindows)} windows.
             Click an app to expand its top windows. Adding an{" "}
-            <span className="font-mono">App</span> blocks the entire app;
+            <span className="font-mono">应用</span> blocks the entire app;
             adding a window adds it as{" "}
             <span className="font-mono">App::Title</span> (scoped).
           </DialogDescription>

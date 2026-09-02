@@ -51,7 +51,7 @@ export function ActivitiesSettings() {
             <div className="flex items-start gap-3">
               <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <div>
-                <h3 className="text-sm font-medium text-foreground">Interval</h3>
+                <h3 className="text-sm font-medium text-foreground">间隔</h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   How often activities will be created.
                 </p>

@@ -320,7 +320,7 @@ const ShortcutRow = ({
               </span>
             </span>
           ) : getShortcutState() === ShortcutState.DISABLED ? (
-            <span>Disabled</span>
+            <span>已禁用</span>
           ) : (
             <span className="flex items-center justify-between gap-2">
               {currentKeys.map((key, i) => (

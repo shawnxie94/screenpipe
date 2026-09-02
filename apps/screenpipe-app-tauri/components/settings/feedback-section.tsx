@@ -104,7 +104,7 @@ export function FeedbackSection() {
             <div className="flex items-center gap-2.5">
               <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
-                <h3 className="text-sm font-medium text-foreground">Documentation</h3>
+                <h3 className="text-sm font-medium text-foreground">文档</h3>
                 <p className="text-xs text-muted-foreground">guides, API reference, integrations</p>
               </div>
             </div>
@@ -200,7 +200,7 @@ export function FeedbackSection() {
             <div className="flex items-center gap-2.5">
               <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
-                <h3 className="text-sm font-medium text-foreground">Changelog</h3>
+                <h3 className="text-sm font-medium text-foreground">更新日志</h3>
                 <p className="text-xs text-muted-foreground">what&apos;s new in each version</p>
               </div>
             </div>

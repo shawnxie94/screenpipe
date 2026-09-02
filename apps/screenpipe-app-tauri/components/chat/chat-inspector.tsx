@@ -101,7 +101,7 @@ export function ChatInspector({
       className="max-h-[min(34rem,calc(100vh-5rem))] overflow-y-auto"
     >
       <div className="px-4 pb-2 pt-3">
-        <h2 className="text-sm font-medium">Outputs</h2>
+        <h2 className="text-sm font-medium">输出</h2>
       </div>
 
       {outputs.length === 0 ? (

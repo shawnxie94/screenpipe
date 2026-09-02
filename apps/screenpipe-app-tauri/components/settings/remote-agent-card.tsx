@@ -210,7 +210,7 @@ that installs the screenpipe MCP server${hasSkills ? " + skill" : ""} so ${name}
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <label className="text-xs text-muted-foreground">Agent</label>
+        <label className="text-xs text-muted-foreground">代理</label>
         <select
           value={targetId}
           onChange={(e) => {

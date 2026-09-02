@@ -135,7 +135,7 @@ export function DiskUsageSection() {
         >
           <CardContent className="px-3 py-2.5">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-muted-foreground">Data</span>
+              <span className="text-xs text-muted-foreground">数据</span>
               <Database
                 className={cn(
                   "h-3 w-3 text-muted-foreground",
@@ -158,7 +158,7 @@ export function DiskUsageSection() {
         >
           <CardContent className="px-3 py-2.5">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-muted-foreground">Cache</span>
+              <span className="text-xs text-muted-foreground">缓存</span>
               <Folder
                 className={cn(
                   "h-3 w-3 text-muted-foreground",
@@ -181,7 +181,7 @@ export function DiskUsageSection() {
         >
           <CardContent className="px-3 py-2.5">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-muted-foreground">Free</span>
+              <span className="text-xs text-muted-foreground">可用</span>
               <HardDrive
                 className={cn(
                   "h-3 w-3 text-muted-foreground",
@@ -253,13 +253,13 @@ export function DiskUsageSection() {
                   ));
                 })()}
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Audio</span>
+                <span className="text-muted-foreground">音频</span>
                 <span className="font-medium">
                   {diskUsage?.media.audios_size || "0 KB"}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs pt-1 border-t">
-                <span className="font-medium">Total</span>
+                <span className="font-medium">总计</span>
                 <span className="font-bold">
                   {diskUsage?.media.total_media_size || "0 KB"}
                 </span>
@@ -289,13 +289,13 @@ export function DiskUsageSection() {
           ) : (
             <div className="space-y-1.5 ml-[26px]">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Database</span>
+                <span className="text-muted-foreground">数据库</span>
                 <span className="font-medium">
                   {diskUsage?.other?.database_size || "0 KB"}
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Logs</span>
+                <span className="text-muted-foreground">日志</span>
                 <span
                   className={cn(
                     "font-medium",
@@ -320,7 +320,7 @@ export function DiskUsageSection() {
               {diskUsage?.other?.other_size &&
                 diskUsage.other.other_size !== "0 B" && (
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Other</span>
+                    <span className="text-muted-foreground">其他</span>
                     <span className="font-medium">
                       {diskUsage.other.other_size}
                     </span>

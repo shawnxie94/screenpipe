@@ -539,7 +539,7 @@ export function UsageSection() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{totalChats}</div>
-            <p className="text-xs text-muted-foreground">Conversations</p>
+            <p className="text-xs text-muted-foreground">对话</p>
           </CardContent>
         </Card>
         <Card>

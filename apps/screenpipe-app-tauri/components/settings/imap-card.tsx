@@ -187,7 +187,7 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
         auto-detect the copy, so you never even paste.
       </p>
       <div className="space-y-1">
-        <Label className="text-xs">Email</Label>
+        <Label className="text-xs">电子邮件</Label>
         <Input
           type="email"
           placeholder="you@gmail.com"
@@ -207,7 +207,7 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
               <Input placeholder={inferredHost || `imap.${domain || "example.com"}`} value={host} onChange={(e) => setHost(e.target.value)} className="h-8 text-xs" />
             </div>
             <div className="w-24 space-y-1">
-              <Label className="text-xs">Port</Label>
+              <Label className="text-xs">端口</Label>
               <Input placeholder="993" value={port} onChange={(e) => setPort(e.target.value)} className="h-8 text-xs" />
             </div>
           </div>

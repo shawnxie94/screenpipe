@@ -1970,11 +1970,11 @@ export const AIPresetsSelector = ({
                   </p>
                 ) : (
                   <p className="flex items-center gap-2">
-                    <span>Press</span>
+                    <span>按</span>
                     <kbd className="px-1.5 py-0.5 text-xs font-semibold bg-muted rounded">
                       ⌘/
                     </kbd>
-                    <span>to cycle presets</span>
+                    <span>切换预设</span>
                   </p>
                 )}
               </TooltipContent>

@@ -86,7 +86,7 @@ export function NotificationPauseControl({
       {/* header / status */}
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">
         <div className="min-w-0">
-          <p className="text-sm font-medium">Notifications</p>
+          <p className="text-sm font-medium">通知</p>
           <p className="text-xs text-muted-foreground">{statusLabel}</p>
         </div>
         {paused ? (

@@ -166,7 +166,7 @@ export function StandaloneChatHeader({
             title="新聊天"
           >
             <Plus size={14} />
-            <span>New</span>
+            <span>新建</span>
           </Button>
           {!settings.disabledShortcuts.includes("showChatShortcut") &&
           settings.showChatShortcut ? (

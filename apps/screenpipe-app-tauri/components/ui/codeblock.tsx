@@ -104,7 +104,7 @@ const CodeBlock: FC<Props> = memo(({ language, value }) => {
             size="icon"
           >
             <IconDownload />
-            <span className="sr-only">Download</span>
+            <span className="sr-only">下载</span>
           </Button>
           <Button
             variant="ghost"

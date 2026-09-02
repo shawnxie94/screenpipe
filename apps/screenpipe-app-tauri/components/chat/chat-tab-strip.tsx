@@ -472,7 +472,7 @@ export function ChatTabStrip({
                       Rename
                     </ContextMenuItem>
                     <ContextMenuSub>
-                      <ContextMenuSubTrigger>Copy</ContextMenuSubTrigger>
+                      <ContextMenuSubTrigger>复制</ContextMenuSubTrigger>
                       <ContextMenuSubContent className="w-48">
                         <ContextMenuItem
                           onSelect={() => {

@@ -86,7 +86,7 @@ export function ComingUp({
   };
   return (
     <section className="mb-12">
-      <h2 className="text-2xl font-medium tracking-tight mb-4">Coming up</h2>
+      <h2 className="text-2xl font-medium tracking-tight mb-4">即将到来</h2>
       <div className="border border-border rounded-md bg-muted/10 px-6 py-5">
         {events.length === 0 ? (
           <ComingUpEmptyState

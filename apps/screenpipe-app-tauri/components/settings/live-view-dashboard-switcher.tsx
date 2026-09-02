@@ -88,7 +88,7 @@ export function LiveViewDashboardSwitcher({
         data-testid="live-view-dashboard-switcher"
         className="flex min-w-0 flex-1 items-center"
       >
-        <p className="sr-only">Dashboards</p>
+        <p className="sr-only">仪表盘</p>
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <select
             data-testid="overview-dashboard-selector"

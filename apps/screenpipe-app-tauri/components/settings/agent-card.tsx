@@ -1103,9 +1103,9 @@ export function AgentCard({
               }}
             >
               <TabsTrigger value="mcp" className="text-xs">MCP</TabsTrigger>
-              {skills.length > 0 && <TabsTrigger value="skill" className="text-xs">Skill</TabsTrigger>}
+              {skills.length > 0 && <TabsTrigger value="skill" className="text-xs">技能</TabsTrigger>}
               <TabsTrigger value="sync" className="text-xs">同步（远程）</TabsTrigger>
-              {connect && <TabsTrigger value="connect" className="text-xs">Connect</TabsTrigger>}
+              {connect && <TabsTrigger value="connect" className="text-xs">连接</TabsTrigger>}
             </TabsList>
             <TabsContent value="mcp" className="mt-3">
               <McpSection name={name} mcp={mcp} />
