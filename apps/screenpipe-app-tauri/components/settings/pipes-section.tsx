@@ -452,7 +452,7 @@ after analyzing, show me the improved pipe.md and explain what you changed and w
 }
 
 function buildOptimizeDisplayLabel(pipeName: string): string {
-  return `Optimize scheduled task: ${pipeName.trim()}`;
+  return `优化定时任务：${pipeName.trim()}`;
 }
 
 // "fork" = make your own version of an existing pipe. We don't mutate the
@@ -981,8 +981,28 @@ export function pipeExecutionCompletedBeforeContinueError(exec: PipeExecutionSta
   );
 }
 
-function pipeExecutionDisplayStatus(exec: PipeExecutionStatusFields): string {
+const PIPE_STATUS_LABELS: Record<string, string> = {
+  completed: "已完成",
+  running: "运行中",
+  failed: "失败",
+  paused: "已暂停",
+  disabled: "已禁用",
+  enabled: "已启用",
+  pending: "等待中",
+  queued: "排队中",
+  cancelled: "已取消",
+  canceled: "已取消",
+  skipped: "已跳过",
+  scheduled: "已计划",
+  error: "错误",
+};
+
+function pipeExecutionRawStatus(exec: PipeExecutionStatusFields): string {
   return pipeExecutionCompletedBeforeContinueError(exec) ? "completed" : exec.status;
+}
+
+function pipeExecutionDisplayStatus(exec: PipeExecutionStatusFields): string {
+  return PIPE_STATUS_LABELS[pipeExecutionRawStatus(exec)] ?? pipeExecutionRawStatus(exec);
 }
 
 function ElapsedTimer({ startedAt }: { startedAt: string }) {
@@ -3106,7 +3126,7 @@ export function PipesSection() {
                             {hasMissingConnections
                               ? <AlertCircle className="h-4 w-4" />
                               : <Play className="h-4 w-4 fill-current" />}
-                            run now
+                            立即运行
                           </Button>
                         )}
                       </div>
@@ -3158,7 +3178,7 @@ export function PipesSection() {
                                 navigateHomeAndPrefill({
                                   context: "the user wants to fork their pipe into a new one",
                                   prompt: buildForkPrompt(pipe.config.name),
-                                  displayLabel: `Fork scheduled task: ${pipe.config.name}`,
+                                  displayLabel: `复制定时任务：${pipe.config.name}`,
                                   autoSend: true,
                                 });
                               }}
@@ -3587,12 +3607,12 @@ export function PipesSection() {
                                   <span className="text-muted-foreground">
                                     {exec.started_at ? new Date(exec.started_at).toLocaleString() : "queued"}
                                   </span>
-                                  <Badge variant={statusBadgeVariant(pipeExecutionDisplayStatus(exec))} className="text-[10px] h-5">{pipeExecutionDisplayStatus(exec)}</Badge>
+                                  <Badge variant={statusBadgeVariant(pipeExecutionRawStatus(exec))} className="text-[10px] h-5">{pipeExecutionDisplayStatus(exec)}</Badge>
                                   {!pipeExecutionCompletedBeforeContinueError(exec) && errorTypeBadge(exec.error_type)}
                                   {exec.duration_ms != null && <span className="text-muted-foreground">{(exec.duration_ms / 1000).toFixed(1)}s</span>}
                                   <span className="text-muted-foreground/60">{exec.trigger_type}</span>
                                   {exec.model && <span className="text-muted-foreground/60 truncate max-w-[100px]">{exec.model}</span>}
-                                  {pipeExecutionDisplayStatus(exec) === "completed" && exec.stdout && cleanPipeStdout(exec.stdout) && (
+                                  {pipeExecutionRawStatus(exec) === "completed" && exec.stdout && cleanPipeStdout(exec.stdout) && (
                                     <div className="ml-auto flex items-center gap-1">
                                       <button className="text-muted-foreground hover:text-foreground p-0.5" title="copy" onClick={() => {
                                         commands.copyTextToClipboard(cleanPipeStdout(exec.stdout));
@@ -3617,7 +3637,7 @@ export function PipesSection() {
                                   )}
                                 </div>
                                 {exec.error_message && !pipeExecutionCompletedBeforeContinueError(exec) && <p className="text-xs text-muted-foreground">{exec.error_message}</p>}
-                                {pipeExecutionDisplayStatus(exec) === "completed" && exec.stdout && cleanPipeStdout(exec.stdout) && (
+                                {pipeExecutionRawStatus(exec) === "completed" && exec.stdout && cleanPipeStdout(exec.stdout) && (
                                   <div>
                                     <div className="text-xs text-muted-foreground max-h-96 overflow-y-auto scrollbar-hide [&_.prose]:text-xs [&_.prose]:max-w-none [&_.prose_h1]:text-sm [&_.prose_h2]:text-xs [&_.prose_h3]:text-xs [&_.prose_p]:text-xs [&_.prose_li]:text-xs [&_.prose_code]:text-[10px]">
                                       <MarkdownBlock
@@ -3627,7 +3647,7 @@ export function PipesSection() {
                                     </div>
                                   </div>
                                 )}
-                                {pipeExecutionDisplayStatus(exec) === "failed" && exec.stderr && !exec.error_message && (
+                                {pipeExecutionRawStatus(exec) === "failed" && exec.stderr && !exec.error_message && (
                                   <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words max-h-96 overflow-y-auto scrollbar-hide">{exec.stderr}</pre>
                                 )}
                                 {exec.status === "running" && (() => {
@@ -3998,7 +4018,7 @@ export function PipesSection() {
                                     ? new Date(exec.started_at).toLocaleString()
                                     : "queued"}
                                 </span>
-                                <Badge variant={statusBadgeVariant(pipeExecutionDisplayStatus(exec))} className="text-[10px] h-5">
+                                <Badge variant={statusBadgeVariant(pipeExecutionRawStatus(exec))} className="text-[10px] h-5">
                                   {pipeExecutionDisplayStatus(exec)}
                                 </Badge>
                                 {!pipeExecutionCompletedBeforeContinueError(exec) && errorTypeBadge(exec.error_type)}
@@ -4065,12 +4085,12 @@ export function PipesSection() {
                                   </pre>
                                 );
                               })()}
-                              {pipeExecutionDisplayStatus(exec) === "completed" && exec.stdout && cleanPipeStdout(exec.stdout) && (
+                              {pipeExecutionRawStatus(exec) === "completed" && exec.stdout && cleanPipeStdout(exec.stdout) && (
                                 <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
                                   {cleanPipeStdout(exec.stdout)}
                                 </pre>
                               )}
-                              {pipeExecutionDisplayStatus(exec) === "failed" && exec.stderr && !exec.error_message && (
+                              {pipeExecutionRawStatus(exec) === "failed" && exec.stderr && !exec.error_message && (
                                 <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
                                   {exec.stderr}
                                 </pre>

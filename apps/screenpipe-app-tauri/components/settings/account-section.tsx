@@ -15,7 +15,7 @@ export const searchIndex: SettingsField[] = [
   { label: "Screenpipe Business", keywords: ["subscription", "billing", "plan", "pro", "business", "max", "ultra", "upgrade", "manage"] },
   { label: "Data Sync", keywords: ["allow data sync", "cloud", "account"] },
   { label: "Device name", keywords: ["data sync", "hostname", "computer"] },
-  { label: "sync scheduled tasks across devices", keywords: ["scheduled sync", "pipe sync", "sync"] },
+  { label: "跨设备同步定时任务", keywords: ["scheduled sync", "pipe sync", "sync"] },
   { label: "memories sync across devices", keywords: ["memories sync", "sync", "facts"] },
   { label: "connection sync across devices", keywords: ["connection sync", "sync", "slack", "notion"] },
   { label: "restart remote sync", keywords: ["reset sync", "older key", "new device", "decryption"] },
@@ -786,7 +786,7 @@ export function AccountSection() {
               <div>
                 <p className="text-sm font-medium">跨设备同步定时任务</p>
                 <p className="text-xs text-muted-foreground">
-                  sync your scheduled tasks & configs to all devices linked to your account
+                  将你的定时任务和配置同步到已关联账户的所有设备
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -799,8 +799,8 @@ export function AccountSection() {
                       toast({
                         title: checked ? "scheduled task sync enabled" : "scheduled task sync disabled",
                         description: checked
-                          ? "scheduled tasks will sync across your devices"
-                          : "scheduled tasks will no longer sync",
+                          ? "定时任务将跨设备同步"
+                          : "定时任务将不再同步",
                       });
                     }}
                   />
@@ -824,7 +824,7 @@ export function AccountSection() {
                       try {
                         await syncFetchOrThrow("/sync/pipes/pull", { method: "POST" });
                         await syncFetchOrThrow("/sync/pipes/push", { method: "POST" });
-                        toast({ title: "scheduled tasks synced" });
+                        toast({ title: "定时任务已同步" });
                       } catch (e) {
                         reportSyncFailure(e);
                       } finally {
@@ -1018,7 +1018,7 @@ export function AccountSection() {
               <div>
                 <p className="text-sm font-medium">跨设备同步定时任务</p>
                 <p className="text-xs text-muted-foreground">
-                  sync your scheduled tasks & configs to all devices linked to your account
+                  将你的定时任务和配置同步到已关联账户的所有设备
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1105,7 +1105,7 @@ export function AccountSection() {
               <div>
                 <p className="text-sm font-medium">跨设备同步定时任务</p>
                 <p className="text-xs text-muted-foreground">
-                  sync your scheduled tasks & configs to all devices linked to your account
+                  将你的定时任务和配置同步到已关联账户的所有设备
                 </p>
               </div>
               <div className="flex items-center gap-2">

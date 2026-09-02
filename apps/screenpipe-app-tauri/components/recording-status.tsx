@@ -239,7 +239,7 @@ export function RecordingStatus({
               onClick={() => void toggleAllRecording()}
               disabled={pauseLoading || (allPaused ? (isGloballyPaused && !onResumeRecording) : !onPauseRecording)}
               data-testid="recording-status-pause-all"
-              title={allPaused ? "resume all recording" : "pause all screen and audio recording — resume anytime"}
+              title={allPaused ? "恢复所有录制" : "暂停所有屏幕和音频录制 — 可随时恢复"}
               className="flex w-full items-center justify-center gap-1.5 rounded-md bg-foreground px-2 py-1.5 text-[11px] font-medium text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {allPaused
@@ -248,7 +248,7 @@ export function RecordingStatus({
               {pauseLoading
                 ? allPaused ? "resuming…" : "pausing…"
                 : allPaused
-                  ? "resume all recording"
+                  ? "恢复所有录制"
                   : "pause all recording"}
             </button>
           </div>

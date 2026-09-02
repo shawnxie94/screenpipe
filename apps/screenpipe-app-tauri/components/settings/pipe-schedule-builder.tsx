@@ -327,7 +327,7 @@ export function PipeScheduleBuilder({
                 }
                 className="h-8 w-20 text-xs"
               />
-              <span className="text-muted-foreground">runs</span>
+              <span className="text-muted-foreground">次</span>
             </div>
           )}
         </>

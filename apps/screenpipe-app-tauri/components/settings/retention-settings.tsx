@@ -424,7 +424,7 @@ export function RetentionSettings({
                   data-testid="low-disk-recording-guard-copy"
                 >
                   when free space falls to {lowDiskThreshold}, stop capture and
-                  notify you. search, scheduled tasks, and existing data stay
+                  通知你。搜索、定时任务和现有数据会保留
                   available. on by default.
                 </p>
               </div>
