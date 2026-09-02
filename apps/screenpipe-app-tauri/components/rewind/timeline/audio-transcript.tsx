@@ -736,7 +736,7 @@ export function AudioTranscript({
 									<X className="h-3 w-3" />
 								</Button>
 							</TooltipTrigger>
-							<TooltipContent side="bottom"><p>close</p></TooltipContent>
+							<TooltipContent side="bottom"><p>关闭</p></TooltipContent>
 						</Tooltip>
 					</div>
 					</TooltipProvider>

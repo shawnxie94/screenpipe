@@ -2787,7 +2787,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
 
         {!settings.disableAudio && (
           <div className="flex items-center gap-2 px-1 pt-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">transcription</span>
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">转写</span>
             <div className="h-px flex-1 bg-border/60" />
           </div>
         )}

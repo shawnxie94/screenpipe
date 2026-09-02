@@ -128,7 +128,7 @@ export function SyncKeyRecovery({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={resetting}>cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={resetting}>取消</AlertDialogCancel>
             <AlertDialogAction
               disabled={resetting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

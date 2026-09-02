@@ -220,7 +220,7 @@ export function LiveViewDashboardSwitcher({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>取消</AlertDialogCancel>
             <AlertDialogAction
               data-testid="overview-confirm-delete"
               variant="destructive"

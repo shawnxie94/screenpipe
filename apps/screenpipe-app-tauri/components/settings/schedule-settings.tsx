@@ -392,7 +392,7 @@ function RuleEditor({ rule, onUpdate, onRemove }: RuleEditorProps) {
         className="w-24 h-6 text-xs font-mono px-1.5 text-center rounded border border-input bg-background"
       />
 
-      <span className="text-xs text-muted-foreground">to</span>
+      <span className="text-xs text-muted-foreground">至</span>
 
       <input
         type="time"

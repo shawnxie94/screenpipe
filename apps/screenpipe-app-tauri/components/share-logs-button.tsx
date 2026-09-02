@@ -836,7 +836,7 @@ export const ShareLogsButton = ({
           ) : phase === "sent" ? (
             <>
               <Check className="h-3 w-3" />
-              <span>sent</span>
+              <span>已发送</span>
             </>
           ) : (
             <>

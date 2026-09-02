@@ -230,7 +230,7 @@ const EndowedProgress = ({
 }) => (
   <div className="w-full max-w-sm mx-auto mb-[22px]">
     <div className="flex justify-between font-mono text-[9px] lowercase tracking-[0.04em] text-muted-foreground mb-[5px]">
-      <span>setup</span>
+      <span>设置</span>
       <span>
         {step} of {total}
       </span>

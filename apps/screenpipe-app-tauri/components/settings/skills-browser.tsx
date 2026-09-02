@@ -222,7 +222,7 @@ export function SkillsBrowser({
               className="ml-auto text-muted-foreground transition-colors hover:text-foreground"
             >
               <X className="h-4 w-4" />
-              <span className="sr-only">close</span>
+              <span className="sr-only">关闭</span>
             </button>
           </DialogClose>
         </DialogHeader>

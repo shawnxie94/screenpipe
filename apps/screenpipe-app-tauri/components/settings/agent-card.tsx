@@ -397,7 +397,7 @@ function SkillVariantBody({ name, variant }: { name: string; variant: SkillVaria
         <p className="text-xs text-muted-foreground leading-relaxed">
           Copy the SKILL.md contents above and paste them into{" "}
           <code className="bg-muted px-1 rounded">{variant.localPath}</code> on the remote
-          host. To let {name} reach the screenpipe data on <em>this</em> machine, use the{" "}
+          host. To let {name} reach the screenpipe data on <em>本机</em>, use the{" "}
           <strong>同步（远程）</strong> tab to push it over, or point any{" "}
           <code>localhost:3030</code> calls at this machine&apos;s IP/Tailscale name.
         </p>

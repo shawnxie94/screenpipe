@@ -88,7 +88,7 @@ export function ComposerSuggestions({
             title="建议提示词"
           >
             <Sparkles className="h-2.5 w-2.5" strokeWidth={1.5} />
-            <span>suggestions</span>
+            <span>建议</span>
             <ChevronDown className="h-2.5 w-2.5" strokeWidth={1.5} />
           </button>
         </PopoverTrigger>
