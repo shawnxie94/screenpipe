@@ -366,7 +366,7 @@ function SkillVariantBody({ name, variant }: { name: string; variant: SkillVaria
             ) : (
               <Download className="h-3 w-3 mr-1.5" />
             )}
-            {isSaving ? "saving…" : savedPath ? "saved" : "Save SKILL.md to Downloads"}
+            {isSaving ? "保存中…" : savedPath ? "已保存" : "保存 SKILL.md 到下载目录"}
           </Button>
           {savedPath && (
             <Button variant="ghost" size="sm" onClick={revealSaved} className="text-xs h-7">
@@ -717,7 +717,7 @@ function RemoteSyncSection({
             <button
               onClick={() => updateConfig({ host: "", user: "" })}
               className="text-muted-foreground hover:text-foreground"
-              title="disconnect"
+              title="断开连接"
             >
               <X className="h-3 w-3" />
             </button>
@@ -796,7 +796,7 @@ function RemoteSyncSection({
 
           {testResult && (
             <p className={`text-xs ${testResult.ok ? "text-foreground" : "text-destructive"}`}>
-              {testResult.ok ? "connected" : testResult.error}
+              {testResult.ok ? "已连接" : testResult.error}
             </p>
           )}
           {syncError && <p className="text-xs text-destructive">{syncError}</p>}
@@ -919,7 +919,7 @@ export function ConnectSection({ integrationId, fields }: { integrationId: strin
           <div className="relative">
             <Input
               type={field.secret && !visible[field.key] ? "password" : "text"}
-              placeholder={status === "saved" && field.secret ? "stored securely" : field.placeholder}
+              placeholder={status === "saved" && field.secret ? "已安全存储" : field.placeholder}
               value={creds[field.key] || ""}
               onChange={(e) => { setCreds(prev => ({ ...prev, [field.key]: e.target.value })); if (status === "saved") setStatus("idle"); }}
               className="h-8 text-xs pr-8"
@@ -948,7 +948,7 @@ export function ConnectSection({ integrationId, fields }: { integrationId: strin
             className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal"
           >
             {status === "connecting" ? (
-              <><Loader2 className="h-3 w-3 animate-spin" />connecting…</>
+              <><Loader2 className="h-3 w-3 animate-spin" />正在连接…</>
             ) : (
               <><Check className="h-3 w-3" />连接</>
             )}
@@ -961,7 +961,7 @@ export function ConnectSection({ integrationId, fields }: { integrationId: strin
             size="sm"
             className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal text-destructive"
           >
-            <X className="h-3 w-3" />disconnect
+            <X className="h-3 w-3" />断开
           </Button>
         )}
       </div>

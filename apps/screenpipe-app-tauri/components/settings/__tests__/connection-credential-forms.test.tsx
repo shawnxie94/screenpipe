@@ -116,8 +116,8 @@ describe("connection credential forms", () => {
     );
 
     await waitFor(() => expect(screen.getByDisplayValue("default-specific")).toBeTruthy());
-    await waitFor(() => expect(screen.getByText("connect")).toBeTruthy());
-    expect(screen.queryByText("disconnect")).toBeNull();
+    await waitFor(() => expect(screen.getByText("连接")).toBeTruthy());
+    expect(screen.queryByText("断开连接")).toBeNull();
   });
 
   it("uses connected while default-denying AgentCard credential fields", async () => {
@@ -152,11 +152,11 @@ describe("connection credential forms", () => {
       />
     );
 
-    await waitFor(() => expect(screen.getByText("disconnect")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("断开")).toBeTruthy());
     expect(
       (screen.getByDisplayValue("http://localhost:9999") as HTMLInputElement).value
     ).toBe("http://localhost:9999");
-    expect((screen.getByPlaceholderText("stored securely") as HTMLInputElement).value).toBe("");
+    expect((screen.getByPlaceholderText("已安全存储") as HTMLInputElement).value).toBe("");
     expect(screen.queryByDisplayValue("secret-sentinel")).toBeNull();
     expect(screen.queryByDisplayValue("unknown-sentinel")).toBeNull();
   });
@@ -179,7 +179,7 @@ describe("connection credential forms", () => {
       />
     );
 
-    const connect = await screen.findByRole("button", { name: /^connect$/i });
+    const connect = await screen.findByRole("button", { name: "连接" });
     expect((connect as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -201,7 +201,7 @@ describe("connection credential forms", () => {
       />
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: /^connect$/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "连接" }));
 
     await waitFor(() => {
       const put = mocks.localFetch.mock.calls.find(
@@ -241,7 +241,7 @@ describe("connection credential forms", () => {
       />
     );
 
-    const connect = await screen.findByRole("button", { name: /^connect$/i });
+    const connect = await screen.findByRole("button", { name: "连接" });
     expect((connect as HTMLButtonElement).disabled).toBe(true);
   });
 });

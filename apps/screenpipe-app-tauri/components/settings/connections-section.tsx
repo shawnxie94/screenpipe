@@ -119,7 +119,7 @@ async function getLatestMcpRelease(): Promise<{ url: string; version: string }> 
       { method: "GET", headers: { "Accept": "application/vnd.github.v3+json" } },
       { timeoutMs: remainingMs }
     );
-    if (!response.ok) throw new Error("Failed to fetch releases");
+    if (!response.ok) throw new Error("获取发布列表失败");
     const releases: GitHubRelease[] = await response.json();
     if (releases.length === 0) break;
     const mcpRelease = releases.find(r => r.tag_name.startsWith("mcp-v"));
@@ -129,7 +129,7 @@ async function getLatestMcpRelease(): Promise<{ url: string; version: string }> 
       return { url: mcpbAsset.browser_download_url, version: mcpRelease.tag_name.replace("mcp-v", "") };
     }
   }
-  throw new Error("No MCP release found");
+  throw new Error("未找到 MCP 发布");
 }
 
 async function findClaudeExeOnWindows(): Promise<string | null> {
@@ -767,25 +767,25 @@ const SETTINGS_CONNECTION_IDS = new Set(["custom-mcp", "skills", "pi-extensions"
 
 // Per-connection quickstart prompts shown when "在聊天中尝试" is clicked.
 export const TRY_IN_CHAT_PROMPTS: Record<string, string> = {
-  slack: "Summarize recent Slack discussions",
-  "google-calendar": "What's on my calendar this week?",
-  "google-docs": "Summarize my recent documents",
+  slack: "总结最近的 Slack 讨论",
+  "google-calendar": "这周我的日历上有什么？",
+  "google-docs": "总结我最近的文档",
   obsidian: "我最近在笔记里写了什么？",
   notion: "在 Notion 中查找最近的项目笔记",
-  linear: "Show my open issues and tasks",
+  linear: "显示我未关闭的问题和任务",
   claude: "根据屏幕历史，我最近在做什么？",
   cursor: "总结我最近的编码会话",
   chatgpt: "我最近与 AI 讨论了哪些主题？",
   "apple-calendar": "这周我有什么会议？",
   "ics-calendar": "这周有什么活动？",
   granola: "显示最近会议的笔记",
-  imap: "Summarize my recent emails",
-  zoom: "Summarize my recent Zoom calls",
-  gmail: "Summarize my recent emails",
-  "google-drive": "Find my recent files in Google Drive",
-  "google-sheets": "What's in my latest spreadsheet?",
+  imap: "总结我最近的邮件",
+  zoom: "总结我最近的 Zoom 通话",
+  gmail: "总结我最近的邮件",
+  "google-drive": "查找我在 Google Drive 中的最近文件",
+  "google-sheets": "我最新的表格里有什么？",
   krisp: "在我的会议记录中搜索行动项",
-  excalidraw: "What's on my recent Excalidraw boards?",
+  excalidraw: "我最近的 Excalidraw 白板里有什么？",
   whatsapp: "我的 WhatsApp 最新消息是什么？",
   discord: "我的 Discord 服务器最近讨论了什么？",
   teams: "显示最近的 Microsoft Teams 消息",
@@ -795,12 +795,12 @@ export const TRY_IN_CHAT_PROMPTS: Record<string, string> = {
   github: "显示我最近的 GitHub 活动",
   "browser-url": "我今天访问了哪些网站？",
   fireflies: "显示最近会议的行动项",
-  otter: "Search my meeting recordings",
+  otter: "搜索我的会议录音",
   "voice-memos": "我最近在语音备忘录里录了什么？",
 };
 
 function tryInChat(tile: ConnectionTile) {
-  const prompt = TRY_IN_CHAT_PROMPTS[tile.id] ?? `What can you tell me about my ${tile.name} data?`;
+  const prompt = TRY_IN_CHAT_PROMPTS[tile.id] ?? `你能告诉我关于我的 ${tile.name} 数据些什么？`;
   window.dispatchEvent(
     new CustomEvent("try-in-chat", {
       detail: { connectionId: tile.id, connectionName: tile.name, prompt },
@@ -894,8 +894,8 @@ function McpSpotlight({
   onClick: () => void;
 }) {
   const summary = totalCount === 0
-    ? "None added"
-    : `${enabledCount} active`;
+    ? "未添加"
+    : `${enabledCount} 个已启用`;
 
   return (
     <div
@@ -932,7 +932,7 @@ function McpSpotlight({
           className="h-8 gap-1.5 text-xs normal-case font-sans tracking-normal"
         >
           <Plus className="h-3.5 w-3.5" />
-          {totalCount === 0 ? "Add" : "Manage"}
+          {totalCount === 0 ? "添加" : "管理"}
         </Button>
       </div>
     </div>
@@ -964,7 +964,7 @@ function AiToolsSpotlight({
             className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted"
           />
           <div className="min-w-0">
-            <h3 className="text-sm font-medium text-foreground">AI tools</h3>
+            <h3 className="text-sm font-medium text-foreground">AI 工具</h3>
             <p className="text-xs text-muted-foreground">选择你的 AI 可以使用什么</p>
           </div>
         </button>
@@ -975,7 +975,7 @@ function AiToolsSpotlight({
           onClick={onClick}
           className="h-8 text-xs normal-case font-sans tracking-normal"
         >
-          Manage
+          管理
         </Button>
       </div>
     </div>
@@ -993,7 +993,7 @@ function SkillsSpotlight({
   onClick: () => void;
 }) {
   const summary =
-    count === 0 ? "No skills yet" : `${count} skill${count === 1 ? "" : "s"} imported`;
+    count === 0 ? "还没有技能" : `已导入 ${count} 个技能`;
 
   return (
     <div
@@ -1028,7 +1028,7 @@ function SkillsSpotlight({
           className="h-8 gap-1.5 text-xs normal-case font-sans tracking-normal"
         >
           <Plus className="h-3.5 w-3.5" />
-          {count === 0 ? "Connect skills" : "Manage"}
+          {count === 0 ? "连接技能" : "管理"}
         </Button>
       </div>
     </div>
@@ -1813,10 +1813,10 @@ function ObsidianMemorySyncSubsection() {
               />
               <button
                 type="button"
-                title="browse for vault folder"
+                title="浏览 Vault 文件夹"
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={async () => {
-                  const selected = await openDialog({ directory: true, multiple: false, title: "Select Obsidian Vault Folder" });
+                  const selected = await openDialog({ directory: true, multiple: false, title: "选择 Obsidian Vault 文件夹" });
                   if (typeof selected === "string") setVaultPath(selected);
                 }}
               >
@@ -1825,7 +1825,7 @@ function ObsidianMemorySyncSubsection() {
             </div>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">folder inside vault (optional)</Label>
+            <Label className="text-xs text-muted-foreground">vault 内的文件夹（可选）</Label>
             <Input
               value={folder}
               onChange={(e) => setFolder(e.target.value)}
@@ -2131,7 +2131,7 @@ function ChatGptPanel() {
         toast({
           title: "ChatGPT 登录失败",
           description: msg.includes("timed out") || msg.includes("not logged in")
-            ? "Sign-in timed out or was cancelled. Please try again."
+            ? "登录超时或已取消。请重试。"
             : msg.slice(0, 120),
           variant: "destructive",
         });
@@ -2140,7 +2140,7 @@ function ChatGptPanel() {
       setStatus("idle");
       toast({
         title: "ChatGPT 登录失败",
-        description: "An unexpected error occurred. Please try again.",
+        description: "发生意外错误，请重试。",
         variant: "destructive",
       });
     }
@@ -2155,15 +2155,15 @@ function ChatGptPanel() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Use your ChatGPT Plus/Pro subscription as an AI provider. No API key needed.
+        使用你的 ChatGPT Plus/Pro 订阅作为 AI 提供商。无需 API 密钥。
       </p>
 
       {status === "expired" && (
         <div className="flex items-start gap-2 rounded-md border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-700 dark:text-yellow-400">
           <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
           <span>
-            Your ChatGPT session has expired. Click{" "}
-            <strong>reconnect</strong> to sign in again.
+            你的 ChatGPT 会话已过期。点击
+            <strong>重新连接</strong> 再次登录。
           </span>
         </div>
       )}
@@ -2227,7 +2227,7 @@ const OAUTH_SCOPE_VARIANTS: Record<
   { id: string; label: string; description: string }[]
 > = {
   slack: [
-    { id: "send", label: "Send only", description: "Post messages as you. Screenpipe can't read your Slack." },
+    { id: "send", label: "仅发送", description: "以你的身份发送消息。Screenpipe 无法读取你的 Slack。" },
     { id: "read_write", label: "Send + read", description: "还可以搜索和阅读你的消息、私信和频道。" },
   ],
 };
@@ -2235,14 +2235,14 @@ const OAUTH_SCOPE_VARIANTS: Record<
 export function getOAuthPanelCopy(integrationId: string, integrationName: string) {
   if (integrationId === "slack") {
     return {
-      description: "Connect a Slack workspace. Add each workspace where Screenpipe should act on your behalf.",
-      addAnotherLabel: "add another workspace",
+      description: "连接 Slack 工作区。添加每个 Screenpipe 应以你身份操作的工作区。",
+      addAnotherLabel: "添加另一个工作区",
     };
   }
 
   return {
-    description: `Connect your ${integrationName} account. AI can act on your behalf once connected.`,
-    addAnotherLabel: "add another account",
+    description: `连接你的 ${integrationName} 账户。连接后，AI 可以代你操作。`,
+    addAnotherLabel: "添加另一个账户",
   };
 }
 
@@ -2253,7 +2253,7 @@ export function getOAuthFallbackMessage(
 ): string | null {
   if (integrationId !== "zendesk") return null;
   if (phase === "pending") {
-    return "If Zendesk shows Invalid Authorization Request / No such client, use advanced: connect with a token instead.";
+    return "如果 Zendesk 显示 Invalid Authorization Request / No such client，请使用高级选项：改用令牌连接。";
   }
   const reason = error instanceof Error ? error.message : String(error ?? "");
   if (
@@ -2262,7 +2262,7 @@ export function getOAuthFallbackMessage(
     reason.includes("No such client") ||
     reason.includes("Invalid Authorization Request")
   ) {
-    return "Zendesk OAuth is not available for this subdomain yet. Use advanced: connect with a token instead.";
+    return "此子域尚不可用 Zendesk OAuth。请使用高级选项：改用令牌连接。";
   }
   return "Zendesk OAuth 失败。请使用高级选项：改用令牌连接。";
 }
@@ -2681,9 +2681,9 @@ export function ConnectionCredentialForm({
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="top" align="start" alignOffset={8} sideOffset={8} className="text-xs max-w-[220px] space-y-1">
-                    <p>Learn how to find your {field.label.toLowerCase()} for this integration.</p>
+                    <p>了解如何为此集成查找你的{field.label}。</p>
                     <button onClick={() => openUrl(field.help_url)} className="underline hover:text-primary cursor-pointer">
-                      Open guide →
+                      打开指南 →
                     </button>
                   </TooltipContent>
                 </Tooltip>
@@ -2693,7 +2693,7 @@ export function ConnectionCredentialForm({
           <div className="relative">
             <Input
               type={field.secret && !visible[field.key] ? "password" : "text"}
-              placeholder={isSaved && field.secret ? "stored securely" : field.placeholder}
+              placeholder={isSaved && field.secret ? "已安全存储" : field.placeholder}
               value={creds[field.key] || ""}
               onChange={(e) => { setCreds(prev => ({ ...prev, [field.key]: e.target.value })); }}
               className="h-8 text-xs pr-8"
@@ -2722,7 +2722,7 @@ export function ConnectionCredentialForm({
         )}
         {isSaved && (
           <Button onClick={handleDisconnect} variant="ghost" size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal text-destructive">
-            <X className="h-3 w-3" />disconnect
+            <X className="h-3 w-3" />断开连接
           </Button>
         )}
       </div>
@@ -2897,7 +2897,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
     <div className="space-y-4">
       {connected.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">connected {connected.length === 1 ? "vault" : "vaults"}</p>
+          <p className="text-xs text-muted-foreground">已连接 {connected.length === 1 ? "1 个 vault" : `${connected.length} 个 vault`}</p>
           <div className="space-y-1">
             {connected.map(v => (
               <div
@@ -2911,7 +2911,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
                 <button
                   type="button"
                   onClick={() => handleDisconnect(v)}
-                  title="disconnect vault"
+                  title="断开 vault"
                   className="text-muted-foreground hover:text-destructive shrink-0"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -2924,7 +2924,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
 
       {suggestions.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">{connected.length > 0 ? "add another vault" : "detected vaults"}</p>
+          <p className="text-xs text-muted-foreground">{connected.length > 0 ? "添加另一个 vault" : "检测到的 vault"}</p>
           <div className="space-y-1">
             {suggestions.map(v => (
               <button
@@ -2946,7 +2946,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
 
       <div className="space-y-1.5">
         <p className="text-xs text-muted-foreground">
-          {connected.length > 0 || suggestions.length > 0 ? "or enter a vault path manually" : "select your vault folder"}
+          {connected.length > 0 || suggestions.length > 0 ? "或手动输入 vault 路径" : "选择你的 vault 文件夹"}
         </p>
         <div className="flex gap-2">
           <div className="relative flex-1">
@@ -2959,10 +2959,10 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
             />
             <button
               type="button"
-              title="browse for vault folder"
+              title="浏览 Vault 文件夹"
               className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               onClick={async () => {
-                const selected = await openDialog({ directory: true, multiple: false, title: "Select Obsidian Vault Folder" });
+                const selected = await openDialog({ directory: true, multiple: false, title: "选择 Obsidian Vault 文件夹" });
                 if (typeof selected === "string") setManualPath(selected);
               }}
             >
@@ -3450,7 +3450,7 @@ function OAuthMcpPanel({
     clearTimer();
     setWaiting(false);
     setBusy(false);
-    setStatusMsg("Sign-in cancelled");
+    setStatusMsg("登录已取消");
   };
 
   const handleDisconnect = async () => {
@@ -4007,8 +4007,8 @@ export function ConnectionsSection({
       { id: "warp", name: "Warp", icon: "warp", connected: false, detected: detectedConnectionIds.has("warp") },
       { id: "chatgpt", name: "ChatGPT", icon: "chatgpt", connected: chatgptConnected, detected: detectedConnectionIds.has("chatgpt") },
       ...(os === "macos" ? [
-        { id: "browser-url", name: "Browser activity", icon: "browser-url", connected: browserUrlConnected, detected: browserUrlDetected },
-        { id: "voice-memos", name: "Voice Memos", icon: "voice-memos", connected: false },
+        { id: "browser-url", name: "浏览器活动", icon: "browser-url", connected: browserUrlConnected, detected: browserUrlDetected },
+        { id: "voice-memos", name: "语音备忘录", icon: "voice-memos", connected: false },
       ] : []),
       ...(os === "macos" ? [{ id: "apple-calendar", name: "Apple Calendar", icon: "apple-calendar", connected: appleCalendarConnected }] : []),
       { id: "google-calendar", name: "Google Calendar", icon: "google-calendar", connected: false },
@@ -4016,8 +4016,8 @@ export function ConnectionsSection({
       { id: "gmail", name: "Gmail", icon: "gmail", connected: composioConnected.gmail },
       { id: "google-drive", name: "Google Drive", icon: "google-drive", connected: composioConnected.googledrive },
       { id: "google-sheets", name: "Google Sheets", icon: "google-sheets", connected: composioConnected.googlesheets },
-      { id: "ics-calendar", name: "Other calendars", icon: "ics-calendar", connected: false },
-      { id: "remote-agent", name: "Always-on AI", icon: "remote-agent", connected: false },
+      { id: "ics-calendar", name: "其他日历", icon: "ics-calendar", connected: false },
+      { id: "remote-agent", name: "常驻 AI", icon: "remote-agent", connected: false },
       { id: "whatsapp", name: "WhatsApp", icon: "whatsapp", connected: false, detected: detectedConnectionIds.has("whatsapp") },
       { id: "anythingllm", name: "AnythingLLM", icon: "anythingllm", connected: false, detected: detectedConnectionIds.has("anythingllm") },
       { id: "ollama", name: "Ollama", icon: "ollama", connected: false, detected: detectedConnectionIds.has("ollama") },
@@ -4030,9 +4030,9 @@ export function ConnectionsSection({
       { id: "krisp", name: "Krisp", icon: "krisp", connected: krispConnected, detected: detectedConnectionIds.has("krisp") },
       { id: "plaud", name: "Plaud", icon: "plaud", connected: plaudConnected },
       { id: "excalidraw", name: "Excalidraw", icon: "excalidraw", connected: excalidrawConnected },
-      { id: "custom-mcp", name: "Advanced connections", icon: "custom-mcp", connected: false, detected: customMcpServerCount > 0 },
-      { id: "skills", name: "Skills", icon: "skills", connected: importedSkillsCount > 0, category: "Agent" },
-      { id: "pi-extensions", name: "AI tools", icon: "pi-extensions", connected: true, category: "Agent" },
+      { id: "custom-mcp", name: "高级连接", icon: "custom-mcp", connected: false, detected: customMcpServerCount > 0 },
+      { id: "skills", name: "技能", icon: "skills", connected: importedSkillsCount > 0, category: "Agent" },
+      { id: "pi-extensions", name: "AI 工具", icon: "pi-extensions", connected: true, category: "Agent" },
     ];
     // Merge API tiles, skipping duplicates already in hardcoded.
     // owned-default is hidden from settings — the agent drives it via the
@@ -4128,6 +4128,26 @@ export function ConnectionsSection({
   // CONNECTION_CATEGORY_BY_ID (lib/constants/connections.ts). Unknown
   // categories sort after these, alphabetically.
   const CATEGORY_ORDER = ["Desktop", "AI", "Agent", "Automation", "Meetings", "Calendar", "Communication", "Notes", "Documents", "Project Management", "CRM", "Support", "Finance", "Developer", "Wearables", "Notifications", "System", "Other"];
+  const CATEGORY_LABELS: Record<string, string> = {
+    Desktop: "桌面应用",
+    AI: "AI",
+    Agent: "Agent",
+    Automation: "自动化",
+    Meetings: "会议",
+    Calendar: "日历",
+    Communication: "通讯",
+    Notes: "笔记",
+    Documents: "文档",
+    "Project Management": "项目管理",
+    CRM: "CRM",
+    Support: "支持",
+    Finance: "财务",
+    Developer: "开发者",
+    Wearables: "可穿戴",
+    Notifications: "通知",
+    System: "系统",
+    Other: "其他",
+  };
 
   // Grouped tiles by category for the collapsed catalog. Connected, suggested,
   // and advanced AI setup each have a clearer home above or below this list.
@@ -4304,14 +4324,14 @@ export function ConnectionsSection({
       case "krisp": return <OAuthMcpPanel
         name="Krisp"
         mcpUrl={KRISP_MCP_URL}
-        description={<>Connect Krisp so your AI can search your meeting transcripts, notes, and action items. Sign-in is handled by Krisp&apos;s OAuth, so screenpipe never sees your password.</>}
+        description={<>连接 Krisp，让 AI 搜索你的会议转写、笔记和行动项。登录由 Krisp 的 OAuth 处理，screenpipe 永远不会看到你的密码。</>}
         onConnected={() => setKrispConnected(true)}
         onDisconnected={() => setKrispConnected(false)}
       />;
       case "plaud": return <OAuthMcpPanel
         name="Plaud"
         mcpUrl={PLAUD_MCP_URL}
-        description={<>Connect Plaud so your AI can search your Plaud recordings, transcripts, summaries, and notes. Sign-in is handled by Plaud&apos;s OAuth, so screenpipe never sees your password.</>}
+        description={<>连接 Plaud，让 AI 搜索你的 Plaud 录音、转写、摘要和笔记。登录由 Plaud 的 OAuth 处理，screenpipe 永远不会看到你的密码。</>}
         onConnected={() => setPlaudConnected(true)}
         onDisconnected={() => setPlaudConnected(false)}
       />;
@@ -4319,9 +4339,9 @@ export function ConnectionsSection({
         name="Excalidraw"
         mcpUrl={EXCALIDRAW_MCP_URL}
         description={<>连接 Excalidraw+，让 AI 搜索、读取和编辑你工作区中的白板场景。Excalidraw 在此不提供 OAuth，请改从 Excalidraw+ 工作区设置中粘贴 API 密钥。密钥安全存储在本地，并且只会发送给 Excalidraw。</>}
-        keyPlaceholder="Excalidraw+ API key"
+        keyPlaceholder="Excalidraw+ API 密钥"
         createKeyUrl="https://plus.excalidraw.com/docs/mcp/getting-started"
-        createKeyLabel="How to create an API key"
+        createKeyLabel="如何创建 API 密钥"
         onConnected={() => setExcalidrawConnected(true)}
         onDisconnected={() => setExcalidrawConnected(false)}
       />;
@@ -4517,7 +4537,7 @@ export function ConnectionsSection({
               <div className="min-w-0 flex-1">
                 <h3 className="text-sm font-medium text-foreground">浏览所有应用</h3>
                 <p className="text-xs text-muted-foreground">
-                  {integrationsLoaded ? `${catalogTileCount} more` : "Loading apps"}
+                  {integrationsLoaded ? `另有 ${catalogTileCount} 个应用` : "正在加载应用"}
                 </p>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
@@ -4533,7 +4553,7 @@ export function ConnectionsSection({
                 groupedTiles?.map(([category, tiles]) => (
                   <div key={category} className="space-y-3">
                     <div className="border-b border-border pb-2">
-                      <h3 className="text-sm font-semibold text-foreground">{category}</h3>
+                      <h3 className="text-sm font-semibold text-foreground">{CATEGORY_LABELS[category] ?? category}</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-1">
                       {tiles.map((tile) => (
@@ -4555,7 +4575,7 @@ export function ConnectionsSection({
       ) : !integrationsLoaded ? (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-3 w-3 animate-spin" />
-          Loading connections
+          正在加载连接
         </div>
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-2 gap-2">

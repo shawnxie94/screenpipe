@@ -35,7 +35,7 @@ export function ConnectAppsNudge({
             key={connection.id}
             type="button"
             title={connection.name}
-            aria-label={`Connect ${connection.name}`}
+            aria-label={`连接 ${connection.name}`}
             onClick={() => banner.onOpenConnectionSetup(connection.id)}
             className="flex h-9 w-9 shrink-0 items-center justify-center border-l border-border/60 opacity-70 transition-colors duration-150 hover:bg-foreground hover:text-background hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-signal motion-reduce:transition-none"
           >

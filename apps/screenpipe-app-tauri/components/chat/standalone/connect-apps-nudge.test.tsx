@@ -32,13 +32,13 @@ describe("ConnectAppsNudge", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Connect apps for better answers",
+        name: "连接应用以获得更好答案",
       }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Connect Slack" }));
+    fireEvent.click(screen.getByRole("button", { name: "连接 Slack" }));
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Dismiss connect apps suggestion",
+        name: "关闭连接应用提示",
       }),
     );
 

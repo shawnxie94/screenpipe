@@ -103,7 +103,7 @@ describe("connection descriptions", () => {
 
     expect(
       screen.getByText(
-        "Connect a Slack workspace. Add each workspace where Screenpipe should act on your behalf.",
+        "连接 Slack 工作区。添加每个 Screenpipe 应以你身份操作的工作区。",
       ),
     ).toBeVisible();
   });

@@ -53,7 +53,7 @@ describe("isMcpOAuthProviderTileConnected", () => {
 describe("getOAuthFallbackMessage", () => {
   it("surfaces a Zendesk token fallback when the OAuth app is unavailable", () => {
     expect(getOAuthFallbackMessage("zendesk", "failed", "No such client")).toContain(
-      "connect with a token"
+      "改用令牌连接"
     );
   });
 
@@ -66,15 +66,15 @@ describe("getOAuthFallbackMessage", () => {
 describe("getOAuthPanelCopy", () => {
   it("frames Slack multi-connect as workspaces", () => {
     expect(getOAuthPanelCopy("slack", "Slack")).toEqual({
-      description: "Connect a Slack workspace. Add each workspace where Screenpipe should act on your behalf.",
-      addAnotherLabel: "add another workspace",
+      description: "连接 Slack 工作区。添加每个 Screenpipe 应以你身份操作的工作区。",
+      addAnotherLabel: "添加另一个工作区",
     });
   });
 
   it("keeps account language for other OAuth providers", () => {
     expect(getOAuthPanelCopy("github", "GitHub")).toEqual({
-      description: "Connect your GitHub account. AI can act on your behalf once connected.",
-      addAnotherLabel: "add another account",
+      description: "连接你的 GitHub 账户。连接后，AI 可以代你操作。",
+      addAnotherLabel: "添加另一个账户",
     });
   });
 });
