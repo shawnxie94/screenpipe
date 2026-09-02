@@ -824,13 +824,13 @@ fn hd_stop_menu_label(hd: &HighFpsCacheEntry) -> String {
     let fps = (hd.interval_ms > 0).then(|| 1000 / hd.interval_ms);
     let remaining = format_remaining_secs(hd.remaining_secs);
     let why = match hd.session_kind.as_str() {
-        "meeting" => "until call ends",
-        "prewarm_pending" => "awaiting call",
-        _ => "left",
+        "meeting" => "通话结束",
+        "prewarm_pending" => "等待通话",
+        _ => "剩余",
     };
     match fps {
-        Some(f) => format!("Stop HD recording (~{} fps, {} {})", f, remaining, why),
-        None => format!("Stop HD recording ({} {})", remaining, why),
+        Some(f) => format!("停止高清录制 (~{} fps，{} {})", f, remaining, why),
+        None => format!("停止高清录制 ({} {})", remaining, why),
     }
 }
 
@@ -1180,12 +1180,12 @@ fn create_dynamic_menu(
             .item(&PredefinedMenuItem::separator(app)?);
         if data.trial_activation_locked {
             menu_builder = menu_builder
-                .item(&MenuItemBuilder::with_id("open_app", "Open first summary").build(app)?)
-                .item(&MenuItemBuilder::with_id("settings", "Settings...").build(app)?)
+                .item(&MenuItemBuilder::with_id("open_app", "打开首个摘要").build(app)?)
+                .item(&MenuItemBuilder::with_id("settings", "设置…").build(app)?)
                 .item(&PredefinedMenuItem::separator(app)?);
         }
         menu_builder = menu_builder
-            .item(&MenuItemBuilder::with_id("quit", "Quit screenpipe").build(app)?);
+            .item(&MenuItemBuilder::with_id("quit", "退出 screenpipe").build(app)?);
 
         return menu_builder.build().map_err(Into::into);
     }
@@ -1197,28 +1197,28 @@ fn create_dynamic_menu(
     // --- Open screenpipe ---
     if !data.app_ui_hidden {
         menu_builder = menu_builder
-            .item(&MenuItemBuilder::with_id("open_app", "Open screenpipe").build(app)?)
+            .item(&MenuItemBuilder::with_id("open_app", "打开 screenpipe").build(app)?)
             .item(&PredefinedMenuItem::separator(app)?);
     }
 
     // --- Primary actions (most-used first) ---
     // Use native accelerators for right-aligned shortcut display (like Notion Calendar)
     if !data.app_ui_hidden && !is_tray_item_hidden("tray_chat") {
-        let mut item = MenuItemBuilder::with_id("show_chat", "Chat");
+        let mut item = MenuItemBuilder::with_id("show_chat", "聊天");
         if !chat_shortcut.is_empty() {
             item = item.accelerator(&to_accelerator(chat_shortcut));
         }
         menu_builder = menu_builder.item(&item.build(app)?);
     }
     if !data.app_ui_hidden && !is_tray_item_hidden("tray_search") {
-        let mut item = MenuItemBuilder::with_id("show_search", "Search");
+        let mut item = MenuItemBuilder::with_id("show_search", "搜索");
         if !search_shortcut.is_empty() {
             item = item.accelerator(&to_accelerator(search_shortcut));
         }
         menu_builder = menu_builder.item(&item.build(app)?);
     }
     if !data.app_ui_hidden && !is_tray_item_hidden("tray_timeline") && !data.disable_timeline {
-        let mut item = MenuItemBuilder::with_id("show", "Timeline");
+        let mut item = MenuItemBuilder::with_id("show", "时间线");
         if !show_shortcut.is_empty() {
             item = item.accelerator(&to_accelerator(show_shortcut));
         }
@@ -1241,7 +1241,7 @@ fn create_dynamic_menu(
             || effective_status == RecordingStatus::Starting)
     {
         menu_builder = menu_builder.item(
-            &MenuItemBuilder::with_id("privacy_info", "Your data stays local")
+            &MenuItemBuilder::with_id("privacy_info", "您的数据只保存在本机")
                 .enabled(false)
                 .build(app)?,
         );
@@ -1389,15 +1389,15 @@ fn create_dynamic_menu(
 
         let is_recording = effective_status == RecordingStatus::Recording && !all_capture_disabled;
         let label = if all_capture_disabled {
-            "Stopped — no devices enabled"
+            "已停止 — 未启用任何设备"
         } else {
             match effective_status {
-                RecordingStatus::Recording => "Recording",
-                RecordingStatus::Paused => "Paused — click to resume",
-                RecordingStatus::ScheduledPause => "Outside work hours — paused by schedule",
-                RecordingStatus::Starting => "Starting…",
-                RecordingStatus::Error => "Error — click to retry",
-                _ => "Stopped — click to record",
+                RecordingStatus::Recording => "正在录制",
+                RecordingStatus::Paused => "已暂停 — 点击恢复",
+                RecordingStatus::ScheduledPause => "非工作时间 — 已按计划暂停",
+                RecordingStatus::Starting => "启动中…",
+                RecordingStatus::Error => "出错 — 点击重试",
+                _ => "已停止 — 点击开始录制",
             }
         };
         let toggle = CheckMenuItemBuilder::with_id("toggle_recording", label)
@@ -1410,11 +1410,11 @@ fn create_dynamic_menu(
         // Each click stops capture immediately, then a tokio task auto-resumes
         // after the chosen interval. See cancel_pause_timer / handle_menu_event.
         if is_recording {
-            let pause_submenu = SubmenuBuilder::new(app, "Pause for…")
-                .item(&MenuItemBuilder::with_id("pause_5", "5 minutes").build(app)?)
-                .item(&MenuItemBuilder::with_id("pause_15", "15 minutes").build(app)?)
-                .item(&MenuItemBuilder::with_id("pause_30", "30 minutes").build(app)?)
-                .item(&MenuItemBuilder::with_id("pause_60", "1 hour").build(app)?)
+            let pause_submenu = SubmenuBuilder::new(app, "暂停…")
+                .item(&MenuItemBuilder::with_id("pause_5", "5 分钟").build(app)?)
+                .item(&MenuItemBuilder::with_id("pause_15", "15 分钟").build(app)?)
+                .item(&MenuItemBuilder::with_id("pause_30", "30 分钟").build(app)?)
+                .item(&MenuItemBuilder::with_id("pause_60", "1 小时").build(app)?)
                 .build()?;
             menu_builder = menu_builder.item(&pause_submenu);
         }
@@ -1434,17 +1434,17 @@ fn create_dynamic_menu(
             // the most common "one more demo / one more topic" extension;
             // bigger bumps go via the API or restart timer from scratch.
             menu_builder = menu_builder.item(
-                &MenuItemBuilder::with_id("extend_hd_30", "Extend HD by +30 min").build(app)?,
+                &MenuItemBuilder::with_id("extend_hd_30", "延长 HD 录制 +30 分钟").build(app)?,
             );
         } else if !all_capture_disabled {
             *HD_STOP_MENU_ITEM.lock().unwrap_or_else(|e| e.into_inner()) = None;
             // Idle: offer timer-bound sessions only. The meeting-bound path
             // is reached via the meeting-start notification's "+ HD" action.
-            let submenu = SubmenuBuilder::new(app, "Record HD")
-                .item(&MenuItemBuilder::with_id("hd_timer_15", "15 minutes").build(app)?)
-                .item(&MenuItemBuilder::with_id("hd_timer_30", "30 minutes").build(app)?)
-                .item(&MenuItemBuilder::with_id("hd_timer_60", "1 hour").build(app)?)
-                .item(&MenuItemBuilder::with_id("hd_timer_120", "2 hours").build(app)?)
+            let submenu = SubmenuBuilder::new(app, "高清录制")
+                .item(&MenuItemBuilder::with_id("hd_timer_15", "15 分钟").build(app)?)
+                .item(&MenuItemBuilder::with_id("hd_timer_30", "30 分钟").build(app)?)
+                .item(&MenuItemBuilder::with_id("hd_timer_60", "1 小时").build(app)?)
+                .item(&MenuItemBuilder::with_id("hd_timer_120", "2 小时").build(app)?)
                 .build()?;
             menu_builder = menu_builder.item(&submenu);
         } else {
@@ -1464,13 +1464,13 @@ fn create_dynamic_menu(
     menu_builder = menu_builder.item(&PredefinedMenuItem::separator(app)?);
     if !data.app_ui_hidden && !is_tray_item_hidden("tray_settings") {
         menu_builder = menu_builder.item(
-            &MenuItemBuilder::with_id("settings", "Settings...")
+            &MenuItemBuilder::with_id("settings", "设置…")
                 .accelerator("CmdOrCtrl+,")
                 .build(app)?,
         );
     }
     menu_builder = menu_builder.item(
-        &MenuItemBuilder::with_id("quit", "Quit screenpipe")
+        &MenuItemBuilder::with_id("quit", "退出 screenpipe")
             .accelerator("CmdOrCtrl+Q")
             .build(app)?,
     );
