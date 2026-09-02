@@ -49,7 +49,7 @@ const BROWSER_DEV_TEMPLATE_KITS: BrainViewTemplateKit[] = [
     slots: [
       {
         id: "today-in-brief",
-        title: "Today in brief",
+        title: "今日简报",
         component: "markdown.v1",
         width: 12,
         order: 0,

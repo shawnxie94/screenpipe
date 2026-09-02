@@ -149,7 +149,7 @@ function analyticsDistinctId(enabled: boolean): string | undefined {
  */
 function syncErrorDescription(e: unknown): string {
   const msg = (e instanceof Error ? e.message : String(e)) || "";
-  // WebKit ("Load failed"), Chromium ("Failed to fetch"), Firefox ("NetworkError")
+  // WebKit ("加载失败"), Chromium ("Failed to fetch"), Firefox ("NetworkError")
   if (/load failed|failed to fetch|networkerror|network request failed/i.test(msg)) {
     return "screenpipe server isn't reachable — give it a few seconds after launch and try again";
   }
@@ -639,7 +639,7 @@ export function AccountSection() {
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-2">
             <ShieldCheck className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">Local mode</h3>
+            <h3 className="text-lg font-semibold">本地模式</h3>
           </div>
           <p className="text-sm text-muted-foreground">
             This self-hosted build keeps everything on this computer. There is

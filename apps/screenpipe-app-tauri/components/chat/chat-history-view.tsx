@@ -954,7 +954,7 @@ export function ChatHistoryView({
                     onNewChat();
                     onBack();
                   }}
-                  title="New chat"
+                  title="新聊天"
                 >
                   <Plus className="h-4 w-4" />
                   New chat

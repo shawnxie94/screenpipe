@@ -40,29 +40,29 @@ const COPY: Record<
   onboarding: {
     title: "Start your 7-day Business trial",
     body: "Full access to AI, unlimited pipes, and cloud transcription. Cancel anytime before day 7 and you are not charged.",
-    cta: "Start trial",
+    cta: "开始试用",
   },
   login: {
     title: "Start your 7-day Business trial",
     body: "Full access to AI, unlimited pipes, and cloud transcription. Cancel anytime before day 7 and you are not charged.",
-    cta: "Start trial",
+    cta: "开始试用",
   },
   // Mid-journey placement: the user is deep in a session and has seen the app
   // work, so the ask leads with continuity rather than setup.
   mid_session: {
     title: "Keep Business features running",
     body: "A 7-day Business trial keeps AI, pipes, and cloud transcription at full capacity while you work. Cancel anytime before day 7 and you are not charged.",
-    cta: "Start trial",
+    cta: "开始试用",
   },
   first_value: {
     title: "Keep this running",
     body: "You just got your first result. A 7-day Business trial keeps AI, pipes, and transcription running at full capacity. Cancel anytime before day 7 and you are not charged.",
-    cta: "Start trial",
+    cta: "开始试用",
   },
   limit: {
     title: "You have hit today's AI limit",
     body: "A 7-day Business trial lifts the cap and keeps your pipes running. Cancel anytime before day 7 and you are not charged.",
-    cta: "Start trial",
+    cta: "开始试用",
   },
   // Someone already on a cardless grant is *in* a trial. Offering to "start"
   // one is nonsense to them; the real ask is to keep what they already have.

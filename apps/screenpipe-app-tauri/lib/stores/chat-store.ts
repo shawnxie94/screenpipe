@@ -143,7 +143,7 @@ export interface SessionRecord {
   unread: boolean;
   /** True until the assistant has replied at least once. Draft sessions
    *  are hidden in the sidebar so the user can't accumulate empty chats
-   *  by clicking "New chat" repeatedly. Cleared on the first successful
+   *  by clicking "新聊天" repeatedly. Cleared on the first successful
    *  save (after the assistant replies). */
   draft?: boolean;
   /** The AI preset ID last used in this conversation. Used to restore

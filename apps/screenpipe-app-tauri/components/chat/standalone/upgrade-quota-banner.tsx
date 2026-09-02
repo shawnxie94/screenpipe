@@ -210,10 +210,10 @@ export function UpgradeQuotaBanner({
               {requiredPlanLabel
                 ? `Upgrade to ${requiredPlanLabel}`
                 : activeUpgrade
-                  ? "See plans"
+                  ? "查看方案"
                   : serverBlocked
                     ? "View plans"
-                    : "View Business"}
+                    : "查看 Business"}
             </Button>
             <button
               type="button"

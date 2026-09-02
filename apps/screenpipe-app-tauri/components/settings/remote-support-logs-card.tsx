@@ -158,7 +158,7 @@ export function RemoteSupportLogsCard() {
             </div>
             <Switch
               id="remote-log-collection-toggle"
-              aria-label="Allow remote support logs"
+              aria-label="允许远程支持日志"
               data-testid="remote-log-collection-toggle"
               checked={enabled}
               disabled={

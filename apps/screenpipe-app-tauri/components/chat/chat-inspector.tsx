@@ -64,8 +64,8 @@ export function ChatInspectorPopover({
             "h-7 w-7",
             open && "bg-muted ring-2 ring-primary ring-offset-1 ring-offset-background",
           )}
-          title="Toggle pinned summary"
-          aria-label="Toggle pinned summary"
+          title="切换固定摘要"
+          aria-label="切换固定摘要"
           aria-pressed={open}
           onMouseDown={(event) => event.stopPropagation()}
           onClick={(event) => event.stopPropagation()}
@@ -97,7 +97,7 @@ export function ChatInspector({
   return (
     <div
       role="region"
-      aria-label="Pinned summary"
+      aria-label="固定的摘要"
       className="max-h-[min(34rem,calc(100vh-5rem))] overflow-y-auto"
     >
       <div className="px-4 pb-2 pt-3">

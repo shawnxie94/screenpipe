@@ -546,7 +546,7 @@ const INTEGRATION_ICONS: Record<string, React.ReactNode> = {
     "google-drive": <img src="/images/google-drive.svg" alt="Google Drive" className="w-5 h-5" />,
     "google-sheets": <img src="/images/google-sheets.svg" alt="Google Sheets" className="w-5 h-5" />,
     "ics-calendar": <CalendarIcon className="h-5 w-5 text-muted-foreground" />,
-    "remote-agent": <img src="/openclaw-icon.svg" alt="Remote agent" className="w-5 h-5" />,
+    "remote-agent": <img src="/openclaw-icon.svg" alt="远程代理" className="w-5 h-5" />,
     bee: <img src="/images/bee.png" alt="Bee" className="w-5 h-5 rounded" />,
     email: <Send className="h-5 w-5 text-muted-foreground" />,
     imap: <Inbox className="h-5 w-5 text-muted-foreground" />,
@@ -765,7 +765,7 @@ const ALL_CONNECTION_CATEGORIES = "All";
 const SETTINGS_CONNECTION_IDS = new Set(["custom-mcp", "skills", "pi-extensions"]);
 
 
-// Per-connection quickstart prompts shown when "Try in Chat" is clicked.
+// Per-connection quickstart prompts shown when "在聊天中尝试" is clicked.
 export const TRY_IN_CHAT_PROMPTS: Record<string, string> = {
   slack: "Summarize recent Slack discussions",
   "google-calendar": "What's on my calendar this week?",
@@ -816,7 +816,7 @@ export function ListRow({ tile, selected, onClick, onTryInChat }: {
   onTryInChat?: () => void;
 }) {
   // Use div instead of button to avoid nested-button DOM violations
-  // (the "Try in Chat" icon is itself a button).
+  // (the "在聊天中尝试" icon is itself a button).
   return (
     <div
       role="button"
@@ -852,13 +852,13 @@ export function ListRow({ tile, selected, onClick, onTryInChat }: {
             <div className="absolute inset-0 flex items-center justify-center transition-opacity group-hover/row:opacity-0 pointer-events-none">
               <Check className="h-4 w-4 text-muted-foreground" />
             </div>
-            {/* "Try in Chat" — fades in on row hover; button is valid here since parent is div */}
+            {/* "在聊天中尝试" — fades in on row hover; button is valid here since parent is div */}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    aria-label="Try in Chat"
+                    aria-label="在聊天中尝试"
                     onClick={(e) => {
                       e.stopPropagation();
                       onTryInChat?.();
@@ -4040,9 +4040,9 @@ export function ConnectionsSection({
     // too: it's a memory-sync destination surfaced as a subsection inside the
     // Obsidian card, not a standalone connection tile.
     // openclaw + hermes are hidden as standalone tiles too: both are surfaced
-    // inside the unified "Remote agent" card (RemoteAgentCard), which owns their
+    // inside the unified "远程代理" card (RemoteAgentCard), which owns their
     // MCP/skill/sync setup AND the outbound "Connect" credential flow. Showing
-    // separate Productivity tiles next to "Remote agent" duplicated them and
+    // separate Productivity tiles next to "远程代理" duplicated them and
     // confused users. The backend integrations stay registered so pipes calling
     // /connections/{openclaw,hermes} keep working.
     const REMOTE_AGENT_TILE_IDS = new Set(["openclaw", "hermes"]);

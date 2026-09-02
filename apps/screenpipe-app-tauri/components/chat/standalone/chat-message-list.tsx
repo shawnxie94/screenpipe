@@ -393,7 +393,7 @@ export function ChatMessageList({
                           data-testid="chat-message-editor"
                         >
                           <textarea
-                            aria-label="Edit message"
+                            aria-label="编辑消息"
                             ref={(el) => {
                               editTextareaRef.current = el;
                               if (!el) return;

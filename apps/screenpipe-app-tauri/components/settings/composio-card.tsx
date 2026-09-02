@@ -207,7 +207,7 @@ export function ComposioCard({
       setAliasInput("");
       await openUrl(redirectUrl);
     } catch (e: any) {
-      const msg = e?.message === "Load failed" || e?.name === "TypeError"
+      const msg = e?.message === "加载失败" || e?.name === "TypeError"
         ? "couldn't reach screenpipe.com — check your internet connection and try again"
         : e?.message || "could not start the connection";
       setError(msg);

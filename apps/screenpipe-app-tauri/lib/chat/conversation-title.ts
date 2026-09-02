@@ -74,7 +74,7 @@ export function resolveVisibleChatTitle({
   if (derivedTitle && hasRealUserContent) return derivedTitle;
 
   // Empty chats and prompt-only plumbing are intentionally unlabeled.
-  // "New chat" is supplied by the creation affordance, not persisted as a
+  // "新聊天" is supplied by the creation affordance, not persisted as a
   // conversation title.
   return "";
 }

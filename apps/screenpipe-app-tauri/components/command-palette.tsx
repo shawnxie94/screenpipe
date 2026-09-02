@@ -140,7 +140,7 @@ export function buildPaletteEntries(
         ]),
     {
       id: "new_chat",
-      label: "new chat",
+      label: "新聊天",
       keywords: "compose ask ai conversation",
       group: "actions",
       hint: inAppShortcutLabel("new_chat", isMac),

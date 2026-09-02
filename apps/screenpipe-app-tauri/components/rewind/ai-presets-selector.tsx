@@ -1559,7 +1559,7 @@ export const AIPresetsSelector = ({
   const handleSavePreset = (preset: Partial<AIPreset>) => {
     if (!canManageEmployeePresets) {
       toast.error("由你的组织管理", {
-        description: "Your admin controls which AI presets are available",
+        description: "你的管理员控制可用的 AI 预设",
       });
       return;
     }
@@ -1708,7 +1708,7 @@ export const AIPresetsSelector = ({
   const handleDuplicatePreset = (preset: AIPreset) => {
     if (!canManageEmployeePresets || isEnterpriseManagedPreset(preset)) {
       toast.error("由你的组织管理", {
-        description: "Your admin controls which AI presets are available",
+        description: "你的管理员控制可用的 AI 预设",
       });
       return;
     }
@@ -1731,7 +1731,7 @@ export const AIPresetsSelector = ({
   const handleEditPreset = (preset: AIPreset) => {
     if (!canManageEmployeePresets || isEnterpriseManagedPreset(preset)) {
       toast.error("由你的组织管理", {
-        description: "Your admin controls which AI presets are available",
+        description: "你的管理员控制可用的 AI 预设",
       });
       return;
     }
@@ -1773,7 +1773,7 @@ export const AIPresetsSelector = ({
     if (!settings?.aiPresets) return;
     if (!canManageEmployeePresets || isEnterpriseManagedPreset(preset)) {
       toast.error("由你的组织管理", {
-        description: "Your admin controls which AI presets are available",
+        description: "你的管理员控制可用的 AI 预设",
       });
       return;
     }

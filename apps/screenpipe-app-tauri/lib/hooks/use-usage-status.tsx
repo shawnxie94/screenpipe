@@ -353,7 +353,7 @@ export function allowanceScopeLabel(lane: HostedAiLane): string {
 
 export function formatAllowanceLabel(allowance: HostedAiAllowance): string {
   if (allowance.window_seconds === 7 * 86_400) {
-    if (allowance.lane === "combined") return "Weekly AI allowance";
+    if (allowance.lane === "combined") return "每周 AI 额度";
     if (allowance.lane === "frontier") return "Frontier models";
     return `Weekly · ${allowanceScopeLabel(allowance.lane)}`;
   }

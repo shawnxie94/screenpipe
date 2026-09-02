@@ -24,10 +24,10 @@ export type LiveViewTimeContext = {
 };
 
 export const LIVE_VIEW_TIME_RANGES: readonly LiveViewTimeRangeOption[] = [
-  { value: "today", label: "Today", milliseconds: null },
-  { value: "24h", label: "Last 24 hours", milliseconds: 24 * HOUR_MS },
-  { value: "7d", label: "Last 7 days", milliseconds: 7 * 24 * HOUR_MS },
-  { value: "30d", label: "Last 30 days", milliseconds: 30 * 24 * HOUR_MS },
+  { value: "today", label: "今天", milliseconds: null },
+  { value: "24h", label: "最近 24 小时", milliseconds: 24 * HOUR_MS },
+  { value: "7d", label: "最近 7 天", milliseconds: 7 * 24 * HOUR_MS },
+  { value: "30d", label: "最近 30 天", milliseconds: 30 * 24 * HOUR_MS },
 ];
 
 export const DEFAULT_LIVE_VIEW_PERIOD_POLICY: BrainViewPeriodPolicy = {

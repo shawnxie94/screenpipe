@@ -69,19 +69,19 @@ async function messagesForExport(session: SessionRecord): Promise<Message[]> {
 }
 
 function visibleTabTitle(session: SessionRecord): string {
-  if (isEphemeralSideConversation(session)) return "temporary side chat";
+  if (isEphemeralSideConversation(session)) return "临时副聊天";
   if (session.streamingTitle?.trim()) return session.streamingTitle.trim();
   const title = session.title.trim();
-  if (!title || isInjectedTitle(title)) return "new chat";
+  if (!title || isInjectedTitle(title)) return "新聊天";
   return title;
 }
 
 type TabGlyph =
-  | { kind: "error"; label: "error" }
-  | { kind: "working"; label: "working" }
-  | { kind: "unread"; label: "unread" }
+  | { kind: "error"; label: "错误" }
+  | { kind: "working"; label: "处理中" }
+  | { kind: "unread"; label: "未读" }
   | { kind: "worktree"; label: string }
-  | { kind: "split"; label: "split pane" };
+  | { kind: "split"; label: "分屏" };
 
 /** One left-slot mark. Status wins over worktree/split so the dot stays
  *  readable instead of stacking a branch icon on top of a 6px circle. */
@@ -90,18 +90,18 @@ function tabGlyph(
   active: boolean,
   split: boolean,
 ): TabGlyph | null {
-  if (session.status === "error") return { kind: "error", label: "error" };
+  if (session.status === "error") return { kind: "error", label: "错误" };
   if (["streaming", "thinking", "tool"].includes(session.status)) {
-    return { kind: "working", label: "working" };
+    return { kind: "working", label: "处理中" };
   }
-  if (session.unread && !active) return { kind: "unread", label: "unread" };
+  if (session.unread && !active) return { kind: "unread", label: "未读" };
   if (session.codingWorkspace) {
     return {
       kind: "worktree",
-      label: `worktree · ${session.codingWorkspace.repoName}`,
+      label: `工作树 · ${session.codingWorkspace.repoName}`,
     };
   }
-  if (split) return { kind: "split", label: "split pane" };
+  if (split) return { kind: "split", label: "分屏" };
   return null;
 }
 
@@ -320,7 +320,7 @@ export function ChatTabStrip({
         ref={scrollerRef}
         className="scrollbar-hide flex min-w-0 items-center gap-0.5 overflow-x-auto scroll-smooth"
         role="tablist"
-        aria-label="Open chats"
+        aria-label="打开聊天"
       >
         {tabs.map((session, index) => {
           const active = session.id === activeId;
@@ -617,7 +617,7 @@ export function ChatTabStrip({
       <button
         type="button"
         aria-label="New chat tab"
-        title="New chat"
+        title="新聊天"
         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => void onNewChat()}
       >

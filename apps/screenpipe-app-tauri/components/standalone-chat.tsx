@@ -233,7 +233,7 @@ export function StandaloneChat({
     isWindows,
     refreshSuggestions,
   });
-  // Pre-fill chat input when "Try in Chat" is clicked from the connections page.
+  // Pre-fill chat input when "在聊天中尝试" is clicked from the connections page.
   // Always opens a new chat so the prompt never lands in an existing conversation.
   // Uses a ref so the effect doesn't need startNewConversation as a dep (avoids
   // re-registering the listener on every render while still calling the latest fn).

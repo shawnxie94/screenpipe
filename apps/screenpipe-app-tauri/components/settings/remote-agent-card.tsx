@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { commands } from "@/lib/utils/tauri";
 
-// One unified "Remote agent" entry that supersedes the separate OpenClaw and
+// One unified "远程代理" entry that supersedes the separate OpenClaw and
 // Hermes cards. Pick an agent, then set screenpipe up on the machine where that
 // agent lives (your VPS / cloud box / Mac mini) the easy way: copy one command
 // to run on the box, or copy a prompt for your own AI to do it. The Sync

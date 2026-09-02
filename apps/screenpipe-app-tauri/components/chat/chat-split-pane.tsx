@@ -48,7 +48,7 @@ export function ChatSplitPane({
     session?.streamingTitle?.trim() ||
     (session?.title && !isInjectedTitle(session.title)
       ? session.title
-      : "new chat");
+      : "新聊天");
   const working = Boolean(
     session && ["streaming", "thinking", "tool"].includes(session.status),
   );

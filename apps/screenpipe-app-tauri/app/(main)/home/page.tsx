@@ -470,7 +470,7 @@ function HomeContent() {
   // Memories views appears to "do nothing" — the standalone chat
   // component receives the event and switches conversation just fine,
   // but the user is still looking at a different view. They'd have to
-  // also click "New chat" or similar to see the result. Hooking the
+  // also click "新聊天" or similar to see the result. Hooking the
   // listener at the page level fixes the cross-view UX.
   useTauriEvent<ChatLoadConversationPayload>("chat-load-conversation", (event) => {
     if (!shouldActivateHomeSectionForChatLoadConversation(event.payload)) return;
@@ -481,7 +481,7 @@ function HomeContent() {
   // view. The chat panel stays mounted (display:none) and keeps streaming.
   //
   // Do NOT setCurrent(panelSessionId) when entering home — that ran
-  // after the same click as "New chat" / chat-load-conversation and
+  // after the same click as "新聊天" / chat-load-conversation and
   // overwrote the freshly chosen id with the stale foreground id,
   // so the sidebar jumped to an old row (felt like cycling recents)
   // instead of the blank session the user just asked for. Highlight
@@ -557,7 +557,7 @@ function HomeContent() {
     return () => window.removeEventListener("keydown", handler);
   }, [isMac, toggleSidebar]);
 
-  // Cmd+N / Ctrl+N to start a new chat (matches the "New chat" sidebar button)
+  // Cmd+N / Ctrl+N to start a new chat (matches the "新聊天" sidebar button)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!matchesInAppShortcut(e, "new_chat", isMac)) return;
@@ -1013,7 +1013,7 @@ function HomeContent() {
     return () => window.removeEventListener("open-settings", handler);
   }, [openSettings, setActiveSection]);
 
-  // "Try in Chat" from connections page — switch to chat view so the
+  // "在聊天中尝试" from connections page — switch to chat view so the
   // pre-filled prompt (set by standalone-chat.tsx) becomes visible.
   useEffect(() => {
     const handler = () => setActiveSection("home");

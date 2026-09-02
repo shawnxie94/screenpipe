@@ -120,8 +120,8 @@ export function ChatResponseFeedback({
             onClick={() => selectRating("negative")}
             disabled={saveState === "saving"}
             className={buttonClass("negative")}
-            title="Bad response"
-            aria-label="Bad response"
+            title="糟糕的回复"
+            aria-label="糟糕的回复"
             aria-pressed={rating === "negative"}
           >
             <ThumbsDown className="h-3 w-3" />

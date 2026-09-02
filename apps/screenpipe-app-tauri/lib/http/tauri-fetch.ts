@@ -239,7 +239,7 @@ export async function tauriFetchWithDeadline(
     else callerSignal.addEventListener("abort", forwardAbort, { once: true });
   }
 
-  // The plugin reports any cancellation as "Request canceled"; say which
+  // The plugin reports any cancellation as "请求已取消"; say which
   // deadline actually fired so field logs are diagnosable.
   const asCallerError = (e: unknown) => (timedOut ? timeoutError(input, timeoutMs) : e);
 

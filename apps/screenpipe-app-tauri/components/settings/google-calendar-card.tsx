@@ -164,7 +164,7 @@ export function GoogleCalendarCard({ onConnected, onDisconnected }: { onConnecte
         const msg = String(res.error ?? "");
         toast({
           title: "google calendar connect failed",
-          description: msg || "Unknown error",
+          description: msg || "未知错误",
           variant: "destructive",
         });
       }

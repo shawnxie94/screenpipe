@@ -681,8 +681,8 @@ export default function ShortcutReminderPage() {
               aria-pressed={meetingPinned}
               className="ml-auto flex items-center justify-center px-1.5 h-full text-white/70 hover:text-white hover:bg-white/10"
               style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-              title={meetingPinned ? "Unpin transcript" : "Pin transcript"}
-              aria-label={meetingPinned ? "Unpin transcript" : "Pin transcript"}
+              title={meetingPinned ? "取消固定文字记录" : "固定文字记录"}
+              aria-label={meetingPinned ? "取消固定文字记录" : "固定文字记录"}
             >
               {meetingPinned ? (
                 <PinOff style={{ width: `${smIconPx}px`, height: `${smIconPx}px` }} />
@@ -785,7 +785,7 @@ export default function ShortcutReminderPage() {
           {meetingOverlay.active && (
             <span
               role="status"
-              aria-label="Meeting live"
+              aria-label="会议进行中"
               title="会议进行中 — 悬停查看文字记录"
               className="absolute rounded-full bg-red-500 pointer-events-none"
               style={{

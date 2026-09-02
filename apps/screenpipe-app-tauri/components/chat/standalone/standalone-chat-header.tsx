@@ -163,7 +163,7 @@ export function StandaloneChatHeader({
               await onNewChat();
             }}
             className="relative z-10 h-7 px-3 gap-1.5 text-xs bg-foreground text-background hover:bg-background hover:text-foreground transition-colors duration-150"
-            title="New chat"
+            title="新聊天"
           >
             <Plus size={14} />
             <span>New</span>

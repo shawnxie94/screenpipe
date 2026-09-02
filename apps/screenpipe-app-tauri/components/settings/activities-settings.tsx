@@ -12,7 +12,7 @@ import type { SettingsField } from "./settings-search";
 const DEFAULT_INTERVAL_MINUTES = 15;
 
 export const searchIndex: SettingsField[] = [
-  { label: "Enable activities", keywords: ["activity", "history", "automatic"] },
+  { label: "启用活动记录", keywords: ["activity", "history", "automatic"] },
   { label: "Interval", keywords: ["frequency", "cadence", "minutes", "schedule"] },
 ];
 
@@ -42,7 +42,7 @@ export function ActivitiesSettings() {
             data-testid="activities-enabled-toggle"
             checked={enabled}
             onCheckedChange={(checked) => updateSettings({ activitiesEnabled: checked })}
-            aria-label="Enable activities"
+            aria-label="启用活动记录"
           />
         </div>
 

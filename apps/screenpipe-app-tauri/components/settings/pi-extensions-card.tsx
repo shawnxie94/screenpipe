@@ -409,7 +409,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
         if (res.status === "error") {
           setError(res.error);
           toast({
-            title: "Tool could not be changed",
+            title: "无法更改工具",
             description: res.error,
             variant: "destructive",
           });
@@ -434,7 +434,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
         const message = packageErrorMessage(err);
         setError(message);
         toast({
-          title: "Tool could not be changed",
+          title: "无法更改工具",
           description: message,
           variant: "destructive",
         });
@@ -454,7 +454,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
         if (res.status === "error") {
           setError(res.error);
           toast({
-            title: "Tool could not be changed",
+            title: "无法更改工具",
             description: res.error,
             variant: "destructive",
           });
@@ -471,7 +471,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
         const message = packageErrorMessage(err);
         setError(message);
         toast({
-          title: "Tool could not be changed",
+          title: "无法更改工具",
           description: message,
           variant: "destructive",
         });

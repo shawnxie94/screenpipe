@@ -395,8 +395,8 @@ const AISection = ({
   const updateStoreSettings = async () => {
     if (!employeePresetsAllowed) {
       toast({
-        title: "Managed by your organization",
-        description: "Your admin controls which AI presets are available",
+        title: "由你的组织管理",
+        description: "你的管理员控制可用的 AI 预设",
         variant: "destructive",
       });
       return;
@@ -1010,7 +1010,7 @@ const AISection = ({
         ...prev,
         chat: {
           status: "fail",
-          message: `Chat request failed: ${err.message || "Unknown error"}`,
+          message: `Chat request failed: ${err.message || "未知错误"}`,
           latencyMs,
         },
       }));
@@ -2261,8 +2261,8 @@ useEffect(() => {
         ((presetToRemove && isEnterpriseManagedPreset(presetToRemove)) || !aiPresetPolicy.allow_employee_custom_presets)
       ) {
         toast({
-          title: "Managed by your organization",
-          description: "Your admin controls which AI presets are available",
+          title: "由你的组织管理",
+          description: "你的管理员控制可用的 AI 预设",
           variant: "destructive",
         });
         return;
@@ -2385,8 +2385,8 @@ useEffect(() => {
       (isEnterpriseManagedPreset(presetToDuplicate) || !aiPresetPolicy.allow_employee_custom_presets)
     ) {
       toast({
-        title: "Managed by your organization",
-        description: "Your admin controls which AI presets are available",
+        title: "由你的组织管理",
+        description: "你的管理员控制可用的 AI 预设",
         variant: "destructive",
       });
       return;
