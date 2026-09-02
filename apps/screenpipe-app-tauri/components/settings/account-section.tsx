@@ -36,6 +36,7 @@ import { openExternalUrl } from "@/lib/open-external-url";
 import {
   planDisplayName,
   canUseDataSync,
+  isDevLoginSkipEnabled,
   isSignedInCloudSubscriber,
   type AppUser,
 } from "@/lib/app-entitlement";
@@ -665,6 +666,10 @@ export function AccountSection() {
                 logout
               </Button>
             </>
+          ) : isDevLoginSkipEnabled() ? (
+            <span className="text-xs font-mono text-muted-foreground/70">
+              local build — sign-in not available
+            </span>
           ) : (
             <Button
               variant="outline"

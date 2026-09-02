@@ -221,7 +221,14 @@ function SettingsContent() {
         ...(isManagedDeployment
           ? []
           : [{ id: "team" as const, label: "Team", icon: <Users className="h-4 w-4" /> }]),
-        { id: "referral" as const, label: "Get free month", icon: <Gift className="h-4 w-4" /> },
+        // Local/self-hosted builds (DEV_LOGIN_SKIP) skip the referral
+        // marketing entry — there's no signed-in account to earn/claim
+        // referral credit, so "Get free month" only invites confusion.
+        ...(() =>
+          process.env.NEXT_PUBLIC_SCREENPIPE_DEV_LOGIN_SKIP === "true"
+            ? []
+            : [{ id: "referral" as const, label: "Get free month", icon: <Gift className="h-4 w-4" /> }]
+        )(),
       ].filter((s) => !isSectionHidden(s.id)),
     },
     {
