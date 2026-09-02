@@ -43,7 +43,7 @@ describe("Pi extension catalog", () => {
   it("filters by capability, package source, and model-fit copy", () => {
     expect(filterPiExtensionCatalog("subagent").map((item) => item.id)).toContain("pi-subagents");
     expect(filterPiExtensionCatalog("@eko24ive").map((item) => item.id)).toEqual(["pi-ask"]);
-    expect(filterPiExtensionCatalog("local").map((item) => item.id)).toEqual(
+    expect(filterPiExtensionCatalog("本地").map((item) => item.id)).toEqual(
       expect.arrayContaining(["pi-ask", "pi-package-search"]),
     );
   });

@@ -18,7 +18,7 @@ describe("Live View time ranges", () => {
 
     expect(context).toEqual({
       preset: "7d",
-      label: "Last 7 days",
+      label: "最近 7 天",
       start: "2026-07-17T18:30:00.000Z",
       end: "2026-07-24T18:30:00.000Z",
       timezone: "America/Los_Angeles",

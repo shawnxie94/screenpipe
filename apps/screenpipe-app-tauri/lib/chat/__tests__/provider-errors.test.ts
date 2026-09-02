@@ -34,8 +34,8 @@ describe("provider error copy", () => {
       message: refusal?.message,
       retryable: false,
     });
-    expect(presentation?.message).toContain("selected model declined");
-    expect(presentation?.message).toContain("Start a new chat");
+    expect(presentation?.message).toContain("安全策略拒绝了此请求");
+    expect(presentation?.message).toContain("请开新聊天");
     expect(presentation?.message).not.toContain("finish_reason");
   });
 
@@ -47,8 +47,8 @@ describe("provider error copy", () => {
     });
 
     expect(presentation).toMatchObject({ kind: "provider", retryable: false });
-    expect(presentation?.message).toContain("not in good standing");
-    expect(presentation?.message).toContain("contact screenpipe support");
+    expect(presentation?.message).toContain("信用不良");
+    expect(presentation?.message).toContain("联系 screenpipe 支持");
     expect(presentation?.message).not.toContain("403");
     expect(presentation?.message).not.toContain("account_not_in_good_standing");
   });
@@ -69,7 +69,7 @@ describe("provider error copy", () => {
       model: "gemma4:31b",
     });
 
-    expect(msg).toContain("Cannot connect to Ollama");
+    expect(msg).toContain("无法连接 Ollama");
     expect(msg).toContain("ollama serve");
     expect(msg).toContain("gemma4:31b");
   });
@@ -114,8 +114,8 @@ describe("provider error copy", () => {
       model: "auto",
     });
 
-    expect(msg).toContain("screenpipe cloud");
-    expect(msg?.toLowerCase()).toContain("try again");
+    expect(msg).toContain("screenpipe 云端");
+    expect(msg).toContain("重试");
     // does not blame the user's own machine/setup
     expect(msg?.toLowerCase()).not.toContain("ollama");
   });
@@ -129,8 +129,8 @@ describe("provider error copy", () => {
     });
 
     expect(presentation).toMatchObject({ kind: "provider", retryable: true });
-    expect(presentation?.message).toContain("screenpipe cloud");
-    expect(presentation?.message.toLowerCase()).toContain("try again");
+    expect(presentation?.message).toContain("screenpipe 云端");
+    expect(presentation?.message).toContain("重试");
     expect(presentation?.message).not.toContain("verbose: true");
   });
 
@@ -142,7 +142,7 @@ describe("provider error copy", () => {
     ]) {
       expect(
         buildProviderErrorMessage(raw, { provider: "screenpipe-cloud", model: "auto" })
-      ).toContain("screenpipe cloud");
+      ).toContain("screenpipe 云端");
     }
   });
 
@@ -153,8 +153,8 @@ describe("provider error copy", () => {
     );
 
     expect(presentation).toMatchObject({ kind: "provider", retryable: true });
-    expect(presentation?.message).toContain("screenpipe cloud");
-    expect(presentation?.message.toLowerCase()).toContain("try again");
+    expect(presentation?.message).toContain("screenpipe 云端");
+    expect(presentation?.message).toContain("重试");
     expect(presentation?.message).not.toContain("certificate has expired");
   });
 
@@ -163,9 +163,9 @@ describe("provider error copy", () => {
       '{"error":"free_chat_limit_exceeded","limit":2}',
       { provider: "screenpipe-cloud", model: "auto" },
     );
-    expect(msg).toContain("2 free AI messages");
-    expect(msg).toContain("tomorrow");
-    expect(msg).toContain("upgrade");
+    expect(msg).toContain("2 条免费 AI 消息");
+    expect(msg).toContain("明天");
+    expect(msg).toContain("升级");
     expect(msg).toContain("Ollama");
     expect(msg).toContain("Claude");
     expect(msg).toContain("Codex");
@@ -176,7 +176,7 @@ describe("provider error copy", () => {
       '{"error":"free_chat_turn_request_limit_exceeded"}',
       { provider: "pi", model: "auto" },
     );
-    expect(msg).toContain("8-step agent limit");
+    expect(msg).toContain("8 步代理上限");
   });
 
   it("explains the free background-pipe provider options", () => {
@@ -184,7 +184,7 @@ describe("provider error copy", () => {
       '{"error":"free_plan_hosted_background_disabled"}',
       { provider: "screenpipe-cloud", model: "auto" },
     );
-    expect(msg).toContain("background scheduled tasks");
+    expect(msg).toContain("后台定时任务");
     expect(msg).toContain("Ollama");
   });
 
@@ -193,7 +193,7 @@ describe("provider error copy", () => {
       '{"error":"free_chat_client_update_required"}',
       { provider: "screenpipe-cloud", model: "auto" },
     );
-    expect(msg).toContain("Update screenpipe");
+    expect(msg).toContain("请更新 screenpipe");
   });
 
   it("gives a generic connectivity message for other remote providers", () => {
@@ -245,12 +245,12 @@ describe("provider error copy", () => {
       model: "gpt-5.2-codex",
     });
 
-    expect(msg).toContain("ChatGPT account id");
-    expect(msg).toContain("Reconnect ChatGPT");
+    expect(msg).toContain("ChatGPT 账户 ID");
+    expect(msg).toContain("重新连接 ChatGPT");
     // provider-independent: the error string alone identifies the failure
     expect(
       buildProviderErrorMessage("Error: Failed to extract accountId from token", null)
-    ).toContain("ChatGPT account id");
+    ).toContain("ChatGPT 账户 ID");
   });
 
   it("maps only the full Codex usage-limit signature to sanitized recovery guidance", () => {
@@ -285,7 +285,7 @@ describe("provider error copy", () => {
         '{"error":"free_chat_limit_exceeded","message":"Codex error: the usage limit has been reached"}',
         { provider: "screenpipe-cloud", model: "auto" },
       ),
-    ).toContain("2 free AI messages");
+    ).toContain("2 条免费 AI 消息");
   });
 
   it("does not map unrelated token errors to the ChatGPT account-id message", () => {
@@ -342,15 +342,15 @@ describe("provider error copy", () => {
   it("is case-insensitive on the gateway signatures", () => {
     expect(
       buildProviderErrorMessage("TLS HANDSHAKE EOF", { provider: "screenpipe-cloud" })
-    ).toContain("screenpipe cloud");
+    ).toContain("screenpipe 云端");
   });
 
   it("turns raw context-window JSON into actionable chat copy", () => {
     const raw = 'Codex error: {"type":"error","error":{"type":"invalid_request_error","code":"context_length_exceeded","message":"Your input exceeds the context window of this model."}}';
     const msg = buildProviderErrorMessage(raw, { provider: "screenpipe-cloud", model: "auto" });
 
-    expect(msg).toContain("chat is too long");
-    expect(msg).toContain("Start a new chat");
+    expect(msg).toContain("太长了");
+    expect(msg).toContain("开新聊天");
     expect(msg).not.toContain("context_length_exceeded");
     expect(msg).not.toContain("invalid_request_error");
   });
@@ -376,7 +376,7 @@ describe("provider error copy", () => {
   it("does not regress ollama copy now that other providers are handled", () => {
     expect(
       buildProviderErrorMessage("Connection error.", { provider: "native-ollama", model: "gemma4:31b" })
-    ).toContain("Cannot connect to Ollama");
+    ).toContain("无法连接 Ollama");
     expect(
       buildProviderErrorMessage("model not found", { provider: "native-ollama", model: "llama3.2" })
     ).toContain("ollama pull llama3.2");
@@ -387,7 +387,7 @@ describe("provider error copy", () => {
       "No response from model"
     );
     expect(buildNoResponseMessage({ provider: "native-ollama", model: "mistral" })).toContain(
-      "Cannot connect to Ollama"
+      "无法连接 Ollama"
     );
   });
 });
@@ -442,6 +442,6 @@ describe("Ollama preflight", () => {
     );
 
     expect(result.ok).toBe(false);
-    expect(result.ok ? "" : result.message).toContain("Cannot connect to Ollama");
+    expect(result.ok ? "" : result.message).toContain("无法连接 Ollama");
   });
 });

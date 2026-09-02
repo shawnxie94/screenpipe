@@ -79,7 +79,7 @@ describe("pickHandoffTarget", () => {
   it("every target leaves the prompt for review instead of auto-sending", () => {
     for (const target of handoffTargets()) {
       expect(target.label.length).toBeGreaterThan(0);
-      expect(target.hint).toMatch(/review and send/i);
+      expect(target.hint).toMatch(/请审查并发送/);
     }
   });
 

@@ -74,7 +74,7 @@ describe("sqlTables / sqlVerb", () => {
     expect(sqlVerb("INSERT INTO x")).toBe("Inserted into");
     expect(sqlVerb("UPDATE x")).toBe("Updated");
     expect(sqlVerb("DELETE FROM x")).toBe("Deleted from");
-    expect(sqlVerb("PRAGMA foo")).toBe("Ran SQL on");
+    expect(sqlVerb("PRAGMA foo")).toBe("在…上运行了 SQL");
   });
 });
 
@@ -111,11 +111,11 @@ describe("classifyCurl", () => {
     ).toBe("Queried frames");
   });
   it("labels activity-summary", () => {
-    expect(classifyCurl(`curl ${LOCAL}/activity-summary`)?.label).toBe("Activity summary");
+    expect(classifyCurl(`curl ${LOCAL}/activity-summary`)?.label).toBe("活动摘要");
   });
   it("labels a Google Calendar events call", () => {
     const out = classifyCurl(`curl '${LOCAL}/connections/google-calendar/events'`);
-    expect(out?.label).toBe("Listed calendar events");
+    expect(out?.label).toBe("列出了日历事件");
     expect(out?.connectionIconName).toBe("google-calendar");
   });
   it("labels an external fetch by domain", () => {

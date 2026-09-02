@@ -94,7 +94,7 @@ const HANDOFF_TARGETS: AgentHandoffTarget[] = [
     // Claude Desktop handles this as a new Claude chat and maps `q` into the
     // composer without submitting it.
     deeplink: `claude://claude.ai/new?q=${ENCODED_HANDOFF_PROMPT}`,
-    hint: "Question ready in Claude. Review and send it.",
+    hint: "问题已就绪于 Claude。请审查并发送。",
   },
   {
     id: "cursor",
@@ -104,7 +104,7 @@ const HANDOFF_TARGETS: AgentHandoffTarget[] = [
     // drop the first event, so replay once after the UI has initialized.
     deeplink: `cursor://anysphere.cursor-deeplink/prompt?text=${ENCODED_HANDOFF_PROMPT}`,
     replayAfterMs: CURSOR_DEEPLINK_REPLAY_DELAY_MS,
-    hint: "Cursor opened. Review and send the question.",
+    hint: "已打开 Cursor。请审查并发送此问题。",
   },
   {
     id: "codex",

@@ -170,7 +170,7 @@ describe("useAgentHandoff — performing the handoff", () => {
     expect(openUrl).toHaveBeenCalledWith(
       `claude://claude.ai/new?q=${encodeURIComponent(HANDOFF_PROMPT)}`,
     );
-    expect(result.current.hint).toMatch(/review and send/i);
+    expect(result.current.hint).toMatch(/请审查并发送/);
     expect(clicked()[0]?.[1]).toMatchObject({
       agent: "claude",
       opened: true,
@@ -192,7 +192,7 @@ describe("useAgentHandoff — performing the handoff", () => {
     });
 
     expect(openUrl).toHaveBeenCalledTimes(1);
-    expect(result.current.hint).toMatch(/review and send/i);
+    expect(result.current.hint).toMatch(/请审查并发送/);
     expect(failed()[0]?.[1]).toMatchObject({
       agent: "claude",
       stage: "clipboard",
@@ -266,7 +266,7 @@ describe("useAgentHandoff — performing the handoff", () => {
       2,
       `cursor://anysphere.cursor-deeplink/prompt?text=${encodeURIComponent(HANDOFF_PROMPT)}`,
     );
-    expect(result.current.hint).toMatch(/review and send/i);
+    expect(result.current.hint).toMatch(/请审查并发送/);
     expect(clicked()[0]?.[1]).toMatchObject({
       agent: "cursor",
       opened: true,
