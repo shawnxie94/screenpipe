@@ -11,6 +11,13 @@ import { ToastAction } from "@/components/ui/toast";
 import posthog from "posthog-js";
 import { commands } from "@/lib/utils/tauri";
 import { PROD_WEB_BASE, screenpipeWebBase, screenpipeWebUrl } from "@/lib/web-url";
+import { isDevLoginSkipEnabled } from "@/lib/app-entitlement";
+
+// Local/self-hosted builds have no cloud account: the 10-minute token
+// re-verify and the focus re-verify are pure noise (they ping screenpipe.com
+// for a token that never exists). Guard them with the same compile-time flag
+// that disables the login UI, erecting no timers/interceptors at all.
+const IS_LOCAL_BUILD = isDevLoginSkipEnabled();
 
 const CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 const TOAST_COOLDOWN_MS = 5 * 60 * 1000;
@@ -222,6 +229,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [loadUser, handleSessionExpired]);
 
   useEffect(() => {
+    // Local/self-hosted builds never install the pollers: no token exists to
+    // verify, and the old timer chain would fetch screenpipe.com every 10min
+    // and on every focus for nothing.
+    if (IS_LOCAL_BUILD) return;
     const initial = setTimeout(verifyToken, 5000);
     const interval = setInterval(verifyToken, CHECK_INTERVAL_MS);
 
@@ -263,6 +274,10 @@ export function installAuthInterceptor(
   getToken: () => string | undefined,
   clearSession: () => Promise<void>
 ) {
+  // Local/self-hosted builds: no API auth surface to watch, and patching
+  // window.fetch adds overhead (and a tiny risk of misinterpreting a local
+  // 401 as a session death) for zero benefit.
+  if (IS_LOCAL_BUILD) return;
   if (_patched || typeof window === "undefined") return;
   _patched = true;
 

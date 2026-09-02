@@ -263,6 +263,15 @@ const OnboardingLogin: React.FC<OnboardingLoginProps> = ({
   }, []);
 
   useEffect(() => {
+    // Local/self-hosted builds skip the login step entirely — there is no
+    // account to sign into. Auto-advance as soon as settings hydrate.
+    if (isDevLoginSkipEnabled()) {
+      if (!suppressAutoAdvance && isSettingsLoaded && !hasAdvanced.current) {
+        hasAdvanced.current = true;
+        handleNextSlide();
+      }
+      return;
+    }
     if (!isSettingsLoaded) return;
     const loginCompleted = wasLoggedIn.current === false && isLoggedIn;
     wasLoggedIn.current = isLoggedIn;

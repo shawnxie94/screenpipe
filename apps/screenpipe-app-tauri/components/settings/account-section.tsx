@@ -620,6 +620,37 @@ export function AccountSection() {
     });
   };
 
+  // Local/self-hosted builds: there is no cloud account, no subscription,
+  // no data sync — the entire Account section collapses to a single
+  // explanatory panel. Everything else in this file (login button, business
+  // upgrade card, cloud sync toggles) targets signed-in cloud use and is
+  // pointless (and confusing) here.
+  if (isDevLoginSkipEnabled()) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground" data-testid="account-login-status">
+            not logged in
+          </p>
+          <span className="text-xs font-mono text-muted-foreground/70">
+            local build — sign-in not available
+          </span>
+        </div>
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold">Local mode</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            This self-hosted build keeps everything on this computer. There is
+            no screenpipe account, no subscription, and no cloud sync — recording,
+            search, AI and pipes all run locally.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header + login status */}

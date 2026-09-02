@@ -1949,6 +1949,14 @@ pub async fn open_login_window(
     fresh_session: Option<bool>,
     auth_mode: Option<LoginMode>,
 ) -> Result<String, String> {
+    // Local/self-hosted builds strip the sign-in flow entirely: there is no
+    // cloud account to log into, so opening the browser to screenpipe.com
+    // would only confuse. Keep the command so any still-referenced UI call
+    // site compiles, but make it a no-op.
+    if crate::should_skip_onboarding() {
+        info!("open_login_window: no-op in local/self-hosted build");
+        return Ok(String::new());
+    }
     let fresh_session = fresh_session.unwrap_or(false);
     #[cfg(target_os = "macos")]
     {
