@@ -773,7 +773,7 @@ function BackgroundTranscriptionDialog({
         <DialogContent className="flex h-[min(760px,calc(100vh-4rem))] w-[min(920px,calc(100vw-3rem))] max-w-none flex-col gap-3 overflow-hidden p-4 sm:p-5">
           <div className="flex shrink-0 items-start justify-between gap-3 pr-8">
             <div>
-              <DialogTitle>Background transcription backlog</DialogTitle>
+              <DialogTitle>后台转写积压</DialogTitle>
               <DialogDescription className="mt-1 text-xs">
                 Audio chunks waiting for background transcription reconciliation.
               </DialogDescription>
@@ -1720,7 +1720,7 @@ function HighFpsCard({
 
           <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
             <div className="min-w-0">
-              <h4 className="text-xs font-medium text-foreground">Quality</h4>
+              <h4 className="text-xs font-medium text-foreground">质量</h4>
               <p className="text-[11px] text-muted-foreground">
                 Lower interval = smoother replay + more disk. ≥ 33 ms (30 fps).
               </p>
@@ -2735,7 +2735,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
       <>
       {/* Audio */}
       <div className="space-y-2 pt-2">
-        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Audio &amp; meetings</h2>
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">音频与会议</h2>
 
         <LockedSetting settingKey="audio_recording">
         <div className="space-y-2">
@@ -2746,8 +2746,8 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
               <div className="flex items-center space-x-2.5">
                 <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Audio Recording</h3>
-                  <p className="text-xs text-muted-foreground">Capture audio from microphone and system</p>
+                  <h3 className="text-sm font-medium text-foreground">音频录制</h3>
+                  <p className="text-xs text-muted-foreground">从麦克风和系统采集音频</p>
                 </div>
               </div>
               <ManagedSwitch settingKey="disableAudio" id="disableAudio" checked={!settings.disableAudio} onCheckedChange={(checked) => handleDisableAudioChange(!checked)} />
@@ -2775,8 +2775,8 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   <SelectValue placeholder="Select mode" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="always">Always (continuous)</SelectItem>
-                  <SelectItem value="meetings-only">During meetings only</SelectItem>
+                  <SelectItem value="always">始终（连续）</SelectItem>
+                  <SelectItem value="meetings-only">仅会议期间</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2826,16 +2826,16 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                     <SelectGroup>
                       <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">offline</SelectLabel>
                       <SelectItem value="whisper-large-v3-turbo">Whisper Turbo</SelectItem>
-                      <SelectItem value="whisper-large-v3-turbo-quantized">Whisper Turbo (fast)</SelectItem>
+                      <SelectItem value="whisper-large-v3-turbo-quantized">Whisper Turbo（快）</SelectItem>
                       <SelectItem value="whisper-tiny">Whisper Tiny</SelectItem>
-                      <SelectItem value="whisper-tiny-quantized">Whisper Tiny (fast)</SelectItem>
+                      <SelectItem value="whisper-tiny-quantized">Whisper Tiny（快）</SelectItem>
                       {!isMacOS && <SelectItem value="qwen3-asr">Qwen3-ASR</SelectItem>}
                       <SelectItem value="parakeet">Parakeet{isMacOS ? " (experimental)" : ""}</SelectItem>
                     </SelectGroup>
                     <SelectGroup>
                       <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">other</SelectLabel>
-                      <SelectItem value="openai-compatible">OpenAI Compatible</SelectItem>
-                      <SelectItem value="disabled">Disabled (capture only)</SelectItem>
+                      <SelectItem value="openai-compatible">OpenAI 兼容</SelectItem>
+                      <SelectItem value="disabled">已禁用（仅采集）</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -2921,7 +2921,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 {isOpenAICompatibleSetupOpen && (
                   <Alert className="border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle className="text-xs font-semibold">Endpoint verification required</AlertTitle>
+                    <AlertTitle className="text-xs font-semibold">需要端点验证</AlertTitle>
                     <AlertDescription className="text-xs">
                       These edits are not saved or applied until this endpoint completes a test transcription. This prevents recordings that cannot be searched.
                     </AlertDescription>
@@ -3085,7 +3085,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   >
                     <div className="flex items-center gap-2">
                       <Zap className="h-3.5 w-3.5" />
-                      <span>Connection Test</span>
+                      <span>连接测试</span>
                       {txTestStatus === "done" && (
                         <span className="text-xs text-muted-foreground">
                           {txTestResults.transcribe.status === "pass"
@@ -3205,11 +3205,11 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                       <Command>
                         <CommandInput placeholder="Search languages..." />
                         <CommandList>
-                          <CommandEmpty>No languages found.</CommandEmpty>
+                          <CommandEmpty>未找到语言。</CommandEmpty>
                           <CommandGroup>
                             <CommandItem value="auto-detect" onSelect={() => handleLanguageChange(null)}>
                               <Check className={cn("mr-2 h-3 w-3", settings.languages.length === 0 ? "opacity-100" : "opacity-0")} />
-                              <span className="text-xs">Auto-detect</span>
+                              <span className="text-xs">自动检测</span>
                             </CommandItem>
                             {supportedLanguageOptions.map((language) => (
                               <CommandItem key={language.code} value={language.code} onSelect={() => handleLanguageChange(language.code)}>
@@ -3378,9 +3378,9 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="selected-engine">Current transcription engine</SelectItem>
+                      <SelectItem value="selected-engine">当前转写引擎</SelectItem>
                       <SelectItem value="screenpipe-cloud">screenpipe cloud live</SelectItem>
-                      <SelectItem value="deepgram-live">Direct Deepgram live</SelectItem>
+                      <SelectItem value="deepgram-live">Deepgram 实时直连</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -3565,7 +3565,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
               <div className="flex items-center space-x-2.5">
                 <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Auto-select audio devices</h3>
+                  <h3 className="text-sm font-medium text-foreground">自动选择音频设备</h3>
                   <p className="text-xs text-muted-foreground">Records all default devices. Turn off to exclude bluetooth headphones or pick specific devices.</p>
                 </div>
               </div>
@@ -3610,7 +3610,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   <div className="min-w-0 flex-1 flex items-center gap-1.5">
                     <p className="text-xs font-medium truncate">{displayName}</p>
                     {device.isDefault && (
-                      <Badge variant="secondary" className="text-[9px] h-3.5 px-1 shrink-0">Default</Badge>
+                      <Badge variant="secondary" className="text-[9px] h-3.5 px-1 shrink-0">默认</Badge>
                     )}
                     {isBluetoothMicGated && (
                       <Badge
@@ -3647,7 +3647,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   <div className="mb-2.5">
                     <div className="flex items-center space-x-2 mb-1.5">
                       <Mic className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <h3 className="text-xs font-medium text-muted-foreground">Microphones (what you say)</h3>
+                      <h3 className="text-xs font-medium text-muted-foreground">麦克风（你说的话）</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-1.5">
                       {inputDevices.map(renderDevice)}
@@ -3658,7 +3658,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   <div>
                     <div className="flex items-center space-x-2 mb-1.5">
                       <Volume2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <h3 className="text-xs font-medium text-muted-foreground">System audio (what you hear)</h3>
+                      <h3 className="text-xs font-medium text-muted-foreground">系统音频（你听到的）</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-1.5">
                       {outputDevices.map(renderDevice)}
@@ -3678,7 +3678,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
               <div className="flex items-center space-x-2.5">
                 <Bluetooth className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Always record bluetooth mic</h3>
+                  <h3 className="text-sm font-medium text-foreground">始终录制蓝牙麦克风</h3>
                   <p className="text-xs text-muted-foreground">
                     by default bluetooth mics are only recorded during meetings to avoid degrading headphone audio quality. turn on to record always.
                   </p>
@@ -3776,7 +3776,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
       {/* Screen */}
       <LockedSetting settingKey="screen_recording">
       <div className="space-y-2 pt-2">
-        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Screen</h2>
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">屏幕</h2>
 
         {/* Screen context capture toggle */}
         <Card className="border-border bg-card">
@@ -3785,7 +3785,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
               <div className="flex items-center space-x-2.5">
                 <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Screen context capture</h3>
+                  <h3 className="text-sm font-medium text-foreground">屏幕上下文采集</h3>
                   <p className="text-xs text-muted-foreground">Capture app/window context, accessibility text, screenshot images, and OCR fallback</p>
                 </div>
               </div>
@@ -3892,7 +3892,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 <div className="flex items-center space-x-2.5">
                   <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
-                    <h3 className="text-sm font-medium text-foreground">Screen recording</h3>
+                    <h3 className="text-sm font-medium text-foreground">屏幕录制</h3>
                     <p className="text-xs text-muted-foreground">Record screen pixels for the timeline and image-only text. Turn this off to stop screen recording; accessibility text stays searchable.</p>
                   </div>
                 </div>
@@ -3915,7 +3915,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 <div className="flex items-center space-x-2.5">
                   <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
-                    <h3 className="text-sm font-medium text-foreground">Use all monitors</h3>
+                    <h3 className="text-sm font-medium text-foreground">使用所有显示器</h3>
                     <p className="text-xs text-muted-foreground">Capture screenshot images from all available monitors</p>
                   </div>
                 </div>
@@ -3933,7 +3933,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
             <CardContent className="px-3 py-2.5">
               <div className="flex items-center space-x-2.5 mb-3">
                 <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
-                <h3 className="text-sm font-medium text-foreground">Monitors</h3>
+                <h3 className="text-sm font-medium text-foreground">显示器</h3>
               </div>
 
               <div className="flex items-end justify-center gap-6 py-2">
@@ -4005,7 +4005,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 <div className="flex items-center space-x-2.5 min-w-0">
                   <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div className="min-w-0">
-                    <h3 className="text-sm font-medium text-foreground">Recording quality</h3>
+                    <h3 className="text-sm font-medium text-foreground">录制质量</h3>
                     <p className="text-xs text-muted-foreground">
                       Pick "high" or "max" if your text looks blurry on a 4K / ultrawide. Higher = crisper + larger files.
                     </p>
@@ -4047,7 +4047,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 <div className="flex items-center space-x-2.5 mb-2">
                   <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div className="min-w-0">
-                    <h3 className="text-sm font-medium text-foreground">Capture frequency</h3>
+                    <h3 className="text-sm font-medium text-foreground">采集频率</h3>
                     <p className="text-xs text-muted-foreground">
                       Always take a screenshot at least this often, even when the screen
                       isn&apos;t changing. Lower = fewer missed moments + more disk used.
@@ -4055,7 +4055,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   </div>
                 </div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-muted-foreground">Minimum interval</span>
+                  <span className="text-xs text-muted-foreground">最小间隔</span>
                   <span className="text-xs font-mono text-foreground">
                     {seconds === 0 ? "auto (power profile)" : `every ${seconds}s`}
                   </span>
@@ -4105,7 +4105,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
 
       {/* System */}
       <div className="space-y-2 pt-2">
-        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">System</h2>
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">系统</h2>
 
         <Card className="border-border bg-card">
           <CardContent className="px-3 py-2.5">
@@ -4113,8 +4113,8 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
               <div className="flex items-center space-x-2.5">
                 <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Chinese mirror</h3>
-                  <p className="text-xs text-muted-foreground">For users in China</p>
+                  <h3 className="text-sm font-medium text-foreground">中国镜像</h3>
+                  <p className="text-xs text-muted-foreground">适用于中国用户</p>
                 </div>
               </div>
               <Switch id="useChineseMirror" checked={settings.useChineseMirror} onCheckedChange={handleChineseMirrorToggle} />
@@ -4130,7 +4130,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
         <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
           <Zap className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div>
-            <h2 className="text-sm font-medium text-foreground">Power &amp; battery</h2>
+            <h2 className="text-sm font-medium text-foreground">电源与电池</h2>
             <p className="text-xs text-muted-foreground">Battery-aware capture and keep-awake behavior</p>
           </div>
         </summary>
@@ -4150,7 +4150,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
         }
       }}>
         <DialogContent className="max-w-lg">
-          <DialogTitle className="text-sm font-medium">Read this aloud</DialogTitle>
+          <DialogTitle className="text-sm font-medium">朗读此内容</DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
             speak naturally at your normal pace — this helps screenpipe learn your voice
           </DialogDescription>

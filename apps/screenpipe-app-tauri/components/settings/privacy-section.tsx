@@ -1381,7 +1381,7 @@ export function PrivacySection() {
             {piiMode !== "off" && (
               <div className="mt-3 ml-6 space-y-3 border-l-2 border-border pl-3">
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-foreground">Mode</p>
+                  <p className="text-xs font-medium text-foreground">模式</p>
                   <label className="flex cursor-pointer items-start gap-2 text-xs">
                     <input
                       type="radio"
@@ -1391,7 +1391,7 @@ export function PrivacySection() {
                       onChange={() => handlePiiModeChange("basic")}
                     />
                     <span>
-                      <span className="font-medium text-foreground">Basic</span>
+                      <span className="font-medium text-foreground">基础</span>
                       <span className="text-muted-foreground">
                         {" "}— regex on capture. Free, instant, deterministic.
                         Catches emails, phones, SSNs, cards, JWTs, API keys,
@@ -1408,7 +1408,7 @@ export function PrivacySection() {
                       onChange={() => handlePiiModeChange("smart")}
                     />
                     <span>
-                      <span className="font-medium text-foreground">Smart</span>
+                      <span className="font-medium text-foreground">智能</span>
                       <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded ml-1">
                         Experimental
                       </span>
@@ -1472,7 +1472,7 @@ export function PrivacySection() {
             {aiPiiRemovalEnabled && (
               <div className="mt-3 ml-6 space-y-2 border-l-2 border-border pl-3">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                  <span className="font-medium text-foreground">Where it runs</span>
+                  <span className="font-medium text-foreground">运行位置</span>
                   <label className={`flex items-center gap-1.5 ${managedPiiBackend ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                     <input
                       type="radio"
@@ -1481,7 +1481,7 @@ export function PrivacySection() {
                       disabled={!!managedPiiBackend}
                       onChange={() => handlePiiBackendChange("local")}
                     />
-                    <span className="text-foreground">Local</span>
+                    <span className="text-foreground">本地</span>
                   </label>
                   <label className={`flex items-center gap-1.5 ${managedPiiBackend ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                     <input
@@ -1491,7 +1491,7 @@ export function PrivacySection() {
                       disabled={!!managedPiiBackend}
                       onChange={() => handlePiiBackendChange("tinfoil")}
                     />
-                    <span className="text-foreground">Cloud (enclave)</span>
+                    <span className="text-foreground">云端（机密计算）</span>
                   </label>
                 </div>
                 <p className="text-[11px] text-muted-foreground">

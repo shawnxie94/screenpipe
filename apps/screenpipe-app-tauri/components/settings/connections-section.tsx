@@ -868,7 +868,7 @@ export function ListRow({ tile, selected, onClick, onTryInChat }: {
                     <MessageSquare className="h-4 w-4 text-foreground" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top">Try in Chat</TooltipContent>
+                <TooltipContent side="top">在聊天中试用</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </>
@@ -916,7 +916,7 @@ function McpSpotlight({
           />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium text-foreground">Advanced connections</h3>
+              <h3 className="text-sm font-medium text-foreground">高级连接</h3>
               {enabledCount > 0 && (
                 <span className="h-2 w-2 rounded-full bg-foreground" />
               )}
@@ -965,7 +965,7 @@ function AiToolsSpotlight({
           />
           <div className="min-w-0">
             <h3 className="text-sm font-medium text-foreground">AI tools</h3>
-            <p className="text-xs text-muted-foreground">Choose what your AI can use</p>
+            <p className="text-xs text-muted-foreground">选择你的 AI 可以使用什么</p>
           </div>
         </button>
         <Button
@@ -1014,7 +1014,7 @@ function SkillsSpotlight({
           />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium text-foreground">Skills</h3>
+              <h3 className="text-sm font-medium text-foreground">技能</h3>
               {count > 0 && <span className="h-2 w-2 rounded-full bg-foreground" />}
             </div>
             <p className="text-xs text-muted-foreground">{summary}</p>
@@ -1217,7 +1217,7 @@ function ClaudePanel({
       {connectError && <PanelConfigError err={connectError} />}
       {state === "connected" && (
         <p className="text-xs text-muted-foreground">
-          <strong>Connected.</strong> Restart Claude and ask: &quot;what did I do in the last 5 minutes?&quot;
+          <strong>已连接。</strong> Restart Claude and ask: &quot;what did I do in the last 5 minutes?&quot;
         </p>
       )}
       {targets.includes("claude-code") && (
@@ -1391,7 +1391,7 @@ function CodexPanel({ onConnected, onDisconnected }: { onConnected?: () => void;
       {connectError && <PanelConfigError err={connectError} />}
       {state === "installed" && (
         <p className="text-xs text-muted-foreground">
-          <strong>Connected.</strong> Open a new Codex session and ask: &quot;what did I do in the last 5 minutes?&quot;
+          <strong>已连接。</strong> Open a new Codex session and ask: &quot;what did I do in the last 5 minutes?&quot;
         </p>
       )}
       <details className="text-xs text-muted-foreground">
@@ -1457,7 +1457,7 @@ function GrokPanel({ onConnected, onDisconnected }: { onConnected?: () => void; 
       {connectError && <PanelConfigError err={connectError} />}
       {state === "installed" && (
         <p className="text-xs text-muted-foreground">
-          <strong>Connected.</strong> Start a new <code>grok</code> session and ask: &quot;what did I do in the last 5 minutes?&quot;
+          <strong>已连接。</strong> Start a new <code>grok</code> session and ask: &quot;what did I do in the last 5 minutes?&quot;
         </p>
       )}
       <details className="text-xs text-muted-foreground">
@@ -1869,7 +1869,7 @@ function AnythingLLMPanel() {
         Let AnythingLLM search your screen and audio history.
       </p>
       <p className="text-xs text-muted-foreground">
-        1. In AnythingLLM, go to <strong>Agent Skills</strong> &gt; <strong>MCP Servers</strong>
+        1. In AnythingLLM, go to <strong>代理技能</strong> &gt; <strong>MCP Servers</strong>
       </p>
       <p className="text-xs text-muted-foreground">
         2. Add this config to your <code className="bg-muted px-1 rounded">anythingllm_mcp_servers.json</code>:
@@ -1881,7 +1881,7 @@ function AnythingLLMPanel() {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        3. Click <strong>Refresh</strong> in Agent Skills to load the server.
+        3. Click <strong>刷新</strong> in Agent Skills to load the server.
       </p>
     </div>
   );
@@ -1907,10 +1907,10 @@ function MstyPanel() {
         Let Msty search your screen and audio history.
       </p>
       <p className="text-xs text-muted-foreground">
-        1. Open Msty and go to <strong>Settings</strong> &gt; <strong>Toolbox</strong>
+        1. Open Msty and go to <strong>设置</strong> &gt; <strong>工具箱</strong>
       </p>
       <p className="text-xs text-muted-foreground">
-        2. Click <strong>Add New Tool</strong>, select <strong>STDIO / JSON</strong>, and paste this config:
+        2. Click <strong>添加新工具</strong>, select <strong>STDIO / JSON</strong>, and paste this config:
       </p>
       <div className="relative group">
         <pre className="bg-muted border border-border rounded-lg p-3 pr-10 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">{config}</pre>
@@ -1953,7 +1953,7 @@ function WarpPanel() {
         Let Warp search your screen and audio history.
       </p>
       <p className="text-xs text-muted-foreground">
-        1. In Warp, open <strong>Settings</strong> &gt; <strong>AI</strong> &gt; <strong>Manage MCP servers</strong> &gt; <strong>+ Add</strong> (or run <code className="bg-muted px-1 rounded">Open MCP Servers</code> from the Command Palette)
+        1. In Warp, open <strong>设置</strong> &gt; <strong>AI</strong> &gt; <strong>管理 MCP 服务器</strong> &gt; <strong>+ Add</strong> (or run <code className="bg-muted px-1 rounded">打开 MCP 服务器</code> from the Command Palette)
       </p>
       <p className="text-xs text-muted-foreground">
         2. Choose <strong>CLI Server (Command)</strong> and paste this config:
@@ -1965,7 +1965,7 @@ function WarpPanel() {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        3. Click <strong>Save</strong>. The server should show <strong>Running</strong>. Then ask Warp&apos;s agent: <em>&quot;what did I do in the last 5 minutes?&quot;</em>
+        3. Click <strong>保存</strong>. The server should show <strong>运行中</strong>. Then ask Warp&apos;s agent: <em>&quot;what did I do in the last 5 minutes?&quot;</em>
       </p>
       <Button variant="outline" onClick={() => openUrl("https://www.warp.dev")} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
         <ExternalLink className="h-3 w-3" />open warp
@@ -2454,7 +2454,7 @@ export function OAuthPanel({
       )}
       {isSubdomainProvider && (
         <div className="space-y-1">
-          <label className="text-[11px] text-muted-foreground">Zendesk subdomain</label>
+          <label className="text-[11px] text-muted-foreground">Zendesk 子域名</label>
           <div className="flex items-center gap-1">
             <Input
               value={subdomain}
@@ -2469,7 +2469,7 @@ export function OAuthPanel({
       )}
       {scopeVariants && status !== "loading" && (
         <div className="space-y-1.5">
-          <p className="text-[11px] text-muted-foreground">Access level</p>
+          <p className="text-[11px] text-muted-foreground">访问级别</p>
           {scopeVariants.map((v) => (
             <label key={v.id} className="flex items-start gap-2 text-xs cursor-pointer">
               <input
@@ -4440,7 +4440,7 @@ export function ConnectionsSection({
     <div className="space-y-5">
       {/* Header: title + inline search */}
       <div className="flex items-center gap-3">
-        <p className="flex-1 text-sm text-muted-foreground">Connect your apps</p>
+        <p className="flex-1 text-sm text-muted-foreground">连接你的应用</p>
         <div className="relative w-52 shrink-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
@@ -4481,7 +4481,7 @@ export function ConnectionsSection({
 
           {connectedTiles.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-xs font-medium text-muted-foreground">Connected</h3>
+              <h3 className="text-xs font-medium text-muted-foreground">已连接</h3>
               <div className="grid grid-cols-2 gap-2">
                 {connectedTiles.map((tile) => (
                   <ListRow
@@ -4498,7 +4498,7 @@ export function ConnectionsSection({
 
           {suggested.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-xs font-medium text-muted-foreground">Suggested</h3>
+              <h3 className="text-xs font-medium text-muted-foreground">推荐</h3>
               <div className="grid grid-cols-2 gap-2">
                 {suggested.map((tile) => (
                   <ListRow
@@ -4515,7 +4515,7 @@ export function ConnectionsSection({
           <details className="group border-t border-border pt-4">
             <summary className="flex cursor-pointer list-none items-center gap-3 select-none">
               <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-medium text-foreground">Browse all apps</h3>
+                <h3 className="text-sm font-medium text-foreground">浏览所有应用</h3>
                 <p className="text-xs text-muted-foreground">
                   {integrationsLoaded ? `${catalogTileCount} more` : "Loading apps"}
                 </p>
@@ -4570,7 +4570,7 @@ export function ConnectionsSection({
           ))}
         </div>
       ) : (
-        <p className="py-8 text-center text-sm text-muted-foreground">No matching apps</p>
+        <p className="py-8 text-center text-sm text-muted-foreground">没有匹配的应用</p>
       )}
 
       <Dialog

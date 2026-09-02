@@ -80,7 +80,7 @@ export function DisplaySection() {
             <div className="space-y-2.5">
               <div className="flex items-center space-x-2.5">
                 <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
-                <h3 className="text-sm font-medium text-foreground">Theme</h3>
+                <h3 className="text-sm font-medium text-foreground">主题</h3>
               </div>
               <div className="flex gap-3 ml-[26px]">
                 {themeOptions.map((option) => {
@@ -126,7 +126,7 @@ export function DisplaySection() {
             <div className="space-y-2.5">
               <div className="flex items-center space-x-2.5">
                 <Type className="h-4 w-4 text-muted-foreground shrink-0" />
-                <h3 className="text-sm font-medium text-foreground">Font Size</h3>
+                <h3 className="text-sm font-medium text-foreground">字体大小</h3>
               </div>
               <div className="flex gap-2 ml-[26px]">
                 {FONT_SIZE_OPTIONS.map((option) => {
@@ -231,7 +231,7 @@ export function DisplaySection() {
                     Timeline Mode
                     <HelpTooltip text="Controls how the timeline overlay appears. 'Native' uses a system overlay, 'Tauri' uses the app window." />
                   </h3>
-                  <p className="text-xs text-muted-foreground">Reopen timeline to apply</p>
+                  <p className="text-xs text-muted-foreground">重新打开时间线以应用</p>
                 </div>
               </div>
               <div className="flex gap-2 ml-[26px]">
@@ -276,8 +276,8 @@ export function DisplaySection() {
               <div className="flex items-center space-x-2.5">
                 <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Chat Always on Top</h3>
-                  <p className="text-xs text-muted-foreground">Keep chat window above other windows</p>
+                  <h3 className="text-sm font-medium text-foreground">聊天窗口置顶</h3>
+                  <p className="text-xs text-muted-foreground">让聊天窗口保持在其他窗口之上</p>
                 </div>
               </div>
               <Switch
@@ -437,7 +437,7 @@ export function DisplaySection() {
                       Translucent Sidebar
                       <HelpTooltip text="Apply a macOS vibrancy effect to the sidebar for a frosted glass look." />
                     </h3>
-                    <p className="text-xs text-muted-foreground">Frosted glass sidebar effect</p>
+                    <p className="text-xs text-muted-foreground">毛玻璃侧边栏效果</p>
                   </div>
                 </div>
                 <Switch
@@ -554,7 +554,7 @@ export function DisplaySection() {
               <div className="flex items-center space-x-2.5">
                 <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Shortcut Reminder</h3>
+                  <h3 className="text-sm font-medium text-foreground">快捷键提醒</h3>
                   <p className="text-xs text-muted-foreground">
                     Show the floating shortcut bar. Recording problems can still surface temporarily.
                   </p>
@@ -589,8 +589,8 @@ export function DisplaySection() {
               <div className="flex items-center space-x-2.5">
                 <Maximize2 className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Overlay Size</h3>
-                  <p className="text-xs text-muted-foreground">Size of the shortcut reminder overlay</p>
+                  <h3 className="text-sm font-medium text-foreground">悬浮层尺寸</h3>
+                  <p className="text-xs text-muted-foreground">快捷键提醒悬浮层的大小</p>
                 </div>
               </div>
               <div className="flex gap-2 ml-[26px]">

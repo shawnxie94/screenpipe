@@ -246,8 +246,8 @@ export default function GeneralSettings() {
               <div className="flex items-center space-x-2.5">
                 <Rocket className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Auto-start</h3>
-                  <p className="text-xs text-muted-foreground">Start in the background when you log in</p>
+                  <h3 className="text-sm font-medium text-foreground">开机自启</h3>
+                  <p className="text-xs text-muted-foreground">登录时在后台启动</p>
                 </div>
               </div>
               <ManagedSwitch
@@ -269,7 +269,7 @@ export default function GeneralSettings() {
                 <div className="flex items-center space-x-2.5">
                   <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
-                    <h3 className="text-sm font-medium text-foreground">Auto-update</h3>
+                    <h3 className="text-sm font-medium text-foreground">自动更新</h3>
                     <p className="text-xs text-muted-foreground">
                       {autoUpdateForcedByRemote
                         ? "Required temporarily so this installation receives reliability fixes."
@@ -298,7 +298,7 @@ export default function GeneralSettings() {
                 <div className="flex items-center space-x-2.5">
                   <FlaskConical className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
-                    <h3 className="text-sm font-medium text-foreground">Release channel</h3>
+                    <h3 className="text-sm font-medium text-foreground">发布通道</h3>
                     <p className="text-xs text-muted-foreground">
                       Pre-release receives new public builds before Standard.
                     </p>
@@ -314,8 +314,8 @@ export default function GeneralSettings() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="stable">Standard</SelectItem>
-                    <SelectItem value="pre-release">Pre-release</SelectItem>
+                    <SelectItem value="stable">标准</SelectItem>
+                    <SelectItem value="pre-release">预发布</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -330,7 +330,7 @@ export default function GeneralSettings() {
                 <div className="flex items-center space-x-2.5">
                   <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
-                    <h3 className="text-sm font-medium text-foreground">Check for updates</h3>
+                    <h3 className="text-sm font-medium text-foreground">检查更新</h3>
                     <p className="text-xs text-muted-foreground">
                       {currentVersion ? `Running v${currentVersion}` : "Look for a new version now"}
                     </p>
@@ -357,7 +357,7 @@ export default function GeneralSettings() {
                 <div className="flex items-center space-x-2.5">
                   <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
-                    <h3 className="text-sm font-medium text-foreground">App updates</h3>
+                    <h3 className="text-sm font-medium text-foreground">应用更新</h3>
                     <p className="text-xs text-muted-foreground">
                       {describeEnterpriseUpdateMode(enterpriseAppUpdatePolicy)}
                       {enterpriseInstallMetadata?.managed ? " · managed device detected" : ""}
@@ -384,7 +384,7 @@ export default function GeneralSettings() {
               <div className="flex items-center space-x-2.5">
                 <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
-                  <h3 className="text-sm font-medium text-foreground">Auto-update scheduled tasks</h3>
+                  <h3 className="text-sm font-medium text-foreground">自动更新定时任务</h3>
                   <p className="text-xs text-muted-foreground">Keep tasks you installed from the Store up to date, unless you&apos;ve edited them</p>
                 </div>
               </div>
@@ -439,7 +439,7 @@ export default function GeneralSettings() {
             <div className="flex items-center space-x-2.5">
               <Layers className="h-4 w-4 shrink-0 text-muted-foreground" />
               <div>
-                <h3 className="text-sm font-medium text-foreground">Your goal</h3>
+                <h3 className="text-sm font-medium text-foreground">你的目标</h3>
                 <p className="text-xs text-muted-foreground">
                   What you want screenpipe to help you accomplish
                 </p>
@@ -455,7 +455,7 @@ export default function GeneralSettings() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="default">No specific goal</SelectItem>
+                <SelectItem value="default">没有特定目标</SelectItem>
                 {ONBOARDING_GOALS.map((goal) => (
                   <SelectItem key={goal.category} value={goal.category}>
                     {goal.title}
@@ -473,8 +473,8 @@ export default function GeneralSettings() {
             <div className="flex items-center space-x-2.5">
               <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
-                <h3 className="text-sm font-medium text-foreground">Reset Onboarding</h3>
-                <p className="text-xs text-muted-foreground">Run the setup wizard again</p>
+                <h3 className="text-sm font-medium text-foreground">重置引导流程</h3>
+                <p className="text-xs text-muted-foreground">再次运行设置向导</p>
               </div>
             </div>
             <Button

@@ -1506,7 +1506,7 @@ const AISection = ({
                 </Button>
               )}
               {chatgptLoggedIn && !chatgptChecking && (
-                <span className="text-sm text-muted-foreground">Connected</span>
+                <span className="text-sm text-muted-foreground">已连接</span>
               )}
             </div>
           </div>
@@ -1769,7 +1769,7 @@ const AISection = ({
               className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-left hover:bg-accent/50 transition-colors rounded-lg"
               onClick={() => setModelLimitsOpen(!modelLimitsOpen)}
             >
-              <span>Advanced model limits</span>
+              <span>高级模型限制</span>
               {modelLimitsOpen ? (
                 <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
@@ -1838,9 +1838,9 @@ const AISection = ({
           >
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4" />
-              <span>Connection Test</span>
+              <span>连接测试</span>
               {connectionTestRequired && !connectionTestPassed && testStatus !== "testing" && (
-                <span className="text-xs text-destructive">Required before saving</span>
+                <span className="text-xs text-destructive">保存前必需</span>
               )}
               {testStatus === "done" && (
                 <span className="text-xs text-muted-foreground">
@@ -2514,14 +2514,14 @@ useEffect(() => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>确定吗？</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the
               preset &quot;{presetToDelete ? formatPresetName(presetToDelete) : ''}&quot;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => presetToDelete && removePreset(presetToDelete)}
@@ -2542,14 +2542,14 @@ useEffect(() => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Change default preset?</AlertDialogTitle>
+            <AlertDialogTitle>更改默认预设？</AlertDialogTitle>
             <AlertDialogDescription>
               This will set &quot;{presetToSetDefault ? formatPresetName(presetToSetDefault) : ''}&quot; as the default preset and apply its settings.
               The current default preset will remain but will no longer be the default.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={() =>
                 presetToSetDefault && setDefaultPreset(presetToSetDefault)
