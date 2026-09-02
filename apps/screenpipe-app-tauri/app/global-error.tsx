@@ -38,7 +38,7 @@ export default function GlobalError({
       <body style={{ margin: 0, backgroundColor: "#0a0a0a", color: "#fff", fontFamily: "system-ui, sans-serif" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
           <div style={{ textAlign: "center", padding: "2rem" }}>
-            <h2 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>something went wrong</h2>
+            <h2 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>出现问题</h2>
             <p style={{ fontSize: "0.875rem", color: "#999", marginBottom: "1.5rem" }}>
               {error.message || "an unexpected error occurred"}
             </p>

@@ -127,7 +127,7 @@ export function BrowserPairingDialog() {
           <details className="border border-border p-3 text-xs text-muted-foreground">
             <summary className="cursor-pointer font-mono">验证请求</summary>
             <div className="mt-2 font-mono">
-              <div>match this code with the browser extension</div>
+              <div>将此代码与浏览器扩展配对</div>
               <div className="mt-1 text-lg tracking-[0.2em] text-foreground">
                 {pending.code}
               </div>

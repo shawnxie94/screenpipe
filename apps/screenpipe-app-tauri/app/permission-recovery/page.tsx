@@ -322,7 +322,7 @@ export default function PermissionRecoveryPage() {
             className="w-full max-w-sm border border-foreground px-5 py-5 text-center"
             data-testid="permission-recovery-restart-prompt"
           >
-            <h2 className="font-mono text-sm font-semibold">restart required</h2>
+            <h2 className="font-mono text-sm font-semibold">需要重启</h2>
             <p className="mt-1 font-mono text-xs text-muted-foreground">
               screenpipe won&apos;t work until you restart.
             </p>
@@ -347,7 +347,7 @@ export default function PermissionRecoveryPage() {
         ) : (
           <div className="w-full max-w-sm space-y-4" data-testid="permission-recovery-page">
             <div className="text-center">
-              <h2 className="font-mono text-sm">recording paused</h2>
+              <h2 className="font-mono text-sm">录制已暂停</h2>
               <p className="font-mono text-xs text-muted-foreground mt-1">
                 some permissions were revoked
               </p>

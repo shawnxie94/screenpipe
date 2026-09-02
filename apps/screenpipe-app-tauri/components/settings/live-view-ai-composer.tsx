@@ -349,7 +349,7 @@ export function LiveViewAiComposer({
                 </>
               ) : (
                 <>
-                  <span className="mr-1.5">update Live View</span>
+                  <span className="mr-1.5">更新实时视图</span>
                   <ArrowUp className="h-3.5 w-3.5" />
                 </>
               )}

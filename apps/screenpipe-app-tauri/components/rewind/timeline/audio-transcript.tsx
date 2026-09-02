@@ -952,7 +952,7 @@ export function AudioTranscript({
 							})()}
 						</>
 					) : (
-						<span className="text-muted-foreground">click bubbles to select</span>
+						<span className="text-muted-foreground">点击气泡进行选择</span>
 					)}
 					<Button
 						variant="ghost"

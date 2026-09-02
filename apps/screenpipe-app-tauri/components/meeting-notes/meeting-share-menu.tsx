@@ -309,7 +309,7 @@ export function MeetingShareMenu({
               >
                 <ConnectedShareAppIcon app={suggestion.app} />
                 {suggestion.observed && (
-                  <span className="sr-only">used during this meeting</span>
+                  <span className="sr-only">本次会议中使用</span>
                 )}
               </button>
             ))}

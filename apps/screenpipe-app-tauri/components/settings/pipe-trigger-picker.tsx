@@ -608,12 +608,12 @@ function NotionPicker({ instance, onAdd }: { instance?: string; onAdd: (s: Trigg
   const row = "w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors";
   return (
     <div>
-      <label className={LABEL}>select a data source</label>
+      <label className={LABEL}>选择数据源</label>
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="search databases…" className={`${INPUT} mt-1 mb-2`} />
       <div className="border rounded-none max-h-[220px] overflow-y-auto">
         <button onClick={() => setPicked(null)} className={`${row} border-b ${picked === null ? "bg-accent" : "hover:bg-accent/60"}`}>
           <IntegrationIcon icon="notion" className="w-3.5 h-3.5 flex items-center justify-center" fallbackClassName="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="flex-1">any page in your workspace</span>
+          <span className="flex-1">工作区中的任意页面</span>
           {picked === null && <Check className="h-3.5 w-3.5" />}
         </button>
         {dbs === null ? (

@@ -382,7 +382,7 @@ export function CardAskModal({
         {embeddedComplete ? (
           <>
             <DialogHeader>
-              <DialogTitle>your access is set</DialogTitle>
+              <DialogTitle>你的访问权限已设置</DialogTitle>
               <DialogDescription>
                 no charge today. your Business subscription starts when your
                 current trial ends.

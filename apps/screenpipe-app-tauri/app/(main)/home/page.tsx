@@ -1199,7 +1199,7 @@ function HomeContent() {
             aria-hidden="true"
             className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-red-500"
           />
-          <span className="sr-only">meeting recording active</span>
+          <span className="sr-only">会议录制进行中</span>
         </>
       ) : undefined,
   }));
@@ -1468,7 +1468,7 @@ function HomeContent() {
                           aria-hidden="true"
                           className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-red-500 ring-2 ring-background"
                         />
-                        <span className="sr-only">meeting recording active</span>
+                        <span className="sr-only">会议录制进行中</span>
                       </>
                     )}
                   </button>

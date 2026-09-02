@@ -203,7 +203,7 @@ export function PipeInstallDialog() {
       <AlertDialog open={!!request} onOpenChange={(open) => !open && handleCancel()}>
         <AlertDialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-sm">review scheduled task access</AlertDialogTitle>
+            <AlertDialogTitle className="text-sm">审查定时任务访问权限</AlertDialogTitle>
             <AlertDialogDescription className="text-xs">
               {isRegistry
                 ? registryRisk === "high"

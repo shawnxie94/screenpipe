@@ -1012,7 +1012,7 @@ function SecondBrainCallout({ name }: { name: string }) {
     <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
       <div className="flex items-center gap-1.5">
         <Brain className="h-3.5 w-3.5 text-foreground/70" />
-        <p className="text-xs font-semibold text-foreground">build a second brain</p>
+        <p className="text-xs font-semibold text-foreground">构建第二大脑</p>
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed">
         Paste one prompt into {name} and it keeps working in the background — segmenting your

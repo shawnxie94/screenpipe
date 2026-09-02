@@ -172,7 +172,7 @@ export function AIProviderChoices({
       {showAdvanced && (
         <div className="space-y-3">
           <div className="space-y-2">
-            <p className="text-sm font-medium">use a model directly</p>
+            <p className="text-sm font-medium">直接使用模型</p>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
               <AIProviderCard
                 type="openai-chatgpt"

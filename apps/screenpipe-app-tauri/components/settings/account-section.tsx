@@ -784,7 +784,7 @@ export function AccountSection() {
           <div className="mt-4 pt-4 border-t border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">sync scheduled tasks across devices</p>
+                <p className="text-sm font-medium">跨设备同步定时任务</p>
                 <p className="text-xs text-muted-foreground">
                   sync your scheduled tasks & configs to all devices linked to your account
                 </p>
@@ -845,7 +845,7 @@ export function AccountSection() {
           <div className="mt-4 pt-4 border-t border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">memories sync across devices</p>
+                <p className="text-sm font-medium">跨设备同步记忆</p>
                 <p className="text-xs text-muted-foreground">
                   sync your memories (facts, preferences, decisions) across devices
                 </p>
@@ -909,7 +909,7 @@ export function AccountSection() {
           <div className="mt-4 pt-4 border-t border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">connection sync across devices</p>
+                <p className="text-sm font-medium">跨设备同步连接</p>
                 <p className="text-xs text-muted-foreground">
                   sync connected accounts (slack, notion…) to your devices — credentials are end-to-end encrypted
                 </p>
@@ -1016,7 +1016,7 @@ export function AccountSection() {
           <Card className="p-4 opacity-75">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">sync scheduled tasks across devices</p>
+                <p className="text-sm font-medium">跨设备同步定时任务</p>
                 <p className="text-xs text-muted-foreground">
                   sync your scheduled tasks & configs to all devices linked to your account
                 </p>
@@ -1103,7 +1103,7 @@ export function AccountSection() {
           <Card className="p-4 opacity-75">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">sync scheduled tasks across devices</p>
+                <p className="text-sm font-medium">跨设备同步定时任务</p>
                 <p className="text-xs text-muted-foreground">
                   sync your scheduled tasks & configs to all devices linked to your account
                 </p>

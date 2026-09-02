@@ -35,7 +35,7 @@ export function FeedbackSection() {
             <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
             <div>
               <h3 className="text-sm font-medium text-foreground">发送日志</h3>
-              <p className="text-xs text-muted-foreground">logs are included automatically</p>
+              <p className="text-xs text-muted-foreground">日志会自动包含</p>
             </div>
           </div>
           <ShareLogsButton />
@@ -124,7 +124,7 @@ export function FeedbackSection() {
               <Youtube className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground">视频教程</h3>
-                <p className="text-xs text-muted-foreground">watch demos and walkthroughs</p>
+                <p className="text-xs text-muted-foreground">观看演示和教程</p>
               </div>
             </div>
             <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-150">
@@ -143,7 +143,7 @@ export function FeedbackSection() {
               <Lightbulb className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground">功能建议</h3>
-                <p className="text-xs text-muted-foreground">vote or submit requests</p>
+                <p className="text-xs text-muted-foreground">投票或提交请求</p>
               </div>
             </div>
             <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-150">
@@ -182,7 +182,7 @@ export function FeedbackSection() {
               <DiscordIcon className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground">Discord</h3>
-                <p className="text-xs text-muted-foreground">community support and discussion</p>
+                <p className="text-xs text-muted-foreground">社区支持与讨论</p>
               </div>
             </div>
             <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-150">

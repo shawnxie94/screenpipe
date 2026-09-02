@@ -36,7 +36,7 @@ export function PipeStoreSubmissionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>submit your scheduled task</DialogTitle>
+          <DialogTitle>提交你的定时任务</DialogTitle>
           <DialogDescription>
             Store publishing is curated
           </DialogDescription>

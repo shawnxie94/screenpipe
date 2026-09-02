@@ -2647,7 +2647,7 @@ export function PipesSection() {
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             {searchQuery ? (
-              <p>no scheduled tasks match your search</p>
+              <p>没有符合搜索条件的定时任务</p>
             ) : pipeFavorites.showOnly && tabCounts[pipeTypeFilter] > 0 ? (
               <div className="space-y-4">
                 <div>
@@ -2673,7 +2673,7 @@ export function PipesSection() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <p className="text-foreground font-medium text-base">no scheduled tasks yet</p>
+                  <p className="text-foreground font-medium text-base">还没有定时任务</p>
                   <p className="text-sm mt-1">
                     scheduled tasks run locally over your screen data — they can summarize your day, track your time, sync your notes, and more.
                   </p>
@@ -3358,7 +3358,7 @@ export function PipesSection() {
                           <div className="border border-border p-4">
                             <div className="flex items-center gap-2">
                               <Lock className="h-4 w-4" />
-                              <p className="text-sm font-medium">managed by your organization</p>
+                              <p className="text-sm font-medium">由你的组织管理</p>
                             </div>
                             <p className="mt-2 text-xs text-muted-foreground">
                               schedule, prompt, AI preset, connections, and enabled state are restored from organization policy automatically.
@@ -4181,7 +4181,7 @@ export function PipesSection() {
                         </div>
                       </form>
 
-                      <p className="mt-5 text-xs text-muted-foreground">or start from an example</p>
+                      <p className="mt-5 text-xs text-muted-foreground">或从示例开始</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {PIPE_EXAMPLES.map((ex) => (
                           <button
@@ -4201,7 +4201,7 @@ export function PipesSection() {
                     detail ?? (
                       <div className="flex h-full min-h-[28rem] items-center justify-center px-8 text-center">
                         <div className="max-w-xs space-y-1">
-                          <p className="text-sm text-foreground">select a scheduled task</p>
+                          <p className="text-sm text-foreground">选择定时任务</p>
                           <p className="text-xs text-muted-foreground">
                             its schedule, prompt, runs and logs open here.
                           </p>

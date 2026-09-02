@@ -1100,7 +1100,7 @@ export function AIProviderConfig({
         {showAdvanced && (
           <div className="space-y-1.5">
             <div className="space-y-1">
-              <p className="text-xs font-medium">use a model directly</p>
+              <p className="text-xs font-medium">直接使用模型</p>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
@@ -1172,7 +1172,7 @@ export function AIProviderConfig({
                   }}
                 >
                   <Icons.settings className="h-3.5 w-3.5" />
-                  <span>use an API key</span>
+                  <span>使用 API 密钥</span>
                 </Button>
               </div>
             </div>

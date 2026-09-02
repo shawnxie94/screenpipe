@@ -2704,7 +2704,7 @@ export function BrainOverview({
       <div className="flex min-h-64 flex-col items-center justify-center gap-3 border border-border text-center">
         <AlertCircle className="h-5 w-5 text-muted-foreground" />
         <div>
-          <p className="text-sm">failed to load Live Views</p>
+          <p className="text-sm">加载实时视图失败</p>
           <p className="mt-1 text-xs text-muted-foreground">{error}</p>
         </div>
         <Button

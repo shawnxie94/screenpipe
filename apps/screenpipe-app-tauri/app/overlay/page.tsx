@@ -53,7 +53,7 @@ function TimelineErrorFallback({
   return (
     <div className="flex items-center justify-center h-screen bg-background">
       <div className="text-center space-y-4 max-w-md">
-        <p className="text-lg font-medium">timeline crashed</p>
+        <p className="text-lg font-medium">时间线崩溃</p>
         <p className="text-sm text-muted-foreground">{error?.message}</p>
         <div className="flex gap-2 justify-center">
           <Button onClick={onRetry} variant="outline">

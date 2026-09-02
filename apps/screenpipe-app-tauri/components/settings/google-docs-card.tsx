@@ -240,7 +240,7 @@ export function GoogleDocsCard() {
             {isLoadingDocs && recentDocs.length === 0 ? (
               <p className="text-xs text-muted-foreground">loading...</p>
             ) : recentDocs.length === 0 ? (
-              <p className="text-xs text-muted-foreground">no recent documents found</p>
+              <p className="text-xs text-muted-foreground">未找到最近的文档</p>
             ) : (
               <div className="space-y-1.5">
                 {recentDocs.map((doc) => (

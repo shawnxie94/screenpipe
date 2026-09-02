@@ -3423,7 +3423,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
               {/* Suggestion chips from recent screen activity */}
               {suggestions.length > 0 && (
                 <div>
-                  <SectionLabel>from your recent activity</SectionLabel>
+                  <SectionLabel>来自你的近期活动</SectionLabel>
                   <div className="flex flex-wrap gap-2">
                     {suggestions.map((suggestion) => (
                       <button

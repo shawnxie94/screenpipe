@@ -1003,7 +1003,7 @@ function BackgroundTranscriptionDialog({
                                     )}
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent side="top">transcribe this chunk now</TooltipContent>
+                                <TooltipContent side="top">立即转写此片段</TooltipContent>
                               </Tooltip>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -1026,7 +1026,7 @@ function BackgroundTranscriptionDialog({
                                     )}
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent side="top">drop this waiting chunk</TooltipContent>
+                                <TooltipContent side="top">丢弃此等待片段</TooltipContent>
                               </Tooltip>
                             </div>
                           </TooltipProvider>
@@ -1652,7 +1652,7 @@ function HighFpsCard({
           <div className="flex items-center space-x-2.5 min-w-0">
             <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="min-w-0">
-              <h3 className="text-sm font-medium text-foreground">HD recording for meetings</h3>
+              <h3 className="text-sm font-medium text-foreground">会议高清录制</h3>
               <p className="text-xs text-muted-foreground">
                 Capture screen at higher rate during calls so you can rewatch
                 slides, demos, and shared docs. {statusBadge}.

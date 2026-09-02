@@ -450,7 +450,7 @@ export function CloudAgentRunner({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="new">a new agent each run</SelectItem>
+                    <SelectItem value="new">每次运行使用新代理</SelectItem>
                     {cursorAgents.map((candidate) => (
                       <SelectItem key={candidate.id} value={candidate.id}>
                         {candidate.name} · {candidate.status.toLowerCase()}

@@ -852,7 +852,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
   const installGateDialog = (
     <Dialog open={!!pendingInstall} onOpenChange={(open) => !open && closeInstallGate()}>
       <DialogContent className="max-w-lg pt-8">
-        <DialogTitle className="sr-only">review scheduled task access</DialogTitle>
+        <DialogTitle className="sr-only">审查定时任务访问权限</DialogTitle>
 
         {pendingInstall ? (
           <InstallRiskSummary
@@ -1029,7 +1029,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
           <CardContent className="py-12 text-center text-muted-foreground">
             <AlertTriangle className="mx-auto mb-3 h-5 w-5" />
             <p className="text-sm text-foreground">无法加载定时任务</p>
-            <p className="mt-1.5 text-xs">the task catalog is temporarily unavailable</p>
+            <p className="mt-1.5 text-xs">任务目录暂时不可用</p>
             <Button
               variant="outline"
               size="sm"
@@ -1048,7 +1048,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
           <CardContent className="py-12 text-center text-muted-foreground">
             <p className="text-sm">未找到定时任务</p>
             {debouncedQuery && (
-              <p className="text-xs mt-1.5">try a different search term</p>
+              <p className="text-xs mt-1.5">尝试其他搜索词</p>
             )}
           </CardContent>
         </Card>

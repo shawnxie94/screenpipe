@@ -1487,7 +1487,7 @@ export function ConnectedShareDialog({
           >
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
             <div>
-              <p className="font-medium">the action did not complete</p>
+              <p className="font-medium">操作未完成</p>
               <p className="mt-0.5 text-muted-foreground">{actionError}</p>
               <p className="mt-1 text-muted-foreground">
                 No success was recorded. Review the destination and try again.

@@ -203,7 +203,7 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
           </summary>
           <div className="flex gap-2 pt-2">
             <div className="flex-1 space-y-1">
-              <Label className="text-xs">IMAP Host</Label>
+              <Label className="text-xs">IMAP 主机</Label>
               <Input placeholder={inferredHost || `imap.${domain || "example.com"}`} value={host} onChange={(e) => setHost(e.target.value)} className="h-8 text-xs" />
             </div>
             <div className="w-24 space-y-1">

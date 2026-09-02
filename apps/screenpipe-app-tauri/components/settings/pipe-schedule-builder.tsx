@@ -125,7 +125,7 @@ export function PipeScheduleBuilder({
     <div className="w-[320px] space-y-3 p-1 text-xs">
       {/* Run on a schedule toggle — off = manual (runs only on demand) */}
       <div className="flex items-center justify-between gap-2">
-        <Label className="text-xs">run on a schedule</Label>
+        <Label className="text-xs">按计划运行</Label>
         <Switch checked={!manual} onCheckedChange={(on) => setManual(!on)} />
       </div>
 
@@ -201,7 +201,7 @@ export function PipeScheduleBuilder({
                 })}
               </div>
               {weeklyNoDays && (
-                <p className="mt-1 text-[11px] text-destructive">pick at least one day</p>
+                <p className="mt-1 text-[11px] text-destructive">至少选择一天</p>
               )}
             </div>
           )}
@@ -209,7 +209,7 @@ export function PipeScheduleBuilder({
           {/* Day of month (months) */}
           {cfg.frequency === "months" && (
             <div className="flex items-center justify-between gap-2">
-              <Label className="text-xs">on the</Label>
+              <Label className="text-xs">在</Label>
               <Select
                 value={String(cfg.day_of_month ?? 1)}
                 onValueChange={(v) => update({ day_of_month: Number(v) })}
@@ -297,7 +297,7 @@ export function PipeScheduleBuilder({
               <SelectContent>
                 <SelectItem value="never">never</SelectItem>
                 <SelectItem value="on">在日期</SelectItem>
-                <SelectItem value="after">after N runs</SelectItem>
+                <SelectItem value="after">运行 N 次后</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -2111,7 +2111,7 @@ export function BrainSection() {
           className="text-sm text-muted-foreground py-8 space-y-3 text-center"
         >
           <div className="space-y-1">
-            <p className="font-medium text-foreground">failed to load artifacts</p>
+            <p className="font-medium text-foreground">加载产物失败</p>
             <p className="text-xs">{artifactsError}</p>
           </div>
           <Button

@@ -227,7 +227,7 @@ export function SubtitleBar({ frames, currentIndex, isPlaying, onClick, transcri
 				{/* CTA hint */}
 				<div className={`flex items-center justify-center gap-1 transition-all duration-200 overflow-hidden ${isHovered ? "max-h-6 opacity-100 pt-0.5" : "max-h-0 opacity-0"}`}>
 					<ChevronDown className="w-3 h-3 text-muted-foreground/60" />
-					<span className="text-[10px] text-muted-foreground/60">click for full transcript</span>
+					<span className="text-[10px] text-muted-foreground/60">点击查看完整文字记录</span>
 				</div>
 			</div>
 		</div>
