@@ -41,7 +41,7 @@ export function PlanBlock({ entries }: { entries: PlanEntries }) {
       className="my-2 rounded-none border border-border bg-muted/30 px-3 py-2"
     >
       <div className="mb-1.5 flex items-center justify-between text-[10px] uppercase tracking-wide text-muted-foreground">
-        <span>plan</span>
+        <span>计划</span>
         <span data-testid="chat-plan-progress">
           {completed}/{total}
         </span>

@@ -99,7 +99,7 @@ export function AcpSignInDialog({
   // flow, and any reject/cancel entries.
   const acpOptions = options.filter(
     (o) =>
-      !/reject|deny|decline|cancel|not now/i.test(`${o.kind ?? ""} ${o.name}`) &&
+      !/reject|deny|decline|cancel|暂不/i.test(`${o.kind ?? ""} ${o.name}`) &&
       o.optionId !== "api-key",
   );
 
@@ -292,7 +292,7 @@ export function AcpSignInDialog({
                 onClick={onDismiss}
                 className="h-auto min-h-8 w-full py-1.5"
               >
-                {state === "waiting" ? "cancel" : "not now"}
+                {state === "waiting" ? "cancel" : "暂不"}
               </Button>
             </>
           ) : null}

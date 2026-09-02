@@ -339,7 +339,7 @@ export function CustomSummaryBuilder({
           ) : (
             <div className="text-[11px] text-muted-foreground font-mono">
               {hasValidTime
-                ? <>summarizing <span className="font-medium text-foreground">{getTimeLabel().toLowerCase()}</span></>
+                ? <>正在总结 <span className="font-medium text-foreground">{getTimeLabel().toLowerCase()}</span></>
                 : "select a time period"}
             </div>
           )}

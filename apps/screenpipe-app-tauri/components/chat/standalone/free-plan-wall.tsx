@@ -129,7 +129,7 @@ export function FreeUpgradeSheet() {
     <Dialog open onOpenChange={(open) => !open && close()}>
       <DialogContent data-testid="free-upgrade-sheet" className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>upgrade to keep going</DialogTitle>
+          <DialogTitle>升级以继续</DialogTitle>
           <DialogDescription>
             Free messages{resets ? ` reset ${resets}` : " reset daily"}.
             Upgrading unlocks:
@@ -154,7 +154,7 @@ export function FreeUpgradeSheet() {
             onClick={close}
             className="font-mono text-[11px] uppercase tracking-wide text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
           >
-            not now
+            暂不
           </button>
           <Button
             type="button"

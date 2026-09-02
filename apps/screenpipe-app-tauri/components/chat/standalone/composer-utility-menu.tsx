@@ -143,13 +143,13 @@ export function ComposerUtilityMenu({
           className="w-full flex items-center gap-2 px-2 py-2 text-left text-sm rounded-md hover:bg-muted disabled:opacity-40 disabled:pointer-events-none transition-colors"
         >
           <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span>add photos & files</span>
+          <span>添加照片与文件</span>
         </button>
       </div>
 
       <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border/50 flex items-center gap-1.5">
         <Filter className="h-3 w-3" />
-        <span>filters</span>
+        <span>筛选</span>
         {activeFilterCount > 0 && (
           <span className="ml-auto text-foreground">{activeFilterCount}</span>
         )}
@@ -202,7 +202,7 @@ export function ComposerUtilityMenu({
         <>
           <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border/50 flex items-center gap-1.5">
             <Search className="h-3 w-3" />
-            <span>matching filters</span>
+            <span>匹配的筛选</span>
             {isLoadingFilterSearch && (
               <Loader2 className="ml-auto h-3 w-3 animate-spin text-muted-foreground" />
             )}

@@ -119,7 +119,7 @@ export function ImportChatsDialog({
     <Dialog open={open} onOpenChange={(next) => !importing && onOpenChange(next)}>
       <DialogContent className="rounded-none border border-border sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle className="lowercase">import chats</DialogTitle>
+          <DialogTitle className="lowercase">导入聊天</DialogTitle>
           <DialogDescription>
             Copy local conversations from the past {EXTERNAL_CHAT_LOOKBACK_DAYS} days into screenpipe. Source files stay unchanged and nothing is uploaded.
           </DialogDescription>

@@ -26,11 +26,11 @@ export function ComposerWorktreeToggle({
         className="flex h-7 shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground"
         data-testid="coding-workspace-row"
         role="status"
-        aria-label="preparing worktree"
+        aria-label="正在准备工作树"
         aria-live="polite"
       >
         <PipeAIIcon size={16} thinking className="text-foreground" />
-        <span className="whitespace-nowrap">preparing worktree</span>
+        <span className="whitespace-nowrap">正在准备工作树</span>
       </div>
     );
   }
@@ -63,7 +63,7 @@ export function ComposerWorktreeToggle({
             data-testid="coding-workspace-popover"
           >
             <div>
-              <p className="text-xs font-medium">isolated worktree</p>
+              <p className="text-xs font-medium">隔离工作树</p>
               <p className="mt-1 break-all font-mono text-[10px] text-muted-foreground">
                 {workspace.branch}
               </p>
@@ -95,10 +95,10 @@ export function ComposerWorktreeToggle({
             <button
               type="button"
               className="inline-flex h-6 shrink-0 items-center gap-1 rounded-sm border border-destructive/30 px-1.5 text-[10px] font-medium text-destructive transition-colors duration-150 hover:bg-destructive/5 focus-visible:ring-1 focus-visible:ring-destructive focus-visible:ring-offset-1 motion-reduce:transition-none"
-              aria-label="worktree setup failed"
+              aria-label="worktree 设置失败"
             >
               <CircleAlert className="h-3 w-3" />
-              <span>setup failed</span>
+              <span>设置失败</span>
             </button>
           </PopoverTrigger>
           <PopoverContent
@@ -107,12 +107,12 @@ export function ComposerWorktreeToggle({
             side="top"
             sideOffset={6}
           >
-            <p className="text-xs font-medium">worktree setup failed</p>
+            <p className="text-xs font-medium">worktree 设置失败</p>
             <p className="break-words text-[11px] text-muted-foreground">
               {error}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              send again to continue without an isolated worktree.
+              send again to continue without an 隔离工作树.
             </p>
           </PopoverContent>
         </Popover>

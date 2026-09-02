@@ -1694,7 +1694,7 @@ export function MessageContent({
         <RefreshCw className="h-3 w-3" />
         Try again
       </button>
-      <span className="text-xs text-muted-foreground">or edit your message above</span>
+      <span className="text-xs text-muted-foreground">或在上方编辑你的消息</span>
       <button
         type="button"
         onClick={() => openFeedback(`AI error in chat: ${message.content.slice(0, 300)}`)}
@@ -1705,7 +1705,7 @@ export function MessageContent({
     </div>
   ) : isErrorMessage ? (
     <div className="mt-2 flex items-center gap-1.5">
-      <span className="text-xs text-destructive/60">still happening?</span>
+      <span className="text-xs text-destructive/60">还在发生吗？</span>
       <button
         type="button"
         onClick={() => openFeedback(`AI error in chat: ${message.content.slice(0, 300)}`)}

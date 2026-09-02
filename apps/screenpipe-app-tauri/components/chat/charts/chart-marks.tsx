@@ -950,19 +950,19 @@ export function CalendarChart({ spec, palette }: MarkProps<CalendarChartSpec>) {
         </div>
         <dl className="grid min-w-[11rem] flex-1 grid-cols-3 divide-x divide-border text-right">
           <div className="pr-3">
-            <dt className="text-[10px] text-muted-foreground">average</dt>
+            <dt className="text-[10px] text-muted-foreground">平均</dt>
             <dd className="mt-0.5 text-xs tabular-nums text-foreground">
               {formatChartValue(geometry.average, spec.unit)}
             </dd>
           </div>
           <div className="px-3">
-            <dt className="text-[10px] text-muted-foreground">peak</dt>
+            <dt className="text-[10px] text-muted-foreground">峰值</dt>
             <dd className="mt-0.5 text-xs tabular-nums text-foreground">
               {formatChartValue(geometry.maximum, spec.unit)}
             </dd>
           </div>
           <div className="pl-3">
-            <dt className="text-[10px] text-muted-foreground">total</dt>
+            <dt className="text-[10px] text-muted-foreground">总计</dt>
             <dd className="mt-0.5 text-xs tabular-nums text-foreground">
               {formatChartValue(geometry.total, spec.unit)}
             </dd>
