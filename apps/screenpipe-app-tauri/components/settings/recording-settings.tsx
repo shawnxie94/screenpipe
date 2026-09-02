@@ -3786,7 +3786,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                 <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground">屏幕上下文采集</h3>
-                  <p className="text-xs text-muted-foreground">Capture app/window context, accessibility text, screenshot images, and OCR fallback</p>
+                  <p className="text-xs text-muted-foreground">采集应用/窗口上下文、无障碍文本、屏幕截图和 OCR 兜底</p>
                 </div>
               </div>
               <ManagedSwitch settingKey="disableVision" id="disableVision" checked={!settings.disableVision} onCheckedChange={(checked) => handleSettingsChange({ disableVision: !checked }, true)} />
@@ -4131,7 +4131,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
           <Zap className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div>
             <h2 className="text-sm font-medium text-foreground">电源与电池</h2>
-            <p className="text-xs text-muted-foreground">Battery-aware capture and keep-awake behavior</p>
+            <p className="text-xs text-muted-foreground">电池感知采集和保持唤醒行为</p>
           </div>
         </summary>
         <div className="border-t border-border px-3 py-3">
