@@ -138,18 +138,18 @@ interface LocalPipe {
 
 // Categories are derived dynamically from pipe metadata — no hardcoded taxonomy.
 const SORT_OPTIONS = [
-  { value: "popular", label: "Popular" },
-  { value: "newest", label: "Newest" },
+  { value: "popular", label: "热门" },
+  { value: "newest", label: "最新" },
 ];
 
 const PERMISSION_LABELS: { key: string; label: string; icon: React.ReactNode }[] = [
-  { key: "ocr", label: "Screen text (OCR)", icon: <Eye className="h-3.5 w-3.5" /> },
-  { key: "audio", label: "Audio transcripts", icon: <Mic className="h-3.5 w-3.5" /> },
-  { key: "input", label: "Keyboard input", icon: <Keyboard className="h-3.5 w-3.5" /> },
-  { key: "raw_sql", label: "Raw SQL", icon: <Database className="h-3.5 w-3.5" /> },
-  { key: "frames", label: "Screenshots", icon: <Image className="h-3.5 w-3.5" /> },
-  { key: "connections", label: "Connections", icon: <Plug className="h-3.5 w-3.5" /> },
-  { key: "accessibility", label: "Accessibility", icon: <Accessibility className="h-3.5 w-3.5" /> },
+  { key: "ocr", label: "屏幕文字（OCR）", icon: <Eye className="h-3.5 w-3.5" /> },
+  { key: "audio", label: "音频转写", icon: <Mic className="h-3.5 w-3.5" /> },
+  { key: "input", label: "键盘输入", icon: <Keyboard className="h-3.5 w-3.5" /> },
+  { key: "raw_sql", label: "原始 SQL", icon: <Database className="h-3.5 w-3.5" /> },
+  { key: "frames", label: "屏幕截图", icon: <Image className="h-3.5 w-3.5" /> },
+  { key: "connections", label: "连接", icon: <Plug className="h-3.5 w-3.5" /> },
+  { key: "accessibility", label: "无障碍", icon: <Accessibility className="h-3.5 w-3.5" /> },
 ];
 
 function getPermissionStatus(perms: PipePermissions | undefined, key: string): "allowed" | "denied" | "unset" {
@@ -204,7 +204,7 @@ function getAllowedAccessLabels(perms?: PipePermissions): string[] {
       "keyboard input",
       "screenshots",
       "accessibility",
-      "raw queries",
+      "原始查询",
       "connections",
     ];
   }
@@ -213,7 +213,7 @@ function getAllowedAccessLabels(perms?: PipePermissions): string[] {
     ocr: "screen text",
     audio: "audio",
     input: "keyboard input",
-    raw_sql: "raw queries",
+    raw_sql: "原始查询",
     frames: "screenshots",
     connections: "connections",
     accessibility: "accessibility",
@@ -232,12 +232,12 @@ function getPipeAccessSummary(perms?: PipePermissions): string {
   }
 
   if (labels.length === 1) {
-    return `This scheduled task requests access to ${labels[0]}.`;
+    return `此计划任务请求访问 ${labels[0]}。`;
   }
 
   const last = labels[labels.length - 1];
   const rest = labels.slice(0, -1);
-  return `This scheduled task requests access to ${rest.join(", ")}, and ${last}.`;
+  return `此计划任务请求访问 ${rest.join("、")}，以及 ${last}。`;
 }
 
 function getReadmeFromPipeMd(raw: string): string {
@@ -257,7 +257,7 @@ function navigateHomeAndPrefill(data: ChatPrefillData): void {
 
 function buildForkPipeDisplayLabel(pipeTitle: string): string {
   const title = pipeTitle.trim();
-  return title ? `Fork scheduled task: ${title}` : "Fork scheduled task";
+  return title ? `复制计划任务：${title}` : "复制计划任务";
 }
 
 function formatCount(n: number): string {
@@ -371,8 +371,8 @@ export function PipeStoreView() {
   }, [installedCount]);
 
   const tabs = [
-    { key: "my-pipes" as const, label: "My tasks" },
-    { key: "discover" as const, label: "Discover" },
+    { key: "my-pipes" as const, label: "我的任务" },
+    { key: "discover" as const, label: "发现" },
   ];
 
   return (
@@ -617,7 +617,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
     } catch (err) {
       console.error("failed to fetch pipe detail:", err);
       toast({
-        title: "failed to load scheduled task details",
+        title: "无法加载计划任务详情",
         variant: "destructive",
       });
       setShowDetail(false);
@@ -675,10 +675,10 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
         return next;
       });
       apiCache.invalidate("pipes/installed");
-      toast({ title: `"${pipeName}" updated` });
+      toast({ title: `“${pipeName}” 已更新` });
     } catch (err: any) {
       toast({
-        title: "failed to update scheduled task",
+        title: "更新计划任务失败",
         description: err.message,
         variant: "destructive",
       });
@@ -758,7 +758,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
       onInstalled?.();
     } catch (err: any) {
       toast({
-        title: "failed to install scheduled task",
+        title: "安装计划任务失败",
         description: (
           <span>
             {err.message}{" "}
@@ -767,7 +767,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
               className="underline underline-offset-2 text-inherit opacity-80 hover:opacity-100"
               onClick={() => openFeedback(`Scheduled task install failed (${slug}): ${err.message}`)}
             >
-              report issue
+              报告问题
             </button>
           </span>
         ),
@@ -797,12 +797,12 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `HTTP ${res.status}`);
       }
-      toast({ title: "review submitted" });
+      toast({ title: "评价已提交" });
       openDetail(selectedPipe.slug);
       setReviewExpanded(false);
     } catch (err: any) {
       toast({
-        title: "failed to submit review",
+        title: "提交评价失败",
         description: err.message,
         variant: "destructive",
       });
@@ -831,7 +831,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
       fetchPipes();
     } catch (err: any) {
       toast({
-        title: "failed to unpublish scheduled task",
+        title: "取消发布计划任务失败",
         description: err.message,
         variant: "destructive",
       });
@@ -866,7 +866,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="ghost" onClick={closeInstallGate}>
-            not now
+            暂不
           </Button>
           <Button
             data-testid="pipe-risk-install-confirm"
@@ -879,10 +879,10 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
               {pendingInstall && installing === pendingInstall.slug ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                  installing...
+                  正在安装...
                 </>
               ) : (
-                "install scheduled task"
+                "安装计划任务"
               )}
             </Button>
           </DialogFooter>
@@ -902,7 +902,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          back to discover
+          返回发现
         </button>
 
         {detailLoading ? (
@@ -943,7 +943,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
             ✕
           </button>
           <p className="text-sm font-medium text-foreground">
-            scheduled tasks are AI automations that run on your screen data
+            定时任务是运行在你屏幕数据上的 AI 自动化
           </p>
           <p className="text-sm text-muted-foreground mt-1">
             they can summarize your day, track your time, build a digital memory, sync notes to obsidian, auto-update your CRM, and more. install one below to get started — click GET, then enable it in My tasks.
@@ -982,7 +982,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
             onClick={() => setPublishOpen(true)}
           >
             <Upload className="mr-1.5 h-4 w-4" />
-            PUBLISH
+            发布
           </Button>
         </div>
 
@@ -1039,7 +1039,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
                 void fetchPipes();
               }}
             >
-              TRY AGAIN
+              重试
             </Button>
           </CardContent>
         </Card>
@@ -1092,14 +1092,14 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
           <div className="flex items-start gap-2 p-3 rounded-none bg-muted border border-border">
             <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
             <p className="text-sm text-muted-foreground">
-              you have local edits to this scheduled task. updating overwrites your prompt changes.
-              a backup is saved as <code className="text-xs">pipe.md.bak</code>, and your
-              schedule, model, and enabled state are preserved.
+              你在此计划任务上有本地修改。更新会覆盖你的提示词修改。
+              备份会保存为 <code className="text-xs">pipe.md.bak</code>，你的
+              计划、模型和启用状态会保留。
             </p>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="ghost" onClick={() => setUpdateConfirm(null)}>
-              skip
+              跳过
             </Button>
             <Button
               onClick={() => {
@@ -1176,10 +1176,10 @@ function PipeCard({
           ) : hasUpdate ? (
             <>
               <ArrowUpCircle className="h-3 w-3 mr-1" />
-              UPDATE
+              更新
             </>
           ) : isInstalled ? (
-            "INSTALLED"
+            "已安装"
           ) : (
             "GET"
           )}
@@ -1263,7 +1263,7 @@ function PublisherIdentity({
       </span>
       {publisher.verified && !publisher.isScreenpipeTeam && (
         <BadgeCheck
-          aria-label="verified publisher"
+          aria-label="已验证发布者"
           className={cn(
             "flex-shrink-0 text-foreground",
             compact ? "h-3 w-3" : "h-3.5 w-3.5",
@@ -1387,7 +1387,7 @@ if the pipe's final user-facing file lives outside the pipe's own \`./output/\` 
                 }}
               >
                 <GitFork className="h-4 w-4 mr-1.5" />
-                FORK
+                复制
               </Button>
               {isOwner && (
                 <Button
@@ -1397,7 +1397,7 @@ if the pipe's final user-facing file lives outside the pipe's own \`./output/\` 
                   onClick={() => void openUrl(updateContactHref)}
                 >
                   <ExternalLink className="h-4 w-4 mr-1.5" />
-                  REQUEST UPDATE
+                  请求更新
                 </Button>
               )}
               {isOwner && onUnpublish && (
@@ -1411,10 +1411,10 @@ if the pipe's final user-facing file lives outside the pipe's own \`./output/\` 
                   {unpublishing ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                      UNPUBLISHING...
+                      正在取消发布...
                     </>
                   ) : (
-                    "UNPUBLISH"
+                    "取消发布"
                   )}
                 </Button>
               )}
@@ -1433,19 +1433,19 @@ if the pipe's final user-facing file lives outside the pipe's own \`./output/\` 
                 {installing === pipe.slug ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                    {hasUpdate ? "UPDATING..." : "INSTALLING..."}
+                    {hasUpdate ? "正在更新..." : "正在安装..."}
                   </>
                 ) : hasUpdate ? (
                   <>
                     <ArrowUpCircle className="h-4 w-4 mr-1.5" />
-                    UPDATE
+                    更新
                   </>
                 ) : isInstalled ? (
-                  "INSTALLED"
+                  "已安装"
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-1.5" />
-                    GET
+                    获取
                   </>
                 )}
               </Button>
@@ -1457,7 +1457,7 @@ if the pipe's final user-facing file lives outside the pipe's own \`./output/\` 
       {/* README section */}
       <div className="space-y-3">
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
-          README
+          说明文档
         </h4>
         <div className="border border-border rounded-none p-6">
           {readmeContent ? (
@@ -1488,7 +1488,7 @@ if the pipe's final user-facing file lives outside the pipe's own \`./output/\` 
       {/* Permissions */}
       <div className="space-y-3">
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
-          Permissions
+          权限
         </h4>
         <div className="border border-border rounded-none p-5 space-y-3">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -1517,14 +1517,14 @@ if the pipe's final user-facing file lives outside the pipe's own \`./output/\` 
           {pipe.permissions?.time_range && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-2 border-t border-border">
               <Clock className="h-3.5 w-3.5" />
-              time range: {pipe.permissions?.time_range}
+              时间范围：{pipe.permissions?.time_range}
             </div>
           )}
           {pipe.permissions?.day_restrictions &&
             pipe.permissions.day_restrictions.length > 0 && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
-                days: {pipe.permissions?.day_restrictions?.join(", ")}
+                星期：{pipe.permissions?.day_restrictions?.join(", ")}
               </div>
             )}
         </div>
@@ -1534,15 +1534,14 @@ if the pipe's final user-facing file lives outside the pipe's own \`./output/\` 
           <div className="border border-foreground bg-muted/50 rounded-none p-4 space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <AlertTriangle className="h-4 w-4" />
-              unrestricted data access
+              无限制的数据访问
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              this scheduled task has no data access restrictions. it can access all your
-              screen text, audio, keyboard input, and raw database queries.
+              此计划任务没有任何数据访问限制。它可以访问你所有的屏幕文字、音频、键盘输入和原始数据库查询。
             </p>
             {!pipe.author_verified && (
               <p className="text-xs text-muted-foreground leading-relaxed">
-                this publisher is not verified. use the source section below if you want to inspect the scheduled task before installing.
+                此发布者未经验证。如果你想在安装前检查此计划任务，请使用下方的源码部分。
               </p>
             )}
           </div>
@@ -1560,7 +1559,7 @@ if the pipe's final user-facing file lives outside the pipe's own \`./output/\` 
           ) : (
             <ChevronRight className="h-3.5 w-3.5" />
           )}
-          Source (pipe.md)
+          源码（pipe.md）
         </button>
         {sourceExpanded && pipe.source ? (
           <div className="border border-border rounded-none overflow-hidden">
@@ -1590,7 +1589,7 @@ export function PermissionsReview({
       <div className="border border-border rounded-none p-4 space-y-2">
         <div className="flex items-center gap-1.5 text-sm font-medium">
           <Shield className="h-4 w-4" />
-          data access
+          数据访问
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           {PERMISSION_LABELS.map((perm) => {
@@ -1621,7 +1620,7 @@ export function PermissionsReview({
         <div className="border border-foreground bg-muted/50 rounded-none p-4">
           <div className="flex items-center gap-2 text-xs font-medium text-foreground">
             <AlertTriangle className="h-3.5 w-3.5" />
-            unrestricted data access — this scheduled task can read all your data
+            无限制的数据访问 — 此计划任务可以读取你的所有数据
           </div>
         </div>
       )}
@@ -1659,11 +1658,11 @@ export function InstallRiskSummary({
             ) : (
               <Shield className="h-4 w-4" />
             )}
-            {unrestricted ? "可以访问你所有的屏幕数据" : "Requested access"}
+            {unrestricted ? "可以访问你所有的屏幕数据" : "请求的权限"}
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
             {unrestricted
-              ? "screen text, audio, keyboard input, screenshots, and raw queries."
+              ? "屏幕文字、音频、键盘输入、截图和原始查询。"
               : getPipeAccessSummary(permissions)}{" "}
             {onReviewSource ? (
               <button
@@ -1671,7 +1670,7 @@ export function InstallRiskSummary({
                 onClick={onReviewSource}
                 className="underline underline-offset-2 hover:text-foreground transition-colors"
               >
-                review source
+                查看源码
               </button>
             ) : null}
           </p>

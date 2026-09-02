@@ -101,16 +101,16 @@ describe("pipe store error state", () => {
     fireEvent.click(screen.getByTestId("tab-discover"));
 
     await waitFor(() => {
-      expect(screen.getByText("couldn't load scheduled tasks")).toBeTruthy();
+      expect(screen.getByText("无法加载定时任务")).toBeTruthy();
     });
-    expect(screen.queryByText("No scheduled tasks found")).toBeNull();
+    expect(screen.queryByText("未找到定时任务")).toBeNull();
     expect(mocks.cacheSet).not.toHaveBeenCalledWith(
       expect.stringContaining("pipes/store"),
       [],
       expect.any(Number)
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "TRY AGAIN" }));
+    fireEvent.click(screen.getByRole("button", { name: "重试" }));
 
     await waitFor(() => expect(screen.getByText("Daily summary")).toBeTruthy());
     expect(storeAttempts).toBe(2);

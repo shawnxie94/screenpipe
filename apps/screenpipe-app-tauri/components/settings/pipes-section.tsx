@@ -295,7 +295,7 @@ schedule: every 30m
 enabled: true
 ---
 
-Your prompt instructions here...
+你的提示词说明写在这里...
 \`\`\`
 
 ## connections
@@ -389,7 +389,7 @@ function navigateHomeAndPrefill(data: ChatPrefillData): void {
 
 function buildCreatePipeDisplayLabel(prompt: string): string {
   const normalized = prompt.replace(/\s+/g, " ").trim();
-  if (!normalized) return "Create scheduled task";
+  if (!normalized) return "创建计划任务";
   const compact = normalized.length > 60 ? `${normalized.slice(0, 57).trimEnd()}...` : normalized;
   return `Create scheduled task: ${compact}`;
 }
@@ -2465,7 +2465,7 @@ export function PipesSection() {
       <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
         <Monitor className="h-8 w-8 opacity-40" />
         <p className="text-sm font-medium">{selectedDeviceInfo.label} is offline</p>
-        <p className="text-xs opacity-70">check that screenpipe is running on the remote device</p>
+        <p className="text-xs opacity-70">检查远程设备上 screenpipe 是否在运行</p>
         <Button variant="outline" size="sm" onClick={() => setSelectedDevice(null)}>
           back to this device
         </Button>
@@ -2648,12 +2648,12 @@ export function PipesSection() {
               <AlertCircle className="h-7 w-7 mx-auto text-muted-foreground/70" />
               <div>
                 <p className="text-foreground font-medium text-base">
-                  {isRemote ? "couldn't load scheduled tasks from this device" : "screenpipe backend is unavailable"}
+                  {isRemote ? "无法从此设备加载计划任务" : "屏幕录制后端不可用"}
                 </p>
                 <p className="text-sm mt-1">
                   {isRemote
-                    ? `the remote API at ${apiBase} did not answer. check that screenpipe is running on that device.`
-                    : `your scheduled task files may still be installed, but the local API at ${apiBase} did not answer.`}
+                    ? `远程 API（${apiBase}）未响应。请检查该设备上 screenpipe 是否在运行。`
+                    : `你的计划任务文件可能仍然已安装，但本地 API（${apiBase}）未响应。`}
                 </p>
                 <p className="text-xs mt-2 font-mono text-muted-foreground/80">{loadError}</p>
               </div>
@@ -2899,9 +2899,9 @@ export function PipesSection() {
                       {hasMissingConnections && (
                         <span
                           className="shrink-0 font-mono text-[10px] text-destructive"
-                          title="required connections are not configured"
+                          title="必需的连接尚未配置"
                         >
-                          setup
+                          需配置
                         </span>
                       )}
                       {availableUpdates[pipe.config.name] && (
@@ -3028,7 +3028,7 @@ export function PipesSection() {
                         <Badge
                           variant="outline"
                           className="h-5 shrink-0 rounded-none text-[10px] text-muted-foreground"
-                          title="future runs remember prior context and update one chat"
+                          title="后续运行会记住之前的上下文并更新同一个聊天"
                         >
                           one chat
                         </Badge>
@@ -3072,9 +3072,9 @@ export function PipesSection() {
                             e.stopPropagation();
                             setConnectionModal({ pipeName: pipe.config.name, connections: pipe.config.connections ?? [] });
                           }}
-                          title="required connections are not configured"
+                          title="必需的连接尚未配置"
                         >
-                          setup
+                          需配置
                         </button>
                       )}
                     </div>
@@ -3094,8 +3094,8 @@ export function PipesSection() {
                             className="h-9 gap-2 rounded-none px-3 font-mono text-xs uppercase"
                             onClick={() => stopPipe(pipe.config.name)}
                             disabled={stoppingPipe === pipe.config.name}
-                            title="stop scheduled task"
-                            aria-label="stop scheduled task"
+                            title="停止计划任务"
+                            aria-label="停止计划任务"
                           >
                             {stoppingPipe === pipe.config.name ? (
                               <Loader2 className="h-5 w-5 animate-spin" />
@@ -3621,7 +3621,7 @@ export function PipesSection() {
                                       }}>
                                         {copiedExecId === exec.id ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
                                       </button>
-                                      <button className="text-muted-foreground hover:text-foreground p-0.5" title="open in chat" onClick={async () => {
+                                      <button className="text-muted-foreground hover:text-foreground p-0.5" title="在聊天中打开" onClick={async () => {
                                         const recorderSid = exec.conversation_id || `pipe:${exec.pipe_name}:${exec.id}`;
                                         const existing = await loadConversationFile(recorderSid);
                                         if (pipeConversationNeedsRefresh(existing, exec)) {
@@ -4038,7 +4038,7 @@ export function PipesSection() {
                                 {exec.stdout && (
                                   <button
                                     className="ml-auto text-muted-foreground hover:text-foreground transition-colors"
-                                    title="view in chat"
+                                    title="在聊天中查看"
                                     onClick={async (e) => {
                                       e.stopPropagation();
                                       const conversationId =

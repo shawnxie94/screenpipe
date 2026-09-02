@@ -13,7 +13,7 @@ const DEFAULT_INTERVAL_MINUTES = 15;
 
 export const searchIndex: SettingsField[] = [
   { label: "启用活动记录", keywords: ["activity", "history", "automatic"] },
-  { label: "Interval", keywords: ["frequency", "cadence", "minutes", "schedule"] },
+  { label: "活动间隔", keywords: ["frequency", "cadence", "minutes", "schedule"] },
 ];
 
 export function ActivitiesSettings() {
@@ -24,7 +24,7 @@ export function ActivitiesSettings() {
   return (
     <div className="space-y-5" data-testid="section-settings-activities">
       <p className="text-sm text-muted-foreground">
-        Control automatic activity summaries.
+        控制自动活动摘要。
       </p>
 
       <div className="border border-border bg-card">
@@ -34,7 +34,7 @@ export function ActivitiesSettings() {
             <div>
               <h3 className="text-sm font-medium text-foreground">启用活动记录</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Automatically create activity summaries from your screen history.
+                从你的屏幕历史自动创建活动摘要。
               </p>
             </div>
           </div>
@@ -53,7 +53,7 @@ export function ActivitiesSettings() {
               <div>
                 <h3 className="text-sm font-medium text-foreground">间隔</h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  How often activities will be created.
+                  活动创建的频率。
                 </p>
               </div>
             </div>

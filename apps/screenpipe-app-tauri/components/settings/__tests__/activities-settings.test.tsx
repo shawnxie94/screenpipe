@@ -34,8 +34,8 @@ describe("ActivitiesSettings", () => {
       "data-state",
       "unchecked",
     );
-    expect(screen.getByLabelText("Activity interval")).toHaveValue("15");
-    expect(screen.getByLabelText("Activity interval")).toBeDisabled();
+    expect(screen.getByLabelText("活动间隔")).toHaveValue("15");
+    expect(screen.getByLabelText("活动间隔")).toBeDisabled();
   });
 
   it("persists both settings without running activity generation", () => {
@@ -45,7 +45,7 @@ describe("ActivitiesSettings", () => {
     fireEvent.click(screen.getByTestId("activities-enabled-toggle"));
     expect(mocks.updateSettings).toHaveBeenCalledWith({ activitiesEnabled: false });
 
-    fireEvent.change(screen.getByLabelText("Activity interval"), {
+    fireEvent.change(screen.getByLabelText("活动间隔"), {
       target: { value: "30" },
     });
     expect(mocks.updateSettings).toHaveBeenCalledWith({
