@@ -340,7 +340,7 @@ export function ChatHistoryView({
       });
       if (!validation.ok) {
         toast({
-          title: "Invalid group name",
+          title: "无效的组名称",
           description: validation.message,
           variant: "destructive",
         });
@@ -418,7 +418,7 @@ export function ChatHistoryView({
               checked={selected}
               onCheckedChange={() => toggleSelected(conv.id)}
               onClick={(e) => e.stopPropagation()}
-              aria-label={selected ? "Deselect chat" : "Select chat"}
+              aria-label={selected ? "取消选择聊天" : "选择聊天"}
             />
           </div>
         </div>
@@ -469,7 +469,7 @@ export function ChatHistoryView({
                     "h-7 w-7 inline-flex items-center justify-center",
                     "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                   )}
-                  aria-label="Conversation actions"
+                  aria-label="聊天操作"
                   disabled={rowPending}
                 >
                   {rowPending ? (
@@ -522,7 +522,7 @@ export function ChatHistoryView({
                       } catch {
                         toast({
                           title: "Update failed",
-                          description: "Could not update this chat. Please try again.",
+                          description: "无法更新此聊天，请重试。",
                         });
                       } finally {
                         setRowPendingIds((prev) => {
@@ -683,7 +683,7 @@ export function ChatHistoryView({
             <div
               className="flex items-center gap-6 border-b border-border/60"
               role="tablist"
-              aria-label="Chat filter"
+              aria-label="聊天筛选"
             >
               {TABS.map((t) => {
                 const active = tab === t.value;
@@ -749,7 +749,7 @@ export function ChatHistoryView({
                             else setAllVisibleSelected();
                           }}
                           aria-label={
-                            allVisibleSelected ? "Clear selection" : "Select all visible chats"
+                            allVisibleSelected ? "清除选择" : "选择全部可见聊天"
                           }
                         />
                       );
@@ -806,7 +806,7 @@ export function ChatHistoryView({
                                 setBulkPending(null);
                                 if (result.failed.length > 0) {
                                   toast({
-                                    title: "Some chats could not be archived",
+                                    title: "部分聊天无法归档",
                                     description: `${result.failed.length} failed.`,
                                   });
                                   return;
@@ -929,7 +929,7 @@ export function ChatHistoryView({
                         "absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 transition-colors",
                         "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       )}
-                      aria-label="Clear search"
+                      aria-label="清除搜索"
                       title="Clear"
                       onClick={() => setQuery("")}
                     >
@@ -972,8 +972,8 @@ export function ChatHistoryView({
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
               <span>
-                {tab === "chats" ? "Loading chats…"
-                  : tab === "pipes" ? "Loading scheduled tasks…"
+                {tab === "chats" ? "正在加载聊天…"
+                  : tab === "pipes" ? "正在加载定时任务…"
                   : "Loading…"}
               </span>
             </div>
@@ -982,14 +982,14 @@ export function ChatHistoryView({
           <div className="min-h-[40vh] flex items-center justify-center">
             <span className="text-sm text-muted-foreground">
               {query.trim()
-                ? (tab === "chats" ? "No matching chats."
-                  : tab === "pipes" ? "No matching scheduled tasks."
-                  : tab === "archived" ? "No matching archived."
-                  : "No results.")
-                : (tab === "chats" ? "No chats yet."
-                  : tab === "pipes" ? "No scheduled tasks yet."
-                  : tab === "archived" ? "No archived yet."
-                  : "No chats yet.")}
+                ? (tab === "chats" ? "没有匹配的聊天。"
+                  : tab === "pipes" ? "没有匹配的定时任务。"
+                  : tab === "archived" ? "没有匹配的已归档。"
+                  : "没有结果。")
+                : (tab === "chats" ? "还没有聊天。"
+                  : tab === "pipes" ? "还没有定时任务。"
+                  : tab === "archived" ? "还没有归档。"
+                  : "还没有聊天。")}
             </span>
           </div>
         ) : (
@@ -1022,11 +1022,11 @@ export function ChatHistoryView({
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{deleteIds.length > 1 ? "Delete chats" : "Delete chat"}</DialogTitle>
+            <DialogTitle>{deleteIds.length > 1 ? "删除聊天" : "删除聊天"}</DialogTitle>
             <DialogDescription>
               {deleteIds.length > 1
                 ? `Delete ${deleteIds.length} chats? This cannot be undone.`
-                : "Delete this chat? This cannot be undone."}
+                : "删除此聊天？此操作无法撤销。"}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1119,8 +1119,8 @@ export function ChatHistoryView({
                 "w-full rounded-md border bg-background px-3 py-2 text-sm outline-none",
                 "focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
               )}
-              placeholder="Group name"
-              aria-label="Group name"
+              placeholder="组名称"
+              aria-label="组名称"
             />
           </div>
           <DialogFooter>

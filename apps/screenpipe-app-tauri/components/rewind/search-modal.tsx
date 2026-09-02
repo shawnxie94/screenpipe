@@ -490,9 +490,8 @@ function EmptyMessage({ title, hint, action }: {
 }
 
 /**
- * "See all" link that closes a capped section in the blended view. One
- * component so both sections read the same and line up with the rows above
- * them — they were "see all 7 chats →" and "show all 6 results", at different
+ * "查看全部"链接：在混合视图中收起超出上限的分区。
+ * 一个组件让两个分区读取一致，并与上方行对齐—— — they were "see all 7 chats →" and "show all 6 results", at different
  * left edges, both in muted 12px that disappeared under the list.
  */
 function SeeAllRow({ label, onClick }: { label: string; onClick: () => void }) {
@@ -2353,10 +2352,10 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
             ? "idle"
             : "results";
   const SCOPE_NOUNS: Record<ContentFilter, string> = {
-    all: "results",
-    screen: "screen matches",
-    input: "keyboard or clipboard matches",
-    chats: "chats",
+    all: "结果",
+    screen: "屏幕匹配",
+    input: "键盘或剪贴板匹配",
+    chats: "聊天",
   };
 
   // Scope lives in the search bar rather than as a row of chips above the
@@ -2656,8 +2655,8 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           {/* Empty state */}
           {showMinChars && (
             <EmptyMessage
-              title="Keep typing"
-              hint={`Search needs at least ${MIN_QUERY_CHARS} characters`}
+              title="继续输入"
+              hint={`搜索至少需要 ${MIN_QUERY_CHARS} 个字符`}
             />
           )}
 
@@ -2682,10 +2681,10 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
 
           {showSearchError && (
             <EmptyMessage
-              title="Search failed"
-              hint={searchError ?? "Something went wrong reaching your history"}
+              title="搜索失败"
+              hint={searchError ?? "访问历史记录时出现错误"}
               action={{
-                label: "Try again",
+                label: "重试",
                 onClick: () => {
                   resetSearch();
                   // The keyword effect keys off the epoch, so bumping it reruns
@@ -2699,16 +2698,16 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
 
           {showEmpty && (
             <EmptyMessage
-              title={<>No {SCOPE_NOUNS[contentFilter]} for &ldquo;{trimmedQuery}&rdquo;</>}
+              title={<>没有与 &ldquo;{trimmedQuery}&rdquo; 匹配的{SCOPE_NOUNS[contentFilter]}结果</>}
               hint={
                 contentFilter === "all"
-                  ? "Try a different word, or check the spelling"
-                  : "This scope only searches part of your history"
+                  ? "换个词试试，或检查拼写"
+                  : "此范围仅搜索部分历史记录"
               }
               action={
                 contentFilter === "all"
                   ? undefined
-                  : { label: "Search everything instead", onClick: () => { setContentFilter("all"); setNavIndex(0); } }
+                  : { label: "改为搜索全部", onClick: () => { setContentFilter("all"); setNavIndex(0); } }
               }
             />
           )}
@@ -2966,7 +2965,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
               </div>
               {filteredChats.length > 5 && (
                 <SeeAllRow
-                  label={`See all ${filteredChats.length} chats`}
+                  label={`查看全部 ${filteredChats.length} 个聊天`}
                   onClick={() => { setContentFilter("chats"); setNavIndex(0); }}
                 />
               )}
@@ -2984,8 +2983,8 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                   so the two can't both fire. */}
               {!isLoadingChats && filteredChats.length === 0 && !debouncedQuery.trim() && (
                 <EmptyMessage
-                  title="No chats yet"
-                  hint="Ask about anything you've seen, said, or heard to start one"
+                  title="还没有聊天"
+                  hint="问问你看过、说过或听过的任何内容来开始一段"
                 />
               )}
               {/* Below the minimum this scope shows the "keep typing" state
@@ -3109,7 +3108,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
               })()}
               {contentFilter === "all" && uiEventResults.length > 5 && (
                 <SeeAllRow
-                  label={`See all ${uiEventResults.length} keyboard & clipboard`}
+                  label={`查看全部 ${uiEventResults.length} 条键盘与剪贴板`}
                   onClick={() => { setContentFilter("input"); setNavIndex(0); }}
                 />
               )}
@@ -3212,10 +3211,10 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                   query has results, an applied facet is hiding them. */}
               {facetsHidEverything && (
                 <EmptyMessage
-                  title="No results with these filters"
-                  hint={`${searchResults.length} screen results for "${trimmedQuery}" are hidden`}
+                  title="没有符合当前筛选的结果"
+                  hint={`${searchResults.length} 条屏幕结果因“${trimmedQuery}”被隐藏`}
                   action={{
-                    label: "Clear filters",
+                    label: "清除筛选",
                     onClick: () => {
                       setAppFilter(null);
                       setDomainFilter(null);
@@ -3447,8 +3446,8 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                   name what this searches and what typing will do. */}
               {!visibleRecentChats.length && !suggestionsLoading && !isLoadingChats && (
                 <EmptyMessage
-                  title="Nothing recent yet"
-                  hint="Start typing to search everything you've seen, said, or heard"
+                  title="还没有近期内容"
+                  hint="开始输入，搜索你看过、说过或听过的一切"
                 />
               )}
             </div>
@@ -3496,7 +3495,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                 setHasMoreTranscriptions(true);
               }
             }}
-            placeholder="search memory & chats... (# tags, @ apps & people)"
+            placeholder="搜索记忆与聊天... (# 标签，@ 应用与人)"
             className={cn(
               "min-w-[120px] flex-1 bg-transparent text-foreground placeholder:text-muted-foreground/60 outline-none",
               standalone ? "text-base" : "text-sm",
@@ -3596,7 +3595,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                 setHasMoreTranscriptions(true);
               }
             }}
-            placeholder="Search memory & chats... (# tags, @ apps & people)"
+            placeholder="搜索记忆与聊天... (# 标签，@ 应用与人)"
             className="min-w-[120px] flex-1 bg-transparent text-foreground placeholder:text-muted-foreground text-sm outline-none"
             {...searchInputBehaviorProps}
           />

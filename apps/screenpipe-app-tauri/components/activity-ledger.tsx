@@ -185,9 +185,9 @@ const DEFAULT_ACTIVITY_REVIEW_PRESET: AIPreset = {
 
 const RANGE_COPY: Record<RangePreset, string> = {
   today: "Today",
-  "24h": "Last 24 hours",
-  "7d": "Last 7 days",
-  custom: "Custom range",
+  "24h": "最近 24 小时",
+  "7d": "最近 7 天",
+  custom: "自定义范围",
 };
 
 const RANGE_SHORT_COPY: Record<RangePreset, string> = {
@@ -270,7 +270,7 @@ export function isActivityCalendarDateDisabled(
 }
 
 function customRangeLabel(range: DateRange | undefined): string {
-  if (!range?.from) return "Choose dates";
+  if (!range?.from) return "选择日期";
   if (!range.to) return `${format(range.from, "MMM d, yyyy")} – …`;
   return `${format(range.from, "MMM d, yyyy")} – ${format(range.to, "MMM d, yyyy")}`;
 }
@@ -556,7 +556,7 @@ export function artifactsForHistoryEntry(
         frame_id: null,
         meeting_id: null,
         label:
-          evidence.window_title?.trim() || app || domain || "Screen capture",
+          evidence.window_title?.trim() || app || domain || "屏幕录制",
       };
       if (app) {
         const artifact = {
@@ -1235,7 +1235,7 @@ function ActivityEntryArtifacts({
               ? "Meeting"
               : siteDomain(evidence.browser_url) ||
                 evidence.app_name ||
-                (evidence.kind === "audio" ? "Transcript" : "Screen capture");
+                (evidence.kind === "audio" ? "文字记录" : "屏幕录制");
           const destination =
             evidence.kind === "meeting" && evidence.meeting_id
               ? "Meetings"
@@ -1536,7 +1536,7 @@ export function ActivityLedger({
   useEffect(() => {
     if (!range || range.start >= range.end) {
       setLoading(false);
-      setError("Start time must be before end time.");
+      setError("开始时间必须早于结束时间。");
       return;
     }
     const controller = new AbortController();
@@ -1760,7 +1760,7 @@ export function ActivityLedger({
                   ? quota.message
                   : agentFailure
                     ? agentFailure
-                    : "History could not be updated. Try again.",
+                    : "无法更新历史记录，请重试。",
         );
         if (noDataStatus) {
           posthog.capture("activity_generation_completed", {
@@ -1898,7 +1898,7 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
     void showChatWithPrefill({
       context: compactEntryContext(entry),
       displayLabel: `Ask about “${entry.title}”`,
-      prompt: "Tell me more about this activity.",
+      prompt: "了解更多此活动的详情。",
       source: "activity-history-chat",
     });
   };
@@ -2021,7 +2021,7 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
                     ? recentActivityDisabled
                     : loading || historyLoading || !cacheReady || invalidRange
                 }
-                aria-label="Refresh history"
+                aria-label="刷新历史记录"
               >
                 <RefreshCw
                   className={cn(
@@ -2040,7 +2040,7 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
                   <Button
                     variant="outline"
                     className="h-9 justify-start rounded-none border-border bg-background px-3 font-mono text-xs font-normal normal-case tracking-normal"
-                    aria-label="Choose custom date range"
+                    aria-label="选择自定义日期范围"
                   >
                     <CalendarDays className="mr-2 h-3.5 w-3.5" />
                     {customRangeLabel(customDateRange)}
@@ -2121,11 +2121,11 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
             </p>
           ) : !activitiesEnabled ? (
             loading && !summary ? (
-              <ActivityLedgerSkeleton label="Reading your day…" />
+              <ActivityLedgerSkeleton label="正在读取你的一天…" />
             ) : !cacheReady ? (
-              <ActivityLedgerSkeleton label="Loading generated activities…" />
+              <ActivityLedgerSkeleton label="正在生成活动…" />
             ) : historyLoading ? (
-              <ActivityLedgerSkeleton label="Understanding what you worked on…" />
+              <ActivityLedgerSkeleton label="正在理解你做了什么…" />
             ) : (
               <div className="flex min-h-[320px] items-center justify-center py-12 text-center">
                 <div className="max-w-sm">
@@ -2143,13 +2143,13 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
                     className="mt-5 h-10 px-5 uppercase tracking-wide"
                     onClick={() => void enableActivities()}
                   >
-                    {historyError ? "Try again" : "Enable activities"}
+                    {historyError ? "重试" : "启用活动记录"}
                   </Button>
                 </div>
               </div>
             )
           ) : history ? (
-            <section aria-label="Activity history">
+            <section aria-label="活动历史">
               {groupedEntries.map(([day, entries]) => (
                 <div key={day} className="mb-12 last:mb-0">
                   <h2 className="border-b border-foreground pb-3 font-sans text-xl font-medium">
@@ -2223,13 +2223,13 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
               ))}
             </section>
           ) : loading && !summary ? (
-            <ActivityLedgerSkeleton label="Reading your day…" />
+            <ActivityLedgerSkeleton label="正在读取你的一天…" />
           ) : error ? (
             <p className="text-sm text-muted-foreground">{error}</p>
           ) : !cacheReady ? (
-            <ActivityLedgerSkeleton label="Loading generated activities…" />
+            <ActivityLedgerSkeleton label="正在生成活动…" />
           ) : historyLoading && !history ? (
-            <ActivityLedgerSkeleton label="Understanding what you worked on…" />
+            <ActivityLedgerSkeleton label="正在理解你做了什么…" />
           ) : (
             <div className="flex min-h-[320px] items-center justify-center py-12 text-center">
               <div className="max-w-sm">
@@ -2239,7 +2239,7 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   <span role={historyError ? "alert" : undefined}>
                     {historyError ||
-                      "Turn this range into a private activity history when you’re ready."}
+                      "准备好的时候，把这段时间变成一份私有的活动历史记录。"}
                   </span>
                 </p>
                 <Button
@@ -2247,7 +2247,7 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
                   className="mt-5 h-10 px-5 uppercase tracking-wide"
                   onClick={() => regenerateSelectedRange("empty_state")}
                 >
-                  {historyError ? "Try again" : "Generate activities"}
+                  {historyError ? "重试" : "生成活动"}
                 </Button>
               </div>
             </div>

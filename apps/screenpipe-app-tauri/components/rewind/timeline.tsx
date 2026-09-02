@@ -1480,19 +1480,19 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 							<button
 								onClick={() => commands.closeWindow("Main")}
 								className="absolute top-4 right-4 p-2 bg-card hover:bg-muted border border-border rounded-md transition-colors z-50"
-								title="Close (Esc)"
+								title="关闭 (Esc)"
 							>
 								<X className="w-4 h-4 text-muted-foreground" />
 							</button>
 						)}
 						<div className="bg-card text-foreground p-6 rounded-lg text-center space-y-3 max-w-md mx-4">
-							<h3 className="font-medium">Loading Timeline</h3>
+							<h3 className="font-medium">正在加载时间线</h3>
 							<p className="text-sm text-foreground">
-								Fetching your recorded frames...
+								正在获取录制的画面...
 							</p>
 							<Loader2 className="h-5 w-5 animate-spin mx-auto mt-2" />
 							<p className="text-xs text-muted-foreground mt-4">
-								Press Esc or click X to close
+								按 Esc 或点击 X 关闭
 							</p>
 						</div>
 					</div>
@@ -1511,7 +1511,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 							<button
 								onClick={() => commands.closeWindow("Main")}
 								className="absolute top-4 right-4 p-2 bg-card hover:bg-muted border border-border rounded-md transition-colors z-50"
-								title="Close (Esc)"
+								title="关闭 (Esc)"
 							>
 								<X className="w-4 h-4 text-muted-foreground" />
 							</button>
@@ -1519,18 +1519,17 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 						<div className="bg-destructive/20 border border-destructive/30 text-foreground p-6 rounded-lg text-center space-y-4 max-w-md mx-4">
 							<div className="flex flex-col items-center gap-2">
 								<AlertCircle className="h-6 w-6 text-destructive" />
-								<h3 className="font-medium text-destructive">Connection Error</h3>
+								<h3 className="font-medium text-destructive">连接错误</h3>
 							</div>
 							<p className="text-sm text-foreground">
-								Unable to reach your screenpipe data. Please verify that the
-								screenpipe turned on.
+								无法访问你的 screenpipe 数据，请确认 screenpipe 已开启。
 							</p>
 							<button
 								onClick={handleRefresh}
 								className="flex items-center gap-2 px-4 py-2 bg-card rounded-lg border border-border mx-auto bg-muted"
 							>
 								<RotateCcw className="h-4 w-4" />
-								<span>Reload Timeline</span>
+								<span>重新加载时间线</span>
 							</button>
 							<p className="text-xs text-muted-foreground">
 								Press Esc or click X to close
@@ -1602,7 +1601,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 							className="px-1.5 hover:text-white/80 disabled:text-white/30"
 							disabled={searchResultIndex >= searchResults.length - 1}
 							onClick={() => navigateToSearchResult(searchResultIndex + 1)}
-							title="Older match (←)"
+							title="较旧匹配 (←)"
 						>
 							&#9664;
 						</button>
@@ -1618,14 +1617,14 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 							className="px-1.5 hover:text-white/80 disabled:text-white/30"
 							disabled={searchResultIndex <= 0}
 							onClick={() => navigateToSearchResult(searchResultIndex - 1)}
-							title={isMac ? "Newer match (→ or ⌘G)" : "Newer match (→ or Ctrl+G)"}
+							title={isMac ? "较新匹配 (→ or ⌘G)" : "较新匹配 (→ or Ctrl+G)"}
 						>
 							&#9654;
 						</button>
 						<button
 							className="ml-1 text-white/50 hover:text-white/80"
 							onClick={() => clearSearchHighlight()}
-							title="Exit search review (Esc)"
+							title="退出搜索检查 (Esc)"
 						>
 							<X className="w-3.5 h-3.5" />
 						</button>
@@ -1686,7 +1685,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 										{/* Skeleton timeline slider */}
 										<div className="flex items-center gap-2 justify-center">
 											<Loader2 className="w-4 h-4 animate-spin" />
-											<span>Loading timeline...</span>
+											<span>正在加载时间线...</span>
 										</div>
 										<div className="h-16 bg-muted/50 rounded-lg animate-pulse flex items-end gap-0.5 px-2 pb-2">
 											{/* Skeleton bars */}
@@ -1704,7 +1703,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 										</div>
 									</div>
 								) : error ? (
-									<div className="text-destructive text-center">Failed to load timeline data</div>
+									<div className="text-destructive text-center">无法加载时间线数据</div>
 								) : isScreenRecordingOff(health) ? (
 									// Same signal the empty-state overlay reads. Without this the bar
 									// claims to be recording while the overlay right above it says
