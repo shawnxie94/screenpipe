@@ -2093,7 +2093,7 @@ export function ChatSidebar({
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete chat</DialogTitle>
+            <DialogTitle>删除聊天</DialogTitle>
             <DialogDescription>Delete this chat? This cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2123,8 +2123,8 @@ export function ChatSidebar({
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Rename chat</DialogTitle>
-            <DialogDescription>Give this chat a new title.</DialogDescription>
+            <DialogTitle>重命名聊天</DialogTitle>
+            <DialogDescription>为此聊天输入新标题。</DialogDescription>
           </DialogHeader>
           <div className="py-2">
             <input
@@ -2143,7 +2143,7 @@ export function ChatSidebar({
                 "w-full rounded-md border bg-background px-3 py-2 text-sm outline-none",
                 "focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
               )}
-              placeholder="Chat title"
+              placeholder="聊天标题"
               aria-label="Chat title"
             />
           </div>
@@ -2173,8 +2173,8 @@ export function ChatSidebar({
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>New group</DialogTitle>
-            <DialogDescription>Enter a name for the sidebar group.</DialogDescription>
+            <DialogTitle>新建分组</DialogTitle>
+            <DialogDescription>为侧边栏分组输入一个名称。</DialogDescription>
           </DialogHeader>
           <div className="py-2">
             <input
@@ -2197,7 +2197,7 @@ export function ChatSidebar({
                 "w-full rounded-md border bg-background px-3 py-2 text-sm outline-none",
                 "focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
               )}
-              placeholder="Group name"
+              placeholder="分组名称"
               aria-label="Group name"
             />
           </div>
@@ -2316,7 +2316,7 @@ export function CollapsedChatSidebarButton({
             </button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent side="right" className="text-xs">Recent chats</TooltipContent>
+        <TooltipContent side="right" className="text-xs">最近的聊天</TooltipContent>
       </Tooltip>
       <PopoverContent
         side="right"

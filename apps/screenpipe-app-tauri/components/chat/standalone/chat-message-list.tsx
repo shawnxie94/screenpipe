@@ -522,7 +522,7 @@ export function ChatMessageList({
                               }
                             }}
                             className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
-                            title="Copy message"
+                            title="复制消息"
                           >
                             {copiedMessageId === message.id ? (
                               <Check className="h-3 w-3" />
@@ -539,7 +539,7 @@ export function ChatMessageList({
                                 beginEditingMessage(message);
                               }}
                               className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
-                              title="Edit"
+                              title="编辑"
                             >
                               <Pencil className="h-3 w-3" />
                             </button>
@@ -557,7 +557,7 @@ export function ChatMessageList({
                             <button
                               onClick={() => onRetryAssistantMessage(message.id)}
                               className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
-                              title="Retry"
+                              title="重试"
                             >
                               <RefreshCw className="h-3 w-3" />
                             </button>
@@ -570,7 +570,7 @@ export function ChatMessageList({
                               <PopoverTrigger asChild>
                                 <button
                                   className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"
-                                  title="More options"
+                                  title="更多选项"
                                 >
                                   <MoreHorizontal className="h-3 w-3" />
                                 </button>

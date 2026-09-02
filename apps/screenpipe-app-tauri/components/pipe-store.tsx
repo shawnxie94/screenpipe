@@ -957,7 +957,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="search community tasks..."
+              placeholder="搜索社区任务..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 h-9"
@@ -1046,7 +1046,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
       ) : pipes.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            <p className="text-sm">No scheduled tasks found</p>
+            <p className="text-sm">未找到定时任务</p>
             {debouncedQuery && (
               <p className="text-xs mt-1.5">try a different search term</p>
             )}

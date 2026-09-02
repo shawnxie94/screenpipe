@@ -572,7 +572,7 @@ export default function ShortcutReminderPage() {
               onPointerDown={(e) => e.stopPropagation()}
               className="flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer text-white/60 hover:text-white"
               style={{ padding: `${padY}px ${padX * 2}px`, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-              title="Dismiss"
+              title="忽略"
             >
               <X style={{ width: `${smIconPx}px`, height: `${smIconPx}px` }} />
             </button>
@@ -700,7 +700,7 @@ export default function ShortcutReminderPage() {
               disabled={meetingOverlay.stopping}
               className="flex items-center gap-1 px-1.5 h-full font-mono text-white/70 hover:text-white hover:bg-white/10 disabled:opacity-50"
               style={{ fontSize: `${fontPx}px`, WebkitAppRegion: "no-drag" } as React.CSSProperties}
-              title="Stop meeting"
+              title="结束会议"
             >
               {meetingOverlay.stopping ? (
                 <Loader2 className="animate-spin" style={{ width: `${smIconPx}px`, height: `${smIconPx}px` }} />
@@ -771,7 +771,7 @@ export default function ShortcutReminderPage() {
             cursor: "grab",
             WebkitAppRegion: "no-drag",
           } as React.CSSProperties}
-          title="Open timeline"
+          title="打开时间线"
         >
           <span
             aria-hidden="true"
@@ -786,7 +786,7 @@ export default function ShortcutReminderPage() {
             <span
               role="status"
               aria-label="Meeting live"
-              title="Meeting live — hover for transcript"
+              title="会议进行中 — 悬停查看文字记录"
               className="absolute rounded-full bg-red-500 pointer-events-none"
               style={{
                 top: `${-1 * overlayScale}px`,
@@ -839,7 +839,7 @@ export default function ShortcutReminderPage() {
         }}
       >
         <button
-          title="Open search"
+          title="打开搜索"
           className={dockButtonClass}
           style={dockButtonStyle}
           onMouseEnter={() => setHoveredControl("search")}
@@ -854,7 +854,7 @@ export default function ShortcutReminderPage() {
           <Search style={{ width: `${12 * overlayScale}px`, height: `${12 * overlayScale}px` }} />
         </button>
         <button
-          title="Open chat"
+          title="打开聊天"
           className={dockButtonClass}
           style={dockButtonStyle}
           onMouseEnter={() => setHoveredControl("chat")}
@@ -869,7 +869,7 @@ export default function ShortcutReminderPage() {
           <MessageCircle style={{ width: `${12 * overlayScale}px`, height: `${12 * overlayScale}px` }} />
         </button>
         <button
-          title="Open timeline"
+          title="打开时间线"
           className={dockButtonClass}
           style={dockButtonStyle}
           onMouseEnter={() => setHoveredControl("timeline")}
@@ -881,7 +881,7 @@ export default function ShortcutReminderPage() {
         </button>
         <div className="my-1 bg-white/25" style={{ width: "1px" }} />
         <div
-          title="Microphone capture status"
+          title="麦克风采集状态"
           className={`${dockButtonClass} min-w-0 overflow-hidden`}
           onMouseEnter={() => setHoveredControl("audio")}
         >
@@ -892,7 +892,7 @@ export default function ShortcutReminderPage() {
         </div>
         <div className="my-1 bg-white/25" style={{ width: "1px" }} />
         <button
-          title="screenpipe — right-click for options"
+          title="screenpipe — 右键查看选项"
           aria-label="screenpipe — open timeline; right-click for options"
           className={dockButtonClass}
           style={dockButtonStyle}
@@ -934,7 +934,7 @@ export default function ShortcutReminderPage() {
           <button
             role="menuitem"
             className="flex-1 px-2 text-left hover:bg-white/15"
-            title="Hide for 1 hour"
+            title="隐藏 1 小时"
             onClick={(e) => void handleHourSnooze(e)}
           >
             hide for 1 hour
@@ -943,7 +943,7 @@ export default function ShortcutReminderPage() {
           <button
             role="menuitem"
             className="flex-1 px-2 text-left hover:bg-white/15"
-            title="Open overlay settings"
+            title="打开悬浮层设置"
             onClick={handleOpenSettings}
           >
             settings…

@@ -434,7 +434,7 @@ export default function OverlayPage() {
                       <AlertTriangle className="w-8 h-8 text-destructive" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold">Server Not Active</h2>
+                      <h2 className="text-2xl font-bold">服务器未运行</h2>
                       <p className="text-muted-foreground mt-2">
                         The screenpipe server is not running. Start the server or check permissions to continue.
                       </p>
@@ -448,7 +448,7 @@ export default function OverlayPage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold">Server Control</h3>
+                        <h3 className="font-semibold">服务器控制</h3>
                         <p className="text-sm text-muted-foreground">
                           Start or restart the screenpipe server
                         </p>
@@ -470,18 +470,18 @@ export default function OverlayPage() {
                       <Separator />
                       <div className="space-y-4">
                         <div>
-                          <h3 className="font-semibold">System Permissions</h3>
+                          <h3 className="font-semibold">系统权限</h3>
                           <p className="text-sm text-muted-foreground">
                             Ensure screenpipe has the necessary permissions to function properly
                           </p>
                         </div>
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Screen Recording</span>
+                            <span className="text-sm font-medium">屏幕录制</span>
                             <PermissionButtons type="screen" hideWindowOnClick />
                           </div>
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Audio Recording</span>
+                            <span className="text-sm font-medium">音频录制</span>
                             <PermissionButtons type="audio" hideWindowOnClick />
                           </div>
 

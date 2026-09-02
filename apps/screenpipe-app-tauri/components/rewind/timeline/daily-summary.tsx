@@ -679,7 +679,7 @@ export function TimelineDailySummary({
 							<div className="flex items-start gap-3">
 								<CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
 								<div>
-									<p className="font-medium">Only when you ask</p>
+									<p className="font-medium">仅在你询问时</p>
 									<p className="text-xs text-muted-foreground">
 										Daily summaries never run on a timer or generate
 										automatically.
@@ -689,7 +689,7 @@ export function TimelineDailySummary({
 							<div className="flex items-start gap-3">
 								<ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
 								<div>
-									<p className="font-medium">Bounded, read-only access</p>
+									<p className="font-medium">受限的只读访问</p>
 									<p className="text-xs text-muted-foreground">
 										The AI agent can read only the selected day through local
 										Screenpipe APIs. Relevant evidence is processed by your

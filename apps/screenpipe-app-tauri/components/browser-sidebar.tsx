@@ -1588,7 +1588,7 @@ export function BrowserSidebar({
           <div
             onMouseDown={onDragStart}
             className="absolute top-0 left-0 h-full w-2.5 cursor-ew-resize z-10 group/resize -translate-x-1/2"
-            title="Drag to resize"
+            title="拖动调整大小"
           >
             <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-border/60 group-hover/resize:bg-foreground/40 transition-colors" />
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-10 w-1 rounded-full bg-border group-hover/resize:bg-foreground/60 group-hover/resize:w-1.5 transition-all" />
@@ -1624,7 +1624,7 @@ export function BrowserSidebar({
                 >
                   <button
                     onClick={() => void moveHistory("back")}
-                    title="Back"
+                    title="后退"
                     aria-label="Browser back"
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
@@ -1632,7 +1632,7 @@ export function BrowserSidebar({
                   </button>
                   <button
                     onClick={() => void moveHistory("forward")}
-                    title="Forward"
+                    title="前进"
                     aria-label="Browser forward"
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
@@ -1654,7 +1654,7 @@ export function BrowserSidebar({
                   {isMac && (
                     <button
                       onClick={openCookieMenu}
-                      title="Browser session cookies"
+                      title="浏览器会话 Cookie"
                       aria-label="Browser session cookies"
                       className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
@@ -1663,7 +1663,7 @@ export function BrowserSidebar({
                   )}
                   <button
                     onClick={reload}
-                    title="Reload"
+                    title="重新加载"
                     aria-label="Reload page"
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
                   >
