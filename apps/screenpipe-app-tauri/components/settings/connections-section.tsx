@@ -1439,7 +1439,7 @@ function GrokPanel({ onConnected, onDisconnected }: { onConnected?: () => void; 
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">Let Grok search your screen and audio history.</p>
+      <p className="text-xs text-muted-foreground">让 Grok 搜索你的屏幕和音频历史。</p>
       <div className="flex flex-wrap gap-2">
         {state === "installed" ? (
           <Button onClick={handleDisconnect} variant="outline" size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
@@ -1965,7 +1965,7 @@ function WarpPanel() {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        3. Click <strong>保存</strong>. The server should show <strong>运行中</strong>. Then ask Warp&apos;s agent: <em>&quot;what did I do in the last 5 minutes?&quot;</em>
+        3. Click <strong>保存</strong>. The server should show <strong>运行中</strong>. 然后询问 Warp 的代理：<em>“我过去 5 分钟做了什么？”</em>
       </p>
       <Button variant="outline" onClick={() => openUrl("https://www.warp.dev")} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
         <ExternalLink className="h-3 w-3" />open warp
@@ -2009,12 +2009,12 @@ function OllamaPanel() {
               {models.map(m => <li key={m}>{m}</li>)}
             </ul>
           ) : (
-            <p className="text-xs text-muted-foreground">no models found. run &quot;ollama pull &lt;model&gt;&quot; to get started.</p>
+            <p className="text-xs text-muted-foreground">未找到模型。运行 &quot;ollama pull &lt;model&gt;&quot; 开始使用。</p>
           )}
         </div>
       )}
       {status === "error" && (
-        <p className="text-xs text-destructive">ollama not detected. make sure it&apos;s running on localhost:11434.</p>
+        <p className="text-xs text-destructive">未检测到 ollama。请确保它在 localhost:11434 上运行。</p>
       )}
     </div>
   );
@@ -2066,7 +2066,7 @@ function LMStudioPanel() {
         </div>
       )}
       {status === "error" && (
-        <p className="text-xs text-destructive">lm studio not detected. make sure it&apos;s running on localhost:1234.</p>
+        <p className="text-xs text-destructive">未检测到 LM Studio。请确保它在 localhost:1234 上运行。</p>
       )}
     </div>
   );
@@ -3272,17 +3272,17 @@ export const MCP_OAUTH_PROVIDERS: {
   url: string;
   description: React.ReactNode;
 }[] = [
-  { id: "linear", name: "Linear", url: "https://mcp.linear.app/mcp", description: <>Connect Linear so your AI can search and manage your issues, projects, and cycles. Sign-in uses Linear&apos;s OAuth — no API key, and screenpipe never sees your password.</> },
-  { id: "stripe", name: "Stripe", url: "https://mcp.stripe.com", description: <>Connect Stripe so your AI can query your customers, payments, invoices, and subscriptions. Sign-in uses Stripe&apos;s OAuth — no API key, and screenpipe never sees your password.</> },
-  { id: "sentry", name: "Sentry", url: "https://mcp.sentry.dev/mcp", description: <>Connect Sentry so your AI can search your issues, events, and releases. Sign-in uses Sentry&apos;s OAuth — no API key, and screenpipe never sees your password.</> },
-  { id: "intercom", name: "Intercom", url: "https://mcp.intercom.com/mcp", description: <>Connect Intercom so your AI can search your conversations, contacts, and help content. Sign-in uses Intercom&apos;s OAuth — no API key, and screenpipe never sees your password.</> },
-  { id: "asana", name: "Asana", url: "https://mcp.asana.com/mcp", description: <>Connect Asana so your AI can search and manage your tasks, projects, and portfolios. Sign-in uses Asana&apos;s OAuth — no API key, and screenpipe never sees your password.</> },
-  { id: "monday", name: "monday.com", url: "https://mcp.monday.com/mcp", description: <>Connect monday.com so your AI can work with your boards, items, and updates. Sign-in uses monday&apos;s OAuth — no API key, and screenpipe never sees your password.</> },
-  { id: "clickup", name: "ClickUp", url: "https://mcp.clickup.com/mcp", description: <>Connect ClickUp so your AI can search and manage your tasks, docs, and spaces. Sign-in uses ClickUp&apos;s OAuth — no API key, and screenpipe never sees your password.</> },
-  { id: "airtable", name: "Airtable", url: "https://mcp.airtable.com/mcp", description: <>Connect Airtable so your AI can read and update your bases, tables, and records. Sign-in uses Airtable&apos;s OAuth — no API key, and screenpipe never sees your password.</> },
-  { id: "confluence", name: "Confluence", url: "https://mcp.atlassian.com/v1/mcp", description: <>Connect Atlassian so your AI can search and edit your Confluence pages (and Jira issues). Sign-in uses Atlassian&apos;s OAuth — no API key, and screenpipe never sees your password.</> },
-  { id: "jira", name: "Jira", url: "https://mcp.atlassian.com/v1/mcp", description: <>Connect Atlassian so your AI can search and manage your Jira issues (and Confluence pages). Sign-in uses Atlassian&apos;s OAuth — no API key, and screenpipe never sees your password.</> },
-  { id: "notion", name: "Notion", url: "https://mcp.notion.com/mcp", description: <>Connect Notion so your AI can search, read, and write your pages and databases. Sign-in uses Notion&apos;s OAuth — no API key, and screenpipe never sees your password.</> },
+  { id: "linear", name: "Linear", url: "https://mcp.linear.app/mcp", description: <>连接 Linear，让 AI 搜索和管理你的问题、项目和周期。使用 Linear 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
+  { id: "stripe", name: "Stripe", url: "https://mcp.stripe.com", description: <>连接 Stripe，让 AI 查询你的客户、付款、发票和订阅。使用 Stripe 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
+  { id: "sentry", name: "Sentry", url: "https://mcp.sentry.dev/mcp", description: <>连接 Sentry，让 AI 搜索你的问题、事件和发布。使用 Sentry 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
+  { id: "intercom", name: "Intercom", url: "https://mcp.intercom.com/mcp", description: <>连接 Intercom，让 AI 搜索你的对话、联系人和帮助内容。使用 Intercom 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
+  { id: "asana", name: "Asana", url: "https://mcp.asana.com/mcp", description: <>连接 Asana，让 AI 搜索和管理你的任务、项目和组合。使用 Asana 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
+  { id: "monday", name: "monday.com", url: "https://mcp.monday.com/mcp", description: <>连接 monday.com，让 AI 处理你的看板、条目和更新。使用 monday 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
+  { id: "clickup", name: "ClickUp", url: "https://mcp.clickup.com/mcp", description: <>连接 ClickUp，让 AI 搜索和管理你的任务、文档和空间。使用 ClickUp 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
+  { id: "airtable", name: "Airtable", url: "https://mcp.airtable.com/mcp", description: <>连接 Airtable，让 AI 读取和更新你的数据库、表格和记录。使用 Airtable 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
+  { id: "confluence", name: "Confluence", url: "https://mcp.atlassian.com/v1/mcp", description: <>连接 Atlassian，让 AI 搜索和编辑你的 Confluence 页面（以及 Jira 问题）。使用 Atlassian 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
+  { id: "jira", name: "Jira", url: "https://mcp.atlassian.com/v1/mcp", description: <>连接 Atlassian，让 AI 搜索和管理你的 Jira 问题（以及 Confluence 页面）。使用 Atlassian 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
+  { id: "notion", name: "Notion", url: "https://mcp.notion.com/mcp", description: <>连接 Notion，让 AI 搜索、读取和写入你的页面和数据库。使用 Notion 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
 ];
 
 export function isMcpOAuthProviderTileConnected(
@@ -4318,7 +4318,7 @@ export function ConnectionsSection({
       case "excalidraw": return <ApiKeyMcpPanel
         name="Excalidraw"
         mcpUrl={EXCALIDRAW_MCP_URL}
-        description={<>Connect Excalidraw+ so your AI can search, read, and edit the whiteboard scenes in your workspace. Excalidraw doesn&apos;t offer OAuth here, so paste an API key from your Excalidraw+ workspace settings instead. The key is stored securely on this device and only ever sent to Excalidraw.</>}
+        description={<>连接 Excalidraw+，让 AI 搜索、读取和编辑你工作区中的白板场景。Excalidraw 在此不提供 OAuth，请改从 Excalidraw+ 工作区设置中粘贴 API 密钥。密钥安全存储在本地，并且只会发送给 Excalidraw。</>}
         keyPlaceholder="Excalidraw+ API key"
         createKeyUrl="https://plus.excalidraw.com/docs/mcp/getting-started"
         createKeyLabel="How to create an API key"

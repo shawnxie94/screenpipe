@@ -167,7 +167,7 @@ export function DisplaySection() {
                     Timeline / rewind
                     <HelpTooltip text="Turn off the timeline / rewind feature. Skips the in-memory hot frame cache (warm-up + per-frame/audio buffering) that only the timeline uses, and disables the native macOS Live Text overlay that can otherwise leak a selection layer over other windows (e.g. the chat input) and block typing. Restarts screenpipe to apply." />
                   </h3>
-                  <p className="text-xs text-muted-foreground">Show rewind and keep its background cache work on</p>
+                  <p className="text-xs text-muted-foreground">显示回放并持续进行后台缓存工作</p>
                 </div>
               </div>
               <ManagedSwitch

@@ -3055,7 +3055,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           {uiEventResults.length > 0 && contentFilter !== "screen" && contentFilter !== "chats" && (
             <div className={cn(contentFilter === "all" && "mb-4")}>
               {contentFilter === "all" && (
-                <SectionLabel>keyboard &amp; clipboard</SectionLabel>
+                <SectionLabel>键盘与剪贴板</SectionLabel>
               )}
               {/* In its own scope these group by day like the chats list does;
                   in "All" the five-row preview stays flat so the section reads

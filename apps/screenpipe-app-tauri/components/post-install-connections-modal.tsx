@@ -522,7 +522,7 @@ export function PostInstallConnectionsModal({
                     <div className="px-3 pb-3 border-t border-border pt-3">
                       <p className="text-xs text-muted-foreground">
                         connect {integration.name} in{" "}
-                        <strong>settings &gt; connections</strong> then come back here.
+                        <strong>设置 &gt; 连接</strong> 然后回到这里。
                       </p>
                     </div>
                   )}

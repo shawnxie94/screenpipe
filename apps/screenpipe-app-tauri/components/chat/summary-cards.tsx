@@ -301,7 +301,7 @@ export function SummaryCards({
         {userName ? `你好，${userName}，我能帮你什么？` : "今天我能帮你什么？"}
       </h3>
       <p className="text-xs text-muted-foreground mb-2">
-        From everything you&apos;ve seen, said, or heard
+        从你看过、说过或听过的一切中获取答案
       </p>
 
       {/* The onboarding goal or General Settings choice determines priority. */}

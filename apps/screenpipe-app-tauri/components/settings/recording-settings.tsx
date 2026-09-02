@@ -3916,7 +3916,7 @@ Your screen is a pipe. Everything you see, hear, and type flows through it. Scre
                   <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div>
                     <h3 className="text-sm font-medium text-foreground">使用所有显示器</h3>
-                    <p className="text-xs text-muted-foreground">Capture screenshot images from all available monitors</p>
+                    <p className="text-xs text-muted-foreground">捕获所有可用显示器的屏幕截图</p>
                   </div>
                 </div>
                 <Switch id="useAllMonitors" checked={settings.useAllMonitors} onCheckedChange={(checked) => handleSettingsChange({ useAllMonitors: checked }, true)} />

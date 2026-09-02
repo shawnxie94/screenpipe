@@ -1028,7 +1028,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <AlertTriangle className="mx-auto mb-3 h-5 w-5" />
-            <p className="text-sm text-foreground">couldn&apos;t load scheduled tasks</p>
+            <p className="text-sm text-foreground">无法加载定时任务</p>
             <p className="mt-1.5 text-xs">the task catalog is temporarily unavailable</p>
             <Button
               variant="outline"

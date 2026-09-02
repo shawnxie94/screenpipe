@@ -344,7 +344,7 @@ export function WhatsAppPanel() {
               className="w-[200px] h-[200px]"
             />
           </div>
-          <p className="text-xs text-muted-foreground">open WhatsApp &gt; linked devices &gt; link a device</p>
+          <p className="text-xs text-muted-foreground">打开 WhatsApp &gt; 已链接设备 &gt; 链接设备</p>
         </div>
       )}
 
