@@ -127,18 +127,17 @@ export function FirstRunSetupReadyPanel({
           </span>
         </div>
         <h2 className="mt-3 font-mono text-base font-semibold lowercase text-foreground">
-          screenpipe is ready
+          screenpipe 已就绪
         </h2>
         <p className="mt-2 max-w-xl text-[11px] leading-relaxed text-muted-foreground">
-          there was not enough activity in this short setup window to write a
-          useful first summary. Screenpipe will keep recording in the
-          background.
+          在短暂设置窗口内没有足够的活动来生成有用的首次摘要。
+          screenpipe 会在后台持续录制。
         </p>
       </div>
 
       <div className="flex items-center justify-between gap-4 border-t border-border px-4 py-3">
         <p className="text-[10px] leading-relaxed text-muted-foreground">
-          ask about anything you see, say, or hear from now on.
+          从今以后，你可以问任何你看到、说到或听到的内容。
         </p>
         <Button
           size="sm"
@@ -147,7 +146,7 @@ export function FirstRunSetupReadyPanel({
           data-testid="first-run-setup-complete"
           onClick={onDismiss}
         >
-          this is ready
+          我明白了
         </Button>
       </div>
     </div>
