@@ -232,5 +232,15 @@ async function main() {
 }
 
 if (import.meta.main) {
+	// Self-hosted/local builds default to skip-login so the mandatory
+	// checkout ("add a payment method") never blocks a self-compiled
+	// desktop app. The login gate still renders for anyone who wants to
+	// sign in; this only adds the `skip for dev` affordance and keeps the
+	// plan/paywall slide out of the onboarding flow for token-less local
+	// use. Set NEXT_PUBLIC_SCREENPIPE_DEV_LOGIN_SKIP=false explicitly to
+	// restore the stock gate.
+	if (process.env.NEXT_PUBLIC_SCREENPIPE_DEV_LOGIN_SKIP === undefined) {
+		process.env.NEXT_PUBLIC_SCREENPIPE_DEV_LOGIN_SKIP = 'true'
+	}
 	await main()
 }
