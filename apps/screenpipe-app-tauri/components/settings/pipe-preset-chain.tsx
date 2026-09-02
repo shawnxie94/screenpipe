@@ -85,7 +85,7 @@ export function PipePresetChain({
     <section className="p-4" data-testid="pipe-preset-chain">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Label className="text-xs font-medium">model fallback chain</Label>
+          <Label className="text-xs font-medium">模型回退链</Label>
           <p className="mt-0.5 max-w-md text-[11px] text-muted-foreground">
             screenpipe tries these models from top to bottom when a run can be
             retried.

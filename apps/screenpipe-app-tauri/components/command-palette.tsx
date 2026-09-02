@@ -304,7 +304,7 @@ export function CommandPalette({
         data-testid="command-palette-input"
       />
       <CommandList data-testid="command-palette-list">
-        <CommandEmpty>no matching commands</CommandEmpty>
+        <CommandEmpty>无匹配命令</CommandEmpty>
         {GROUP_ORDER.map((group, groupIndex) => {
           const items = entries.filter((entry) => entry.group === group);
           if (items.length === 0) return null;

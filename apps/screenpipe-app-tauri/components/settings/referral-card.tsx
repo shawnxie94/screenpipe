@@ -94,7 +94,7 @@ export function ReferralCard() {
       <Card className="p-5">
         <div className="mb-3 flex items-center gap-2">
           <Gift className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">refer a friend</h3>
+          <h3 className="text-lg font-semibold">推荐好友</h3>
         </div>
         <p className="mb-4 text-sm text-muted-foreground">
           sign in to view your referral eligibility and invite link
@@ -168,7 +168,7 @@ export function ReferralCard() {
       <Card className="p-5">
         <div className="mb-2 flex items-center gap-2">
           <Gift className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">refer a friend</h3>
+          <h3 className="text-lg font-semibold">推荐好友</h3>
         </div>
         <p className="text-sm text-muted-foreground">
           your signed-in account has no email address
@@ -182,7 +182,7 @@ export function ReferralCard() {
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-2">
           <Gift className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">refer a friend</h3>
+          <h3 className="text-lg font-semibold">推荐好友</h3>
         </div>
         <p className="text-sm text-muted-foreground">loading referral info...</p>
       </Card>
@@ -194,7 +194,7 @@ export function ReferralCard() {
       <Card className="p-5">
         <div className="mb-2 flex items-center gap-2">
           <Gift className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">refer a friend</h3>
+          <h3 className="text-lg font-semibold">推荐好友</h3>
         </div>
         <p className="mb-4 text-sm text-muted-foreground">
           {loadError}
@@ -215,7 +215,7 @@ export function ReferralCard() {
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-2">
           <Gift className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">refer a friend</h3>
+          <h3 className="text-lg font-semibold">推荐好友</h3>
         </div>
         <p className="text-sm text-muted-foreground">
           referral links unlock after your first paid plan starts. the free
@@ -232,7 +232,7 @@ export function ReferralCard() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Gift className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">refer a friend</h3>
+          <h3 className="text-lg font-semibold">推荐好友</h3>
         </div>
         <Badge variant="secondary" className="rounded-none font-mono text-xs">
           {referral.redemptions} / {referral.maxRedemptions} used
@@ -247,7 +247,7 @@ export function ReferralCard() {
           className="font-mono text-sm"
         />
         <Button variant="outline" size="icon" onClick={handleCopy}>
-          <span className="sr-only">copy referral link</span>
+          <span className="sr-only">复制推荐链接</span>
           {copied ? (
             <Check className="h-4 w-4 text-foreground" />
           ) : (
@@ -258,7 +258,7 @@ export function ReferralCard() {
 
       {/* How it works */}
       <div className="space-y-1.5 text-sm text-muted-foreground mb-4">
-        <p className="font-medium text-foreground text-xs uppercase tracking-wide">how it works</p>
+        <p className="font-medium text-foreground text-xs uppercase tracking-wide">工作原理</p>
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 shrink-0 items-center justify-center border border-border bg-muted font-mono text-xs">1</span>
           share your invite link

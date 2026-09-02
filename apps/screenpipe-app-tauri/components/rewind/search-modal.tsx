@@ -404,7 +404,7 @@ const FrameThumbnail = ({
             className="h-4 w-4 animate-spin text-muted-foreground"
             aria-hidden="true"
           />
-          <span className="sr-only">loading frame</span>
+          <span className="sr-only">正在加载帧</span>
         </div>
       )}
       {hasError ? (
@@ -2415,7 +2415,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
         <>
           <span>↑↓ navigate</span>
           <span>⏎ go to timeline</span>
-          <span>esc back</span>
+          <span>按 Esc 返回</span>
         </>
       );
     }
@@ -2423,11 +2423,11 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       return (
         <>
           <span>↑↓ navigate</span>
-          <span>esc back</span>
+          <span>按 Esc 返回</span>
         </>
       );
     }
-    if (!activeNavItem) return <span>type to search</span>;
+    if (!activeNavItem) return <span>输入以搜索</span>;
     return (
       <>
         <span>{activeNavItem.kind === "frame" ? "←→↑↓ navigate" : "↑↓ navigate"}</span>
@@ -2620,7 +2620,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
               {isLoadingMoreTranscriptions ? (
                 <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
               ) : (
-                <span className="text-xs text-muted-foreground">scroll for more</span>
+                <span className="text-xs text-muted-foreground">滚动查看更多</span>
               )}
             </div>
           )}
@@ -3552,7 +3552,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           <div className="flex items-center gap-4">
             {renderFooterHints()}
           </div>
-          <span>esc close</span>
+          <span>按 Esc 关闭</span>
         </div>
       </div>
     );

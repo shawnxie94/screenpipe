@@ -214,7 +214,7 @@ export function AIProviderChoices({
 
           {acpEnabled && customAcpAdapter && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">connect another agent</p>
+              <p className="text-sm font-medium">连接另一个代理</p>
               <AIProviderCard
                 type="acp"
                 title="使用命令"

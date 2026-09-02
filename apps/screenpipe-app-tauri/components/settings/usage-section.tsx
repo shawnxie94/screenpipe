@@ -166,7 +166,7 @@ export function HostedUsageLimits({ query }: { query: UsageStatusQuery }) {
       <Card>
         <CardContent className="flex items-center justify-between gap-4 pt-6">
           <div>
-            <h2 className="text-sm font-medium lowercase">usage unavailable</h2>
+            <h2 className="text-sm font-medium lowercase">用量不可用</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               no balance was assumed. try refreshing.
             </p>
@@ -188,7 +188,7 @@ export function HostedUsageLimits({ query }: { query: UsageStatusQuery }) {
       <Card data-testid="hosted-usage-limits">
         <CardContent className="flex items-center justify-between gap-4 pt-6">
           <div>
-            <h2 className="text-sm font-medium lowercase">usage unavailable</h2>
+            <h2 className="text-sm font-medium lowercase">用量不可用</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               {hosted.plan === "unknown"
                 ? "sign in to view your usage limits."
@@ -218,7 +218,7 @@ export function HostedUsageLimits({ query }: { query: UsageStatusQuery }) {
       <CardContent className="space-y-5 pt-6">
         <div className="flex items-baseline justify-between gap-4 border-b border-border pb-4">
           <div>
-            <h2 className="text-base font-medium lowercase">your usage limits</h2>
+            <h2 className="text-base font-medium lowercase">你的用量限制</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               each listed allowance applies independently.
             </p>

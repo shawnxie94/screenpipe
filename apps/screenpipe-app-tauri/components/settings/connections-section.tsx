@@ -1318,7 +1318,7 @@ function CursorPanel({ onConnected, onDisconnected }: { onConnected?: () => void
       </div>
       {connectError && <PanelConfigError err={connectError} />}
       <details className="text-xs text-muted-foreground">
-        <summary className="cursor-pointer">manual config</summary>
+        <summary className="cursor-pointer">手动配置</summary>
         <pre className="mt-2 bg-muted border border-border rounded-lg p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">{`add to ~/.cursor/mcp.json:\n\n${JSON.stringify({ mcpServers: { screenpipe: { command: "npx", args: ["-y", "screenpipe-mcp@latest"] } } }, null, 2)}`}</pre>
       </details>
     </div>
@@ -1395,7 +1395,7 @@ function CodexPanel({ onConnected, onDisconnected }: { onConnected?: () => void;
         </p>
       )}
       <details className="text-xs text-muted-foreground">
-        <summary className="cursor-pointer">manual config</summary>
+        <summary className="cursor-pointer">手动配置</summary>
         <pre className="mt-2 bg-muted border border-border rounded-lg p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">{manualConfig}</pre>
       </details>
       <MemorySyncSubsection
@@ -1461,7 +1461,7 @@ function GrokPanel({ onConnected, onDisconnected }: { onConnected?: () => void; 
         </p>
       )}
       <details className="text-xs text-muted-foreground">
-        <summary className="cursor-pointer">manual config</summary>
+        <summary className="cursor-pointer">手动配置</summary>
         <pre className="mt-2 bg-muted border border-border rounded-lg p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">{manualConfig}</pre>
       </details>
     </div>
@@ -1656,7 +1656,7 @@ function MemorySyncSubsection({
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={triggerSyncNow} disabled={status === "syncing"} size="sm" variant="outline" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-              {status === "syncing" ? (<><Loader2 className="h-3 w-3 animate-spin" />syncing...</>) : (<><Send className="h-3 w-3" />sync now</>)}
+              {status === "syncing" ? (<><Loader2 className="h-3 w-3 animate-spin" />syncing...</>) : (<><Send className="h-3 w-3" />立即同步</>)}
             </Button>
             <Button onClick={disconnect} size="sm" variant="ghost" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
               <LogOut className="h-3 w-3" />stop syncing
@@ -1676,7 +1676,7 @@ function MemorySyncSubsection({
             />
           </div>
           <Button onClick={() => connect({ home_path: persistedPath })} disabled={status === "connecting"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />enabling...</>) : (<><Download className="h-3 w-3" />enable memory sync</>)}
+            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />enabling...</>) : (<><Download className="h-3 w-3" />启用记忆同步</>)}
           </Button>
         </>
       )}
@@ -1792,7 +1792,7 @@ function ObsidianMemorySyncSubsection() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={triggerSyncNow} disabled={status === "syncing"} size="sm" variant="outline" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-              {status === "syncing" ? (<><Loader2 className="h-3 w-3 animate-spin" />syncing...</>) : (<><Send className="h-3 w-3" />sync now</>)}
+              {status === "syncing" ? (<><Loader2 className="h-3 w-3 animate-spin" />syncing...</>) : (<><Send className="h-3 w-3" />立即同步</>)}
             </Button>
             <Button onClick={disconnect} size="sm" variant="ghost" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
               <LogOut className="h-3 w-3" />stop syncing
@@ -1802,7 +1802,7 @@ function ObsidianMemorySyncSubsection() {
       ) : (
         <>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">vault folder</Label>
+            <Label className="text-xs text-muted-foreground">Vault 文件夹</Label>
             <div className="relative">
               <Input
                 value={vaultPath}
@@ -1835,7 +1835,7 @@ function ObsidianMemorySyncSubsection() {
             />
           </div>
           <Button onClick={handleEnable} disabled={status === "connecting" || !vaultPath.trim()} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />enabling...</>) : (<><Download className="h-3 w-3" />enable memory sync</>)}
+            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />enabling...</>) : (<><Download className="h-3 w-3" />启用记忆同步</>)}
           </Button>
         </>
       )}
@@ -2003,7 +2003,7 @@ function OllamaPanel() {
       </Button>
       {status === "connected" && (
         <div className="p-3 bg-muted border border-border rounded-lg space-y-1">
-          <p className="text-xs font-medium text-foreground">ollama detected</p>
+          <p className="text-xs font-medium text-foreground">已检测到 Ollama</p>
           {models.length > 0 ? (
             <ul className="text-xs text-muted-foreground list-disc list-inside">
               {models.map(m => <li key={m}>{m}</li>)}
@@ -2055,7 +2055,7 @@ function LMStudioPanel() {
       </div>
       {status === "connected" && (
         <div className="p-3 bg-muted border border-border rounded-lg space-y-1">
-          <p className="text-xs font-medium text-foreground">lm studio detected</p>
+          <p className="text-xs font-medium text-foreground">已检测到 LM Studio</p>
           {models.length > 0 ? (
             <ul className="text-xs text-muted-foreground list-disc list-inside">
               {models.map(m => <li key={m}>{m}</li>)}

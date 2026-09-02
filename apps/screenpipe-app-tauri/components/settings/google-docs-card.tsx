@@ -225,7 +225,7 @@ export function GoogleDocsCard() {
         {connected && (
           <div className="px-4 pb-3 pt-1 border-t border-border">
             <div className="flex items-center justify-between mt-2 mb-2">
-              <span className="text-xs font-medium text-muted-foreground">recently modified docs</span>
+              <span className="text-xs font-medium text-muted-foreground">最近修改的文档</span>
               <Button
                 variant="ghost"
                 size="sm"

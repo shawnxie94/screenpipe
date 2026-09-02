@@ -1849,7 +1849,7 @@ export function ChatSidebar({
                         </DropdownMenuCheckboxItem>
                       ))}
                       <DropdownMenuSeparator />
-                      <DropdownMenuLabel>organize sidebar</DropdownMenuLabel>
+                      <DropdownMenuLabel>整理侧边栏</DropdownMenuLabel>
                       <DropdownMenuRadioGroup value={recentLayout} onValueChange={changeRecentLayout}>
                         <DropdownMenuRadioItem data-shortcut="b" aria-keyshortcuts="B" value="source">
                           By source
@@ -1865,7 +1865,7 @@ export function ChatSidebar({
                         </DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
                       <DropdownMenuSeparator />
-                      <DropdownMenuLabel>sort chats by</DropdownMenuLabel>
+                      <DropdownMenuLabel>聊天排序方式</DropdownMenuLabel>
                       <DropdownMenuRadioGroup value={recentSort} onValueChange={changeRecentSort}>
                         <DropdownMenuRadioItem data-shortcut="p" aria-keyshortcuts="P" value="priority">
                           Priority
@@ -1934,7 +1934,7 @@ export function ChatSidebar({
                         </ContextMenuCheckboxItem>
                       ))}
                       <ContextMenuSeparator />
-                      <ContextMenuLabel>organize sidebar</ContextMenuLabel>
+                      <ContextMenuLabel>整理侧边栏</ContextMenuLabel>
                       <ContextMenuRadioGroup value={recentLayout} onValueChange={changeRecentLayout}>
                         <ContextMenuRadioItem data-shortcut="b" aria-keyshortcuts="B" value="source">
                           By source
@@ -1950,7 +1950,7 @@ export function ChatSidebar({
                         </ContextMenuRadioItem>
                       </ContextMenuRadioGroup>
                       <ContextMenuSeparator />
-                      <ContextMenuLabel>sort chats by</ContextMenuLabel>
+                      <ContextMenuLabel>聊天排序方式</ContextMenuLabel>
                       <ContextMenuRadioGroup value={recentSort} onValueChange={changeRecentSort}>
                         <ContextMenuRadioItem data-shortcut="p" aria-keyshortcuts="P" value="priority">
                           Priority

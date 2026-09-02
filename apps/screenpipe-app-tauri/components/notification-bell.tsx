@@ -372,7 +372,7 @@ export function NotificationInboxPanel({
                 {inboxView === "all" &&
                   idx === highPriority.length &&
                   otherUpdates.length > 0 && (
-                    <SectionLabel>other updates</SectionLabel>
+                    <SectionLabel>其他更新</SectionLabel>
                   )}
                 <div
                   data-notification-id={entry.id}

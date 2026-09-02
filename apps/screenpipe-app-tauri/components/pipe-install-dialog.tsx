@@ -250,7 +250,7 @@ export function PipeInstallDialog() {
           )}
 
           <AlertDialogFooter>
-            <AlertDialogCancel className="text-xs">not now</AlertDialogCancel>
+            <AlertDialogCancel className="text-xs">暂不</AlertDialogCancel>
             <Button
               type="button"
               className="text-xs"

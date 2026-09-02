@@ -232,7 +232,7 @@ export function HomeCardAgentActions({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>not now</AlertDialogCancel>
+            <AlertDialogCancel>暂不</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (setupAgent) onOpenAcpSetup?.(setupAgent);

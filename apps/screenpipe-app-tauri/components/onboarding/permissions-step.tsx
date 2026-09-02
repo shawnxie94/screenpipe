@@ -393,7 +393,7 @@ export default function PermissionsStep({
           className="w-full max-w-sm border border-foreground px-5 py-5 text-center"
           data-testid="screen-recording-restart-prompt"
         >
-          <h2 className="font-mono text-sm font-semibold">restart required</h2>
+          <h2 className="font-mono text-sm font-semibold">需要重启</h2>
           <p className="mt-1 font-mono text-xs text-muted-foreground">
             screenpipe won&apos;t work until you restart.
           </p>

@@ -115,7 +115,7 @@ export function BrowserPairingDialog() {
         overlayClassName="bg-black/50 backdrop-blur-sm"
       >
         <DialogHeader>
-          <DialogTitle>connect browser</DialogTitle>
+          <DialogTitle>连接浏览器</DialogTitle>
           <DialogDescription>
             {pending
               ? `${labelBrowser(pending.browser)} wants to connect to Screenpipe. This lets agents use your open tabs when browser context is needed.`
@@ -125,7 +125,7 @@ export function BrowserPairingDialog() {
 
         {pending && (
           <details className="border border-border p-3 text-xs text-muted-foreground">
-            <summary className="cursor-pointer font-mono">verify request</summary>
+            <summary className="cursor-pointer font-mono">验证请求</summary>
             <div className="mt-2 font-mono">
               <div>match this code with the browser extension</div>
               <div className="mt-1 text-lg tracking-[0.2em] text-foreground">

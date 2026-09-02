@@ -387,7 +387,7 @@ export function RetentionSettings({
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="text-sm font-medium">erase recent activity</p>
+              <p className="text-sm font-medium">清除最近活动</p>
               <p className="text-xs text-muted-foreground">
                 wipe the last few minutes if something was captured by mistake.
                 removes clips, audio, transcripts, and ocr. asks first.
@@ -446,7 +446,7 @@ export function RetentionSettings({
           <div className="flex items-center gap-2">
             <Trash2 className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="text-sm font-medium">storage policy</p>
+              <p className="text-sm font-medium">存储策略</p>
               <p className="text-xs text-muted-foreground">
                 what happens to recordings as they age
               </p>
@@ -576,7 +576,7 @@ export function RetentionSettings({
               but the file only returns space to the drive when compacted. */}
           <div className="flex flex-wrap items-center gap-3 pl-6 border-t border-border pt-3">
             <div className="flex-1 min-w-[180px]">
-              <p className="text-sm font-medium">reclaim disk space</p>
+              <p className="text-sm font-medium">回收磁盘空间</p>
               <p className="text-xs text-muted-foreground">
                 rebuild the database file so freed space goes back to your
                 drive. cleanup keeps the database from growing; compacting is

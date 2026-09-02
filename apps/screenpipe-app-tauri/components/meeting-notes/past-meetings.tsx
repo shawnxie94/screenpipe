@@ -219,7 +219,7 @@ export function PastMeetings({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>merge meetings</AlertDialogTitle>
+            <AlertDialogTitle>合并会议</AlertDialogTitle>
             <AlertDialogDescription>
               combine these two meetings into one. titles, attendees, notes
               and transcripts are joined chronologically. this can't be
@@ -431,7 +431,7 @@ function PastMeetingRow({
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>delete meeting</AlertDialogTitle>
+                  <AlertDialogTitle>删除会议</AlertDialogTitle>
                   <AlertDialogDescription>
                     your notes and transcript will be permanently deleted.
                   </AlertDialogDescription>

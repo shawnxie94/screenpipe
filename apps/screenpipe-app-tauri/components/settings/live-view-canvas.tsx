@@ -1698,7 +1698,7 @@ export function LiveViewCanvas({
               onClick={arrangeCanvas}
             >
               <LayoutGrid className="h-3.5 w-3.5" aria-hidden="true" />
-              <span className="sr-only">arrange canvas</span>
+              <span className="sr-only">排列画布</span>
             </Button>
             <Button
               type="button"

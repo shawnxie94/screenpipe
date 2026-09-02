@@ -514,7 +514,7 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground flex items-center gap-2">
           <Rewind className="h-3 w-3" />
-          replay the moment
+          回放这一时刻
         </h3>
         <button
           onClick={openInTimeline}

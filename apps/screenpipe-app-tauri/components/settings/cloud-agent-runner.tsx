@@ -307,7 +307,7 @@ export function CloudAgentRunner({
       >
         <div className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_15rem] sm:items-center">
           <div>
-            <Label className="text-xs font-medium">runs with</Label>
+            <Label className="text-xs font-medium">使用…运行</Label>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               choose who handles each run.
             </p>
@@ -686,7 +686,7 @@ export function CloudAgentRunner({
         <Dialog open={memoryOpen} onOpenChange={setMemoryOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-base">shared context</DialogTitle>
+              <DialogTitle className="text-base">共享上下文</DialogTitle>
               <DialogDescription className="text-xs">
                 Control what screenpipe may send to {definition.label} for this
                 task.
@@ -695,7 +695,7 @@ export function CloudAgentRunner({
 
             <div className="space-y-4">
               <div className="border border-border bg-muted/20 p-3">
-                <p className="text-xs font-medium">what gets shared</p>
+                <p className="text-xs font-medium">共享哪些内容</p>
                 <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
                   A short, relevant summary of app activity, screen text,
                   transcript excerpts, and saved memories. Screenshots, audio
@@ -704,7 +704,7 @@ export function CloudAgentRunner({
                 </p>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">look back</Label>
+                <Label className="text-xs">回看</Label>
                 <Select
                   value={String(draft.context_lookback_hours ?? 24)}
                   onValueChange={(value) =>
@@ -715,7 +715,7 @@ export function CloudAgentRunner({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">last hour</SelectItem>
+                    <SelectItem value="1">最近一小时</SelectItem>
                     <SelectItem value="8">last 8 hours</SelectItem>
                     <SelectItem value="24">last 24 hours</SelectItem>
                     <SelectItem value="168">last 7 days</SelectItem>

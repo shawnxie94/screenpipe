@@ -1813,7 +1813,7 @@ export function BrainSection() {
       >
         <DialogContent className="max-w-xl" data-testid="brain-add-memory-dialog">
           <DialogHeader>
-            <DialogTitle className="text-base">add memory</DialogTitle>
+            <DialogTitle className="text-base">添加记忆</DialogTitle>
             <DialogDescription>
               Save a durable fact, preference, or decision the AI should keep.
             </DialogDescription>
@@ -1906,7 +1906,7 @@ export function BrainSection() {
       >
         <DialogContent className="max-w-xl" data-testid="brain-edit-memory-dialog">
           <DialogHeader>
-            <DialogTitle className="text-base">edit memory</DialogTitle>
+            <DialogTitle className="text-base">编辑记忆</DialogTitle>
             <DialogDescription>
               Update the saved memory and its labels.
             </DialogDescription>

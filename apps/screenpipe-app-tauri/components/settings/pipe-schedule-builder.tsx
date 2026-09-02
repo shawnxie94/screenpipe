@@ -296,7 +296,7 @@ export function PipeScheduleBuilder({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="never">never</SelectItem>
-                <SelectItem value="on">on date</SelectItem>
+                <SelectItem value="on">在日期</SelectItem>
                 <SelectItem value="after">after N runs</SelectItem>
               </SelectContent>
             </Select>

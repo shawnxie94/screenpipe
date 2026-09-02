@@ -42,7 +42,7 @@ const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
         overlayStyle={{ animation: "none" }}
         style={{ animation: "none", opacity: 1 }}
       >
-        <DialogTitle className="sr-only">command menu</DialogTitle>
+        <DialogTitle className="sr-only">命令菜单</DialogTitle>
         <DialogDescription className="sr-only">
           search and run screenpipe actions
         </DialogDescription>

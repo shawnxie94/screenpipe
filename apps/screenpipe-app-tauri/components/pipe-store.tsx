@@ -1480,7 +1480,7 @@ if the pipe's final user-facing file lives outside the pipe's own \`./output/\` 
               {readmeContent}
             </MemoizedReactMarkdown>
           ) : (
-            <p className="text-sm text-muted-foreground">no description available</p>
+            <p className="text-sm text-muted-foreground">无可用描述</p>
           )}
         </div>
       </div>

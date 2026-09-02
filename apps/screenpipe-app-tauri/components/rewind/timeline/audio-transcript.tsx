@@ -691,7 +691,7 @@ export function AudioTranscript({
 									<BotMessageSquare className="h-3 w-3" />
 								</Button>
 							</TooltipTrigger>
-							<TooltipContent side="bottom"><p>ask ai</p></TooltipContent>
+							<TooltipContent side="bottom"><p>询问 AI</p></TooltipContent>
 						</Tooltip>
 						<Tooltip>
 							<TooltipTrigger asChild>

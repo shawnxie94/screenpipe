@@ -995,7 +995,7 @@ export function ConnectedShareDialog({
         data-testid="connected-share-dialog"
       >
         <DialogHeader>
-          <DialogTitle>send snapshot</DialogTitle>
+          <DialogTitle>发送快照</DialogTitle>
           <DialogDescription>
             A frozen copy of “{artifact.title}”.
           </DialogDescription>

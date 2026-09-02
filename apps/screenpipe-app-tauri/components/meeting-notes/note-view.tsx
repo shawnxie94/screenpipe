@@ -2186,7 +2186,7 @@ export function NoteView({
       {confirmingAction === "retranscribe" ? (
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>retranscribe meeting</AlertDialogTitle>
+            <AlertDialogTitle>重新转写会议</AlertDialogTitle>
             <AlertDialogDescription>
               rebuild the transcript from saved audio. this replaces the current
               transcript and refreshes the summary when automatic summary is on.
@@ -2202,7 +2202,7 @@ export function NoteView({
       ) : confirmingAction === "delete" ? (
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>delete meeting</AlertDialogTitle>
+            <AlertDialogTitle>删除会议</AlertDialogTitle>
             <AlertDialogDescription>
               your notes and transcript will be permanently deleted.
             </AlertDialogDescription>
@@ -2907,7 +2907,7 @@ function AudioHealthButton({
           />
 
           <div className="mt-3 grid grid-cols-[112px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[11px] leading-tight">
-            <span className="text-muted-foreground">transcription engine</span>
+            <span className="text-muted-foreground">转写引擎</span>
             <span className="truncate">
               {liveEnabled
                 ? providerLabel(

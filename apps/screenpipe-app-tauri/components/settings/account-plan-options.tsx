@@ -236,7 +236,7 @@ export function AccountPlanOptions({
                   className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
                   data-testid="account-plan-next-step"
                 >
-                  next step
+                  下一步
                 </span>
               ) : null}
             </div>

@@ -96,7 +96,7 @@ export function ShortcutGuide({
               keyboard map
             </span>
           </div>
-          <DialogTitle className="text-xl">keyboard shortcuts</DialogTitle>
+          <DialogTitle className="text-xl">键盘快捷键</DialogTitle>
           <DialogDescription className="max-w-xl text-xs leading-relaxed">
             open tabs are a small working set. recent chats remain in the sidebar,
             and closing a tab never deletes or stops its conversation.

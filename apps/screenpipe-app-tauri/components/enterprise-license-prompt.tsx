@@ -64,7 +64,7 @@ export function EnterpriseLicensePrompt({
     <div className={embedded ? "w-full" : "w-full max-w-sm border border-border bg-background p-6 shadow-lg"}>
       {!embedded && (
         <>
-          <h2 className="mb-1 text-lg font-semibold">enterprise key</h2>
+          <h2 className="mb-1 text-lg font-semibold">企业密钥</h2>
           <p className="mb-4 text-sm text-muted-foreground">
             enter the key provided by your administrator to configure this device
           </p>

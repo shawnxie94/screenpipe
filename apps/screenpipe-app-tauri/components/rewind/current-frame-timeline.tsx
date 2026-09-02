@@ -581,7 +581,7 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 								}}
 							>
 								<Type className="w-4 h-4 shrink-0" />
-								<span className="flex-1 min-w-0 truncate">copy selected text</span>
+								<span className="flex-1 min-w-0 truncate">复制选中文本</span>
 							</button>
 						);
 					})()}
@@ -595,7 +595,7 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 						title="将帧图片复制到剪贴板"
 					>
 						<ImageIcon className="w-4 h-4 shrink-0" />
-						<span className="flex-1 min-w-0 truncate">copy image</span>
+						<span className="flex-1 min-w-0 truncate">复制图片</span>
 						<span className="text-xs text-muted-foreground group-hover:text-background shrink-0 ml-auto">
 							{formatShortcutDisplay(isMac ? "Super+Shift+C" : "Control+Shift+C", isMac)}
 						</span>

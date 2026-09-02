@@ -344,7 +344,7 @@ function RedactionWherePreview({
           <div className="text-[10px]">
             {region(
               "a11y_url_field",
-              <span className="text-foreground underline">reset password</span>,
+              <span className="text-foreground underline">重置密码</span>,
             )}
           </div>
 

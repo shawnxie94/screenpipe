@@ -785,19 +785,19 @@ function BackgroundTranscriptionDialog({
 
           <div className="grid shrink-0 grid-cols-2 gap-2 text-xs sm:grid-cols-4">
             <div className="border border-border px-2 py-1.5">
-              <div className="text-muted-foreground">ready loaded</div>
+              <div className="text-muted-foreground">已就绪加载</div>
               <div className="font-mono text-sm">{readyItems.length.toLocaleString()}</div>
             </div>
             <div className="border border-border px-2 py-1.5">
-              <div className="text-muted-foreground">quiet loaded</div>
+              <div className="text-muted-foreground">已静默加载</div>
               <div className="font-mono text-sm">{quietItems.length.toLocaleString()}</div>
             </div>
             <div className="border border-border px-2 py-1.5">
-              <div className="text-muted-foreground">total candidates</div>
+              <div className="text-muted-foreground">候选总数</div>
               <div className="font-mono text-sm">{visiblePending.toLocaleString()}</div>
             </div>
             <div className="border border-border px-2 py-1.5">
-              <div className="text-muted-foreground">oldest candidate</div>
+              <div className="text-muted-foreground">最早的候选</div>
               <div className="font-mono text-sm">{oldestPending}</div>
             </div>
           </div>

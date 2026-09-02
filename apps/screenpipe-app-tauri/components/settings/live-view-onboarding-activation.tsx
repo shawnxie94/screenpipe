@@ -24,7 +24,7 @@ const PATH_COPY: Record<
   },
   meeting_follow_through: {
     firstAction:
-      "Finish a real call with microphone and system audio enabled. Decisions and next steps appear only after a meeting is captured.",
+      "完成一次真实通话（开启麦克风和系统音频）。只有会议被采集后，决定和下一步操作才会出现。",
     reviewAction:
       "审查一个决定或行动项，如果负责人或下一步有误请更正。",
   },

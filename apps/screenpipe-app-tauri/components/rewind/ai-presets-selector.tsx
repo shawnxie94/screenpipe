@@ -802,7 +802,7 @@ export function AIProviderConfig({
         {selectedProvider === "native-ollama" && (
           <div className="space-y-1">
             <div className="space-y-1">
-              <Label htmlFor="baseUrl" className="text-xs">base url</Label>
+              <Label htmlFor="baseUrl" className="text-xs">基础 URL</Label>
               <Input
                 id="baseUrl"
                 type="text"
@@ -837,7 +837,7 @@ export function AIProviderConfig({
         {selectedProvider === "custom" && (
           <div className="space-y-1">
             <div className="space-y-1">
-              <Label htmlFor="baseUrl" className="text-xs">base url</Label>
+              <Label htmlFor="baseUrl" className="text-xs">基础 URL</Label>
               <Input
                 id="baseUrl"
                 type="text"
@@ -850,7 +850,7 @@ export function AIProviderConfig({
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="apiKey" className="text-xs">api key</Label>
+              <Label htmlFor="apiKey" className="text-xs">API 密钥</Label>
               <div className="relative">
                 <Input
                   id="apiKey"
@@ -898,7 +898,7 @@ export function AIProviderConfig({
         {selectedProvider === "openai-chatgpt" && (
           <div className="space-y-1">
             <div className="space-y-1">
-              <Label className="text-xs">chatgpt account</Label>
+              <Label className="text-xs">ChatGPT 账户</Label>
               <ChatGptSignInButton />
             </div>
             <div className="space-y-1">
@@ -922,7 +922,7 @@ export function AIProviderConfig({
           <div className="space-y-1">
             {selectedProvider === "anthropic" && (
               <div className="space-y-1 pt-1">
-                <Label htmlFor="anthropicApiKey" className="text-xs">api key</Label>
+                <Label htmlFor="anthropicApiKey" className="text-xs">API 密钥</Label>
                 <div className="relative">
                   <Input
                     id="anthropicApiKey"
@@ -1015,7 +1015,7 @@ export function AIProviderConfig({
           <div className="space-y-2 border p-2.5">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-xs font-medium">connection test</p>
+                <p className="text-xs font-medium">连接测试</p>
                 <p className={cn(
                   "text-[10px]",
                   (connectionTestStatus === "fail" && connectionTestResultIsCurrent) ||
@@ -1178,7 +1178,7 @@ export function AIProviderConfig({
             </div>
             {acpEnabled && customAcpAdapter && (
               <div className="space-y-1">
-                <p className="text-xs font-medium">connect another agent</p>
+                <p className="text-xs font-medium">连接另一个代理</p>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     type="button"
@@ -1210,7 +1210,7 @@ export function AIProviderConfig({
                       alt=""
                       className="h-3.5 w-3.5 rounded-sm"
                     />
-                    <span>use a command</span>
+                    <span>使用命令</span>
                   </Button>
                 </div>
               </div>
@@ -1226,7 +1226,7 @@ export function AIProviderConfig({
               selectedProvider !== "acp" &&
               !resolvedModelLimits?.contextWindow && (
               <div className="space-y-1">
-                <Label htmlFor="maxContextTokens" className="text-xs">model context tokens</Label>
+                <Label htmlFor="maxContextTokens" className="text-xs">模型上下文令牌</Label>
                 <Input
                   id="maxContextTokens"
                   type="number"
@@ -1249,7 +1249,7 @@ export function AIProviderConfig({
               selectedProvider !== "acp" &&
               !resolvedModelLimits?.maxOutputTokens && (
               <div className="space-y-1">
-                <Label htmlFor="maxTokens" className="text-xs">max output tokens</Label>
+                <Label htmlFor="maxTokens" className="text-xs">最大输出令牌</Label>
                 <Input
                   id="maxTokens"
                   type="number"

@@ -2582,7 +2582,7 @@ export function PipesSection() {
 
       {pipeTypeFilter === "local" && !selectMode && (
         <div className="flex items-baseline gap-2 px-1 pt-1">
-          <h3 className="text-sm font-medium">scheduled tasks</h3>
+          <h3 className="text-sm font-medium">定时任务</h3>
           <span className="text-xs tabular-nums text-muted-foreground">
             {filteredPipes.length} total
           </span>
@@ -3730,7 +3730,7 @@ export function PipesSection() {
                       {/* Reasoning effort */}
                       <div className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_11rem] sm:items-center">
                         <div>
-                          <Label className="text-xs font-medium">reasoning effort</Label>
+                          <Label className="text-xs font-medium">推理力度</Label>
                           <p className="mt-0.5 text-[11px] text-muted-foreground">
                             low uses fewer reasoning tokens. raise it only for tasks that need deeper analysis; unsupported models may ignore it.
                           </p>
@@ -3932,8 +3932,8 @@ export function PipesSection() {
 
                       <section className="border border-border">
                       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-                        <Label className="text-sm font-medium">task definition</Label>
-                        <span className="text-[11px] text-muted-foreground">task configuration</span>
+                        <Label className="text-sm font-medium">任务定义</Label>
+                        <span className="text-[11px] text-muted-foreground">任务配置</span>
                         <div className="ml-auto flex items-center gap-2">
                         {saveStatus[pipe.config.name] === "saving" && (
                           <span className="text-[11px] text-muted-foreground flex items-center gap-1">
@@ -4134,7 +4134,7 @@ export function PipesSection() {
                     <div className="px-5 pb-6 pt-4" data-testid="pipe-create-pane">
                       <div className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
-                          <h3 className="text-base font-medium">new scheduled task</h3>
+                          <h3 className="text-base font-medium">新定时任务</h3>
                           <p className="mt-1 text-xs text-muted-foreground">
                             describe what you want in plain english — screenpipe builds,
                             installs, and schedules it for you.

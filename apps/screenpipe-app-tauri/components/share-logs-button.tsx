@@ -764,7 +764,7 @@ export const ShareLogsButton = ({
             onClick={handleFilePicker}
           >
             <Plus className="h-3 w-3" />
-            <span>add files</span>
+            <span>添加文件</span>
           </Button>
           <Tooltip delayDuration={200}>
             <TooltipTrigger asChild>
@@ -851,7 +851,7 @@ export const ShareLogsButton = ({
             data-testid="drop-overlay"
             className="absolute inset-0 z-10 pointer-events-none border-2 border-dashed border-foreground bg-background/95 flex flex-col items-center justify-center gap-1"
           >
-            <span className="text-xs font-medium">release to attach</span>
+            <span className="text-xs font-medium">松开以附加</span>
             <span className="text-[10px] text-muted-foreground">
               png, jpg, mov, mp4 · 50 mb max
             </span>

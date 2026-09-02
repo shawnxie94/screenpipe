@@ -270,7 +270,7 @@ export function SpeakerAssignPopover({
 			</PopoverTrigger>
 			<PopoverContent className="w-80 p-3 z-[9999] border border-border rounded-none shadow-none" align="start">
 				<div className="space-y-3">
-					<div className="text-sm font-medium lowercase">assign speaker</div>
+					<div className="text-sm font-medium lowercase">分配说话人</div>
 
 					{/* Search input */}
 					<div className="relative">

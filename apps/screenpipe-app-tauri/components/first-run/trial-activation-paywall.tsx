@@ -160,7 +160,7 @@ export function TrialActivationPaywall({
         onPointerDownOutside={(event) => event.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>opening secure checkout</DialogTitle>
+          <DialogTitle>正在打开安全结账</DialogTitle>
           <DialogDescription>
             Using the account you already signed into during onboarding.
             Nothing is charged today.

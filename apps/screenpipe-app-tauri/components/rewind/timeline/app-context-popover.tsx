@@ -299,7 +299,7 @@ export function AppContextPopover({
 					<div className="space-y-1">
 						<div className="flex items-center gap-1.5 text-muted-foreground">
 							<Globe className="w-3 h-3 flex-shrink-0" />
-							<span>top sites</span>
+							<span>常用网站</span>
 						</div>
 						<div className="pl-4 space-y-0.5">
 							{data.topUrls.map((u, i) => {

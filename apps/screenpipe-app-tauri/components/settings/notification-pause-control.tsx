@@ -105,7 +105,7 @@ export function NotificationPauseControl({
       {/* snooze presets — only when not already paused */}
       {!paused && (
         <div className="flex flex-wrap items-center gap-1.5 border-t border-border px-4 py-3">
-          <span className="mr-1 text-[11px] text-muted-foreground">pause for</span>
+          <span className="mr-1 text-[11px] text-muted-foreground">暂停</span>
           {SNOOZE_PRESETS.map((p) => (
             <button
               key={p.label}

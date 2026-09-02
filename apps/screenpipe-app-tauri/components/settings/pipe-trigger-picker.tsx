@@ -130,7 +130,7 @@ export function PipeTriggerPicker(props: PickerProps) {
   return (
     <div>
       <div className="mb-2.5">
-        <div className="text-sm font-medium lowercase">when to run</div>
+        <div className="text-sm font-medium lowercase">运行时机</div>
         <div className="text-[11px] text-muted-foreground">on a schedule, after a meeting, on a new message…</div>
       </div>
       <div className="space-y-1.5">
@@ -217,7 +217,7 @@ function TriggerModal({
       {/* left rail */}
       <div className="w-[270px] border-r flex flex-col">
         <div className="p-3 pb-2">
-          <div className="text-sm font-medium mb-2 lowercase">add trigger</div>
+          <div className="text-sm font-medium mb-2 lowercase">添加触发器</div>
           <div className="relative">
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -547,7 +547,7 @@ function SlackPicker({ instance, onAdd }: { instance?: string; onAdd: (s: Trigge
   const shown = (channels ?? []).filter((c) => !q || c.name.toLowerCase().includes(q.toLowerCase()));
   return (
     <div>
-      <label className={LABEL}>select a channel</label>
+      <label className={LABEL}>选择频道</label>
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="search channels…" className={`${INPUT} mt-1 mb-2`} />
       <div className="border rounded-none max-h-[220px] overflow-y-auto">
         {channels === null ? (
@@ -667,7 +667,7 @@ function ObsidianPicker({ onAdd }: { onAdd: (s: TriggerSource) => void }) {
   return (
     <div>
       <p className="text-xs text-muted-foreground mb-3">Fires when a new note appears in the folder you watch.</p>
-      <label className={LABEL}>folder to watch</label>
+      <label className={LABEL}>要监控的文件夹</label>
       <div className="flex items-center gap-2 mt-1">
         <input value={folder} onChange={(e) => setFolder(e.target.value)} placeholder={vault || "/path/to/vault/folder"} className={INPUT} />
         <button onClick={choose} className={BTN_SECONDARY}>browse</button>

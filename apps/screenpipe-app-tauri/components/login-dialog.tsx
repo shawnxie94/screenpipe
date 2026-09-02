@@ -17,7 +17,7 @@ export function LoginDialog() {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>login required</DialogTitle>
+          <DialogTitle>需要登录</DialogTitle>
           <DialogDescription>
             please login to continue. you will be redirected to screenpipe.com
           </DialogDescription>

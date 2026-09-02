@@ -374,7 +374,7 @@ export function MeetingChatPanel({
                   />
                   {/* Case 66: never render a blank finished turn. */}
                   {turn.done && !turn.text && !turn.error && (
-                    <span className="text-muted-foreground/70">no answer</span>
+                    <span className="text-muted-foreground/70">无答案</span>
                   )}
                   {turn.error && (
                     <span className="flex flex-wrap items-center gap-2 text-foreground">

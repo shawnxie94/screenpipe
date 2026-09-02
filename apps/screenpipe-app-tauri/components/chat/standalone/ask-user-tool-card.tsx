@@ -291,7 +291,7 @@ export function AskUserToolCard({
             {activeQuestion.prompt}
           </div>
           {activeQuestion.required ? (
-            <div className="mt-1 text-[11px] text-muted-foreground">required by Pi</div>
+            <div className="mt-1 text-[11px] text-muted-foreground">Pi 必需</div>
           ) : null}
         </div>
 
