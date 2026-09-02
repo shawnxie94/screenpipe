@@ -442,7 +442,7 @@ export function PrivacySection() {
   const handleUpdate = async () => {
     if (Object.keys(validationErrors).length > 0) {
       toast({
-        title: "Validation errors",
+        title: "校验错误",
         description: "请先修正所有校验错误再应用更改",
         variant: "destructive",
       });

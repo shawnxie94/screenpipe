@@ -2129,7 +2129,7 @@ function ChatGptPanel() {
         setStatus("idle");
         const msg = String((res as any).error || "unknown error");
         toast({
-          title: "ChatGPT sign-in failed",
+          title: "ChatGPT 登录失败",
           description: msg.includes("timed out") || msg.includes("not logged in")
             ? "Sign-in timed out or was cancelled. Please try again."
             : msg.slice(0, 120),
@@ -2139,7 +2139,7 @@ function ChatGptPanel() {
     } catch {
       setStatus("idle");
       toast({
-        title: "ChatGPT sign-in failed",
+        title: "ChatGPT 登录失败",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });

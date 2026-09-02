@@ -1476,7 +1476,7 @@ const AISection = ({
                           const msg = String(res.error || "unknown error");
                           console.error("chatgpt oauth failed:", msg);
                           toast({
-                            title: "ChatGPT sign-in failed",
+                            title: "ChatGPT 登录失败",
                             description: msg.includes("invalid_state")
                               ? "登录会话已过期 — 请重新登录。"
                               : msg.includes("not logged in") || msg.includes("timed out")
@@ -1488,7 +1488,7 @@ const AISection = ({
                       } catch (e) {
                         console.error("chatgpt oauth failed:", e);
                         toast({
-                          title: "ChatGPT sign-in failed",
+                          title: "ChatGPT 登录失败",
                           description: "发生意外错误，请重试。",
                           variant: "destructive",
                         });

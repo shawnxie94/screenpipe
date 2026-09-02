@@ -256,7 +256,7 @@ const NotificationHandler: React.FC = () => {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                title: "HD recording started",
+                title: "已开始高清录制",
                 body: "正在以高帧率录制此会议。通话结束时自动停止。",
               }),
             }).catch(() => {});
