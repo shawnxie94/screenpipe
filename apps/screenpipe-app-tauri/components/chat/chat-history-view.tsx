@@ -53,7 +53,7 @@ type HistoryTab = "chats" | "pipes" | "archived" | "all";
 const HISTORY_PAGE_SIZE = 30;
 const TABS: ReadonlyArray<{ value: HistoryTab; label: string }> = [
   { value: "chats", label: "Chats" },
-  { value: "pipes", label: "Automations" },
+  { value: "pipes", label: "自动化" },
   { value: "archived", label: "Archived" },
   { value: "all", label: "All" },
 ];
@@ -272,7 +272,7 @@ export function ChatHistoryView({
       if (!store.sessions[id] && meta) {
         store.actions.upsert({
           id,
-          title: meta.title || "untitled",
+          title: meta.title || "未命名",
           preview: "",
           status: "idle",
           messageCount: meta.messageCount ?? 0,
@@ -431,7 +431,7 @@ export function ChatHistoryView({
               conv.hidden ? "text-muted-foreground" : "text-foreground"
             )}
           >
-            {(isInjectedTitle(conv.title) ? undefined : conv.title) || "untitled"}
+            {(isInjectedTitle(conv.title) ? undefined : conv.title) || "未命名"}
           </p>
         </div>
 

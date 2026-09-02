@@ -107,13 +107,13 @@ export function homeCardSlugsForGoal(category: UserGoalCategory): string[] {
 const QUICK_SUMMARY_TASKS = [
   {
     name: "meeting-prep",
-    title: "Meeting Prep",
-    previewPrompt: "Summarize context I'll need for upcoming meetings",
+    title: "会议准备",
+    previewPrompt: "总结我为即将到来的会议所需的上下文",
   },
   {
     name: "blockers",
-    title: "Blockers",
-    previewPrompt: "What problems, errors, or blockers did I encounter?",
+    title: "阻碍项",
+    previewPrompt: "我遇到了什么问题、错误或阻碍？",
   },
 ] satisfies HomeCardAgentTask[];
 

@@ -123,7 +123,7 @@ export function FirstRunSetupReadyPanel({
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 bg-signal" aria-hidden="true" />
           <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-signal">
-            setup · ready
+            设置 · 就绪
           </span>
         </div>
         <h2 className="mt-3 font-mono text-base font-semibold lowercase text-foreground">

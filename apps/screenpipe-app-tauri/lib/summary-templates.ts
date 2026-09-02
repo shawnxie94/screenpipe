@@ -192,8 +192,8 @@ Install a new pipe if needed. Do not use the screenpipe CLI or \`bun x screenpip
 export const FALLBACK_TEMPLATES: TemplatePipe[] = [
   {
     name: AUTOMATE_MY_WORK_TEMPLATE_NAME,
-    title: "Automate My Work",
-    description: "Find one repeated workflow and propose a testable automation",
+    title: "自动化我的工作",
+    description: "找到一个重复的工作流并提出可测试的自动化方案",
     previewPrompt: "Find a repeated workflow I could automate",
     icon: "⚡",
     featured: true,
@@ -201,8 +201,8 @@ export const FALLBACK_TEMPLATES: TemplatePipe[] = [
   },
   {
     name: "day-recap",
-    title: "Day Recap",
-    description: "Today's accomplishments, key moments, and unfinished work",
+    title: "每日回顾",
+    description: "今天的成就、关键时刻和未完成的工作",
     previewPrompt: "Summarize what I worked on today",
     icon: "\u{1F4CB}",
     featured: true,
@@ -229,8 +229,8 @@ Only report what you can verify from the data. End with: "**Next step:** [most i
   },
   {
     name: "time-breakdown",
-    title: "Time Breakdown",
-    description: "Where your time went — by app, project, and category",
+    title: "时间分配",
+    description: "你的时间花在哪里 — 按应用、项目和类别划分",
     previewPrompt: "Show me where my time went today",
     icon: "⏱",
     featured: true,
@@ -254,8 +254,8 @@ End with: "**Suggestion:** [one specific change to improve tomorrow]"`,
   },
   {
     name: "missed-todos",
-    title: "Missed To-Dos",
-    description: "Action items from the last few days you may have missed",
+    title: "遗漏的待办",
+    description: "过去几天你可能遗漏的行动项",
     previewPrompt: "Find action items I may have missed",
     icon: "✅",
     featured: true,

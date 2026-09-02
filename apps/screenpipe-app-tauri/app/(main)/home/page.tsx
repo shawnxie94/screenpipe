@@ -327,7 +327,7 @@ function HomeContent() {
     if (isNew) {
       store.actions.upsert({
         id,
-        title: "untitled",
+        title: "未命名",
         preview: "",
         status: "idle",
         messageCount: 0,

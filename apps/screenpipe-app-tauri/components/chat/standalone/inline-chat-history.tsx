@@ -102,7 +102,7 @@ export function InlineChatHistory({
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium truncate">
-                            {(isInjectedTitle(conv.title) ? undefined : conv.title) || "untitled"}
+                            {(isInjectedTitle(conv.title) ? undefined : conv.title) || "未命名"}
                           </p>
                           <p className="text-[10px] text-muted-foreground">
                             {conv.messageCount} messages

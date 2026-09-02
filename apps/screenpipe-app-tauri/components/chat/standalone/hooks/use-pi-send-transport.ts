@@ -755,7 +755,7 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
     if (!storeState.sessions[turnSessionId]) {
       storeState.actions.upsert({
         id: turnSessionId,
-        title: "untitled",
+        title: "未命名",
         preview: "",
         status: "streaming",
         messageCount: 0,

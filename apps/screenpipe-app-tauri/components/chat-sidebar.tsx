@@ -1810,7 +1810,7 @@ export function ChatSidebar({
 
           <div className="group/recents min-h-0 flex flex-col">
             <Section
-              title="recents"
+              title="最近"
               collapsed={recentsCollapsed}
               onCollapsedChange={setRecentsCollapsed}
               headerAction={
@@ -1821,8 +1821,8 @@ export function ChatSidebar({
                         type="button"
                         disabled={conversationRestrictionActive}
                         className="inline-flex h-5 w-5 items-center justify-center rounded opacity-0 transition-opacity hover:bg-muted/40 focus-visible:opacity-100 group-hover:opacity-100"
-                        aria-label="organize recents"
-                        title="organize recents"
+                        aria-label="整理最近"
+                        title="整理最近"
                       >
                         <MoreHorizontal className="h-3.5 w-3.5" aria-hidden />
                       </button>
@@ -1832,7 +1832,7 @@ export function ChatSidebar({
                       align="end"
                       onKeyDown={handleRecentsMenuShortcut}
                     >
-                      <DropdownMenuLabel>show in recents</DropdownMenuLabel>
+                      <DropdownMenuLabel>在“最近”中显示</DropdownMenuLabel>
                       {visibleRecentSourceOptions().map(({ source, label }) => (
                         <DropdownMenuCheckboxItem
                           key={source}
@@ -1916,7 +1916,7 @@ export function ChatSidebar({
                       </button>
                     </ContextMenuTrigger>
                     <ContextMenuContent className="w-52" onKeyDown={handleRecentsMenuShortcut}>
-                      <ContextMenuLabel>show in recents</ContextMenuLabel>
+                      <ContextMenuLabel>在“最近”中显示</ContextMenuLabel>
                       {visibleRecentSourceOptions().map(({ source, label }) => (
                         <ContextMenuCheckboxItem
                           key={source}
@@ -2025,7 +2025,7 @@ export function ChatSidebar({
 
           <div className="group/pipes min-h-0 flex flex-col shrink-0">
               <Section
-                title="automations"
+                title="自动化"
                 collapsed={pipesCollapsed}
                 onCollapsedChange={updatePipesCollapsed}
                 headerAction={

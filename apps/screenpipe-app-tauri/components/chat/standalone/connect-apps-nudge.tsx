@@ -25,7 +25,7 @@ export function ConnectAppsNudge({
         className="group/connect flex min-w-0 flex-1 items-center justify-between gap-3 px-3 py-2 text-left text-muted-foreground transition-colors duration-150 hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-signal motion-reduce:transition-none"
       >
         <span className="truncate font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-          Connect apps for better answers
+          连接应用以获得更好答案
         </span>
         <ArrowRight className="h-3.5 w-3.5 shrink-0 transition-transform duration-150 group-hover/connect:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" />
       </button>
@@ -50,7 +50,7 @@ export function ConnectAppsNudge({
       <button
         type="button"
         onClick={banner.onDismiss}
-        aria-label="Dismiss connect apps suggestion"
+        aria-label="关闭连接应用提示"
         className="flex h-9 w-9 shrink-0 items-center justify-center border-l border-border/60 text-muted-foreground/60 transition-colors duration-150 hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-signal motion-reduce:transition-none"
       >
         <X className="h-3.5 w-3.5" />
