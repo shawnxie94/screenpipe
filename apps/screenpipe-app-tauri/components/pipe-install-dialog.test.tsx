@@ -76,7 +76,7 @@ async function openRegistryInstall() {
       payload: { url: "registry:digital-clone" },
     });
   });
-  await screen.findByText("review scheduled task access");
+  await screen.findByText("审查定时任务访问权限");
 }
 
 beforeEach(() => {
@@ -126,13 +126,13 @@ describe("pipe install dialog lifecycle", () => {
     });
     fireEvent.click(install);
     expect(await screen.findByText("installing...")).toBeInTheDocument();
-    expect(screen.getByText("review scheduled task access")).toBeInTheDocument();
+    expect(screen.getByText("审查定时任务访问权限")).toBeInTheDocument();
     expect(cancelled).not.toHaveBeenCalled();
 
     await act(async () => finishInstall?.());
     await waitFor(() =>
       expect(
-        screen.queryByText("review scheduled task access"),
+        screen.queryByText("审查定时任务访问权限"),
       ).not.toBeInTheDocument(),
     );
     expect(installed).toHaveBeenCalledWith(
@@ -152,10 +152,10 @@ describe("pipe install dialog lifecycle", () => {
     render(<PipeInstallDialog />);
     await openRegistryInstall();
 
-    fireEvent.click(screen.getByRole("button", { name: "not now" }));
+    fireEvent.click(screen.getByRole("button", { name: "暂不" }));
     await waitFor(() =>
       expect(
-        screen.queryByText("review scheduled task access"),
+        screen.queryByText("审查定时任务访问权限"),
       ).not.toBeInTheDocument(),
     );
     expect(cancelled).toHaveBeenCalledWith(

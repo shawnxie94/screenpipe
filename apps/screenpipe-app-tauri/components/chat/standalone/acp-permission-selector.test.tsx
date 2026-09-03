@@ -41,7 +41,7 @@ const codexModeOption = {
   values: [
     {
       value: "read-only",
-      name: "Read-only",
+      name: "只读",
       description: "Requires approval to edit files and run commands.",
     },
     {
@@ -126,19 +126,19 @@ describe("AcpPermissionSelector", () => {
     render(<AcpPermissionSelector sessionId={SESSION} agentId="codex-acp" />);
 
     const trigger = screen.getByTestId("acp-permission-trigger");
-    expect(trigger).toHaveTextContent("Full access");
+    expect(trigger).toHaveTextContent("完全访问");
     expect(trigger.className).toContain("text-amber");
 
     fireEvent.click(trigger);
     expect(
       screen.getByText("how should codex actions be approved?"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Ask for approval")).toBeInTheDocument();
-    expect(screen.getByText("Approve for me")).toBeInTheDocument();
-    expect(screen.getAllByText("Full access").length).toBeGreaterThan(0);
+    expect(screen.getByText("请求批准")).toBeInTheDocument();
+    expect(screen.getByText("替我批准")).toBeInTheDocument();
+    expect(screen.getAllByText("完全访问").length).toBeGreaterThan(0);
     expect(
       screen.getByText(
-        "Unrestricted access to the internet and any file on your computer.",
+        "不受限制地访问互联网和你电脑上的任何文件。",
       ),
     ).toBeInTheDocument();
   });
@@ -200,7 +200,7 @@ describe("AcpPermissionSelector", () => {
     );
 
     expect(screen.getByTestId("acp-permission-trigger")).toHaveTextContent(
-      "Ask for approval",
+      "请求批准",
     );
   });
 
@@ -279,7 +279,7 @@ describe("AcpPermissionSelector", () => {
     fireEvent.click(screen.getByTestId("acp-permission-trigger"));
     expect(
       screen.getByTestId("acp-permission-option-screenpipe-full-access"),
-    ).toHaveTextContent("Full access");
+    ).toHaveTextContent("完全访问");
     fireEvent.click(
       screen.getByTestId("acp-permission-option-screenpipe-full-access"),
     );
@@ -330,7 +330,7 @@ describe("AcpPermissionSelector", () => {
     );
 
     expect(screen.getByTestId("acp-permission-trigger")).toHaveTextContent(
-      "Full access",
+      "完全访问",
     );
     fireEvent.click(screen.getByTestId("acp-permission-trigger"));
     fireEvent.click(screen.getByTestId("acp-permission-option-agent"));
@@ -363,17 +363,17 @@ describe("AcpPermissionSelector", () => {
     );
 
     const trigger = screen.getByTestId("acp-permission-trigger");
-    expect(trigger).toHaveTextContent("Ask for approval");
+    expect(trigger).toHaveTextContent("请求批准");
     expect(trigger).toHaveAttribute(
       "aria-label",
-      "Claude Code permissions: Ask for approval",
+      "Claude Code permissions: 请求批准",
     );
 
     fireEvent.click(trigger);
     expect(
       screen.getByText("how should claude code actions be approved?"),
     ).toBeInTheDocument();
-    expect(screen.getByText("Approve edits")).toBeInTheDocument();
+    expect(screen.getByText("批准编辑")).toBeInTheDocument();
     expect(screen.getByText("Plan only")).toBeInTheDocument();
     expect(screen.getByText("Don't ask")).toBeInTheDocument();
     fireEvent.click(
@@ -436,10 +436,10 @@ describe("AcpPermissionSelector", () => {
     );
 
     const trigger = screen.getByTestId("acp-permission-trigger");
-    expect(trigger).toHaveTextContent("Ask for approval");
+    expect(trigger).toHaveTextContent("请求批准");
     expect(trigger).toHaveAttribute(
       "aria-label",
-      "GitHub Copilot permissions: Ask for approval",
+      "GitHub Copilot permissions: 请求批准",
     );
     fireEvent.click(trigger);
     fireEvent.click(screen.getByTestId("acp-permission-option-true"));
