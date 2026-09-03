@@ -6,40 +6,40 @@ trigger:
   events:
     - meeting_ended
 template: true
-title: Commitments
+title: 承诺跟进
 description: "随着新的工作上下文出现，保持承诺和跟进事项的更新"
 featured: true
 ---
 
-Maintain one living commitments inbox from the user's recent work context.
+维护一个来自用户近期工作上下文的、单一且不断更新的承诺收件箱。
 
-Read the screenpipe skill first. Then call `structured_output` with `get_targets` before searching. The returned targets include exact schemas, the prior payload, user feedback, and per-item state. Treat the requested target time range as authoritative.
+先读取 screenpipe skill。然后在搜索前调用 `structured_output` 的 `get_targets`。返回的 targets 包含精确 schema、先前的载荷、用户反馈和逐项状态。把请求的目标时间范围视为权威。
 
-Search the API only. Use at most 5 bounded searches with `limit=10`, covering messages, meetings, email, documents, and issue trackers visible in Screenpipe. Prefer a recent delta, but use enough overlap to reconcile open items. Never run code or probe files in other apps.
+只搜索 API。最多用 5 次有界搜索（`limit=10`），覆盖 Screenpipe 中可见的消息、会议、邮件、文档和问题追踪器。优先用近期增量，但要留足够的重叠来核对未结事项。绝不在其他应用中运行代码或探测文件。
 
-## Reconciliation contract
+## 对账规则
 
-- Extract only explicit promises, requests, assigned actions, waiting dependencies, deadlines, cancellations, and strong evidence of completion.
-- Reuse a stable item `id` when later evidence concerns the same real-world commitment. Build IDs from durable source identity plus the normalized commitment, not list position or wording alone.
-- Read the prior payload before deciding an item is new. Merge duplicates and attach the clearest current context.
-- User item state is authoritative. Apply corrections. Do not return dismissed items as active. Do not return resolved items as active unless later explicit evidence clearly reopens them. Do not return an item as active while its snooze time is in the future.
-- Absence of later evidence is never proof of completion. If completion is only inferred, keep the item open and label it `needs review`.
-- Keep source snippets minimal. Include enough source and timing for the user to understand why the item exists.
-- Never send messages, create external tasks, close issues, or change another app. The Live View's handoff button performs that separate, user-confirmed flow.
+- 只提取明确的承诺、请求、被指派的任务、等待中的依赖、截止日期、取消，以及强有力的完成证据。
+- 当后续证据涉及同一个现实世界承诺时，复用稳定的项 `id`。用持久的来源身份加上规范化后的承诺来构建 ID，不要仅靠列表位置或措辞。
+- 在判定某一项是否为新项之前，先读取先前的载荷。合并重复项，并附上最清晰的当前上下文。
+- 用户项状态是权威的。应用修正。不要把已关闭的项当作活跃项返回。除非后来的明确证据清楚地重新打开了已解决项，否则不要把它当作活跃项返回。当某项目的暂停时间在未来时，不要把它当作活跃项返回。
+- 缺乏后续证据绝不是完成的证明。如果完成只是推断出来的，保持该事项开启并标记为 `needs review`。
+- 来源片段保持精简。包含足够让用户理解该项为什么存在的来源和时间信息。
+- 绝不发送消息、创建外部任务、关闭问题或改动其他应用。Live View 的交接按钮负责那个独立、经用户确认的流程。
 
-## Interactive list items
+## 交互式列表项
 
-For actionable `list.v1` targets, use the optional interactive fields from the exact target schema:
+对于可操作的 `list.v1` targets，使用精确 target schema 里的可选交互字段：
 
-- `id`: stable across runs for the same commitment;
-- `title`: concise verb-first next action;
-- `subtitle`: owner, dependency, or the reason it remains open;
-- `status`: one of `needs review`, `due`, `open`, or `waiting`;
-- `dueAt`: RFC3339 only when the timing is source-backed;
-- `source`: short app + person/thread/meeting label;
-- `resolveLabel`: `done`;
-- `actions`: `resolve`, `snooze`, `correct`, `dismiss`, and `handoff`.
+- `id`：同一承诺在多次运行间保持稳定；
+- `title`：简明的以动词开头的下一步动作；
+- `subtitle`：负责人、依赖，或它仍未关闭的原因；
+- `status`：`needs review`、`due`、`open` 或 `waiting` 之一；
+- `dueAt`：仅当时间有来源支撑时用 RFC3339；
+- `source`：简短的应用 + 人/讨论串/会议标签；
+- `resolveLabel`：`done`；
+- `actions`：`resolve`、`snooze`、`correct`、`dismiss` 和 `handoff`。
 
-Rank the main inbox by urgency, explicitness, and recency. Keep it calm: at most 12 open items. Submit empty arrays when no item is supported instead of inventing work.
+按紧急程度、明确程度和时效性对主收件箱排序。保持克制：最多 12 个未结事项。当没有事项有支撑时提交空数组，而不是编造工作。
 
-Fill every assigned target whose schema can be supported. Metrics must be calculated from the same reconciled set. The changes timeline should show only material creates, deadline/owner changes, reopened items, or source-backed completions. The context note should explain uncertainty or missing sources plainly.
+填写每个 schema 可被支撑的已指派 target。指标必须从同一套对账后的集合计算。变更时间线只应显示实质性的创建、截止日期/负责人变更、被重新打开的事项，或有来源支撑的完成。上下文说明应直白地解释不确定性和缺失的来源。

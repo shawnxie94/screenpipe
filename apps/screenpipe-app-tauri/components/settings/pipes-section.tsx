@@ -997,6 +997,29 @@ const PIPE_STATUS_LABELS: Record<string, string> = {
   error: "错误",
 };
 
+// Display-layer name → 中文标题 mapping for the bundled builtin pipes.
+// The slug (dir name) stays the stable identifier everywhere; only what the
+// user sees is localized. User-installed pipes keep their slug.
+const PIPE_ZH_TITLES: Record<string, string> = {
+  "accounting-follow-through": "财务跟进",
+  "ai-habits": "AI 使用习惯",
+  "automate-my-work": "自动化我的工作",
+  commitments: "承诺跟进",
+  "day-recap": "每日回顾",
+  "meeting-summary": "会议摘要",
+  "missed-todos": "遗漏的待办",
+  "speaker-reconciliation": "说话人归属",
+  "standup-update": "站会更新",
+  "time-breakdown": "时间分配",
+  "video-export": "导出视频片段",
+};
+
+/** Display title for a pipe row/detail — Chinese for bundled builtins, the
+ * slug otherwise. Never used as an identifier. */
+function pipeDisplayTitle(name: string): string {
+  return PIPE_ZH_TITLES[name] || name;
+}
+
 function pipeExecutionRawStatus(exec: PipeExecutionStatusFields): string {
   return pipeExecutionCompletedBeforeContinueError(exec) ? "completed" : exec.status;
 }
@@ -2830,7 +2853,7 @@ export function PipesSection() {
                   role="button"
                   tabIndex={0}
                   aria-current={isSelected}
-                  title={`${pipe.config.name} — ${scheduleSummary} · ${lastRunSummary}`}
+                  title={`${pipeDisplayTitle(pipe.config.name)} — ${scheduleSummary} · ${lastRunSummary}`}
                   onClick={() => selectPipe(pipe.config.name)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -2895,7 +2918,7 @@ export function PipesSection() {
                           aria-label="由你的组织管理"
                         />
                       )}
-                      <span className="truncate text-sm font-medium">{pipe.config.name}</span>
+                      <span className="truncate text-sm font-medium">{pipeDisplayTitle(pipe.config.name)}</span>
                       {hasMissingConnections && (
                         <span
                           className="shrink-0 font-mono text-[10px] text-destructive"
@@ -2942,7 +2965,7 @@ export function PipesSection() {
                 <div key={pipe.config.name} data-testid="pipe-detail" className="relative flex flex-col">
                   <div className="border-b border-border px-5 pb-3 pt-4">
                     <h3 className="truncate text-base font-medium" title={pipe.config.name}>
-                      {pipe.config.name}
+                      {pipeDisplayTitle(pipe.config.name)}
                     </h3>
                     {description && (
                       <p className="mt-1 text-xs text-muted-foreground">{description}</p>
@@ -3178,7 +3201,7 @@ export function PipesSection() {
                                 navigateHomeAndPrefill({
                                   context: "the user wants to fork their pipe into a new one",
                                   prompt: buildForkPrompt(pipe.config.name),
-                                  displayLabel: `复制定时任务：${pipe.config.name}`,
+                                  displayLabel: `复制定时任务：${pipeDisplayTitle(pipe.config.name)}`,
                                   autoSend: true,
                                 });
                               }}

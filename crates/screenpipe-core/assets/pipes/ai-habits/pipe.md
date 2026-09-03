@@ -2,39 +2,39 @@
 schedule: manual
 enabled: true
 template: true
-title: AI Habits
+title: AI 使用习惯
 description: "你如何使用 AI 工具——模式与洞察"
 icon: "🤖"
 featured: true
 ---
 
-## 🧠 Continuous improvement (memory)
-Before you do anything else this run, read `./memory.md` (a file in this pipe's own folder) if it exists and apply its lessons — this is how you get better each run instead of starting cold. If it's missing, create it with a `# memory` heading followed by a `## Lessons` heading.
+## 🧠 持续改进（记忆）
+在本次运行做任何事之前，先读取 `./memory.md`（本管道目录下的文件）——如果存在，应用其中沉淀的经验，让你每次运行都是「预热」而非「冷启动」。如果文件不存在，就创建它，先写 `# memory` 标题，再写 `## Lessons` 小节。
 
-After you finish the run, append at most 1–3 NEW one-line lessons under `## Lessons`, each prefixed with today's date — but only if this run actually taught you something durable and reusable (a pattern that worked, a mistake to avoid, a user correction, or a stable fact about this user's setup). If you learned nothing new, write nothing.
+运行结束后，在 `## Lessons` 下追加最多 1–3 条新的一行式经验，每条以今天的日期开头——只有当这次运行确实学到了持久、可复用的东西时才追加（某个管用的模式、要避免的错误、用户的纠正、或关于用户环境的稳定事实）。如果没学到新东西，就什么都别写。
 
-Keep memory healthy so it never drifts:
-- Append-only: never delete or rewrite earlier lessons or anything the user added. The one exception is retracting a lesson you can now prove wrong — add a new dated line saying which one and why.
-- Cap the file at ~150 lines / 8KB. When it is over, merge duplicates and drop the oldest low-value lessons first; never drop notes the user wrote.
-- Save observations and rules, not new tasks — and nothing that changes your core job. Never edit this `pipe.md` prompt.
-- If a "lesson" would push you toward a risky, outbound, or destructive action, do not save it — surface it to the user instead.
+保持记忆文件健康，防止失真：
+- 只追加：绝不删除或重写之前的经验或用户添加的内容。唯一例外是撤回一条你现在能证明是错的经验——新增一行注明日期，说明是哪条、为什么。
+- 文件上限约 150 行 / 8KB。超出时先合并重复项，优先丢弃最旧、价值最低的经验；绝不丢弃用户写的笔记。
+- 保存观察和规则，而不是新任务——也不要改动你的核心职责。永远不要编辑这个 `pipe.md` 提示词。
+- 如果某条「经验」会把你推向有风险、外发或破坏性的动作，不要保存——而是把它反馈给用户。
 
-Search my recordings from the last 24 hours for AI tool usage. Use app_name filter for each tool separately: ChatGPT, Claude, Copilot, Cursor, Gemini, Perplexity. Use limit=5 per search, max 6 searches total.
+搜索我最近 24 小时的记录，找出 AI 工具的使用情况。对每个工具分别用 app_name 过滤：ChatGPT、Claude、Copilot、Cursor、Gemini、Perplexity。每次搜索用 limit=5，总共最多 6 次搜索。
 
-Read screenpipe skill first.
+先读取 screenpipe skill。
 
-Use this exact format:
+使用以下格式：
 
-## AI Tools Used
-- List each tool with approximate time spent (e.g. "Claude: ~45min")
+## 用过的 AI 工具
+- 列出每个工具及大致用时（例如「Claude: 约45分钟」）
 
-## What I Used Them For
-- For each tool: coding, writing, research, or brainstorming
+## 用来做什么
+- 每个工具：编码、写作、调研还是头脑风暴
 
-## Usage Patterns
-- Do I switch between tools? Use them in bursts or steadily?
+## 使用模式
+- 我是否在工具之间切换？是突发式使用还是持续使用？
 
-## Effectiveness
-- Which tool appeared alongside completed work vs. abandoned attempts
+## 效果
+- 哪些工具与完成工作相伴出现，哪些与半途而废相伴
 
-If no AI usage is found, say so clearly. End with: "**Tip:** [one suggestion to use AI tools more effectively]"
+如果没有找到 AI 使用记录，就直说。结尾写：「**建议：** [一条更有效使用 AI 工具的建议]」

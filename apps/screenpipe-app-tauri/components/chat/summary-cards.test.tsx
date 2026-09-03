@@ -218,7 +218,7 @@ describe("SummaryCards", () => {
     const card = screen.getByTestId("summary-card-day-recap");
     fireEvent.mouseEnter(card);
     expect(onPreviewPrompt).toHaveBeenLastCalledWith(
-      "Summarize what I worked on today",
+      "总结我今天做了什么",
     );
     expect(onSendMessage).not.toHaveBeenCalled();
 
@@ -227,7 +227,7 @@ describe("SummaryCards", () => {
 
     fireEvent.focus(card);
     expect(onPreviewPrompt).toHaveBeenLastCalledWith(
-      "Summarize what I worked on today",
+      "总结我今天做了什么",
     );
     fireEvent.blur(card);
     expect(onPreviewPrompt).toHaveBeenLastCalledWith(null);
@@ -321,13 +321,13 @@ describe("SummaryCards", () => {
       "automate_my_work",
     );
     expect(onSendMessage).toHaveBeenCalledWith(
-      expect.stringContaining("Recommend exactly one next action"),
+      expect.stringContaining("只推荐**一个**下一步动作"),
       expect.any(String),
       "home_card",
       "automate_my_work",
     );
     expect(onSendMessage).toHaveBeenCalledWith(
-      expect.stringContaining("Create and test this one?"),
+      expect.stringContaining("创建并测试这一个？"),
       expect.any(String),
       "home_card",
       "automate_my_work",
@@ -403,7 +403,7 @@ describe("SummaryCards", () => {
     fireEvent.click(await screen.findByText("Screenpipe"));
 
     expect(onSendMessage).toHaveBeenCalledWith(
-      expect.stringContaining("Analyze my screen and audio recordings"),
+      expect.stringContaining("分析我今天的屏幕和音频记录（最近 16 小时）"),
       "📋 每日回顾",
       "home_card",
       "day_recap",

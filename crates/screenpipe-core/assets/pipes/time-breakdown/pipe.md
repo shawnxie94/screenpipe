@@ -2,37 +2,37 @@
 schedule: manual
 enabled: true
 template: true
-title: Time Breakdown
+title: 时间分配
 description: "你的时间花在哪里——按应用、项目和分类"
 icon: "⏱"
 featured: true
 ---
 
-## 🧠 Continuous improvement (memory)
-Before you do anything else this run, read `./memory.md` (a file in this pipe's own folder) if it exists and apply its lessons — this is how you get better each run instead of starting cold. If it's missing, create it with a `# memory` heading followed by a `## Lessons` heading.
+## 🧠 持续改进（记忆）
+在本次运行做任何事之前，先读取 `./memory.md`（本管道目录下的文件）——如果存在，应用其中沉淀的经验，让你每次运行都是「预热」而非「冷启动」。如果文件不存在，就创建它，先写 `# memory` 标题，再写 `## Lessons` 小节。
 
-After you finish the run, append at most 1–3 NEW one-line lessons under `## Lessons`, each prefixed with today's date — but only if this run actually taught you something durable and reusable (a pattern that worked, a mistake to avoid, a user correction, or a stable fact about this user's setup). If you learned nothing new, write nothing.
+运行结束后，在 `## Lessons` 下追加最多 1–3 条新的一行式经验，每条以今天的日期开头——只有当这次运行确实学到了持久、可复用的东西时才追加（某个管用的模式、要避免的错误、用户的纠正、或关于用户环境的稳定事实）。如果没学到新东西，就什么都别写。
 
-Keep memory healthy so it never drifts:
-- Append-only: never delete or rewrite earlier lessons or anything the user added. The one exception is retracting a lesson you can now prove wrong — add a new dated line saying which one and why.
-- Cap the file at ~150 lines / 8KB. When it is over, merge duplicates and drop the oldest low-value lessons first; never drop notes the user wrote.
-- Save observations and rules, not new tasks — and nothing that changes your core job. Never edit this `pipe.md` prompt.
-- If a "lesson" would push you toward a risky, outbound, or destructive action, do not save it — surface it to the user instead.
+保持记忆文件健康，防止失真：
+- 只追加：绝不删除或重写之前的经验或用户添加的内容。唯一例外是撤回一条你现在能证明是错的经验——新增一行注明日期，说明是哪条、为什么。
+- 文件上限约 150 行 / 8KB。超出时先合并重复项，优先丢弃最旧、价值最低的经验；绝不丢弃用户写的笔记。
+- 保存观察和规则，而不是新任务——也不要改动你的核心职责。永远不要编辑这个 `pipe.md` 提示词。
+- 如果某条「经验」会把你推向有风险、外发或破坏性的动作，不要保存——而是把它反馈给用户。
 
-Analyze my app usage from today (last 12 hours). Read the screenpipe skill first. Use limit=10 per search, max 4 searches. For time per app, aggregate frames by app over the range using whatever screenpipe query tool you have (a COUNT/GROUP BY query or the activity summary). Use only screenpipe's recorded data, not this project's files or other apps' source.
+分析我今天（最近 12 小时）的应用使用情况。先读取 screenpipe skill。每次搜索用 limit=10，总共最多 4 次搜索。统计每个应用的用时时，用你手头的 screenpipe 查询工具按应用对时间范围内的帧聚合（COUNT/GROUP BY 查询或活动摘要）。只使用 screenpipe 记录的数据，不要看本项目文件或其他应用的源码。
 
-Use this exact format with durations and percentages:
+使用带时长和百分比的格式：
 
-## By Application
-- Each app with duration and percentage, sorted by time (e.g. "VS Code: 2h 15min (28%)").
+## 按应用
+- 每个应用及其时长和百分比，按用时排序（例如「VS Code: 2小时15分（28%）」）。
 
-## By Category
-- Group into: coding, meetings, browsing, writing, communication, other. Show hours and % per category.
+## 按类别
+- 分组为：编码、会议、浏览、写作、沟通、其他。显示每类的时长和百分比。
 
-## By Project
-- Group related activity by project/topic. Name specific repos or tasks.
+## 按项目
+- 按项目/主题对相关活动分组。指明具体的仓库或任务。
 
-## Focus Score
-- focused / total as a percentage. Focused = coding + writing; unfocused = browsing + app-switching.
+## 专注度评分
+- 专注时间 / 总时间 的百分比。专注 = 编码 + 写作；不专注 = 浏览 + 频繁切换应用。
 
-End with: "**Suggestion:** [one specific change to improve tomorrow]"
+结尾写：「**建议：** [一项明天可以改进的具体调整]」

@@ -2,36 +2,36 @@
 schedule: manual
 enabled: true
 template: true
-title: Missed To-Dos
+title: 遗漏的待办
 description: "最近几天你可能遗漏的行动事项"
 icon: "✅"
 featured: true
 ---
 
-## 🧠 Continuous improvement (memory)
-Before you do anything else this run, read `./memory.md` (a file in this pipe's own folder) if it exists and apply its lessons — this is how you get better each run instead of starting cold. If it's missing, create it with a `# memory` heading followed by a `## Lessons` heading.
+## 🧠 持续改进（记忆）
+在本次运行做任何事之前，先读取 `./memory.md`（本管道目录下的文件）——如果存在，应用其中沉淀的经验，让你每次运行都是「预热」而非「冷启动」。如果文件不存在，就创建它，先写 `# memory` 标题，再写 `## Lessons` 小节。
 
-After you finish the run, append at most 1–3 NEW one-line lessons under `## Lessons`, each prefixed with today's date — but only if this run actually taught you something durable and reusable (a pattern that worked, a mistake to avoid, a user correction, or a stable fact about this user's setup). If you learned nothing new, write nothing.
+运行结束后，在 `## Lessons` 下追加最多 1–3 条新的一行式经验，每条以今天的日期开头——只有当这次运行确实学到了持久、可复用的东西时才追加（某个管用的模式、要避免的错误、用户的纠正、或关于用户环境的稳定事实）。如果没学到新东西，就什么都别写。
 
-Keep memory healthy so it never drifts:
-- Append-only: never delete or rewrite earlier lessons or anything the user added. The one exception is retracting a lesson you can now prove wrong — add a new dated line saying which one and why.
-- Cap the file at ~150 lines / 8KB. When it is over, merge duplicates and drop the oldest low-value lessons first; never drop notes the user wrote.
-- Save observations and rules, not new tasks — and nothing that changes your core job. Never edit this `pipe.md` prompt.
-- If a "lesson" would push you toward a risky, outbound, or destructive action, do not save it — surface it to the user instead.
+保持记忆文件健康，防止失真：
+- 只追加：绝不删除或重写之前的经验或用户添加的内容。唯一例外是撤回一条你现在能证明是错的经验——新增一行注明日期，说明是哪条、为什么。
+- 文件上限约 150 行 / 8KB。超出时先合并重复项，优先丢弃最旧、价值最低的经验；绝不丢弃用户写的笔记。
+- 保存观察和规则，而不是新任务——也不要改动你的核心职责。永远不要编辑这个 `pipe.md` 提示词。
+- 如果某条「经验」会把你推向有风险、外发或破坏性的动作，不要保存——而是把它反馈给用户。
 
-Find action items and to-dos from the last 3 days that I may have missed. Read the screenpipe skill first. Use limit=10 per search, max 5 searches over the last 3 days. Use only screenpipe's recorded data, not this project's files or other apps' source.
+找出最近 3 天我可能遗漏的行动事项和待办。先读取 screenpipe skill。最近 3 天内每次搜索用 limit=10，总共最多 5 次搜索。只使用 screenpipe 记录的数据，不要看本项目文件或其他应用的源码。
 
-Look across messages, meetings, docs, and issue trackers (e.g. Slack, Notion, Linear, GitHub) for commitments and tasks — phrases like "I'll", "can you", "TODO", "follow up", "by Friday", action items, and unchecked checkboxes.
+在消息、会议、文档和问题追踪器（如 Slack、Notion、Linear、GitHub）中寻找承诺和任务——比如「我会」、「你能」、「TODO」、「跟进」、「周五之前」这类表述、行动事项和未勾选的复选框。
 
-Use this exact format:
+使用以下格式：
 
-## Likely Missed
-- [ ] Task — where it came from (app + person/thread) and when. Only items that still look unresolved.
+## 可能遗漏
+- [ ] 任务——来源（应用 + 人/讨论串）和时间。只列仍然看起来未解决的事项。
 
-## Waiting on Me
-- [ ] Things someone asked me to do that I haven't acted on yet.
+## 等待我处理
+- [ ] 别人让我做、但我还没行动的事。
 
-## Quick Wins
-- [ ] Small tasks (<5 min) I can clear right now.
+## 快速完成
+- [ ] 现在就能做完的小任务（<5 分钟）。
 
-Rank by urgency. Only include items you can actually see in the data — never invent tasks. If you find none, say so plainly. End with: "**Do first:** [the single most important item]"
+按紧急程度排序。只包含你能在数据中实际看到的事项——绝不编造任务。如果一个都没有，就直说。结尾写：「**先做：** [唯一最重要的一项]」

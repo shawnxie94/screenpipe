@@ -10,7 +10,7 @@ subagent: false
 connections: []
 template: true
 featured: false
-title: Speaker Reconciliation
+title: 说话人归属
 description: "将未命名的说话人声音与时间对齐的无障碍文本、解析后的会议数据对应起来。自动运行仅预览。"
 trigger:
   events:

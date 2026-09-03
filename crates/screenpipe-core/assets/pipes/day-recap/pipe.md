@@ -2,40 +2,40 @@
 schedule: manual
 enabled: true
 template: true
-title: Day Recap
+title: 每日回顾
 description: "今天的成就、关键时刻和未完成的工作"
 icon: "📋"
 featured: true
 ---
 
-## 🧠 Continuous improvement (memory)
-Before you do anything else this run, read `./memory.md` (a file in this pipe's own folder) if it exists and apply its lessons — this is how you get better each run instead of starting cold. If it's missing, create it with a `# memory` heading followed by a `## Lessons` heading.
+## 🧠 持续改进（记忆）
+在本次运行做任何事之前，先读取 `./memory.md`（本管道目录下的文件）——如果存在，应用其中沉淀的经验，让你每次运行都是「预热」而非「冷启动」。如果文件不存在，就创建它，先写 `# memory` 标题，再写 `## Lessons` 小节。
 
-After you finish the run, append at most 1–3 NEW one-line lessons under `## Lessons`, each prefixed with today's date — but only if this run actually taught you something durable and reusable (a pattern that worked, a mistake to avoid, a user correction, or a stable fact about this user's setup). If you learned nothing new, write nothing.
+运行结束后，在 `## Lessons` 下追加最多 1–3 条新的一行式经验，每条以今天的日期开头——只有当这次运行确实学到了持久、可复用的东西时才追加（某个管用的模式、要避免的错误、用户的纠正、或关于用户环境的稳定事实）。如果没学到新东西，就什么都别写。
 
-Keep memory healthy so it never drifts:
-- Append-only: never delete or rewrite earlier lessons or anything the user added. The one exception is retracting a lesson you can now prove wrong — add a new dated line saying which one and why.
-- Cap the file at ~150 lines / 8KB. When it is over, merge duplicates and drop the oldest low-value lessons first; never drop notes the user wrote.
-- Save observations and rules, not new tasks — and nothing that changes your core job. Never edit this `pipe.md` prompt.
-- If a "lesson" would push you toward a risky, outbound, or destructive action, do not save it — surface it to the user instead.
+保持记忆文件健康，防止失真：
+- 只追加：绝不删除或重写之前的经验或用户添加的内容。唯一例外是撤回一条你现在能证明是错的经验——新增一行注明日期，说明是哪条、为什么。
+- 文件上限约 150 行 / 8KB。超出时先合并重复项，优先丢弃最旧、价值最低的经验；绝不丢弃用户写的笔记。
+- 保存观察和规则，而不是新任务——也不要改动你的核心职责。永远不要编辑这个 `pipe.md` 提示词。
+- 如果某条「经验」会把你推向有风险、外发或破坏性的动作，不要保存——而是把它反馈给用户。
 
-Analyze my screen and audio recordings from today (last 16 hours). Read the screenpipe skill first. Use limit=10 per search, max 5 searches total. For app-usage totals, aggregate by app over the time range using whatever screenpipe query tool you have (a COUNT/GROUP BY query or the activity summary). Use only screenpipe's recorded data, not this project's files or other apps' source.
+分析我今天的屏幕和音频记录（最近 16 小时）。先读取 screenpipe skill。每次搜索用 limit=10，总共最多 5 次搜索。统计应用使用时长时，用你手头的 screenpipe 查询工具按应用对时间范围内的数据聚合（COUNT/GROUP BY 查询或活动摘要）。只使用 screenpipe 记录的数据，不要看本项目文件或其他应用的源码。
 
-Use this exact format:
+严格使用以下格式：
 
-## Summary
-One sentence: what I mainly did today.
+## 今日总结
+一句话说明我今天主要做了什么。
 
-## Accomplishments
-- Top 3 things I finished, with timestamps (e.g. "2:30 PM"). Name specific apps, files, or projects.
+## 完成事项
+- 我完成的最重要的 3 件事，带时间戳（例如「下午 2:30」）。指明具体的应用、文件或项目。
 
-## Key Moments
-- Important things I saw, said, or heard — with timestamps.
+## 关键时刻
+- 我看到、说到或听到的重要内容——带时间戳。
 
-## Unfinished Work
-- What to continue tomorrow — name the app, file, or task.
+## 未完成的工作
+- 明天要继续的内容——指明应用、文件或任务。
 
-## Patterns
-- Apps I used most and topics that recurred.
+## 模式
+- 我使用最多的应用和反复出现的主题。
 
-Only report what you can verify from the data. End with: "**Next step:** [most important thing to continue]"
+只报告你能从数据中验证的内容。结尾写：「**下一步：** [最重要的一件待办]」

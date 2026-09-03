@@ -9,7 +9,7 @@ trigger:
   events:
     - meeting_ended
 template: true
-title: Meeting Summary
+title: 会议摘要
 description: "自动总结刚结束的会议，并把摘要保存回会议记录（标题 + 笔记）"
 icon: "🤝"
 featured: false
