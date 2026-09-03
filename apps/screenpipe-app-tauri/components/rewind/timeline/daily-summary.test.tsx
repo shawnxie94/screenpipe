@@ -149,7 +149,7 @@ describe("daily summary helpers", () => {
 		).toBe("timeout");
 		expect(presentGenerationError(new Error("boom"))).toEqual({
 			kind: "unknown",
-			message: "Daily summary could not be generated. Try again.",
+			message: "无法生成每日摘要，请重试。",
 			upgrade: null,
 		});
 	});
@@ -194,7 +194,7 @@ describe("TimelineDailySummary", () => {
 		const trigger = screen.getByTestId("timeline-daily-summary-trigger");
 		expect(trigger).toHaveClass("h-10", "w-10");
 		expect(trigger).toHaveAccessibleName(
-			"Turn on Enhanced AI to generate a summary for this day",
+			"开启增强 AI 以生成这一天的摘要",
 		);
 		expect(trigger).not.toHaveTextContent("daily summary");
 	});
@@ -297,7 +297,7 @@ describe("TimelineDailySummary", () => {
 		expect(
 			screen.getByText(/never run on a timer or generate automatically/i),
 		).toBeInTheDocument();
-		expect(screen.getByText(/bounded, read-only access/i)).toBeInTheDocument();
+		expect(screen.getByText(/受限的只读访问/i)).toBeInTheDocument();
 		expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
 	});
 

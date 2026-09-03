@@ -26,7 +26,7 @@ describe("MeetingSummaryTransition", () => {
     expect(screen.getByRole("status")).toHaveAccessibleName("meeting saved");
     expect(
       screen.getByText(
-        "Your notes are saved. Finishing the transcript before the summary starts.",
+        "你的笔记已保存。在摘要开始前完成文字记录。",
       ),
     ).toBeInTheDocument();
     expect(
@@ -52,7 +52,7 @@ describe("MeetingSummaryTransition", () => {
     expect(screen.getByRole("status")).toHaveAccessibleName("writing summary");
     expect(
       screen.getByText(
-        "Your notes and transcript are safe. The draft appears in Summary as it is written.",
+        "你的笔记和文字记录是安全的。草稿会随书写出现在摘要中。",
       ),
     ).toBeVisible();
     expect(

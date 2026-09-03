@@ -150,7 +150,7 @@ function ControlledSelector() {
 async function createChatGptPreset() {
   fireEvent.click(screen.getByRole("combobox"));
   fireEvent.click(await screen.findByText("create new preset"));
-  fireEvent.click(screen.getByRole("button", { name: /advanced/ }));
+  fireEvent.click(screen.getByRole("button", { name: /高级/ }));
   fireEvent.click(screen.getByRole("button", { name: "chatgpt" }));
   fireEvent.change(screen.getByLabelText("name"), {
     target: { value: "new chat preset" },
@@ -202,7 +202,7 @@ describe("AIPresetsSelector controlled preset creation", () => {
     expect(screen.getByText("choose one to continue")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "continue" })).toBeDisabled();
 
-    const dialog = screen.getByRole("dialog", { name: "Create New Preset" });
+    const dialog = screen.getByRole("dialog", { name: "新建预设" });
     const primaryChoices = new Set([
       "screenpipe",
       "Codex",
@@ -234,9 +234,9 @@ describe("AIPresetsSelector controlled preset creation", () => {
     fireEvent.change(nameInput, { target: { value: "my claude preset" } });
     expect(nameInput).toHaveValue("my claude preset");
 
-    fireEvent.click(screen.getByRole("button", { name: /advanced/ }));
+    fireEvent.click(screen.getByRole("button", { name: /高级/ }));
 
-    expect(screen.getByText("use a model directly")).toBeInTheDocument();
+    expect(screen.getByText("直接使用模型")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "chatgpt" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "claude API" })).toBeInTheDocument();
     expect(

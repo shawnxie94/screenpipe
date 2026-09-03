@@ -362,7 +362,7 @@ describe("ShareLogsButton attachments", () => {
     openFileDialogMock.mockResolvedValue("/tmp/picked.mp4");
     render(<ShareLogsButton />);
 
-    fireEvent.click(screen.getByRole("button", { name: /add files/i }));
+    fireEvent.click(screen.getByRole("button", { name: /添加文件/i }));
 
     const row = await screen.findByTestId("video-attachment");
     expect(row).toHaveTextContent("picked.mp4");
@@ -444,7 +444,7 @@ describe("ShareLogsButton attachments", () => {
       dragDropHandlerRef.current!({ payload: { type: "over" } });
     });
     expect(screen.getByTestId("drop-overlay")).toHaveTextContent(
-      "release to attach",
+      "松开以附加",
     );
 
     act(() => {
@@ -500,7 +500,7 @@ describe("ShareLogsButton attachments", () => {
     expect(toastMock).toHaveBeenCalledWith(
       expect.objectContaining({ title: "feedback sent" }),
     );
-    expect(screen.getByRole("button", { name: /sent/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /已发送/i })).toBeDisabled();
     expect(screen.getByTestId("attachment-status")).toHaveTextContent(
       "report sent — attachment included",
     );
