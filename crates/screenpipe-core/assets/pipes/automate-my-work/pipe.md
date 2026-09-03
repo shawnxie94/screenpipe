@@ -3,7 +3,7 @@ schedule: manual
 enabled: true
 template: true
 title: Automate My Work
-description: "Find one repeated workflow and propose a testable automation"
+description: "找出一个反复出现的工作流程，并提议一个可测试的自动化方案"
 icon: "⚡"
 featured: true
 ---

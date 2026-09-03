@@ -3,7 +3,7 @@ schedule: manual
 enabled: true
 template: true
 title: Day Recap
-description: "Today's accomplishments, key moments, and unfinished work"
+description: "今天的成就、关键时刻和未完成的工作"
 icon: "📋"
 featured: true
 ---

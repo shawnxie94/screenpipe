@@ -4,7 +4,7 @@ enabled: false
 history: false
 template: true
 title: Accounting follow-through
-description: Finds source-backed document and payment gaps without changing the books
+description: "查找有来源依据的文档和付款缺口，不修改账本"
 featured: false
 ---
 

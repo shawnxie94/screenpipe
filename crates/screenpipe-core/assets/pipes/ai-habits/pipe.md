@@ -3,7 +3,7 @@ schedule: manual
 enabled: true
 template: true
 title: AI Habits
-description: "How you use AI tools — patterns and insights"
+description: "你如何使用 AI 工具——模式与洞察"
 icon: "🤖"
 featured: true
 ---

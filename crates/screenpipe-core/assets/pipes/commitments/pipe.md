@@ -7,7 +7,7 @@ trigger:
     - meeting_ended
 template: true
 title: Commitments
-description: Keeps promises and follow-ups current as new work context arrives
+description: "随着新的工作上下文出现，保持承诺和跟进事项的更新"
 featured: true
 ---
 

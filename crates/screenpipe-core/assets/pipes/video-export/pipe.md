@@ -3,7 +3,7 @@ schedule: manual
 enabled: true
 template: true
 title: Export Video Clip
-description: "Create a video of your recent screen activity"
+description: "把最近的屏幕活动制作成视频"
 icon: "🎬"
 featured: false
 ---

@@ -11,7 +11,7 @@ connections: []
 template: true
 featured: false
 title: Speaker Reconciliation
-description: Reconciles unnamed diarized voices with time-aligned accessibility and parsed meeting data. Automatic runs are preview-only.
+description: "将未命名的说话人声音与时间对齐的无障碍文本、解析后的会议数据对应起来。自动运行仅预览。"
 trigger:
   events:
     - meeting_ended

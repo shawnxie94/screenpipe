@@ -3,7 +3,7 @@ schedule: manual
 enabled: true
 template: true
 title: Standup Update
-description: "What you did, what's next, and any blockers"
+description: "你做了什么、接下来做什么、以及遇到的阻碍"
 icon: "🏢"
 featured: true
 ---

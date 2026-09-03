@@ -3,7 +3,7 @@ schedule: manual
 enabled: true
 template: true
 title: Time Breakdown
-description: "Where your time went — by app, project, and category"
+description: "你的时间花在哪里——按应用、项目和分类"
 icon: "⏱"
 featured: true
 ---

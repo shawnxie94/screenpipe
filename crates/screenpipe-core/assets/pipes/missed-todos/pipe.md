@@ -3,7 +3,7 @@ schedule: manual
 enabled: true
 template: true
 title: Missed To-Dos
-description: "Action items from the last few days you may have missed"
+description: "最近几天你可能遗漏的行动事项"
 icon: "✅"
 featured: true
 ---
