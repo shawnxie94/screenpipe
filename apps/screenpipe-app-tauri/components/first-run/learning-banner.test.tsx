@@ -294,7 +294,7 @@ describe("first-run learning banner", () => {
     expect(
       screen.queryByTestId("first-run-next-steps"),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "this is ready" }));
+    fireEvent.click(screen.getByRole("button", { name: "准备就绪" }));
     expect(dismiss).toHaveBeenCalled();
   });
 
@@ -316,7 +316,7 @@ describe("first-run learning banner", () => {
         dismiss,
       });
       const rendered = render(<FirstRunLearningBanner />);
-      expect(screen.getByText("screenpipe is ready")).toBeInTheDocument();
+      expect(screen.getByText("screenpipe 已就绪")).toBeInTheDocument();
       expect(
         screen.queryByTestId("first-run-next-steps"),
       ).not.toBeInTheDocument();
@@ -328,7 +328,7 @@ describe("first-run learning banner", () => {
 
     mocks.view = view({ phase: "empty", showProgress: true, dismiss });
     render(<FirstRunLearningBanner />);
-    fireEvent.click(screen.getByRole("button", { name: "this is ready" }));
+    fireEvent.click(screen.getByRole("button", { name: "我明白了" }));
     expect(dismiss).toHaveBeenCalled();
   });
 

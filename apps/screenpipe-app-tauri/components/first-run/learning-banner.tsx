@@ -105,7 +105,7 @@ export function FirstRunReadyPanel({
           className="h-7 shrink-0 px-2 text-[9px]"
           onClick={onDismiss}
         >
-          this is ready
+          准备就绪
         </Button>
       </div>
     </div>

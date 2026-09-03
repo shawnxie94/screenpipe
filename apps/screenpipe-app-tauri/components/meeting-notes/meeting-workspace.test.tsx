@@ -425,7 +425,7 @@ describe("meeting summary surface", () => {
     expect(alert).toHaveTextContent("AI usage limit reached");
     expect(alert).toHaveTextContent("configured summary model");
     expect(
-      screen.getByText("Generation stopped before a summary was written."),
+      screen.getByText("生成在写出摘要前停止了。"),
     ).toBeVisible();
     expect(screen.getAllByText(/configured summary model/i)).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "retry" })).toBeNull();

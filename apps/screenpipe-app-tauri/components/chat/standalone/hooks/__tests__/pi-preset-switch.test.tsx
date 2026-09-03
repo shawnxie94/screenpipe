@@ -273,7 +273,7 @@ describe("send-time preset switch guard", () => {
 
     await expect(checkLivePiSession("session-1", setPiInfo, readPiInfo)).resolves.toEqual({
       running: false,
-      error: "The AI assistant is not running",
+      error: "AI 助手未在运行",
       indeterminate: false,
     });
     expect(readPiInfo).toHaveBeenCalledWith("session-1");

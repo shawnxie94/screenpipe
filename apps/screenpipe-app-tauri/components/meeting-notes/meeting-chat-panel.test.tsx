@@ -398,7 +398,7 @@ describe("meeting chat panel", () => {
     setup({
       turns: [{ id: "a", role: "assistant", text: "", done: true }],
     });
-    expect(screen.getByText("no answer")).toBeInTheDocument();
+    expect(screen.getByText("无答案")).toBeInTheDocument();
   });
 
   it("case 63: a failed turn offers retry", () => {

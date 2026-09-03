@@ -115,7 +115,7 @@ describe("ComposerSuggestions telemetry", () => {
     );
 
     expect(captureMock).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "suggestions" }));
+    fireEvent.click(screen.getByRole("button", { name: "建议" }));
     await waitFor(() => expect(captureMock).toHaveBeenCalledTimes(3));
   });
 });

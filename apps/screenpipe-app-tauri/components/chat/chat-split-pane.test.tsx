@@ -52,7 +52,7 @@ describe("ChatSplitPane", () => {
     render(<ChatSplitPane sessionId="split-chat" onPromote={vi.fn()} onClose={onClose} />);
 
     expect(screen.getByText(/ready/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Close split view" }));
+    fireEvent.click(screen.getByRole("button", { name: "关闭分屏" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

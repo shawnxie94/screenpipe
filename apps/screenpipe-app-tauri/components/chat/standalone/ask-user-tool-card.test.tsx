@@ -84,7 +84,7 @@ describe("AskUserToolCard", () => {
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit.mock.calls[0][0]).toBe(
-      "Here are my answers to your ask_user questions:\n- Where should I start?: UI polish",
+      "以下是我对你 ask_user 问题的回答：\n- Where should I start?: UI polish",
     );
     expect(onSubmit.mock.calls[0][1]).toBe("Answered Ask user: UI polish");
     expect(await screen.findByText("sent")).toBeInTheDocument();
