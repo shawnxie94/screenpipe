@@ -9,13 +9,13 @@ import {
 } from "./pipe-visibility";
 
 describe("pipe visibility", () => {
-  it("hides an untouched bundled manual template", () => {
+  it("shows every bundled template (local installs want the full list)", () => {
     expect(
       shouldShowInMyPipes({
         config: { schedule: "manual" },
         is_bundled_builtin: true,
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("shows bundled pipes that run from a schedule or event", () => {

@@ -3014,12 +3014,22 @@ impl PipeManager {
         }
     }
 
-    fn is_bundled_builtin_pipe(name: &str, content: &str) -> bool {
+    fn is_bundled_builtin_pipe(name: &str, _content: &str) -> bool {
+        // Match on the pipe's stable identifier (dir name — never localized)
+        // only. Content is deliberately not compared: localization rewrites
+        // front-matter rows (description/icon/title/featured), the app flips
+        // `enabled` via local overrides, and update_config re-serializes the
+        // whole file through serde_yaml — any of these change the bytes and
+        // would misclassify a perfectly stock builtin as a third-party pipe,
+        // which then counts against the non-template cap and can silently
+        // hide builtins from "my tasks".
+        //
+        // User edits are tracked separately through `source_hash` →
+        // `locally_modified` (body hash), so dropping the content check does
+        // not lose the “user touched this” signal.
         BUNDLED_BUILTIN_PIPES
             .iter()
-            .any(|(builtin_name, builtin_content)| {
-                name == *builtin_name && content == *builtin_content
-            })
+            .any(|(builtin_name, _)| name == *builtin_name)
     }
 
     /// Read and parse all pipe files, applying the product cap only to the
@@ -9538,8 +9548,10 @@ mod tests {
         assert_eq!(installed_manual.config.schedule, "manual");
         assert!(!installed_manual.is_bundled_builtin);
 
-        // Scheduling an untouched template adopts it, and removing that
-        // schedule later must not turn it back into a hidden bundled template.
+        // is_bundled_builtin keys off the stable dir name only — localization
+        // and update_config re-serialization change the file bytes, but the
+        // pipe stays a bundled template. "User touched this" is tracked
+        // separately via source_hash → locally_modified.
         manager
             .update_config(
                 "day-recap",
@@ -9557,7 +9569,7 @@ mod tests {
             .unwrap();
         let scheduled = manager.get_pipe("day-recap").await.unwrap();
         assert!(scheduled.config.schedule_config.is_some());
-        assert!(!scheduled.is_bundled_builtin);
+        assert!(scheduled.is_bundled_builtin);
 
         manager
             .update_config(
@@ -9568,7 +9580,7 @@ mod tests {
             .unwrap();
         let between_triggers = manager.get_pipe("day-recap").await.unwrap();
         assert_eq!(between_triggers.config.schedule, "manual");
-        assert!(!between_triggers.is_bundled_builtin);
+        assert!(between_triggers.is_bundled_builtin);
 
         manager
             .update_config(
@@ -9585,7 +9597,7 @@ mod tests {
             meeting_triggered.config.trigger.unwrap().events,
             vec!["meeting_ended"]
         );
-        assert!(!meeting_triggered.is_bundled_builtin);
+        assert!(meeting_triggered.is_bundled_builtin);
 
         manager
             .update_config(
@@ -10716,7 +10728,7 @@ Run the scheduled task.
             manager.get_pipe("day-recap").await.unwrap().config.effort,
             PipeEffort::High
         );
-        assert!(std::fs::read_to_string(pipes_dir.join("day-recap/pipe.md"))
+        assert!(std::fs::read_to_string(pipes_dir.clone().join("day-recap/pipe.md"))
             .unwrap()
             .contains("effort: high"));
 

@@ -48,5 +48,13 @@ export function isAutomatedPipe(pipe: PipeVisibilityStatus): boolean {
  * the pipe disappear.
  */
 export function shouldShowInMyPipes(pipe: PipeVisibilityStatus): boolean {
-  return isAutomatedPipe(pipe) || pipe.is_bundled_builtin === false;
+  // is_bundled_builtin is a tri-state: true (bundled template installed with
+  // the engine), false (user-installed / user-created), undefined (older
+  // remote screenpipe versions that don't report the flag).
+  //
+  // Upstream hid untouched bundled *manual* templates to cut noise, but on a
+  // local install users expect to see every bundled task they were promised.
+  // Show all bundled pipes when the flag is present; keep hiding only when the
+  // flag is missing entirely (can't tell a template from a real pipe).
+  return pipe.is_bundled_builtin === false || isAutomatedPipe(pipe) || pipe.is_bundled_builtin === true;
 }
