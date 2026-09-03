@@ -94,6 +94,55 @@ interface StorePipe {
   readme_md?: string;
 }
 
+/**
+ * Chinese labels for screenpipe's built-in pipes shown in the store.
+ * Keyed by store slug; only official built-ins are listed so community
+ * pipes keep their original (publisher-authored) title/description.
+ */
+const STORE_PIPE_ZH: Record<string, { title: string; description: string }> = {
+  "automate-my-work": {
+    title: "自动化我的工作",
+    description: "找出一个反复出现的工作流程，并提议一个可测试的自动化方案",
+  },
+  "missed-todos": { title: "遗漏待办", description: "最近几天你可能遗漏的行动事项" },
+  "day-recap": { title: "每日回顾", description: "今天的成就、关键时刻和未完成的工作" },
+  "standup-update": {
+    title: "站会更新",
+    description: "你做了什么、接下来做什么、以及遇到的阻碍",
+  },
+  "ai-habits": {
+    title: "AI 使用习惯",
+    description: "你如何使用 AI 工具——模式与洞察",
+  },
+  "time-breakdown": {
+    title: "时间分布",
+    description: "你的时间花在哪里——按应用、项目和分类",
+  },
+  "video-export": { title: "导出视频片段", description: "把最近的屏幕活动制作成视频" },
+  "meeting-summary": {
+    title: "会议总结",
+    description: "自动总结刚结束的会议，并把摘要保存回会议记录（标题 + 笔记）",
+  },
+  "speaker-reconciliation": {
+    title: "说话人校准",
+    description: "将未命名的说话人声音与时间对齐的无障碍文本、解析后的会议数据对应起来。自动运行仅预览。",
+  },
+  commitments: {
+    title: "承诺跟进",
+    description: "随着新的工作上下文出现，保持承诺和跟进事项的更新",
+  },
+  "accounting-follow-through": {
+    title: "会计跟进",
+    description: "查找有来源依据的文档和付款缺口，不修改账本",
+  },
+};
+
+function localizeStorePipe<T extends { slug: string; title: string; description: string }>(pipe: T): T {
+  const zh = STORE_PIPE_ZH[pipe.slug];
+  if (!zh) return pipe;
+  return { ...pipe, title: zh.title, description: zh.description };
+}
+
 interface PipePermissions {
   /// Unified permissions preset or rule summary from pipe.md frontmatter.
   preset?: string; // "reader", "writer", "admin", "none"
@@ -1187,11 +1236,11 @@ function PipeCard({
       </div>
 
       {/* Title — full width, no truncation */}
-      <h4 className="text-sm font-semibold mt-3 line-clamp-2 leading-snug">{pipe.title}</h4>
+      <h4 className="text-sm font-semibold mt-3 line-clamp-2 leading-snug">{localizeStorePipe(pipe).title}</h4>
 
       {/* Description */}
       <p className="text-xs text-muted-foreground line-clamp-2 mt-2.5 leading-relaxed flex-1">
-        {pipe.description}
+        {localizeStorePipe(pipe).description}
       </p>
 
       {/* Footer: publisher + installs. Category already lives in the filters. */}
@@ -1307,12 +1356,13 @@ function PipeDetailPanel({
     name: pipe.author,
     verified: pipe.author_verified,
   });
+  const localized = localizeStorePipe(pipe);
 
   const readmeContent = pipe.readme_md
     ? pipe.readme_md
     : pipe.source
       ? getReadmeFromPipeMd(pipe.source)
-      : (pipe.full_description || pipe.description);
+      : (pipe.full_description || localized.description);
   const updateContactHref = buildPipeStoreSubmissionMailto({
     kind: "update",
     pipeName: pipe.title,
@@ -1329,7 +1379,7 @@ function PipeDetailPanel({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold tracking-tight">{pipe.title || pipe.slug || "未命名定时任务"}</h2>
+              <h2 className="text-xl font-semibold tracking-tight">{localized.title || pipe.slug || "未命名定时任务"}</h2>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <PublisherIdentity publisher={publisher} />
                 {pipe.version ? (
