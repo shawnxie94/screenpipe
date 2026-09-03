@@ -130,7 +130,7 @@ describe("ChatMessageList inline message editing", () => {
     beginInlineEdit();
 
     const bubble = screen.getByTestId("chat-message-bubble");
-    const textarea = screen.getByRole("textbox", { name: "Edit message" });
+    const textarea = screen.getByRole("textbox", { name: "编辑消息" });
     expect(bubble).toHaveAttribute("data-editing", "true");
     expect(bubble).toHaveStyle({ width: "248px", maxWidth: "100%" });
     expect(bubble.parentElement).toHaveClass("items-end", "max-w-[82%]");
@@ -144,7 +144,7 @@ describe("ChatMessageList inline message editing", () => {
     render(<EditableMessageHarness onCommit={onCommit} />);
     beginInlineEdit();
 
-    const textarea = screen.getByRole("textbox", { name: "Edit message" });
+    const textarea = screen.getByRole("textbox", { name: "编辑消息" });
     Object.defineProperty(textarea, "scrollHeight", {
       configurable: true,
       value: 300,
@@ -159,7 +159,7 @@ describe("ChatMessageList inline message editing", () => {
       "update the user profile with the new account details",
     );
     expect(
-      screen.queryByRole("textbox", { name: "Edit message" }),
+      screen.queryByRole("textbox", { name: "编辑消息" }),
     ).not.toBeInTheDocument();
   });
 
@@ -169,14 +169,14 @@ describe("ChatMessageList inline message editing", () => {
     render(<EditableMessageHarness onCommit={onCommit} onCancel={onCancel} />);
     beginInlineEdit();
 
-    const textarea = screen.getByRole("textbox", { name: "Edit message" });
+    const textarea = screen.getByRole("textbox", { name: "编辑消息" });
     fireEvent.change(textarea, { target: { value: "discard this edit" } });
     fireEvent.keyDown(textarea, { key: "Escape" });
 
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onCommit).not.toHaveBeenCalled();
     expect(
-      screen.queryByRole("textbox", { name: "Edit message" }),
+      screen.queryByRole("textbox", { name: "编辑消息" }),
     ).not.toBeInTheDocument();
   });
 });

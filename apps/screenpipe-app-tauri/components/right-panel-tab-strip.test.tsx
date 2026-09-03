@@ -50,7 +50,7 @@ describe("RightPanelTabStrip", () => {
     );
 
     expect(
-      screen.getByRole("tablist", { name: "Open side panel items" }),
+      screen.getByRole("tablist", { name: "打开侧面板项" }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("right-panel-tab-strip")).toHaveClass("h-9");
     expect(screen.getByRole("tab", { name: "screenpipe.com" })).toHaveAttribute(
@@ -127,7 +127,7 @@ describe("RightPanelTabStrip", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "New browser tab" }));
+    fireEvent.click(screen.getByRole("button", { name: "新建浏览器标签页" }));
     expect(onNewBrowserTab).toHaveBeenCalledTimes(1);
   });
 });

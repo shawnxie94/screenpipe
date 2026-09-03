@@ -164,7 +164,7 @@ describe("onboarding permission wheel", () => {
       screen.queryByRole("button", { name: /capture browser urls/i })
     ).toBeNull();
     expect(
-      screen.getByText("Three permissions turn on recording.")
+      screen.getByText("开启录制需要三项权限。")
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", {
@@ -257,7 +257,7 @@ describe("onboarding permission wheel", () => {
     const prompt = await screen.findByTestId(
       "screen-recording-restart-prompt"
     );
-    expect(prompt).toHaveTextContent("restart required");
+    expect(prompt).toHaveTextContent("需要重启");
     expect(prompt).toHaveTextContent(
       "screenpipe won't work until you restart."
     );

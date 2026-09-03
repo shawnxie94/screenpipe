@@ -143,7 +143,7 @@ describe("UpgradeQuotaBanner", () => {
     } as AIPreset);
 
     expect(mocks.usageQueryEnabled).toBe(true);
-    expect(screen.getByRole("button", { name: "View Business" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "查看 Business" })).toBeTruthy();
   });
 
   it.each(["business_max", "business_ultra"])(
@@ -158,7 +158,7 @@ describe("UpgradeQuotaBanner", () => {
       mocks.gateState = true;
       renderBanner();
       expect(screen.queryByText(/out of premium AI/i)).toBeNull();
-      expect(screen.queryByRole("button", { name: "View Business" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "查看 Business" })).toBeNull();
     },
   );
 
@@ -166,7 +166,7 @@ describe("UpgradeQuotaBanner", () => {
     mocks.gateState = true;
     renderBanner();
 
-    const upgrade = screen.getByRole("button", { name: "View Business" });
+    const upgrade = screen.getByRole("button", { name: "查看 Business" });
     expectNeutralPrimary(upgrade);
     fireEvent.click(upgrade);
     await waitFor(() =>
@@ -378,7 +378,7 @@ describe("UpgradeQuotaBanner", () => {
       await waitFor(() =>
         expect(mocks.openExternalUrl).toHaveBeenCalledWith(upgradeUrl),
       );
-      expect(screen.queryByRole("button", { name: "View Business" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "查看 Business" })).toBeNull();
 
       polled.unmount();
       mocks.openExternalUrl.mockClear();
@@ -531,7 +531,7 @@ describe("UpgradeQuotaBanner", () => {
 
     expect(screen.queryByText(/business_titan/i)).toBeNull();
     expect(screen.getByText(/upgrade to a higher plan/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "See plans" }));
+    fireEvent.click(screen.getByRole("button", { name: "查看方案" }));
 
     await waitFor(() =>
       expect(mocks.openExternalUrl).toHaveBeenCalledWith(

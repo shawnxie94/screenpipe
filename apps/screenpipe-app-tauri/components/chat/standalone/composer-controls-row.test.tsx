@@ -209,9 +209,9 @@ describe("ComposerControlsRow", () => {
       />,
     );
 
-    expect(screen.getByText("preparing worktree")).toBeInTheDocument();
+    expect(screen.getByText("正在准备工作树")).toBeInTheDocument();
     expect(
-      screen.getByRole("status", { name: "preparing worktree" }),
+      screen.getByRole("status", { name: "正在准备工作树" }),
     ).toBeInTheDocument();
     expect(screen.getByTestId("pipe-ai-icon")).toHaveAttribute(
       "data-live",
@@ -260,14 +260,14 @@ describe("ComposerControlsRow", () => {
 
     expect(screen.queryByLabelText("worktree")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "worktree setup failed" }),
+      screen.getByRole("button", { name: "worktree 设置失败" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("The AI did not choose a repository in time"),
     ).not.toBeInTheDocument();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "worktree setup failed" }),
+      screen.getByRole("button", { name: "worktree 设置失败" }),
     );
     expect(
       screen.getByText("The AI did not choose a repository in time"),

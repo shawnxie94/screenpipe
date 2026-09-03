@@ -82,10 +82,10 @@ describe("ChatTitleMenu", () => {
     fireEvent.click(screen.getByRole("button", { name: "chat options for day recap" }));
     expect(await screen.findByRole("button", { name: "Pin" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Rename" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Archive" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "归档" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Archive" }));
+    fireEvent.click(screen.getByRole("button", { name: "归档" }));
     await waitFor(() =>
       expect(archiveConversation).toHaveBeenCalledWith(SESSION.id),
     );
@@ -106,7 +106,7 @@ describe("ChatTitleMenu", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "chat options for day recap" }),
     );
-    expect(await screen.findByRole("button", { name: "Archive" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "归档" })).toBeVisible();
     expect(screen.getByText(/⌘E|Ctrl\+E/)).toBeVisible();
   });
 

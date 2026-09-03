@@ -56,12 +56,12 @@ describe("ChatInspectorPopover", () => {
     render(<EmptyInspectorCommandHarness />);
 
     expect(
-      screen.queryByRole("button", { name: "Toggle pinned summary" }),
+      screen.queryByRole("button", { name: "切换固定摘要" }),
     ).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Run /inspector" }));
 
-    expect(screen.getByRole("region", { name: "Pinned summary" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "固定的摘要" })).toBeTruthy();
     expect(screen.getByText("No outputs yet")).toBeTruthy();
     expect(screen.getByText("No sources yet")).toBeTruthy();
   });
@@ -69,25 +69,25 @@ describe("ChatInspectorPopover", () => {
   it("toggles a pinned summary from the toolbar control", () => {
     render(<InspectorHarness onOpenFile={vi.fn()} />);
 
-    const toggle = screen.getByRole("button", { name: "Toggle pinned summary" });
-    expect(screen.queryByRole("region", { name: "Pinned summary" })).toBeNull();
+    const toggle = screen.getByRole("button", { name: "切换固定摘要" });
+    expect(screen.queryByRole("region", { name: "固定的摘要" })).toBeNull();
 
     fireEvent.click(toggle);
-    expect(screen.getByRole("region", { name: "Pinned summary" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "固定的摘要" })).toBeTruthy();
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
 
     fireEvent.click(toggle);
-    expect(screen.queryByRole("region", { name: "Pinned summary" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "固定的摘要" })).toBeNull();
   });
 
   it("keeps the pinned summary open when an output opens the side panel", () => {
     const onOpenFile = vi.fn();
     render(<InspectorHarness onOpenFile={onOpenFile} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle pinned summary" }));
+    fireEvent.click(screen.getByRole("button", { name: "切换固定摘要" }));
     fireEvent.click(screen.getByRole("button", { name: "worklog.md" }));
 
     expect(onOpenFile).toHaveBeenCalledWith("/tmp/worklog.md");
-    expect(screen.getByRole("region", { name: "Pinned summary" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "固定的摘要" })).toBeTruthy();
   });
 });

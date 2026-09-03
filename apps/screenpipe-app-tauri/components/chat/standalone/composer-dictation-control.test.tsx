@@ -99,8 +99,8 @@ describe("ComposerDictationControl", () => {
     const waveform = screen.getByTestId("composer-dictation-waveform");
     expect(waveform.children).toHaveLength(9);
     expect(waveform.children[4]).toHaveStyle({ height: "18px", opacity: "1" });
-    fireEvent.click(screen.getByRole("button", { name: "Cancel dictation" }));
-    fireEvent.click(screen.getByRole("button", { name: "Finish dictation" }));
+    fireEvent.click(screen.getByRole("button", { name: "取消听写" }));
+    fireEvent.click(screen.getByRole("button", { name: "完成听写" }));
     expect(mocks.cancel).toHaveBeenCalledTimes(1);
     expect(mocks.finish).toHaveBeenCalledTimes(1);
   });
@@ -111,7 +111,7 @@ describe("ComposerDictationControl", () => {
     mocks.canRetry = true;
     renderControl();
 
-    fireEvent.click(screen.getByRole("button", { name: "Retry transcription" }));
+    fireEvent.click(screen.getByRole("button", { name: "重试转写" }));
     expect(mocks.retry).toHaveBeenCalledTimes(1);
     expect(mocks.start).not.toHaveBeenCalled();
   });

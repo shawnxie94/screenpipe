@@ -175,7 +175,7 @@ describe("archive all recent chats", () => {
     expect(otherButton).toBeDisabled();
     expect(screen.getAllByLabelText("locked during trial").length).toBeGreaterThan(0);
     expect(
-      screen.getByRole("button", { name: "organize recents" }),
+      screen.getByRole("button", { name: "整理最近" }),
     ).toBeDisabled();
 
     fireEvent.click(currentButton!);
@@ -190,11 +190,11 @@ describe("archive all recent chats", () => {
       renderSidebar();
 
       fireEvent.pointerDown(
-        screen.getByRole("button", { name: "organize recents" }),
+        screen.getByRole("button", { name: "整理最近" }),
         { button: 0, ctrlKey: false },
       );
       const archiveAll = await screen.findByTestId("archive-all-recent-chats");
-      expect(archiveAll).toHaveTextContent("Archive all recent chats");
+      expect(archiveAll).toHaveTextContent("归档所有近期会话");
       fireEvent.click(archiveAll);
 
       await waitFor(() => {
@@ -245,7 +245,7 @@ describe("archive all recent chats", () => {
       const archiveAll = await screen.findByTestId(
         "archive-all-recent-chats-context",
       );
-      expect(archiveAll).toHaveTextContent("Archive all recent chats");
+      expect(archiveAll).toHaveTextContent("归档所有近期会话");
       fireEvent.click(archiveAll);
 
       await waitFor(() => {

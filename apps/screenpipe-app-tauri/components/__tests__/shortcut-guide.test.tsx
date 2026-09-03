@@ -60,7 +60,7 @@ describe("ShortcutGuide", () => {
 
     fireEvent.keyDown(window, { key: "/", code: "Slash", metaKey: true });
     expect(
-      await screen.findByRole("dialog", { name: "keyboard shortcuts" }),
+      await screen.findByRole("dialog", { name: "键盘快捷键" }),
     ).toBeVisible();
     expect(screen.getByText("next chat tab")).toBeInTheDocument();
     expect(screen.getByText("close tab")).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe("ShortcutGuide", () => {
     fireEvent.keyDown(window, { key: "/", code: "Slash", metaKey: true });
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "keyboard shortcuts" }),
+        screen.queryByRole("dialog", { name: "键盘快捷键" }),
       ).toBeNull(),
     );
   });
@@ -84,7 +84,7 @@ describe("ShortcutGuide", () => {
       window.dispatchEvent(new Event(OPEN_SHORTCUT_GUIDE_EVENT));
     });
     expect(
-      await screen.findByRole("dialog", { name: "keyboard shortcuts" }),
+      await screen.findByRole("dialog", { name: "键盘快捷键" }),
     ).toBeVisible();
     expect(screen.getAllByText("disabled")).toHaveLength(1);
   });

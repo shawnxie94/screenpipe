@@ -1890,7 +1890,7 @@ export function ChatSidebar({
                           className="mr-2 h-3.5 w-3.5 text-muted-foreground"
                           aria-hidden
                         />
-                        Archive all recent chats
+                        归档所有近期会话
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -1975,7 +1975,7 @@ export function ChatSidebar({
                           className="mr-2 h-3.5 w-3.5 text-muted-foreground"
                           aria-hidden
                         />
-                        Archive all recent chats
+                        归档所有近期会话
                       </ContextMenuItem>
                     </ContextMenuContent>
                   </ContextMenu>
