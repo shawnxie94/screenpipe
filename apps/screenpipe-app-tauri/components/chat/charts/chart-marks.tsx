@@ -905,7 +905,7 @@ export function CalendarChart({ spec, palette }: MarkProps<CalendarChartSpec>) {
       <div className="mb-2 flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
         <span className="truncate tabular-nums">{geometry.span}</span>
         <span className="shrink-0 tabular-nums">
-          {spec.items.length} recorded days
+          {spec.items.length} 天有记录
         </span>
       </div>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">

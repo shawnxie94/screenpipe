@@ -192,10 +192,10 @@ describe("AIPresetsSelector controlled preset creation", () => {
       screen.queryByRole("button", { name: "coding agent" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "use an API key" }),
+      screen.queryByRole("button", { name: "使用 API 密钥" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "use a command" }),
+      screen.queryByRole("button", { name: "使用命令" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByLabelText("name")).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/api key/i)).not.toBeInTheDocument();
@@ -243,11 +243,11 @@ describe("AIPresetsSelector controlled preset creation", () => {
       screen.getByRole("button", { name: "ollama" }).querySelector("img"),
     ).toHaveAttribute("src", "/images/ollama.png");
     expect(
-      screen.getByRole("button", { name: "use an API key" }),
+      screen.getByRole("button", { name: "使用 API 密钥" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("connect another agent")).toBeInTheDocument();
+    expect(screen.getByText("连接另一个代理")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "use a command" }),
+      screen.getByRole("button", { name: "使用命令" }),
     ).toBeInTheDocument();
   });
 

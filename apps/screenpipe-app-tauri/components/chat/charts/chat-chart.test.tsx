@@ -525,10 +525,10 @@ describe("ChatChart — new mark types", () => {
       />,
     );
     expect(screen.getByText("2026-08-01 – 2026-08-02")).toBeInTheDocument();
-    expect(screen.getByText("2 recorded days")).toBeInTheDocument();
-    expect(screen.getByText("average")).toBeInTheDocument();
-    expect(screen.getByText("peak")).toBeInTheDocument();
-    expect(screen.getByText("total")).toBeInTheDocument();
+    expect(screen.getByText("2 天有记录")).toBeInTheDocument();
+    expect(screen.getByText("平均")).toBeInTheDocument();
+    expect(screen.getByText("峰值")).toBeInTheDocument();
+    expect(screen.getByText("总计")).toBeInTheDocument();
     expect(screen.getAllByText("4 h").length).toBeGreaterThan(0);
   });
 

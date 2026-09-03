@@ -324,7 +324,7 @@ export default function PermissionRecoveryPage() {
           >
             <h2 className="font-mono text-sm font-semibold">需要重启</h2>
             <p className="mt-1 font-mono text-xs text-muted-foreground">
-              screenpipe won&apos;t work until you restart.
+              screenpipe 在重启前无法工作。
             </p>
             <button
               type="button"
@@ -336,7 +336,7 @@ export default function PermissionRecoveryPage() {
               <RefreshCw
                 className={`h-3.5 w-3.5 ${restartingApp ? "animate-spin" : ""}`}
               />
-              {restartingApp ? "restarting..." : "restart screenpipe"}
+              {restartingApp ? "正在重启…" : "重启 screenpipe"}
             </button>
           </div>
         ) : allOk ? (

@@ -88,7 +88,7 @@ describe("CardAskModal", () => {
 
   it("uses trigger-specific copy", () => {
     const { rerender } = render(<CardAskModal {...base} trigger="limit" />);
-    expect(screen.getByText(/hit today's AI limit/i)).toBeTruthy();
+    expect(screen.getByText(/已达到今日 AI 用量上限/i)).toBeTruthy();
     rerender(<CardAskModal {...base} trigger="first_value" />);
     expect(screen.getByText(/Keep this running/i)).toBeTruthy();
   });

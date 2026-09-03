@@ -177,7 +177,7 @@ describe("BrowserSidebar session access", () => {
       });
     });
 
-    expect(screen.getByLabelText("Browser address")).toHaveValue(
+    expect(screen.getByLabelText("浏览器地址")).toHaveValue(
       "https://example.com/first",
     );
     expect(screen.getByTestId("owned-browser-toolbar")).toHaveClass("h-9");

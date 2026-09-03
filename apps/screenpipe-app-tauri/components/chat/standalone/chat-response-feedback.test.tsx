@@ -74,7 +74,7 @@ describe("ChatResponseFeedback", () => {
       />,
     );
 
-    const goodButton = screen.getByRole("button", { name: "Good response" });
+    const goodButton = screen.getByRole("button", { name: "好回复" });
     fireEvent.click(goodButton);
     await waitFor(() => expect(goodButton).not.toBeDisabled());
 
@@ -123,8 +123,8 @@ describe("ChatResponseFeedback", () => {
       />,
     );
 
-    const goodButton = screen.getByRole("button", { name: "Good response" });
-    const badButton = screen.getByRole("button", { name: "Bad response" });
+    const goodButton = screen.getByRole("button", { name: "好回复" });
+    const badButton = screen.getByRole("button", { name: "糟糕的回复" });
     fireEvent.click(goodButton);
     await waitFor(() => expect(goodButton).not.toBeDisabled());
     fireEvent.click(goodButton);
@@ -159,7 +159,7 @@ describe("ChatResponseFeedback", () => {
       />,
     );
 
-    const badButton = screen.getByRole("button", { name: "Bad response" });
+    const badButton = screen.getByRole("button", { name: "糟糕的回复" });
     fireEvent.click(badButton);
 
     expect(await screen.findByText("what went wrong?")).toBeInTheDocument();
@@ -226,7 +226,7 @@ describe("ChatResponseFeedback", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Bad response" }));
+    fireEvent.click(screen.getByRole("button", { name: "糟糕的回复" }));
     const reasonButton = await screen.findByRole("button", { name: "incorrect" });
     await waitFor(() => expect(reasonButton).not.toBeDisabled());
     fireEvent.click(reasonButton);
