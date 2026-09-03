@@ -519,9 +519,9 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
         <button
           onClick={openInTimeline}
           className="text-[11px] uppercase tracking-[0.15em] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
-          title="open this moment in the full timeline"
+          title="在完整时间线中打开此时刻"
         >
-          open in timeline
+          在时间线中打开
           <ExternalLink className="h-3 w-3" />
         </button>
       </div>
@@ -563,7 +563,7 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
               onClick={togglePlayback}
               disabled={!canPlay}
               aria-label={
-                isPlaying ? "pause silent replay" : "play silent replay"
+                isPlaying ? "暂停静音回放" : "播放静音回放"
               }
               className="inline-flex h-7 w-7 shrink-0 items-center justify-center border border-white/30 transition-colors duration-150 hover:border-white hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
             >
@@ -580,7 +580,7 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
             <div
               role="slider"
               tabIndex={0}
-              aria-label="silent replay progress"
+              aria-label="静音回放进度"
               aria-valuemin={0}
               aria-valuemax={Math.round(durationMs / 1000)}
               aria-valuenow={Math.round((cursorMs - rangeStartMs) / 1000)}
@@ -640,7 +640,7 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
               >
                 <button
                   className="text-[11px] text-muted-foreground hover:text-foreground underline decoration-dotted underline-offset-2 mr-1.5 transition-colors"
-                  title="click to rename or merge this speaker"
+                  title="点击重命名或合并此发言人"
                 >
                   {speakerLabel}
                 </button>
@@ -654,10 +654,10 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
             )}
             <span className="text-sm text-foreground/90 line-clamp-3">
               {chunksLoading
-                ? "loading transcript…"
+                ? "正在加载文字记录…"
                 : activeChunk
                 ? activeChunk.transcription.replace(/\s+/g, " ").trim()
-                : "no transcript at this moment"}
+                : "此刻没有文字记录"}
             </span>
           </div>
         </div>
@@ -667,7 +667,7 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
           data-testid="replay-scrubber"
           role="slider"
           tabIndex={0}
-          aria-label="replay position"
+          aria-label="回放位置"
           aria-valuemin={0}
           aria-valuemax={Math.round(durationMs / 1000)}
           aria-valuenow={Math.round((cursorMs - rangeStartMs) / 1000)}
@@ -733,7 +733,7 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
           <span>{formatClock(new Date(rangeStartMs).toISOString())}</span>
           <span>
             {chunksLoading
-              ? "loading transcript…"
+              ? "正在加载文字记录…"
               : `${enrichedChunks.length} segments · ${renderableFrames.length} frames · click or drag to scrub`}
           </span>
           <span>{formatClock(new Date(rangeEndMs).toISOString())}</span>

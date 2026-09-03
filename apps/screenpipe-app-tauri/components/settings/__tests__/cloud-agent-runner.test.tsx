@@ -90,7 +90,7 @@ describe("CloudAgentRunner", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: "review shared context" }),
+      screen.getByRole("button", { name: "查看已共享的上下文" }),
     );
     expect(
       await screen.findByText(/截图、\s*\n?\s*音频文件、本地路径/),

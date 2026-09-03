@@ -38,7 +38,7 @@ describe("ChatJumpToLatest", () => {
 
   it("is an unlabeled jump control parked above the composer", () => {
     const { onJump } = renderJump();
-    const button = screen.getByRole("button", { name: "Jump to latest" });
+    const button = screen.getByRole("button", { name: "跳转到最新" });
     expect(button).toHaveAttribute("type", "button");
     expect(button.className).toMatch(/h-8/);
     expect(button.className).toMatch(/w-8/);

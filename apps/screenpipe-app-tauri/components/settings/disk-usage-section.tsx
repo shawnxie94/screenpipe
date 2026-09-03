@@ -86,7 +86,7 @@ export function DiskUsageSection() {
       {isLoading && (
         <div className="flex items-center space-x-2 px-1 text-xs text-muted-foreground">
           <Calculator className="h-3 w-3 animate-pulse" />
-          <span>Calculating...</span>
+          <span>计算中...</span>
         </div>
       )}
 

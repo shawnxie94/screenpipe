@@ -230,7 +230,7 @@ export function BatterySaverSection() {
           checked={keepAwakeEnabled}
           onCheckedChange={setKeepAwake}
           disabled={keepAwakeUpdating}
-          aria-label="keep computer awake"
+          aria-label="保持电脑唤醒"
         />
       </div>
 

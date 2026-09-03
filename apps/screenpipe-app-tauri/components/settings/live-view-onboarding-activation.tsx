@@ -181,7 +181,7 @@ export function LiveViewOnboardingActivation({
       <div className="px-5">
         <StatusRow
           state={captureStatus.state}
-          label="capture"
+          label="采集"
           detail={captureStatus.detail}
         />
         <StatusRow
@@ -192,7 +192,7 @@ export function LiveViewOnboardingActivation({
                 ? "ready"
                 : "working"
           }
-          label="setup"
+          label="设置"
           detail={
             setupStatus === "needs_retry"
               ? (setupError ?? "设置未完成即已暂停。")
@@ -203,7 +203,7 @@ export function LiveViewOnboardingActivation({
         />
         <StatusRow
           state="working"
-          label="first result"
+          label="首个结果"
           detail={
             refreshing
               ? "正在读取近期活动。"

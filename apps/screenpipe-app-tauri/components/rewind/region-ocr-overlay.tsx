@@ -92,7 +92,7 @@ export const RegionOcrOverlay: FC<RegionOcrOverlayProps> = ({
       if (!userToken) {
         toast({
           title: "login required",
-          description: "login required for region OCR",
+          description: "区域 OCR 需要登录",
           variant: "destructive",
         });
         setSelectionRect(null);
@@ -100,7 +100,7 @@ export const RegionOcrOverlay: FC<RegionOcrOverlayProps> = ({
       }
 
       setIsProcessing(true);
-      toast({ title: "reading text...", description: "analyzing selected region" });
+      toast({ title: "正在读取文字...", description: "正在分析所选区域" });
 
       try {
         // Map container coords to natural image coords
@@ -187,8 +187,8 @@ export const RegionOcrOverlay: FC<RegionOcrOverlayProps> = ({
 
         if (!extractedText) {
           toast({
-            title: "no text found",
-            description: "no text was detected in the selected region",
+            title: "未找到文字",
+            description: "所选区域中未检测到文字",
           });
         } else {
           // Use native Tauri clipboard — navigator.clipboard.writeText() fails

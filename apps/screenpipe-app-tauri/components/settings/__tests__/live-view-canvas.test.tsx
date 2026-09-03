@@ -722,7 +722,7 @@ describe("LiveViewCanvas", () => {
 
     openCanvasTools();
     for (let index = 0; index < 20; index += 1) {
-      fireEvent.click(screen.getByLabelText("zoom out"));
+      fireEvent.click(screen.getByLabelText("缩小"));
     }
     expect(screen.getByText("25%")).toBeTruthy();
   });
@@ -920,7 +920,7 @@ describe("LiveViewCanvas", () => {
     fireEvent.pointerEnter(surface, { clientX: 500, clientY: 350 });
     openCanvasTools();
     for (let index = 0; index < 20; index += 1) {
-      fireEvent.click(screen.getByLabelText("zoom out"));
+      fireEvent.click(screen.getByLabelText("缩小"));
     }
     expect(screen.getByText("25%")).toBeTruthy();
     onPersist.mockClear();

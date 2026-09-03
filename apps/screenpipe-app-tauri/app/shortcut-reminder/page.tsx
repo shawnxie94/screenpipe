@@ -462,7 +462,7 @@ export default function ShortcutReminderPage() {
   const gap = 2 * overlayScale;
   const smIconPx = 10 * overlayScale;
   const dotPx = Math.max(5 * overlayScale, 5);
-  const failureReason = healthDetail || "recording stopped unexpectedly";
+  const failureReason = healthDetail || "录制意外停止";
   const manualRecoveryRequired = healthAction === "manual-reopen";
   // Name the subsystem the engine identified. Anything else — both failed, a
   // persistence error, an unattributable stop — keeps the generic wording.
@@ -470,17 +470,15 @@ export default function ShortcutReminderPage() {
   // src-tauri/swift/shortcut_reminder.swift; both read the same payload field.
   const failureHeadline =
     healthSubsystem === "audio"
-      ? "audio needs help"
+      ? "音频需要处理"
       : healthSubsystem === "screen"
-        ? "screen capture needs help"
-        : "recording needs help";
-  // The pill is lowercase by design; the accessible name is a sentence.
-  const failureHeadlineSentence =
-    failureHeadline.charAt(0).toUpperCase() + failureHeadline.slice(1);
+        ? "屏幕采集需要处理"
+        : "录制需要处理";
+  const failureHeadlineSentence = failureHeadline;
   const latestTranscript = meetingOverlay.items.at(-1);
   const latestSpeaker = latestTranscript
     ? latestTranscript.speakerName ||
-      (latestTranscript.deviceType === "input" ? "me" : "speaker")
+      (latestTranscript.deviceType === "input" ? "我" : "发言人")
     : null;
 
   // While a drag is in flight the window covers every monitor, so the stage is
@@ -523,8 +521,8 @@ export default function ShortcutReminderPage() {
             style={{ gap: `${gap * 2}px`, padding: `${padY}px ${padX}px`, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
             title={failureReason}
             aria-label={manualRecoveryRequired
-              ? `${failureHeadlineSentence}: ${failureReason}`
-              : `${failureHeadlineSentence}: ${failureReason}. Restart recording`}
+              ? `${failureHeadlineSentence}：${failureReason}`
+              : `${failureHeadlineSentence}：${failureReason}。重启录制`}
           >
             <div
               className="rounded-full bg-red-500 animate-pulse shrink-0"
@@ -547,7 +545,7 @@ export default function ShortcutReminderPage() {
               >
                 <Power style={{ width: `${smIconPx}px`, height: `${smIconPx}px` }} className="shrink-0" />
                 <span className="font-mono font-bold" style={{ fontSize: `${fontPx}px` }}>
-                  quit &amp; reopen
+                  退出并重新打开
                 </span>
               </div>
             ) : (
@@ -557,11 +555,11 @@ export default function ShortcutReminderPage() {
                 onPointerDown={(e) => e.stopPropagation()}
                 className="flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer text-white/90 flex-1"
                 style={{ gap: `${gap}px`, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-                title={`Restart recording — ${failureReason}`}
+                title={`重启录制 — ${failureReason}`}
               >
                 <RotateCw style={{ width: `${smIconPx}px`, height: `${smIconPx}px` }} className="shrink-0" />
                 <span className="font-mono font-bold" style={{ fontSize: `${fontPx}px` }}>
-                  restart
+                  重启
                 </span>
               </button>
             )}
@@ -606,10 +604,10 @@ export default function ShortcutReminderPage() {
             style={{ fontSize: `${fontPx}px` }}
           >
             {healthState === "recovering"
-              ? "checking recovery..."
+              ? "正在检查恢复状态..."
               : healthDetail
-                ? `fixing — ${healthDetail}...`
-                : "fixing recording..."}
+                ? `正在修复 — ${healthDetail}...`
+                : "正在修复录制..."}
           </span>
         </div>
       </div>
@@ -639,7 +637,7 @@ export default function ShortcutReminderPage() {
             className="font-mono text-white/90 whitespace-nowrap"
             style={{ fontSize: `${fontPx}px` }}
           >
-            recording again
+            已恢复录制
           </span>
         </div>
       </div>
@@ -670,7 +668,7 @@ export default function ShortcutReminderPage() {
               style={{ width: `${dotPx}px`, height: `${dotPx}px` }}
             />
             <span className="font-mono text-white/85 truncate" style={{ fontSize: `${fontPx}px` }}>
-              meeting live{meetingOverlay.meetingApp ? ` · ${meetingOverlay.meetingApp}` : ""}
+              会议进行中{meetingOverlay.meetingApp ? ` · ${meetingOverlay.meetingApp}` : ""}
             </span>
             <button
               onClick={(event) => {
@@ -707,13 +705,13 @@ export default function ShortcutReminderPage() {
               ) : (
                 <Square fill="currentColor" style={{ width: `${smIconPx * 0.75}px`, height: `${smIconPx * 0.75}px` }} />
               )}
-              stop
+              结束
             </button>
           </div>
           <div className="bg-white/15" />
           <div className="flex items-center min-w-0" style={{ padding: `0 ${padX}px`, gap: `${gap * 2}px` }}>
             <span className="font-mono text-white/40 shrink-0" style={{ fontSize: `${fontPx}px` }}>
-              {meetingOverlay.stopError ? "stop failed" : latestSpeaker || "live transcript"}
+              {meetingOverlay.stopError ? "停止失败" : latestSpeaker || "实时文字记录"}
             </span>
             <span className="font-mono text-white/80 truncate" style={{ fontSize: `${fontPx}px` }}>
               {meetingOverlay.stopError || latestTranscript?.text || "listening for speech…"}
@@ -725,17 +723,17 @@ export default function ShortcutReminderPage() {
   }
 
   const disclosure = hoveredControl === "search"
-    ? ["search", searchShortcut]
+    ? ["搜索", searchShortcut]
     : hoveredControl === "brand"
-      ? ["screenpipe", "right-click"]
+      ? ["screenpipe", "右键"]
     : hoveredControl === "chat"
-      ? ["ask chat", chatShortcut]
+      ? ["问聊天", chatShortcut]
       : hoveredControl === "timeline"
-        ? ["timeline", overlayShortcut]
+        ? ["时间线", overlayShortcut]
         : hoveredControl === "audio"
-          ? ["mic capture", overlayData.audioActive ? "live" : "idle"]
+          ? ["麦克风采集", overlayData.audioActive ? "实时" : "空闲"]
           : hoveredControl === "settings"
-            ? ["settings", null]
+            ? ["设置", null]
             : null;
 
   const openTimeline = guardDragClick((e: React.MouseEvent) => {
@@ -937,7 +935,7 @@ export default function ShortcutReminderPage() {
             title="隐藏 1 小时"
             onClick={(e) => void handleHourSnooze(e)}
           >
-            hide for 1 hour
+            隐藏 1 小时
           </button>
           <div className="mx-2 bg-white/20" style={{ height: "1px" }} />
           <button
@@ -946,7 +944,7 @@ export default function ShortcutReminderPage() {
             title="打开悬浮层设置"
             onClick={handleOpenSettings}
           >
-            settings…
+            设置…
           </button>
         </div>
       ) : (

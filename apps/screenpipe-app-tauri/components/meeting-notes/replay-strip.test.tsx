@@ -204,7 +204,7 @@ describe("ReplayStrip", () => {
         "1",
       ),
     );
-    expect(screen.getByRole("button", { name: "play silent replay" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "播放静音回放" })).toBeEnabled();
     expect(screen.getByText("silent")).toBeInTheDocument();
     expect(container.querySelector("audio, video")).toBeNull();
   });
@@ -281,7 +281,7 @@ describe("ReplayStrip", () => {
       ),
     );
 
-    const bar = screen.getByLabelText("silent replay progress");
+    const bar = screen.getByLabelText("静音回放进度");
     bar.getBoundingClientRect = () =>
       ({ left: 0, width: 200, top: 0, height: 28, right: 200, bottom: 28 }) as DOMRect;
     // jsdom has no PointerEvent; a MouseEvent named "pointerdown" carries
@@ -330,7 +330,7 @@ describe("ReplayStrip", () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "performance"] });
     fireEvent.click(screen.getByTestId("replay-play-toggle"));
     expect(
-      screen.getByRole("button", { name: "pause silent replay" }),
+      screen.getByRole("button", { name: "暂停静音回放" }),
     ).toBeEnabled();
     act(() => vi.advanceTimersByTime(1_100));
     expect(screen.getByTestId("replay-active-frame")).toHaveAttribute(

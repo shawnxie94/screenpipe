@@ -659,7 +659,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 				setPendingNavigation(null);
 				toast({
 					title: "navigation failed",
-					description: error instanceof Error ? error.message : "could not resolve frame to timestamp",
+					description: error instanceof Error ? error.message : "无法将画面解析为时间戳",
 					variant: "destructive",
 				});
 			}
@@ -914,7 +914,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 		});
 
 		if (pipe) {
-			toast({ title: `${pipe.icon} ${pipe.title}`, description: "running scheduled task with selection context" });
+			toast({ title: `${pipe.icon} ${pipe.title}`, description: "正在使用所选内容上下文运行定时任务" });
 		}
 	}, [selectionRange, frames]);
 

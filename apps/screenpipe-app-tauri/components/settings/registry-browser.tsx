@@ -215,7 +215,7 @@ export function RegistryBrowser({
           <DialogClose asChild>
             <button
               type="button"
-              aria-label="close"
+              aria-label="关闭"
               className="ml-auto text-muted-foreground transition-colors hover:text-foreground"
             >
               <X className="h-4 w-4" />
@@ -230,7 +230,7 @@ export function RegistryBrowser({
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="search servers — notion, github, postgres…"
+              placeholder="搜索服务器 — notion、github、postgres…"
               className="h-8 text-sm pl-8"
               autoFocus
             />
@@ -260,7 +260,7 @@ export function RegistryBrowser({
             </div>
           ) : servers.length === 0 ? (
             <div className="text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-6 text-center">
-              no servers match “{debounced}”.
+              没有与“{debounced}”匹配的服务器。
             </div>
           ) : (
             <div className="space-y-1.5">

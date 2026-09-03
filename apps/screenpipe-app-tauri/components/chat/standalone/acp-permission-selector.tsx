@@ -437,12 +437,12 @@ export function AcpPermissionSelector({
               {isPending ? (
                 <Loader2
                   className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-muted-foreground"
-                  aria-label="changing permissions"
+                  aria-label="正在更改权限"
                 />
               ) : isSelected ? (
                 <Check
                   className="mt-0.5 h-4 w-4 shrink-0"
-                  aria-label="selected"
+                  aria-label="已选择"
                 />
               ) : null}
             </button>

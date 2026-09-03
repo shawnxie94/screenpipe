@@ -175,7 +175,7 @@ describe("recording health hover detail", () => {
     render(<ShortcutReminderPage />);
 
     const failureButton = await screen.findByRole("button", {
-      name: "Recording needs help: screen capture is not updating. Restart recording",
+      name: "录制需要处理：screen capture is not updating。重启录制",
     });
     expect(failureButton).toHaveAttribute(
       "title",
@@ -191,14 +191,14 @@ describe("recording health hover detail", () => {
     render(<ShortcutReminderPage />);
 
     const failureButton = await screen.findByRole("button", {
-      name: "Screen capture needs help: quit and reopen screenpipe to restore screen capture",
+      name: "屏幕采集需要处理：quit and reopen screenpipe to restore screen capture",
     });
     expect(failureButton).toBeDisabled();
-    expect(screen.getByText("quit & reopen")).toBeVisible();
+    expect(screen.getByText("退出并重新打开")).toBeVisible();
 
     fireEvent.click(failureButton);
     expect(mocks.overlayRestartRecording).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: /restart recording/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /重启录制/ })).toBeNull();
   });
 
   it("does not infer recovery behavior from user-facing wording", async () => {
@@ -209,7 +209,7 @@ describe("recording health hover detail", () => {
     render(<ShortcutReminderPage />);
 
     const failureButton = await screen.findByRole("button", {
-      name: /restart recording/i,
+      name: /重启录制/,
     });
     expect(failureButton).toBeEnabled();
     fireEvent.click(failureButton);
@@ -223,8 +223,8 @@ describe("recording health hover detail", () => {
 
     render(<ShortcutReminderPage />);
 
-    expect(await screen.findByText("checking recovery...")).toBeVisible();
-    expect(screen.queryByText("screen capture needs help")).toBeNull();
+    expect(await screen.findByText("正在检查恢复状态...")).toBeVisible();
+    expect(screen.queryByText("屏幕采集需要处理")).toBeNull();
     expect(screen.queryByRole("button", { name: /restart/i })).toBeNull();
   });
 
@@ -237,12 +237,12 @@ describe("recording health hover detail", () => {
 
     render(<ShortcutReminderPage />);
 
-    expect(await screen.findByText("audio needs help")).toBeVisible();
-    expect(screen.queryByText("recording needs help")).toBeNull();
+    expect(await screen.findByText("音频需要处理")).toBeVisible();
+    expect(screen.queryByText("录制需要处理")).toBeNull();
     // The reason stays available where it always was.
     expect(
       screen.getByRole("button", {
-        name: "Audio needs help: audio capture is not updating. Restart recording",
+        name: "音频需要处理：audio capture is not updating。重启录制",
       }),
     ).toHaveAttribute("title", "audio capture is not updating");
   });
@@ -254,8 +254,8 @@ describe("recording health hover detail", () => {
 
     render(<ShortcutReminderPage />);
 
-    expect(await screen.findByText("screen capture needs help")).toBeVisible();
-    expect(screen.queryByText("recording needs help")).toBeNull();
+    expect(await screen.findByText("屏幕采集需要处理")).toBeVisible();
+    expect(screen.queryByText("录制需要处理")).toBeNull();
   });
 
   it("stays generic when both subsystems failed or the cause is unknown", async () => {
@@ -273,9 +273,9 @@ describe("recording health hover detail", () => {
 
       render(<ShortcutReminderPage />);
 
-      expect(await screen.findByText("recording needs help")).toBeVisible();
-      expect(screen.queryByText("audio needs help")).toBeNull();
-      expect(screen.queryByText("screen capture needs help")).toBeNull();
+      expect(await screen.findByText("录制需要处理")).toBeVisible();
+      expect(screen.queryByText("音频需要处理")).toBeNull();
+      expect(screen.queryByText("屏幕采集需要处理")).toBeNull();
     }
   });
 
@@ -296,10 +296,10 @@ describe("recording health hover detail", () => {
       pushHealth!({ payload: "failure|audio capture is not updating|audio" });
     });
 
-    expect(await screen.findByText("audio needs help")).toBeVisible();
+    expect(await screen.findByText("音频需要处理")).toBeVisible();
   });
 
-  // #5553 fixed overflow in this pill; "screen capture needs help" is the
+  // #5553 fixed overflow in this pill; "屏幕采集需要处理" is the
   // longest label it can now show, so it has to stay inside the same budget.
   it("keeps the longest label on one truncating line", async () => {
     mocks.getRecordingHealthState.mockResolvedValue(
@@ -308,7 +308,7 @@ describe("recording health hover detail", () => {
 
     render(<ShortcutReminderPage />);
 
-    const label = await screen.findByText("screen capture needs help");
+    const label = await screen.findByText("屏幕采集需要处理");
     expect(label.className).toContain("whitespace-nowrap");
     expect(label.className).toContain("truncate");
   });
@@ -336,10 +336,10 @@ describe("recording health hover detail", () => {
 
     expect(await screen.findByRole("status", { name: "会议进行中" })).toBeVisible();
     fireEvent.mouseEnter(screen.getByTestId("shortcut-reminder-root"));
-    expect(screen.getByText("meeting live · zoom")).toBeVisible();
+    expect(screen.getByText("会议进行中 · zoom")).toBeVisible();
     expect(screen.getByText("the live transcript keeps moving")).toBeVisible();
 
-    fireEvent.click(screen.getByRole("button", { name: "stop" }));
+    fireEvent.click(screen.getByRole("button", { name: "结束" }));
     expect(mocks.stopMeeting).toHaveBeenCalledTimes(1);
   });
 
@@ -417,7 +417,7 @@ describe("recording health hover detail", () => {
       screen.getByTestId("shortcut-reminder-meeting-preview"),
     ).toBeVisible();
     // The transcript is what the pin is for — it has to survive the exit too.
-    expect(screen.getByText("meeting live · zoom")).toBeVisible();
+    expect(screen.getByText("会议进行中 · zoom")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "取消固定文字记录" }));
     expect(screen.queryByTestId("shortcut-reminder-meeting-preview")).toBeNull();
@@ -503,7 +503,7 @@ describe("recording health hover detail", () => {
 
     render(<ShortcutReminderPage />);
 
-    expect(await screen.findByText("recording needs help")).toBeVisible();
+    expect(await screen.findByText("录制需要处理")).toBeVisible();
     expect(screen.queryByRole("status", { name: "会议进行中" })).toBeNull();
     expect(
       screen.queryByTestId("shortcut-reminder-meeting-preview"),

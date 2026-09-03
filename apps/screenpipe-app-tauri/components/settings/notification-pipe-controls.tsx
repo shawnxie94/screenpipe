@@ -162,8 +162,8 @@ export function NotificationPipeControls({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="filter scheduled tasks"
-            aria-label="filter scheduled tasks"
+            placeholder="筛选定时任务"
+            aria-label="筛选定时任务"
             disabled={disabled}
             className="w-full border border-border bg-transparent py-1.5 pl-8 pr-2.5 text-xs outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/30"
           />

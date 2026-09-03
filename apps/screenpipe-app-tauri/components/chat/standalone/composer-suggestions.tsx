@@ -199,7 +199,7 @@ function SuggestionActionButtons({
         onClick={onRefresh}
         disabled={isRefreshing}
         className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center text-muted-foreground/40 transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground disabled:cursor-default disabled:opacity-30"
-        title="refresh suggestions"
+        title="刷新建议"
         aria-label="刷新建议"
       >
         <RefreshCw

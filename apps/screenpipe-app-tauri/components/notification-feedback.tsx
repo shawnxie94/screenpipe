@@ -120,7 +120,7 @@ export function NotificationFeedback({
             <>
               <div
                 role="group"
-                aria-label="notification feedback options"
+                aria-label="通知反馈选项"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -131,7 +131,7 @@ export function NotificationFeedback({
                   type="button"
                   onClick={selectUp}
                   disabled={saveState === "saving"}
-                  aria-label="useful notification"
+                  aria-label="有用的通知"
                   aria-pressed={rating === "up"}
                   title="useful"
                   style={iconButtonStyle(rating === "up")}
@@ -142,7 +142,7 @@ export function NotificationFeedback({
                   type="button"
                   onClick={selectDown}
                   disabled={saveState === "saving"}
-                  aria-label="not useful notification"
+                  aria-label="无用的通知"
                   aria-pressed={rating === "down"}
                   title="not useful"
                   style={iconButtonStyle(rating === "down")}
@@ -163,8 +163,8 @@ export function NotificationFeedback({
                       if (saveState !== "idle") setSaveState("idle");
                     }}
                     maxLength={500}
-                    placeholder="what should improve?"
-                    aria-label="what should improve"
+                    placeholder="有什么可以改进的？"
+                    aria-label="有什么可以改进的"
                     style={{
                       minWidth: 0,
                       flex: 1,
@@ -182,7 +182,7 @@ export function NotificationFeedback({
                   <button
                     type="submit"
                     disabled={!correction.trim() || saveState === "saving"}
-                    aria-label="send feedback"
+                    aria-label="发送反馈"
                     title="send feedback"
                     style={{
                       display: "inline-flex",

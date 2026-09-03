@@ -191,7 +191,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 			if (!resp.ok) throw new Error(await resp.text());
 			const data = await resp.json();
 			toast({
-				title: "deleted",
+				title: "已删除",
 				description: `removed ${data.frames_deleted} frames, ${data.audio_transcriptions_deleted} audio segments`,
 			});
 			posthog.capture("timeline_range_deleted", {
@@ -204,7 +204,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 			await clearTimelineCache();
 			window.location.reload();
 		} catch (e) {
-			toast({ title: "deletion failed", description: String(e), variant: "destructive" });
+			toast({ title: "删除失败", description: String(e), variant: "destructive" });
 		} finally {
 			setIsDeleting(false);
 		}
@@ -265,7 +265,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 				<button
 					onClick={() => setSelectionRange(null)}
 					className="absolute top-1.5 right-1.5 p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-					title="close"
+					title="关闭"
 				>
 					<X className="w-3 h-3" />
 				</button>
@@ -288,7 +288,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 								? "text-destructive bg-destructive/10"
 								: "text-muted-foreground hover:text-destructive hover:bg-destructive/10"
 						)}
-						title="delete selected range"
+						title="删除所选范围"
 					>
 						{isDeleting ? (
 							<Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -542,7 +542,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 						type="text"
 						value={customTag}
 						onChange={(e) => setCustomTag(e.target.value)}
-						placeholder="custom tag..."
+						placeholder="自定义标签..."
 						disabled={isApplying}
 						maxLength={50}
 						className="flex-1 text-xs px-2 py-1 rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 min-w-0"

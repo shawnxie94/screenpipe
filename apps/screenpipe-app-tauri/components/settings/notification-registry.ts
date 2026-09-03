@@ -55,28 +55,28 @@ export interface NotificationCategory {
 export const NOTIFICATION_GROUPS: NotificationGroup[] = [
   {
     id: "recording",
-    label: "recording health",
-    description: "know the moment capture stops working",
+    label: "录制健康",
+    description: "采集停止时立即得知",
   },
   {
     id: "meetings",
-    label: "meetings",
-    description: "live notes and audio/transcript health during calls",
+    label: "会议",
+    description: "通话期间的实时笔记与音频/文字记录健康状态",
   },
   {
     id: "system",
-    label: "system",
-    description: "monitors, docking, and power changes",
+    label: "系统",
+    description: "显示器、扩展坞和电源变化",
   },
   {
     id: "automation",
-    label: "scheduled tasks & automation",
-    description: "ideas and alerts from your automations",
+    label: "定时任务与自动化",
+    description: "来自你自动化的建议与提醒",
   },
   {
     id: "app",
-    label: "app",
-    description: "updates to screenpipe itself",
+    label: "应用",
+    description: "screenpipe 本身的更新",
   },
 ];
 
@@ -85,7 +85,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     id: "captureStalls",
     label: "录制健康提醒",
     description:
-      "Show “recording needs help” and notify when capture stops — may send false positives",
+      "采集停止时显示“录制需要处理”并通知你 — 可能会产生误报",
     group: "recording",
     default: false,
     experimental: true,
@@ -104,7 +104,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     id: "audioCaptureStalled",
     label: "会议音频未采集",
     description:
-      "OS notification when a meeting is detected but no audio reaches the recorder within 60s",
+      "检测到会议但 60 秒内录音设备没有收到任何音频时，发送系统通知",
     group: "meetings",
     default: true,
     keywords: ["no audio", "mic", "silent", "meeting"],
@@ -113,7 +113,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     id: "liveTranscriptStalled",
     label: "实时文字记录未流动",
     description:
-      "In-app alert when audio is captured but no live transcript arrives within 60s",
+      "已采集音频但 60 秒内没有实时文字记录流入时，在应用内提醒",
     group: "meetings",
     default: true,
     keywords: ["transcript", "subtitles", "stt"],
@@ -122,7 +122,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     id: "displayChanges",
     label: "显示变化",
     description:
-      "Tells you when a monitor is plugged in, unplugged, or switched (laptop lid closed, docking)",
+      "显示器接入、拔出或切换时告知你（合上笔记本盖子、接入扩展坞）",
     group: "system",
     default: true,
     keywords: ["monitor", "display", "dock", "clamshell", "screen"],
@@ -131,7 +131,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     id: "powerModeChanges",
     label: "电源模式变化",
     description:
-      "Tells you when battery saver turns on (Balanced or Saver). You'll still get critical alerts if recording pauses on low battery.",
+      "节能模式开启时（均衡或省电）告知你。如果录制因低电量暂停，你仍会收到关键提醒。",
     group: "system",
     default: true,
     keywords: ["battery", "saver", "power", "thermal", "ac"],
@@ -149,7 +149,7 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
     id: "pipeAllowanceWarnings",
     label: "定时任务额度警告",
     description:
-      "Warn before background scheduled tasks use most of your hosted-AI allowance while the reset is still far away",
+      "后台定时任务在距离重置还很远时就消耗掉大部分托管 AI 额度前，先警告你",
     group: "automation",
     default: true,
     keywords: [
@@ -201,10 +201,10 @@ export interface SnoozePreset {
 }
 
 export const SNOOZE_PRESETS: SnoozePreset[] = [
-  { label: "30 min", kind: "minutes", minutes: 30 },
-  { label: "1 hour", kind: "minutes", minutes: 60 },
-  { label: "2 hours", kind: "minutes", minutes: 120 },
-  { label: "until tomorrow", kind: "untilTomorrow" },
+  { label: "30 分钟", kind: "minutes", minutes: 30 },
+  { label: "1 小时", kind: "minutes", minutes: 60 },
+  { label: "2 小时", kind: "minutes", minutes: 120 },
+  { label: "直到明天", kind: "untilTomorrow" },
 ];
 
 /** Resolve a snooze preset to an absolute epoch-ms expiry (local clock). */
@@ -248,9 +248,9 @@ export function formatSnoozeUntil(untilMs: number, now = new Date()): string {
   const until = new Date(untilMs);
   const sameDay = until.toDateString() === now.toDateString();
   const time = until.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (sameDay) return `until ${time}`;
+  if (sameDay) return `直到 ${time}`;
   const day = until.toLocaleDateString([], { weekday: "short" });
-  return `until ${day} ${time}`;
+  return `直到 ${day} ${time}`;
 }
 
 // ── presets (bulk set) ───────────────────────────────────────────────

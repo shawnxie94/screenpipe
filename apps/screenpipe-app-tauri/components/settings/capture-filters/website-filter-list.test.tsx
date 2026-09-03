@@ -15,7 +15,7 @@ describe("WebsiteRuleList", () => {
 		fireEvent.change(screen.getByLabelText("要允许的主机名"), {
 			target: { value: " HTTPS://WWW.Example.COM/path " },
 		});
-		fireEvent.click(screen.getByRole("button", { name: "add" }));
+		fireEvent.click(screen.getByRole("button", { name: "添加" }));
 
 		expect(onChange).toHaveBeenCalledWith([
 			{
@@ -33,10 +33,10 @@ describe("WebsiteRuleList", () => {
 		fireEvent.change(screen.getByLabelText("要阻止的主机名"), {
 			target: { value: "worktrace" },
 		});
-		fireEvent.click(screen.getByRole("button", { name: "add" }));
+		fireEvent.click(screen.getByRole("button", { name: "添加" }));
 
 		expect(onChange).not.toHaveBeenCalled();
-		expect(screen.getByRole("alert")).toHaveTextContent("full hostname");
+		expect(screen.getByRole("alert")).toHaveTextContent("完整主机名");
 	});
 
 	it("keeps legacy block entries intact when adding a structured rule", () => {
@@ -48,7 +48,7 @@ describe("WebsiteRuleList", () => {
 		fireEvent.change(screen.getByLabelText("要阻止的主机名"), {
 			target: { value: "docs.example.com" },
 		});
-		fireEvent.click(screen.getByRole("button", { name: "add" }));
+		fireEvent.click(screen.getByRole("button", { name: "添加" }));
 
 		expect(onChange).toHaveBeenCalledWith([
 			"legacy.example",
@@ -75,7 +75,7 @@ describe("WebsiteRuleList", () => {
 		fireEvent.change(screen.getByLabelText("要阻止的主机名"), {
 			target: { value: "example.com" },
 		});
-		fireEvent.click(screen.getByRole("button", { name: "add" }));
+		fireEvent.click(screen.getByRole("button", { name: "添加" }));
 
 		expect(onChange).not.toHaveBeenCalled();
 		expect(screen.getByRole("alert")).toHaveTextContent("该主机名已在列表中");
@@ -98,7 +98,7 @@ describe("WebsiteRuleList", () => {
 			/>,
 		);
 
-		fireEvent.click(screen.getByLabelText("Include subdomains of worktrace.ai"));
+		fireEvent.click(screen.getByLabelText("包含 worktrace.ai 的子域名"));
 		expect(onChange).toHaveBeenCalledWith([
 			{
 				domain: "worktrace.ai",

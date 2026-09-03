@@ -121,7 +121,7 @@ export function ContentFiltersCard({
 				label: scoped,
 				icon: AppWindowMac,
 				iconUrl: appIconUrl(window.app_name),
-				description: `only this window of ${window.app_name}`,
+				description: `仅 ${window.app_name} 的这个窗口`,
 			});
 		}
 
@@ -180,14 +180,14 @@ export function ContentFiltersCard({
 				<Tabs value={tab} onValueChange={(next) => setTab(next as "apps" | "websites")}>
 					<TabsList className="mb-2.5">
 						<TabsTrigger value="apps" className="text-[12px]" data-testid="privacy-tab-apps">
-							Apps{excludedCount > 0 ? ` (${excludedCount})` : ""}
+							应用{excludedCount > 0 ? ` (${excludedCount})` : ""}
 						</TabsTrigger>
 						<TabsTrigger
 							value="websites"
 							className="text-[12px]"
 							data-testid="privacy-tab-websites"
 						>
-							Websites
+							网站
 							{ignoredUrls.length + includedUrls.length > 0
 								? ` (${ignoredUrls.length + includedUrls.length})`
 								: ""}
@@ -196,7 +196,7 @@ export function ContentFiltersCard({
 
 					<TabsContent value="apps" className="mt-0 space-y-2">
 						<p className="text-[11px] text-muted-foreground">
-							Switch an app off to stop recording it. Everything else keeps being captured.
+							关闭某个应用即停止录制它，其余内容继续被捕获。
 						</p>
 
 						{allowlistActive && (
@@ -204,8 +204,8 @@ export function ContentFiltersCard({
 								className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-[11px] text-muted-foreground"
 								data-testid="privacy-allowlist-notice"
 							>
-								An allowlist is active, so only the apps switched on are recorded. Clear the
-								&ldquo;only capture these&rdquo; rules below to go back to capturing everything.
+								允许列表已启用，因此只录制已开启的应用。清除下方
+								&ldquo;仅捕获这些&rdquo; 规则即可恢复捕获所有内容。
 							</p>
 						)}
 
@@ -227,7 +227,7 @@ export function ContentFiltersCard({
 								<ChevronRight
 									className={cn("h-3 w-3 transition-transform", showRules && "rotate-90")}
 								/>
-								Window rules
+								窗口规则
 								{advancedIgnored.length + advancedIncluded.length > 0 &&
 									` (${advancedIgnored.length + advancedIncluded.length})`}
 							</button>
@@ -236,8 +236,8 @@ export function ContentFiltersCard({
 								<div className="mt-2 space-y-3 border-l border-border pl-3">
 									<div className="space-y-1.5">
 										<h4 className="flex items-center gap-1.5 text-[12px] font-medium text-foreground">
-											Skip specific windows
-											<HelpTooltip text="Narrower than switching off a whole app. 'Slack::#hr' skips only that channel; '::confidential' skips any window whose title contains the word, in any app." />
+											跳过特定窗口
+											<HelpTooltip text="比关闭整个应用更精细。'Slack::#hr' 只跳过该频道；'::confidential' 跳过任何标题包含该词的窗口，无论哪个应用。" />
 										</h4>
 										<div data-testid="privacy-ignored-apps-select">
 											<MultiSelect
@@ -253,8 +253,8 @@ export function ContentFiltersCard({
 
 									<div className="space-y-1.5">
 										<h4 className="flex items-center gap-1.5 text-[12px] font-medium text-foreground">
-											Only capture these
-											<HelpTooltip text="Leave empty to capture everything except what you switched off. Adding entries turns capture into an allowlist: 'Slack::#engineering' keeps only that channel of Slack and leaves other apps alone." />
+											仅捕获这些
+											<HelpTooltip text="留空则捕获除已关闭之外的所有内容。添加条目后，捕获变为允许列表：'Slack::#engineering' 只保留 Slack 的该频道，其他应用不受影响。" />
 										</h4>
 										<div data-testid="privacy-included-apps-select">
 											<MultiSelect
@@ -275,7 +275,7 @@ export function ContentFiltersCard({
 											className="h-7 gap-1.5 text-[11px]"
 											onClick={() => onBrowse("ignored")}
 										>
-											<FolderTree className="h-3 w-3" /> browse to skip
+											<FolderTree className="h-3 w-3" /> 浏览并跳过
 										</Button>
 										<Button
 											variant="outline"
@@ -283,7 +283,7 @@ export function ContentFiltersCard({
 											className="h-7 gap-1.5 text-[11px]"
 											onClick={() => onBrowse("included")}
 										>
-											<FolderTree className="h-3 w-3" /> browse to allow
+											<FolderTree className="h-3 w-3" /> 浏览并允许
 										</Button>
 									</div>
 								</div>
@@ -295,8 +295,8 @@ export function ContentFiltersCard({
 						<div className="space-y-1.5">
 							<h4 className="text-[12px] font-medium">仅录制这些网站</h4>
 							<p className="text-[11px] text-muted-foreground">
-								When this list is non-empty, browser capture is restricted to matching hostnames.
-								Native apps and tabs whose URL cannot be verified are not recorded.
+								列表非空时，浏览器捕获将被限制为匹配的主机名。
+								原生应用及无法验证 URL 的标签页不会被录制。
 							</p>
 							<WebsiteRuleList
 								rules={includedUrls}
@@ -309,8 +309,8 @@ export function ContentFiltersCard({
 						<div className="space-y-1.5 border-t border-border pt-2">
 							<h4 className="text-[12px] font-medium">始终跳过这些网站</h4>
 							<p className="text-[11px] text-muted-foreground">
-								Block rules take priority over the allowlist. Choose exact domain matching or
-								include its subdomains; optional exceptions stay visible on the rule.
+								阻止规则优先于允许列表。可选择精确匹配域名或
+								包含其子域名；可选的例外项会显示在规则上。
 							</p>
 							<WebsiteRuleList
 								rules={ignoredUrls}

@@ -8,9 +8,9 @@ import type { SettingsField } from "./settings-search";
 
 /** Settings search index for this section. Co-located with the component so adding a field here means updating one file. See `SettingsField` in `./settings-search` for the schema. */
 export const searchIndex: SettingsField[] = [
-  { label: "Disk usage", keywords: ["disk", "space", "gb"] },
-  { label: "Retention", keywords: ["cleanup", "delete old"] },
-  { label: "Clear Cache" },
+  { label: "磁盘用量", keywords: ["disk", "space", "gb"] },
+  { label: "数据保留", keywords: ["cleanup", "delete old"] },
+  { label: "清理缓存" },
 ];
 import { DiskUsageSection } from "./disk-usage-section";
 import { ApplyRestartBar } from "./apply-restart-bar";
@@ -66,7 +66,7 @@ export function StorageSection() {
       const result = await commands.validateDataDir(selected);
       if (result.status === "error") {
         toast({
-          title: "invalid directory",
+          title: "无效目录",
           description: String(result.error),
           variant: "destructive",
           duration: 5000,
@@ -78,8 +78,8 @@ export function StorageSection() {
     } catch (error) {
       console.error("failed to change data directory:", error);
       toast({
-        title: "error",
-        description: "failed to change data directory",
+        title: "错误",
+        description: "更换数据目录失败",
         variant: "destructive",
         duration: 5000,
       });
@@ -102,8 +102,8 @@ export function StorageSection() {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setDataDirChanged(false);
       toast({
-        title: "restarted",
-        description: "screenpipe restarted with the new data directory",
+        title: "已重启",
+        description: "screenpipe 已使用新数据目录重启",
       });
     } catch (error) {
       console.error("failed to restart screenpipe:", error);
@@ -206,7 +206,7 @@ export function StorageSection() {
                   setCacheFiles(result.data);
                   setShowCacheDialog(true);
                 } catch (e: any) {
-                  toast({ title: "failed to clear cache", description: e?.toString(), variant: "destructive" });
+                  toast({ title: "清理缓存失败", description: e?.toString(), variant: "destructive" });
                 }
               }}
             >
@@ -219,7 +219,7 @@ export function StorageSection() {
       <AlertDialog open={showCacheDialog} onOpenChange={setShowCacheDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>clear cache?</AlertDialogTitle>
+            <AlertDialogTitle>清理缓存？</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
                 <p>the following files will be deleted ({formatBytes(cacheFiles.reduce((s, f) => s + Number(f.size_bytes), 0))} total):</p>
@@ -238,7 +238,7 @@ export function StorageSection() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={async () => {
                 setIsClearing(true);
@@ -253,7 +253,7 @@ export function StorageSection() {
                     description: `freed ${formatBytes(Number(result.data))}`,
                   });
                 } catch (e: any) {
-                  toast({ title: "failed to clear cache", description: e?.toString(), variant: "destructive" });
+                  toast({ title: "清理缓存失败", description: e?.toString(), variant: "destructive" });
                 } finally {
                   setIsClearing(false);
                   setCacheFiles([]);

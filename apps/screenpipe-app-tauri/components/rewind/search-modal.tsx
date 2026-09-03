@@ -2666,7 +2666,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
               land. Five rows everywhere: a different count per scope was the
               other half of the height jump. */}
           {showSkeleton && (
-            <div className="space-y-2 py-1" aria-busy="true" aria-label="searching">
+            <div className="space-y-2 py-1" aria-busy="true" aria-label="正在搜索">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div
                   key={i}
@@ -2828,7 +2828,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
               a browse whereas a person row needs their name to be known. */}
           {isEntitySearch && appSuggestions.length > 0 && (
             <div className="mb-4">
-              <SectionLabel>apps</SectionLabel>
+              <SectionLabel>应用</SectionLabel>
               <div className="space-y-1">
                 {appSuggestions.map((app) => (
                   <button
@@ -2909,7 +2909,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           {/* People section */}
           {speakerResults.length > 0 && (
             <div className="mb-4">
-              <SectionLabel>people</SectionLabel>
+              <SectionLabel>人物</SectionLabel>
               <div className="flex gap-2 flex-wrap">
                 {speakerResults.map((speaker) => (
                   <button
@@ -2937,7 +2937,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           {/* Inline chat section in "All" view — appears instantly (in-memory filter) while screen results load */}
           {contentFilter === "all" && debouncedQuery.trim().length >= MIN_QUERY_CHARS && chatsFreshForQuery && filteredChats.length > 0 && !isTagSearch && !isEntitySearch && (
             <div className="mb-4">
-              <SectionLabel>chats</SectionLabel>
+              <SectionLabel>聊天</SectionLabel>
               <div className="flex flex-col">
                 {filteredChats.slice(0, 5).map((chat) => {
                   const ts = new Date(chat.lastUserMessageAt ?? chat.updatedAt).toISOString();
@@ -3392,7 +3392,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                 <div>
                   {/* No icon here — the chip in the search bar already names
                       this list as chats, and each row carries its own icon. */}
-                  <SectionLabel>recent</SectionLabel>
+                  <SectionLabel>最近</SectionLabel>
                   <div className="flex flex-col">
                     {visibleRecentChats.map((chat) => {
                       const ts = new Date(chat.lastUserMessageAt ?? chat.updatedAt).toISOString();
@@ -3644,7 +3644,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           <div className="flex items-center gap-4">
             {renderFooterHints()}
           </div>
-          <span>esc {selectedSpeaker || selectedApp ? "back" : "close"}</span>
+          <span>esc {selectedSpeaker || selectedApp ? "返回" : "关闭"}</span>
         </div>
       </div>
     </div>

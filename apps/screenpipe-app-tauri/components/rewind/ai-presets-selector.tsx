@@ -887,7 +887,7 @@ export function AIProviderConfig({
                 status={modelDiscoveryStatus}
                 errorMessage={modelDiscoveryError}
                 idleMessage="enter a valid base URL to discover models"
-                placeholder="type or select model"
+                placeholder="输入或选择模型"
                 emptyMessage="no models discovered — type a model name manually"
                 allowManualEntry
               />
@@ -952,7 +952,7 @@ export function AIProviderConfig({
                 onValueChange={(value) => setFormData({ ...formData, model: value })}
               >
                 <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="select model" />
+                  <SelectValue placeholder="选择模型" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="claude-opus-5">claude opus 5</SelectItem>
@@ -975,7 +975,7 @@ export function AIProviderConfig({
               }}
             >
               <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="select model" />
+                <SelectValue placeholder="选择模型" />
               </SelectTrigger>
               <SelectContent>
                 {piModels.map((m) => {
@@ -984,8 +984,8 @@ export function AIProviderConfig({
                   return (
                   <SelectItem key={m.id} value={m.id} disabled={locked} className={locked ? "opacity-60" : undefined}>
                     <span className="flex items-center gap-1.5">
-                      {m.health?.status === 'down' && <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" title="overloaded" />}
-                      {m.health?.status === 'degraded' && <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500" title="degraded" />}
+                      {m.health?.status === 'down' && <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" title="过载" />}
+                      {m.health?.status === 'degraded' && <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500" title="降级" />}
                       {m.name}{m.free ? " (free)" : ""}
                       {locked && <span className="text-[9px] font-medium text-muted-foreground border rounded px-1">business</span>}
                       {!locked && costLabel && <span className="text-[9px] font-medium text-muted-foreground">{costLabel}</span>}
@@ -1068,7 +1068,7 @@ export function AIProviderConfig({
             <Input
               id="name"
               type="text"
-              placeholder="generated automatically"
+              placeholder="自动生成"
               value={formData.id ?? ""}
               onChange={(e) => handleIdChange(e.target.value)}
               onBlur={refillEmptyName}
@@ -1272,7 +1272,7 @@ export function AIProviderConfig({
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                   setFormData({ ...formData, prompt: e.target.value })
                 }
-                placeholder="enter your custom prompt here"
+                placeholder="在此输入你的自定义提示词"
                 className="min-h-[60px] max-h-[100px] text-xs resize-none"
               />
             </div>
@@ -1988,9 +1988,9 @@ export const AIPresetsSelector = ({
             className="min-w-[500px] w-[--radix-popover-trigger-width] p-0"
           >
             <Command>
-              <CommandInput placeholder="search presets..." />
+              <CommandInput placeholder="搜索预设..." />
               <CommandList>
-                <CommandEmpty>no presets found.</CommandEmpty>
+                <CommandEmpty>未找到预设。</CommandEmpty>
                 {allowNone && (
                   <CommandGroup>
                     <CommandItem

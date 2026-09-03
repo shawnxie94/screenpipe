@@ -166,16 +166,16 @@ const ShortcutRow = ({
       );
       if (conflict) {
         toast({
-          title: "shortcut conflict",
-          description: `this shortcut is already used by "${conflict[0].replace(/([A-Z])/g, " $1").trim().toLowerCase()}". choose a different combination.`,
+          title: "快捷键冲突",
+          description: "该快捷键已被其他功能使用，请换一个组合。",
           variant: "destructive",
         });
         return;
       }
 
       toast({
-        title: "shortcut enabled",
-        description: `${shortcut.replace(/_/g, " ")} enabled`,
+        title: "快捷键已启用",
+        description: title,
       });
 
       // Remove from disabled shortcuts and set the key value in a single update
@@ -224,9 +224,8 @@ const ShortcutRow = ({
     } catch (error) {
       console.error("error updating shortcut", error);
       toast({
-        title: "error updating shortcut",
-        description:
-          "failed to register shortcut. please try a different combination.",
+        title: "更新快捷键失败",
+        description: "无法注册快捷键，请换一个组合。",
         variant: "destructive",
       });
     }
@@ -234,8 +233,8 @@ const ShortcutRow = ({
 
   const handleDisableShortcut = async () => {
     toast({
-      title: "shortcut disabled",
-      description: `${shortcut.replace(/_/g, " ")} disabled`,
+      title: "快捷键已禁用",
+      description: title,
     });
     await updateSettings({
       disabledShortcuts: Array.from(
@@ -275,7 +274,7 @@ const ShortcutRow = ({
     !v || v.trim() === "";
 
   const currentKeys = isValueEmpty(value)
-    ? ["Unassigned"]
+    ? ["未设置"]
     : parseKeyboardShortcut(value || "").split("+");
 
   const getShortcutState = (): ShortcutState => {
@@ -309,12 +308,12 @@ const ShortcutRow = ({
         >
           {isRecording ? (
             <span className="flex items-center justify-between gap-2 w-full">
-              <span className="animate-pulse">press keys...</span>
+              <span className="animate-pulse">按键中…</span>
               <span
                 role="button"
                 onClick={(e) => { e.stopPropagation(); setIsRecording(false); }}
                 className="text-muted-foreground hover:text-foreground transition-colors"
-                title="cancel"
+                title="取消"
               >
                 <X className="h-3 w-3" />
               </span>

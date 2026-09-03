@@ -785,11 +785,11 @@ describe("BrainOverview", () => {
     fireEvent.click(await screen.findByTestId("overview-refresh-data"));
 
     const loadingButton = await screen.findByRole("button", {
-      name: "loading data",
+      name: "正在加载数据",
     });
     expect(loadingButton).toBeDisabled();
     expect(loadingButton.textContent).toBe("");
-    expect(screen.queryByText("loading data")).toBeNull();
+    expect(screen.queryByText("正在加载数据")).toBeNull();
   });
 
   it("reports an honest partial refresh when a block is not configured", async () => {
@@ -2117,7 +2117,7 @@ describe("BrainOverview", () => {
     mocks.capture.mockClear();
     fireEvent.click(notUseful);
     fireEvent.change(
-      await screen.findByPlaceholderText("e.g. exclude meetings"),
+      await screen.findByPlaceholderText("例如：排除会议"),
       {
         target: { value: "exclude meetings" },
       },
@@ -2215,7 +2215,7 @@ describe("BrainOverview", () => {
       await screen.findByRole("button", { name: "edit Focus time with AI" }),
     );
     fireEvent.change(
-      await screen.findByPlaceholderText("e.g. group by project instead"),
+      await screen.findByPlaceholderText("例如：改为按项目分组"),
       { target: { value: "group this by project" } },
     );
     fireEvent.click(screen.getByRole("button", { name: "update" }));
@@ -2499,7 +2499,7 @@ describe("BrainOverview", () => {
       await screen.findByRole("button", { name: "edit Focus time with AI" }),
     );
     fireEvent.change(
-      await screen.findByPlaceholderText("e.g. group by project instead"),
+      await screen.findByPlaceholderText("例如：改为按项目分组"),
       { target: { value: "group this by project" } },
     );
     fireEvent.click(screen.getByRole("button", { name: "update" }));

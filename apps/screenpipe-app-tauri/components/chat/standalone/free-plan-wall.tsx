@@ -32,10 +32,10 @@ import { openExternalUrl } from "@/lib/open-external-url";
 import { UpgradeVignette } from "@/components/chat/standalone/upgrade-vignettes";
 
 const VALUE_CARDS = [
-  { scene: "pipes", title: "scheduled automations" },
-  { scene: "meeting", title: "meeting summaries" },
-  { scene: "timeline", title: "timeline recaps" },
-  { scene: "models", title: "premium models" },
+  { scene: "pipes", title: "定时自动化" },
+  { scene: "meeting", title: "会议摘要" },
+  { scene: "timeline", title: "时间线回顾" },
+  { scene: "models", title: "高级模型" },
 ] as const;
 
 /** Stage 1 — quiet remaining-messages counter beside the model controls. */
@@ -61,7 +61,7 @@ export function FreePlanCounterChip() {
         data-testid="free-plan-counter-chip"
         className="inline-flex items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground"
       >
-        {usage.remaining} of {usage.limit_today} free messages left
+        {usage.remaining}/{usage.limit_today} 条免费消息剩余
       </span>
     </div>
   );
@@ -83,8 +83,7 @@ export function FreePlanWallStrip() {
         <div className="min-w-0 flex-1 text-[12px] leading-snug">
           <span className="font-medium">消息用完了</span>
           <span className="text-muted-foreground">
-            {resets ? ` · resets ${resets}` : ""} · local &amp; own-key models
-            still work
+            {resets ? ` · 重置时间 ${resets}` : ""} · 本地与自带密钥模型仍可使用
           </span>
         </div>
         <Button
@@ -99,7 +98,7 @@ export function FreePlanWallStrip() {
             void openExternalUrl(wall.plansUrl);
           }}
         >
-          See plans
+          查看方案
         </Button>
       </div>
     </div>
@@ -131,8 +130,7 @@ export function FreeUpgradeSheet() {
         <DialogHeader>
           <DialogTitle>升级以继续</DialogTitle>
           <DialogDescription>
-            Free messages{resets ? ` reset ${resets}` : " reset daily"}.
-            Upgrading unlocks:
+            免费消息{resets ? `将于 ${resets} 重置` : "每日重置"}。升级可解锁：
           </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -147,7 +145,7 @@ export function FreeUpgradeSheet() {
         </div>
         <div className="flex items-center gap-4">
           <span className="mr-auto text-[10px] text-muted-foreground">
-            cancel anytime
+            可随时取消
           </span>
           <button
             type="button"
@@ -167,7 +165,7 @@ export function FreeUpgradeSheet() {
               close();
             }}
           >
-            See plans
+            查看方案
           </Button>
         </div>
       </DialogContent>

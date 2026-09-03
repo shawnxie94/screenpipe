@@ -28,9 +28,9 @@ import { NotificationPipeControls } from "./notification-pipe-controls";
 import { NotificationPauseControl } from "./notification-pause-control";
 
 const PRESETS: { kind: CategoryPreset; label: string }[] = [
-  { kind: "recommended", label: "recommended" },
-  { kind: "all", label: "everything" },
-  { kind: "none", label: "nothing" },
+  { kind: "recommended", label: "推荐" },
+  { kind: "all", label: "全部" },
+  { kind: "none", label: "无" },
 ];
 
 /**
@@ -40,15 +40,15 @@ const PRESETS: { kind: CategoryPreset; label: string }[] = [
  */
 export const searchIndex: SettingsField[] = [
   {
-    label: "Notifications",
+    label: "通知",
     keywords: ["mute all", "do not disturb", "dnd", "silence", "pause", "snooze"],
   },
   {
-    label: "Quiet hours",
+    label: "勿扰时段",
     keywords: ["schedule", "night", "sleep", "focus", "dnd", "do not disturb"],
   },
   {
-    label: "Reset to defaults",
+    label: "重置为默认",
     keywords: ["presets", "recommended", "everything", "nothing", "reset"],
   },
   ...NOTIFICATION_CATEGORIES.map((c) => ({
@@ -56,7 +56,7 @@ export const searchIndex: SettingsField[] = [
     keywords: c.keywords,
   })),
   {
-    label: "Per-task notifications",
+    label: "按任务的通知",
     keywords: ["pipe", "mute pipe", "per pipe", "individual pipe"],
     conditional: true,
   },
@@ -142,8 +142,7 @@ export function NotificationsSettings() {
     <div className="space-y-6">
       <div>
         <p className="text-sm text-muted-foreground">
-          Control which notifications screenpipe sends you. Pause on a whim,
-          set quiet hours, turn whole groups off, or fine-tune a single scheduled task.
+          控制 screenpipe 向你发送哪些通知。随时暂停、设置勿扰时段、整组关闭，或为单个定时任务做精细调整。
         </p>
       </div>
 
@@ -168,7 +167,7 @@ export function NotificationsSettings() {
 
       {/* Quick presets + reset, then the in-section filter */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] text-muted-foreground">quick set:</span>
+        <span className="text-[11px] text-muted-foreground">快速预设：</span>
         {PRESETS.map((p) => (
           <button
             key={p.kind}
@@ -186,7 +185,7 @@ export function NotificationsSettings() {
           onClick={resetToDefaults}
           className="ml-auto text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
         >
-          reset to defaults
+          重置为默认
         </button>
       </div>
 
@@ -196,8 +195,8 @@ export function NotificationsSettings() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="search notifications"
-          aria-label="search notifications"
+          placeholder="搜索通知"
+          aria-label="搜索通知"
           data-testid="notification-search"
           className="w-full border border-border bg-transparent py-2 pl-8 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-foreground/30"
         />
@@ -218,7 +217,7 @@ export function NotificationsSettings() {
               {!q && (
                 <Switch
                   data-testid={`notification-group-${group.id}`}
-                  aria-label={`toggle all ${group.label}`}
+                  aria-label={`全部切换：${group.label}`}
                   checked={gstate === "all"}
                   onCheckedChange={(v) =>
                     writeCategoryPatch(
@@ -263,10 +262,10 @@ export function NotificationsSettings() {
                           pipesExpanded && "rotate-90"
                         )}
                       />
-                      customize per task
+                      按任务自定义
                       {mutedPipes.length > 0 && (
                         <span className="ml-1 text-muted-foreground/70">
-                          ({mutedPipes.length} muted)
+                          （已静音 {mutedPipes.length} 个）
                         </span>
                       )}
                     </button>
@@ -293,7 +292,7 @@ export function NotificationsSettings() {
 
         {visibleGroups.length === 0 && (
           <p className="py-6 text-center text-xs text-muted-foreground">
-            no notifications match &quot;{query}&quot;
+            没有匹配 “{query}” 的通知
           </p>
         )}
       </div>
@@ -328,7 +327,7 @@ function CategoryRow({
             {category.label}
             {category.experimental && (
               <span className="ml-1.5 text-[10px] font-normal text-muted-foreground/70">
-                experimental
+                实验性
               </span>
             )}
           </p>

@@ -299,7 +299,7 @@ export function CommandPalette({
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput
-        placeholder="type a command..."
+        placeholder="输入命令..."
         className="ph-no-capture"
         data-testid="command-palette-input"
       />

@@ -60,7 +60,7 @@ export function showChatArchiveUndoToast({
     } catch (error) {
       console.warn("[chat] archive undo failed:", error);
       toast({
-        title: "couldn't undo archive",
+        title: "无法撤销归档",
         variant: "destructive",
       });
     }

@@ -65,16 +65,16 @@ export function NotificationPauseControl({
   // a hard off — so only surface the exception count in those states.
   const vipSuffix =
     masterOn && (isSnoozed || quietNow) && vipCount > 0
-      ? ` · ${vipCount} pipe${vipCount === 1 ? "" : "s"} still notify`
+      ? ` · 仍有 ${vipCount} 个任务会通知`
       : "";
 
   const statusLabel = !masterOn
-    ? "off — until you turn it back on"
+    ? "已关闭 — 直到你重新开启"
     : isSnoozed
-      ? `paused ${formatSnoozeUntil(snoozeUntil)}${vipSuffix}`
+      ? `已暂停，${formatSnoozeUntil(snoozeUntil)}${vipSuffix}`
       : quietNow
-        ? `quiet hours active${vipSuffix}`
-        : "on";
+        ? `勿扰时段中${vipSuffix}`
+        : "开启中";
 
   return (
     <div
@@ -95,7 +95,7 @@ export function NotificationPauseControl({
             onClick={onResume}
             className="border border-foreground px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide transition-colors hover:bg-foreground hover:text-background"
           >
-            Resume
+            恢复
           </button>
         ) : (
           <span className="flex h-2 w-2 shrink-0 rounded-full bg-foreground" aria-hidden />
@@ -123,7 +123,7 @@ export function NotificationPauseControl({
             onClick={onTurnOff}
             className="ml-auto text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
           >
-            turn off
+            关闭
           </button>
         </div>
       )}
@@ -134,15 +134,15 @@ export function NotificationPauseControl({
           <Moon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <div className="min-w-0">
             <p className="text-xs font-medium">
-              Quiet hours
+              勿扰时段
               {quietNow && quietHours.enabled && (
                 <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
-                  active now
+                  当前生效
                 </span>
               )}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              silence non-critical alerts on a nightly schedule
+              每晚按时间表静默非关键提醒
             </p>
           </div>
         </div>

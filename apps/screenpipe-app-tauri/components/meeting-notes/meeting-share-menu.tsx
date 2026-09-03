@@ -290,7 +290,7 @@ export function MeetingShareMenu({
           <div
             className="group flex h-11 shrink-0 items-center border-l border-border px-2"
             data-testid="meeting-share-destinations"
-            aria-label="connected apps suggested for this meeting"
+            aria-label="为本会议推荐的已连接应用"
           >
             {suggestedDestinations.slice(0, 4).map((suggestion, index) => (
               <button
@@ -327,7 +327,7 @@ export function MeetingShareMenu({
             disabled={busy}
             data-testid="meeting-send-button"
             aria-label={sendLabel ?? ACTION_LABEL.send}
-            title="review this meeting, then send it to a connected app"
+            title="审阅本次会议，然后发送到已连接的应用"
             className={cn(RULE_ACTION_CLASS, "px-4")}
           >
             <Share className="h-3.5 w-3.5" />
@@ -366,8 +366,8 @@ export function MeetingShareMenu({
           <button
             type="button"
             disabled={busy}
-            aria-label="more meeting actions"
-            title="everything else for this meeting"
+            aria-label="更多会议操作"
+            title="此会议的其他操作"
             className={cn(RULE_ACTION_CLASS, "px-3")}
             data-testid="meeting-more-button"
           >

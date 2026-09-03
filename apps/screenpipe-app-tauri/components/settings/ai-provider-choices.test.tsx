@@ -97,7 +97,7 @@ describe("AIProviderChoices", () => {
     expect(screen.queryByRole("button", { name: /Ollama/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /使用 API 密钥/ })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "advanced" }));
+    fireEvent.click(screen.getByRole("button", { name: "高级" }));
 
     expect(screen.getByText("直接使用模型")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /ChatGPT/ })).toBeInTheDocument();

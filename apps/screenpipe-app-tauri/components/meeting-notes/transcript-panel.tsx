@@ -514,21 +514,21 @@ function liveErrorSummary(message: string | null): string {
     lower.includes("nodename") ||
     lower.includes("dns")
   ) {
-    return "cloud connection failed";
+    return "云连接失败";
   }
   if (lower.includes("screenpipe cloud login")) {
-    return "cloud login required";
+    return "需要登录 screenpipe 云";
   }
   if (lower.includes("daily") && lower.includes("limit")) {
-    return "daily limit reached";
+    return "今日额度已用完";
   }
   if (lower.includes("tls")) {
-    return "secure connection failed";
+    return "安全连接失败";
   }
   if (lower.includes("websocket")) {
-    return "live stream unavailable";
+    return "实时流不可用";
   }
-  return "live transcription failed";
+  return "实时转写失败";
 }
 
 export function TranscriptPanel({
@@ -931,17 +931,17 @@ export function TranscriptPanel({
   const emptyCopy = useMemo(() => {
     if (loading && !loaded) return null;
     if (liveError && chunks.length === 0 && visibleLiveBlocks.length === 0) {
-      return `${liveErrorSummary(liveError)}. Background recording is still running.`;
+      return `${liveErrorSummary(liveError)}。后台录制仍在进行。`;
     }
     if (chunks.length === 0 && visibleLiveBlocks.length === 0) {
-      if (!isLive) return "no transcript was captured for this meeting";
+      if (!isLive) return "本次会议未捕获到文字记录";
       return (
         captureState?.transcriptEmptyCopy ??
-        "no transcript yet — audio can take a minute to appear; keep the meeting open"
+        "尚无文字记录——音频可能需要约 1 分钟才会出现；请保持会议窗口打开"
       );
     }
     if (filteredBlocks.length === 0 && query.trim()) {
-      return `no matches for "${query.trim()}"`;
+      return `未找到与"${query.trim()}"匹配的内容`;
     }
     return null;
   }, [
@@ -970,7 +970,7 @@ export function TranscriptPanel({
     isLive &&
     Boolean(liveError || (pendingTranscriptSegments > 0 && liveStatus?.active));
   const recoveryMessage = liveError
-    ? `${liveErrorSummary(liveError)}. Still recording; saved audio remains available for background transcription.`
+    ? `${liveErrorSummary(liveError)}。仍在录制；已保存的音频仍可用于后台转写。`
     : recorderTranscriptionBacklogMessage(pendingTranscriptSegments);
   const transcriptState = showRecoveryBanner
     ? "recovering"
@@ -1035,7 +1035,7 @@ export function TranscriptPanel({
           <div
             role="separator"
             aria-orientation="horizontal"
-            aria-label="resize transcript panel"
+            aria-label="调整转录面板大小"
             tabIndex={0}
             title="drag to resize · double-click to reset"
             onPointerDown={handleResizeStart}
@@ -1063,7 +1063,7 @@ export function TranscriptPanel({
                     setSearchOpen(false);
                   }
                 }}
-                placeholder="search transcript..."
+                placeholder="搜索文字记录..."
                 className="min-w-0 flex-1 bg-transparent text-xs px-2 h-7 border border-input focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/50"
               />
             ) : (
@@ -1071,7 +1071,7 @@ export function TranscriptPanel({
                 <span
                   className="inline-flex min-w-0 items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground"
                   role="status"
-                  aria-label={`transcript status: ${transcriptState}`}
+                  aria-label={`文字记录状态: ${transcriptState}`}
                   data-testid="transcript-stream-status"
                 >
                   <span
@@ -1145,7 +1145,7 @@ export function TranscriptPanel({
                   onClick={onClose}
                   className="h-7 w-7 p-0"
                   title="close transcript"
-                  aria-label="close transcript"
+                  aria-label="关闭转录"
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -1229,7 +1229,7 @@ export function TranscriptPanel({
               onClick={() => scrollToLatest()}
               className="absolute bottom-3 right-3 h-8 w-8 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur hover:bg-accent"
               title="follow live transcript"
-              aria-label="follow live transcript"
+              aria-label="跟随实时转录"
             >
               <ArrowDown className="h-3.5 w-3.5" />
               {hasUnseenLive && (
@@ -1261,7 +1261,7 @@ export const TranscriptRows = React.memo(function TranscriptRows({
   return (
     <ol
       className={cn("space-y-0.5 pb-10 pt-3", className ?? "px-4")}
-      aria-label="meeting transcript"
+      aria-label="会议转录"
     >
       {blocks.map((block, index) => (
         <SpeakerParagraph
@@ -1385,7 +1385,7 @@ export const SpeakerParagraph = React.memo(function SpeakerParagraph({
           <span
             className="absolute -right-1 -top-1 flex h-3 w-3 items-center justify-center rounded-full bg-background shadow-sm ring-1 ring-border"
             title="transcribing partial text"
-            aria-label="transcribing partial text"
+            aria-label="正在转写部分文本"
           >
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground motion-reduce:animate-none" />
           </span>

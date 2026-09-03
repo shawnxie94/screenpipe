@@ -111,7 +111,7 @@ describe("StorageSection clear cache", () => {
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: "failed to clear cache",
+          title: "清理缓存失败",
           variant: "destructive",
         }),
       ),

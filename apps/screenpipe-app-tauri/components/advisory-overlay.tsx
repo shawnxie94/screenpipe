@@ -69,7 +69,7 @@ function AdvisoryCard({ advisory }: { advisory: Advisory }) {
         <button
           type="button"
           onClick={() => remove(advisory.id)}
-          aria-label="dismiss"
+          aria-label="关闭"
           className="shrink-0 text-muted-foreground/60 transition-colors hover:text-foreground"
         >
           <X className="h-3.5 w-3.5" />

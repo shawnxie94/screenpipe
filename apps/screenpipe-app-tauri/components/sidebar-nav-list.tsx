@@ -343,8 +343,8 @@ export function SidebarCustomizationMenu({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label="sidebar options"
-          title="sidebar options"
+          aria-label="侧边栏选项"
+          title="侧边栏选项"
           data-testid="sidebar-options"
           data-announcement-anchor="top-sidebar-options"
           className={cn(

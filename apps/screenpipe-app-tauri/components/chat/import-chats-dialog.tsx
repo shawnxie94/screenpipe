@@ -93,7 +93,7 @@ export function ImportChatsDialog({
       const result = await importExternalChatHistory(selectedCandidates);
       const completed = result.imported + result.updated;
       toast({
-        title: completed > 0 ? "chat import complete" : "no chats imported",
+        title: completed > 0 ? "聊天导入完成" : "未导入聊天",
         description: [
           result.imported > 0 ? `${result.imported} new` : "",
           result.updated > 0 ? `${result.updated} updated` : "",

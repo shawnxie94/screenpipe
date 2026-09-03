@@ -209,7 +209,7 @@ describe("UpgradeQuotaBanner", () => {
     renderBanner();
 
     expect(screen.getByTestId("hosted-ai-allowance-banner")).toBeTruthy();
-    expect(screen.getByText("Weekly AI limit reached")).toBeTruthy();
+    expect(screen.getByText("本周 AI 用量已达上限")).toBeTruthy();
     expect(screen.getByText(/100% used this week/i)).toBeTruthy();
     expect(screen.getByText(/resets Aug 17, 5:00 PM/i)).toBeTruthy();
     expect(screen.getByText(/Switch to Auto or upgrade/i)).toBeTruthy();
@@ -259,8 +259,8 @@ describe("UpgradeQuotaBanner", () => {
 
     renderBanner();
 
-    expect(screen.getByText("Frontier model limit reached")).toBeTruthy();
-    expect(screen.queryByText("Weekly AI limit reached")).toBeNull();
+    expect(screen.getByText("前沿模型用量已达上限")).toBeTruthy();
+    expect(screen.queryByText("本周 AI 用量已达上限")).toBeNull();
     expect(screen.getByText(/Switch to Auto or upgrade/i)).toBeTruthy();
   });
 
@@ -418,7 +418,7 @@ describe("UpgradeQuotaBanner", () => {
 
     renderBanner();
     expect(screen.getByTestId("cost-limit-upgrade-banner")).toBeTruthy();
-    expect(screen.getByText(/AI usage limit reached/i)).toBeTruthy();
+    expect(screen.getByText(/AI 用量已达上限/)).toBeTruthy();
     expect(
       screen.getByText(/resets 5:00 PM/i),
     ).toBeTruthy();
@@ -549,7 +549,7 @@ describe("UpgradeQuotaBanner", () => {
     renderBanner();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "dismiss AI usage notice" }),
+      screen.getByRole("button", { name: "关闭 AI 用量提示" }),
     );
     expect(mocks.clearQuotaUpgrade).toHaveBeenCalledOnce();
   });

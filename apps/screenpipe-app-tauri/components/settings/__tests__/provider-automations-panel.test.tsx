@@ -77,23 +77,23 @@ describe("ProviderAutomationsPanel", () => {
     expect(screen.getByText("Daily review")).toBeInTheDocument();
     expect(screen.queryByText("Say hi")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "open Codex schedules" }),
+      screen.getByRole("button", { name: "打开 Codex 定时任务" }),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: /Claude Code 1/i }));
 
     expect(screen.getByText("Say hi")).toBeInTheDocument();
     expect(screen.getByText("Every hour at :07")).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "active" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "运行中" })).toBeInTheDocument();
     expect(screen.queryByText("active")).not.toBeInTheDocument();
     expect(screen.queryByText("session only")).not.toBeInTheDocument();
     expect(screen.queryByText(/view only here/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/managed in Claude/i)).not.toBeInTheDocument();
     expect(screen.queryByText("read only")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "open Claude schedules" }),
+      screen.getByRole("button", { name: "打开 Claude 定时任务" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("open Claude schedules")).not.toBeInTheDocument();
+    expect(screen.queryByText("打开 Claude 定时任务")).not.toBeInTheDocument();
   });
 
   it("uses the scheduled-task search for native provider rows", async () => {
@@ -115,7 +115,7 @@ describe("ProviderAutomationsPanel", () => {
 
     expect(await screen.findByText("Daily review")).toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole("button", { name: "open Codex schedules" }),
+      screen.getByRole("button", { name: "打开 Codex 定时任务" }),
     );
 
     expect(onOpenProvider).toHaveBeenCalledWith("codex://automations");
@@ -123,7 +123,7 @@ describe("ProviderAutomationsPanel", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: /Claude Code 1/i }));
     fireEvent.click(
-      screen.getByRole("button", { name: "open Claude schedules" }),
+      screen.getByRole("button", { name: "打开 Claude 定时任务" }),
     );
     expect(onOpenProvider).toHaveBeenCalledWith("https://claude.ai");
   });
@@ -140,7 +140,7 @@ describe("ProviderAutomationsPanel", () => {
     expect(await screen.findByText("Daily review")).toBeInTheDocument();
     expect(screen.getByTestId("provider-heading")).toHaveTextContent("Codex1");
     expect(
-      screen.queryByRole("button", { name: "open Claude schedules" }),
+      screen.queryByRole("button", { name: "打开 Claude 定时任务" }),
     ).not.toBeInTheDocument();
   });
 
@@ -153,7 +153,7 @@ describe("ProviderAutomationsPanel", () => {
     render(<ProviderAutomationsPanel />);
 
     expect(
-      await screen.findByRole("button", { name: "open Claude schedules" }),
+      await screen.findByRole("button", { name: "打开 Claude 定时任务" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("agent schedules")).not.toBeInTheDocument();
   });
@@ -164,7 +164,7 @@ describe("ProviderAutomationsPanel", () => {
 
     expect(await screen.findByText("Daily review")).toBeInTheDocument();
     const toggle = screen.getByRole("switch", {
-      name: "Turn on Daily review",
+      name: "开启 Daily review",
     });
     expect(toggle).toHaveTextContent("");
     fireEvent.click(toggle);
@@ -182,17 +182,17 @@ describe("ProviderAutomationsPanel", () => {
 
     expect(await screen.findByText("Daily review")).toBeInTheDocument();
     fireEvent.pointerDown(
-      screen.getByRole("button", { name: "actions for Daily review" }),
+      screen.getByRole("button", { name: "Daily review 的操作" }),
       { button: 0, ctrlKey: false, pointerType: "mouse" },
     );
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: "delete schedule" }),
+      await screen.findByRole("menuitem", { name: "删除定时任务" }),
     );
 
     expect(
-      screen.getByRole("heading", { name: "delete Daily review?" }),
+      screen.getByRole("heading", { name: "删除 Daily review？" }),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "delete schedule" }));
+    fireEvent.click(screen.getByRole("button", { name: "删除定时任务" }));
 
     await waitFor(() =>
       expect(onManageTask).toHaveBeenCalledWith("codex:daily-review", "delete"),
@@ -220,12 +220,12 @@ describe("ProviderAutomationsPanel", () => {
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     expect(screen.queryByText("runs locally")).not.toBeInTheDocument();
     expect(screen.queryByText(/managed in Codex/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /actions for/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /的操作/ })).toBeNull();
     expect(screen.getByText("Task 0")).toBeInTheDocument();
     expect(screen.queryByText("Task 5")).not.toBeInTheDocument();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "show 1 more" }),
+      screen.getByRole("button", { name: "再显示 1 个" }),
     );
     expect(screen.getByText("Task 5")).toBeInTheDocument();
   });
@@ -250,35 +250,35 @@ describe("ProviderAutomationsPanel", () => {
 
     expect(await screen.findByText("Daily review")).toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole("button", { name: "open Codex schedules" }),
+      screen.getByRole("button", { name: "打开 Codex 定时任务" }),
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "couldn't open Codex",
+      "无法打开 Codex",
     );
   });
 
   it("formats common Codex recurrence rules", () => {
-    expect(providerScheduleLabel(TASKS[0])).toBe("daily at 17:00");
+    expect(providerScheduleLabel(TASKS[0])).toBe("每天 17:00");
     expect(
       providerScheduleLabel({
         ...TASKS[0],
         schedule: "FREQ=HOURLY;INTERVAL=6",
       }),
-    ).toBe("every 6 hours");
+    ).toBe("每 6 小时");
     expect(
       providerScheduleLabel({
         ...TASKS[1],
         scheduleLabel: null,
         schedule: "0 9 * * 1-5",
       }),
-    ).toBe("weekdays at 09:00");
+    ).toBe("工作日 09:00");
     expect(
       providerScheduleLabel({
         ...TASKS[0],
         schedule:
           "FREQ=YEARLY;COUNT=2;BYMONTH=8;BYMONTHDAY=25,30;BYHOUR=9;BYMINUTE=0",
       }),
-    ).toBe("yearly · Aug 25 & 30 · 9 AM · 2 runs");
+    ).toBe("每年 · Aug 25 & 30 · 9 AM · 2 次");
   });
 });

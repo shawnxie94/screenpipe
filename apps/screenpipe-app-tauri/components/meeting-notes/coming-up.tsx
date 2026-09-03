@@ -63,9 +63,9 @@ function relativeDayLabel(date: Date): string | null {
   const diffDays = Math.round(
     (today.getTime() - candidate.getTime()) / (24 * 60 * 60 * 1000),
   );
-  if (diffDays === 0) return "today";
-  if (diffDays === -1) return "tomorrow";
-  if (diffDays === 1) return "yesterday";
+  if (diffDays === 0) return "今天";
+  if (diffDays === -1) return "明天";
+  if (diffDays === 1) return "昨天";
   return null;
 }
 
@@ -170,15 +170,15 @@ function ComingUpEmptyState({
   const loading = status === "loading";
   const needsAttention = status === "error";
   const title = loading
-    ? "checking calendars"
+    ? "正在检查日历"
     : needsAttention
-      ? "calendar needs attention"
-      : "no upcoming meetings";
+      ? "日历需要处理"
+      : "暂无即将开始的会议";
   const body = needsAttention
     ? "检查你的日历连接。"
     : connectedLabel
-      ? `${connectedLabel} connected. Nothing in the next 8h.`
-      : "Nothing in the next 8h.";
+      ? `已连接 ${connectedLabel}。未来 8 小时没有会议。`
+      : "未来 8 小时没有会议。";
 
   return (
     <div className="min-h-[116px] flex items-center justify-between gap-5">
@@ -205,7 +205,7 @@ function ComingUpEmptyState({
         className="gap-2 normal-case tracking-normal border-border bg-background text-foreground hover:bg-muted hover:text-foreground active:bg-muted disabled:opacity-100 disabled:bg-muted/40 disabled:text-muted-foreground disabled:border-border shrink-0"
       >
         <Settings2 className="h-3.5 w-3.5" />
-        calendars
+        日历
       </Button>
     </div>
   );
@@ -286,8 +286,8 @@ function ComingUpRow({
         )}
         title={
           disabled
-            ? "a meeting is already recording"
-            : "start a meeting seeded from this event"
+            ? "已有会议正在录制"
+            : "从此事件开始一场会议"
         }
       >
         <div
@@ -302,11 +302,11 @@ function ComingUpRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-sm font-medium text-foreground truncate">
-              {event.title || "untitled event"}
+              {event.title || "未命名会议"}
             </span>
             {isImminent && (
               <span className="shrink-0 text-[9px] uppercase tracking-[0.15em] text-foreground border border-foreground px-1 py-px">
-                {startsIn === "now" ? "now" : "soon"}
+                {startsIn === "现在" ? "现在" : "即将开始"}
               </span>
             )}
           </div>
@@ -320,7 +320,7 @@ function ComingUpRow({
               <>
                 <span className="text-muted-foreground/60">·</span>
                 <span>
-                  {attendeeCount} {attendeeCount === 1 ? "person" : "people"}
+                  {attendeeCount} 位参会人
                 </span>
               </>
             )}

@@ -8,7 +8,7 @@ import type { SettingsField } from "./settings-search";
 
 /** Settings search index for this section. Co-located with the component so adding a field here means updating one file. See `SettingsField` in `./settings-search` for the schema. */
 export const searchIndex: SettingsField[] = [
-  { label: "Speakers", keywords: ["voice", "diarization", "identify"] },
+  { label: "说话人", keywords: ["voice", "diarization", "identify"] },
 ];
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,7 +175,7 @@ function AudioClip({
     } else {
       if (!audioSrc) {
         toast({
-          title: "couldn't play sample",
+          title: "无法播放样本",
           description: audioChunkId
             ? "this voice sample is not ready yet"
             : "this voice sample is missing its audio chunk id",
@@ -200,8 +200,8 @@ function AudioClip({
           });
           setPlaying(false);
           toast({
-            title: "couldn't play sample",
-            description: "screenpipe couldn't load this voice clip",
+            title: "无法播放样本",
+            description: "screenpipe 无法加载此语音片段",
             variant: "destructive",
           });
         });
@@ -234,8 +234,8 @@ function AudioClip({
           });
           stop();
           toast({
-            title: "couldn't play sample",
-            description: "screenpipe couldn't load this voice clip",
+            title: "无法播放样本",
+            description: "screenpipe 无法加载此语音片段",
             variant: "destructive",
           });
         }}
@@ -299,7 +299,7 @@ function QuickNameInput({
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder={placeholder || "who is this?"}
+        placeholder={placeholder || "这位是谁？"}
         className="h-7 text-xs flex-1 min-w-0"
         onKeyDown={(e) => {
           if (e.key === "Enter") save();
@@ -509,7 +509,7 @@ function IdentifiedSpeakerCard({
             <Input
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              placeholder="enter name..."
+              placeholder="输入名称..."
               className="h-7 text-sm"
               autoFocus
               onKeyDown={(e) => {
@@ -579,7 +579,7 @@ function IdentifiedSpeakerCard({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                title="rename"
+                title="重命名"
                 onClick={() => {
                   setEditing(true);
                   setEditName(speaker.name || "");
@@ -591,7 +591,7 @@ function IdentifiedSpeakerCard({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-destructive"
-                title="delete"
+                title="删除"
                 disabled={deleting}
                 onClick={async () => {
                   setDeleting(true);
@@ -1088,7 +1088,7 @@ export function SpeakersSection() {
       body: JSON.stringify({ id }),
     });
     if (!res.ok) throw new Error("failed");
-    toast({ title: "speaker deleted" });
+    toast({ title: "说话人已删除" });
     if (expandedId === id) setExpandedId(null);
     fetchSpeakers();
   };
@@ -1100,7 +1100,7 @@ export function SpeakersSection() {
       body: JSON.stringify({ speaker_id: id }),
     });
     if (!res.ok) throw new Error("failed");
-    toast({ title: "marked as false detection" });
+    toast({ title: "已标记为误识别" });
     fetchSpeakers();
   };
 
@@ -1116,7 +1116,7 @@ export function SpeakersSection() {
       }),
     });
     if (!res.ok) throw new Error("failed");
-    toast({ title: "speakers merged" });
+    toast({ title: "说话人已合并" });
     fetchSpeakers();
   };
 
@@ -1231,7 +1231,7 @@ export function SpeakersSection() {
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="search speakers..."
+            placeholder="搜索说话人..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-9"

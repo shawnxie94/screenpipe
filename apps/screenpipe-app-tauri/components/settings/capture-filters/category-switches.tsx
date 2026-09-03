@@ -37,7 +37,7 @@ function CategoryRow({ category, state, onToggle }: CategoryRowProps) {
 				<div className="min-w-0 flex-1">
 					<p className="text-[13px] leading-tight text-foreground">{category.name}</p>
 					<p className="text-[11px] leading-tight text-muted-foreground">
-						{state === "partial" ? "partly on, switch to apply the rest" : category.description}
+						{state === "partial" ? "部分开启，切换以应用剩余规则" : category.description}
 					</p>
 				</div>
 
@@ -46,7 +46,7 @@ function CategoryRow({ category, state, onToggle }: CategoryRowProps) {
 					onClick={() => setShowRules((open) => !open)}
 					className="flex shrink-0 items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground"
 					aria-expanded={showRules}
-					aria-label={`Show the ${categorySize(category)} rules in ${category.name}`}
+					aria-label={`显示${category.name}的 ${categorySize(category)} 条规则`}
 				>
 					<ChevronRight className={cn("h-3 w-3 transition-transform", showRules && "rotate-90")} />
 					{categorySize(category)}
@@ -55,7 +55,7 @@ function CategoryRow({ category, state, onToggle }: CategoryRowProps) {
 				<Switch
 					checked={state === "on"}
 					onCheckedChange={(next) => onToggle(category, next)}
-					aria-label={`Stop recording ${category.name}`}
+					aria-label={`停止录制${category.name}`}
 				/>
 			</div>
 
@@ -96,7 +96,7 @@ export function CategorySwitches({ rules, ignoredUrls, onToggle }: CategorySwitc
 	return (
 		<div data-testid="privacy-category-switches">
 			<p className="mb-1 text-[11px] text-muted-foreground">
-				Turn off a whole category at once. Each one adds ordinary rules you can edit below.
+				一键关闭整个类别。每个类别都会添加下方可编辑的普通规则。
 			</p>
 			<div className="rounded-md border border-border bg-background/40 px-2">
 				{CAPTURE_CATEGORIES.map((category) => (

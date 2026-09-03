@@ -10,11 +10,11 @@ export const searchIndex: SettingsField[] = [
   // Mirrors the labels actually rendered by AccountSection below. Keep in sync
   // when you add/remove a control — phantom entries route users to a page that
   // doesn't contain the field.
-  { label: "Sign in to Screenpipe", keywords: ["login", "log in", "sign in"] },
+  { label: "登录 Screenpipe", keywords: ["login", "log in", "sign in"] },
   { label: "Logout", keywords: ["signout", "sign out", "log out"] },
   { label: "Screenpipe Business", keywords: ["subscription", "billing", "plan", "pro", "business", "max", "ultra", "upgrade", "manage"] },
-  { label: "Data Sync", keywords: ["allow data sync", "cloud", "account"] },
-  { label: "Device name", keywords: ["data sync", "hostname", "computer"] },
+  { label: "数据同步", keywords: ["allow data sync", "cloud", "account"] },
+  { label: "设备名称", keywords: ["data sync", "hostname", "computer"] },
   { label: "跨设备同步定时任务", keywords: ["scheduled sync", "pipe sync", "sync"] },
   { label: "memories sync across devices", keywords: ["memories sync", "sync", "facts"] },
   { label: "connection sync across devices", keywords: ["connection sync", "sync", "slack", "notion"] },
@@ -202,8 +202,8 @@ export function AccountSection() {
       const deviceName = checked
         ? settings.dataSyncDeviceName?.trim() ||
           (await hostname().catch(() => null))?.trim() ||
-          "This device"
-        : settings.dataSyncDeviceName?.trim() || "This device";
+          "本设备"
+        : settings.dataSyncDeviceName?.trim() || "本设备";
 
       if (checked) {
         const accountResponse = await tauriFetchWithDeadline(DATA_SYNC_URL, {
@@ -246,7 +246,7 @@ export function AccountSection() {
       });
     } catch (error) {
       toast({
-        title: "Data sync was not changed",
+        title: "数据同步设置未更改",
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -269,7 +269,7 @@ export function AccountSection() {
       .catch(() => null)
       .then((name) =>
         updateSettings({
-          dataSyncDeviceName: name?.trim() || "This device",
+          dataSyncDeviceName: name?.trim() || "本设备",
         }),
       )
       .finally(() => {
@@ -351,13 +351,13 @@ export function AccountSection() {
                 loadUser(settings.user.token!);
               }
               toast({
-                title: "stripe connected!",
-                description: "your account is now set up for payments",
+                title: "Stripe 已连接！",
+                description: "你的账户已完成收款配置",
               });
             } else if (url.includes("/refresh")) {
               toast({
-                title: "stripe setup incomplete",
-                description: "please complete the stripe onboarding process",
+                title: "Stripe 配置未完成",
+                description: "请先完成 Stripe 入驻流程",
               });
             }
           }
@@ -433,7 +433,7 @@ export function AccountSection() {
               source: upgradeSource,
             });
             toast({
-              title: "subscription activated",
+              title: "订阅已激活",
               description: "Screenpipe Business is ready",
             });
             return;
@@ -560,7 +560,7 @@ export function AccountSection() {
         startSubscriptionPolling();
       } catch (error) {
         toast({
-          title: "failed to start checkout",
+          title: "启动结账失败",
           description: String(error),
           variant: "destructive",
         });
@@ -614,7 +614,7 @@ export function AccountSection() {
       setShowSyncKeyRecovery(true);
     }
     toast({
-      title: "sync failed",
+      title: "同步失败",
       description: syncErrorDescription(error),
       variant: "destructive",
     });
@@ -691,7 +691,7 @@ export function AccountSection() {
                   try {
                     await commands.piUpdateConfig(null, null);
                   } catch {}
-                  toast({ title: "logged out" });
+                  toast({ title: "已登出" });
                 }}
               >
                 logout
@@ -720,7 +720,7 @@ export function AccountSection() {
         <Card className="p-5" data-testid="account-enterprise-managed-card">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">Screenpipe Enterprise</h3>
+            <h3 className="text-lg font-semibold">Screenpipe 企业版</h3>
             <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
               {isManagedAuthenticated ? "active" : "verification required"}
             </span>
@@ -885,7 +885,7 @@ export function AccountSection() {
                       try {
                         await syncFetchOrThrow("/sync/memories/pull", { method: "POST" });
                         await syncFetchOrThrow("/sync/memories/push", { method: "POST" });
-                        toast({ title: "memories synced" });
+                        toast({ title: "记忆已同步" });
                       } catch (e) {
                         reportSyncFailure(e);
                       } finally {
@@ -949,7 +949,7 @@ export function AccountSection() {
                       try {
                         await syncFetchOrThrow("/sync/connections/pull", { method: "POST" });
                         await syncFetchOrThrow("/sync/connections/push", { method: "POST" });
-                        toast({ title: "connections synced" });
+                        toast({ title: "连接已同步" });
                       } catch (e) {
                         reportSyncFailure(e);
                       } finally {
@@ -987,9 +987,9 @@ export function AccountSection() {
         <>
           <Card className="p-8 flex flex-col items-center text-center">
             <UserCog className="h-10 w-10 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-1">Sign in to Screenpipe</h3>
+            <h3 className="text-lg font-semibold mb-1">登录 Screenpipe</h3>
             <p className="text-sm text-muted-foreground mb-6">
-              free account — no credit card required
+              免费账户——无需信用卡
             </p>
             <Button
               className="w-full max-w-xs bg-foreground text-background hover:bg-background hover:text-foreground transition-colors duration-150"
@@ -1072,7 +1072,7 @@ export function AccountSection() {
             <Card className="p-5" data-testid="account-free-plan-card">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-muted-foreground" />
-                <h3 className="text-lg font-semibold">Screenpipe Free</h3>
+                <h3 className="text-lg font-semibold">Screenpipe 免费版</h3>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
                 local capture, search &amp; timeline are included. choose a plan

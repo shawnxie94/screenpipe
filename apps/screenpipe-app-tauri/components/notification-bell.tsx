@@ -303,7 +303,7 @@ export function NotificationInboxPanel({
         <div
           className="mt-2 grid grid-cols-2 rounded-md bg-muted/45 p-0.5"
           role="tablist"
-          aria-label="notification view"
+          aria-label="通知视图"
         >
           {(["priority", "all"] as const).map((view) => {
             const count = view === "priority" ? highPriority.length : history.length;
@@ -474,7 +474,7 @@ export function NotificationInboxPanel({
                           dismissOne(entry.id);
                         }}
                         className="p-0.5 rounded hover:bg-muted/60 opacity-0 group-hover/notif:opacity-100 group-focus/notif:opacity-100 group-focus-within/notif:opacity-100 focus:opacity-100 transition-opacity"
-                        title="dismiss"
+                        title="关闭"
                       >
                         <X className="w-3 h-3 text-muted-foreground/50 hover:text-foreground" />
                       </button>

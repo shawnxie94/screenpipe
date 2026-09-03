@@ -30,12 +30,12 @@ export function useFrameActions(opts: {
 		if (!debouncedFrame?.frameId) return;
 		try {
 			await commands.copyFrameToClipboard(parseInt(debouncedFrame.frameId, 10));
-			toast({ title: "copied image", description: "frame copied to clipboard" });
+			toast({ title: "已复制图片", description: "画面已复制到剪贴板" });
 		} catch (err) {
 			console.warn("Copy image failed:", err);
 			toast({
-				title: "copy failed",
-				description: err instanceof Error ? err.message : "could not copy image",
+				title: "复制失败",
+				description: err instanceof Error ? err.message : "无法复制图片",
 				variant: "destructive",
 			});
 		}
@@ -50,26 +50,26 @@ export function useFrameActions(opts: {
 		}
 		if (!text?.trim()) {
 			toast({
-				title: "no text",
-				description: "no text available for this frame",
+				title: "无文字",
+				description: "此画面没有可用文字",
 				variant: "destructive",
 			});
 			return;
 		}
 		await commands.copyTextToClipboard(text);
-		toast({ title: "copied text", description: "text copied to clipboard" });
+		toast({ title: "已复制文字", description: "文字已复制到剪贴板" });
 	}, [debouncedFrame?.frameId, frameContext?.text, textPositions]);
 
 	const copyDeeplinkAction = useCallback(async () => {
 		if (!debouncedFrame?.frameId) return;
 		try {
 			await commands.copyDeeplinkToClipboard(parseInt(debouncedFrame.frameId, 10));
-			toast({ title: "copied deeplink", description: "frame link copied to clipboard" });
+			toast({ title: "已复制链接", description: "画面链接已复制到剪贴板" });
 		} catch (err) {
 			console.warn("Copy deeplink failed:", err);
 			toast({
-				title: "copy failed",
-				description: err instanceof Error ? err.message : "could not copy",
+				title: "复制失败",
+				description: err instanceof Error ? err.message : "无法复制",
 				variant: "destructive",
 			});
 		}
@@ -90,7 +90,7 @@ export function useFrameActions(opts: {
 		const textSnippet = rawText.slice(0, 300);
 		const context = `Context from timeline frame:\n${device.metadata?.app_name || "?"} - ${device.metadata?.window_name || "?"}\nTime: ${currentFrame?.timestamp || "?"}\n\nText:\n${textSnippet}${textSnippet.length >= 300 ? "…" : ""}`;
 		await showChatWithPrefill({ context, prompt: pipe.prompt, autoSend: true });
-		toast({ title: `${pipe.icon} ${pipe.title}`, description: "running scheduled task with frame context" });
+		toast({ title: `${pipe.icon} ${pipe.title}`, description: "正在使用画面上下文运行定时任务" });
 	}, [debouncedFrame, device, frameContext?.text, textPositions, currentFrame]);
 
 	return { copyImage, copyFrameText, copyDeeplinkAction, askAboutFrame, runPipeWithContext };

@@ -1297,7 +1297,7 @@ function TranscriptionDictionary({
     const available = VOCAB_LIMIT - vocabularyWords.length;
     const toAdd = newTerms.slice(0, available);
     if (toAdd.length === 0) {
-      toast({ title: "no new terms", description: "all terms already exist in your dictionary" });
+      toast({ title: "没有新词条", description: "所有词条已存在于你的词典中" });
       return;
     }
     const updated = [...vocabularyWords, ...toAdd.map((w) => ({ word: w }))];
@@ -1473,7 +1473,7 @@ function TranscriptionDictionary({
             const word = wordInput.value.trim();
             if (!word) return;
             if (vocabularyWords.length >= VOCAB_LIMIT) {
-              toast({ title: "limit reached", description: `maximum ${VOCAB_LIMIT} terms allowed` });
+              toast({ title: "已达上限", description: `最多允许 ${VOCAB_LIMIT} 个词条` });
               return;
             }
             const replacement = replacementInput.value.trim() || undefined;
@@ -1499,8 +1499,8 @@ function TranscriptionDictionary({
             replacementInput.value = "";
           }}
         >
-          <Input name="vocab-word" placeholder="e.g. screenpipe" className="h-7 text-xs flex-1" spellCheck={false} autoCorrect="off" autoCapitalize="off" />
-          <Input name="vocab-replacement" placeholder="replacement (optional)" className="h-7 text-xs flex-1" spellCheck={false} autoCorrect="off" autoCapitalize="off" />
+          <Input name="vocab-word" placeholder="例如：screenpipe" className="h-7 text-xs flex-1" spellCheck={false} autoCorrect="off" autoCapitalize="off" />
+          <Input name="vocab-replacement" placeholder="替换为（可选）" className="h-7 text-xs flex-1" spellCheck={false} autoCorrect="off" autoCapitalize="off" />
           <Button type="submit" size="sm" variant="outline" className="h-7 text-xs px-2">
             add
           </Button>

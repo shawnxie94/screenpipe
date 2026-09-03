@@ -536,7 +536,7 @@ export function LiveViewCard({
                   autoFocus
                   value={feedbackNote}
                   onChange={(event) => setFeedbackNote(event.target.value)}
-                  placeholder="e.g. exclude meetings"
+                  placeholder="例如：排除会议"
                   className="h-8 rounded-none text-xs"
                   maxLength={500}
                 />
@@ -575,7 +575,7 @@ export function LiveViewCard({
             variant="ghost"
             size="icon"
             aria-label={`regenerate ${slot.title}`}
-            title="regenerate this section"
+            title="重新生成本节"
             className="h-7 w-7 rounded-none"
             disabled={!slot.binding || busy}
             onClick={onRegenerate}
@@ -593,7 +593,7 @@ export function LiveViewCard({
                 variant="ghost"
                 size="icon"
                 aria-label={`edit ${slot.title} with AI`}
-                title="edit this section with AI"
+                title="用 AI 编辑本节"
                 className="h-7 w-7 rounded-none"
                 disabled={busy}
               >
@@ -620,7 +620,7 @@ export function LiveViewCard({
                   autoFocus
                   value={aiPrompt}
                   onChange={(event) => setAiPrompt(event.target.value)}
-                  placeholder="e.g. group by project instead"
+                  placeholder="例如：改为按项目分组"
                   className="h-8 rounded-none text-xs"
                   maxLength={500}
                 />

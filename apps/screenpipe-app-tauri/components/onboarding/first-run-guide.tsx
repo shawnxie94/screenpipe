@@ -377,7 +377,7 @@ export default function FirstRunGuide({
     };
     const onPlayClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      const btn = target.closest('[title="run scheduled task"]');
+      const btn = target.closest('[title="运行定时任务"]');
       if (btn) finishGuide();
     };
     // small delay for the pipes tab to mount
@@ -513,7 +513,7 @@ export default function FirstRunGuide({
           </span>
           <button
             onClick={skip}
-            aria-label="skip intro"
+            aria-label="跳过引导"
             className="font-mono text-[10px] uppercase tracking-widest text-foreground transition-opacity hover:opacity-60"
           >
             skip ✕
@@ -553,13 +553,13 @@ export default function FirstRunGuide({
                   onClick={submitPrefilledPrompt}
                   className="mt-4 flex w-full items-center justify-center border border-foreground bg-foreground py-2.5 font-mono text-xs uppercase tracking-widest text-background transition-colors hover:bg-background hover:text-foreground"
                 >
-                  send prompt ↵
+                  发送提示词 ↵
                 </button>
                 <button
                   onClick={skip}
                   className={SKIP_BUTTON_CLASS}
                 >
-                  skip intro
+                  跳过引导
                 </button>
                 <p className="mt-2 text-center font-mono text-[9px] lowercase tracking-wider text-muted-foreground/60">
                   esc to exit anytime
@@ -615,7 +615,7 @@ export default function FirstRunGuide({
                 onClick={skip}
                 className={SKIP_BUTTON_CLASS}
               >
-                skip intro
+                跳过引导
               </button>
               <p className="mt-2 text-center font-mono text-[9px] lowercase tracking-wider text-muted-foreground/60">
                 esc to exit anytime
@@ -703,7 +703,7 @@ export default function FirstRunGuide({
             onClick={skip}
             className={SKIP_BUTTON_CLASS}
           >
-            skip intro
+            跳过引导
           </button>
           <p className="mt-2 text-center font-mono text-[9px] lowercase tracking-wider text-muted-foreground/60">
             esc to exit anytime

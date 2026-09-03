@@ -126,7 +126,7 @@ describe("meeting chat panel", () => {
     setup();
     const panel = screen.getByTestId("meeting-chat-panel");
     expect(panel.tagName).toBe("ASIDE");
-    expect(panel).toHaveAttribute("aria-label", "ask about this meeting");
+    expect(panel).toHaveAttribute("aria-label", "询问此会议");
   });
 
   it("costs the document no height", () => {
@@ -419,7 +419,7 @@ describe("meeting chat panel", () => {
 
   it("case 98: the resize handle is reachable and operable by keyboard", () => {
     const { props } = setup({ storedWidth: 380 });
-    const handle = screen.getByRole("separator", { name: "resize conversation" });
+    const handle = screen.getByRole("separator", { name: "调整对话宽度" });
     expect(handle).toHaveAttribute("tabIndex", "0");
     fireEvent.keyDown(handle, { key: "ArrowLeft" });
     expect(props.onWidthChange).toHaveBeenCalledWith(412);

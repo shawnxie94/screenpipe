@@ -159,7 +159,7 @@ export function PipeScheduleBuilder({
                 type="number"
                 min={1}
                 max={999}
-                aria-label="interval"
+                aria-label="间隔"
                 value={cfg.interval}
                 onChange={(e) => update({ interval: Math.max(1, Number(e.target.value) || 1) })}
                 className="h-8 w-16 text-xs"
@@ -231,10 +231,10 @@ export function PipeScheduleBuilder({
           {/* At <time> */}
           {showTime && (
             <div className="flex items-center justify-between gap-2">
-              <Label className="text-xs">at</Label>
+              <Label className="text-xs">于</Label>
               <input
                 type="time"
-                aria-label="time"
+                aria-label="时间"
                 value={timeValue}
                 onChange={(e) => {
                   const [h, m] = e.target.value.split(":").map(Number);
@@ -272,7 +272,7 @@ export function PipeScheduleBuilder({
             <Label className="text-xs">开始</Label>
             <input
               type="date"
-              aria-label="starting"
+              aria-label="开始时间"
               value={isoToDateInput(cfg.starting)}
               onChange={(e) =>
                 update({ starting: e.target.value ? `${e.target.value}T00:00:00Z` : null })
@@ -305,7 +305,7 @@ export function PipeScheduleBuilder({
             <div className="flex items-center justify-end">
               <input
                 type="date"
-                aria-label="ending date"
+                aria-label="结束日期"
                 value={isoToDateInput(cfg.ending)}
                 onChange={(e) =>
                   update({ ending: e.target.value ? `${e.target.value}T23:59:59Z` : null })
@@ -320,7 +320,7 @@ export function PipeScheduleBuilder({
                 type="number"
                 min={1}
                 max={9999}
-                aria-label="max occurrences"
+                aria-label="最多执行次数"
                 value={cfg.max_occurrences ?? 5}
                 onChange={(e) =>
                   update({ max_occurrences: Math.max(1, Number(e.target.value) || 1) })

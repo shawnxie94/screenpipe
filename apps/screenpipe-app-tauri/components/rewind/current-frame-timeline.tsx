@@ -389,7 +389,7 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 
 			e.preventDefault();
 			commands.copyTextToClipboard(text).catch(() => {});
-			toast({ title: "copied text", description: "all frame text copied to clipboard" });
+			toast({ title: "已复制文字", description: "画面全部文字已复制到剪贴板" });
 		};
 
 		el.addEventListener("keydown", handleKeyDown);
@@ -509,7 +509,7 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 									type="button"
 									onClick={() => {
 										commands.copyTextToClipboard(frameText).catch(() => {});
-										toast({ title: "copied text", description: "frame text copied to clipboard" });
+										toast({ title: "已复制文字", description: "画面文字已复制到剪贴板" });
 									}}
 									className="flex items-center justify-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-xs font-mono uppercase tracking-wide text-white/80 transition-colors hover:bg-white/20"
 								>
@@ -575,7 +575,7 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 									const text = getSelectableLayerText()?.trim();
 									if (text) {
 										commands.copyTextToClipboard(text).catch(() => {});
-										toast({ title: "copied selection", description: "selected text copied to clipboard" });
+										toast({ title: "已复制所选内容", description: "所选文字已复制到剪贴板" });
 									}
 									setContextMenuOpen(false);
 								}}
@@ -632,13 +632,13 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 						}}
 					>
 						<MessageCircle className="w-4 h-4 shrink-0" />
-						ask about this frame
+						关于此画面提问
 					</button>
 					{templatePipes.length > 0 && (
 						<>
 							<div className="h-px bg-border/30 my-0.5" />
 							<div className="px-3 py-1 text-[10px] text-muted-foreground uppercase tracking-wider">
-								run scheduled task
+								运行定时任务
 							</div>
 							{templatePipes.map((pipe) => (
 								<button

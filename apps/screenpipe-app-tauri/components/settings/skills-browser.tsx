@@ -218,7 +218,7 @@ export function SkillsBrowser({
           <DialogClose asChild>
             <button
               type="button"
-              aria-label="close"
+              aria-label="关闭"
               className="ml-auto text-muted-foreground transition-colors hover:text-foreground"
             >
               <X className="h-4 w-4" />
@@ -233,7 +233,7 @@ export function SkillsBrowser({
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="search skills — pdf, transcribe, security…"
+              placeholder="搜索技能 — pdf、转写、安全…"
               className="h-8 text-sm pl-8"
               autoFocus
             />
@@ -263,7 +263,7 @@ export function SkillsBrowser({
               {query.trim() ? (
                 <>no skills match “{query.trim()}”.</>
               ) : (
-                <>no skills in the catalog yet.</>
+                <>目录中尚无技能。</>
               )}
             </div>
           ) : query.trim() ? (

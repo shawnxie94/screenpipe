@@ -574,14 +574,14 @@ export function formatStartsIn(
   const startMs = Date.parse(startIso);
   if (!Number.isFinite(startMs)) return "";
   const diffSecs = Math.round((startMs - now) / 1000);
-  if (diffSecs <= 0) return "now";
+  if (diffSecs <= 0) return "现在";
   const mins = Math.round(diffSecs / 60);
-  if (mins < 60) return `in ${mins}m`;
+  if (mins < 60) return `${mins} 分钟后`;
   const hours = Math.floor(mins / 60);
   const remMins = mins % 60;
   if (hours < 24) {
-    return remMins === 0 ? `in ${hours}h` : `in ${hours}h ${remMins}m`;
+    return remMins === 0 ? `${hours} 小时后` : `${hours} 小时 ${remMins} 分后`;
   }
   const days = Math.round(hours / 24);
-  return `in ${days}d`;
+  return `${days} 天后`;
 }

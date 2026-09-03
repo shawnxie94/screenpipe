@@ -137,10 +137,10 @@ export function UpgradeQuotaBanner({
     cloudflareBlocked && cloudflareAllowance.window_seconds === 7 * 86_400;
   const frontierBlocked = cloudflareBlocked && cloudflareAllowance.lane === "frontier";
   const blockedTitle = frontierBlocked
-    ? "Frontier model limit reached"
+    ? "前沿模型用量已达上限"
     : weeklyAllowance
-      ? "Weekly AI limit reached"
-      : "AI usage limit reached";
+      ? "本周 AI 用量已达上限"
+      : "AI 用量已达上限";
 
   return (
     <>
@@ -225,7 +225,7 @@ export function UpgradeQuotaBanner({
                 }
               }}
               className="ml-0.5 shrink-0 text-muted-foreground/50 transition-colors hover:text-foreground"
-              aria-label="dismiss AI usage notice"
+              aria-label="关闭 AI 用量提示"
             >
               <X className="h-3.5 w-3.5" />
             </button>

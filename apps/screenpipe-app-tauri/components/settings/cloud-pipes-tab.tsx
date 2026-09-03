@@ -83,7 +83,7 @@ export function CloudPipesTab({ active }: { active: boolean }) {
   if (cloud.error === "no_license") {
     return (
       <EmptyState
-        title="no enterprise license on this device"
+        title="此设备上没有企业版许可证"
         body="cloud scheduled tasks run your org's managed tasks on screenpipe infrastructure. activate your enterprise license first, then come back here."
       />
     );
@@ -92,9 +92,9 @@ export function CloudPipesTab({ active }: { active: boolean }) {
   if (cloud.error) {
     return (
       <EmptyState
-        title="couldn't reach cloud scheduled tasks"
+        title="无法连接云端定时任务"
         body={cloud.error}
-        action={<Button variant="outline" size="sm" onClick={cloud.refresh}>retry</Button>}
+        action={<Button variant="outline" size="sm" onClick={cloud.refresh}>重试</Button>}
       />
     );
   }
@@ -103,7 +103,7 @@ export function CloudPipesTab({ active }: { active: boolean }) {
   if (!cloud.runner) {
     return (
       <EmptyState
-        title={cloud.orgName ? `no cloud runner for ${cloud.orgName}` : "no cloud runner yet"}
+        title={cloud.orgName ? `没有 ${cloud.orgName} 的云运行器` : "尚无云运行器"}
         body={
           cloud.isAdmin
             ? "one managed vm for your whole org: it syncs every managed task and runs them on schedule against your org's centralized data, laptops closed."
@@ -166,13 +166,13 @@ export function CloudPipesTab({ active }: { active: boolean }) {
                 )}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={cloud.mutating} title="delete runner">
+                    <Button variant="outline" size="icon" className="h-7 w-7" disabled={cloud.mutating} title="删除运行器">
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>delete the cloud runner?</AlertDialogTitle>
+                      <AlertDialogTitle>删除云运行器？</AlertDialogTitle>
                       <AlertDialogDescription>
                         the vm is deleted and its data access token revoked. managed
                         scheduled tasks keep running on devices as usual. you can start a new
@@ -180,7 +180,7 @@ export function CloudPipesTab({ active }: { active: boolean }) {
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>cancel</AlertDialogCancel>
+                      <AlertDialogCancel>取消</AlertDialogCancel>
                       <AlertDialogAction onClick={() => act(cloud.deprovision, "cloud runner deleted")}>
                         delete
                       </AlertDialogAction>
@@ -200,7 +200,7 @@ export function CloudPipesTab({ active }: { active: boolean }) {
                   <Input
                     value={aiKeyDraft}
                     onChange={(e) => setAiKeyDraft(e.target.value)}
-                    placeholder="api key for AI scheduled tasks (SCREENPIPE_API_KEY on the vm)"
+                    placeholder="AI 定时任务的 API 密钥（云主机上的 SCREENPIPE_API_KEY）"
                     className="h-7 text-xs"
                     type="password"
                     spellCheck={false}
@@ -248,7 +248,7 @@ export function CloudPipesTab({ active }: { active: boolean }) {
       {/* org managed pipes — managed in the enterprise dashboard */}
       {cloud.orgPipes.length === 0 ? (
         <EmptyState
-          title="no scheduled tasks for the runner yet"
+          title="运行器尚无定时任务"
           body="share a scheduled task to your team or push one from the enterprise dashboard. the runner picks it up within a minute."
         />
       ) : (
@@ -266,7 +266,7 @@ export function CloudPipesTab({ active }: { active: boolean }) {
                       <Badge variant="outline" className="text-[10px] opacity-70">
                         {pipe.source === "team" ? "team share" : "dashboard"}
                       </Badge>
-                      {ps?.is_running && <Badge variant="outline" className="text-[10px]">running</Badge>}
+                      {ps?.is_running && <Badge variant="outline" className="text-[10px]">运行中</Badge>}
                       {!pipe.enabled && <Badge variant="outline" className="text-[10px] opacity-60">disabled</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">

@@ -1295,7 +1295,7 @@ function CursorPanel({ onConnected, onDisconnected }: { onConnected?: () => void
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">Let Cursor search your screen and audio history.</p>
+      <p className="text-xs text-muted-foreground">让 Cursor 搜索你的屏幕与音频历史。</p>
       <div className="flex flex-wrap gap-2">
         {state === "installed" ? (
           <Button onClick={handleDisconnect} variant="outline" size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
@@ -1373,7 +1373,7 @@ function CodexPanel({ onConnected, onDisconnected }: { onConnected?: () => void;
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">Let Codex search your screen and audio history.</p>
+      <p className="text-xs text-muted-foreground">让 Codex 搜索你的屏幕与音频历史。</p>
       <div className="flex flex-wrap gap-2">
         {state === "installed" ? (
           <Button onClick={handleDisconnect} variant="outline" size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
@@ -1527,14 +1527,14 @@ function useMemorySyncDestination(integrationId: string) {
         const resultText = describeSyncOutcome(me.outcome.result);
         setLastResult(resultText);
         setLastResultAt(Date.now());
-        toast({ title: "memory sync", description: resultText });
+        toast({ title: "记忆同步", description: resultText });
       } else if (me) {
         throw new Error(me?.outcome?.error || "sync failed");
       }
     } catch (e: any) {
       const msg = e?.message || "sync failed";
       setError(msg);
-      toast({ title: "memory sync failed", description: msg, variant: "destructive" });
+      toast({ title: "记忆同步失败", description: msg, variant: "destructive" });
     } finally {
       setStatus("idle");
     }
@@ -3221,7 +3221,7 @@ export function ApiIntegrationPanel({ integration, onRefresh }: {
             <Input
               value={newInstanceName}
               onChange={(e) => setNewInstanceName(e.target.value)}
-              placeholder="instance name (e.g. work, personal)"
+              placeholder="实例名称（例如：work、personal）"
               className="h-7 text-xs flex-1"
               spellCheck={false}
               onKeyDown={(e) => { if (e.key === "Enter") handleAddInstance(); }}
@@ -4633,7 +4633,7 @@ export function ConnectionsSection({
                 <DialogClose asChild>
                   <button
                     type="button"
-                    aria-label="close"
+                    aria-label="关闭"
                     className="ml-auto text-muted-foreground transition-colors hover:text-foreground"
                   >
                     <X className="h-4 w-4" />

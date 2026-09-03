@@ -95,7 +95,7 @@ describe("first-run guide", () => {
     );
     startTour();
 
-    const skipButton = screen.getByRole("button", { name: "skip intro" });
+    const skipButton = screen.getByRole("button", { name: "跳过引导" });
     expect(skipButton).toHaveClass(
       "w-full",
       "border",
@@ -115,7 +115,7 @@ describe("first-run guide", () => {
     );
     startTour();
 
-    fireEvent.click(screen.getByRole("button", { name: "skip intro" }));
+    fireEvent.click(screen.getByRole("button", { name: "跳过引导" }));
 
     expect(onDone).toHaveBeenCalledOnce();
     expect(mocks.capture).toHaveBeenCalledWith("firstrun_guide_skipped", {
@@ -216,7 +216,7 @@ describe("first-run guide", () => {
       startTour();
 
       fireEvent.click(
-        screen.getByRole("button", { name: /send prompt/i }),
+        screen.getByRole("button", { name: /发送提示词/ }),
       );
 
       expect(onSubmit).toHaveBeenCalledOnce();
@@ -288,7 +288,7 @@ describe("first-run guide", () => {
       screen.getByText("2 of 3 · building your automation"),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "skip intro" }),
+      screen.getByRole("button", { name: "跳过引导" }),
     ).toBeInTheDocument();
   });
 
@@ -308,7 +308,7 @@ describe("first-run guide", () => {
       );
       startTour();
 
-      fireEvent.click(screen.getByRole("button", { name: "skip intro" }));
+      fireEvent.click(screen.getByRole("button", { name: "跳过引导" }));
 
       expect(textarea.value).toBe("");
     } finally {
@@ -332,7 +332,7 @@ describe("first-run guide", () => {
       );
       startTour();
 
-      fireEvent.click(screen.getByRole("button", { name: "skip intro" }));
+      fireEvent.click(screen.getByRole("button", { name: "跳过引导" }));
 
       expect(textarea.value).toBe(
         "create a pipe that tracks what i do every hour, but daily",

@@ -142,7 +142,7 @@ describe("first-run next steps", () => {
     );
     expect(
       screen.getByText(
-        "after each meeting, suggest who was speaking. you review every name before anything changes.",
+        "每次会议后推测说话人，所有名字在你确认前不会更改。",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/shadow mode/i)).not.toBeInTheDocument();

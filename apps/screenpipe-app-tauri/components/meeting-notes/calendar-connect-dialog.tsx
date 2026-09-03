@@ -424,7 +424,7 @@ function IcsCalendarConnect({
         <Input
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="name, optional"
+          placeholder="名称（可选）"
           className="rounded-none"
         />
       </div>

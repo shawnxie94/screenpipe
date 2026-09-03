@@ -159,9 +159,9 @@ export function LiveViewAiComposer({
   const scope: LiveViewGenerationScope = "dashboard";
   const intentLabel =
     intent === "edit-dashboard"
-      ? `agent will edit “${currentViewTitle}”`
-      : "agent will create a new dashboard";
-  const actionLabel = busy ? "stop update" : "update Live View";
+      ? `agent 将编辑“${currentViewTitle}”`
+      : "agent 将创建一个新仪表盘";
+  const actionLabel = busy ? "停止更新" : "更新实时视图";
 
   const submit = async () => {
     if (!canSubmit || !selectedPreset) return;

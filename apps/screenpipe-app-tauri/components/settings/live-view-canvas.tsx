@@ -202,14 +202,14 @@ function CanvasConnectionHandles({ tool }: { tool: CanvasTool }) {
         position={Position.Left}
         isConnectable={visible}
         style={style}
-        aria-label="connect incoming step"
+        aria-label="连接进入步骤"
       />
       <Handle
         type="source"
         position={Position.Right}
         isConnectable={visible}
         style={style}
-        aria-label="connect outgoing step"
+        aria-label="连接外出步骤"
       />
     </>
   );
@@ -408,7 +408,7 @@ function CanvasNoteNode({ id, data }: NodeProps<NoteFlowNode>) {
         aria-label="画布笔记"
         value={note.text}
         maxLength={4_000}
-        placeholder="write a note"
+        placeholder="写笔记"
         className="nodrag nowheel nopan h-[calc(100%-2rem)] w-full resize-none bg-transparent p-3 font-serif text-sm outline-none"
         onChange={(event) =>
           data.onTextChange(note.id, event.target.value, false)
@@ -1594,8 +1594,8 @@ export function LiveViewCanvas({
               variant="ghost"
               size="icon"
               data-testid="canvas-tools-close"
-              aria-label="close canvas tools"
-              title="close canvas tools"
+              aria-label="关闭画布工具"
+              title="关闭画布工具"
               className="h-8 w-8 shrink-0 rounded-none"
               onClick={() => {
                 setToolsOpen(false);
@@ -1645,8 +1645,8 @@ export function LiveViewCanvas({
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="zoom out"
-              title="zoom out (-)"
+              aria-label="缩小"
+              title="缩小 (-)"
               className="h-8 w-8 shrink-0 rounded-none"
               onClick={() => zoomCanvas(1 / 1.2)}
             >
@@ -1655,8 +1655,8 @@ export function LiveViewCanvas({
             <button
               type="button"
               data-testid="canvas-zoom-reset"
-              aria-label="reset zoom to 100%"
-              title="reset zoom to 100%"
+              aria-label="重置缩放至 100%"
+              title="重置缩放至 100%"
               className="h-8 w-11 shrink-0 text-center font-mono text-[10px] tabular-nums text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline focus-visible:outline-1 focus-visible:outline-foreground"
               onClick={() =>
                 zoomCanvas(1 / latestDocumentRef.current.viewport.zoom)
@@ -1668,8 +1668,8 @@ export function LiveViewCanvas({
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="zoom in"
-              title="zoom in (+)"
+              aria-label="放大"
+              title="放大 (+)"
               className="h-8 w-8 shrink-0 rounded-none"
               onClick={() => zoomCanvas(1.2)}
             >
@@ -1680,8 +1680,8 @@ export function LiveViewCanvas({
               data-testid="canvas-fit"
               variant="ghost"
               size="icon"
-              aria-label="fit canvas"
-              title="fit canvas"
+              aria-label="适应画布"
+              title="适应画布"
               className="h-8 w-8 shrink-0 rounded-none"
               onClick={fitCanvas}
             >
@@ -1692,8 +1692,8 @@ export function LiveViewCanvas({
               data-testid="canvas-arrange"
               variant="ghost"
               size="icon"
-              aria-label="arrange canvas"
-              title="arrange canvas"
+              aria-label="排列画布"
+              title="排列画布"
               className="h-8 w-8 shrink-0 rounded-none"
               onClick={arrangeCanvas}
             >
@@ -1705,8 +1705,8 @@ export function LiveViewCanvas({
               data-testid="canvas-delete-selection"
               variant="ghost"
               size="icon"
-              aria-label="delete selected canvas item"
-              title="delete selected canvas item"
+              aria-label="删除选中的画布项"
+              title="删除选中的画布项"
               className="h-8 w-8 shrink-0 rounded-none"
               disabled={!selectedCanDelete}
               onClick={removeSelection}
@@ -1739,8 +1739,7 @@ export function LiveViewCanvas({
           data-testid="canvas-interaction-hint"
           className="pointer-events-none absolute right-3 top-3 z-20 max-w-[calc(100%-11rem)] border border-border bg-background/95 px-2 py-1 text-right font-mono text-[9px] leading-tight text-muted-foreground"
         >
-          drag nodes · pan tool or middle-drag · pinch or ctrl/⌘ + wheel to
-          zoom
+          拖动节点 · 平移工具或中键拖动 · 捏合或 ctrl/⌘ + 滚轮缩放
         </div>
       )}
     </section>

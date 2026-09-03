@@ -211,7 +211,7 @@ export function AttendeesPill({ value, count, onChange }: AttendeesPillProps) {
           <input
             ref={inputRef}
             value={searchTerm}
-            placeholder="search or add attendee…"
+            placeholder="搜索或添加参会者…"
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"

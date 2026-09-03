@@ -137,19 +137,19 @@ export function PipeTriggerPicker(props: PickerProps) {
         {events.map((e, i) => (
           <div key={`e${i}`} className="flex items-center gap-1.5 group/item">
             <span className={chip}>› {eventLabel(e)}</span>
-            <button className={xBtn} aria-label="remove" onClick={() => remove("events", i)}>×</button>
+            <button className={xBtn} aria-label="移除" onClick={() => remove("events", i)}>×</button>
           </div>
         ))}
         {sources.map((s, i) => (
           <div key={`s${i}`} className="flex items-center gap-1.5 group/item">
             <span className={chip} title={s.path || s.filter?.channel || ""}>› {sourceLabel(s)}</span>
-            <button className={xBtn} aria-label="remove" onClick={() => remove("sources", i)}>×</button>
+            <button className={xBtn} aria-label="移除" onClick={() => remove("sources", i)}>×</button>
           </div>
         ))}
         {custom.map((c, i) => (
           <div key={`c${i}`} className="flex items-center gap-1.5 group/item">
             <span className={chip}>› {c}</span>
-            <button className={xBtn} aria-label="remove" onClick={() => remove("custom", i)}>×</button>
+            <button className={xBtn} aria-label="移除" onClick={() => remove("custom", i)}>×</button>
           </div>
         ))}
         <button

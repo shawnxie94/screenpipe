@@ -53,7 +53,7 @@ export function WebsiteRuleList(props: WebsiteRuleListProps) {
 	const addRule = () => {
 		const domain = normalizeRuleDomain(draft);
 		if (domain === "") {
-			setError("Enter a full hostname such as docs.google.com");
+			setError("请输入完整主机名，例如 docs.google.com");
 			return;
 		}
 		if (
@@ -101,7 +101,7 @@ export function WebsiteRuleList(props: WebsiteRuleListProps) {
 					))}
 				</datalist>
 				<Button type="button" size="sm" className="h-8 gap-1" onClick={addRule}>
-					<Plus className="h-3 w-3" /> add
+					<Plus className="h-3 w-3" /> 添加
 				</Button>
 			</div>
 			{error && (
@@ -133,7 +133,7 @@ export function WebsiteRuleList(props: WebsiteRuleListProps) {
 								{rule.domain}
 								{legacy && normalizedLegacy === "" && (
 									<span className="ml-1 font-sans text-[10px] text-muted-foreground">
-										legacy broad match
+										legacy 宽匹配
 									</span>
 								)}
 							</span>
@@ -156,9 +156,10 @@ export function WebsiteRuleList(props: WebsiteRuleListProps) {
 											),
 										)
 									}
-									aria-label={`Include subdomains of ${rule.domain}`}
+									aria-label={`包含 ${rule.domain} 的子域名`}
+
 								/>
-								include subdomains
+								包含子域名
 							</label>
 							<Button
 								type="button"
@@ -166,7 +167,7 @@ export function WebsiteRuleList(props: WebsiteRuleListProps) {
 								size="icon"
 								className="h-6 w-6"
 								onClick={() => commit(rules.filter((_, entryIndex) => entryIndex !== index))}
-								aria-label={`Remove ${rule.domain}`}
+								aria-label={`移除 ${rule.domain}`}
 							>
 								<Trash2 className="h-3 w-3" />
 							</Button>
@@ -174,7 +175,7 @@ export function WebsiteRuleList(props: WebsiteRuleListProps) {
 						{rule.includeSubdomains && (
 							<div className="mt-2 space-y-1">
 								<span className="text-[10px] text-muted-foreground">
-									Exceptions and their descendants
+									例外及其子域名
 								</span>
 								<MultiSelect
 									options={exceptionOptions}
@@ -195,7 +196,7 @@ export function WebsiteRuleList(props: WebsiteRuleListProps) {
 											),
 										)
 									}
-									placeholder={`e.g. private.${rule.domain}`}
+									placeholder={`例如 private.${rule.domain}`}
 									allowCustomValues
 								/>
 							</div>

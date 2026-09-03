@@ -826,7 +826,7 @@ describe("BrainSection type filter", () => {
     ) as HTMLTextAreaElement;
     expect(textarea.value).toBe(MEMORIES[0].content);
 
-    const tagInput = screen.getByPlaceholderText("add tag...");
+    const tagInput = screen.getByPlaceholderText("添加标签...");
     fireEvent.change(tagInput, { target: { value: "new-tag" } });
     fireEvent.keyDown(tagInput, { key: "Enter" });
 

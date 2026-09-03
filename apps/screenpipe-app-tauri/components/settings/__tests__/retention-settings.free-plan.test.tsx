@@ -85,7 +85,7 @@ describe("RetentionSettings account-plan independence", () => {
 
     expect(
       screen.getByText(
-        /currently: dropping video \+ audio and the bulky ocr\/accessibility detail older than 90 days/i,
+        /当前：删除 90 天前的视频 \+ 音频及体积庞大的 OCR\/无障碍细节，文字 \+ 记忆仍保留可搜索。/,
       ),
     ).toBeInTheDocument();
 
@@ -104,7 +104,7 @@ describe("RetentionSettings account-plan independence", () => {
     render(<RetentionSettings />);
 
     expect(
-      screen.getByText(/currently: keeping everything forever/i),
+      screen.getByText(/当前：永久保留所有内容。/),
     ).toBeInTheDocument();
     expect(screen.getByTestId("retention-mode-off")).toBeEnabled();
     expect(screen.getByTestId("retention-mode-media")).toBeEnabled();
@@ -123,7 +123,7 @@ describe("RetentionSettings account-plan independence", () => {
     render(<RetentionSettings />);
 
     expect(
-      screen.getByText(/currently: keeping everything forever/i),
+      screen.getByText(/当前：永久保留所有内容。/),
     ).toBeInTheDocument();
     expect(screen.getByTestId("retention-mode-off")).toBeEnabled();
   });
@@ -140,7 +140,7 @@ describe("RetentionSettings account-plan independence", () => {
 
     expect(
       screen.getByTestId("low-disk-recording-guard-copy"),
-    ).toHaveTextContent("when free space falls to 32.00 GB");
+    ).toHaveTextContent("当可用空间降至 32.00 GB");
     expect(mocks.getLowDiskGuardConfig).toHaveBeenCalledOnce();
   });
 });

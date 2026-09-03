@@ -454,7 +454,7 @@ export function NoteView({
       return;
     }
     toast({
-      title: "couldn't send",
+      title: "无法发送",
       description: result.error,
       variant: "destructive",
     });
@@ -538,8 +538,8 @@ export function NoteView({
         setSummaryPresetIds(previousPresetIds);
         console.error("failed to save meeting summary model", error);
         toast({
-          title: "couldn't change summary model",
-          description: "your previous model is still selected.",
+          title: "无法切换摘要模型",
+          description: "已保留你之前的模型。",
           variant: "destructive",
         });
         return false;
@@ -811,8 +811,8 @@ export function NoteView({
       if (paths.length === 0) return;
       if (imagePaths.length === 0) {
         toast({
-          title: "couldn't insert image",
-          description: "drop a png, jpg, gif, webp, bmp, or svg file.",
+          title: "无法插入图片",
+          description: "请拖入 png、jpg、gif、webp、bmp 或 svg 文件。",
           variant: "destructive",
         });
         return;
@@ -834,7 +834,7 @@ export function NoteView({
       } catch (err) {
         console.error("failed to insert dropped meeting note image", err);
         toast({
-          title: "couldn't insert image",
+          title: "无法插入图片",
           description: String(err),
           variant: "destructive",
         });
@@ -1147,7 +1147,7 @@ export function NoteView({
     });
     if (!canSummarizeMeeting) {
       toast({
-        title: "stop the meeting first",
+        title: "请先结束会议",
         description:
           "summaries run on the saved transcript after the meeting ends.",
       });
@@ -1181,8 +1181,8 @@ export function NoteView({
     } catch (err) {
       console.error("failed to summarize meeting", err);
       toast({
-        title: "couldn't start summary",
-        description: "try again in a moment.",
+        title: "无法启动摘要生成",
+        description: "请稍后重试。",
         variant: "destructive",
       });
     } finally {
@@ -1194,7 +1194,7 @@ export function NoteView({
     if (retranscribing || summaryWorking) return;
     if (!meeting.meeting_end) {
       toast({
-        title: "stop the meeting first",
+        title: "请先结束会议",
         description:
           "batch retranscribe runs on the saved audio after a meeting ends.",
       });
@@ -1223,7 +1223,7 @@ export function NoteView({
       }
       setTranscriptRefreshKey((key) => key + 1);
       toast({
-        title: "transcript refreshed",
+        title: "文字记录已刷新",
         description: meetingRetranscribeSuccessCopy({
           batchesProcessed: body?.batches_processed,
           autoSummaryEnabled,
@@ -1234,7 +1234,7 @@ export function NoteView({
     } catch (err) {
       console.error("failed to retranscribe meeting", err);
       toast({
-        title: "couldn't retranscribe",
+        title: "无法重新转写",
         description: String(err),
         variant: "destructive",
       });
@@ -1264,7 +1264,7 @@ export function NoteView({
         } catch (saveErr) {
           console.error("failed to save meeting note before stop", saveErr);
           toast({
-            title: "couldn't save notes",
+            title: "无法保存笔记",
             description:
               "stopping anyway — your latest edits may not be saved.",
             variant: "destructive",
@@ -1275,7 +1275,7 @@ export function NoteView({
     } catch (err) {
       console.error("failed to stop meeting", err);
       toast({
-        title: "couldn't stop meeting",
+        title: "无法结束会议",
         description: String(err),
         variant: "destructive",
       });
@@ -1288,7 +1288,7 @@ export function NoteView({
     if (exporting) return;
     if (!meeting.meeting_end) {
       toast({
-        title: "stop the meeting first",
+        title: "请先结束会议",
         description:
           "mp4 export runs on the saved frames and audio after a meeting ends.",
       });
@@ -1313,7 +1313,7 @@ export function NoteView({
     } catch (err) {
       console.error("failed to open save dialog", err);
       toast({
-        title: "couldn't open save dialog",
+        title: "无法打开保存对话框",
         description: String(err),
         variant: "destructive",
       });
@@ -1323,7 +1323,7 @@ export function NoteView({
 
     setExporting(true);
     toast({
-      title: "exporting mp4…",
+      title: "正在导出 MP4…",
       description:
         "stitching frames and audio — this can take a minute for long meetings.",
     });
@@ -1347,7 +1347,7 @@ export function NoteView({
             ? (summary.file_size_bytes / (1024 * 1024)).toFixed(1)
             : null;
           toast({
-            title: "mp4 exported",
+            title: "MP4 已导出",
             description: [
               `${summary?.frame_count ?? 0} frames`,
               `${summary?.audio_chunk_count ?? 0} audio chunks`,
@@ -1371,7 +1371,7 @@ export function NoteView({
             stack: event.error,
           });
           toast({
-            title: "couldn't export mp4",
+            title: "无法导出 MP4",
             description: event.error,
             variant: "destructive",
           });
@@ -1398,7 +1398,7 @@ export function NoteView({
         stack: err instanceof Error ? (err.stack ?? err.message) : String(err),
       });
       toast({
-        title: "couldn't export mp4",
+        title: "无法导出 MP4",
         description: String(err),
         variant: "destructive",
       });
@@ -1435,11 +1435,11 @@ export function NoteView({
       const ctx = await copyMeetingToClipboard(fresh);
       setMeetingCtx(ctx);
       confirmCopied("meeting");
-      toast({ title: "copied to clipboard" });
+      toast({ title: "已复制到剪贴板" });
     } catch (err) {
       console.error("failed to copy meeting", err);
       toast({
-        title: "couldn't copy",
+        title: "无法复制",
         description: String(err),
         variant: "destructive",
       });
@@ -1454,15 +1454,15 @@ export function NoteView({
     try {
       const copiedTranscript = await copyMeetingTranscript(currentMeeting());
       if (!copiedTranscript) {
-        toast({ title: "nothing transcribed yet" });
+        toast({ title: "尚无文字记录" });
         return;
       }
       confirmCopied("transcript");
-      toast({ title: "transcript copied" });
+      toast({ title: "文字记录已复制" });
     } catch (err) {
       console.error("failed to copy transcript", err);
       toast({
-        title: "couldn't copy transcript",
+        title: "无法复制文字记录",
         description: String(err),
         variant: "destructive",
       });
@@ -1481,11 +1481,11 @@ export function NoteView({
         extractMeetingSummary(note),
       );
       if (!shared) {
-        toast({ title: "no summary to copy yet" });
+        toast({ title: "尚无摘要可复制" });
         return;
       }
       confirmCopied("summary");
-      toast({ title: "summary copied", description: "paste it anywhere" });
+      toast({ title: "摘要已复制", description: "可粘贴到任意位置" });
     } catch (err) {
       console.error("failed to copy meeting summary", err);
       toast({
@@ -1502,7 +1502,7 @@ export function NoteView({
         currentMeeting(),
         extractMeetingSummary(note),
       );
-      if (!shared) toast({ title: "no summary to send yet" });
+      if (!shared) toast({ title: "尚无摘要可发送" });
     } catch (err) {
       console.error("failed to open email draft", err);
       toast({
@@ -2251,7 +2251,7 @@ export function NoteView({
             variant="ghost"
             size="sm"
             onClick={onBack}
-            aria-label="back to meetings"
+            aria-label="返回会议"
             className={cn(
               MEETING_QUIET_CONTROL_CLASS,
               "-ml-2 h-7 gap-1.5 px-2 text-xs",
@@ -2265,9 +2265,9 @@ export function NoteView({
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="untitled meeting"
+              placeholder="未命名会议"
               spellCheck={false}
-              aria-label="meeting title"
+              aria-label="会议标题"
               className="min-w-0 flex-1 bg-transparent text-xl font-medium leading-tight tracking-tight text-foreground placeholder:text-muted-foreground/40 focus:outline-none sm:text-2xl"
             />
           </div>
@@ -2838,8 +2838,8 @@ function AudioHealthButton({
             "relative h-7 w-7 rounded-none p-0",
             open && "invisible",
           )}
-          title="audio health"
-          aria-label="audio health"
+          title="音频健康"
+          aria-label="音频健康"
         >
           <AudioLines className="h-3.5 w-3.5" />
           {anyAudioActive && (
@@ -2869,8 +2869,8 @@ function AudioHealthButton({
             type="button"
             onClick={openAudioSettings}
             className="flex h-7 w-7 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
-            title="open audio settings"
-            aria-label="open audio settings"
+            title="打开音频设置"
+            aria-label="打开音频设置"
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </button>
@@ -2879,7 +2879,7 @@ function AudioHealthButton({
         <div className="px-3 py-3">
           <AudioDeviceRow
             icon={<Mic2 className="h-3.5 w-3.5" />}
-            label="audio input"
+            label="音频输入"
             value={audioDeviceLabel({
               devices: inputs,
               selectedDevices,
@@ -2893,7 +2893,7 @@ function AudioHealthButton({
           />
           <AudioDeviceRow
             icon={<Volume2 className="h-3.5 w-3.5" />}
-            label="system audio"
+            label="系统音频"
             value={audioDeviceLabel({
               devices: outputs,
               selectedDevices,
@@ -2935,7 +2935,7 @@ function AudioHealthButton({
                   : "text-muted-foreground",
               )}
             >
-              <span>english</span>
+              <span>英语</span>
               {englishOnly && <Check className="h-3 w-3" />}
             </button>
             <button
@@ -2986,8 +2986,8 @@ function JoinMeetingSuggestion({
           type="button"
           onClick={onDismiss}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-          aria-label="dismiss join suggestion"
-          title="dismiss"
+          aria-label="关闭加入建议"
+          title="关闭"
         >
           <X className="h-4 w-4" />
         </button>
@@ -3043,7 +3043,7 @@ function InactivityResumeBanner({
           size="sm"
           className="h-8 w-8 rounded-none p-0 text-muted-foreground hover:text-foreground sm:hidden"
           onClick={onDismiss}
-          aria-label="dismiss inactivity message"
+          aria-label="关闭闲置消息"
         >
           <X className="h-3.5 w-3.5" />
         </Button>

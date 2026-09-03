@@ -360,7 +360,7 @@ export function CustomSummaryBuilder({
                 <Input
                   value={templateTitle}
                   onChange={(e) => setTemplateTitle(e.target.value)}
-                  placeholder="template name..."
+                  placeholder="模板名称..."
                   className="h-8 w-36 text-[11px]"
                   onKeyDown={(e) => e.key === "Enter" && handleSave()}
                   autoFocus

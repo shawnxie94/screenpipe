@@ -274,7 +274,7 @@ export function FirstRunNextStepsPanel({
   const announcement = checking
     ? "checking your setup"
     : allReady
-      ? "all set. Screenpipe remembers your work, emails your daily recap, helps name people in meetings, and knows what is on your calendar."
+      ? "全部就绪。Screenpipe 会记住你的工作、邮件发送每日总结、协助标注会议上的人名，并了解你日历上的安排。"
       : "setup checked";
 
   return (
@@ -322,8 +322,8 @@ export function FirstRunNextStepsPanel({
               all set
             </p>
             <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-              Screenpipe remembers your work, emails your daily recap, helps
-              name people in meetings, and knows what is on your calendar.
+              Screenpipe 会记住你的工作、邮件发送每日总结、协助标注会议上的人名，
+              并了解你日历上的安排。
             </p>
           </div>
         </div>
@@ -369,8 +369,8 @@ export function FirstRunNextStepsPanel({
 
           <SetupOutcomeRow
             icon={<BrainCircuit className="h-4 w-4" aria-hidden="true" />}
-            title="remember my work"
-            description="remember my work, meetings, and the people I work with."
+            title="记住我的工作"
+            description="记住我的工作、会议以及共事的同事。"
             status={
               checking
                 ? "checking"
@@ -387,8 +387,8 @@ export function FirstRunNextStepsPanel({
 
           <SetupOutcomeRow
             icon={<AudioLines className="h-4 w-4" aria-hidden="true" />}
-            title="name people in meetings"
-            description="after each meeting, suggest who was speaking. you review every name before anything changes."
+            title="会议上标注人名"
+            description="每次会议后推测说话人，所有名字在你确认前不会更改。"
             status={
               checking
                 ? "checking"
@@ -412,8 +412,8 @@ export function FirstRunNextStepsPanel({
                 data-testid="gmail-service-icon"
               />
             }
-            title="send my daily recap"
-            description="email me a short recap of my day each evening."
+            title="发送我的每日总结"
+            description="每晚通过邮件发送一天的简短回顾。"
             status={
               checking
                 ? "checking"
@@ -437,8 +437,8 @@ export function FirstRunNextStepsPanel({
                 data-testid="google-calendar-service-icon"
               />
             }
-            title="understand my meetings"
-            description="use Google Calendar to understand what my meetings are about. Screenpipe never changes my calendar."
+            title="理解我的会议"
+            description="使用 Google 日历了解我的会议内容。Screenpipe 永不修改我的日历。"
             status={
               checking
                 ? "checking"

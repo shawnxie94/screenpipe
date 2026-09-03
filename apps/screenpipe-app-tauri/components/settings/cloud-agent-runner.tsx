@@ -94,7 +94,7 @@ function CodebaseField({
           if (event.key === "Enter") event.currentTarget.blur();
         }}
         placeholder={definition.codebasePlaceholder}
-        aria-label="codebase"
+        aria-label="代码库"
         data-testid="cloud-agent-codebase-select"
         className="h-9 min-w-0 rounded-none text-xs"
       />
@@ -501,7 +501,7 @@ export function CloudAgentRunner({
                   size="icon"
                   className="h-9 w-9 rounded-none"
                   onClick={() => setMemoryOpen(true)}
-                  aria-label="review shared context"
+                  aria-label="查看已共享的上下文"
                 >
                   <ShieldCheck className="h-3.5 w-3.5" />
                 </Button>

@@ -293,7 +293,7 @@ export function LiveViewLayoutEditor({
               Time window
             </span>
             <select
-              aria-label="template time range"
+              aria-label="模板时间范围"
               value={draft.timeRange}
               className="h-9 w-full border border-border bg-background px-2 text-xs outline-none focus:border-foreground"
               onChange={(event) =>
@@ -330,7 +330,7 @@ export function LiveViewLayoutEditor({
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="close Block settings"
+              aria-label="关闭 Block 设置"
               className="h-8 w-8 rounded-none"
               onClick={() => setSelectedSlotId(null)}
             >

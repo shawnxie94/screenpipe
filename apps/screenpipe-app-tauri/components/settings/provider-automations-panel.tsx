@@ -110,11 +110,11 @@ function yearlyRruleLabel(
         : `${hour12}:${String(minute).padStart(2, "0")} ${suffix}`;
   const count = Number(parts.COUNT);
   return [
-    interval === 1 ? "yearly" : `every ${interval} years`,
+    interval === 1 ? "每年" : `每 ${interval} 年`,
     dates || null,
     time,
     Number.isInteger(count) && count > 0
-      ? `${count} ${count === 1 ? "run" : "runs"}`
+      ? `${count} 次`
       : null,
   ]
     .filter(Boolean)
@@ -134,13 +134,13 @@ function cronLabel(schedule: string): string | null {
     month === "*" &&
     dayOfWeek === "*"
   ) {
-    if (minute === "*") return "every minute";
+    if (minute === "*") return "每分钟";
     const everyMinutes = minute.match(/^\*\/(\d+)$/)?.[1];
-    if (everyMinutes) return `every ${everyMinutes} minutes`;
+    if (everyMinutes) return `每 ${everyMinutes} 分钟`;
     if (/^\d+$/.test(minute)) {
       return Number(minute) === 0
-        ? "every hour"
-        : `every hour at :${minute.padStart(2, "0")}`;
+        ? "每小时"
+        : `每小时第 ${minute.padStart(2, "0")} 分`;
     }
   }
   const everyHours = hour.match(/^\*\/(\d+)$/)?.[1];
@@ -151,7 +151,7 @@ function cronLabel(schedule: string): string | null {
     month === "*" &&
     dayOfWeek === "*"
   ) {
-    return `every ${everyHours} hours${Number(minute) === 0 ? "" : ` at :${minute.padStart(2, "0")}`}`;
+    return `每 ${everyHours} 小时${Number(minute) === 0 ? "" : `第 ${minute.padStart(2, "0")} 分`}`;
   }
   if (
     /^\d+$/.test(minute) &&
@@ -160,8 +160,8 @@ function cronLabel(schedule: string): string | null {
     month === "*"
   ) {
     const time = `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
-    if (dayOfWeek === "*") return `daily at ${time}`;
-    if (dayOfWeek === "1-5") return `weekdays at ${time}`;
+    if (dayOfWeek === "*") return `每天 ${time}`;
+    if (dayOfWeek === "1-5") return `工作日 ${time}`;
   }
   return null;
 }
@@ -175,18 +175,18 @@ export function providerScheduleLabel(task: ProviderAutomation): string {
   const parts = rruleParts(task.schedule);
   const interval = Math.max(1, Number(parts.INTERVAL || "1"));
   if (parts.FREQ === "HOURLY") {
-    return interval === 1 ? "every hour" : `every ${interval} hours`;
+    return interval === 1 ? "每小时" : `每 ${interval} 小时`;
   }
   if (parts.FREQ === "DAILY") {
     const hour = Number(parts.BYHOUR);
     const minute = Number(parts.BYMINUTE || "0");
     if (Number.isFinite(hour)) {
-      return `daily at ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+      return `每天 ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
     }
-    return interval === 1 ? "daily" : `every ${interval} days`;
+    return interval === 1 ? "每天" : `每 ${interval} 天`;
   }
   if (parts.FREQ === "WEEKLY") {
-    return parts.BYDAY ? `weekly · ${parts.BYDAY.toLowerCase()}` : "weekly";
+    return parts.BYDAY ? `每周 · ${parts.BYDAY.toLowerCase()}` : "每周";
   }
   if (parts.FREQ === "YEARLY") {
     return yearlyRruleLabel(parts, interval);
@@ -203,7 +203,7 @@ export function providerManagementUrl(provider: string): string | null {
 function providerManagementActionLabel(provider: string): string {
   const name =
     provider.toLowerCase() === "claude" ? "Claude" : providerLabel(provider);
-  return `open ${name} schedules`;
+  return `打开 ${name} 定时任务`;
 }
 
 type ProviderOpenDependencies = {
@@ -370,7 +370,7 @@ export function ProviderAutomationsPanel({
       try {
         await onOpenProvider(url);
       } catch {
-        setOpenError(`couldn't open ${providerLabel(provider)}`);
+        setOpenError(`无法打开 ${providerLabel(provider)}`);
       }
     },
     [onOpenProvider],
@@ -387,7 +387,7 @@ export function ProviderAutomationsPanel({
         setMutationError(
           error instanceof Error
             ? error.message
-            : `couldn't ${action} this schedule`,
+            : `无法对该定时任务执行 ${action} 操作`,
         );
       } finally {
         setPendingTask(null);
@@ -410,8 +410,8 @@ export function ProviderAutomationsPanel({
           </div>
           <button
             type="button"
-            aria-label="open Claude schedules"
-            title="open Claude schedules"
+            aria-label="打开 Claude 定时任务"
+            title="打开 Claude 定时任务"
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center border-l border-border text-muted-foreground transition-colors hover:bg-foreground hover:text-background"
             onClick={() => void manageProvider("claude")}
           >
@@ -436,7 +436,7 @@ export function ProviderAutomationsPanel({
     : null;
   const activeManagementAction = activeProvider
     ? providerManagementActionLabel(activeProvider)
-    : "open provider schedules";
+    : "打开定时任务";
   const displayedActiveTasks =
     expandedProvider === activeProvider ? activeTasks : activeTasks.slice(0, 5);
   const hiddenTaskCount = activeTasks.length - displayedActiveTasks.length;
@@ -451,7 +451,7 @@ export function ProviderAutomationsPanel({
         {hasMultipleProviders ? (
           <div
             role="tablist"
-            aria-label="schedule owner"
+            aria-label="定时任务归属"
             className="flex min-w-0 flex-1 overflow-x-auto bg-muted/20 px-2"
           >
             {providers.map((provider) => {
@@ -539,8 +539,8 @@ export function ProviderAutomationsPanel({
                 >
                   <span
                     role="img"
-                    aria-label={isOn ? "active" : "paused"}
-                    title={isOn ? "active" : "paused"}
+                    aria-label={isOn ? "运行中" : "已暂停"}
+                    title={isOn ? "运行中" : "已暂停"}
                     className={cn(
                       "h-2 w-2 shrink-0 border border-current text-muted-foreground",
                       isOn && "bg-foreground text-foreground",
@@ -568,7 +568,7 @@ export function ProviderAutomationsPanel({
                         role="switch"
                         aria-checked={isOn}
                         aria-busy={isPending}
-                        aria-label={`${isOn ? "Turn off" : "Turn on"} ${task.name}`}
+                        aria-label={`${isOn ? "关闭" : "开启"} ${task.name}`}
                         disabled={isPending}
                         className="inline-flex h-7 w-9 items-center justify-center border border-border transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-50"
                         onClick={() => void mutateTask(task, primaryAction)}
@@ -598,7 +598,7 @@ export function ProviderAutomationsPanel({
                         <DropdownMenuTrigger asChild>
                           <button
                             type="button"
-                            aria-label={`actions for ${task.name}`}
+                            aria-label={`${task.name} 的操作`}
                             disabled={isPending}
                             className="inline-flex h-7 w-7 items-center justify-center border border-border transition-colors hover:bg-foreground hover:text-background disabled:opacity-50"
                           >
@@ -614,7 +614,7 @@ export function ProviderAutomationsPanel({
                             onSelect={() => setTaskToDelete(task)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            delete schedule
+                            删除定时任务
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -628,7 +628,7 @@ export function ProviderAutomationsPanel({
           {hiddenTaskCount > 0 && (
             <button
               type="button"
-              aria-label={`show ${hiddenTaskCount} more`}
+              aria-label={`再显示 ${hiddenTaskCount} 个`}
               className="w-full border-t border-border px-3 py-2 text-left font-mono text-[10px] text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground"
               onClick={() => setExpandedProvider(activeProvider)}
             >
@@ -662,11 +662,10 @@ export function ProviderAutomationsPanel({
         <AlertDialogContent className="rounded-none">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              delete {taskToDelete?.name ?? "this schedule"}?
+              删除 {taskToDelete?.name ?? "此定时任务"}？
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes the schedule from {activeProviderLabel}.
-              It will not run again, and this cannot be undone here.
+              这会永久从 {activeProviderLabel} 中移除该定时任务。它将不再运行，且无法在此撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -680,7 +679,7 @@ export function ProviderAutomationsPanel({
                 void mutateTask(task, "delete");
               }}
             >
-              delete schedule
+              删除定时任务
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

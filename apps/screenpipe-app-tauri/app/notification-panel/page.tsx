@@ -559,7 +559,7 @@ export default function NotificationPanelPage() {
         >
           <div
             onClick={payload.source_url ? openSource : undefined}
-            title={payload.source_url ? "open source chat" : undefined}
+            title={payload.source_url ? "打开来源聊天" : undefined}
             style={{
               fontSize: "12px",
               fontWeight: 500,
@@ -632,8 +632,8 @@ export default function NotificationPanelPage() {
                           onMouseLeave={(e) => {
                             e.currentTarget.style.color = "rgba(0, 0, 0, 0.35)";
                           }}
-                          title="open in default app"
-                          aria-label="open in default app"
+                          title="在默认应用中打开"
+                          aria-label="在默认应用中打开"
                           style={{
                             marginLeft: "3px",
                             padding: "0 3px",
@@ -748,7 +748,7 @@ export default function NotificationPanelPage() {
         >
           <button
             onClick={copyNotification}
-            title="copy notification"
+            title="复制通知"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -780,7 +780,7 @@ export default function NotificationPanelPage() {
           {payload.source_url && (
             <button
               onClick={openSource}
-              title="open source chat"
+              title="打开来源聊天"
               style={{
                 display: "inline-flex",
                 alignItems: "center",

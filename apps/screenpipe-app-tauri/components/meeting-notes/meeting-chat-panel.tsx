@@ -258,7 +258,7 @@ export function MeetingChatPanel({
   return (
     <aside
       data-testid="meeting-chat-panel"
-      aria-label="ask about this meeting"
+      aria-label="询问此会议"
       style={{ width }}
       // Absolute, always. Docking this in a column shrank the shell and slid
       // the centred reading column leftward on open, so the transcript jumped
@@ -270,7 +270,7 @@ export function MeetingChatPanel({
     >
       <div
         role="separator"
-        aria-label="resize conversation"
+        aria-label="调整对话宽度"
         aria-orientation="vertical"
         tabIndex={0}
         onPointerDown={(event) => {
@@ -297,7 +297,7 @@ export function MeetingChatPanel({
           </p>
           <p
             className="mt-0.5 truncate text-xs font-medium text-foreground"
-            title={meetingTitle || "untitled meeting"}
+            title={meetingTitle || "未命名会议"}
           >
             {meetingTitle || "untitled meeting"}
           </p>
@@ -314,7 +314,7 @@ export function MeetingChatPanel({
           size="icon"
           variant="ghost"
           data-testid="meeting-chat-close"
-          aria-label="close chat"
+          aria-label="关闭聊天"
           onClick={onClose}
           className="h-6 w-6 rounded-none"
         >
@@ -409,7 +409,7 @@ export function MeetingChatPanel({
           value={draft}
           rows={1}
           disabled={!availability.enabled}
-          aria-label="ask about this meeting"
+          aria-label="询问此会议"
           placeholder={availability.placeholder}
           onChange={(event) => onDraftChange(event.target.value)}
           onKeyDown={handleKeyDown}
@@ -458,8 +458,8 @@ export function MeetingChatPanel({
             size="icon"
             variant="ghost"
             data-testid="meeting-chat-send"
-            aria-label={conditions.turnInFlight ? "stop" : "send"}
-            title={conditions.turnInFlight ? "stop" : "send"}
+            aria-label={conditions.turnInFlight ? "停止" : "发送"}
+            title={conditions.turnInFlight ? "停止" : "发送"}
             disabled={
               conditions.turnInFlight ? false : !canSubmitTurn(draft, conditions)
             }

@@ -156,7 +156,7 @@ export function AIProviderChoices({
 
       <button
         type="button"
-        aria-label="advanced"
+        aria-label="高级"
         className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         onClick={() => setShowAdvanced((current) => !current)}
         aria-expanded={showAdvanced}

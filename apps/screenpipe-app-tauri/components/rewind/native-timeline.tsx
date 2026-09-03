@@ -223,7 +223,7 @@ export function NativeTimelineBridge({
         "timeline-export-video-selection",
         (event) => {
           const selection = event.payload;
-          toast({ title: "exporting selected timeline…" });
+          toast({ title: "正在导出所选时间线…" });
           void localFetch("/export", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

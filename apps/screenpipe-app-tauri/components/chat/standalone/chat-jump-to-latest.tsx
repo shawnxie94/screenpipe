@@ -26,7 +26,7 @@ export function ChatJumpToLatest({
       <button
         type="button"
         data-testid="chat-jump-to-latest"
-        aria-label="Jump to latest"
+        aria-label="跳转到最新"
         aria-hidden={!visible}
         tabIndex={visible ? 0 : -1}
         onClick={onJump}

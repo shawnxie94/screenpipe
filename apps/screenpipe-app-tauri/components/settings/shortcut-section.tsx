@@ -16,7 +16,7 @@ import { useExperimentalFeaturesEnabled } from "@/lib/experimental-features";
 
 /** Settings search index for this section. Co-located with the component so adding a field here means updating one file. See `SettingsField` in `./settings-search` for the schema. */
 export const searchIndex: SettingsField[] = [
-  { label: "Shortcuts", keywords: ["hotkey", "keybind", "keyboard"] },
+  { label: "快捷键", keywords: ["hotkey", "keybind", "keyboard"] },
 ];
 
 const ShortcutSection = () => {
@@ -72,14 +72,14 @@ const ShortcutSection = () => {
       try { await commands.showShortcutReminder(defaults.showScreenpipeShortcut); } catch (_) {}
 
       toast({
-        title: "shortcuts restored",
-        description: "all shortcuts have been reset to their defaults",
+        title: "快捷键已恢复",
+        description: "所有快捷键已重置为默认值",
       });
     } catch (error) {
       console.error("error restoring default shortcuts", error);
       toast({
-        title: "error restoring shortcuts",
-        description: "failed to restore default shortcuts. please try again.",
+        title: "恢复快捷键失败",
+        description: "无法恢复默认快捷键，请重试。",
         variant: "destructive",
       });
     }
@@ -87,13 +87,13 @@ const ShortcutSection = () => {
 
   const globalShortcutRows = (
     <>
-      <ShortcutRow type="global" shortcut="showScreenpipeShortcut" title="toggle screenpipe overlay" description="show/hide the main interface" value={settings.showScreenpipeShortcut} />
-      <ShortcutRow type="global" shortcut="showChatShortcut" title="toggle ai chat" description="show/hide the ai chat window" value={settings.showChatShortcut} />
-      <ShortcutRow type="global" shortcut="searchShortcut" title="open search" description="open search when overlay is visible" value={settings.searchShortcut} />
-      <ShortcutRow type="global" shortcut="startRecordingShortcut" title="start recording" description="start screen recording" value={settings.startRecordingShortcut} />
-      <ShortcutRow type="global" shortcut="stopRecordingShortcut" title="stop recording" description="stop screen recording" value={settings.stopRecordingShortcut} />
-      <ShortcutRow type="global" shortcut="startAudioShortcut" title="start audio recording" description="start audio recording" value={settings.startAudioShortcut} />
-      <ShortcutRow type="global" shortcut="stopAudioShortcut" title="stop audio recording" description="stop audio recording" value={settings.stopAudioShortcut} />
+      <ShortcutRow type="global" shortcut="showScreenpipeShortcut" title="显示/隐藏悬浮层" description="显示/隐藏主界面" value={settings.showScreenpipeShortcut} />
+      <ShortcutRow type="global" shortcut="showChatShortcut" title="显示/隐藏 AI 聊天" description="显示/隐藏 AI 聊天窗口" value={settings.showChatShortcut} />
+      <ShortcutRow type="global" shortcut="searchShortcut" title="打开搜索" description="悬浮层可见时打开搜索" value={settings.searchShortcut} />
+      <ShortcutRow type="global" shortcut="startRecordingShortcut" title="开始录制" description="开始屏幕录制" value={settings.startRecordingShortcut} />
+      <ShortcutRow type="global" shortcut="stopRecordingShortcut" title="停止录制" description="停止屏幕录制" value={settings.stopRecordingShortcut} />
+      <ShortcutRow type="global" shortcut="startAudioShortcut" title="开始录制" description="开始音频录制" value={settings.startAudioShortcut} />
+      <ShortcutRow type="global" shortcut="stopAudioShortcut" title="停止录制" description="停止音频录制" value={settings.stopAudioShortcut} />
       {/* TODO: vault lock shortcut disabled — CLI-only for now */}
       {/* <ShortcutRow type="global" shortcut="lockVaultShortcut" title="lock vault" description="encrypt all data at rest" value={settings.lockVaultShortcut} /> */}
     </>
@@ -104,8 +104,8 @@ const ShortcutSection = () => {
       <div className="flex items-center justify-between mb-4">
         <p className="text-muted-foreground text-sm">
           {experimentalFeaturesEnabled
-            ? "in-app commands and global hotkeys"
-            : "Keyboard shortcuts and hotkeys"}
+            ? "应用内命令与全局热键"
+            : "键盘快捷键与热键"}
         </p>
         <Button
           variant="ghost"
@@ -115,7 +115,7 @@ const ShortcutSection = () => {
           className="text-muted-foreground hover:text-foreground h-7 px-2 text-xs"
         >
           <RotateCcw className="h-3 w-3 mr-1" />
-          restore defaults
+          恢复默认
         </Button>
       </div>
 
@@ -123,9 +123,9 @@ const ShortcutSection = () => {
         <section>
           <div className="mb-2 flex items-baseline justify-between gap-3">
             <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              in app
+              应用内
             </h3>
-            <span className="text-[10px] text-muted-foreground">fixed</span>
+            <span className="text-[10px] text-muted-foreground">固定</span>
           </div>
           <div className="divide-y divide-border border border-border">
             {IN_APP_SHORTCUTS.map((item) => (
@@ -152,10 +152,10 @@ const ShortcutSection = () => {
         <section>
           <div className="mb-2 flex items-baseline justify-between gap-3">
             <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-              global
+              全局
             </h3>
             <span className="text-[10px] text-muted-foreground">
-              works while screenpipe is in the background
+              在 screenpipe 处于后台时仍然有效
             </span>
           </div>
           <div className="space-y-2">{globalShortcutRows}</div>

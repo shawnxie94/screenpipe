@@ -59,7 +59,7 @@ describe("FreePlanCounterChip", () => {
     mocks.usageState = { tier: "logged_in", limit_today: 2, remaining: 1 };
     render(<FreePlanCounterChip />);
     expect(screen.getByTestId("free-plan-counter-chip")).toHaveTextContent(
-      "1 of 2 free messages left",
+      "1/2 条免费消息剩余",
     );
   });
 
@@ -96,13 +96,13 @@ describe("FreePlanWallStrip", () => {
     mocks.wallState = WALL;
     render(<FreePlanWallStrip />);
     const strip = screen.getByTestId("free-plan-wall-strip");
-    expect(strip).toHaveTextContent("Ran out of messages");
-    expect(strip).toHaveTextContent("resets Aug 6, 3:38 AM");
-    expect(strip).toHaveTextContent("local & own-key models still work");
+    expect(strip).toHaveTextContent("消息用完了");
+    expect(strip).toHaveTextContent("重置时间 Aug 6, 3:38 AM");
+    expect(strip).toHaveTextContent("本地与自带密钥模型仍可使用");
     // Non-dismissible: no close affordance while the wall holds.
     expect(screen.queryByRole("button", { name: /dismiss/i })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "See plans" }));
+    fireEvent.click(screen.getByRole("button", { name: "查看方案" }));
     expect(mocks.openExternalUrl).toHaveBeenCalledWith(WALL.plansUrl);
   });
 });
@@ -115,7 +115,7 @@ describe("FreeUpgradeSheet", () => {
     for (const scene of ["pipes", "meeting", "timeline", "models"]) {
       expect(screen.getByTestId(`vignette-${scene}`)).toBeTruthy();
     }
-    fireEvent.click(screen.getByRole("button", { name: "not now" }));
+    fireEvent.click(screen.getByRole("button", { name: "暂不" }));
     expect(screen.queryByTestId("free-upgrade-sheet")).toBeNull();
     unmount();
 
@@ -127,7 +127,7 @@ describe("FreeUpgradeSheet", () => {
   it("see plans opens the pricing page and closes", () => {
     mocks.wallState = WALL;
     render(<FreeUpgradeSheet />);
-    fireEvent.click(screen.getByRole("button", { name: "See plans" }));
+    fireEvent.click(screen.getByRole("button", { name: "查看方案" }));
     expect(mocks.openExternalUrl).toHaveBeenCalledWith(WALL.plansUrl);
     expect(screen.queryByTestId("free-upgrade-sheet")).toBeNull();
   });

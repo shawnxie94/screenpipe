@@ -482,7 +482,7 @@ export function AudioTranscript({
 	const handleSendToChat = useCallback(async () => {
 		const data = activeMeeting ? meetingConversationData : conversationData;
 		if (!data.items.length) {
-			toast({ title: "no transcript data to send", variant: "destructive" });
+			toast({ title: "没有可发送的文字记录数据", variant: "destructive" });
 			return;
 		}
 

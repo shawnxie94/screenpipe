@@ -1393,7 +1393,7 @@ function HomeContent() {
                     onClick={() => {
                       void commands.showWindow({ Search: { query: null } });
                     }}
-                    aria-label="search"
+                    aria-label="搜索"
                     data-announcement-anchor="top-search"
                     className={cn(
                       "p-1 rounded-md transition-colors",
@@ -1610,7 +1610,7 @@ function HomeContent() {
                   )}>
                     <SettingsIcon className="h-3.5 w-3.5" />
                   </div>
-                  <span className="truncate text-xs font-medium">Settings</span>
+                  <span className="truncate text-xs font-medium">设置</span>
                 </button>
 
                 {/* Help stays discoverable without taking a second row. */}
@@ -1623,7 +1623,7 @@ function HomeContent() {
                           type="button"
                           data-testid="nav-help"
                           data-announcement-anchor="sidebar-help"
-                          aria-label="Help"
+                          aria-label="帮助"
                           disabled={trialActivationLocked}
                           onClick={() => {
                             setActiveSection("help");
@@ -1718,7 +1718,7 @@ function HomeContent() {
                 <button
                   type="button"
                   onClick={returnToActivity}
-                  aria-label="back to activity"
+                  aria-label="返回活动"
                   title="back to activity"
                   className="absolute left-4 top-11 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-lg shadow-black/10 backdrop-blur-sm transition-colors hover:border-foreground hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-offset-2"
                 >

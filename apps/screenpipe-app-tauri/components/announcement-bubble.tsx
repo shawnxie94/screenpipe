@@ -334,7 +334,7 @@ function AnnouncementBubbleVisible({
           <AnnouncementKindChip kind={announcement.kind} />
           <button
             type="button"
-            aria-label="dismiss"
+            aria-label="关闭"
             data-testid="announcement-dismiss"
             onClick={onDismiss}
             className="-mr-1 -mt-1 p-1 text-muted-foreground transition-colors hover:text-foreground"

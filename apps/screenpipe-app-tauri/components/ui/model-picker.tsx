@@ -102,7 +102,7 @@ export function ModelPicker({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            aria-label="model"
+            aria-label="模型"
             aria-describedby={statusText ? statusId : undefined}
             disabled={disabled}
             className={cn(
@@ -124,12 +124,12 @@ export function ModelPicker({
           align="start"
           className="w-[--radix-popover-trigger-width] rounded-none p-0"
         >
-          <Command label="search models" className="rounded-none font-mono">
+          <Command label="搜索模型" className="rounded-none font-mono">
             <CommandInput
               value={search}
               onValueChange={setSearch}
-              placeholder={allowManualEntry ? "search or type a model" : "search models"}
-              aria-label="search models"
+              placeholder={allowManualEntry ? "搜索或输入模型" : "搜索模型"}
+              aria-label="搜索模型"
               className="rounded-none"
             />
             <CommandList>

@@ -306,7 +306,7 @@ export function CustomMcpCard() {
                 <DialogClose asChild>
                   <button
                     type="button"
-                    aria-label="close"
+                    aria-label="关闭"
                     className="ml-auto text-muted-foreground transition-colors hover:text-foreground"
                   >
                     <X className="h-4 w-4" />
@@ -1015,7 +1015,7 @@ function ServerEditor({
                       onChange={(e) =>
                         updateHeader(i, { value: e.target.value })
                       }
-                      placeholder="value"
+                      placeholder="值"
                       className="h-7 text-xs font-mono flex-1"
                       type={
                         h.value === PLACEHOLDER_VALUE ? "password" : "text"

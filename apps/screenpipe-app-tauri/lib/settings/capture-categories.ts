@@ -62,8 +62,8 @@ export interface CaptureCategory {
 export const CAPTURE_CATEGORIES: readonly CaptureCategory[] = [
 	{
 		id: "password-managers",
-		name: "Password managers",
-		description: "Vaults, keychains and the browser tabs that unlock them",
+		name: "密码管理器",
+		description: "密码库、钥匙串以及用于解锁它们的浏览器标签页",
 		apps: [
 			"1Password::",
 			"Bitwarden::",
@@ -89,8 +89,8 @@ export const CAPTURE_CATEGORIES: readonly CaptureCategory[] = [
 	},
 	{
 		id: "personal-messaging",
-		name: "Personal messaging",
-		description: "Private chats in messaging apps and their web clients",
+		name: "个人通讯",
+		description: "通讯应用及其网页客户端中的私人聊天",
 		apps: [
 			"WhatsApp::",
 			"Signal::",
@@ -102,8 +102,8 @@ export const CAPTURE_CATEGORIES: readonly CaptureCategory[] = [
 	},
 	{
 		id: "banking-finance",
-		name: "Banking and finance",
-		description: "Bank and brokerage sites. Add your own institutions to finish the list",
+		name: "银行与金融",
+		description: "银行和券商网站。补充你自己的机构来完善列表",
 		apps: [],
 		domains: [
 			"chase.com",
@@ -122,15 +122,15 @@ export const CAPTURE_CATEGORIES: readonly CaptureCategory[] = [
 	},
 	{
 		id: "health",
-		name: "Health and medical",
-		description: "Patient portals and pharmacies. Add your own provider to finish the list",
+		name: "健康与医疗",
+		description: "患者门户和药店。补充你自己的医疗机构来完善列表",
 		apps: [],
 		domains: ["mychart.com", "healthcare.gov", "cvs.com", "walgreens.com", "zocdoc.com"],
 	},
 	{
 		id: "media",
-		name: "Streaming and games",
-		description: "Off-hours viewing that would otherwise fill your history",
+		name: "流媒体与游戏",
+		description: "下班时间段的观看内容，否则会填满你的历史记录",
 		// No VLC: a three-letter rule is the shape that catches unrelated apps,
 		// and a local file player is not what anyone opens this screen for.
 		apps: ["Netflix::", "Spotify::", "Steam::"],

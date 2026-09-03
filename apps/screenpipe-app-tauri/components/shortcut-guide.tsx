@@ -29,9 +29,9 @@ import {
 import { useExperimentalFeaturesEnabled } from "@/lib/experimental-features";
 
 const SECTION_LABELS: Record<InAppShortcutSection, string> = {
-  chat: "chat",
-  navigation: "open tabs",
-  app: "app",
+  chat: "聊天",
+  navigation: "已打开的标签",
+  app: "应用",
 };
 
 interface ShortcutGuideProps {
@@ -93,13 +93,13 @@ export function ShortcutGuide({
           <div className="mb-2 flex items-center gap-2 text-muted-foreground">
             <Keyboard className="h-3.5 w-3.5" aria-hidden="true" />
             <span className="font-mono text-[10px] uppercase tracking-[0.18em]">
-              keyboard map
+              快捷键一览
             </span>
           </div>
           <DialogTitle className="text-xl">键盘快捷键</DialogTitle>
           <DialogDescription className="max-w-xl text-xs leading-relaxed">
-            open tabs are a small working set. recent chats remain in the sidebar,
-            and closing a tab never deletes or stops its conversation.
+            已打开的标签是你的小工作集；最近的聊天仍保留在侧边栏，
+            关闭标签不会删除或停止其对话。
           </DialogDescription>
         </DialogHeader>
 
@@ -137,10 +137,10 @@ export function ShortcutGuide({
           <section className="px-6 py-4">
             <div className="mb-2 flex items-baseline justify-between gap-3">
               <h3 className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                global
+                全局
               </h3>
               <span className="text-[10px] text-muted-foreground">
-                editable in settings
+                可在设置中修改
               </span>
             </div>
             <div className="divide-y divide-border/60">
@@ -158,7 +158,7 @@ export function ShortcutGuide({
                       <ShortcutKeycap>{hint}</ShortcutKeycap>
                     ) : (
                       <span className="font-mono text-[10px] text-muted-foreground/70">
-                        disabled
+                        已禁用
                       </span>
                     )}
                   </div>
@@ -166,8 +166,7 @@ export function ShortcutGuide({
               })}
             </div>
             <p className="mt-4 border-t border-border pt-3 text-[11px] leading-relaxed text-muted-foreground">
-              global shortcuts work while screenpipe is in the background. in-app
-              shortcuts apply only to the focused screenpipe window.
+              全局快捷键在 screenpipe 处于后台时仍然有效；应用内快捷键仅对获得焦点的 screenpipe 窗口生效。
             </p>
           </section>
         </div>

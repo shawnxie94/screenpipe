@@ -33,8 +33,8 @@ describe("ComingUp empty state", () => {
   it("stays neutral when no upcoming events are returned", () => {
     renderEmptyState("not-connected");
 
-    expect(screen.getByText("no upcoming meetings")).toBeInTheDocument();
-    expect(screen.getByText("Nothing in the next 8h.")).toBeInTheDocument();
+    expect(screen.getByText("暂无即将开始的会议")).toBeInTheDocument();
+    expect(screen.getByText("未来 8 小时没有会议。")).toBeInTheDocument();
     expect(
       screen.queryByText(/No calendar events found/i),
     ).not.toBeInTheDocument();
@@ -42,7 +42,7 @@ describe("ComingUp empty state", () => {
       screen.queryByRole("button", { name: "Google Calendar" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "calendars" }),
+      screen.getByRole("button", { name: "日历" }),
     ).toBeInTheDocument();
   });
 
@@ -50,7 +50,7 @@ describe("ComingUp empty state", () => {
     renderEmptyState("empty", ["google"]);
 
     expect(
-      screen.getByText("Google Calendar connected. Nothing in the next 8h."),
+      screen.getByText("已连接 Google Calendar。未来 8 小时没有会议。"),
     ).toBeInTheDocument();
   });
 });

@@ -655,7 +655,7 @@ function PipeConnectionPicker({
               autoFocus
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="search connections..."
+              placeholder="搜索连接..."
               className="h-8 rounded-none pl-8 text-xs"
               spellCheck={false}
             />
@@ -1317,9 +1317,9 @@ export function PipesSection() {
       if (data.error) throw new Error(data.error);
       await commands.copyTextToClipboard(data.url);
       posthog.capture("pipe_shared_public", { pipe_name: pipe.config.name, pipe_id: data.id });
-      toast({ title: "link copied!", description: data.url });
+      toast({ title: "链接已复制！", description: data.url });
     } catch (err: any) {
-      toast({ title: "failed to share scheduled task", description: err.message, variant: "destructive" });
+      toast({ title: "分享定时任务失败", description: err.message, variant: "destructive" });
     } finally {
       setSharingPublic(null);
     }
@@ -1449,10 +1449,10 @@ export function PipesSection() {
       });
       if (!res.ok) {
         const err = await res.json();
-        toast({ title: "update failed", description: err.error || "unknown error", variant: "destructive" });
+        toast({ title: "更新失败", description: err.error || "未知错误", variant: "destructive" });
         return;
       }
-      toast({ title: "scheduled task updated", description: `${pipeName} updated successfully` });
+      toast({ title: "定时任务已更新", description: `${pipeName} 已成功更新` });
       // Remove from updates map and refresh
       setAvailableUpdates(prev => {
         const next = { ...prev };
@@ -1461,7 +1461,7 @@ export function PipesSection() {
       });
       await fetchPipes();
     } catch (e) {
-      toast({ title: "update failed", description: String(e), variant: "destructive" });
+      toast({ title: "更新失败", description: String(e), variant: "destructive" });
     } finally {
       setUpdatingPipe(null);
     }
@@ -1665,10 +1665,10 @@ export function PipesSection() {
       }).catch(() => undefined);
       setHistoryResetPipe(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "could not clear context";
+      const message = error instanceof Error ? error.message : "无法清除上下文";
       setHistoryResetStatus((previous) => ({ ...previous, [pipeName]: "error" }));
       toast({
-        title: "could not clear remembered context",
+        title: "无法清除已记忆的上下文",
         description: message,
         variant: "destructive",
       });
@@ -1723,7 +1723,7 @@ export function PipesSection() {
       });
     } catch (err: any) {
       toast({
-        title: "failed to share",
+        title: "分享失败",
         description: err?.message,
         variant: "destructive",
       });
@@ -1739,12 +1739,12 @@ export function PipesSection() {
       await team.deleteConfig(id);
       posthog.capture("team_pipe_unshared", { pipe: name });
       toast({
-        title: "unshared from team",
-        description: "teammates' copies will be disabled",
+        title: "已从团队取消共享",
+        description: "队友的副本将被停用",
       });
     } catch (err: any) {
       toast({
-        title: "failed to unshare",
+        title: "取消共享失败",
         description: err?.message,
         variant: "destructive",
       });
@@ -1777,12 +1777,12 @@ export function PipesSection() {
       });
       toast({
         title: `forked to "${forkName}"`,
-        description: "your editable copy — off by default",
+        description: "你的可编辑副本——默认关闭",
       });
       fetchPipes();
     } catch (err: any) {
       toast({
-        title: "failed to fork",
+        title: "派生副本失败",
         description: err?.message,
         variant: "destructive",
       });
@@ -1854,7 +1854,7 @@ export function PipesSection() {
       if (updatedPipes.length > 0) {
         posthog.capture("team_pipe_auto_updated", { pipes: updatedPipes });
         toast({
-          title: "team scheduled tasks updated",
+          title: "团队定时任务已更新",
           description: updatedPipes.join(", "),
         });
       }
@@ -2088,8 +2088,8 @@ export function PipesSection() {
   const togglePipe = async (name: string, enabled: boolean) => {
     if (isEnterpriseManagedName(name)) {
       toast({
-        title: "managed by your organization",
-        description: "an organization admin controls when this task runs and whether it is enabled",
+        title: "由你的组织管理",
+        description: "由组织管理员控制该任务的运行时间与启用状态",
       });
       return;
     }
@@ -2130,7 +2130,7 @@ export function PipesSection() {
         )
       );
       toast({
-        title: "scheduled task toggle failed",
+        title: "切换定时任务失败",
         description: `could not ${enabled ? "enable" : "disable"} "${name}"`,
         variant: "destructive",
       });
@@ -2193,7 +2193,7 @@ export function PipesSection() {
       }
     } catch (error) {
       toast({
-        title: "scheduled task stop failed",
+        title: "停止定时任务失败",
         description:
           error instanceof Error ? error.message : `could not stop "${name}"`,
         variant: "destructive",
@@ -2256,7 +2256,7 @@ export function PipesSection() {
       const failed = results.filter((r) => r.status === "rejected").length;
       if (failed > 0) {
         toast({
-          title: "some scheduled tasks failed to delete",
+          title: "部分定时任务删除失败",
           description: `${failed} of ${selectedPipes.size} scheduled tasks could not be deleted`,
           variant: "destructive",
         });
@@ -2517,7 +2517,7 @@ export function PipesSection() {
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="search scheduled tasks..."
+              placeholder="搜索定时任务..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8 h-8 text-sm"
@@ -2892,7 +2892,7 @@ export function PipesSection() {
                       {enterpriseManaged && (
                         <Lock
                           className="h-3 w-3 shrink-0 text-muted-foreground"
-                          aria-label="managed by your organization"
+                          aria-label="由你的组织管理"
                         />
                       )}
                       <span className="truncate text-sm font-medium">{pipe.config.name}</span>
@@ -2907,7 +2907,7 @@ export function PipesSection() {
                       {availableUpdates[pipe.config.name] && (
                         <ArrowUpCircle
                           className="h-3 w-3 shrink-0 text-muted-foreground"
-                          aria-label="update available"
+                          aria-label="有可用更新"
                         />
                       )}
                     </div>
@@ -3019,7 +3019,7 @@ export function PipesSection() {
                         <Badge
                           variant="outline"
                           className="text-[10px] h-5 shrink-0 text-muted-foreground"
-                          title="no longer shared with the team — auto-run was disabled; fork to keep it or delete it"
+                          title="已不再与团队共享——自动运行已停用；如需保留请派生副本，否则将被删除"
                         >
                           no longer shared
                         </Badge>
@@ -3120,8 +3120,8 @@ export function PipesSection() {
                               }
                             }}
                             disabled={runningPipe === pipe.config.name}
-                            title={hasMissingConnections ? "configure required connections first" : "run scheduled task"}
-                            aria-label={hasMissingConnections ? "configure required connections first" : "run scheduled task"}
+                            title={hasMissingConnections ? "请先配置所需连接" : "运行定时任务"}
+                            aria-label={hasMissingConnections ? "请先配置所需连接" : "运行定时任务"}
                           >
                             {hasMissingConnections
                               ? <AlertCircle className="h-4 w-4" />
@@ -3149,7 +3149,7 @@ export function PipesSection() {
                               autoSend: true,
                             });
                           }}
-                          title="optimize this scheduled task with ai — reads recent runs and improves the prompt"
+                          title="用 AI 优化这个定时任务——读取最近运行并改进提示词"
                         >
                           <Sparkles className="h-3.5 w-3.5" />
                           optimize
@@ -3260,7 +3260,7 @@ export function PipesSection() {
                             <DropdownMenuItem
                               onClick={() => {
                                 checkForUpdates();
-                                toast({ title: "checking for updates..." });
+                                toast({ title: "正在检查更新..." });
                               }}
                             >
                               <RefreshCw className="h-3.5 w-3.5 mr-2" />
@@ -3459,7 +3459,7 @@ export function PipesSection() {
 
                         {/* Connections */}
                         <div className="p-4">
-                          <Label className="text-xs mb-2 block cursor-help" title="give the agent access to your apps (Slack, Obsidian, CRM, etc.) — credentials are fetched at runtime">connections</Label>
+                          <Label className="text-xs mb-2 block cursor-help" title="授予代理访问你应用的权限（Slack、Obsidian、CRM 等）——凭据在运行时获取">连接</Label>
                           <div className="flex flex-wrap items-center gap-2">
                             {(pipe.config.connections || []).map((connId) => {
                               const baseId = pipeConnectionLookupKey(connId);
@@ -3614,7 +3614,7 @@ export function PipesSection() {
                                   {exec.model && <span className="text-muted-foreground/60 truncate max-w-[100px]">{exec.model}</span>}
                                   {pipeExecutionRawStatus(exec) === "completed" && exec.stdout && cleanPipeStdout(exec.stdout) && (
                                     <div className="ml-auto flex items-center gap-1">
-                                      <button className="text-muted-foreground hover:text-foreground p-0.5" title="copy" onClick={() => {
+                                      <button className="text-muted-foreground hover:text-foreground p-0.5" title="复制" onClick={() => {
                                         commands.copyTextToClipboard(cleanPipeStdout(exec.stdout));
                                         setCopiedExecId(exec.id);
                                         setTimeout(() => setCopiedExecId((prev) => prev === exec.id ? null : prev), 1500);
@@ -3701,7 +3701,7 @@ export function PipesSection() {
                                         setCopiedExecId(-(i + 1));
                                         setTimeout(() => setCopiedExecId((prev) => prev === -(i + 1) ? null : prev), 1500);
                                       }}
-                                      title="copy"
+                                      title="复制"
                                     >
                                       {copiedExecId === -(i + 1) ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
                                     </button>
@@ -3788,8 +3788,8 @@ export function PipesSection() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="low">low (recommended)</SelectItem>
-                            <SelectItem value="medium">medium</SelectItem>
+                            <SelectItem value="low">低（推荐）</SelectItem>
+                            <SelectItem value="medium">中</SelectItem>
                             <SelectItem value="high">high</SelectItem>
                           </SelectContent>
                         </Select>
@@ -3798,9 +3798,9 @@ export function PipesSection() {
                       {/* Timeout */}
                       <div className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_11rem] sm:items-center">
                         <div>
-                          <Label className="cursor-help text-xs font-medium" title="max execution time before the scheduled task is stopped — increase for slow LLMs or complex tasks">超时</Label>
+                          <Label className="cursor-help text-xs font-medium" title="定时任务被停止前的最长执行时间——较慢的 LLM 或复杂任务可调高">超时</Label>
                           <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            stop a run if it exceeds this limit.
+                            超过此限制时停止本次运行。
                           </p>
                         </div>
                         <Select
@@ -4165,8 +4165,8 @@ export function PipesSection() {
                           size="icon"
                           className="h-7 w-7 shrink-0"
                           onClick={() => setCreating(false)}
-                          title="close"
-                          aria-label="close"
+                          title="关闭"
+                          aria-label="关闭"
                         >
                           <X className="h-3.5 w-3.5" />
                         </Button>
@@ -4188,12 +4188,12 @@ export function PipesSection() {
                         <div className="flex items-center gap-2">
                           <Input
                             autoFocus
-                            placeholder="e.g. every morning, list the people i still need to reply to"
+                            placeholder="例如：每天早上，列出我仍需回复的人"
                             className="font-mono text-sm"
                           />
                           <button
                             type="submit"
-                            aria-label="create scheduled task"
+                            aria-label="创建定时任务"
                             className="inline-flex h-9 w-9 shrink-0 items-center justify-center border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                           >
                             <ArrowRight className="h-4 w-4" />

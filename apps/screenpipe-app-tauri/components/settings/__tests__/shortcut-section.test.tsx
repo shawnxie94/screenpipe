@@ -55,18 +55,18 @@ describe("ShortcutSection experimental rollout", () => {
   it("keeps the stable global-shortcut view for users outside the flag", () => {
     render(<ShortcutSection />);
 
-    expect(screen.getByText("Keyboard shortcuts and hotkeys")).toBeVisible();
-    expect(screen.queryByText("in app")).toBeNull();
-    expect(screen.queryByText("next chat tab")).toBeNull();
-    expect(screen.getByText("toggle screenpipe overlay")).toBeVisible();
+    expect(screen.getByText("键盘快捷键与热键")).toBeVisible();
+    expect(screen.queryByText("应用内")).toBeNull();
+    expect(screen.queryByText("下一个聊天标签")).toBeNull();
+    expect(screen.getByText("显示/隐藏悬浮层")).toBeVisible();
   });
 
   it("shows in-app navigation commands for experimental users", () => {
     mocks.experimentalEnabled = true;
     render(<ShortcutSection />);
 
-    expect(screen.getByText("in-app commands and global hotkeys")).toBeVisible();
-    expect(screen.getByText("in app")).toBeVisible();
-    expect(screen.getByText("next chat tab")).toBeVisible();
+    expect(screen.getByText("应用内命令与全局热键")).toBeVisible();
+    expect(screen.getByText("应用内")).toBeVisible();
+    expect(screen.getByText("下一个聊天标签")).toBeVisible();
   });
 });

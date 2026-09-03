@@ -602,7 +602,7 @@ export default function FinalSetupStep({
           connect your work
         </h2>
         <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
-          choose each feature separately. you can change everything later.
+          各功能可单独选择，稍后均可更改。
         </p>
       </div>
 
@@ -610,8 +610,8 @@ export default function FinalSetupStep({
         <PipeRow
           slug={DIGITAL_CLONE_PIPE}
           icon={<BrainCircuit className="h-4 w-4" aria-hidden="true" />}
-          title="remember my work"
-          description="remember my work, meetings, and the people I work with."
+          title="记住我的工作"
+          description="记住我的工作、会议以及共事的同事。"
           state={pipeStates[DIGITAL_CLONE_PIPE]}
           busy={busyPipe === DIGITAL_CLONE_PIPE}
           disabled={actionBusy}
@@ -621,8 +621,8 @@ export default function FinalSetupStep({
         <PipeRow
           slug={SPEAKER_RECONCILIATION_PIPE}
           icon={<AudioLines className="h-4 w-4" aria-hidden="true" />}
-          title="name people in meetings"
-          description="suggest who was speaking for you to review after meetings."
+          title="会议上标注人名"
+          description="会议后推测说话人，供你复核。"
           state={pipeStates[SPEAKER_RECONCILIATION_PIPE]}
           busy={busyPipe === SPEAKER_RECONCILIATION_PIPE}
           disabled={actionBusy}
@@ -640,7 +640,7 @@ export default function FinalSetupStep({
             />
           }
           title="Gmail"
-          description="use Gmail for email workflows and daily recaps."
+          description="用 Gmail 处理邮件流程与每日总结。"
           connected={gmailConnected}
           checking={checking}
           busy={busyConnection === "gmail"}
@@ -651,8 +651,8 @@ export default function FinalSetupStep({
         <PipeRow
           slug={DAILY_EMAIL_PIPE}
           icon={<img src="/images/gmail.svg" alt="" className="h-4 w-4" />}
-          title="send my daily recap"
-          description="email me a short recap of my day each evening."
+          title="发送我的每日总结"
+          description="每晚通过邮件发送一天的简短回顾。"
           state={pipeStates[DAILY_EMAIL_PIPE]}
           busy={busyPipe === DAILY_EMAIL_PIPE}
           disabled={actionBusy}

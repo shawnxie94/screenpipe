@@ -11,13 +11,13 @@ import {
 describe("transcript recovery banner copy", () => {
   it("scopes the recorder-wide backlog instead of implying this meeting is missing", () => {
     expect(recorderTranscriptionBacklogMessage(232)).toBe(
-      "Still recording. 232 saved recorder audio segments are queued for background transcription; this count is not specific to this meeting.",
+      "正在录制。已保存 232 段录制器音频，正在排队等待后台转写；该计数并非仅针对本次会议。",
     );
   });
 
   it("uses singular grammar", () => {
     expect(recorderTranscriptionBacklogMessage(1)).toContain(
-      "1 saved recorder audio segment is queued",
+      "已保存 1 段",
     );
   });
 });
@@ -30,7 +30,7 @@ describe("meeting retranscription recovery copy", () => {
         autoSummaryEnabled: true,
         summaryRefreshEventEmitted: true,
       }),
-    ).toBe("2 batches from saved audio · summary refresh requested");
+    ).toBe("从已保存音频处理 2 个批次 · 已请求刷新摘要");
   });
 
   it.each([
@@ -47,7 +47,7 @@ describe("meeting retranscription recovery copy", () => {
           summaryRefreshEventEmitted,
         }),
       ).toBe(
-        "1 batch from saved audio · use summarize again to update the note",
+        "从已保存音频处理 1 个批次 · 可使用\"重新生成摘要\"以更新笔记",
       );
     },
   );
@@ -61,7 +61,7 @@ describe("meeting retranscription recovery copy", () => {
           autoSummaryEnabled: true,
           summaryRefreshEventEmitted: true,
         }),
-      ).toBe("no speech was found in the saved audio");
+      ).toBe("在已保存的音频中未检测到语音");
     },
   );
 });

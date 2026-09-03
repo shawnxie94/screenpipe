@@ -55,12 +55,12 @@ describe("ChatChart actions", () => {
     const { rerender } = render(<ChatChart spec={spec} />);
 
     expect(
-      screen.queryByRole("button", { name: "chart actions" }),
+      screen.queryByRole("button", { name: "图表操作" }),
     ).toBeNull();
 
     rerender(<ChatChart spec={spec} onSendPrompt={vi.fn()} />);
     expect(
-      screen.getByRole("button", { name: "chart actions" }),
+      screen.getByRole("button", { name: "图表操作" }),
     ).toBeInTheDocument();
   });
 
@@ -90,7 +90,7 @@ describe("ChatChart actions", () => {
     });
     render(<ChatChart spec={spec} onSendPrompt={onSendPrompt} />);
 
-    fireEvent.keyDown(screen.getByRole("button", { name: "chart actions" }), {
+    fireEvent.keyDown(screen.getByRole("button", { name: "图表操作" }), {
       key: "ArrowDown",
     });
     fireEvent.click(screen.getByRole("menuitem", { name: /add to live view/i }));

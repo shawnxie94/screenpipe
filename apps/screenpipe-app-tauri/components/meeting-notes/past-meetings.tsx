@@ -310,7 +310,7 @@ function PastMeetingRow({
       await copyMeetingToClipboard(meeting);
       setCopyState("copied");
       window.setTimeout(() => setCopyState("idle"), 2000);
-      toast({ title: "copied meeting to clipboard" });
+      toast({ title: "已复制整场会议到剪贴板" });
     } catch (err) {
       setCopyState("idle");
       toast({
@@ -377,7 +377,7 @@ function PastMeetingRow({
                 gap={1.5}
                 className="text-foreground"
               />
-              <span className="sr-only">recording</span>
+              <span className="sr-only">录制中</span>
             </>
           ) : (
             <Icon className="h-3 w-3 text-muted-foreground" />
@@ -408,8 +408,8 @@ function PastMeetingRow({
             onClick={() => void handleCopy()}
             disabled={copyState === "copying"}
             className="h-7 w-7 flex items-center justify-center bg-transparent text-muted-foreground hover:text-foreground disabled:opacity-60"
-            title="copy full meeting"
-            aria-label="copy full meeting"
+            title="复制完整会议"
+            aria-label="复制完整会议"
           >
             {copyState === "copying" ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -424,7 +424,7 @@ function PastMeetingRow({
               <AlertDialogTrigger asChild>
                 <button
                   className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 flex items-center justify-center bg-transparent text-muted-foreground hover:text-destructive"
-                  title="delete meeting"
+                  title="删除会议"
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>

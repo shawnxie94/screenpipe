@@ -173,7 +173,7 @@ describe("archive all recent chats", () => {
 
     expect(currentButton).toBeEnabled();
     expect(otherButton).toBeDisabled();
-    expect(screen.getAllByLabelText("locked during trial").length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText("试用期内已锁定").length).toBeGreaterThan(0);
     expect(
       screen.getByRole("button", { name: "整理最近" }),
     ).toBeDisabled();
@@ -241,7 +241,7 @@ describe("archive all recent chats", () => {
       useChatStore.getState().actions.setCurrent("recent-open");
       renderSidebar();
 
-      fireEvent.contextMenu(screen.getByRole("button", { name: /view all/i }));
+      fireEvent.contextMenu(screen.getByRole("button", { name: /查看全部/ }));
       const archiveAll = await screen.findByTestId(
         "archive-all-recent-chats-context",
       );

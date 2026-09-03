@@ -189,9 +189,9 @@ type UnifiedItem =
 type TypeFilter = "overview" | "memories" | "artifacts";
 
 const BRAIN_TAB_DESCRIPTIONS: Record<TypeFilter, string> = {
-  overview: "live dashboards the AI builds from your activity, updated as you work",
-  memories: "what the AI has learned about you from your activity",
-  artifacts: "documents, pages and files the AI has generated for you",
+  overview: "AI 根据你的活动构建的实时仪表盘，随你工作而更新",
+  memories: "AI 从你的活动中了解到的关于你的内容",
+  artifacts: "AI 为你生成的文档、页面和文件",
 };
 type SelectedBrainItem =
   | { kind: "memory"; key: string }
@@ -1863,7 +1863,7 @@ export function BrainSection() {
                     removeTagFromNew(newTags[newTags.length - 1]);
                   }
                 }}
-                placeholder="add tag..."
+                placeholder="添加标签..."
                 className="h-6 text-[10px] w-20 px-1.5 border-dashed"
               />
             </div>
@@ -1959,7 +1959,7 @@ export function BrainSection() {
                     removeTagFromEdit(editTags[editTags.length - 1]);
                   }
                 }}
-                placeholder="add tag..."
+                placeholder="添加标签..."
                 className="h-6 text-[10px] w-20 px-1.5 border-dashed"
               />
             </div>
@@ -2593,7 +2593,7 @@ export function BrainSection() {
                       e.stopPropagation();
                       startEditing(memory);
                     }}
-                    title="edit"
+                    title="编辑"
                   >
                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                   </Button>
@@ -2607,7 +2607,7 @@ export function BrainSection() {
                       setCopiedId(memory.id);
                       setTimeout(() => setCopiedId(null), 2000);
                     }}
-                    title="copy"
+                    title="复制"
                   >
                     {copiedId === memory.id ? (
                       <Check className="h-3.5 w-3.5 text-muted-foreground" />
@@ -2623,7 +2623,7 @@ export function BrainSection() {
                         variant="ghost"
                         className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                         disabled={isDeleting}
-                        title="delete"
+                        title="删除"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {isDeleting ? (
@@ -2633,7 +2633,7 @@ export function BrainSection() {
                         )}
                       </Button>
                     }
-                    title="delete memory"
+                    title="删除记忆"
                     description="this memory will be permanently deleted. this cannot be undone."
                     onConfirm={() => deleteMemory(memory.id)}
                   />
@@ -2772,7 +2772,7 @@ export function BrainSection() {
                         variant="ghost"
                         className="h-7 w-7 shrink-0"
                         onClick={() => setSelectedItem(null)}
-                        title="close detail"
+                        title="关闭详情"
                       >
                         <X className="h-3.5 w-3.5" />
                       </Button>
@@ -2855,7 +2855,7 @@ export function BrainSection() {
                               variant="ghost"
                               className="h-7 w-7"
                               data-testid="brain-detail-actions"
-                              title="artifact actions"
+                              title="制品操作"
                             >
                               <MoreVertical className="h-4 w-4" />
                             </Button>

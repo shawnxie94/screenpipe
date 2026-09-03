@@ -700,7 +700,7 @@ export const ShareLogsButton = ({
         onDragLeave={handleDragLeave}
       >
         <Textarea
-          placeholder="describe your feedback or issue..."
+          placeholder="描述你的反馈或问题..."
           value={feedbackText}
           onChange={(e) => setFeedbackText(e.target.value)}
           onPaste={handlePaste}

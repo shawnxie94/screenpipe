@@ -938,7 +938,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
           <button
             onClick={dismissWelcome}
             className="absolute top-2 right-2 text-muted-foreground hover:text-foreground text-sm px-1.5"
-            aria-label="dismiss"
+            aria-label="关闭"
           >
             ✕
           </button>

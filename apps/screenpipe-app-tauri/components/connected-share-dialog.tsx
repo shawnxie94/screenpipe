@@ -1051,7 +1051,7 @@ export function ConnectedShareDialog({
               <div
                 className="grid grid-cols-2 border border-border"
                 data-testid="connected-share-mode"
-                aria-label="how to send"
+                aria-label="发送方式"
               >
                 <button
                   type="button"
@@ -1371,7 +1371,7 @@ export function ConnectedShareDialog({
         <div className="border-y border-border/60">
           {artifact.sections.length > 1 && (
             <SummaryRow
-              label="contents"
+              label="目录"
               value={contentsSummary}
               action="edit"
               open={contentsOpen}
@@ -1398,7 +1398,7 @@ export function ConnectedShareDialog({
           )}
 
           <SummaryRow
-            label="message"
+            label="消息"
             value={
               currentIsChat
                 ? "what Chat will review"

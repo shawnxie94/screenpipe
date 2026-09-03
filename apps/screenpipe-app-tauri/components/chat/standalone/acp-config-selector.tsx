@@ -293,7 +293,7 @@ export function AcpConfigSelector({
     >
       {modes && (
         <ComposerSettingsSelect
-          label="mode"
+          label="模式"
           value={selectedModeId ?? modes.currentModeId}
           disabled={pendingId === "__mode"}
           options={modes.availableModes}

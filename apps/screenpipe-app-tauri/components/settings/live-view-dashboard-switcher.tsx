@@ -112,8 +112,8 @@ export function LiveViewDashboardSwitcher({
                 variant="outline"
                 size="icon"
                 className="h-9 w-9 shrink-0 rounded-none"
-                aria-label="dashboard actions"
-                title="dashboard actions"
+                aria-label="仪表盘操作"
+                title="仪表盘操作"
                 disabled={busy}
               >
                 <MoreHorizontal className="h-3.5 w-3.5" />

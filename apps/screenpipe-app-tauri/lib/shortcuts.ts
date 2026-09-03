@@ -28,50 +28,50 @@ export const IN_APP_SHORTCUTS: readonly InAppShortcutDefinition[] = [
   {
     id: "new_chat",
     section: "chat",
-    label: "new chat",
-    description: "start a clean conversation",
+    label: "新聊天",
+    description: "开始一段干净的对话",
   },
   {
     id: "close_tab",
     section: "navigation",
-    label: "close tab",
-    description: "close the current chat tab, not the app",
+    label: "关闭标签",
+    description: "关闭当前聊天标签，不是关闭应用",
   },
   {
     id: "archive_chat",
     section: "chat",
-    label: "archive chat",
-    description: "hide this conversation, stop the agent, and close the tab",
+    label: "归档聊天",
+    description: "隐藏此对话，停止代理并关闭标签",
   },
   {
     id: "next_recent_chat",
     section: "chat",
-    label: "next chat tab",
-    description: "hold control, cycle open tabs, then release",
+    label: "下一个聊天标签",
+    description: "按住 Control 循环切换已打开的标签，松开生效",
   },
   {
     id: "previous_recent_chat",
     section: "chat",
-    label: "previous chat tab",
-    description: "cycle open chat tabs backward",
+    label: "上一个聊天标签",
+    description: "向前循环切换聊天标签",
   },
   {
     id: "toggle_sidebar",
     section: "app",
-    label: "toggle sidebar",
-    description: "show or hide the durable chat index",
+    label: "切换侧边栏",
+    description: "显示或隐藏常驻的聊天索引",
   },
   {
     id: "command_menu",
     section: "app",
-    label: "command menu",
-    description: "find an action without memorizing it",
+    label: "命令菜单",
+    description: "无需记忆即可找到操作",
   },
   {
     id: "shortcut_guide",
     section: "app",
-    label: "keyboard shortcuts",
-    description: "open this reference",
+    label: "键盘快捷键",
+    description: "打开此参考",
   },
 ] as const;
 
@@ -88,13 +88,13 @@ export const GLOBAL_SHORTCUTS: readonly {
   id: GlobalShortcutKey;
   label: string;
 }[] = [
-  { id: "showScreenpipeShortcut", label: "toggle screenpipe overlay" },
-  { id: "showChatShortcut", label: "toggle ai chat" },
-  { id: "searchShortcut", label: "open search" },
-  { id: "startRecordingShortcut", label: "start screen recording" },
-  { id: "stopRecordingShortcut", label: "stop screen recording" },
-  { id: "startAudioShortcut", label: "start audio recording" },
-  { id: "stopAudioShortcut", label: "stop audio recording" },
+  { id: "showScreenpipeShortcut", label: "显示/隐藏悬浮层" },
+  { id: "showChatShortcut", label: "显示/隐藏 AI 聊天" },
+  { id: "searchShortcut", label: "打开搜索" },
+  { id: "startRecordingShortcut", label: "开始屏幕录制" },
+  { id: "stopRecordingShortcut", label: "停止屏幕录制" },
+  { id: "startAudioShortcut", label: "开始音频录制" },
+  { id: "stopAudioShortcut", label: "停止音频录制" },
 ] as const;
 
 export type ShortcutHintSettings = { disabledShortcuts?: string[] } & Partial<

@@ -26,7 +26,7 @@ function formatUiEvent(ev: UiEventSummary): { icon: string; label: string } | nu
 		case "text":
 			return { icon: "\u2328", label: ev.text_content ? `typed "${truncate(ev.text_content)}"` : "typed" };
 		case "clipboard":
-			return { icon: "\ud83d\udccb", label: ev.text_content ? `copied "${truncate(ev.text_content)}"` : "copied" };
+			return { icon: "\ud83d\udccb", label: ev.text_content ? `复制 "${truncate(ev.text_content)}"` : "复制" };
 		case "click":
 			return { icon: "\ud83d\uddb1", label: `clicked "${truncate(ev.text_content || "element")}"` };
 		case "app_switch":
@@ -388,7 +388,7 @@ export function AppContextPopover({
 					className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
 				>
 					<Copy className="w-3 h-3" />
-					<span>{copied ? "copied" : "copy"}</span>
+					<span>{copied ? "已复制" : "复制"}</span>
 				</button>
 				{onSearch && (
 					<button

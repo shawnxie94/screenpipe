@@ -379,7 +379,7 @@ function CalendarPermissionRow() {
   return (
     <PermissionRow
       id="calendar"
-      title="Calendar"
+      title="日历"
       description="同步 Apple 日历事件以提供会议上下文。"
       status={status}
       busy={busy}

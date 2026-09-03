@@ -207,7 +207,7 @@ function McpSection({ name, mcp }: { name: string; mcp: AgentCardProps["mcp"] })
           size="sm"
           onClick={handleCopy}
           className="absolute top-2 right-2 h-6 w-6 p-0 opacity-100 transition-opacity"
-          title="copy"
+          title="复制"
         >
           {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
         </Button>
@@ -270,9 +270,9 @@ function SkillVariantBody({ name, variant }: { name: string; variant: SkillVaria
       await commands.copyTextToClipboard(variant.md);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast({ title: "copied SKILL.md to clipboard" });
+      toast({ title: "已复制 SKILL.md 到剪贴板" });
     } catch (e) {
-      toast({ title: "copy failed", description: String(e), variant: "destructive" });
+      toast({ title: "复制失败", description: String(e), variant: "destructive" });
     }
   }, [variant.md]);
 
@@ -282,9 +282,9 @@ function SkillVariantBody({ name, variant }: { name: string; variant: SkillVaria
       await commands.copyTextToClipboard(variant.cliInstall);
       setCmdCopied(true);
       setTimeout(() => setCmdCopied(false), 2000);
-      toast({ title: "copied install command" });
+      toast({ title: "已复制安装命令" });
     } catch (e) {
-      toast({ title: "copy failed", description: String(e), variant: "destructive" });
+      toast({ title: "复制失败", description: String(e), variant: "destructive" });
     }
   }, [variant.cliInstall]);
 
@@ -299,12 +299,12 @@ function SkillVariantBody({ name, variant }: { name: string; variant: SkillVaria
       const dir = await downloadDir();
       const filePath = await join(dir, variant.downloadName);
       setSavedPath(filePath);
-      toast({ title: "saved to Downloads", description: filePath });
+      toast({ title: "已保存到下载文件夹", description: filePath });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("[skill] save failed", e);
       setSaveError(msg);
-      toast({ title: "save failed", description: msg, variant: "destructive" });
+      toast({ title: "保存失败", description: msg, variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -315,7 +315,7 @@ function SkillVariantBody({ name, variant }: { name: string; variant: SkillVaria
     try {
       await revealItemInDir(savedPath);
     } catch (e) {
-      toast({ title: "could not open Finder", description: String(e), variant: "destructive" });
+      toast({ title: "无法打开访达", description: String(e), variant: "destructive" });
     }
   }, [savedPath]);
 
@@ -343,7 +343,7 @@ function SkillVariantBody({ name, variant }: { name: string; variant: SkillVaria
                 size="sm"
                 onClick={copyCmd}
                 className="absolute top-2 right-2 h-6 w-6 p-0"
-                title="copy"
+                title="复制"
               >
                 {cmdCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3 text-muted-foreground" />}
               </Button>
@@ -724,7 +724,7 @@ function RemoteSyncSection({
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="text-muted-foreground hover:text-foreground"
-              title="advanced settings"
+              title="高级设置"
             >
               <Settings2 className="h-3 w-3" />
             </button>
@@ -772,13 +772,13 @@ function RemoteSyncSection({
               </div>
               <div className="flex gap-2">
                 <Input
-                  placeholder="remote path"
+                  placeholder="远程路径"
                   value={config.remotePath}
                   onChange={(e) => updateConfig({ remotePath: e.target.value })}
                   className="text-xs h-7 flex-1"
                 />
                 <Input
-                  placeholder="min"
+                  placeholder="分钟"
                   type="number"
                   min={1}
                   value={config.intervalMinutes}
@@ -788,7 +788,7 @@ function RemoteSyncSection({
                     })
                   }
                   className="text-xs h-7 w-16"
-                  title="sync interval in minutes"
+                  title="同步间隔（分钟）"
                 />
               </div>
             </div>
@@ -984,10 +984,10 @@ function SecondBrainCallout({ name }: { name: string }) {
       await commands.copyTextToClipboard(SECOND_BRAIN_PROMPT);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast({ title: "copied second-brain prompt", description: `paste it into ${name}` });
+      toast({ title: "copied second-brain prompt", description: `粘贴到 ${name} 中` });
       posthog.capture("second_brain_prompt_copied", { agent: name });
     } catch (e) {
-      toast({ title: "copy failed", description: String(e), variant: "destructive" });
+      toast({ title: "复制失败", description: String(e), variant: "destructive" });
     }
   }, [name]);
 
@@ -999,10 +999,10 @@ function SecondBrainCallout({ name }: { name: string }) {
       });
       const dir = await downloadDir();
       setSavedPath(await join(dir, "screenpipe-second-brain.md"));
-      toast({ title: "saved to Downloads", description: "screenpipe-second-brain.md" });
+      toast({ title: "已保存到下载文件夹", description: "screenpipe-second-brain.md" });
       posthog.capture("second_brain_prompt_saved", { agent: name });
     } catch (e) {
-      toast({ title: "save failed", description: String(e), variant: "destructive" });
+      toast({ title: "保存失败", description: String(e), variant: "destructive" });
     } finally {
       setIsSaving(false);
     }

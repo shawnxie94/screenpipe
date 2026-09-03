@@ -54,17 +54,17 @@ interface RetentionStatus {
 }
 
 const RETENTION_OPTIONS = [
-  { value: "7", label: "7 days" },
-  { value: "14", label: "14 days" },
-  { value: "30", label: "30 days" },
-  { value: "60", label: "60 days" },
-  { value: "90", label: "90 days" },
+  { value: "7", label: "7 天" },
+  { value: "14", label: "14 天" },
+  { value: "30", label: "30 天" },
+  { value: "60", label: "60 天" },
+  { value: "90", label: "90 天" },
 ];
 
 const RECENT_DELETE_OPTIONS = [
-  { minutes: 15, label: "last 15 min" },
-  { minutes: 30, label: "last 30 min" },
-  { minutes: 60, label: "last hour" },
+  { minutes: 15, label: "最近 15 分钟" },
+  { minutes: 30, label: "最近 30 分钟" },
+  { minutes: 60, label: "最近 1 小时" },
 ];
 
 const COMPACT_FREE_SPACE_MULTIPLIER = 2;
@@ -81,12 +81,12 @@ function formatRelativeTime(isoString: string): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffMins < 1) return "刚刚";
+  if (diffMins < 60) return `${diffMins} 分钟前`;
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffHours < 24) return `${diffHours} 小时前`;
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
+  return `${diffDays} 天前`;
 }
 
 function formatBytes(bytes: number): string {
@@ -222,11 +222,11 @@ export function RetentionSettings({
       try {
         await applyConfig({ enabled: false });
         await updateSettings({ localRetentionEnabled: false });
-        toast({ title: "auto-delete disabled" });
+        toast({ title: "已禁用自动删除" });
         fetchStatus();
       } catch (e: any) {
         toast({
-          title: "failed to disable auto-delete",
+          title: "禁用自动删除失败",
           description: e.message,
           variant: "destructive",
         });
@@ -254,15 +254,15 @@ export function RetentionSettings({
       toast({
         title:
           nextMode === "media"
-            ? `media eviction enabled (${retentionDays}d)`
+            ? `已启用媒体清理（${retentionDays} 天）`
             : nextMode === "lean"
-              ? `lean cleanup enabled (${retentionDays}d)`
-              : `auto-delete enabled (${retentionDays}d)`,
+              ? `已启用精简清理（${retentionDays} 天）`
+              : `已启用自动删除（${retentionDays} 天）`,
       });
       fetchStatus();
     } catch (e: any) {
       toast({
-        title: "failed to update retention",
+        title: "更新存储策略失败",
         description: e.message,
         variant: "destructive",
       });
@@ -309,14 +309,14 @@ export function RetentionSettings({
         (r.ui_events_deleted || 0);
       const files = (r.video_files_deleted || 0) + (r.audio_files_deleted || 0);
       toast({
-        title: `deleted last ${minutes} min`,
-        description: `${total.toLocaleString()} records, ${files} files removed from disk`,
+        title: `已删除最近 ${minutes} 分钟`,
+        description: `${total.toLocaleString()} 条记录、${files} 个文件已从磁盘移除`,
       });
       fetchStatus();
       onStorageChanged?.();
     } catch (e: any) {
       toast({
-        title: "failed to delete recent data",
+        title: "删除最近数据失败",
         description: e.message,
         variant: "destructive",
       });
@@ -337,16 +337,16 @@ export function RetentionSettings({
       const r = await res.json();
       const reclaimed = r.bytes_reclaimed || 0;
       toast({
-        title: "database compacted",
+        title: "数据库已压缩",
         description:
           reclaimed > 0
-            ? `reclaimed ${formatBytes(reclaimed)} of disk space.`
-            : "already compact — nothing to reclaim right now.",
+            ? `已回收 ${formatBytes(reclaimed)} 磁盘空间。`
+            : "已经是压缩状态 — 目前没有可回收的空间。",
       });
       onStorageChanged?.();
     } catch (e: any) {
       toast({
-        title: "failed to compact database",
+        title: "压缩数据库失败",
         description: e.message,
         variant: "destructive",
       });
@@ -361,16 +361,16 @@ export function RetentionSettings({
       const res = await localFetch("/retention/run", { method: "POST" });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "failed to trigger cleanup");
+        throw new Error(err.error || "触发清理失败");
       }
-      toast({ title: "cleanup triggered" });
+      toast({ title: "已触发清理" });
       setTimeout(() => {
         fetchStatus();
         onStorageChanged?.();
       }, 3000);
     } catch (e: any) {
       toast({
-        title: "failed to trigger cleanup",
+        title: "触发清理失败",
         description: e.message,
         variant: "destructive",
       });
@@ -389,8 +389,7 @@ export function RetentionSettings({
             <div>
               <p className="text-sm font-medium">清除最近活动</p>
               <p className="text-xs text-muted-foreground">
-                wipe the last few minutes if something was captured by mistake.
-                removes clips, audio, transcripts, and ocr. asks first.
+                如果误录了内容，可清除最近几分钟。会移除片段、音频、文字记录和 OCR，操作前先询问。
               </p>
             </div>
           </div>
@@ -417,22 +416,20 @@ export function RetentionSettings({
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <div>
                 <p className="text-sm font-medium">
-                  stop recording before disk is full
+                  磁盘写满前停止录制
                 </p>
                 <p
                   className="text-xs text-muted-foreground"
                   data-testid="low-disk-recording-guard-copy"
                 >
-                  when free space falls to {lowDiskThreshold}, stop capture and
-                  通知你。搜索、定时任务和现有数据会保留
-                  available. on by default.
+                  当可用空间降至 {lowDiskThreshold} 时，停止采集并通知你。搜索、定时任务和现有数据仍会保留。默认开启。
                 </p>
               </div>
             </div>
             <Switch
               id="stop-recording-on-low-disk"
               data-testid="low-disk-recording-guard-toggle"
-              aria-label="stop recording before disk is full"
+              aria-label="磁盘写满前停止录制"
               checked={settings.stopRecordingOnLowDisk ?? true}
               onCheckedChange={(checked) =>
                 updateSettings({ stopRecordingOnLowDisk: checked })
@@ -448,7 +445,7 @@ export function RetentionSettings({
             <div>
               <p className="text-sm font-medium">存储策略</p>
               <p className="text-xs text-muted-foreground">
-                what happens to recordings as they age
+                录制内容随时间推移如何处理
               </p>
             </div>
           </div>
@@ -456,20 +453,20 @@ export function RetentionSettings({
           {/* Current state spelled out so "recommended" never reads as "active" */}
           <p className="text-xs text-muted-foreground pl-6">
             {effective === "off"
-              ? "currently: keeping everything forever."
+              ? "当前：永久保留所有内容。"
               : effective === "media"
-                ? `currently: dropping video + audio older than ${retentionDays} days, text stays searchable.`
+                ? `当前：删除 ${retentionDays} 天前的视频 + 音频，文字仍保留可搜索。`
                 : effective === "lean"
-                  ? `currently: dropping video + audio and the bulky ocr/accessibility detail older than ${retentionDays} days, text + memories stay searchable.`
-                  : `currently: deleting everything older than ${retentionDays} days.`}
+                  ? `当前：删除 ${retentionDays} 天前的视频 + 音频及体积庞大的 OCR/无障碍细节，文字 + 记忆仍保留可搜索。`
+                  : `当前：删除 ${retentionDays} 天前的所有内容。`}
           </p>
 
           <div className="space-y-2 pl-6">
             <ModeRow
               testId="retention-mode-off"
               checked={effective === "off"}
-              title="keep everything"
-              body="disk keeps growing. you monitor space yourself."
+              title="保留所有内容"
+              body="磁盘会持续增长，由你自己监控空间。"
               onClick={() => handleSelectMode("off")}
             />
             <ModeRow
@@ -477,24 +474,24 @@ export function RetentionSettings({
               checked={effective === "media"}
               recommended
               icon={<Film className="h-4 w-4" />}
-              title="drop video + audio, keep text"
-              body="reclaims mp4/wav/jpeg files. transcripts, ocr, and app history stay searchable. you won't be able to replay clips past the cutoff."
+              title="删除视频 + 音频，保留文字"
+              body="回收 mp4/wav/jpeg 文件。文字记录、OCR 和应用历史仍保留可搜索。超过截止时间的片段将无法回放。"
               onClick={() => handleSelectMode("media")}
             />
             <ModeRow
               testId="retention-mode-lean"
               checked={effective === "lean"}
               icon={<FileText className="h-4 w-4" />}
-              title="trim heavy ui data, keep text + memories"
-              body="everything media mode does, plus drops the bulky per-element ocr + accessibility detail (the biggest part of the database) older than the cutoff. text search, transcripts, timeline, and memories still work — only the on-screen element geometry is dropped. stops the database from ballooning and frees that space for reuse."
+              title="精简重度 UI 数据，保留文字 + 记忆"
+              body="在媒体模式基础上，额外删除超过截止时间的逐元素 OCR + 无障碍细节（数据库中占比最大的部分）。文字搜索、文字记录、时间线和记忆仍可用 — 仅丢弃屏幕元素几何信息。可阻止数据库无限膨胀，腾出的空间可被复用。"
               onClick={() => handleSelectMode("lean")}
             />
             <ModeRow
               testId="retention-mode-all"
               checked={effective === "all"}
               icon={<Trash2 className="h-4 w-4" />}
-              title="delete everything"
-              body="permanently deletes all data past the cutoff. search won't find anything from that period."
+              title="删除所有内容"
+              body="永久删除超过截止时间的所有数据。搜索将无法找到该时间段的任何内容。"
               onClick={() => handleSelectMode("all")}
             />
           </div>
@@ -503,12 +500,12 @@ export function RetentionSettings({
           <div className="flex flex-wrap items-center gap-3 pl-6">
             <span className="text-sm text-muted-foreground">
               {effective === "off"
-                ? "cutoff (applies once a policy is on)"
+                ? "截止时间（策略开启后生效）"
                 : effective === "media"
-                  ? "evict media older than"
+                  ? "清理更早的媒体"
                   : effective === "lean"
-                    ? "clean up data older than"
-                    : "delete data older than"}
+                    ? "清理更早的数据"
+                    : "删除更早的数据"}
             </span>
             <Select
               value={retentionDays.toString()}
@@ -539,7 +536,7 @@ export function RetentionSettings({
                 ) : (
                   <Play className="h-3 w-3 mr-1.5" />
                 )}
-                clean up now
+                立即清理
               </Button>
             )}
           </div>
@@ -549,17 +546,17 @@ export function RetentionSettings({
           {effective !== "off" && status && (
             <div className="text-xs text-muted-foreground space-y-1 pl-6">
               {status.last_cleanup && (
-                <p>last cleanup: {formatRelativeTime(status.last_cleanup)}</p>
+                <p>上次清理：{formatRelativeTime(status.last_cleanup)}</p>
               )}
               {status.total_deleted > 0 && (
                 <p>
-                  total{" "}
+                  累计{" "}
                   {effective === "media"
-                    ? "files evicted"
+                    ? "已清理文件"
                     : effective === "lean"
-                      ? "items cleaned"
-                      : "records deleted"}
-                  : {status.total_deleted.toLocaleString()}
+                      ? "已清理项"
+                      : "已删除记录"}
+                  ：{status.total_deleted.toLocaleString()}
                 </p>
               )}
               {status.last_error && (
@@ -578,9 +575,7 @@ export function RetentionSettings({
             <div className="flex-1 min-w-[180px]">
               <p className="text-sm font-medium">回收磁盘空间</p>
               <p className="text-xs text-muted-foreground">
-                rebuild the database file so freed space goes back to your
-                drive. cleanup keeps the database from growing; compacting is
-                what actually shrinks the file.
+                重建数据库文件，让释放的空间归还给磁盘。清理只是阻止数据库继续增长，压缩才是真正让文件变小。
               </p>
               {compactRequiredBytes !== null &&
                 availableBytes !== undefined && (
@@ -592,8 +587,7 @@ export function RetentionSettings({
                         : "text-destructive",
                     )}
                   >
-                    needs about {formatBytes(compactRequiredBytes)} free while
-                    it runs; you have {formatBytes(availableBytes)}.
+                    运行时约需 {formatBytes(compactRequiredBytes)} 空闲空间；当前有 {formatBytes(availableBytes)}。
                   </p>
                 )}
             </div>
@@ -609,7 +603,7 @@ export function RetentionSettings({
               ) : (
                 <Minimize2 className="h-3 w-3 mr-1.5" />
               )}
-              compact database
+              压缩数据库
             </Button>
           </div>
         </div>
@@ -624,20 +618,18 @@ export function RetentionSettings({
       >
         <AlertDialogContent data-testid="retention-compact-dialog">
           <AlertDialogHeader>
-            <AlertDialogTitle>compact the database?</AlertDialogTitle>
+            <AlertDialogTitle>压缩数据库？</AlertDialogTitle>
             <AlertDialogDescription>
-              screenpipe will rebuild db.sqlite to return freed space to your
-              drive. recording briefly pauses while it runs, and the data size
-              may temporarily grow before dropping when compaction finishes.
+              screenpipe 将重建 db.sqlite 以把释放的空间归还给磁盘。压缩运行期间录制会短暂暂停，数据大小可能先暂时增大，压缩完成后再回落。
               {compactRequiredBytes !== null && availableBytes !== undefined
-                ? ` needs about ${formatBytes(compactRequiredBytes)} free; you have ${formatBytes(availableBytes)}.`
-                : " larger databases take longer."}
+                ? ` 约需 ${formatBytes(compactRequiredBytes)} 空闲空间；当前有 ${formatBytes(availableBytes)}。`
+                : " 更大的数据库需要更长时间。"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={confirmCompact}>
-              compact now
+              立即压缩
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -653,12 +645,11 @@ export function RetentionSettings({
         <AlertDialogContent data-testid="retention-recent-delete-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              delete the last {pendingRecent} minutes?
+              删除最近 {pendingRecent} 分钟？
             </AlertDialogTitle>
             <AlertDialogDescription>
-              this permanently removes every screen recording, audio segment,
-              transcription, and ocr capture from the last {pendingRecent}{" "}
-              minutes. files are also deleted from disk. this cannot be undone.
+              这将永久删除最近 {pendingRecent} 分钟内的所有屏幕录制、音频片段、
+              文字记录和 OCR 采集。文件也会从磁盘删除。此操作无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -667,7 +658,7 @@ export function RetentionSettings({
               onClick={confirmDeleteRecent}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              delete {pendingRecent} min of data
+              删除 {pendingRecent} 分钟的数据
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -684,51 +675,43 @@ export function RetentionSettings({
           <AlertDialogHeader>
             <AlertDialogTitle>
               {pendingMode === "media"
-                ? "enable media eviction?"
+                ? "启用媒体清理？"
                 : pendingMode === "lean"
-                  ? "enable lean cleanup?"
-                  : "delete everything past the cutoff?"}
+                  ? "启用精简清理？"
+                  : "删除超过截止时间的所有内容？"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pendingMode === "media" ? (
                 <>
-                  every day, screenpipe will delete video and audio files older
-                  than {retentionDays} days. transcripts, ocr text, and your
-                  app/window timeline stay searchable.
+                  每天，screenpipe 都会删除 {retentionDays} 天前的视频和音频文件。文字记录、OCR 文本以及你的应用/窗口时间线仍保留可搜索。
                 </>
               ) : pendingMode === "lean" ? (
                 <>
-                  every day, screenpipe will reclaim video and audio files and
-                  drop the bulky per-element ocr + accessibility detail older
-                  than {retentionDays} days — the part that makes the database
-                  grow. your text search, transcripts, timeline, and memories
-                  stay intact. clip replay past the cutoff will not be
-                  available.
+                  每天，screenpipe 都会回收视频和音频文件，并删除 {retentionDays} 天前
+                  的逐元素 OCR + 无障碍细节 — 这正是让数据库增长的部分。你的文字搜索、
+                  文字记录、时间线和记忆将保持完整。超过截止时间的片段将无法回放。
                 </>
               ) : (
                 <>
-                  every day, screenpipe will permanently delete <em>all</em>{" "}
-                  data older than {retentionDays} days — recordings,
-                  transcripts, ocr, ui events. search will not find anything
-                  past that. this cannot be undone.
+                  每天，screenpipe 都会永久删除 {retentionDays} 天前的<em>所有</em>
+                  数据 — 录制、文字记录、OCR、UI 事件。搜索将无法找到那之前的任何内容。此操作无法撤销。
                 </>
               )}
               <span className="block mt-3 text-xs">
                 {previewLoading ? (
                   <span className="inline-flex items-center gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    estimating disk space...
+                    正在估算磁盘空间...
                   </span>
                 ) : preview && preview.bytes > 0 ? (
                   <>
-                    on your device this would currently free{" "}
-                    <strong>{formatBytes(preview.bytes)}</strong> across{" "}
-                    {preview.file_count.toLocaleString()} files.
+                    在你的设备上，这目前可释放{" "}
+                    <strong>{formatBytes(preview.bytes)}</strong>，涉及{" "}
+                    {preview.file_count.toLocaleString()} 个文件。
                   </>
                 ) : preview ? (
                   <>
-                    nothing past the cutoff right now — first cleanup will run
-                    when data ages in.
+                    目前还没有超过截止时间的内容 — 首次清理将在数据累积后进行。
                   </>
                 ) : null}
               </span>
@@ -737,10 +720,10 @@ export function RetentionSettings({
           <div className="flex items-center gap-3 pt-2">
             <span className="text-sm text-muted-foreground">
               {pendingMode === "media"
-                ? "evict media older than"
+                ? "清理更早的媒体"
                 : pendingMode === "lean"
-                  ? "clean up data older than"
-                  : "delete data older than"}
+                  ? "清理更早的数据"
+                  : "删除更早的数据"}
             </span>
             <Select
               value={retentionDays.toString()}
@@ -760,7 +743,7 @@ export function RetentionSettings({
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="retention-mode-cancel">
-              cancel
+              取消
             </AlertDialogCancel>
             <AlertDialogAction
               data-testid="retention-mode-confirm"
@@ -772,10 +755,10 @@ export function RetentionSettings({
               }
             >
               {pendingMode === "media"
-                ? "enable eviction"
+                ? "启用清理"
                 : pendingMode === "lean"
-                  ? "enable cleanup"
-                  : "enable deletion"}
+                  ? "启用精简清理"
+                  : "启用删除"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -828,7 +811,7 @@ function ModeRow({
           <span>{title}</span>
           {recommended && (
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border rounded px-1 py-px ml-1">
-              recommended
+              推荐
             </span>
           )}
         </div>

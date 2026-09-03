@@ -281,7 +281,7 @@ export function AcpAgentPicker({
               id="acpCommandQuick"
               value={agent?.command || ""}
               onChange={(e) => merge({ command: e.target.value })}
-              placeholder="path or command that starts an ACP agent"
+              placeholder="启动 ACP 代理的路径或命令"
               className="h-8 font-mono text-xs"
               spellCheck={false}
               autoCorrect="off"

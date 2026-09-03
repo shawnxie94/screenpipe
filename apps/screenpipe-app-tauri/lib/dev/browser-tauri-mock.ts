@@ -252,7 +252,7 @@ function createBrowserDevLiveView(now: string): BrainViewDefinition {
   ).toISOString();
   return {
     id: "browser-dev-live-view",
-    title: "How I spend my time today",
+    title: "今天的时间花在了哪里",
     revision: 1,
     timeRange: "today",
     periodPolicy: {
@@ -262,7 +262,7 @@ function createBrowserDevLiveView(now: string): BrainViewDefinition {
     slots: [
       {
         id: "activity-timeline",
-        title: "Today's activity timeline",
+        title: "今日活动时间线",
         component: "timeline.v1",
         width: 12,
         order: 0,
@@ -273,9 +273,9 @@ function createBrowserDevLiveView(now: string): BrainViewDefinition {
             items: [
               {
                 timestamp: dataTimestamp,
-                title: "Recorded activity begins",
+                title: "录制活动开始",
                 description:
-                  "The newest available activity is older than today.",
+                  "最新的可用活动早于今天。",
               },
             ],
           },

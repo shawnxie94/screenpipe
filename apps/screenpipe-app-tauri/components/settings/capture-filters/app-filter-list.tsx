@@ -26,12 +26,12 @@ import {
 import { appIconUrl } from "./icon-urls";
 
 const formatCaptures = (count: number): string =>
-	count >= 1000 ? `${(count / 1000).toFixed(1)}k captures` : `${count} captures`;
+	count >= 1000 ? `${(count / 1000).toFixed(1)}k 次捕获` : `${count} 次捕获`;
 
 const STATUS_LABELS: Record<AppStatusFilter, string> = {
-	all: "All apps",
-	captured: "Being captured",
-	ignored: "Not captured",
+	all: "所有应用",
+	captured: "正在捕获",
+	ignored: "未捕获",
 };
 
 interface AppRowProps {
@@ -50,11 +50,11 @@ const AppRow = React.memo(function AppRow({ row, onToggle, onRemoveRule }: AppRo
 
 	const note = (() => {
 		if (row.state === "partial") {
-			return `capturing, except ${row.scopedRules.length === 1 ? "1 window rule" : `${row.scopedRules.length} window rules`}`;
+			return `正在捕获，除 ${row.scopedRules.length === 1 ? "1 条窗口规则" : `${row.scopedRules.length} 条窗口规则`} 除外`;
 		}
-		if (row.state === "outside-allowlist") return "not in the allowlist";
-		if (row.origin === "installed") return "installed, not captured yet";
-		if (row.origin === "rule") return "from a rule, not seen on this machine";
+		if (row.state === "outside-allowlist") return "不在允许列表中";
+		if (row.origin === "installed") return "已安装，尚未捕获";
+		if (row.origin === "rule") return "来自规则，本机未见过该应用";
 		return formatCaptures(row.captures);
 	})();
 
@@ -83,7 +83,7 @@ const AppRow = React.memo(function AppRow({ row, onToggle, onRemoveRule }: AppRo
 					{note}
 					{row.blockedIndirectly && row.blockingRules.length > 0 && (
 						<>
-							{" · hidden by rule "}
+							{" · 被规则隐藏 "}
 							<code className="rounded bg-muted px-1 py-px font-mono text-[10px]">
 								{row.blockingRules[0]}
 							</code>
@@ -92,7 +92,7 @@ const AppRow = React.memo(function AppRow({ row, onToggle, onRemoveRule }: AppRo
 								onClick={() => onRemoveRule(row.blockingRules[0])}
 								className="ml-1 underline underline-offset-2 hover:text-foreground"
 							>
-								remove
+								移除
 							</button>
 						</>
 					)}
@@ -102,7 +102,7 @@ const AppRow = React.memo(function AppRow({ row, onToggle, onRemoveRule }: AppRo
 			<Switch
 				checked={captured}
 				onCheckedChange={(next) => onToggle(row.app, next)}
-				aria-label={`Capture ${row.app}`}
+				aria-label={`捕获 ${row.app}`}
 			/>
 		</div>
 	);
@@ -189,14 +189,14 @@ export function AppFilterList({
 			>
 				{isLoading && rows.length === 0 ? (
 					<p className="flex items-center gap-1.5 p-2 text-[12px] text-muted-foreground">
-						<Loader2 className="h-3 w-3 animate-spin" /> Loading apps...
+						<Loader2 className="h-3 w-3 animate-spin" /> 正在加载应用…
 					</p>
 				) : visible.length === 0 ? (
 					<p className="p-2 text-[12px] text-muted-foreground">
 						{query.trim() !== ""
-							? "No apps match your search."
+							? "没有匹配搜索的应用。"
 							: status === "ignored"
-								? "No apps are excluded."
+								? "没有应用被排除。"
 								: "尚未找到应用。录制后它们会出现在这里。"}
 					</p>
 				) : (

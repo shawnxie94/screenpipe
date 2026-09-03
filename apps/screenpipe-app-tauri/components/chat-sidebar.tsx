@@ -1780,7 +1780,7 @@ export function ChatSidebar({
           {pinned.length > 0 && (
             <div className="shrink-0">
               <Section
-                title="pinned"
+                title="置顶"
                 tone="default"
                 collapsed={pinnedCollapsed}
                 onCollapsedChange={setPinnedCollapsed}
@@ -1910,9 +1910,9 @@ export function ChatSidebar({
                           onViewAll?.();
                         }}
                         disabled={!onViewAll}
-                        title="view all · right-click to filter"
+                        title="查看全部 · 右键筛选"
                       >
-                        View all <ChevronRight className="h-3 w-3" aria-hidden />
+                        查看全部 <ChevronRight className="h-3 w-3" aria-hidden />
                       </button>
                     </ContextMenuTrigger>
                     <ContextMenuContent className="w-52" onKeyDown={handleRecentsMenuShortcut}>
@@ -3284,7 +3284,7 @@ export function SidebarChatRow({
           >
             {interactionDisabled ? (
               <LockKeyhole
-                aria-label="locked during trial"
+                aria-label="试用期内已锁定"
                 className="h-3 w-3 text-muted-foreground"
               />
             ) : showCurrentLabel ? (

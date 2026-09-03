@@ -110,14 +110,14 @@ export function ListView({
                   onClick={() => void onStart()}
                   disabled={starting}
                   className="gap-2 normal-case tracking-normal border-border bg-background text-foreground hover:bg-muted hover:text-foreground active:bg-muted disabled:opacity-100 disabled:bg-muted/40 disabled:text-muted-foreground disabled:border-border"
-                  title="start a manual meeting"
+                  title="手动开始会议"
                 >
                   {starting ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Plus className="h-3.5 w-3.5" />
                   )}
-                  new meeting
+                  新建会议
                 </Button>
               </div>
             )
@@ -239,8 +239,8 @@ function SearchBar({
         size="sm"
         onClick={() => setOpen(true)}
         className="h-9 w-9 p-0 normal-case tracking-normal text-muted-foreground hover:text-foreground"
-        title="search meetings"
-        aria-label="search meetings"
+        title="搜索会议"
+        aria-label="搜索会议"
       >
         <Search className="h-3.5 w-3.5" />
       </Button>
@@ -269,15 +269,15 @@ function SearchBar({
             collapse();
           }
         }}
-        placeholder="search by title, email, note…"
+        placeholder="按标题、邮箱或笔记搜索…"
         className="flex-1 min-w-0 bg-transparent text-sm placeholder:text-muted-foreground/50 focus:outline-none"
       />
       <button
         type="button"
         onClick={collapse}
         className="shrink-0 text-muted-foreground hover:text-foreground"
-        title="close search"
-        aria-label="close search"
+        title="关闭搜索"
+        aria-label="关闭搜索"
       >
         <X className="h-3.5 w-3.5" />
       </button>
@@ -392,7 +392,7 @@ function ListEmpty({
         ) : (
           <Plus className="h-3.5 w-3.5" />
         )}
-        new meeting
+        新建会议
       </Button>
     </div>
   );

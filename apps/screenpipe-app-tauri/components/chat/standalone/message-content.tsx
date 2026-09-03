@@ -823,7 +823,7 @@ function WebTargetIcon({
 export function ConnectionToolIcon({ name }: { name: string }) {
   const key = normalizeAppKey(name);
   if (key === "connections") {
-    return <Plug className="w-3.5 h-3.5 text-foreground/70" aria-label="connections" />;
+    return <Plug className="w-3.5 h-3.5 text-foreground/70" aria-label="连接" />;
   }
   if (key === "windows-calendar") {
     return <Calendar className="w-3.5 h-3.5 text-muted-foreground" aria-label="Windows 日历" />;

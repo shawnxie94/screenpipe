@@ -181,7 +181,7 @@ export function ComposerUtilityMenu({
                 }
               }
             }}
-            placeholder="search tags or speakers"
+            placeholder="搜索标签或说话人"
             className="h-8 pl-7 pr-7 text-xs"
             autoComplete="off"
           />

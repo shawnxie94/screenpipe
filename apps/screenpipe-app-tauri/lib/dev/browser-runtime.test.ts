@@ -107,7 +107,7 @@ describe("browser development runtime", () => {
       viewId: view.id,
     }) as BrainViewCanvasDocument;
 
-    expect(view.title).toBe("How I spend my time today");
+    expect(view.title).toBe("今天的时间花在了哪里");
     expect(view.slots[0].value).not.toBeNull();
     expect(canvas).toMatchObject({
       viewId: view.id,

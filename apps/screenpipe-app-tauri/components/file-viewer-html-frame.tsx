@@ -98,7 +98,7 @@ export function HtmlPreviewFrame({
     <div className={`space-y-2 ${fillHeight ? "flex h-full min-h-0 flex-col" : ""}`}>
       <iframe
         ref={ref}
-        title="rendered html preview"
+        title="渲染后的 HTML 预览"
         sandbox="allow-scripts"
         // Deny every Permissions-Policy feature (camera, mic, geolocation, …)
         // on top of the sandbox. Belt-and-suspenders for an opaque origin.

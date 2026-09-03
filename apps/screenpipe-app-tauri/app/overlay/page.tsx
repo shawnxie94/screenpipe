@@ -325,7 +325,7 @@ export default function OverlayPage() {
     try {
       toast({
         title: "restarting server",
-        description: "stopping screenpipe server...",
+        description: "正在停止 screenpipe 服务...",
         duration: 3000,
       });
 
@@ -403,7 +403,7 @@ export default function OverlayPage() {
               {hasAnyData && !isConnected && isServerDown && (
                 <div className="fixed top-10 right-4 z-50 flex items-center gap-2 px-3 py-1.5 bg-muted/90 backdrop-blur-sm rounded-full text-xs text-muted-foreground border">
                   <WifiOff className="h-3 w-3" />
-                  <span>reconnecting...</span>
+                  <span>重连中...</span>
                 </div>
               )}
               

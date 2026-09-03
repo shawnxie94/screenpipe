@@ -119,7 +119,7 @@ describe("LiveViewAiComposer", () => {
       "aria-hidden",
       "true",
     );
-    fireEvent.click(screen.getByRole("button", { name: "stop update" }));
+    fireEvent.click(screen.getByRole("button", { name: "停止更新" }));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });

@@ -3178,7 +3178,7 @@ export function BrainOverview({
                 variant="outline"
                 size="icon"
                 className="h-9 w-9 shrink-0 rounded-none"
-                aria-label="undo last Live View change"
+                aria-label="撤销上次实时视图更改"
                 title={`撤销上次实时视图更改 (${isMac ? "⌘Z" : "Ctrl+Z"})`}
                 disabled={saving}
                 onClick={() => void restorePreviousView()}
@@ -3221,8 +3221,8 @@ export function BrainOverview({
                 variant="outline"
                 size="icon"
                 className="h-9 w-9 shrink-0 rounded-none"
-                aria-label={refreshIsActive ? "loading data" : "refresh data"}
-                title={refreshIsActive ? "loading data" : "refresh data"}
+                aria-label={refreshIsActive ? "正在加载数据" : "刷新数据"}
+                title={refreshIsActive ? "正在加载数据" : "刷新数据"}
                 disabled={dashboardBusy}
                 onClick={() => void refreshConnectedPipes(view)}
               >
@@ -3287,7 +3287,7 @@ export function BrainOverview({
                 disabled={dashboardBusy}
                 onClick={() => void refreshConnectedPipes(view)}
               >
-                refresh data
+                刷新数据
               </Button>
             )}
           </div>
@@ -3327,7 +3327,7 @@ export function BrainOverview({
         {templateGalleryOpen && !onboardingColdStart && (
           <div className="relative mb-5 max-h-[min(50vh,32rem)] shrink-0 overflow-y-auto border border-border p-4 pr-12">
             <Button
-              aria-label="close templates"
+              aria-label="关闭模板"
               variant="ghost"
               size="icon"
               className="absolute right-2 top-2 h-8 w-8 rounded-none"
@@ -3407,7 +3407,7 @@ export function BrainOverview({
                 size="icon"
                 variant="ghost"
                 className="h-7 w-7 rounded-none"
-                aria-label="discard all AI changes"
+                aria-label="放弃全部 AI 修改"
                 onClick={discardAiProposals}
               >
                 <X className="h-3 w-3" />

@@ -142,17 +142,17 @@ export const ChangelogDialog: React.FC = () => {
                   )}
                   <CategorySection
                     icon={<Sparkles className="w-3 h-3 text-foreground/60" />}
-                    label="new"
+                    label="新增"
                     items={entry.features ?? []}
                   />
                   <CategorySection
                     icon={<Wrench className="w-3 h-3 text-foreground/60" />}
-                    label="improved"
+                    label="改进"
                     items={entry.improvements ?? []}
                   />
                   <CategorySection
                     icon={<Bug className="w-3 h-3 text-foreground/60" />}
-                    label="fixed"
+                    label="修复"
                     items={entry.fixes ?? []}
                   />
                 </div>

@@ -44,7 +44,7 @@ describe("meeting share control", () => {
 
   const openMenu = () =>
     fireEvent.keyDown(
-      screen.getByRole("button", { name: "more meeting actions" }),
+      screen.getByRole("button", { name: "更多会议操作" }),
       { key: "Enter" },
     );
 
@@ -65,7 +65,7 @@ describe("meeting share control", () => {
       screen.getByRole("button", { name: "send to an app…" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "more meeting actions" }),
+      screen.getByRole("button", { name: "更多会议操作" }),
     ).toBeVisible();
   });
 

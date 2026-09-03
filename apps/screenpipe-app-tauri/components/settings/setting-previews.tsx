@@ -36,15 +36,14 @@ export function CaptureFrequencyPreview({ seconds }: { seconds: number }) {
       </div>
       <p className="mt-1.5 text-[11px] text-muted-foreground">
         {auto ? (
-          "follows your power profile — roughly one frame every 30s when the screen is idle"
+          "跟随你的电源配置 — 屏幕空闲时大约每 30 秒一帧"
         ) : (
           <>
-            at least one frame every{" "}
-            <span className="font-mono text-foreground">{seconds}s</span> — about{" "}
+            至少每{" "}
+            <span className="font-mono text-foreground">{seconds}s</span> 一帧 — 静止屏幕上约每小时{" "}
             <span className="font-mono text-foreground">
               {perHour?.toLocaleString()}
-            </span>{" "}
-            an hour on a still screen
+            </span> 帧
           </>
         )}
       </p>
@@ -68,7 +67,7 @@ function DayStripRow({
     <div className={cn("flex items-center gap-2", !active && "opacity-40")}>
       <span className="w-16 shrink-0 text-[10px] text-muted-foreground">
         {label}
-        {active && " · now"}
+        {active && " · 现在"}
       </span>
       <span className="min-w-0 flex-1">{children}</span>
     </div>
@@ -79,10 +78,10 @@ export function AudioCaptureModePreview({ mode }: { mode: string }) {
   const meetings = mode === "meetings-only";
   return (
     <div className="mt-2.5 space-y-1.5 rounded-md border border-border bg-muted/40 px-2.5 py-2">
-      <DayStripRow label="always" active={!meetings}>
+      <DayStripRow label="始终" active={!meetings}>
         <span className="block h-2.5 rounded-[2px] bg-foreground" />
       </DayStripRow>
-      <DayStripRow label="meetings" active={meetings}>
+      <DayStripRow label="会议" active={meetings}>
         <span className="relative block h-2.5 rounded-[2px] bg-foreground/15">
           <span className="absolute inset-y-0 left-[16%] w-[12%] rounded-[2px] bg-foreground" />
           <span className="absolute inset-y-0 left-[46%] w-[8%] rounded-[2px] bg-foreground" />
@@ -91,8 +90,8 @@ export function AudioCaptureModePreview({ mode }: { mode: string }) {
       </DayStripRow>
       <p className="text-[10px] text-muted-foreground">
         {meetings
-          ? "records only during detected meetings — saves battery, disk & transcription cost"
-          : "records continuously, 24/7"}
+          ? "仅在检测到会议时录制 — 省电、省磁盘、省转写成本"
+          : "全天候连续录制，24/7"}
       </p>
     </div>
   );
@@ -101,16 +100,16 @@ export function AudioCaptureModePreview({ mode }: { mode: string }) {
 // ── Retention / storage saver ────────────────────────────────────────
 // One past timeline entry, shown as the pieces it's made of, with the
 // pieces each cleanup mode drops struck through.
-const RETENTION_CHIPS = ["Screenshot", "Text", "App structure", "Memories"];
+const RETENTION_CHIPS = ["截图", "文字", "应用结构", "记忆"];
 const RETENTION_KEPT: Record<"media" | "lean" | "all", boolean[]> = {
   media: [false, true, true, true],
   lean: [false, true, false, true],
   all: [false, false, false, false],
 };
 const RETENTION_CAPTION: Record<"media" | "lean" | "all", string> = {
-  media: "drops screenshots & video; everything stays searchable",
-  lean: "keeps text & memories; drops screenshots and app structure",
-  all: "deletes the whole entry once it's past the cutoff",
+  media: "丢弃截图与视频；其余仍保留可搜索",
+  lean: "保留文字与记忆；丢弃截图和应用结构",
+  all: "超过截止时间后删除整条记录",
 };
 
 export function RetentionModePreview({
@@ -122,7 +121,7 @@ export function RetentionModePreview({
   return (
     <div className="mt-2.5 ml-6 rounded-md border border-border bg-muted/40 px-2.5 py-2">
       <p className="mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-        a past entry, after cleanup
+        一条历史记录清理后的样子
       </p>
       <div className="flex flex-wrap gap-1.5">
         {RETENTION_CHIPS.map((chip, i) => (
@@ -178,15 +177,15 @@ const POWER_PROFILE: Record<
 > = {
   performance: {
     meters: [5, 5, 1],
-    caption: "full cadence & quality — ignores battery",
+    caption: "满频率与满质量 — 忽略电量",
   },
   auto: {
     meters: [3, 3, 3],
-    caption: "adapts to whether you're plugged in",
+    caption: "根据是否插电自适应",
   },
   battery_saver: {
     meters: [1, 2, 5],
-    caption: "slows capture & trims quality to stretch battery",
+    caption: "降低采集频率并压缩质量以延长续航",
   },
 };
 
@@ -198,9 +197,9 @@ export function PowerModePreview({
   const p = POWER_PROFILE[mode] ?? POWER_PROFILE.auto;
   return (
     <div className="mt-3 space-y-1.5 rounded-md border border-border bg-muted/40 px-2.5 py-2">
-      <SegMeter label="capture cadence" level={p.meters[0]} />
-      <SegMeter label="capture quality" level={p.meters[1]} />
-      <SegMeter label="battery life" level={p.meters[2]} />
+      <SegMeter label="采集频率" level={p.meters[0]} />
+      <SegMeter label="采集质量" level={p.meters[1]} />
+      <SegMeter label="电池续航" level={p.meters[2]} />
       <p className="pt-0.5 text-[10px] text-muted-foreground">{p.caption}</p>
     </div>
   );
@@ -272,7 +271,7 @@ export function CloudMediaAnalysisPreview() {
       <div className="grid grid-cols-[auto_auto_1fr] items-center gap-x-1 gap-y-2.5">
         {/* lane 1 — audio → transcript */}
         <span className="flex items-center">
-          <SourceTile label="audio">
+          <SourceTile label="音频">
             <span className="flex h-4 items-end gap-[2px]">
               {bars.map((h, i) => (
                 <span
@@ -304,11 +303,11 @@ export function CloudMediaAnalysisPreview() {
           </span>
         </span>
 
-        <ResultLine text={"“…then we shipped the fix.”"} tag="transcript" />
+        <ResultLine text={"“…然后我们上线了修复。”"} tag="文字记录" />
 
         {/* lane 2 — video & images → description */}
         <span className="flex items-center">
-          <SourceTile label="video · images">
+          <SourceTile label="视频 · 图像">
             <span className="grid grid-cols-3 gap-[2px]">
               {[0.9, 0.4, 0.7, 0.5, 0.85, 0.35].map((o, i) => (
                 <span
@@ -322,13 +321,12 @@ export function CloudMediaAnalysisPreview() {
           <FlowTrack />
         </span>
 
-        <ResultLine text="dashboard open, chart trending up" tag="from video" />
+        <ResultLine text="仪表盘已打开，曲线呈上升趋势" tag="来自视频" />
       </div>
 
       <p className="mt-2 text-[10px] text-muted-foreground">
-        speech becomes searchable text and video &amp; images become
-        descriptions — processed in a confidential enclave, then available to
-        Pi &amp; Claude Code.
+        语音变成可搜索的文字，视频与图像变成描述 — 在机密飞地中处理，随后供
+        Pi 与 Claude Code 使用。
       </p>
     </div>
   );
@@ -340,7 +338,7 @@ export function NotificationSamplePreview() {
   return (
     <div className="mb-4 rounded-lg border border-border bg-card px-3 py-2.5">
       <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
-        what these look like
+        通知长这样
       </p>
       <div className="flex items-start gap-2.5 rounded-md border border-border bg-background px-2.5 py-2">
         <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[6px] bg-foreground">
@@ -352,7 +350,7 @@ export function NotificationSamplePreview() {
             <span className="text-[10px] text-muted-foreground">now</span>
           </div>
           <p className="truncate text-xs text-muted-foreground">
-            Audio capture recovered — recording is healthy again.
+            音频采集已恢复 — 录制重新健康。
           </p>
         </div>
       </div>

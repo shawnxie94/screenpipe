@@ -160,7 +160,7 @@ describe("AccountSection subscription/login gating", () => {
     // header.
     expect(screen.queryByTestId(ACTIVE_CARD)).not.toBeInTheDocument();
     // It falls through to the login-first layout instead.
-    expect(screen.getByText(/sign in to screenpipe/i)).toBeInTheDocument();
+    expect(screen.getByText(/登录 Screenpipe/)).toBeInTheDocument();
   });
 
   it("shows the active plan card for a real signed-in cloud subscriber", () => {
@@ -217,7 +217,7 @@ describe("AccountSection subscription/login gating", () => {
 
     expect(loginStatus()).toContain(status);
     expect(screen.getByTestId("account-enterprise-managed-card")).toHaveTextContent(
-      "Screenpipe Enterprise",
+      "Screenpipe 企业版",
     );
     expect(screen.getByText(/Rialto Distribution manages this deployment/i)).toBeInTheDocument();
     expect(screen.queryByText("Screenpipe Free")).not.toBeInTheDocument();
@@ -537,6 +537,6 @@ describe("AccountSection subscription/login gating", () => {
 
     expect(loginStatus()).toContain("not logged in");
     expect(screen.queryByTestId(ACTIVE_CARD)).not.toBeInTheDocument();
-    expect(screen.getByText(/sign in to screenpipe/i)).toBeInTheDocument();
+    expect(screen.getByText(/登录 Screenpipe/)).toBeInTheDocument();
   });
 });

@@ -85,7 +85,7 @@ describe("ImportChatsDialog", () => {
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({
-      title: "chat import complete",
+      title: "聊天导入完成",
       description: "2 new · 1 updated",
     }));
   });
