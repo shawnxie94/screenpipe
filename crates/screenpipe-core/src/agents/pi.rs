@@ -10,6 +10,7 @@
 use super::{install_spawned_pid, AgentExecutor, AgentOutput, ExecutionHandle};
 use anyhow::{anyhow, Result};
 use arc_swap::ArcSwap;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::ffi::{OsStr, OsString};
@@ -152,6 +153,126 @@ pub fn apply_custom_provider_compat(provider: &mut serde_json::Value) {
             .expect("custom provider model compat was initialized as an object")
             .insert("supportsStore".to_string(), json!(false));
     }
+}
+
+/// A single model entry as listed under `providers.<name>.models[]` in the
+/// user's standalone-pi `~/.pi/agent/models.json`.
+///
+/// `name` follows pi's documented fallback (`name` overrides `id`); the
+/// Settings picker reuses the same rule so the label matches what pi itself
+/// would show in `/model`.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PiGlobalModel {
+    pub id: String,
+    pub name: String,
+    pub context_window: Option<u64>,
+    pub max_output_tokens: Option<u64>,
+}
+
+/// A provider catalog entry as it appears under `providers` in
+/// `~/.pi/agent/models.json`.
+///
+/// `name` is the stable provider key the Settings picker uses to address the
+/// provider when building a preset (e.g. "minimax", "ollama", "custom-proxy").
+/// `title` is the human-readable label from the provider's `"name"` field,
+/// falling back to `name` when absent.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PiGlobalProvider {
+    pub name: String,
+    pub title: String,
+    pub models: Vec<PiGlobalModel>,
+}
+
+/// Read the user's standalone-pi `~/.pi/agent/models.json` and return every
+/// provider's model catalog. Read-only — never writes to the global dir.
+///
+/// Called on demand from the desktop app's Settings → AI preset picker. A
+/// provider added through `pi /login` (e.g. self-hosted MiniMax / Ollama /
+/// custom endpoints) needs to reach the picker without restarting screenpipe,
+/// so this reads the file on every call rather than caching. The file is
+/// tiny and the picker is user-initiated, so the cost is negligible.
+///
+/// A fresh install that has never launched a standalone pi returns an empty
+/// list — the picker must keep working on first run. The `screenpipe` key is
+/// skipped: it is screenpipe's own provider entry, shaped by
+/// `ensure_pi_config` for the isolated `~/.screenpipe/pi-config/`, and
+/// surfacing it here would duplicate the hosted catalog that the gateway
+/// fetch already covers.
+pub fn read_global_pi_models() -> Vec<PiGlobalProvider> {
+    let Some(home) = dirs::home_dir() else {
+        return Vec::new();
+    };
+    let path = home.join(".pi").join("agent").join("models.json");
+    read_global_pi_models_from(&path)
+}
+
+/// Pure-function variant of [`read_global_pi_models`] that takes an explicit
+/// path. Exists so the parsing logic can be unit-tested without touching the
+/// developer's real `~/.pi/agent/models.json`.
+///
+/// `path` is read best-effort: a missing or malformed file yields an empty
+/// list (logged once). The `screenpipe` key is skipped; providers without a
+/// `models` array are skipped; model entries without an `id` are skipped.
+pub fn read_global_pi_models_from(path: &std::path::Path) -> Vec<PiGlobalProvider> {
+    let Ok(raw) = std::fs::read_to_string(path) else {
+        return Vec::new();
+    };
+    let parsed: serde_json::Value = match serde_json::from_str(&raw) {
+        Ok(v) => v,
+        Err(_) => {
+            warn!("pi: ignoring unparseable global models.json at {}", path.display());
+            return Vec::new();
+        }
+    };
+    let Some(providers) = parsed.get("providers").and_then(|v| v.as_object()) else {
+        return Vec::new();
+    };
+    let mut out: Vec<PiGlobalProvider> = Vec::with_capacity(providers.len());
+    for (name, value) in providers {
+        if name == "screenpipe" {
+            continue;
+        }
+        let title = value
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or(name.as_str())
+            .to_string();
+        let Some(models_value) = value.get("models").and_then(|v| v.as_array()) else {
+            // A provider with no models contributes nothing to the picker.
+            continue;
+        };
+        let mut models: Vec<PiGlobalModel> = Vec::with_capacity(models_value.len());
+        for model in models_value {
+            // `id` is what pi sends on the wire, so an empty / non-string id
+            // is unusable to the picker — skip rather than show a blank entry.
+            let Some(raw_id) = model.get("id").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            let id = raw_id.trim();
+            if id.is_empty() {
+                continue;
+            }
+            let label = model
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or(id)
+                .to_string();
+            models.push(PiGlobalModel {
+                id: id.to_string(),
+                name: label,
+                context_window: model.get("contextWindow").and_then(|v| v.as_u64()),
+                max_output_tokens: model.get("maxTokens").and_then(|v| v.as_u64()),
+            });
+        }
+        out.push(PiGlobalProvider {
+            name: name.clone(),
+            title,
+            models,
+        });
+    }
+    out
 }
 
 /// Windows creation flags for background agent spawns: CREATE_NO_WINDOW
@@ -2462,10 +2583,6 @@ impl AgentExecutor for PiExecutor {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers (extracted from apps/screenpipe-app-tauri/src-tauri/src/pi.rs)
-// ---------------------------------------------------------------------------
-
 /// Screenpipe's private pi agent dir (models.json, auth.json, sessions, …).
 ///
 /// Isolated from the user's global `~/.pi/agent` so screenpipe never rewrites
@@ -4087,6 +4204,105 @@ mod tests {
     #[test]
     fn managed_pi_install_disables_dependency_lifecycle_scripts() {
         assert!(PI_INSTALL_ARGS.contains(&"--ignore-scripts"));
+    }
+
+    /// The standalone-pi `models.json` is the source of truth for the user's
+    /// locally configured providers (e.g. self-hosted MiniMax / Ollama / a
+    /// custom proxy added via `pi /login`). The Settings picker must see
+    /// every such provider; the screenpipe-managed `screenpipe` key must not
+    /// leak back through this path (it is shaped for the isolated dir and
+    /// already covered by the gateway-hosted catalog).
+    #[test]
+    fn read_global_pi_models_from_lists_provider_catalog_with_screenpipe_filtered() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("models.json");
+        std::fs::write(
+            &path,
+            r#"{
+                "providers": {
+                    "screenpipe": {"baseUrl": "https://api.screenpipe.com/v1", "models": [{"id": "auto"}]},
+                    "minimax": {
+                        "name": "MINIMAX",
+                        "baseUrl": "https://api.minimaxi.com/v1",
+                        "api": "openai-completions",
+                        "models": [
+                            {"id": "MiniMax-M3", "name": "MiniMax M3", "contextWindow": 200000, "maxTokens": 32000},
+                            {"id": "MiniMax-Lite"}
+                        ]
+                    },
+                    "ollama": {"baseUrl": "http://localhost:11434/v1", "models": [{"id": "qwen3:8b"}]},
+                    "no-models": {"baseUrl": "http://example.invalid"}
+                }
+            }"#,
+        )
+        .expect("write");
+
+        let providers = read_global_pi_models_from(&path);
+        let names: Vec<&str> = providers.iter().map(|p| p.name.as_str()).collect();
+        assert_eq!(names, vec!["minimax", "ollama"], "screenpipe + no-models filtered");
+
+        let minimax = &providers[0];
+        assert_eq!(minimax.title, "MINIMAX");
+        assert_eq!(minimax.models.len(), 2);
+        assert_eq!(minimax.models[0].id, "MiniMax-M3");
+        assert_eq!(minimax.models[0].name, "MiniMax M3");
+        assert_eq!(minimax.models[0].context_window, Some(200000));
+        assert_eq!(minimax.models[0].max_output_tokens, Some(32000));
+        // `name` falls back to `id` when absent — mirrors pi's `/model` rule
+        // so the picker label matches what pi itself would show.
+        assert_eq!(minimax.models[1].name, "MiniMax-Lite");
+
+        let ollama = &providers[1];
+        assert_eq!(ollama.title, "ollama", "title falls back to key");
+        assert_eq!(ollama.models[0].id, "qwen3:8b");
+    }
+
+    /// A malformed `models.json` entry — missing `id`, empty `id`, non-string
+    /// `id`, or non-object — must be silently skipped rather than poisoning
+    /// the picker. Skipped entries never reach the UI.
+    #[test]
+    fn read_global_pi_models_from_skips_model_entries_without_a_string_id() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("models.json");
+        std::fs::write(
+            &path,
+            r#"{
+                "providers": {
+                    "minimax": {
+                        "models": [
+                            {"id": "MiniMax-M3"},
+                            {"name": "no-id"},
+                            {"id": ""},
+                            {"id": 42},
+                            {}
+                        ]
+                    }
+                }
+            }"#,
+        )
+        .expect("write");
+
+        let providers = read_global_pi_models_from(&path);
+        assert_eq!(providers.len(), 1);
+        assert_eq!(providers[0].models.len(), 1, "only MiniMax-M3 has a string id");
+        assert_eq!(providers[0].models[0].id, "MiniMax-M3");
+    }
+
+    /// A fresh install that has never launched a standalone pi, a corrupt
+    /// file, or a payload without `providers` must all return an empty list
+    /// — the picker must keep working on first run instead of throwing.
+    #[test]
+    fn read_global_pi_models_from_returns_empty_for_missing_or_malformed_file() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        assert!(read_global_pi_models_from(&dir.path().join("missing.json")).is_empty());
+
+        let bad = dir.path().join("bad.json");
+        std::fs::write(&bad, "not json at all").expect("write");
+        assert!(read_global_pi_models_from(&bad).is_empty());
+
+        let no_providers = dir.path().join("no-providers.json");
+        std::fs::write(&no_providers, r#"{"models": []}"#).expect("write");
+        assert!(read_global_pi_models_from(&no_providers).is_empty());
     }
 
     #[test]

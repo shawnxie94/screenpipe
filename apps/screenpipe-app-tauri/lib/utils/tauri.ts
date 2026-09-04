@@ -1728,6 +1728,30 @@ async piListExtensionPackages() : Promise<Result<PiExtensionPackage[], string>> 
 }
 },
 /**
+ * List every provider's model catalog as configured in the user's standalone
+ * pi `~/.pi/agent/models.json`.
+ *
+ * The Settings → AI preset picker uses this to surface providers the user
+ * registered in their standalone pi install (e.g. self-hosted MiniMax,
+ * Ollama, or a custom openai-compatible proxy added via `pi /login`). Without
+ * it the picker would only know about the hosted catalog returned by the
+ * Cloudflare Worker gateway, silently dropping every local-only provider.
+ *
+ * Read-only and best-effort: a missing, malformed, or never-seeded global
+ * config returns an empty list. The `screenpipe` key is filtered out — it
+ * is screenpipe's own provider entry shaped by [`ensure_pi_config`] for the
+ * isolated `~/.screenpipe/pi-config/`, already covered by the hosted
+ * catalog.
+ */
+async piListLocalProviders() : Promise<Result<PiLocalProvider[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("pi_list_local_providers") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Start a new Pi session (clears conversation history).
  * Serialized through the queue — waits for any in-flight work to complete,
  * then sends new_session and waits for its exact SDK response before returning.
@@ -3386,6 +3410,22 @@ busy: boolean; projectDir: string | null; pid: number | null; sessionId: string 
  * Genuine process/configuration failures still use the command error.
  */
 startupError: string | null }
+/**
+ * A single model entry as listed under a provider in the user's standalone
+ * pi `~/.pi/agent/models.json`. Returned by [`pi_list_local_providers`] so
+ * the Settings → AI preset model picker can show every model the user
+ * registered in their standalone pi install (e.g. self-hosted MiniMax,
+ * Ollama, or a custom openai-compatible proxy).
+ */
+export type PiLocalModel = { id: string; name: string; contextWindow: number | null; maxOutputTokens: number | null }
+/**
+ * A provider catalog entry as it appears under `providers` in the user's
+ * standalone pi `~/.pi/agent/models.json`. The Settings picker uses `name`
+ * to address the provider when building a preset and `title` as the picker
+ * header label (falls back to `name` when the provider has no `"name"`
+ * field of its own).
+ */
+export type PiLocalProvider = { name: string; title: string; models: PiLocalModel[] }
 /**
  * Configuration for which AI provider Pi should use.
  * Not `Hash` (it carries an `env: HashMap` via the ACP agent config); the

@@ -7,6 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { usePiModels } from "../use-pi-models";
 
 let settingsState: any;
+let localProvidersByCall: any[] = [];
+let localProvidersError: Error | null = null;
 
 vi.mock("@/lib/hooks/use-settings", () => ({
   useSettings: () => settingsState,
@@ -15,6 +17,16 @@ vi.mock("@/lib/hooks/use-settings", () => ({
 vi.mock("@/lib/ai-gateway-url", () => ({
   fetchAiGateway: async (path: string, init?: RequestInit) =>
     fetch(`https://api.screenpipe.com/v1${path}`, init),
+}));
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: async (cmd: string) => {
+    if (cmd !== "pi_list_local_providers") {
+      throw new Error(`unexpected invoke: ${cmd}`);
+    }
+    if (localProvidersError) throw localProvidersError;
+    return localProvidersByCall.shift() ?? [];
+  },
 }));
 
 function response(data: any[], status = 200, upgradeEligible = false) {
@@ -39,6 +51,8 @@ describe("usePiModels", () => {
       settings: { user: null },
       isSettingsLoaded: false,
     };
+    localProvidersByCall = [];
+    localProvidersError = null;
     vi.stubGlobal("fetch", vi.fn());
   });
 
@@ -167,5 +181,87 @@ describe("usePiModels", () => {
     );
     const { result } = renderHook(() => usePiModels());
     await waitFor(() => expect(result.current.piModels).toHaveLength(1));
+  });
+
+  it("returns an empty localProviders list on first render", () => {
+    settingsState.isSettingsLoaded = true;
+    vi.mocked(fetch).mockImplementation(() => response([{ id: "auto" }]));
+    const { result } = renderHook(() => usePiModels());
+    expect(result.current.localProviders).toEqual([]);
+  });
+
+  it("exposes local providers the user wired up in their standalone pi install", async () => {
+    settingsState = {
+      settings: { user: { token: "signed.jwt.token" } },
+      isSettingsLoaded: true,
+    };
+    vi.mocked(fetch).mockImplementation(() => response([{ id: "auto" }]));
+    localProvidersByCall = [
+      [
+        {
+          name: "minimax",
+          title: "MINIMAX",
+          models: [
+            { id: "MiniMax-M3", name: "MiniMax M3" },
+            { id: "MiniMax-Lite", name: "MiniMax-Lite" },
+          ],
+        },
+        {
+          name: "ollama",
+          title: "ollama",
+          models: [{ id: "qwen3:8b", name: "qwen3:8b" }],
+        },
+      ],
+    ];
+
+    const { result } = renderHook(() => usePiModels());
+    await waitFor(() => expect(result.current.localProviders).toHaveLength(2));
+
+    expect(result.current.localProviders[0]).toEqual({
+      name: "minimax",
+      title: "MINIMAX",
+      models: [
+        { id: "MiniMax-M3", name: "MiniMax M3" },
+        { id: "MiniMax-Lite", name: "MiniMax-Lite" },
+      ],
+    });
+    expect(result.current.localProviders[1].name).toBe("ollama");
+  });
+
+  it("keeps the hosted catalog when the local-provider command fails", async () => {
+    settingsState = {
+      settings: { user: { token: "signed.jwt.token" } },
+      isSettingsLoaded: true,
+    };
+    vi.mocked(fetch).mockImplementation(() => response([{ id: "hosted-model" }]));
+    localProvidersError = new Error("command not registered yet");
+
+    const { result } = renderHook(() => usePiModels());
+    await waitFor(() => expect(result.current.piModels[0]?.id).toBe("hosted-model"));
+    // Local providers fall back to an empty list — never throw into the picker.
+    expect(result.current.localProviders).toEqual([]);
+  });
+
+  it("does not lose the previous local providers when a token refresh errors", async () => {
+    settingsState = {
+      settings: { user: { token: "old.jwt.token" } },
+      isSettingsLoaded: true,
+    };
+    vi.mocked(fetch).mockImplementation(() => response([{ id: "old-model" }]));
+    localProvidersByCall = [
+      [{ name: "minimax", title: "MINIMAX", models: [{ id: "MiniMax-M3", name: "MiniMax M3" }] }],
+    ];
+    const { result, rerender } = renderHook(() => usePiModels());
+    await waitFor(() => expect(result.current.localProviders).toHaveLength(1));
+
+    settingsState = {
+      settings: { user: { token: "new.jwt.token" } },
+      isSettingsLoaded: true,
+    };
+    localProvidersError = new Error("invocation failed");
+    rerender();
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.localProviders).toEqual([]);
   });
 });

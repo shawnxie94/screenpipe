@@ -7,8 +7,8 @@
 //! Manages the pi coding agent via RPC mode (stdin/stdout JSON protocol).
 
 use screenpipe_core::agents::pi::{
-    apply_custom_provider_compat, screenpipe_cloud_models, PI_AI_PACKAGE, PI_NAMESPACE_DIR,
-    PI_PACKAGE, SCREENPIPE_API_URL,
+    apply_custom_provider_compat, read_global_pi_models, screenpipe_cloud_models, PI_AI_PACKAGE,
+    PI_NAMESPACE_DIR, PI_PACKAGE, SCREENPIPE_API_URL,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -599,6 +599,33 @@ pub struct PiExtensionPackage {
     /// True only after Screenpipe validates the installed package's portable
     /// ACP MCP manifest and its entrypoint stays inside the package directory.
     pub acp_compatible: bool,
+}
+
+/// A single model entry as listed under a provider in the user's standalone
+/// pi `~/.pi/agent/models.json`. Returned by [`pi_list_local_providers`] so
+/// the Settings → AI preset model picker can show every model the user
+/// registered in their standalone pi install (e.g. self-hosted MiniMax,
+/// Ollama, or a custom openai-compatible proxy).
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PiLocalModel {
+    pub id: String,
+    pub name: String,
+    pub context_window: Option<u64>,
+    pub max_output_tokens: Option<u64>,
+}
+
+/// A provider catalog entry as it appears under `providers` in the user's
+/// standalone pi `~/.pi/agent/models.json`. The Settings picker uses `name`
+/// to address the provider when building a preset and `title` as the picker
+/// header label (falls back to `name` when the provider has no `"name"`
+/// field of its own).
+#[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct PiLocalProvider {
+    pub name: String,
+    pub title: String,
+    pub models: Vec<PiLocalModel>,
 }
 
 /// RPC Response from Pi
@@ -5509,6 +5536,42 @@ async fn stop_idle_pi_sessions_for_package_change(state: &PiState) -> Result<(),
 pub async fn pi_list_extension_packages() -> Result<Vec<PiExtensionPackage>, String> {
     let settings = read_pi_settings()?;
     Ok(pi_settings_packages(&settings))
+}
+
+/// List every provider's model catalog as configured in the user's standalone
+/// pi `~/.pi/agent/models.json`.
+///
+/// The Settings → AI preset picker uses this to surface providers the user
+/// registered in their standalone pi install (e.g. self-hosted MiniMax,
+/// Ollama, or a custom openai-compatible proxy added via `pi /login`). Without
+/// it the picker would only know about the hosted catalog returned by the
+/// Cloudflare Worker gateway, silently dropping every local-only provider.
+///
+/// Read-only and best-effort: a missing, malformed, or never-seeded global
+/// config returns an empty list. The `screenpipe` key is filtered out — it
+/// is screenpipe's own provider entry shaped by [`ensure_pi_config`] for the
+/// isolated `~/.screenpipe/pi-config/`, already covered by the hosted
+/// catalog.
+#[tauri::command]
+#[specta::specta]
+pub async fn pi_list_local_providers() -> Result<Vec<PiLocalProvider>, String> {
+    Ok(screenpipe_core::agents::pi::read_global_pi_models()
+        .into_iter()
+        .map(|provider| PiLocalProvider {
+            name: provider.name,
+            title: provider.title,
+            models: provider
+                .models
+                .into_iter()
+                .map(|model| PiLocalModel {
+                    id: model.id,
+                    name: model.name,
+                    context_window: model.context_window,
+                    max_output_tokens: model.max_output_tokens,
+                })
+                .collect(),
+        })
+        .collect())
 }
 
 #[tauri::command]
