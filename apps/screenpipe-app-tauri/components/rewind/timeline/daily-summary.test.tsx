@@ -194,7 +194,7 @@ describe("TimelineDailySummary", () => {
 		const trigger = screen.getByTestId("timeline-daily-summary-trigger");
 		expect(trigger).toHaveClass("h-10", "w-10");
 		expect(trigger).toHaveAccessibleName(
-			"开启增强 AI 以生成这一天的摘要",
+			"生成这一天的摘要",
 		);
 		expect(trigger).not.toHaveTextContent("daily summary");
 	});
@@ -235,7 +235,7 @@ describe("TimelineDailySummary", () => {
 		render(<TimelineDailySummary currentDate={selectedDate} />);
 
 		const trigger = screen.getByTestId("timeline-daily-summary-trigger");
-		expect(trigger).toHaveAccessibleName("Open this day's summary");
+		expect(trigger).toHaveAccessibleName("打开这一天的摘要");
 		fireEvent.click(trigger);
 
 		const panel = screen.getByTestId("timeline-daily-summary-panel");
@@ -253,7 +253,7 @@ describe("TimelineDailySummary", () => {
 				screen.queryByTestId("timeline-daily-summary-panel"),
 			).not.toBeInTheDocument();
 		});
-		expect(screen.queryByText("turn on enhanced ai?")).not.toBeInTheDocument();
+		expect(screen.queryByText("开启增强 AI？")).not.toBeInTheDocument();
 	});
 
 	it("closes the top summary before Escape can close its overlay host", async () => {
@@ -293,9 +293,9 @@ describe("TimelineDailySummary", () => {
 
 		fireEvent.click(screen.getByTestId("timeline-daily-summary-trigger"));
 
-		expect(screen.getByText("turn on enhanced ai?")).toBeInTheDocument();
+		expect(screen.getByText("开启增强 AI？")).toBeInTheDocument();
 		expect(
-			screen.getByText(/never run on a timer or generate automatically/i),
+			screen.getByText(/不会定时运行或自动生成/i),
 		).toBeInTheDocument();
 		expect(screen.getByText(/受限的只读访问/i)).toBeInTheDocument();
 		expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
@@ -306,7 +306,7 @@ describe("TimelineDailySummary", () => {
 		render(<TimelineDailySummary currentDate={selectedDate} />);
 		fireEvent.click(screen.getByTestId("timeline-daily-summary-trigger"));
 		fireEvent.click(
-			screen.getByRole("button", { name: "Turn on and summarize" }),
+			screen.getByRole("button", { name: "开启并生成" }),
 		);
 
 		await waitFor(() => {
