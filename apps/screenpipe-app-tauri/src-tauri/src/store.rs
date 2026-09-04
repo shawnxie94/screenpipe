@@ -2607,7 +2607,7 @@ pub fn init_store(app: &AppHandle) -> Result<SettingsStore, String> {
         }
     }
 
-    if restore_headed_mode_for_consumer(&mut store, cfg!(feature = "enterprise-build")) {
+    if restore_headed_mode_for_consumer(&mut store, false) {
         tracing::info!(
             "settings migration: restored headed UI and scheduled pipe runs for consumer install"
         );

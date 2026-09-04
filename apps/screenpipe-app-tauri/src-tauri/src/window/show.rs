@@ -504,7 +504,7 @@ impl ShowRewindWindow {
             .show(app);
         }
 
-        if crate::enterprise_policy::is_app_ui_hidden() && !allowed_while_hidden {
+        if crate::local_ui_visibility::is_app_ui_hidden() && !allowed_while_hidden {
             info!(
                 "enterprise: suppressed {} window in hidden UI mode",
                 id.label()
@@ -2008,7 +2008,7 @@ impl ShowRewindWindow {
     /// already exists or the UI is suppressed (enterprise hidden mode).
     #[cfg(not(target_os = "windows"))]
     pub fn prewarm_search(app: &AppHandle) -> tauri::Result<()> {
-        if crate::enterprise_policy::is_app_ui_hidden() {
+        if crate::local_ui_visibility::is_app_ui_hidden() {
             return Ok(());
         }
         if app

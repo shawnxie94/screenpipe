@@ -98,7 +98,7 @@ pub fn reset_to_regular_and_refresh_tray(app: &AppHandle) {
         return;
     }
 
-    if crate::enterprise_policy::is_app_ui_hidden() {
+    if crate::local_ui_visibility::is_app_ui_hidden() {
         info!("Setting activation policy to Accessory (enterprise hidden UI mode)");
         let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
         return;

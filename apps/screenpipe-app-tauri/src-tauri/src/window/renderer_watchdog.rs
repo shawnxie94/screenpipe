@@ -338,7 +338,7 @@ pub(crate) fn watch_focused(window: &tauri::Window) {
 }
 
 fn recover_on_main_thread(app: &AppHandle, target: ShowRewindWindow, failed_label: &str) {
-    if crate::enterprise_policy::is_app_ui_hidden() || crate::headless::is_dormant() {
+    if crate::local_ui_visibility::is_app_ui_hidden() || crate::headless::is_dormant() {
         lock_state().recovery_failed();
         info!(
             target: "screenpipe::renderer_watchdog",

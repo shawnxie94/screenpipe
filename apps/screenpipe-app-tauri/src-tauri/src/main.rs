@@ -70,21 +70,7 @@ mod disk_pressure_notifications;
 #[cfg(feature = "e2e")]
 mod e2e;
 mod embedded_server;
-mod enterprise;
-#[cfg(any(
-    test,
-    all(
-        feature = "enterprise-build",
-        any(target_os = "macos", target_os = "windows")
-    )
-))]
-mod enterprise_autostart;
 mod enterprise_config_file;
-mod enterprise_host_identity;
-mod enterprise_install_metadata;
-mod enterprise_policy;
-mod enterprise_recording_access;
-mod enterprise_sync;
 mod events;
 mod feedback_redact;
 mod feedback_upload;
@@ -94,7 +80,7 @@ mod ics_calendar;
 mod livetext;
 #[cfg(target_os = "macos")]
 mod livetext_ffi;
-mod enterprise_persistence;
+mod local_ui_visibility;
 mod meeting_export;
 mod meeting_live_notes;
 mod meeting_stall_notifications;
@@ -165,11 +151,6 @@ pub use recording::stop_screenpipe;
 pub use server::spawn_server;
 // Removed: pub use store::get_profiles_store; // Profile functionality has been removed
 
-pub use enterprise_install_metadata::get_enterprise_install_metadata;
-pub use enterprise_host_identity::get_enterprise_host_identity;
-pub use enterprise_policy::set_enterprise_policy;
-pub use enterprise_policy::set_sync_streams;
-pub use enterprise_recording_access::set_enterprise_recording_authorized;
 pub use permissions::do_permissions_check;
 pub use permissions::open_permission_settings;
 pub use permissions::request_permission;
@@ -256,12 +237,8 @@ fn get_env(name: &str) -> String {
 /// egress, missing permissions dialog). When set, startup marks onboarding
 /// complete so the app lands on the main view.
 ///
-/// Local/self-hosted builds (without the `official-build` feature, i.e. any
-/// build not produced by the Screenpipe CI release pipeline) default to
-/// skipping onboarding, which also disables the trial-activation paywall and
-/// the signup/login requirement. Official builds and enterprise builds keep
-/// the escape-hatch-only behavior. Set SCREENPIPE_SKIP_ONBOARDING=false to
-/// force the original behavior on a local build.
+/// The local-only application defaults to skipping account-oriented onboarding.
+/// Set SCREENPIPE_SKIP_ONBOARDING=false to show the local setup flow.
 fn should_skip_onboarding() -> bool {
     let env_override = std::env::var("SCREENPIPE_SKIP_ONBOARDING")
         .ok()
@@ -272,9 +249,7 @@ fn should_skip_onboarding() -> bool {
             _ => matches!(val, "1" | "true" | "yes" | "on"),
         };
     }
-    // Local self-hosted builds skip onboarding (and thus paywall/login) by
-    // default. Official CI releases and enterprise builds keep stock behavior.
-    !cfg!(feature = "official-build") && !cfg!(feature = "enterprise-build")
+    true
 }
 
 fn should_prevent_window_close(label: &str) -> bool {
@@ -305,79 +280,11 @@ fn emit_menu_close_window(app: &tauri::AppHandle) {
 /// Used to skip Home so login starts stay in the tray.
 const AUTOSTART_ARG: &str = "--autostart";
 
-#[cfg(any(test, all(feature = "enterprise-build", target_os = "macos")))]
-const MACOS_LOGIN_DUPLICATE_WINDOW: std::time::Duration = std::time::Duration::from_secs(30);
-
-#[cfg(any(test, all(feature = "enterprise-build", target_os = "macos")))]
-#[derive(Default)]
-struct PendingPlainLoginDuplicate {
-    expires_at: Option<std::time::Instant>,
-}
-
-#[cfg(any(test, all(feature = "enterprise-build", target_os = "macos")))]
-impl PendingPlainLoginDuplicate {
-    fn arm(&mut self, legacy_launch: bool, main_app_enabled: bool, now: std::time::Instant) {
-        self.expires_at =
-            (legacy_launch && main_app_enabled).then_some(now + MACOS_LOGIN_DUPLICATE_WINDOW);
-    }
-
-    fn consume_if_plain<S: AsRef<str>>(&mut self, args: &[S], now: std::time::Instant) -> bool {
-        let Some(expires_at) = self.expires_at else {
-            return false;
-        };
-        if now > expires_at {
-            self.expires_at = None;
-            return false;
-        }
-        if args.len() != 1 || args[0].as_ref().starts_with("screenpipe://") {
-            return false;
-        }
-        self.expires_at = None;
-        true
-    }
-}
-
-#[cfg(all(feature = "enterprise-build", target_os = "macos"))]
-static PENDING_MACOS_LOGIN_DUPLICATE: once_cell::sync::Lazy<
-    std::sync::Mutex<PendingPlainLoginDuplicate>,
-> = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(PendingPlainLoginDuplicate::default()));
-
 /// True when this process was started by the OS login/autostart entry
 /// (LaunchAgent / Run registry), not a manual user launch.
 fn launched_from_autostart() -> bool {
     let argument_launch = args_contain_autostart(std::env::args());
-    #[cfg(all(feature = "enterprise-build", target_os = "macos"))]
-    let login_item_event = match enterprise_autostart::launched_as_macos_login_item() {
-        Ok(detected) => detected,
-        Err(error) => {
-            warn!("autostart: could not inspect macOS launch event: {error}");
-            false
-        }
-    };
-    #[cfg(not(all(feature = "enterprise-build", target_os = "macos")))]
-    let login_item_event = false;
-
-    #[cfg(all(feature = "enterprise-build", target_os = "macos"))]
-    if argument_launch {
-        match enterprise_autostart::macos_main_app_is_enabled() {
-            Ok(main_app_enabled) => {
-                let mut pending = PENDING_MACOS_LOGIN_DUPLICATE
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
-                pending.arm(true, main_app_enabled, std::time::Instant::now());
-                if main_app_enabled {
-                    info!("autostart: armed one-shot main-app login duplicate suppression");
-                }
-            }
-            Err(error) => warn!("autostart: could not inspect main-app enrollment: {error}"),
-        }
-    }
-
-    let login_launch = classify_login_launch(argument_launch, login_item_event);
-    if login_item_event {
-        info!("autostart: macOS login-item launch event detected");
-    }
-    login_launch
+    classify_login_launch(argument_launch, false)
 }
 
 fn args_contain_autostart<I, S>(args: I) -> bool
@@ -395,15 +302,6 @@ pub(crate) fn should_suppress_startup_handoff<S: AsRef<str>>(args: &[S]) -> bool
         return true;
     }
 
-    #[cfg(all(feature = "enterprise-build", target_os = "macos"))]
-    {
-        return PENDING_MACOS_LOGIN_DUPLICATE
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .consume_if_plain(args, std::time::Instant::now());
-    }
-
-    #[cfg(not(all(feature = "enterprise-build", target_os = "macos")))]
     false
 }
 
@@ -452,8 +350,6 @@ macro_rules! define_specta_builder {
             .typ::<suggestions::CachedSuggestions>()
             .typ::<suggestions::Suggestion>()
             .typ::<hardware::HardwareCapability>()
-            .typ::<enterprise_install_metadata::EnterpriseInstallMetadata>()
-            .typ::<enterprise_host_identity::EnterpriseHostIdentity>()
             .typ::<chatgpt_oauth::ChatGptOAuthStatus>()
             .typ::<provider_automations::ProviderAutomation>()
             .typ::<oauth::OAuthStatus>()
@@ -1133,13 +1029,8 @@ async fn main() {
             // Deep links use route-specific foregrounding: auth returns through
             // the app-entry gate, explicit timeline links open Timeline, and
             // every other route starts from Home.
-            // macOS can start both the main-app login item and the retained
-            // legacy LaunchAgent at once. The plugin's exact --autostart flag
-            // always stays background-only. If legacy won the primary race,
-            // consume one plain main-app handoff from the short guard armed
-            // during setup; normal subsequent launches retain Home behavior.
             let login_duplicate = should_suppress_startup_handoff(&args_clone);
-            if !crate::enterprise_policy::is_app_ui_hidden() && !login_duplicate {
+            if !login_duplicate {
                 match deep_link::handoff_window(deep_link_url.as_deref()) {
                     deep_link::HandoffWindow::AppEntry => {
                         let _ = ShowRewindWindow::Onboarding.show(&app_for_closure);
@@ -1243,14 +1134,12 @@ async fn main() {
             #[cfg(target_os = "macos")]
             {
                 use tauri::menu::{MenuBuilder, SubmenuBuilder, PredefinedMenuItem, MenuItemBuilder};
-                let app_ui_hidden = crate::enterprise_policy::is_app_ui_hidden();
+                let app_ui_hidden = false;
 
                 let mut app_submenu_builder = SubmenuBuilder::new(app, "screenpipe")
                     .item(&PredefinedMenuItem::about(app, Some("About screenpipe"), None)?)
                     .separator();
-                if crate::config::screenpipe_hosted_services_enabled()
-                    && !crate::updates::is_enterprise_build(&app_handle)
-                {
+                if crate::config::screenpipe_hosted_services_enabled() {
                     app_submenu_builder = app_submenu_builder
                         .item(&MenuItemBuilder::with_id("check_for_updates", "Check for Updates...")
                             .build(app)?)
@@ -1526,11 +1415,6 @@ async fn main() {
                 }
             }
 
-            // Enterprise builds can identify org/device health in Sentry and
-            // PostHog without sending the raw license key. No-op on consumer
-            // builds; explicit MDM/support env vars still win when provided.
-            enterprise_sync::configure_telemetry_context(&app_handle);
-
             if data_dir_fell_back {
                 let app_handle_fb = app_handle.clone();
                 tauri::async_runtime::spawn(async move {
@@ -1710,7 +1594,7 @@ async fn main() {
                 });
             }
 
-            let app_ui_hidden = crate::enterprise_policy::is_app_ui_hidden();
+            let app_ui_hidden = false;
 
             // Keep every detected local AI tool connected to screenpipe. The
             // setup is backgrounded and idempotent: it installs missing MCP +
@@ -2250,23 +2134,6 @@ async fn main() {
             // installed app registered exactly as it is.
             if crate::dev_isolation::is_active() {
                 debug!("dev isolation active, skipping autostart registration");
-            } else if crate::enterprise_persistence::installed() {
-                #[cfg(all(feature = "enterprise-build", target_os = "macos"))]
-                match enterprise_autostart::set_macos_employee_autostart(&app_handle, false) {
-                    Ok(()) => {
-                        info!("persistence: retired redundant employee startup registrations")
-                    }
-                    Err(error) => warn!(
-                        "persistence: could not retire redundant startup registrations: {error}"
-                    ),
-                }
-                #[cfg(all(feature = "enterprise-build", target_os = "windows"))]
-                match app_handle.autolaunch().disable() {
-                    Ok(()) => info!("persistence: retired redundant Windows startup registration"),
-                    Err(error) => warn!(
-                        "persistence: could not retire Windows startup registration: {error}"
-                    ),
-                }
             } else if is_autostart_enabled {
                 let _ = autostart_manager.enable();
             } else {
@@ -2278,11 +2145,6 @@ async fn main() {
                 autostart_manager.is_enabled().unwrap_or(false)
             );
 
-            #[cfg(all(
-                feature = "enterprise-build",
-                any(target_os = "macos", target_os = "windows")
-            ))]
-            enterprise_autostart::spawn(&app_handle);
 
             // Use persistent analytics_id for PostHog (consistent across frontend and backend)
             let unique_id = store.recording.analytics_id.clone();
@@ -2485,11 +2347,6 @@ async fn main() {
                 google_calendar::start_google_calendar_publisher(gcal_app_handle).await;
             });
 
-            // Enterprise telemetry sync (no-op stub on consumer builds).
-            // Runs forever in background; only takes effect on enterprise-
-            // telemetry builds with SCREENPIPE_ENTERPRISE_LICENSE_KEY env set.
-            let _enterprise_shutdown_tx = enterprise_sync::spawn(&app_handle);
-
             if crate::config::screenpipe_hosted_services_enabled() {
                 // Account data sync. Runtime eligibility keeps customer-managed
                 // Enterprise accounts out while allowing Screenpipe's own org.
@@ -2540,10 +2397,8 @@ async fn main() {
     // Setup dock right-click menu (fallback for when tray is behind the notch)
     #[cfg(target_os = "macos")]
     {
-        if !crate::enterprise_policy::is_app_ui_hidden() {
-            let app_handle_dock = app.app_handle().clone();
-            dock_menu::setup_dock_menu(app_handle_dock);
-        }
+        let app_handle_dock = app.app_handle().clone();
+        dock_menu::setup_dock_menu(app_handle_dock);
 
         // Route native terminate: (dock Quit, AppleScript quit) through the
         // quit confirmation — tao never surfaces it as ExitRequested.
@@ -2657,22 +2512,10 @@ async fn main() {
 
                 #[cfg(target_os = "macos")]
                 tauri::RunEvent::Reopen { .. } => {
-                    #[cfg(feature = "enterprise-build")]
-                    match enterprise_autostart::launched_as_macos_login_item() {
-                        Ok(true) => {
-                            info!("autostart: ignored macOS login-item Reopen event");
-                            return;
-                        }
-                        Ok(false) => {}
-                        Err(error) => {
-                            warn!("autostart: could not inspect macOS Reopen event: {error}")
-                        }
-                    }
                     // Defer off the event stack so run handler stays panic-free.
                     // Showing Onboarding is the app-entry gate: it focuses setup
                     // while incomplete and routes to Home once complete.
-                    if crate::enterprise_policy::is_app_ui_hidden() || crate::headless::is_dormant()
-                    {
+                    if crate::headless::is_dormant() {
                         return;
                     }
                     let app = app_handle.app_handle().clone();

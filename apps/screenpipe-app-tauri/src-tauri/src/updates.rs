@@ -132,66 +132,9 @@ fn get_target_arch() -> &'static str {
     }
 }
 
-/// Check if this is a source/community build (not an official release)
-/// Official releases are built with --features official-build in GitHub Actions
+/// The local-only distribution never contacts Screenpipe's updater service.
 pub fn is_source_build(_app: &tauri::AppHandle) -> bool {
-    // The official-build feature is only enabled during CI releases
-    // Source builds will not have this feature enabled
-    !cfg!(feature = "official-build") && !cfg!(feature = "enterprise-build")
-}
-
-/// Enterprise build: updates are managed by IT (Intune/RoboPack), not in-app.
-pub fn is_enterprise_build(_app: &tauri::AppHandle) -> bool {
-    cfg!(feature = "enterprise-build")
-}
-
-fn enterprise_app_update_policy(app: &tauri::AppHandle) -> Option<serde_json::Value> {
-    SettingsStore::get(app)
-        .ok()
-        .flatten()
-        .and_then(|settings| settings.extra.get("enterpriseAppUpdatePolicy").cloned())
-}
-
-fn enterprise_update_mode(app: &tauri::AppHandle) -> Option<String> {
-    enterprise_app_update_policy(app)
-        .and_then(|policy| {
-            policy
-                .get("mode")
-                .and_then(|mode| mode.as_str())
-                .map(str::to_string)
-        })
-        .map(|mode| mode.to_lowercase())
-}
-
-fn enterprise_updates_managed_locally_for(
-    mode: Option<&str>,
-    metadata_managed: bool,
-    persistence_installed: bool,
-) -> bool {
-    // The persistent package's root supervisor would immediately relaunch the
-    // app during an in-app bundle replacement. Persistent installations are
-    // therefore updated only by installing a newer persistent package, even
-    // if an old dashboard policy explicitly selected the Screenpipe updater.
-    if persistence_installed {
-        return true;
-    }
-
-    match mode {
-        Some("screenpipe") => false,
-        Some("auto_detect") => metadata_managed,
-        Some("mdm") | Some("manual") => true,
-        _ => false,
-    }
-}
-
-fn enterprise_updates_managed_locally(app: &tauri::AppHandle) -> bool {
-    let metadata = crate::enterprise_install_metadata::get_enterprise_install_metadata();
-    let mode = enterprise_update_mode(app);
-    enterprise_updates_managed_locally_for(
-        mode.as_deref(),
-        metadata.managed,
-        crate::enterprise_persistence::installed(),
-    )
+    true
 }
 
 /// Snapshot of a pending update, exposed to the frontend via
@@ -747,11 +690,8 @@ fn load_auto_update_enabled(app: &tauri::AppHandle) -> bool {
         ),
     }
     let settings_enabled = auto_update_enabled_from_settings(settings);
-    let app_ui_hidden = crate::enterprise_policy::is_app_ui_hidden();
-    // mdm/manual (and auto_detect-with-MDM) => updates are managed outside the
-    // app; don't override that even when hidden.
-    let updates_managed_externally =
-        is_enterprise_build(app) && enterprise_updates_managed_locally(app);
+    let app_ui_hidden = false;
+    let updates_managed_externally = false;
     if app_ui_hidden && !settings_enabled && !updates_managed_externally {
         info!(
             "enterprise: forcing auto-update ON in hidden UI mode \
@@ -851,9 +791,7 @@ impl UpdatesManager {
         let failed_attempt = consume_update_attempt_marker(app);
         let last_failed_update = cooldown_from_failed_attempt(failed_attempt.as_ref());
 
-        let update_menu_item = if is_enterprise_build(app) {
-            None
-        } else {
+        let update_menu_item = {
             let (menu_text, enabled) = if is_source_build(app) {
                 ("Auto-updates unavailable (source build)", true) // Enable to show info dialog
             } else if failed_attempt.is_some() {
@@ -906,16 +844,6 @@ impl UpdatesManager {
             }
         }
         let _guard = CheckGuard(&self.is_checking);
-
-        // Enterprise: default to IT-managed updates unless the dashboard policy
-        // explicitly allows the Screenpipe updater for this install context.
-        if is_enterprise_build(&self.app) && enterprise_updates_managed_locally(&self.app) {
-            info!(
-                "enterprise build, updates managed outside app (mode={:?})",
-                enterprise_update_mode(&self.app)
-            );
-            return Result::Ok(false);
-        }
 
         // Handle source/community builds
         if is_source_build(&self.app) {
@@ -978,18 +906,11 @@ impl UpdatesManager {
         let mut builder = self.app.updater_builder();
         let settings = SettingsStore::get(&self.app).ok().flatten();
         let is_beta_build = self.app.config().identifier.contains("beta");
-        if !is_enterprise_build(&self.app) && !is_beta_build {
+        if !is_beta_build {
             let channel = consumer_update_channel(settings.as_ref());
             builder = builder.endpoints(vec![consumer_update_endpoint(channel).parse()?])?;
         }
-        if is_enterprise_build(&self.app) {
-            if let Some(license_key) = crate::commands::get_enterprise_license_key() {
-                builder = builder.header("X-License-Key", license_key)?;
-            }
-            if let Some(token) = crate::commands::get_cloud_token() {
-                builder = builder.header("Authorization", format!("Bearer {token}"))?;
-            }
-        } else if let Some(settings) = settings {
+        if let Some(settings) = settings {
             if let Some(token) = settings
                 .user
                 .token

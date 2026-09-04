@@ -49,11 +49,8 @@ fn classify_authentication(
 /// immediate branch; otherwise only the build-specific credential check varies.
 fn resolve(app: &tauri::AppHandle, settings: &SettingsStore) -> AuthenticationStatus {
     let status = classify_authentication(!crate::should_skip_onboarding(), || {
-        if cfg!(feature = "enterprise-build") {
-            crate::enterprise_sync::authorize_startup(app)
-        } else {
-            settings.has_cloud_authentication()
-        }
+        let _ = app;
+        settings.has_cloud_authentication()
     });
 
     info!(status = ?status, "startup authentication resolved");

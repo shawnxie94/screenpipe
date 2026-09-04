@@ -11210,7 +11210,6 @@ dependencies = [
  "screenpipe-redact",
  "screenpipe-screen",
  "screenpipe-secrets",
- "screenpipe-sync",
  "screenpipe-telemetry-wire",
  "screenpipe-vault",
  "security-framework",
@@ -11251,7 +11250,6 @@ dependencies = [
  "tauri-specta",
  "tauri-utils",
  "tempfile",
- "thiserror 1.0.69",
  "tikv-jemallocator",
  "tokio",
  "tokio-tungstenite",
@@ -11597,14 +11595,6 @@ dependencies = [
  "tracing",
  "windows 0.58.0",
  "windows-core 0.58.0",
-]
-
-[[package]]
-name = "screenpipe-persistence-supervisor"
-version = "0.1.0"
-dependencies = [
- "windows 0.58.0",
- "windows-service",
 ]
 
 [[package]]
@@ -16664,17 +16654,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7781fa89eaf60850ac3d2da7af8e5242a5ea78d1a11c49bf2910bb5a73853eb5"
 dependencies = [
  "windows-link 0.2.1",
-]
-
-[[package]]
-name = "windows-service"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "857224b3b211c6f3616921f081ee54721ee3ad2ace2fac6a6337e032f7b4dcf2"
-dependencies = [
- "bitflags 2.11.0",
- "widestring",
- "windows-sys 0.61.2",
 ]
 
 [[package]]

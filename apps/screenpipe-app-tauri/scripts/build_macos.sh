@@ -15,7 +15,7 @@ fi
 rm -rf src-tauri/target/debug-dev/bundle
 
 # Build the bundle; the stable development identity is applied below.
-bun tauri build --bundles app -- --profile debug-dev
+bun tauri build --bundles app -- --profile debug-dev --features local-only
 
 # Strip extended attributes from all files in the bundle
 APP_PATH="src-tauri/target/debug-dev/bundle/macos/screenpipe - Development.app"

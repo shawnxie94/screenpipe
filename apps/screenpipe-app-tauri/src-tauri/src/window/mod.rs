@@ -447,7 +447,7 @@ pub fn webview_renderer_heartbeat(window: tauri::WebviewWindow) {
 /// (see the close path in `show.rs`), and hiding keeps the webviews warm for a
 /// later policy reversal.
 pub fn enforce_enterprise_ui_visibility(app: &tauri::AppHandle) {
-    let hidden = crate::enterprise_policy::is_app_ui_hidden();
+    let hidden = crate::local_ui_visibility::is_app_ui_hidden();
 
     // The enterprise policy hook calls this on every 5-min poll. Only do work
     // on an actual transition — otherwise we'd tear down an already-dormant UI

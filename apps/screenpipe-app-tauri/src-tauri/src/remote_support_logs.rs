@@ -14,7 +14,6 @@
 //! module is a compile-time no-op there, so a consumer preference can never
 //! weaken an organization's managed policy.
 
-#[cfg(not(feature = "enterprise-build"))]
 mod imp {
     use std::collections::hash_map::DefaultHasher;
     use std::future::Future;
@@ -812,10 +811,4 @@ mod imp {
     }
 }
 
-#[cfg(not(feature = "enterprise-build"))]
 pub use imp::spawn;
-
-/// Consumer remote support is intentionally absent from enterprise binaries;
-/// their license-authenticated log collection remains mandatory.
-#[cfg(feature = "enterprise-build")]
-pub fn spawn(_app: &tauri::AppHandle) {}

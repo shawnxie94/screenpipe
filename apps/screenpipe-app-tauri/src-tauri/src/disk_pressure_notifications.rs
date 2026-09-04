@@ -265,8 +265,8 @@ pub(crate) async fn handle(app: &AppHandle, event: DiskSpaceLowEvent) -> DiskPre
         return DiskPressureOutcome::CaptureStoppedNotificationSuppressed;
     }
 
-    let storage_available = !crate::enterprise_policy::is_app_ui_hidden()
-        && !crate::enterprise_policy::is_tray_item_hidden("storage");
+    let storage_available = !crate::local_ui_visibility::is_app_ui_hidden()
+        && !crate::local_ui_visibility::is_tray_item_hidden("storage");
     let actions = low_disk_actions(storage_available);
     let delivery = client::send_typed_with_actions_and_priority_confirmed(
         "recording stopped — disk almost full",

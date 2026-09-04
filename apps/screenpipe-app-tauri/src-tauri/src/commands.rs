@@ -16,7 +16,6 @@ use crate::{
         OnboardingStore, SettingsStore, TRIAL_ACTIVATION_PAYWALL_STEP,
         TRIAL_ACTIVATION_SUMMARY_STEP, TRIAL_ACTIVATION_UNLOCKED_STEP,
     },
-    updates::is_enterprise_build,
     window::{RewindWindowId, ShowRewindWindow},
 };
 #[cfg(target_os = "macos")]
@@ -396,8 +395,8 @@ mod tests {
 
 #[tauri::command]
 #[specta::specta]
-pub fn is_enterprise_build_cmd(app_handle: tauri::AppHandle) -> bool {
-    is_enterprise_build(&app_handle)
+pub fn is_enterprise_build_cmd(_app_handle: tauri::AppHandle) -> bool {
+    false
 }
 
 /// Whether the running local API currently enforces the rolling history window.
@@ -1063,7 +1062,7 @@ fn persist_enterprise_hide_app(hidden: bool) {
 #[tauri::command]
 #[specta::specta]
 pub fn apply_enterprise_ui_visibility(app: tauri::AppHandle) -> bool {
-    let hidden = crate::enterprise_policy::is_app_ui_hidden();
+    let hidden = crate::local_ui_visibility::is_app_ui_hidden();
     persist_enterprise_hide_app(hidden);
     crate::window::enforce_enterprise_ui_visibility(&app);
     hidden
@@ -1199,7 +1198,7 @@ pub async fn set_cloud_token(
         // Missing/corrupt settings are unattributed on consumer builds.
         state
             .history_access
-            .set_last_24_hours(!cfg!(feature = "enterprise-build"));
+            .set_last_24_hours(false);
     }
     let pipe_manager = {
         let server = state.server.lock().await;
@@ -1491,7 +1490,7 @@ pub fn set_tray_health_icon(app_handle: tauri::AppHandle) {
 #[specta::specta]
 pub fn show_main_window(app_handle: tauri::AppHandle) {
     info!("show_main_window called");
-    if crate::enterprise_policy::is_app_ui_hidden() {
+    if crate::local_ui_visibility::is_app_ui_hidden() {
         info!("enterprise: suppressing main window in hidden UI mode");
         return;
     }
@@ -2814,7 +2813,7 @@ pub async fn complete_onboarding(app_handle: tauri::AppHandle) -> Result<(), Str
     // Hidden UI applies to the main app, but incomplete onboarding remains
     // visible long enough to finish permissions. Once onboarding completes,
     // close that sole exemption without trying to open Home.
-    if crate::enterprise_policy::is_app_ui_hidden() {
+    if crate::local_ui_visibility::is_app_ui_hidden() {
         info!("enterprise: onboarding completed; keeping main UI hidden");
         return Ok(());
     }
@@ -4941,27 +4940,11 @@ fn dir_size(path: &std::path::Path) -> u64 {
 pub fn set_autostart(app_handle: tauri::AppHandle, enabled: bool) -> Result<(), String> {
     use tauri_plugin_autostart::ManagerExt as AutostartManagerExt;
 
-    #[cfg(all(feature = "enterprise-build", target_os = "windows"))]
-    if crate::enterprise_persistence::installed() {
-        // The protected service owns startup for this package. Keep the
-        // user-writable Run entry absent even if an old setting is toggled.
-        return app_handle
-            .autolaunch()
-            .disable()
-            .map_err(|error| error.to_string());
-    }
-
-    #[cfg(all(feature = "enterprise-build", target_os = "macos"))]
-    crate::enterprise_autostart::set_macos_employee_autostart(&app_handle, enabled)?;
-
-    #[cfg(not(all(feature = "enterprise-build", target_os = "macos")))]
-    {
-        let manager = app_handle.autolaunch();
-        if enabled {
-            manager.enable().map_err(|e| e.to_string())?;
-        } else {
-            manager.disable().map_err(|e| e.to_string())?;
-        }
+    let manager = app_handle.autolaunch();
+    if enabled {
+        manager.enable().map_err(|e| e.to_string())?;
+    } else {
+        manager.disable().map_err(|e| e.to_string())?;
     }
 
     let manager = app_handle.autolaunch();

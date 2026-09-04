@@ -638,12 +638,6 @@ async getDiskUsage(forceRefresh: boolean | null, dataDir: string | null) : Promi
     else return { status: "error", error: e  as any };
 }
 },
-async getEnterpriseHostIdentity() : Promise<EnterpriseHostIdentity> {
-    return await TAURI_INVOKE("get_enterprise_host_identity");
-},
-async getEnterpriseInstallMetadata() : Promise<EnterpriseInstallMetadata> {
-    return await TAURI_INVOKE("get_enterprise_install_metadata");
-},
 /**
  * Read the enterprise license key from deployment config (`enterprise.json`
  * or the documented Windows registry value) and the user recovery config.
@@ -2544,29 +2538,6 @@ async setEnhancedAiSuggestions(enabled: boolean, token: string) : Promise<Result
 }
 },
 /**
- * Called by the frontend after fetching the enterprise policy.
- */
-async setEnterprisePolicy(hiddenSections: string[], enforceAutoStart: boolean) : Promise<void> {
-    await TAURI_INVOKE("set_enterprise_policy", { hiddenSections, enforceAutoStart });
-},
-/**
- * Request or revoke Enterprise recording access. A webview may always revoke
- * its current session, but it cannot grant itself access: native code verifies
- * the supplied key/account credential against both the Enterprise policy and
- * seat-bearing heartbeat endpoints before setting the process-local grant.
- *
- * The grant is never persisted. Every launch must revalidate against the
- * control plane, and an explicit credential rejection revokes it immediately.
- */
-async setEnterpriseRecordingAuthorized(authorized: boolean, credentialType: string | null, credential: string | null) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_enterprise_recording_authorized", { authorized, credentialType, credential }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Apply the frontend's experimental rollout decision to native history swipes.
  * The platform implementation keeps every non-Home webview forced off.
  */
@@ -2624,16 +2595,6 @@ async setSyncEnabled(enabled: boolean) : Promise<Result<null, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
-},
-/**
- * Called by the frontend after fetching the `syncStreams` block from
- * `/api/enterprise/policy`. Flat params rather than a struct so the
- * specta-generated TS binding stays trivial. `frame_images` is the mode
- * string ("off" | "cited" | "all"; legacy "true" accepted) and invalid
- * values fail closed in FrameImagesMode::parse.
- */
-async setSyncStreams(frames: boolean, parsed: boolean, audio: boolean, uiEvents: boolean, memories: boolean, snapshots: boolean, feedback: string, frameImages: string) : Promise<void> {
-    await TAURI_INVOKE("set_sync_streams", { frames, parsed, audio, uiEvents, memories, snapshots, feedback, frameImages });
 },
 async setTrayHealthIcon() : Promise<void> {
     await TAURI_INVOKE("set_tray_health_icon");
@@ -3270,8 +3231,6 @@ alias?: string | null }
 export type DomainRule = { domain: string; includeSubdomains?: boolean; excludedSubdomains?: string[] }
 export type EmbeddedLLM = { enabled: boolean; model: string; port: number }
 export type EngineEvent = { name: string; data: JsonValue }
-export type EnterpriseHostIdentity = { machine_id_hash: string | null; os_user_id_hash: string | null }
-export type EnterpriseInstallMetadata = { install_source: string; update_manager: string; managed: boolean; detected_by: string[] }
 export type ExcludedApp = { bundleId: string; name: string | null; icon: string | null }
 export type ExportEvent = { kind: "started"; jobId: string; request: ExportRequestInfo } | { kind: "completed"; jobId: string; request: ExportRequestInfo; summary: MeetingExportSummary } | { kind: "failed"; jobId: string; request: ExportRequestInfo; error: string }
 export type ExportRequestInfo = { meetingId: number | null; start: string | null; end: string | null; outputPath: string }

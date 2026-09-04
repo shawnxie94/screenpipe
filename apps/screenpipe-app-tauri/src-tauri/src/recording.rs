@@ -121,104 +121,17 @@ fn configured_local_api_port(app: &tauri::AppHandle) -> u16 {
         .unwrap_or(DEFAULT_LOCAL_API_PORT)
 }
 
-fn recording_access_policy(
-    is_enterprise_build: bool,
-    dev_bypass: bool,
-    has_verified_local_plan: bool,
-    enterprise_authorized: bool,
-    consumer_requires_enterprise_app: bool,
-    trial_activation_paywall: bool,
-    authentication_status: crate::startup_auth::AuthenticationStatus,
+/// Local-only builds never gate capture or the Local API behind accounts,
+/// subscriptions, organization policy, or Screenpipe-hosted entitlements.
+pub(crate) fn server_access_allowed(_store: &SettingsStore) -> bool {
+    true
+}
+
+pub(crate) fn recording_access_allowed(
+    _app: &tauri::AppHandle,
+    _store: &SettingsStore,
 ) -> bool {
-    if authentication_status == crate::startup_auth::AuthenticationStatus::LoggedOut {
-        return false;
-    }
-    if trial_activation_paywall {
-        return false;
-    }
-    if authentication_status == crate::startup_auth::AuthenticationStatus::NotRequired {
-        return true;
-    }
-    server_access_policy(
-        is_enterprise_build,
-        dev_bypass,
-        has_verified_local_plan,
-        enterprise_authorized,
-        consumer_requires_enterprise_app,
-    )
-}
-
-fn server_access_policy(
-    is_enterprise_build: bool,
-    dev_bypass: bool,
-    has_verified_local_plan: bool,
-    enterprise_authorized: bool,
-    consumer_requires_enterprise_app: bool,
-) -> bool {
-    if dev_bypass {
-        return true;
-    }
-    if !is_enterprise_build && consumer_requires_enterprise_app {
-        return false;
-    }
-    if is_enterprise_build {
-        // Consumer billing entitlement is not an Enterprise credential. Both
-        // account and key deployments use the same process-local grant, set
-        // only after policy and seat enrollment succeed for the organization.
-        return enterprise_authorized;
-    }
-    has_verified_local_plan
-}
-
-pub(crate) fn server_access_allowed(store: &SettingsStore) -> bool {
-    server_access_policy(
-        cfg!(feature = "enterprise-build"),
-        cfg!(debug_assertions),
-        store.local_plan_policy() != LocalPlanPolicy::Unknown,
-        crate::enterprise_policy::recording_authorized(),
-        !cfg!(debug_assertions) && store.requires_enterprise_app_for_consumer(),
-    )
-}
-
-/// Consumer builds allow signed-in accounts to record on the free plan.
-/// Enterprise builds keep their native entitlement guard, and consumer builds
-/// still reject accounts that are required to use an enterprise binary.
-pub(crate) fn recording_access_allowed(app: &tauri::AppHandle, store: &SettingsStore) -> bool {
-    let trial_activation_paywall = !crate::should_skip_onboarding()
-        && OnboardingStore::get(app)
-            .ok()
-            .flatten()
-            .unwrap_or_default()
-            .blocks_trial_activation_recording();
-    let resolved_authentication = app
-        .try_state::<crate::startup_auth::AuthenticationStatus>()
-        .map(|status| *status)
-        .unwrap_or(crate::startup_auth::AuthenticationStatus::LoggedOut);
-    // The bootstrap result owns initial startup ordering. A later successful
-    // sign-in may open recording without relaunching the already-initialized
-    // app, so derive the current authenticated state from the same native
-    // authorities used by the runtime guards.
-    let authentication_status = if resolved_authentication
-        == crate::startup_auth::AuthenticationStatus::LoggedOut
-        && if cfg!(feature = "enterprise-build") {
-            crate::enterprise_policy::recording_authorized()
-        } else {
-            store.has_cloud_authentication()
-        }
-    {
-        crate::startup_auth::AuthenticationStatus::Authenticated
-    } else {
-        resolved_authentication
-    };
-    recording_access_policy(
-        cfg!(feature = "enterprise-build"),
-        cfg!(debug_assertions),
-        store.local_plan_policy() != LocalPlanPolicy::Unknown,
-        crate::enterprise_policy::recording_authorized(),
-        !cfg!(debug_assertions) && store.requires_enterprise_app_for_consumer(),
-        trial_activation_paywall,
-        authentication_status,
-    )
+    true
 }
 
 fn require_recording_access(app: &tauri::AppHandle, store: &SettingsStore) -> Result<(), String> {
@@ -378,16 +291,9 @@ impl RecordingState {
 
 pub(crate) fn refresh_history_access_policy(
     policy: &screenpipe_engine::history_access::HistoryAccessPolicy,
-    settings: &SettingsStore,
+    _settings: &SettingsStore,
 ) {
-    policy.set_last_24_hours(history_access_restricted(
-        cfg!(feature = "enterprise-build"),
-        settings.is_free_or_unattributed_user(),
-    ));
-}
-
-fn history_access_restricted(is_enterprise_build: bool, free_or_unattributed: bool) -> bool {
-    !is_enterprise_build && free_or_unattributed
+    policy.set_last_24_hours(false);
 }
 
 fn capture_intended_now(wants_recording: &AtomicBool) -> bool {
