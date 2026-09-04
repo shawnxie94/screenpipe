@@ -1012,6 +1012,8 @@ const PIPE_ZH_TITLES: Record<string, string> = {
   "standup-update": "站会更新",
   "time-breakdown": "时间分配",
   "video-export": "导出视频片段",
+  // 云端商店安装的第三方管道
+  "digital-clone": "数字分身",
 };
 
 /** Display title for a pipe row/detail — Chinese for bundled builtins, the
