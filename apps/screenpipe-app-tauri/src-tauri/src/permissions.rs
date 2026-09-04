@@ -263,9 +263,25 @@ pub async fn request_permission(app: tauri::AppHandle, permission: OSPermission)
                 let _ = request_input_monitoring_permission().await;
             }
             OSPermission::Calendar => {
-                if let Err(e) = crate::calendar::calendar_authorize().await {
-                    warn!("calendar permission request failed: {}", e);
-                    open_permission_settings(OSPermission::Calendar);
+                match crate::calendar::calendar_authorize().await {
+                    Ok(result) => {
+                        if result == "denied" {
+                            // macOS EventKit won't show the consent popup again
+                            // once the TCC row exists as denied. Open System
+                            // Settings so the user can toggle Calendar access
+                            // for this app manually — otherwise Connect looks
+                            // dead with no recovery path.
+                            warn!(
+                                "calendar: request returned denied — opening Calendar privacy pane; use tccutil reset Calendar {} if the app is missing from the list",
+                                app.config().identifier
+                            );
+                            open_permission_settings(OSPermission::Calendar);
+                        }
+                    }
+                    Err(e) => {
+                        warn!("calendar permission request failed: {}", e);
+                        open_permission_settings(OSPermission::Calendar);
+                    }
                 }
             }
         }

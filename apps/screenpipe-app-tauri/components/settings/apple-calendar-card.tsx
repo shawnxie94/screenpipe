@@ -135,6 +135,14 @@ export function AppleCalendarCard({
     setHasAttemptedConnect(true);
     setError(null);
     try {
+      // If the OS has a stale denied TCC row, EventKit won't show the consent
+      // popup again. Reset the row first so the request re-prompts. "empty"
+      // means NotDetermined — no stale row, just request directly.
+      const permission = await commands.checkPermission("calendar");
+      if (permission !== "granted" && permission !== "empty") {
+        const reset = await commands.resetPermission("calendar");
+        if (reset.status === "error") throw new Error(String(reset.error));
+      }
       await commands.requestPermission("calendar");
       await refresh();
     } catch (e) {
