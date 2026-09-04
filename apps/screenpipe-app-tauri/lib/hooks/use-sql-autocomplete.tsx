@@ -110,8 +110,12 @@ export function useSqlAutocomplete(type: "app" | "window" | "url") {
         cache[type] = { data: result, timestamp: Date.now() };
       }
     } catch (error) {
-      const msg = (error as Error)?.stack ?? (error as Error)?.message ?? String(error);
-      console.error("failed to fetch items:", msg);
+      // DIAGNOSTIC (temporary): print the full error object so Next's dev
+      // overlay surfaces `name` / `message` / `stack` instead of only the
+      // fallback `String(error)` (which previously collapsed to a single
+      // `"@"` and hid the root cause). Revert once the underlying failure
+      // is identified.
+      console.error("failed to fetch items:", error);
     } finally {
       setIsLoading(false);
     }
