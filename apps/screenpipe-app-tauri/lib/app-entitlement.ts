@@ -4,6 +4,7 @@
 
 import type { JsonValue, User } from "@/lib/utils/tauri";
 import { screenpipeWebUrl } from "@/lib/web-url";
+import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 
 export type AppEntitlementPlan =
   | "none"
@@ -134,7 +135,10 @@ export function isDevBillingBypassEnabled() {
 // preview builds should still exercise login unless this test-only affordance
 // was explicitly compiled into the frontend.
 export function isDevLoginSkipEnabled() {
-  return process.env.NEXT_PUBLIC_SCREENPIPE_DEV_LOGIN_SKIP === "true";
+  return (
+    IS_LOCAL_ONLY_BUILD ||
+    process.env.NEXT_PUBLIC_SCREENPIPE_DEV_LOGIN_SKIP === "true"
+  );
 }
 
 // Show the dev-only login helper (paste a token / screenpipe:// URL) when we are

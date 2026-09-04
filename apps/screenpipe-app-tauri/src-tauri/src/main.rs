@@ -946,10 +946,20 @@ async fn main() {
     // inside `.setup()`: a `block_on` there nests runtimes under
     // #[tokio::main] and panics ("Cannot start a runtime from within a
     // runtime"), killing the app at launch.
-    let initial_cloud_token = crate::auth_token::migrate_plaintext_token(
-        &screenpipe_core::paths::default_screenpipe_data_dir(),
-    )
-    .await;
+    let initial_cloud_token = if crate::config::screenpipe_hosted_services_enabled() {
+        crate::auth_token::migrate_plaintext_token(
+            &screenpipe_core::paths::default_screenpipe_data_dir(),
+        )
+        .await
+    } else {
+        if let Err(error) = crate::auth_token::store_cloud_token(None).await {
+            warn!("failed to clear retired Screenpipe credentials: {error}");
+        }
+        if let Err(error) = crate::pi::clear_screenpipe_auth_token_files() {
+            warn!("failed to clear retired Pi Screenpipe credentials: {error}");
+        }
+        None
+    };
 
     let recording_state = RecordingState {
         server_lifecycle: Arc::new(tokio::sync::Mutex::new(())),

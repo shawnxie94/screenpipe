@@ -17,7 +17,6 @@ import { useHealthCheck } from "@/lib/hooks/use-health-check";
 
 import { commands } from "@/lib/utils/tauri";
 import localforage from "localforage";
-import { LoginDialog } from "@/components/login-dialog";
 import { UpdateBanner } from "@/components/update-banner";
 import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
 import { ModelDownloadTracker } from "@/components/model-download-tracker";
@@ -392,7 +391,6 @@ export default function OverlayPage() {
         <>
           <ChangelogDialog />
 
-          {!isManagedDeployment && <LoginDialog />}
           <ModelDownloadTracker />
           <UpdateBanner />
           

@@ -37,6 +37,7 @@ import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
 import { isPrimaryWindow } from "@/lib/utils/is-primary-window";
 import { commands } from "@/lib/utils/tauri";
 import { EnterpriseLicensePrompt } from "@/components/enterprise-license-prompt";
+import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 
 const E2E_ACCOUNT_USER_KEY = "screenpipe_e2e_account_user";
 const E2E_ACCOUNT_USER_EVENT = "screenpipe-e2e-seed-account-user";
@@ -269,7 +270,7 @@ export function AppEntitlementGate({
   // Onboarding owns ordinary consumer sign-in and Enterprise-build auth.
   // Once build detection confirms this is the consumer app, however, a
   // restricted enterprise member must not advance into consumer setup.
-  const shouldGate = authenticationStatus === "not_required"
+  const shouldGate = IS_LOCAL_ONLY_BUILD || authenticationStatus === "not_required"
     ? false
     : isOnboardingRoute
     ? isManagedDeploymentResolved && shouldGateForEnterpriseApp

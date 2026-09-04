@@ -11,13 +11,11 @@ import { ToastAction } from "@/components/ui/toast";
 import posthog from "posthog-js";
 import { commands } from "@/lib/utils/tauri";
 import { PROD_WEB_BASE, screenpipeWebBase, screenpipeWebUrl } from "@/lib/web-url";
-import { isDevLoginSkipEnabled } from "@/lib/app-entitlement";
+import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 
-// Local/self-hosted builds have no cloud account: the 10-minute token
-// re-verify and the focus re-verify are pure noise (they ping screenpipe.com
-// for a token that never exists). Guard them with the same compile-time flag
-// that disables the login UI, erecting no timers/interceptors at all.
-const IS_LOCAL_BUILD = isDevLoginSkipEnabled();
+// Local-only builds have no Screenpipe account. Do not mount account timers or
+// fetch interception; user-configured third-party providers own their auth.
+const IS_LOCAL_BUILD = IS_LOCAL_ONLY_BUILD;
 
 const CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 const TOAST_COOLDOWN_MS = 5 * 60 * 1000;

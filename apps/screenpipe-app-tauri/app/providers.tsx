@@ -81,6 +81,10 @@ export const Providers = forwardRef<
   }, []);
 
   useEffect(() => {
+    if (IS_LOCAL_ONLY_BUILD) {
+      setStartupAuthenticationStatus("not_required");
+      return;
+    }
     let cancelled = false;
     void commands
       .getEnv(STARTUP_AUTHENTICATION_STATUS_ENV)

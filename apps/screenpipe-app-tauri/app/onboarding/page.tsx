@@ -34,6 +34,7 @@ import {
   TRIAL_ACTIVATION_UNLOCKED_STEP,
 } from "@/lib/first-run/trial-activation";
 import { readOnboardingCheckoutStatus } from "@/lib/onboarding-checkout-navigation";
+import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 
 type SlideKey =
   | "login"
@@ -294,7 +295,7 @@ export default function OnboardingPage() {
     window.sessionStorage.removeItem(TRIAL_ACTIVATION_CHECKOUT_STATE_KEY);
   }, [checkoutReturnStatus]);
   const [currentSlide, setCurrentSlide] = useState<SlideKey>(() =>
-    checkoutReturnStatus ? "plan" : "login",
+    IS_LOCAL_ONLY_BUILD ? "permissions" : checkoutReturnStatus ? "plan" : "login",
   );
   const [isVisible, setIsVisible] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -343,10 +344,9 @@ export default function OnboardingPage() {
     settings.deviceTier === "high"
       ? settings.deviceTier
       : "unknown";
-  const needsOnboardingCheckout = isTrialActivationEligible(
-    onboardingData.trialActivationFreshInstall === true,
-    user,
-  );
+  const needsOnboardingCheckout =
+    !IS_LOCAL_ONLY_BUILD &&
+    isTrialActivationEligible(onboardingData.trialActivationFreshInstall === true, user);
   const [trialActivationAssignment, setTrialActivationAssignment] =
     useState<TrialActivationAssignment | undefined>(
       readTrialActivationAssignment,
@@ -466,7 +466,7 @@ export default function OnboardingPage() {
         const step = onboardingData.currentStep as string;
         // Map old and new step names
         const stepMap: Record<string, SlideKey> = {
-          login: "login",
+          login: IS_LOCAL_ONLY_BUILD ? "permissions" : "login",
           acquisition: "acquisition",
           permissions: "permissions",
           timeline: "timeline",
@@ -486,7 +486,7 @@ export default function OnboardingPage() {
           encrypt: "engine",
           read: "engine",
           shortcut: "engine",
-          welcome: "login",
+          welcome: IS_LOCAL_ONLY_BUILD ? "permissions" : "login",
           intro: "login",
           usecases: "permissions",
           status: "permissions",
@@ -813,6 +813,7 @@ export default function OnboardingPage() {
             />
           )}
           {currentSlide === "login" &&
+            !IS_LOCAL_ONLY_BUILD &&
             (isManagedDeployment ? (
               authenticationState === "license_key" ? (
                 <div className="mx-auto w-full max-w-sm">

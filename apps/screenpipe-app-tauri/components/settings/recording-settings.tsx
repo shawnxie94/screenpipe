@@ -173,7 +173,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSqlAutocomplete } from "@/lib/hooks/use-sql-autocomplete";
 import * as Sentry from "@sentry/react";
 import { defaultOptions } from "tauri-plugin-sentry-api";
-import { useLoginDialog } from "../login-dialog";
 import { BatterySaverSection } from "./battery-saver-section";
 import { ApplyRestartBar } from "./apply-restart-bar";
 // ScheduleSettings moved to privacy-section
@@ -1912,7 +1911,6 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
   const [isTestingOpenAICompatible, setIsTestingOpenAICompatible] = useState(false);
   const [openAICompatibleTestError, setOpenAICompatibleTestError] = useState<string | null>(null);
   const [isRefreshingSubscription, setIsRefreshingSubscription] = useState(false);
-  const { checkLogin } = useLoginDialog();
   const overlayData = useOverlayData();
   const [hwCapability, setHwCapability] = useState<HardwareCapability | null>(null);
 
@@ -2446,10 +2444,12 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
       return;
     }
 
-    const isLoggedIn = checkLogin(settings.user);
-    // Cloud transcription works on every plan (free tier allowance is
-    // enforced server-side) — the only requirement is being logged in.
-    if (value === "screenpipe-cloud" && !isLoggedIn) {
+    if (value === "screenpipe-cloud") {
+      toast({
+        title: "此转写引擎已移除",
+        description: "请选择本地 Whisper、Ollama 或自行配置的第三方服务。",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -2865,18 +2865,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {audioEngineResolution.fallbackReason === "notLoggedIn" && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        data-testid="audio-engine-fallback-login"
-                        onClick={() => checkLogin(settings.user)}
-                      >
-                        登录
-                      </Button>
-                    )}
                     <Button
                       type="button"
                       variant="outline"

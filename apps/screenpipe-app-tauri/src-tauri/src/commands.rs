@@ -1104,6 +1104,9 @@ pub fn get_enterprise_team_api_token() -> Option<String> {
 #[tauri::command]
 #[specta::specta]
 pub fn get_cloud_token() -> Option<String> {
+    if !crate::config::screenpipe_hosted_services_enabled() {
+        return None;
+    }
     // #3943: the authoritative token now lives in the encrypted secret store and
     // is mirrored into an in-process cache at startup + on every `set_cloud_token`.
     // Prefer that; fall back to the legacy `auth.json` for installs that haven't
@@ -1147,6 +1150,18 @@ pub async fn set_cloud_token(
     app: tauri::AppHandle,
     state: tauri::State<'_, crate::recording::RecordingState>,
 ) -> Result<(), String> {
+    if !crate::config::screenpipe_hosted_services_enabled() {
+        if token.is_some_and(|value| !value.is_empty()) {
+            return Err("Screenpipe account login is disabled in this local-only build.".to_string());
+        }
+        state.cloud_token.store(std::sync::Arc::new(None));
+        crate::pi::clear_screenpipe_auth_token_files()
+            .map_err(|error| format!("failed to clear retired Screenpipe credentials: {error}"))?;
+        crate::auth_token::store_cloud_token(None)
+            .await
+            .map_err(|error| format!("failed to clear retired Screenpipe credentials: {error}"))?;
+        return Ok(());
+    }
     let supplied_non_empty = token.as_ref().is_some_and(|value| !value.is_empty());
     let normalized = crate::auth_token::normalize_cloud_token(token);
     if supplied_non_empty && normalized.is_none() {
@@ -1953,9 +1968,8 @@ pub async fn open_login_window(
     // cloud account to log into, so opening the browser to screenpipe.com
     // would only confuse. Keep the command so any still-referenced UI call
     // site compiles, but make it a no-op.
-    if crate::should_skip_onboarding() {
-        info!("open_login_window: no-op in local/self-hosted build");
-        return Ok(String::new());
+    if !crate::config::screenpipe_hosted_services_enabled() {
+        return Err("Screenpipe account login is disabled in this local-only build.".to_string());
     }
     let fresh_session = fresh_session.unwrap_or(false);
     #[cfg(target_os = "macos")]

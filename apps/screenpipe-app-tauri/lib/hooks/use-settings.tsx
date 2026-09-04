@@ -1222,6 +1222,12 @@ function createSettingsStore() {
 		// get() returns directly when there are no stored settings).
 
 		if (IS_LOCAL_ONLY_BUILD) {
+			if (settings.user) {
+				// A local-only build has no Screenpipe account services. Drop the
+				// cached account metadata so it cannot revive account or billing UI.
+				settings.user = null as any;
+				needsUpdate = true;
+			}
 			if (settings.aiPresets?.some((p: any) => p.provider === "screenpipe-cloud")) {
 				// Remove only the retired hosted preset. Never substitute an endpoint
 				// or alter user-configured Runtime and third-party providers.
@@ -1602,6 +1608,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 	const authGenerationRef = useRef(0);
 
 	useEffect(() => {
+		if (IS_LOCAL_ONLY_BUILD) return;
 		installAuthInterceptor(
 			() => settingsRef.current.user?.token ?? undefined,
 			async () => {
@@ -1640,7 +1647,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 	// Retries with exponential backoff so transient network failures don't
 	// leave the user stuck on a stale tier for the entire session.
 	useEffect(() => {
-		if (!isSettingsLoaded) return;
+		if (IS_LOCAL_ONLY_BUILD || !isSettingsLoaded) return;
 		const token = settings.user?.token;
 		if (!token) return;
 
@@ -1905,6 +1912,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 	};
 
 	const loadUser = async (token: string, verify = false) => {
+		if (IS_LOCAL_ONLY_BUILD) {
+			void token;
+			void verify;
+			return;
+		}
 		// Snapshot the auth generation at the start of the request. If the user
 		// signs out while this fetch is in flight, the generation changes and we
 		// abort the write below instead of resurrecting the cleared session.

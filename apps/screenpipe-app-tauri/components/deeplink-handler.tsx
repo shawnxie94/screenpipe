@@ -26,6 +26,7 @@ import { foregroundAfterOAuth } from "@/lib/connections/foreground-oauth";
 import { settingsSectionFromDeepLink } from "@/lib/utils/settings-deep-link";
 import posthog from "posthog-js";
 import { handleExternalDeepLink } from "@/lib/external-deeplink";
+import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 import {
   handoffTargetById,
   performAgentHandoff,
@@ -197,6 +198,16 @@ export function DeeplinkHandler() {
         }
         return;
       }
+
+      // Screenpipe account and subscription callbacks are disabled in local-only
+      // builds. Other deep links, including third-party OAuth and ACP sign-in,
+      // continue through the handlers below.
+      const isScreenpipeAccountCallback =
+        url.includes("api_key=") ||
+        isBusinessSubscriptionPurchaseDeepLink(parsedUrl) ||
+        parsedUrl.host === "subscription-success" ||
+        parsedUrl.pathname?.includes("subscription-success");
+      if (IS_LOCAL_ONLY_BUILD && isScreenpipeAccountCallback) return;
 
       // Handle API key auth
       if (url.includes("api_key=")) {
