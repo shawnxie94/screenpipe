@@ -341,7 +341,11 @@ async function perform(mode: BuildMode, args: string[]): Promise<number> {
   const env = localSccacheEnvironment();
   switch (mode) {
     case "build":
-      return run(["bun", "tauri", "build", "--no-bundle", "--", "--profile", "debug-dev"], env);
+      env.NEXT_PUBLIC_SCREENPIPE_LOCAL_ONLY = "true";
+      return run([
+        "bun", "tauri", "build", "--no-bundle", "--",
+        "--profile", "debug-dev", "--features", "local-only",
+      ], env);
     case "e2e":
       env.NEXT_PUBLIC_SCREENPIPE_E2E = "true";
       return run([
@@ -351,9 +355,10 @@ async function perform(mode: BuildMode, args: string[]): Promise<number> {
     case "signed":
       return run(["bash", "scripts/build_macos.sh", "--queue-held"], env);
     case "test": {
+      env.NEXT_PUBLIC_SCREENPIPE_LOCAL_ONLY = "true";
       const exitCode = await run(["bun", "scripts/pre_build.js"], env);
       if (exitCode !== 0) return exitCode;
-      return run(nativeTestCommand(args), env);
+      return run(nativeTestCommand(["--features", "local-only", ...args]), env);
     }
     case "persistence-test":
       return run([
@@ -449,7 +454,7 @@ async function perform(mode: BuildMode, args: string[]): Promise<number> {
       exitCode = await run([
         "cargo", "build", "--manifest-path", "src-tauri/Cargo.toml",
         "--profile", "debug-dev", "--no-default-features", "--features",
-        "qwen3-asr,parakeet", "--bin", "screenpipe-app",
+        "qwen3-asr,parakeet,local-only", "--bin", "screenpipe-app",
       ], env);
       return exitCode;
     }
@@ -551,7 +556,11 @@ async function main(): Promise<number> {
     console.log("[native-build-queue] warm-up complete; build slot released for the live dev session");
     const env = localSccacheEnvironment();
     env.SCREENPIPE_NATIVE_PREBUILD_COMPLETE = "1";
-    return run(["bun", "tauri", "dev", "--", "--profile", "debug-dev"], env);
+    env.NEXT_PUBLIC_SCREENPIPE_LOCAL_ONLY = "true";
+    return run([
+      "bun", "tauri", "dev", "--", "--profile", "debug-dev",
+      "--features", "local-only",
+    ], env);
   }
   if ([
     "build",

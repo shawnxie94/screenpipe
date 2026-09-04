@@ -584,6 +584,9 @@ pub async fn start_feedback_upload(
     app: AppHandle,
     request: FeedbackUploadRequest,
 ) -> Result<String, String> {
+    if !crate::config::screenpipe_hosted_services_enabled() {
+        return Err("Screenpipe feedback upload is disabled in this self-hosted build.".to_string());
+    }
     validate_request(&request)?;
     let job_id = request.job_id.clone();
     let task_job_id = job_id.clone();

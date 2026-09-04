@@ -32,6 +32,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/query-client";
 import { DesktopRemoteControl } from "@/components/desktop-remote-control";
 import { commands } from "@/lib/utils/tauri";
+import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 
 const STARTUP_AUTHENTICATION_STATUS_ENV =
   "SCREENPIPE_STARTUP_AUTHENTICATION_STATUS";
@@ -112,7 +113,7 @@ export const Providers = forwardRef<
       // plus pollute prod analytics with test traffic.
       const isE2E = process.env.NEXT_PUBLIC_SCREENPIPE_E2E === "true";
       const isBrowserDev = Boolean(process.env.NEXT_PUBLIC_SCREENPIPE_WEB_DEV);
-      if (isDebug || isE2E || isBrowserDev) return;
+      if (isDebug || isE2E || isBrowserDev || IS_LOCAL_ONLY_BUILD) return;
       // Read the cached analytics preference to sync PostHog opt-in/out
       // after init. undefined = first boot → allow capturing (default true).
       const cachedEnabled = readCachedAnalyticsEnabled();

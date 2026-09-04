@@ -297,6 +297,11 @@ custom-protocol = ["tauri/custom-protocol"]
 # Source builds without this flag will show "auto-updates unavailable"
 official-build = []
 
+# Self-hosted source build: no Screenpipe-hosted account, AI gateway, telemetry,
+# updates, support, or sync services. Explicit user-configured third-party and
+# local AI endpoints remain available.
+local-only = []
+
 # Enterprise build: updates are policy-managed (Intune/MDM or Screenpipe),
 # tauri.enterprise
 # bundle identifier, and the periodic telemetry sync that pushes screen + audio

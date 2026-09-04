@@ -12,7 +12,6 @@ import { usePlatform } from "@/lib/hooks/use-platform";
 import { formatShortcutDisplay } from "@/lib/chat-utils";
 import { TextOverlay, extractUrlsFromText, isUrl, normalizeUrl } from "@/components/text-overlay";
 import { SelectableTextLayer, getSelectableLayerText, clearSelectableLayerSelection } from "@/components/selectable-text-layer";
-import { RegionOcrOverlay } from "@/components/rewind/region-ocr-overlay";
 import { useSearchHighlight } from "@/lib/hooks/use-search-highlight";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { ImageOff, ChevronLeft, ChevronRight, Copy, ImageIcon, Link2, MessageCircle, Type } from "lucide-react";
@@ -747,14 +746,6 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 					</div>
 				</div>
 			)}
-
-			{/* Shift+drag region OCR — always mount so shift key listener is active */}
-			<RegionOcrOverlay
-				frameId={debouncedFrame?.frameId ?? null}
-				renderedImageInfo={renderedImageInfo}
-				naturalDimensions={naturalDimensions}
-				userToken={settings.user?.token ?? null}
-			/>
 
 		</div>
 	);

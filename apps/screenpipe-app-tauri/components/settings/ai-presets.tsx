@@ -95,7 +95,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { aiEndpointUrl } from "@/lib/utils/ai-endpoint-url";
-import { fetchAiGateway } from "@/lib/ai-gateway-url";
 import {
   Tooltip,
   TooltipContent,
@@ -116,6 +115,7 @@ import { toast } from "../ui/use-toast";
 import { Card } from "../ui/card";
 import { AIProviderType } from "@/lib/hooks/use-settings";
 import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
+import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 import { useTeam } from "@/lib/hooks/use-team";
 import {
   AlertDialog,
@@ -277,7 +277,8 @@ const AISection = ({
   const primaryAcpAdapters = primaryAcpAdapterChoices(acpAdapters);
   const customAcpAdapter = acpAdapters.find((adapter) => adapter.id === "custom");
   const showScreenpipeCloud =
-    !isManagedDeployment || aiPresetPolicy.allow_screenpipe_cloud;
+    !IS_LOCAL_ONLY_BUILD &&
+    (!isManagedDeployment || aiPresetPolicy.allow_screenpipe_cloud);
 
   // A preset created while the flag was on must not keep the editor pinned to
   // a provider the user can no longer see once it is turned off.
@@ -1184,52 +1185,7 @@ const AISection = ({
         }
 
         case "screenpipe-cloud": {
-          // Fetch models from gateway so new models appear automatically
-          try {
-            const token = settings.user?.token || "";
-            const piResp = await fetchAiGateway("/models", {
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            });
-            if (piResp.ok) {
-              const piData = await piResp.json();
-              const piModels: AIModel[] = (piData.data || [])
-                .map((m: any) => ({
-                id: m.id,
-                name: m.name || m.id,
-                provider: "screenpipe",
-                description: m.description,
-                tags: m.tags,
-                free: m.free,
-                context_window: m.context_window,
-                max_output_tokens: m.max_output_tokens,
-                best_for: m.best_for,
-                speed: m.speed,
-                intelligence: m.intelligence,
-                cost_tier: m.cost_tier,
-                recommended_for: m.recommended_for,
-                warning: m.warning,
-                query_weight: m.query_weight,
-                locked: m.locked,
-                }))
-                .filter((m: AIModel, idx: number, arr: AIModel[]) => arr.findIndex((x) => x.id === m.id) === idx);
-              if (piModels.length > 0) {
-                setModels(piModels);
-                break;
-              }
-            }
-          } catch {
-            // fallback to hardcoded
-          }
-          setModels([
-            { id: "auto", name: "Auto (recommended)", provider: "screenpipe" },
-            { id: "gpt-5.6-luna", name: "GPT-5.6 Luna (fast)", provider: "screenpipe" },
-            { id: "gpt-5.6-terra", name: "GPT-5.6 Terra (balanced)", provider: "screenpipe" },
-            { id: "gpt-5.4-mini", name: "GPT-5.4 mini", provider: "screenpipe" },
-            { id: "claude-sonnet-5", name: "Sonnet 5 (high intelligence)", provider: "screenpipe" },
-            { id: "claude-opus-5", name: "Opus 5 (frontier, Business)", provider: "screenpipe" },
-            { id: "claude-opus-4-8", name: "Opus 4.8 (powerful, Business)", provider: "screenpipe" },
-            { id: "claude-fable-5", name: "Fable 5 (premium, Business)", provider: "screenpipe" },
-          ]);
+          setModels([]);
           break;
         }
 

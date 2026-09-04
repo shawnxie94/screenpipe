@@ -51,10 +51,6 @@ vi.mock("@/components/selectable-text-layer", () => ({
 	clearSelectableLayerSelection: vi.fn(),
 }));
 
-vi.mock("@/components/rewind/region-ocr-overlay", () => ({
-	RegionOcrOverlay: () => null,
-}));
-
 vi.mock("@/lib/hooks/use-search-highlight", () => ({
 	useSearchHighlight: () => searchHighlightState,
 }));

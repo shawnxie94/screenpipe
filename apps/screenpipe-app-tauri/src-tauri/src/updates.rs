@@ -48,6 +48,9 @@ fn consumer_update_endpoint(channel: &str) -> String {
 /// The website's /rollback endpoint returns a manifest with a fake high version
 /// so the updater accepts it as an "update".
 pub async fn install_specific_version(app: &tauri::AppHandle, version: &str) -> Result<(), String> {
+    if !crate::config::screenpipe_hosted_services_enabled() {
+        return Err("Screenpipe updates are disabled in this self-hosted build.".to_string());
+    }
     let target_arch = get_target_arch();
     let rollback_url = format!(
         "https://screenpipe.com/api/app-update/rollback/{}/{}",
@@ -1730,6 +1733,9 @@ pub async fn get_pending_update(
 pub async fn trigger_update_check(
     state: tauri::State<'_, Arc<UpdatesManager>>,
 ) -> Result<bool, String> {
+    if !crate::config::screenpipe_hosted_services_enabled() {
+        return Err("Screenpipe updates are disabled in this self-hosted build.".to_string());
+    }
     state
         // User clicked "check for updates" in Settings — force past the
         // post-failure cooldown so a manual retry always re-attempts.

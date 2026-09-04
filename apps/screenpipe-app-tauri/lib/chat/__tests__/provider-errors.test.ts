@@ -108,19 +108,17 @@ describe("provider error copy", () => {
     ).toBeNull();
   });
 
-  it("maps screenpipe cloud connection errors to a transient-outage message", () => {
+  it("maps legacy cloud presets to a migration message", () => {
     const msg = buildProviderErrorMessage("Connection error.", {
       provider: "screenpipe-cloud",
       model: "auto",
     });
 
-    expect(msg).toContain("screenpipe 云端");
-    expect(msg).toContain("重试");
-    // does not blame the user's own machine/setup
-    expect(msg?.toLowerCase()).not.toContain("ollama");
+    expect(msg).toContain("旧 AI 预设");
+    expect(msg).toContain("第三方服务");
   });
 
-  it("maps Bun socket-close errors to retryable connectivity copy", () => {
+  it("maps legacy provider socket errors to migration copy", () => {
     const raw =
       "The socket connection was closed unexpectedly. For more information, pass `verbose: true` in the second argument to fetch()";
     const presentation = buildProviderErrorPresentation(raw, {
@@ -129,32 +127,28 @@ describe("provider error copy", () => {
     });
 
     expect(presentation).toMatchObject({ kind: "provider", retryable: true });
-    expect(presentation?.message).toContain("screenpipe 云端");
-    expect(presentation?.message).toContain("重试");
+    expect(presentation?.message).toContain("旧 AI 预设");
+    expect(presentation?.message).toContain("第三方服务");
     expect(presentation?.message).not.toContain("verbose: true");
   });
 
-  it("maps the gateway TLS-handshake / send-request signatures the same way", () => {
-    // exact strings observed reaching the app during the 2026-06-18 outage
-    for (const raw of [
-      "tls handshake eof",
-      "error sending request for url (https://api.screenpipe.com/v1/chat/completions)",
-    ]) {
+  it("maps legacy provider transport errors to the migration message", () => {
+    for (const raw of ["tls handshake eof", "error sending request"]) {
       expect(
-        buildProviderErrorMessage(raw, { provider: "screenpipe-cloud", model: "auto" })
-      ).toContain("screenpipe 云端");
+        buildProviderErrorMessage(raw, { provider: "screenpipe-cloud", model: "auto" }),
+      ).toContain("旧 AI 预设");
     }
   });
 
-  it("maps an expired TLS certificate to retryable cloud connectivity copy", () => {
+  it("maps legacy provider certificate errors to migration copy", () => {
     const presentation = buildProviderErrorPresentation(
       "Error: certificate has expired",
       { provider: "screenpipe-cloud", model: "auto" },
     );
 
     expect(presentation).toMatchObject({ kind: "provider", retryable: true });
-    expect(presentation?.message).toContain("screenpipe 云端");
-    expect(presentation?.message).toContain("重试");
+    expect(presentation?.message).toContain("旧 AI 预设");
+    expect(presentation?.message).toContain("第三方服务");
     expect(presentation?.message).not.toContain("certificate has expired");
   });
 
@@ -339,10 +333,10 @@ describe("provider error copy", () => {
     );
   });
 
-  it("is case-insensitive on the gateway signatures", () => {
+  it("handles legacy provider transport errors case-insensitively", () => {
     expect(
-      buildProviderErrorMessage("TLS HANDSHAKE EOF", { provider: "screenpipe-cloud" })
-    ).toContain("screenpipe 云端");
+      buildProviderErrorMessage("TLS HANDSHAKE EOF", { provider: "screenpipe-cloud" }),
+    ).toContain("旧 AI 预设");
   });
 
   it("turns raw context-window JSON into actionable chat copy", () => {

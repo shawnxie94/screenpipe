@@ -1481,10 +1481,10 @@ impl Default for AIPreset {
         Self {
             id: String::new(),
             prompt: String::new(),
-            provider: AIProviderType::ScreenpipeCloud,
+            provider: AIProviderType::OpenAI,
             acp_agent: None,
-            url: "https://api.screenpipe.com/v1".to_string(),
-            model: "qwen/qwen3.5-flash-02-23".to_string(),
+            url: String::new(),
+            model: String::new(),
             default_preset: false,
             api_key: None,
             max_context_chars: 512000,
@@ -1745,25 +1745,6 @@ impl Default for SettingsStore {
             "Parted".to_string(),
         ]);
 
-        // Default AI preset - works without login
-        let default_free_preset = AIPreset {
-            id: "screenpipe-cloud".to_string(),
-            prompt: r#"IMPORTANT: At the start of every conversation, read the files in .pi/skills/ directory (e.g. .pi/skills/screenpipe-api/SKILL.md and .pi/skills/screenpipe-cli/SKILL.md) before responding.
-Rules:
-- Media: use standard markdown with angle-bracket local paths, like ![description](</path/to/file.mp4>) for videos and ![description](</path/to/image.jpg>) for images
-- Always wrap local file paths in angle brackets because screenpipe paths often contain spaces or parentheses
-- Always answer my question/intent, do not make up things
-"#.to_string(),
-            provider: AIProviderType::ScreenpipeCloud,
-            acp_agent: None,
-            url: "https://api.screenpipe.com/v1".to_string(),
-            model: "auto".to_string(),
-            default_preset: true,
-            api_key: None,
-            max_context_chars: 128000,
-            max_tokens: 4096,
-        };
-
         // Rust persists store.bin before the frontend mounts. All-null values
         // identify a genuinely new install that may inherit remote defaults;
         // legacy stores lack this object and are migrated from their current
@@ -1829,7 +1810,9 @@ Rules:
                 ignored_windows,
                 ..screenpipe_config::RecordingSettings::default()
             },
-            ai_presets: vec![default_free_preset],
+            // No provider is assumed on first launch. The user explicitly selects
+            // an installed Pi Runtime provider or configures a third-party API.
+            ai_presets: vec![],
             is_loading: false,
             dev_mode: false,
             #[cfg(target_os = "macos")]

@@ -27,6 +27,7 @@ import {
 	normalizeAppUser,
 } from "@/lib/app-entitlement";
 import { screenpipeWebUrl } from "@/lib/web-url";
+import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 import type { SourceCitation } from "@/lib/source-citations";
 import type {
 	EnterpriseAppUpdatePolicy,
@@ -632,6 +633,11 @@ const PIPES_PRESET_ID = "pipes";
 const SCREENPIPE_PRESET_ID = "screenpipe";
 
 export function makeDefaultPresets(isPro: boolean): AIPreset[] {
+	if (IS_LOCAL_ONLY_BUILD) {
+		// Local-only builds never assume a provider or endpoint. The user chooses
+		// an installed Pi Runtime provider or configures a third-party provider.
+		return [];
+	}
 	if (isPro) {
 		return [
 			{
@@ -678,7 +684,7 @@ const isLoggedInProUser = (user: User | null | undefined) =>
 	hasAppEntitlement(user as any) && Boolean(user?.token);
 
 const applyProCloudAudioDefaults = (settings: Settings): Settings => {
-	if (!isLoggedInProUser(settings.user)) return settings;
+	if (IS_LOCAL_ONLY_BUILD || !isLoggedInProUser(settings.user)) return settings;
 	if ((settings as any)._proCloudAudioDefaultsAppliedV2) return settings;
 
 	// If the user picked a non-default, non-cloud engine, they've configured audio
@@ -1214,6 +1220,22 @@ function createSettingsStore() {
 		// continuous capture — without writing anything to their store. Only brand-new
 		// installs default to "meetings-only" (via createDefaultSettingsObject, which
 		// get() returns directly when there are no stored settings).
+
+		if (IS_LOCAL_ONLY_BUILD) {
+			if (settings.aiPresets?.some((p: any) => p.provider === "screenpipe-cloud")) {
+				// Remove only the retired hosted preset. Never substitute an endpoint
+				// or alter user-configured Runtime and third-party providers.
+				settings.aiPresets = settings.aiPresets.filter(
+					(p: any) => p.provider !== "screenpipe-cloud",
+				);
+				needsUpdate = true;
+			}
+			if (settings.audioTranscriptionEngine === "screenpipe-cloud") {
+				settings.audioTranscriptionEngine = DEFAULT_AUDIO_ENGINE;
+				settings.meetingLiveTranscriptionProvider = "selected-engine";
+				needsUpdate = true;
+			}
+		}
 
 		// b2 seed: the first time we see a logged-in user, replace the anonymous
 		// "screenpipe" placeholder with the pro pair (chat + pipes) IF they're pro.

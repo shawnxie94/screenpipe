@@ -7,8 +7,8 @@
 //! Manages the pi coding agent via RPC mode (stdin/stdout JSON protocol).
 
 use screenpipe_core::agents::pi::{
-    apply_custom_provider_compat, read_global_pi_models, screenpipe_cloud_models, PI_AI_PACKAGE,
-    PI_NAMESPACE_DIR, PI_PACKAGE, SCREENPIPE_API_URL,
+    apply_custom_provider_compat, read_global_pi_models, PI_AI_PACKAGE, PI_NAMESPACE_DIR,
+    PI_PACKAGE,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -1866,67 +1866,6 @@ fn ensure_enterprise_team_skill(project_dir: &str) -> Result<Option<std::path::P
         .map_err(|e| format!("Failed to install Enterprise team skill: {}", e))
 }
 
-/// Ensure the web-search extension exists in the project's .pi/extensions directory
-/// Install or remove the web-search extension based on provider.
-/// Web search uses the screenpipe cloud backend (Gemini + Google Search),
-/// so we only enable it for screenpipe-cloud presets to avoid sending
-/// user data to our backend when they chose a local/custom provider.
-fn ensure_web_search_extension(
-    project_dir: &str,
-    provider_config: Option<&PiProviderConfig>,
-) -> Result<(), String> {
-    let ext_dir = std::path::Path::new(project_dir)
-        .join(".pi")
-        .join("extensions");
-    let ext_path = ext_dir.join("web-search.ts");
-
-    let is_screenpipe_cloud = match provider_config {
-        Some(config) => matches!(config.provider.as_str(), "screenpipe-cloud" | "pi"),
-        None => true, // default preset = screenpipe cloud
-    };
-
-    if is_screenpipe_cloud {
-        std::fs::create_dir_all(&ext_dir)
-            .map_err(|e| format!("Failed to create extensions dir: {}", e))?;
-
-        let api_url = crate::config::screenpipe_ai_gateway_url()?;
-        let ext_content = include_str!("../assets/extensions/web-search.ts")
-            .replace(SCREENPIPE_API_URL, &api_url);
-        std::fs::write(&ext_path, ext_content)
-            .map_err(|e| format!("Failed to write web-search extension: {}", e))?;
-
-        debug!("Web search extension installed at {:?}", ext_path);
-    } else if ext_path.exists() {
-        std::fs::remove_file(&ext_path)
-            .map_err(|e| format!("Failed to remove web-search extension: {}", e))?;
-
-        info!(
-            "Web search extension removed (provider {:?} is not screenpipe-cloud)",
-            provider_config.map(|c| &c.provider)
-        );
-    }
-
-    Ok(())
-}
-
-/// Install the local-proxy web-search extension for pi-acp. Writes the same
-/// `web-search.ts` slot as the cloud variant but with a body that hits the
-/// local engine's `/v1/web-search` proxy (which holds the cloud JWT) using only
-/// the local API key, so "Pi over ACP" keeps web search without the cloud JWT.
-fn ensure_web_search_local_extension(project_dir: &str) -> Result<(), String> {
-    let ext_dir = std::path::Path::new(project_dir)
-        .join(".pi")
-        .join("extensions");
-    std::fs::create_dir_all(&ext_dir)
-        .map_err(|e| format!("Failed to create extensions dir: {}", e))?;
-    let ext_path = ext_dir.join("web-search.ts");
-    let ext_content = include_str!("../assets/extensions/web-search-local.ts");
-    std::fs::write(&ext_path, ext_content)
-        .map_err(|e| format!("Failed to write local web-search extension: {}", e))?;
-    debug!("Local web search extension installed at {:?}", ext_path);
-    Ok(())
-}
-
 /// Install the MCP bridge extension. Registers proxy tools that route
 /// `sp_mcp_call` / `sp_mcp_list_tools` requests through the local
 /// `/mcp-servers/*` API. Always installed — does nothing when zero
@@ -2084,7 +2023,7 @@ pub struct PiProviderConfig {
     /// ACP adapter configuration when `backend` is `acp`.
     #[serde(default)]
     pub acp_agent: Option<AcpAgentConfig>,
-    /// Provider type: "openai", "native-ollama", "custom", "screenpipe-cloud"
+    /// Provider type selected by the user.
     pub provider: String,
     /// Base URL for the provider API
     pub url: String,
@@ -2262,34 +2201,18 @@ fn anthropic_model_requires_adaptive_thinking(model: &str) -> bool {
 /// concurrent pipes overwrite each other's providers.
 #[cfg(test)]
 async fn build_models_json(
-    user_token: Option<&str>,
+    _user_token: Option<&str>,
     provider_config: Option<&PiProviderConfig>,
 ) -> serde_json::Value {
-    build_models_json_with_api_url(user_token, provider_config, SCREENPIPE_API_URL).await
+    build_models_json_with_provider(provider_config).await
 }
 
-async fn build_models_json_with_api_url(
-    user_token: Option<&str>,
+async fn build_models_json_with_provider(
     provider_config: Option<&PiProviderConfig>,
-    api_url: &str,
 ) -> serde_json::Value {
     let mut providers_map = serde_json::Map::new();
 
-    // Always add screenpipe cloud provider. A real token is inlined as a
-    // literal; the logged-out fallback must use `$` env-var syntax (pi >= 0.80
-    // treats bare names as literal keys).
-    let api_key_value = user_token.unwrap_or("$SCREENPIPE_API_KEY");
-    let models = screenpipe_cloud_models(api_url, user_token).await;
-    let screenpipe_provider = json!({
-        "baseUrl": api_url,
-        "api": "openai-completions",
-        "apiKey": api_key_value,
-        "authHeader": true,
-        "models": models
-    });
-    providers_map.insert("screenpipe".to_string(), screenpipe_provider);
-
-    // Add the user's selected provider (if not screenpipe-cloud)
+    // Add the user's selected local or third-party provider.
     if let Some(config) = provider_config {
         let provider_name = match config.provider.as_str() {
             "openai" => "openai-byok",
@@ -2297,7 +2220,7 @@ async fn build_models_json_with_api_url(
             "native-ollama" => "ollama",
             "anthropic" => "anthropic-byok",
             "custom" => "custom",
-            _ => "", // screenpipe-cloud already added above
+            _ => "", // obsolete providers are rejected before this point
         };
 
         if !provider_name.is_empty() {
@@ -2417,16 +2340,22 @@ async fn build_models_json_with_api_url(
 
 /// Write pi's provider config (models.json + auth.json).
 async fn ensure_pi_config(
-    user_token: Option<&str>,
+    _user_token: Option<&str>,
     provider_config: Option<&PiProviderConfig>,
 ) -> Result<(), String> {
+    if provider_config.is_some_and(|config| {
+        matches!(config.provider.as_str(), "screenpipe-cloud" | "pi")
+    }) {
+        return Err(
+            "Screenpipe-hosted AI has been removed. Select a local or third-party provider.".to_string(),
+        );
+    }
+
     let config_dir = get_pi_config_dir()?;
     std::fs::create_dir_all(&config_dir)
         .map_err(|e| format!("Failed to create pi config dir: {}", e))?;
 
-    let api_url = crate::config::screenpipe_ai_gateway_url()?;
-    let new_providers =
-        build_models_json_with_api_url(user_token, provider_config, &api_url).await;
+    let new_providers = build_models_json_with_provider(provider_config).await;
 
     // Merge into existing models.json to avoid race conditions with concurrent pipes
     let models_path = config_dir.join("models.json");
@@ -2468,36 +2397,8 @@ async fn ensure_pi_config(
     // before a chat process starts.
     ensure_required_pi_extension_setting()?;
 
-    // -- auth.json: merge screenpipe token, preserve other providers --
-    let auth_path = config_dir.join("auth.json");
-    if let Some(token) = user_token.filter(|token| !token.is_empty()) {
-        let mut auth: serde_json::Value = if auth_path.exists() {
-            let content = std::fs::read_to_string(&auth_path).unwrap_or_default();
-            serde_json::from_str(&content).unwrap_or_else(|_| json!({}))
-        } else {
-            json!({})
-        };
-
-        // pi >=0.83 rejects any stored credential it cannot tag, with no
-        // fallback to models.json — a bare token string makes the whole
-        // provider resolve to "Provider is not configured: screenpipe".
-        screenpipe_core::agents::pi::upgrade_legacy_pi_credentials(&mut auth);
-
-        if let Some(obj) = auth.as_object_mut() {
-            obj.insert(
-                "screenpipe".to_string(),
-                screenpipe_core::agents::pi::api_key_credential(token),
-            );
-        }
-
-        let auth_str = serde_json::to_string_pretty(&auth)
-            .map_err(|e| format!("Failed to serialize auth: {}", e))?;
-        std::fs::write(&auth_path, auth_str)
-            .map_err(|e| format!("Failed to write pi auth: {}", e))?;
-        harden_secret_file(&auth_path);
-    } else {
-        remove_screenpipe_auth_from_path(&auth_path)?;
-    }
+    // Remove obsolete Screenpipe credentials while preserving all user-managed providers.
+    remove_screenpipe_auth_from_path(&config_dir.join("auth.json"))?;
 
     info!("Pi config merged at {:?}", models_path);
     Ok(())
@@ -2757,35 +2658,25 @@ pub(crate) const ACP_PRESET_WITHOUT_BACKEND: &str =
 
 /// Map a preset provider onto Pi's internal registry name.
 ///
-/// An `acp` preset has no Pi provider at all: its model calls belong to the
-/// coding agent, not to a Pi provider. Reaching this mapping with `acp` means
-/// the ACP backend was dropped between the preset and the spawn, and the
-/// catch-all used to answer that with "screenpipe" — which sent the *agent id*
-/// ("codex-acp") to the cloud gateway as a model name. The gateway rejected it
-/// as `model_not_allowed`, and the desktop rendered that as "upgrade to
-/// Screenpipe Business": a billing dead end for what is really a broken preset,
-/// on an account that already had the plan. Fail loudly instead of silently
-/// spending someone's hosted allowance on a model id that cannot exist.
+/// ACP presets have no Pi provider because their model calls belong to the
+/// coding agent. Reaching this mapping for ACP means its backend was dropped
+/// between preset selection and spawn, so fail loudly.
 fn pi_registry_provider(provider: &str, url: &str) -> Result<&'static str, String> {
     Ok(match provider {
         "openai" => "openai-byok",
         "openai-chatgpt" => "openai-chatgpt",
         "native-ollama" => "ollama",
         "anthropic" => "anthropic-byok",
-        // "custom" requires a valid URL; fall back to screenpipe cloud if missing
         "custom" if !url.is_empty() => "custom",
         "acp" => return Err(ACP_PRESET_WITHOUT_BACKEND.to_string()),
-        "screenpipe-cloud" | "pi" | _ => "screenpipe",
+        "screenpipe-cloud" | "pi" => {
+            return Err("Screenpipe-hosted AI has been removed. Select a local or third-party provider.".to_string())
+        }
+        _ => return Err(format!("Unsupported AI provider: {provider}")),
     })
 }
 
-/// Resolve a model name for the screenpipe provider.
-///
-/// The gateway (api.screenpipe.com) is the source of truth for model validation
-/// and supports many more models than the local hardcoded list (OpenRouter,
-/// Gemini, Anthropic, etc.). We only do lightweight normalization here
-/// (strip date suffixes) and pass through to the gateway which will reject
-/// unknown models with a proper error.
+/// Normalize a configured provider model name before handing it to Pi.
 fn resolve_screenpipe_model(requested: &str, provider: &str) -> String {
     // Only touch screenpipe provider — other providers use their own model names
     if provider != "screenpipe" {
@@ -2949,9 +2840,6 @@ pub async fn pi_start_inner(
     if !use_acp {
         ensure_shared_pi_extensions(&project_dir)?;
 
-        // Install web-search extension only for screenpipe-cloud presets
-        ensure_web_search_extension(&project_dir, provider_config.as_ref())?;
-
         // Ensure Pi is configured with the user's provider
         ensure_pi_config(user_token.as_deref(), provider_config.as_ref()).await?;
         if !extension_safe_mode {
@@ -2972,13 +2860,6 @@ pub async fn pi_start_inner(
     } else if is_pi_acp {
         // Same pi as native, so the same shared extension set.
         ensure_shared_pi_extensions(&project_dir)?;
-
-        // web-search is the one deliberate difference: pi-acp uses the
-        // LOCAL-proxy variant because the cloud extension needs the
-        // screenpipe-cloud JWT (which ACP sessions never receive), while the
-        // local engine proxy at /v1/web-search injects the JWT server-side, so
-        // pi-acp keeps web search with only the local API key.
-        ensure_web_search_local_extension(&project_dir)?;
 
         // pi-acp can't pass pi's `--approve`, so rpc-mode pi would silently skip
         // the project's .pi/extensions and .pi/skills (untrusted-by-default).
@@ -3265,43 +3146,8 @@ pub async fn pi_start_inner(
                 .entry("DISABLE_MCP_CONFIG_FILTERING".to_string())
                 .or_insert_with(|| "true".to_string());
         }
-        // Route the agent's model calls through Screenpipe Cloud when the
-        // preset asks for it and the catalog says this agent can be pointed at
-        // a provider base URL. The agent still owns its own sign-in; this only
-        // changes which endpoint answers its model calls, so the user does not
-        // need a separate provider account to use a coding agent at all.
-        //
-        // The bearer is the signed-in user's cloud token. It reaches the
-        // adapter as the provider token for that base URL only, and nothing
-        // else here forwards it (the ACP runtime scrubs `SCREENPIPE_API_KEY`
-        // from the child env precisely so it cannot leak as a general
-        // credential).
-        let routing = acp
-            .use_screenpipe_cloud
-            .unwrap_or(false)
-            .then(|| screenpipe_core::agents::acp::agent_cloud_routing(agent_id))
-            .flatten();
-        let mut routed_to_cloud = false;
-        if let Some(routing) = routing {
-            let gateway = crate::config::screenpipe_ai_gateway_url().unwrap_or_default();
-            let (set, clear) = screenpipe_core::agents::acp::cloud_routing_env(
-                &routing,
-                &gateway,
-                user_token.as_deref().unwrap_or_default(),
-            );
-            // Empty means something required was missing (signed out, bad
-            // gateway URL). Fall through to the agent's own account rather than
-            // starting it half-configured.
-            if !set.is_empty() {
-                for name in clear {
-                    resolved_env.remove(&name);
-                }
-                for (name, value) in set {
-                    resolved_env.insert(name, value);
-                }
-                routed_to_cloud = true;
-            }
-        }
+        // ACP agents use their own local or third-party provider credentials.
+        let routed_to_cloud = false;
         // Claude on its own account: force ANTHROPIC_API_KEY empty so the Claude
         // Agent SDK ignores any ambient API key and resolves the login it wrote
         // itself. We never read or parse Claude Code's credential store — the
@@ -7619,7 +7465,7 @@ error: InstallFailed extracting tarball"#;
     // -- build_models_json tests --
 
     use super::{
-        build_models_json, build_models_json_with_api_url, pi_registry_provider, resolve_pi_model,
+        build_models_json, build_models_json_with_provider, pi_registry_provider, resolve_pi_model,
         PiProviderConfig, ACP_PRESET_WITHOUT_BACKEND,
     };
 
@@ -7658,29 +7504,16 @@ error: InstallFailed extracting tarball"#;
     }
 
     #[tokio::test]
-    async fn test_build_models_json_default_has_screenpipe_provider() {
+    async fn test_build_models_json_default_has_no_hosted_provider() {
         let config = build_models_json(None, None).await;
         let providers = config["providers"].as_object().unwrap();
-        assert!(providers.contains_key("screenpipe"));
-        assert_eq!(providers.len(), 1);
-
-        let sp = &providers["screenpipe"];
-        assert_eq!(sp["baseUrl"], "https://api.screenpipe.com/v1");
-        assert_eq!(sp["api"], "openai-completions");
-        // `$` prefix is required: pi >= 0.80 treats bare names as literal keys
-        assert_eq!(sp["apiKey"], "$SCREENPIPE_API_KEY");
-        assert_eq!(sp["authHeader"], true);
-        assert!(sp["models"].as_array().unwrap().len() > 0);
+        assert!(providers.is_empty());
     }
 
     #[tokio::test]
-    async fn test_build_models_json_uses_resolved_gateway_url() {
-        let config =
-            build_models_json_with_api_url(None, None, "http://127.0.0.1:8787/v1").await;
-        assert_eq!(
-            config["providers"]["screenpipe"]["baseUrl"],
-            "http://127.0.0.1:8787/v1"
-        );
+    async fn test_build_models_json_without_provider_is_empty() {
+        let config = build_models_json_with_provider(None).await;
+        assert!(config["providers"].as_object().unwrap().is_empty());
     }
 
     /// An `acp` preset that lost its backend must never be answered with the
@@ -7711,29 +7544,21 @@ error: InstallFailed extracting tarball"#;
             pi_registry_provider("custom", "http://localhost:11434/v1").unwrap(),
             "custom"
         );
-        // custom without a URL keeps its long-standing cloud fallback
-        assert_eq!(pi_registry_provider("custom", "").unwrap(), "screenpipe");
-        assert_eq!(
-            pi_registry_provider("screenpipe-cloud", "").unwrap(),
-            "screenpipe"
-        );
+        assert!(pi_registry_provider("custom", "").is_err());
+        assert!(pi_registry_provider("screenpipe-cloud", "").is_err());
     }
 
     #[tokio::test]
-    async fn test_build_models_json_with_user_token() {
+    async fn test_build_models_json_ignores_obsolete_user_token() {
         let config = build_models_json(Some("tok_abc123"), None).await;
-        let sp = &config["providers"]["screenpipe"];
-        assert_eq!(sp["apiKey"], "tok_abc123");
+        assert!(config["providers"].as_object().unwrap().is_empty());
     }
 
     #[tokio::test]
-    async fn test_build_models_json_screenpipe_cloud_no_extra_provider() {
+    async fn test_build_models_json_omits_removed_screenpipe_cloud_provider() {
         let pc = make_provider_config("screenpipe-cloud", "auto");
         let config = build_models_json(None, Some(&pc)).await;
-        let providers = config["providers"].as_object().unwrap();
-        // screenpipe-cloud maps to "" (empty), so only the screenpipe provider is added
-        assert_eq!(providers.len(), 1);
-        assert!(providers.contains_key("screenpipe"));
+        assert!(config["providers"].as_object().unwrap().is_empty());
     }
 
     #[tokio::test]
@@ -7741,8 +7566,7 @@ error: InstallFailed extracting tarball"#;
         let pc = make_provider_config("openai", "gpt-4o");
         let config = build_models_json(None, Some(&pc)).await;
         let providers = config["providers"].as_object().unwrap();
-        assert_eq!(providers.len(), 2);
-        assert!(providers.contains_key("screenpipe"));
+        assert_eq!(providers.len(), 1);
         assert!(providers.contains_key("openai-byok"));
 
         let openai = &providers["openai-byok"];
@@ -7996,7 +7820,7 @@ error: InstallFailed extracting tarball"#;
         let pc = make_provider_config("custom", "my-model");
         let config = build_models_json(None, Some(&pc)).await;
         let providers = config["providers"].as_object().unwrap();
-        assert_eq!(providers.len(), 1); // only screenpipe
+        assert!(providers.is_empty());
         assert!(!providers.contains_key("custom"));
     }
 
@@ -8006,7 +7830,7 @@ error: InstallFailed extracting tarball"#;
         pc.url = "http://my-server:8080/v1".to_string();
         let config = build_models_json(None, Some(&pc)).await;
         let providers = config["providers"].as_object().unwrap();
-        assert_eq!(providers.len(), 2);
+        assert_eq!(providers.len(), 1);
         assert!(providers.contains_key("custom"));
         assert_eq!(providers["custom"]["baseUrl"], "http://my-server:8080/v1");
         assert_eq!(providers["custom"]["headers"]["User-Agent"], "screenpipe");
@@ -8163,16 +7987,8 @@ error: InstallFailed extracting tarball"#;
         let config = build_models_json(Some("tok"), None).await;
         let providers = config["providers"].as_object().unwrap();
 
-        // Only "screenpipe" — no leftover providers
-        assert_eq!(providers.len(), 1);
-
-        // Every model has required fields for pi-coding-agent schema
-        let models = providers["screenpipe"]["models"].as_array().unwrap();
-        for m in models {
-            assert!(m["id"].as_str().unwrap().len() > 0, "model missing id");
-            assert!(m["cost"]["input"].is_number(), "model missing cost.input");
-            assert!(m["cost"]["output"].is_number(), "model missing cost.output");
-        }
+        // No provider is synthesized without an explicit user configuration.
+        assert!(providers.is_empty());
     }
 
     /// Fresh-profile parity (review item F): from an EMPTY profile, the pi-acp

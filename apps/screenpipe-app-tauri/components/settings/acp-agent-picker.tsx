@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { AcpAgentConfig } from "@/lib/utils/tauri";
 import { acpAdapterInfo } from "@/lib/utils/preset-appearance";
 import { useSelectableAcpAdapters } from "@/lib/acp-rollout";
+import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 import { AcpInstallGate } from "@/components/settings/acp-install-gate";
 import { AcpPresetDefaults } from "@/components/settings/acp-preset-defaults";
 import { AcpBoundaries } from "@/components/settings/acp-boundaries";
@@ -30,12 +31,13 @@ export function acpAgentForSelection(
     command: id === "custom" ? agent?.command ?? "" : undefined,
     args: id === "custom" ? agent?.args ?? [] : undefined,
     env: agent?.env ?? {},
-    // Picking an agent that can run on Screenpipe Cloud defaults to that, so
-    // a new preset works without the user first getting a provider account.
-    // Re-selecting the same agent keeps whatever they chose.
-    useScreenpipeCloud: isSwitch
-      ? acpAdapterInfo(id).supportsCloudRouting === true
-      : agent?.useScreenpipeCloud ?? null,
+    // Local-only builds always use the agent's own local or third-party
+    // credentials. Official builds preserve their existing routing behavior.
+    useScreenpipeCloud: IS_LOCAL_ONLY_BUILD
+      ? false
+      : isSwitch
+        ? acpAdapterInfo(id).supportsCloudRouting === true
+        : agent?.useScreenpipeCloud ?? null,
     // Model/mode overrides are per-agent: an option/mode id from one agent is
     // meaningless to another. Preserve them only when re-selecting the same
     // agent; drop them on a real switch so a stale override can't apply.
@@ -189,7 +191,7 @@ export function AcpAgentPicker({
       {/* Where the agent's model calls go. Only shown for agents the catalog
           knows how to point at the gateway; a closed agent (Cursor, Copilot)
           talks to its own service and has no such choice. */}
-      {info.supportsCloudRouting && (
+      {!IS_LOCAL_ONLY_BUILD && info.supportsCloudRouting && (
         <div className="space-y-1">
           <Label className={compact ? "text-xs" : undefined}>
             {compact ? "model billing" : "Model calls"}

@@ -54,9 +54,8 @@ pub struct CachedSuggestions {
 
 // ─── Enhanced AI config ─────────────────────────────────────────────────────
 
-/// When enabled, uses screenpipe cloud (api.screenpipe.com) instead of Apple
-/// Intelligence for generating suggestions. Produces much better results
-/// but sends recent activity context to the cloud.
+/// Retained only to deserialize existing settings. Hosted suggestion analysis
+/// has been removed and suggestions remain local.
 #[derive(Debug, Clone)]
 pub struct EnhancedAIConfig {
     pub enabled: bool,
@@ -1412,77 +1411,14 @@ struct AiResult {
 }
 
 async fn generate_ai_suggestions(
-    api: &LocalApiContext,
-    mode: &str,
-    apps: &[AppActivity],
-    windows: &[WindowActivity],
-    enhanced_ai: Option<&EnhancedAIConfig>,
+    _api: &LocalApiContext,
+    _mode: &str,
+    _apps: &[AppActivity],
+    _windows: &[WindowActivity],
+    _enhanced_ai: Option<&EnhancedAIConfig>,
 ) -> Option<AiResult> {
-    // Enhanced (cloud) AI is the only AI backend for suggestions. Without an
-    // enabled token, fall back to deterministic templates.
-    let config = match enhanced_ai {
-        Some(c) if c.enabled && !c.token.is_empty() => c,
-        _ => {
-            info!("suggestions: enhanced AI not enabled, using templates");
-            return None;
-        }
-    };
-
-    let context = build_activity_context(api, apps, windows).await;
-
-    debug!(
-        "suggestions: AI prompt ~{} tokens, backend=screenpipe-cloud",
-        context.len() / 4
-    );
-
-    let client = reqwest::Client::new();
-    let gateway_url = match crate::config::screenpipe_ai_gateway_url() {
-        Ok(url) => url,
-        Err(error) => {
-            warn!("suggestions: invalid hosted-AI gateway configuration: {error}");
-            return None;
-        }
-    };
-
-    let resp = client
-        .post(format!("{gateway_url}/chat/completions"))
-        .header("Authorization", format!("Bearer {}", config.token))
-        // Suggestions run in the background (no user waiting) -> flex tier.
-        .header("x-screenpipe-latency", "background")
-        .json(&serde_json::json!({
-            "model": "auto",
-            "messages": [
-                {"role": "system", "content": AI_SYSTEM_PROMPT},
-                {"role": "user", "content": format!("Activity mode: {}\n\n{}", mode, context)}
-            ],
-            "temperature": 0.7,
-            "max_tokens": 500
-        }))
-        .timeout(std::time::Duration::from_secs(30))
-        .send()
-        .await;
-
-    match resp {
-        Ok(r) if r.status().is_success() => {
-            let data: serde_json::Value = r.json().await.ok()?;
-            let content = data["choices"][0]["message"]["content"]
-                .as_str()
-                .unwrap_or("");
-            debug!(
-                "suggestions AI response: {}",
-                safe_byte_prefix(content, 300)
-            );
-            parse_ai_response(content)
-        }
-        Ok(r) => {
-            warn!("suggestions: AI returned status {}", r.status());
-            None
-        }
-        Err(e) => {
-            warn!("suggestions: AI request failed: {}", e);
-            None
-        }
-    }
+    // Hosted activity analysis was removed to keep captured context local.
+    None
 }
 
 fn parse_ai_response(content: &str) -> Option<AiResult> {

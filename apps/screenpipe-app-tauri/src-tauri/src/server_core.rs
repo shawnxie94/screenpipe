@@ -306,7 +306,9 @@ impl ServerCore {
     ) -> Result<Self, String> {
         info!("Starting server core on port {}", config.port);
         crate::health::set_boot_phase("starting", Some("starting server"));
-        let ai_gateway_url = crate::config::screenpipe_ai_gateway_url()?;
+        // Agent executors only receive a loopback base URL. Provider-specific
+        // third-party URLs come from the user's saved preset at spawn time.
+        let ai_gateway_url = format!("http://127.0.0.1:{}/v1", config.port);
 
         // --- Environment setup ---
         std::env::set_var("SCREENPIPE_FD_LIMIT", "8192");
@@ -671,11 +673,8 @@ impl ServerCore {
         let pipes_dir = config.data_dir.join("pipes");
         std::fs::create_dir_all(&pipes_dir).ok();
 
-        // Share the cloud-token Arc between Server (for cloud_proxy.rs) and
-        // PiExecutor (for pi-agent provider auth). With one shared Arc the
-        // `set_cloud_token` Tauri command updates both readers in one shot,
-        // so a fresh sign-in or sign-out takes effect on the very next pipe
-        // run without restarting the engine.
+        // Keep one credential handle for agent lifecycle compatibility. Desktop
+        // agents resolve their model credentials from user-selected providers.
         let cloud_token_handle = server.cloud_token.clone();
         let acp_gateway_url = ai_gateway_url.clone();
         let pi_executor = Arc::new(

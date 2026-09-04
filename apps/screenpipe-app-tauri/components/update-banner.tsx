@@ -19,6 +19,7 @@ import { screenpipeWebUrl } from "@/lib/web-url";
 import { enterpriseUpdateAuthHeaders } from "@/lib/enterprise-auth-recovery";
 import { flushPendingSettingsWrites, useSettings, type Settings } from "@/lib/hooks/use-settings";
 import { resolveConsumerUpdateChannel } from "@/lib/update-channel";
+import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 
 interface UpdateInfo {
   version: string;
@@ -369,6 +370,8 @@ export function useUpdateListener() {
   const { setIsVisible, setUpdateInfo, setAuthRequired } = useUpdateBanner();
 
   useEffect(() => {
+    if (IS_LOCAL_ONLY_BUILD) return;
+
     let unlistenAvailable: (() => void) | undefined;
     let unlistenAuth: (() => void) | undefined;
 

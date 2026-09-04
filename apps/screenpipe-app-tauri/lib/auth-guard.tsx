@@ -134,25 +134,9 @@ function cloudRequestFullHost(url: string): string | null {
   }
 }
 
-// The subset of hosts whose 401 genuinely means the login SESSION died — the
-// website auth surface (screenpipe.com/api/user and the OAuth/session
-// endpoints). This is what the fetch interceptor keys its sign-out on.
-//
-// The session authority is wherever the app actually authenticates. When
-// NEXT_PUBLIC_SCREENPIPE_WEB_URL repoints the app (baked enterprise build,
-// Vercel preview, local control plane), THAT deployment minted the token and
-// only its 401s may clear it — a 401 from prod screenpipe.com then just means
-// "prod doesn't know this token" (it never did) and must not sign the user
-// out. This bit every baked local build: any straggler call site still
-// hardcoding prod got a 401 seconds after onboarding and nuked the session.
-//
-// The AI inference gateway `api.screenpipe.com` is EXCLUDED: it is fail-open on
-// auth (a bad/expired token silently degrades to the anonymous tier) and returns
-// 401 (anonymous-tier `/v1/messages`) and 403 (`model_not_allowed` / entitlement)
-// for reasons that are NOT session expiry. Treating a gateway 401/403 as a
-// sign-out nulled the whole user and looped enterprise users through onboarding
-// after an auto-update (SCR-132). Session validity lives on the website, not the
-// inference subdomain.
+// The subset of hosts whose 401 genuinely means the login session expired:
+// the website auth surface and OAuth/session endpoints. The session authority
+// is wherever the app actually authenticates, including an overridden web base.
 export function isScreenpipeAuthApi(
   url: string,
   webBase: string = screenpipeWebBase(PROD_WEB_BASE)
@@ -166,9 +150,13 @@ export function isScreenpipeAuthApi(
     }
     return cloudRequestFullHost(url) === overrideHost;
   }
-  if (!isScreenpipeApi(url)) return false;
-  const host = cloudRequestHost(url);
-  return host !== "api.screenpipe.com" && host !== "api.screenpi.pe";
+  const host = cloudRequestFullHost(url);
+  return (
+    host === "screenpipe.com" ||
+    host === "screenpi.pe" ||
+    host === "clerk.screenpipe.com" ||
+    host === "clerk.screenpi.pe"
+  );
 }
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {

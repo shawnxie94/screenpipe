@@ -9,6 +9,7 @@ import {
   selectableAcpAdapters,
   type AcpAdapterInfo,
 } from "@/lib/utils/preset-appearance";
+import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 
 export const ACP_AGENTS_FLAG = "acp_agents";
 
@@ -35,7 +36,7 @@ export function isAcpRolloutEnabled(flag: boolean | undefined): boolean {
  */
 export function useAcpRolloutEnabled(): boolean {
   const flag = useFeatureFlagEnabled(ACP_AGENTS_FLAG);
-  if (E2E_BUILD) return true;
+  if (E2E_BUILD || IS_LOCAL_ONLY_BUILD) return true;
   return isAcpRolloutEnabled(flag);
 }
 
@@ -57,7 +58,7 @@ export function useSelectableAcpAdapters(
   // the flagged agents would be unreachable to their own coverage. Same
   // build-time constant as the gate above: a production bundle inlines false.
   return selectableAcpAdapters(
-    E2E_BUILD ? ACP_ADAPTER_FLAGS : activeFlags,
+    E2E_BUILD || IS_LOCAL_ONLY_BUILD ? ACP_ADAPTER_FLAGS : activeFlags,
     currentId,
   );
 }

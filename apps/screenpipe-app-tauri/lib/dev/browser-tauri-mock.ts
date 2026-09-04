@@ -929,8 +929,6 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
           managed: false,
           detected_by: [],
         };
-      case "get_screenpipe_ai_gateway_url":
-        return "https://api.screenpipe.com/v1";
       case "generate_activity_history":
       case "get_activity_history":
         return mockActivityHistory(input.start, input.end);

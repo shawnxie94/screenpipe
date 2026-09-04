@@ -115,14 +115,12 @@ function isConnectionLikeError(errorStr: string): boolean {
 }
 
 export function isHostedScreenpipeProvider(provider?: string | null): boolean {
-  // screenpipe's own hosted gateway (default chat preset + the Pi agent both
-  // route through api.screenpipe.com). A connection failure here is on us,
-  // not the user's machine.
+  // Retained only to render a useful migration error for legacy presets.
   return provider === "screenpipe-cloud" || provider === "pi";
 }
 
 export function buildCloudConnectionMessage(): string {
-  return "现在无法连接 screenpipe 云端 — 这通常是我们这边的短暂中断，不是你的环境问题。稍等几秒后重试。";
+  return "此旧 AI 预设已不再可用。请选择本地模型或配置第三方服务。";
 }
 
 export function buildRemoteConnectionMessage(provider?: string | null): string {

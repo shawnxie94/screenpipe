@@ -700,7 +700,7 @@ async fn main() {
     // the process env itself.
 
     let app_version = env!("CARGO_PKG_VERSION");
-    let sentry_guard = if !telemetry_disabled {
+    let sentry_guard = if !telemetry_disabled && crate::config::screenpipe_hosted_services_enabled() {
         Some(sentry::init((
             "https://da4edafe2c8e5e8682505945695ecad7@o4505591122886656.ingest.us.sentry.io/4510761355116544",
             sentry::ClientOptions {
@@ -1238,7 +1238,9 @@ async fn main() {
                 let mut app_submenu_builder = SubmenuBuilder::new(app, "screenpipe")
                     .item(&PredefinedMenuItem::about(app, Some("About screenpipe"), None)?)
                     .separator();
-                if !crate::updates::is_enterprise_build(&app_handle) {
+                if crate::config::screenpipe_hosted_services_enabled()
+                    && !crate::updates::is_enterprise_build(&app_handle)
+                {
                     app_submenu_builder = app_submenu_builder
                         .item(&MenuItemBuilder::with_id("check_for_updates", "Check for Updates...")
                             .build(app)?)
@@ -2193,13 +2195,23 @@ async fn main() {
                 }
             }
 
-            // Initialize update check
-            let update_manager = start_update_check(&app_handle, 5)?;
-            app_handle.manage(update_manager.clone()); // Register for state::<Arc<UpdatesManager>>()
+            // Self-hosted builds must not contact Screenpipe's update service.
+            // The tray still refreshes recording state without an update item.
+            let update_manager = if crate::config::screenpipe_hosted_services_enabled() {
+                Some(start_update_check(&app_handle, 5)?)
+            } else {
+                None
+            };
+            if let Some(update_manager) = &update_manager {
+                app_handle.manage(update_manager.clone());
+            }
 
             // Setup tray
             if let Some(_) = app_handle.tray_by_id("screenpipe_main") {
-                if let Err(e) = tray::setup_tray(&app_handle, update_manager.update_now_menu_item_ref()) {
+                if let Err(e) = tray::setup_tray(
+                    &app_handle,
+                    update_manager.as_ref().and_then(|manager| manager.update_now_menu_item_ref()),
+                ) {
                     error!("Failed to setup tray: {}", e);
                 }
             }
@@ -2267,7 +2279,7 @@ async fn main() {
             let email = store.user.email.unwrap_or_default();
             let local_api = crate::recording::local_api_context_from_app(&app_handle);
 
-            if is_analytics_enabled {
+            if is_analytics_enabled && crate::config::screenpipe_hosted_services_enabled() {
                 match start_analytics(
                     unique_id,
                     email,
@@ -2468,14 +2480,16 @@ async fn main() {
             // telemetry builds with SCREENPIPE_ENTERPRISE_LICENSE_KEY env set.
             let _enterprise_shutdown_tx = enterprise_sync::spawn(&app_handle);
 
-            // Account data sync. Runtime eligibility keeps customer-managed
-            // Enterprise accounts out while allowing Screenpipe's own org.
-            data_sync::spawn(&app_handle);
+            if crate::config::screenpipe_hosted_services_enabled() {
+                // Account data sync. Runtime eligibility keeps customer-managed
+                // Enterprise accounts out while allowing Screenpipe's own org.
+                data_sync::spawn(&app_handle);
 
-            // Standard builds: account-bound, explicit opt-in support logs.
-            // Enterprise builds compile this as a no-op because their managed
-            // license-authenticated collector above is mandatory.
-            remote_support_logs::spawn(&app_handle);
+                // Standard builds: account-bound, explicit opt-in support logs.
+                // Enterprise builds compile this as a no-op because their managed
+                // license-authenticated collector above is mandatory.
+                remote_support_logs::spawn(&app_handle);
+            }
 
             // Disable removed Storage cloud backends if old settings enabled them.
             let app_handle_clone = app_handle.clone();
