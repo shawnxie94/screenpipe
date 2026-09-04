@@ -716,6 +716,8 @@ Coverage requirements: return at least {minimum_entries} source-backed activitie
 Return one JSON object and no Markdown:
 {{"entries":[{{"id":"stable-short-slug","kind":"work","meeting_id":null,"start_at":"ISO timestamp","end_at":"ISO timestamp","title":"3-8 words, past tense","summary":"one specific plain-language sentence","evidence":[{{"kind":"screen","at":"exact source timestamp","frame_id":123,"meeting_id":null,"app_name":"exact app name","label":"short paraphrase of what this proves"}}]}}]}}
 
+Language requirement: write title, summary, and evidence.label in Simplified Chinese. Keep JSON field names and enum values such as kind=work, kind=meeting, and evidence kinds in English. Preserve official product names, project names, file names, and technical identifiers when appropriate.
+
 Rules: return every start_at, end_at, and evidence.at in UTC ending in Z; when a source timestamp has an offset, convert the instant to UTC and never replace its offset without adjusting its clock value; preserve meaningful short work and resumed work as separate intervals; gaps over 15 minutes end an interval; do not span unrelated work; include every recorded meeting of at least two minutes exactly once as kind=meeting with its real meeting_id and a first kind=meeting evidence item; use 1-3 direct evidence items per entry; omit anything you cannot cite directly; do not expose quotes, raw captures, or API mechanics."#,
         start = start.to_rfc3339(),
         end = end.to_rfc3339(),
@@ -2015,6 +2017,28 @@ mod tests {
         assert!(prompt.contains("outside_boundary:1"));
         assert!(prompt.contains("2026-08-19T10:00:00+00:00 to 2026-08-19T10:30:00+00:00"));
         assert!(prompt.contains("meeting_id=7; 2026-08-19T10:10:00Z to 2026-08-19T10:25:00Z"));
+    }
+
+    #[test]
+    fn activity_prompts_require_simplified_chinese_user_facing_text() {
+        let start = parse_time("2026-08-19T10:00:00Z").unwrap();
+        let end = parse_time("2026-08-19T11:00:00Z").unwrap();
+
+        let generation = generation_prompt(start, end, 1);
+        assert!(generation.contains("write title, summary, and evidence.label in Simplified Chinese"));
+
+        let audit = QualityAudit {
+            rejected_entries: 0,
+            rejected_evidence: 0,
+            rejection_reasons: BTreeMap::new(),
+            parse_error: false,
+            entry_count: 0,
+            minimum_entries: 1,
+            missing_observed_windows: Vec::new(),
+            missing_meeting_ids: Vec::new(),
+        };
+        let repair = repair_prompt(start, end, r#"{"entries":[]}"#, &audit, &[]);
+        assert!(repair.contains("write title, summary, and evidence.label in Simplified Chinese"));
     }
 
     #[test]
