@@ -154,6 +154,30 @@ afterEach(() => {
 });
 
 describe("archive all recent chats", () => {
+  it("opens activity-history runs as read-only chat sessions", () => {
+    useChatStore.getState().actions.upsert(
+      session("__title:activity-history-run", {
+        title: "活动生成 · 12:34",
+        internalCategory: "activity-history",
+        status: "streaming",
+        messages: [],
+        messageCount: 0,
+      }),
+    );
+    renderSidebar();
+
+    fireEvent.click(screen.getByTestId("sidebar-section-系统活动"));
+    fireEvent.click(screen.getByRole("button", { name: /活动生成 · 12:34/ }));
+
+    expect(mocks.emit).toHaveBeenCalledWith("chat-load-conversation", {
+      conversationId: "__title:activity-history-run",
+      targetWindow: "home",
+    });
+    expect(mocks.piAbort).not.toHaveBeenCalledWith(
+      "__title:activity-history-run",
+    );
+  });
+
   it("allows only the current summary chat during the trial restriction", () => {
     render(
       <TooltipProvider>

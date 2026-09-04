@@ -743,7 +743,13 @@ export function StandaloneChat({
     const session = state.sessions[conversationId];
     const isExternalAgent = session?.importedFrom?.source === "codex"
       || session?.importedFrom?.source === "claude-code";
-    return session?.kind === "pipe-watch" || isExternalAgent
+    // The app-wide Pi router accumulates activity-history output while the
+    // chat panel is mounted in the background. Read it directly from the
+    // store after the user opens the activity row, otherwise the panel falls
+    // back to its local buffer (which was never subscribed to that session).
+    return session?.kind === "pipe-watch"
+      || session?.internalCategory === "activity-history"
+      || isExternalAgent
       ? session?.messages
       : undefined;
   });

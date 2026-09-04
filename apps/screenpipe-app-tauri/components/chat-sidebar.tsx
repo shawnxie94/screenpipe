@@ -60,6 +60,7 @@ import {
   useChatStore,
   useChatActions,
   useOrderedSessions,
+  useInternalSystemActivitySessions,
   isEmptyChatShell,
   selectDisplayedChatId,
   sessionRecordFromMeta,
@@ -804,6 +805,16 @@ export function ChatSidebar({
     PIPES_SIDEBAR_COLLAPSED_KEY,
     true
   );
+  // "系统活动" group: opt-in surface for `__title:activity-history-*`
+  // sessions that the router otherwise hides. Default-collapsed so it
+  // doesn't compete with recents on every app open; the user's first
+  // failed activity-generation run is what teaches them to expand it.
+  const [systemActivityCollapsed, setSystemActivityCollapsed] = useCollapsedPref(
+    "screenpipe:system-activity-collapsed",
+    true,
+  );
+  const internalActivitySessions = useInternalSystemActivitySessions();
+  const nowTick = useMinuteTick();
   const [pipeInventory, setPipeInventory] = useState<SidebarPipeInventoryItem[]>([]);
   const [pipeInventoryLoaded, setPipeInventoryLoaded] = useState(false);
   const [pipeInventoryAuthoritative, setPipeInventoryAuthoritative] = useState(false);
@@ -2081,6 +2092,85 @@ export function ChatSidebar({
                   </button>
                 )}
               </Section>
+          </div>
+
+          <div className="group/system-activity min-h-0 flex flex-col shrink-0">
+            <Section
+              title="系统活动"
+              collapsed={systemActivityCollapsed}
+              onCollapsedChange={setSystemActivityCollapsed}
+              count={internalActivitySessions.length}
+              headerAction={
+                <Timer className="h-3 w-3 sidebar-text-tertiary" aria-hidden />
+              }
+              bodyClassName=""
+            >
+              {internalActivitySessions.length === 0 ? (
+                <div className="px-2.5 py-2 text-xs sidebar-text-secondary italic">
+                  暂无系统活动
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  {internalActivitySessions.slice(0, 12).map((session) => {
+                    const isLive =
+                      session.status === "streaming"
+                      || session.status === "thinking"
+                      || session.status === "tool";
+                    return (
+                      <button
+                        key={session.id}
+                        type="button"
+                        className={cn(
+                          "group/activity flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left transition-colors",
+                          "hover:bg-muted/15",
+                        )}
+                        title={
+                          session.lastError
+                            ? `${session.title}\n${session.lastError}`
+                            : session.title
+                        }
+                        onClick={() => {
+                          if (session.lastError) {
+                            toast({
+                              title: session.title,
+                              description: session.lastError,
+                              variant: "destructive",
+                            });
+                          }
+                          // Open the read-only transcript in the chat panel
+                          // so the user sees the full prompt + tool calls +
+                          // streamed output, not just a status dot. Never
+                          // abort the background generation on selection —
+                          // the run continues while the user inspects it.
+                          void emit("chat-load-conversation", {
+                            conversationId: session.id,
+                            targetWindow: "home",
+                          });
+                        }}
+                      >
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 shrink-0 rounded-full",
+                            session.status === "error"
+                              ? "bg-destructive"
+                              : isLive
+                                ? "bg-foreground animate-pulse"
+                                : "bg-muted-foreground/40",
+                          )}
+                          aria-hidden
+                        />
+                        <span className="min-w-0 flex-1 truncate text-xs">
+                          {session.title}
+                        </span>
+                        <span className="shrink-0 text-[10px] tabular-nums sidebar-text-tertiary">
+                          {formatCompactAge(session.updatedAt, nowTick)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </Section>
           </div>
         </div>
       </div>

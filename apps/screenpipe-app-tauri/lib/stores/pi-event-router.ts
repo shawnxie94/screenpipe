@@ -71,7 +71,7 @@ import {
 } from "@/lib/chat-utils";
 import { deriveFallbackConversationTitle } from "@/lib/utils/chat-title";
 import { optimisticAssistantForUserEcho } from "@/lib/chat/cross-window-transcript-sync";
-import { isInternalAgentSession } from "@/lib/utils/internal-session";
+import { isInternalAgentSession, getInternalSessionCategory, type InternalSessionCategory } from "@/lib/utils/internal-session";
 import { useAcpSessionConfig } from "@/lib/stores/acp-session-config";
 import {
   agentActionMessage,
@@ -189,6 +189,29 @@ function errorMessage(evt: PiInnerEvent): string | null {
   return null;
 }
 
+/**
+ * Build the sidebar label for an internal-but-visible session.
+ * Internal sessions never receive a user-set title, so the router has to
+ * mint a stable, time-based one. The timestamp comes from
+ * `Date.now()` at row creation — the underlying session id also embeds
+ * the same epoch (`__title:activity-history-<epoch>-<rand>`), so the
+ * label and the id stay in sync.
+ */
+function internalSessionTitle(
+  category: InternalSessionCategory,
+  createdAt: number,
+): string {
+  const date = new Date(createdAt);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  switch (category) {
+    case "activity-history":
+      return `活动生成 · ${hh}:${mm}`;
+    case "live-view":
+      return `Live View 生成 · ${hh}:${mm}`;
+  }
+}
+
 // Per-session throttling: text_delta fires at ~100Hz; rendering the sidebar
 // row that fast wastes CPU. We coalesce to one preview update per
 // `PREVIEW_THROTTLE_MS` window per session. Status changes bypass the
@@ -200,8 +223,12 @@ export async function handlePiEvent(envelope: AgentEventEnvelope) {
   const sid = envelope.sessionId;
   const inner = envelope.event;
   if (!sid || !inner) return; // events without a session id or body can't be routed
-  // Internal Pi sessions (title generation, etc.) — never routed to chat store
-  if (isInternalAgentSession(sid)) return;
+  // Internal Pi sessions (title generation, etc.) — never routed to chat
+  // store. Sub-categories the user opted into seeing (currently only
+  // `activity-history`) fall through so the sidebar can render them in a
+  // dedicated "系统活动" group; everything else stays hidden.
+  const internalCategory = getInternalSessionCategory(sid);
+  if (internalCategory === null && isInternalAgentSession(sid)) return;
   // A closed side chat can still have buffered backend events in flight. The
   // tombstone blocks those in the creating renderer, while the reserved id
   // namespace blocks them after reload and in other renderers that never held
@@ -269,9 +296,12 @@ export async function handlePiEvent(envelope: AgentEventEnvelope) {
   // (e.g. resumed from disk before we hydrated).
   if (!existing) {
     const now = Date.now();
+    const isInternalVisible = internalCategory !== null;
     store.actions.upsert({
       id: sid,
-      title: "未命名",
+      title: isInternalVisible
+        ? internalSessionTitle(internalCategory!, now)
+        : "未命名",
       preview: snippet ?? "",
       status: nextStatus ?? "streaming",
       lastError: err ?? undefined,
@@ -290,7 +320,12 @@ export async function handlePiEvent(envelope: AgentEventEnvelope) {
       // The row is revealed by the paths that prove real content exists:
       // `applyEventToSessionContent` on a user `message_start`, and
       // `persistBackgroundSession` after the first save.
-      draft: true,
+      //
+      // Internal-but-visible sessions (currently only `activity-history`)
+      // skip the draft gate: their row exists for the user to debug, and
+      // they never produce a user `message_start` to flip it on.
+      draft: !isInternalVisible,
+      internalCategory: internalCategory ?? null,
       // Set lastContentAt on first touch only when there's actual content.
       // isUnread() in the store will compute the correct unread boolean.
       ...(snippet ? { lastContentAt: now } : {}),
@@ -298,6 +333,11 @@ export async function handlePiEvent(envelope: AgentEventEnvelope) {
     if (snippet) previewLastEmittedAt.set(sid, Date.now());
     existing = useChatStore.getState().sessions[sid];
     if (!existing) return;
+  } else if (internalCategory !== null && existing.internalCategory == null) {
+    // A row materialized earlier (e.g. user reopened a previously-archived
+    // activity-history session) without a category — backfill it so the
+    // sidebar routes it to the "系统活动" group on the next render.
+    store.actions.patch(sid, { internalCategory });
   }
 
   // Phase 3: accumulate full message-content state in the store for

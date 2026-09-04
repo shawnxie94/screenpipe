@@ -12,6 +12,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   useChatStore,
   selectOrderedSessions,
+  selectInternalSystemActivitySessions,
   selectRecentSwitcherSessions,
   selectVisibleOpenChatTabs,
   nextOpenChatTabId,
@@ -1459,6 +1460,102 @@ describe("chat-store: applyChatSessionActivity", () => {
         NOW,
       );
       expect(useChatStore.getState().sessions["A"].lastContentAt).toBeUndefined();
+    });
+  });
+
+  describe("selectInternalSystemActivitySessions", () => {
+    beforeEach(() => {
+      // The file-level beforeEach already calls `reset`. Each test below
+      // starts from an empty store and re-creates only the rows it needs.
+    });
+
+    it("returns only activity-history internal rows and skips regular chats", () => {
+      const now = Date.now();
+      useChatStore.getState().actions.upsert({
+        ...baseRecord({
+          id: "__title:activity-history-1768-aaaa",
+          createdAt: now - 5_000,
+          updatedAt: now - 5_000,
+        }),
+        internalCategory: "activity-history",
+      });
+      useChatStore.getState().actions.upsert({
+        ...baseRecord({
+          id: "__title:activity-history-1768-bbbb",
+          createdAt: now - 1_000,
+          updatedAt: now - 1_000,
+        }),
+        internalCategory: "activity-history",
+      });
+      useChatStore.getState().actions.upsert({
+        ...baseRecord({ id: "user-chat", updatedAt: now }),
+        draft: false,
+      });
+      useChatStore.getState().actions.upsert({
+        ...baseRecord({ id: "__title:1768-cccc", updatedAt: now }),
+      });
+
+      const ids = selectInternalSystemActivitySessions(
+        useChatStore.getState(),
+      ).map((s) => s.id);
+      expect(ids).toEqual([
+        "__title:activity-history-1768-bbbb",
+        "__title:activity-history-1768-aaaa",
+      ]);
+    });
+
+    it("filters out hidden activity-history rows", () => {
+      const now = Date.now();
+      useChatStore.getState().actions.upsert({
+        ...baseRecord({
+          id: "__title:activity-history-1768-aaaa",
+          updatedAt: now,
+        }),
+        internalCategory: "activity-history",
+      });
+      useChatStore.getState().actions.upsert({
+        ...baseRecord({
+          id: "__title:activity-history-1768-bbbb",
+          updatedAt: now,
+          hidden: true,
+        }),
+        internalCategory: "activity-history",
+      });
+
+      const ids = selectInternalSystemActivitySessions(
+        useChatStore.getState(),
+      ).map((s) => s.id);
+      expect(ids).toEqual(["__title:activity-history-1768-aaaa"]);
+    });
+
+    it("keeps internal-but-visible sessions out of the regular recents order", () => {
+      // Regression guard for the design intent: an activity-history row
+      // must not bubble into the normal recents list and crowd out user
+      // chats at the top.
+      const now = Date.now();
+      useChatStore.getState().actions.upsert({
+        ...baseRecord({
+          id: "__title:activity-history-1768-aaaa",
+          updatedAt: now, // newest
+        }),
+        internalCategory: "activity-history",
+      });
+      useChatStore.getState().actions.upsert({
+        ...baseRecord({
+          id: "user-chat",
+          updatedAt: now - 60_000, // older
+        }),
+        draft: false,
+      });
+
+      const recentsIds = selectOrderedSessions(useChatStore.getState()).map(
+        (s) => s.id,
+      );
+      const internalIds = selectInternalSystemActivitySessions(
+        useChatStore.getState(),
+      ).map((s) => s.id);
+      expect(recentsIds).toEqual(["user-chat"]);
+      expect(internalIds).toEqual(["__title:activity-history-1768-aaaa"]);
     });
   });
 });

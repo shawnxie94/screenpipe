@@ -30,6 +30,10 @@ import {
   conversationDedupIdentity,
   messagesHaveCompletedReply,
 } from "@/lib/chat-dedup";
+import {
+  getInternalSessionCategory,
+  type InternalSessionCategory,
+} from "@/lib/utils/internal-session";
 
 export type SessionStatus =
   | "idle" // not currently producing output
@@ -208,6 +212,17 @@ export interface SessionRecord {
   sidebarGroup?: string;
   /** Local agent source when this conversation was imported into screenpipe. */
   importedFrom?: ConversationMeta["importedFrom"];
+  /**
+   * Marks an internal-agent session (e.g. activity-history generation) that
+   * the sidebar opts into surfacing under a dedicated "系统活动" group. Set
+   * by the pi-event-router's lazy-create path from
+   * `getInternalSessionCategory(sid)`; `null`/missing for normal chats.
+   * Internal sessions stay hidden from the standard chat recents and the
+   * tab strip — they only appear in the "系统活动" group. Visible internal
+   * sessions such as activity-history keep their streaming transcript in
+   * `messages[]` so the chat panel can show live progress when opened.
+   */
+  internalCategory?: InternalSessionCategory | null;
 }
 
 interface ChatStoreState {
@@ -1264,11 +1279,42 @@ export function selectOrderedSessions(
   state: ChatSessionsState,
 ): SessionRecord[] {
   const all = dedupeSessionRecords(Object.values(state.sessions)).filter(
-    (session) => !isEphemeralSideConversation(session),
+    (session) =>
+      !isEphemeralSideConversation(session)
+      // Internal-but-visible sessions (`activity-history`, …) surface in a
+      // dedicated "系统活动" sidebar group, not in the regular recents
+      // list. Filtering them out here keeps the standard recents
+      // unchanged for every existing caller — see
+      // `selectInternalActivityHistorySessions` for the parallel selector.
+      && session.internalCategory == null,
   );
   const pinned = all.filter((s) => s.pinned).sort(compareForSidebar);
   const recents = all.filter((s) => !s.pinned).sort(compareForSidebar);
   return [...pinned, ...recents];
+}
+
+/**
+ * Internal-but-visible sessions surfaced in the sidebar's "系统活动" group.
+ * Currently `activity-history` and `live-view` runs; new internal
+ * sub-categories become eligible automatically when they opt in via
+ * `getInternalSessionCategory()`.
+ *
+ * Same dedup + sort as the regular recents, but skips the
+ * pinned/ephemeral filters because internal runs are never pinned and
+ * never ephemeral.
+ */
+export function selectInternalSystemActivitySessions(
+  state: ChatSessionsState,
+): SessionRecord[] {
+  return dedupeSessionRecords(Object.values(state.sessions))
+    .filter(
+      (session) =>
+        (session.internalCategory === "activity-history"
+          || session.internalCategory === "live-view")
+        && !session.hidden
+        && !isEphemeralSideConversation(session),
+    )
+    .sort(compareForSidebar);
 }
 
 export function selectRecentSwitcherSessions(
@@ -1349,6 +1395,20 @@ export function useOrderedSessions(): SessionRecord[] {
   const sessionsMap = useChatStore((s) => s.sessions);
   return useMemo(
     () => selectOrderedSessions({ sessions: sessionsMap }),
+    [sessionsMap],
+  );
+}
+
+/**
+ * Hook companion to `useOrderedSessions` that returns the
+ * internal-but-visible sessions surfaced in the sidebar's "系统活动"
+ * group (`activity-history` + `live-view`). Same memoization contract —
+ * re-renders only when the underlying `sessions` map changes.
+ */
+export function useInternalSystemActivitySessions(): SessionRecord[] {
+  const sessionsMap = useChatStore((s) => s.sessions);
+  return useMemo(
+    () => selectInternalSystemActivitySessions({ sessions: sessionsMap }),
     [sessionsMap],
   );
 }
