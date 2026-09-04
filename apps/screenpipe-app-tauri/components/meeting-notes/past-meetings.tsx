@@ -474,7 +474,7 @@ function formatRowStamp(iso: string, bucket: string): string {
 }
 
 function titleFromApp(app: string): string {
-  if (!app || app === "manual") return "untitled meeting";
+  if (!app || app === "manual") return "未命名会议";
   return app.toLowerCase();
 }
 

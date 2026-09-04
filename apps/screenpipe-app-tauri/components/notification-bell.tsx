@@ -126,9 +126,9 @@ function notificationClipboardText(entry: NotificationEntry): string {
 
 function buildNotificationDisplayLabel(title: string): string {
   const normalized = title.replace(/\s+/g, " ").trim();
-  if (!normalized) return "Ask AI about notification";
+  if (!normalized) return "询问 AI 关于通知";
   const compact = normalized.length > 60 ? `${normalized.slice(0, 57).trimEnd()}...` : normalized;
-  return `Ask AI about: ${compact}`;
+  return `询问 AI：${compact}`;
 }
 
 interface NotificationInboxPanelProps {
@@ -287,7 +287,7 @@ export function NotificationInboxPanel({
       {/* Header */}
       <div className="border-b border-border px-3 pt-2.5 pb-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-foreground">inbox</span>
+          <span className="text-xs font-medium text-foreground">通知</span>
           {/* Clears both tabs, so it stays reachable from either one — being
               sent to All just to empty the inbox was busywork. */}
           {history.length > 0 && (
@@ -296,7 +296,7 @@ export function NotificationInboxPanel({
               onClick={clearAll}
               className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
             >
-              clear all
+              清空全部
             </button>
           )}
         </div>
@@ -330,7 +330,7 @@ export function NotificationInboxPanel({
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {view === "priority" ? "priority" : "all"}
+                {view === "priority" ? "重要" : "全部"}
                 <span className="ml-1 text-[9px] tabular-nums opacity-60">{count}</span>
               </button>
             );
@@ -346,14 +346,14 @@ export function NotificationInboxPanel({
             className="px-3 py-6 text-center text-xs text-muted-foreground"
           >
             <div className="font-medium text-foreground/80">
-              {history.length === 0 ? "no notifications yet" : "you’re caught up"}
+              {history.length === 0 ? "暂无通知" : "已全部处理"}
             </div>
             {history.length > 0 && (
               <button
                 onClick={() => setInboxView("all")}
                 className="mt-1 text-[10px] hover:text-foreground transition-colors"
               >
-                {history.length} other {history.length === 1 ? "update" : "updates"} in all
+                全部中还有 {history.length} 条其他更新
               </button>
             )}
           </div>
@@ -366,7 +366,7 @@ export function NotificationInboxPanel({
               <Fragment key={entry.id}>
                 {idx === 0 && highPriority.length > 0 && (
                   <SectionLabel>
-                    {inboxView === "priority" ? "needs your attention" : "high priority"}
+                    {inboxView === "priority" ? "需要你处理" : "重要通知"}
                   </SectionLabel>
                 )}
                 {inboxView === "all" &&
@@ -598,7 +598,7 @@ export function NotificationInboxPanel({
                         className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                       >
                         <MessageSquare className="w-3 h-3" />
-                        ask ai
+                        询问 AI
                       </button>
                     </div>
                     <NotificationFeedback notification={entry} variant="inbox" />
@@ -670,7 +670,7 @@ export function NotificationBell() {
     >
       <PopoverTrigger asChild>
         <button
-          aria-label={unreadCount > 0 ? `notifications, ${unreadCount} high priority unread` : "notifications"}
+          aria-label={unreadCount > 0 ? `通知，${unreadCount} 条高优先级未读` : "通知"}
           data-testid="notification-bell-trigger"
           className="relative p-1.5 rounded-md hover:bg-muted/60 transition-colors"
         >

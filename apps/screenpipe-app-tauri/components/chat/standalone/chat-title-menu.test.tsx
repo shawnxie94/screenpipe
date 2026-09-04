@@ -80,10 +80,10 @@ describe("ChatTitleMenu", () => {
     expect(screen.getByTestId("chat-title")).toHaveTextContent("day recap");
 
     fireEvent.click(screen.getByRole("button", { name: "chat options for day recap" }));
-    expect(await screen.findByRole("button", { name: "Pin" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Rename" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "置顶" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "重命名" })).toBeVisible();
     expect(screen.getByRole("button", { name: "归档" })).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "删除" })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "归档" }));
     await waitFor(() =>
@@ -122,7 +122,7 @@ describe("ChatTitleMenu", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "chat options for day recap" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Rename" }));
+    fireEvent.click(await screen.findByRole("button", { name: "重命名" }));
 
     const input = screen.getByRole("textbox");
     fireEvent.change(input, { target: { value: "today's work" } });

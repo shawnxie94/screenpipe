@@ -229,7 +229,7 @@ function formatMeetingWhen(meeting: MeetingRecord): string {
 }
 
 export function meetingSummarySubject(meeting: MeetingRecord): string {
-  const title = meeting.title?.trim() || "untitled meeting";
+  const title = meeting.title?.trim() || "未命名会议";
   return `Meeting summary: ${title}`;
 }
 
@@ -248,7 +248,7 @@ export function buildMeetingSummaryShare({
   const body = summary?.trim();
   if (!body) return null;
 
-  const title = meeting.title?.trim() || "untitled meeting";
+  const title = meeting.title?.trim() || "未命名会议";
   const when = formatMeetingWhen(meeting);
   const attendees = meeting.attendees?.trim();
 

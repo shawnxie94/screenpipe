@@ -299,7 +299,7 @@ export function MeetingChatPanel({
             className="mt-0.5 truncate text-xs font-medium text-foreground"
             title={meetingTitle || "未命名会议"}
           >
-            {meetingTitle || "untitled meeting"}
+            {meetingTitle || "未命名会议"}
           </p>
           <p
             data-testid="meeting-chat-context"

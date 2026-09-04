@@ -2413,8 +2413,8 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     if (selectedSpeaker) {
       return (
         <>
-          <span>↑↓ navigate</span>
-          <span>⏎ go to timeline</span>
+          <span>↑↓ 切换</span>
+          <span>⏎ 跳到时间线</span>
           <span>按 Esc 返回</span>
         </>
       );
@@ -2422,7 +2422,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     if (selectedApp && !activeNavItem) {
       return (
         <>
-          <span>↑↓ navigate</span>
+          <span>↑↓ 切换</span>
           <span>按 Esc 返回</span>
         </>
       );
@@ -2430,14 +2430,14 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     if (!activeNavItem) return <span>输入以搜索</span>;
     return (
       <>
-        <span>{activeNavItem.kind === "frame" ? "←→↑↓ navigate" : "↑↓ navigate"}</span>
+        <span>{activeNavItem.kind === "frame" ? "←→↑↓ 切换" : "↑↓ 切换"}</span>
         {/* Every non-chat row resolves to a moment — a frame, or the instant a
             line was typed or copied — and Enter opens the main timeline there. */}
-        <span>{activeNavItem.kind === "chat" ? "⏎ open chat" : "⏎ go to timeline"}</span>
+        <span>{activeNavItem.kind === "chat" ? "⏎ 打开聊天" : "⏎ 跳到时间线"}</span>
         {activeNavItem.kind === "frame" && (
           <span className="flex items-center gap-1" suppressHydrationWarning>
             <MessageSquare className="w-2.5 h-2.5" />
-            {isMac ? "⌘⏎" : "Ctrl+⏎"} ask AI
+            {isMac ? "⌘⏎" : "Ctrl+⏎"} 询问 AI
           </span>
         )}
       </>

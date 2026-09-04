@@ -91,11 +91,11 @@ export function RecordingStatus({
 
   const summary =
     visibleDevices.length === 0
-      ? "not recording"
+      ? "未录制"
       : pausedCount === 0
-        ? "recording"
-        : `${pausedCount} device${pausedCount > 1 ? "s" : ""} paused`;
-  const label = meetingActive ? `${summary} · meeting notes` : summary;
+        ? "录制中"
+        : `${pausedCount} 个设备已暂停`;
+  const label = meetingActive ? `${summary} · 会议笔记` : summary;
 
   // Monitors pause via /vision/device/* (screen capture only — audio keeps
   // running); mics/speakers pause via /audio/device/*. Both flip optimistically
@@ -246,10 +246,10 @@ export function RecordingStatus({
                 ? <Play aria-hidden="true" className="h-3 w-3 fill-current" />
                 : <Pause aria-hidden="true" className="h-3 w-3 fill-current" />}
               {pauseLoading
-                ? allPaused ? "resuming…" : "pausing…"
+                ? allPaused ? "恢复中…" : "暂停中…"
                 : allPaused
                   ? "恢复所有录制"
-                  : "pause all recording"}
+                  : "暂停所有录制"}
             </button>
           </div>
         )}
@@ -312,11 +312,11 @@ export function RecordingStatus({
                     title={
                       device.kind === "monitor"
                         ? device.active
-                          ? "pause screen recording for this display"
-                          : "resume screen recording for this display"
+                          ? "暂停此显示器的屏幕录制"
+                          : "恢复此显示器的屏幕录制"
                         : device.active
-                          ? "pause recording for this device"
-                          : "resume recording for this device"
+                          ? "暂停此设备的录制"
+                          : "恢复此设备的录制"
                     }
                     className="rounded px-1.5 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors shrink-0"
                   >

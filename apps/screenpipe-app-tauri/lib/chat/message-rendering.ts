@@ -35,7 +35,12 @@ export function getMessageIntentLabel(message: Message): string | null {
 export function isPlaceholderConversationTitle(value?: string | null): boolean {
   if (!value) return true;
   const normalized = value.trim().toLowerCase();
-  return normalized === "" || normalized === "new chat" || normalized === "untitled";
+  return (
+    normalized === "" ||
+    normalized === "new chat" ||
+    normalized === "untitled" ||
+    normalized === "未命名"
+  );
 }
 
 export function isSteeredAssistantMessage(message: Message): boolean {

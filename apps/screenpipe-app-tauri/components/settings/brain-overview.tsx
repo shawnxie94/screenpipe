@@ -271,27 +271,27 @@ const COMPONENTS: Array<{
 }> = [
   {
     value: "metric.v1",
-    label: "Metric",
-    schema: "one value, unit, and change",
+    label: "指标",
+    schema: "单个数值、单位及变化",
   },
-  { value: "list.v1", label: "List", schema: "ranked items with status" },
+  { value: "list.v1", label: "列表", schema: "带状态的有序项目" },
   {
     value: "bar-chart.v1",
     label: "柱状图",
-    schema: "labels and numeric values",
+    schema: "带标签的数值",
   },
   {
     value: "line-chart.v1",
     label: "折线图",
-    schema: "numeric values changing over time",
+    schema: "随时间变化的数值",
   },
   {
     value: "table.v1",
-    label: "Table",
-    schema: "scrollable rows with values and details",
+    label: "表格",
+    schema: "带数值和详情的可滚动行",
   },
-  { value: "timeline.v1", label: "Timeline", schema: "timestamped events" },
-  { value: "markdown.v1", label: "Text", schema: "a short formatted brief" },
+  { value: "timeline.v1", label: "时间线", schema: "带时间戳的事件" },
+  { value: "markdown.v1", label: "文本", schema: "简短的格式化摘要" },
 ];
 
 function serializedSlots(slots: ViewSlot[]): BrainViewSlotInput[] {
@@ -1603,8 +1603,8 @@ export function BrainOverview({
         dashboard_count: views.length,
       });
       toast({
-        title: "dashboard limit reached",
-        description: `Delete a dashboard before creating another. You can keep up to ${MAX_DASHBOARDS}.`,
+        title: "已达到仪表板数量上限",
+        description: `创建新仪表板前请先删除一个。最多保留 ${MAX_DASHBOARDS} 个。`,
         variant: "destructive",
       });
       return;
@@ -2253,7 +2253,7 @@ export function BrainOverview({
       const creatingNew = destination === "new" || draft.revision === 0;
       if (creatingNew && views.length >= MAX_DASHBOARDS) {
         throw new Error(
-          `You can keep up to ${MAX_DASHBOARDS} dashboards. Delete one before creating another.`,
+          `最多保留 ${MAX_DASHBOARDS} 个仪表板。创建新仪表板前请先删除一个。`,
         );
       }
       const previousView =
@@ -2435,8 +2435,8 @@ export function BrainOverview({
     if (!view) return;
     if (views.length >= MAX_DASHBOARDS) {
       toast({
-        title: "dashboard limit reached",
-        description: `Delete a dashboard before duplicating another. You can keep up to ${MAX_DASHBOARDS}.`,
+        title: "已达到仪表板数量上限",
+        description: `复制新仪表板前请先删除一个。最多保留 ${MAX_DASHBOARDS} 个。`,
         variant: "destructive",
       });
       return;
@@ -2730,7 +2730,7 @@ export function BrainOverview({
               choose an outcome
             </p>
             <h2 className="mt-2 text-xl font-semibold tracking-tight">
-              What should screenpipe keep updated for you?
+              你想让 screenpipe 为你持续更新什么？
             </h2>
           </div>
           {templateKits.length > 0 && (
@@ -2948,8 +2948,8 @@ export function BrainOverview({
                     </span>
                     <span className="mt-1 block text-[11px] text-muted-foreground">
                       {dashboardLimitReached
-                        ? `${MAX_DASHBOARDS} dashboard limit reached`
-                        : `keep “${view?.title}” unchanged`}
+                        ? `已达到 ${MAX_DASHBOARDS} 个仪表板上限`
+                        : `保持 “${view?.title}” 不变`}
                     </span>
                   </button>
                   <button
@@ -3023,11 +3023,9 @@ export function BrainOverview({
         >
           <AlertDialogContent className="rounded-none">
             <AlertDialogHeader>
-              <AlertDialogTitle>Replace “{view?.title}”?</AlertDialogTitle>
+              <AlertDialogTitle>替换 “{view?.title}”？</AlertDialogTitle>
               <AlertDialogDescription>
-                This replaces {view?.slots.length ?? 0} current sections with{" "}
-                {previewSlots.length}. Your other dashboards are not affected,
-                and this layout can be restored with Undo.
+                这将把当前的 {view?.slots.length ?? 0} 个板块替换为 {previewSlots.length} 个。其他仪表板不受影响，此布局可通过撤销恢复。
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -3468,7 +3466,7 @@ export function BrainOverview({
                   choose an outcome
                 </p>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight">
-                  What should screenpipe keep updated for you?
+                  你想让 screenpipe 为你持续更新什么？
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   Start with a template, describe the result you want, or build

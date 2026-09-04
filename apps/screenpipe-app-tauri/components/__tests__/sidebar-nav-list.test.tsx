@@ -47,7 +47,7 @@ function renderCustomizationMenu(
   };
   render(
     <SidebarCustomizationMenu
-      hiddenItems={[{ id: "meetings" as SidebarNavId, label: "Meetings" }]}
+      hiddenItems={[{ id: "meetings" as SidebarNavId, label: "会议" }]}
       isTranslucent={false}
       canReset
       {...handlers}
@@ -151,18 +151,18 @@ describe("SidebarNavList", () => {
   it("moves a row from the right-click menu", () => {
     const handlers = renderList();
     rightClick("nav-brain");
-    fireEvent.click(screen.getByText("Move up"));
+    fireEvent.click(screen.getByText("上移"));
     expect(handlers.onShift).toHaveBeenCalledWith("brain", -1);
   });
 
   it("cannot move the first row up or the last row down", () => {
     renderList();
     rightClick("nav-home");
-    expect(screen.getByText("Move up").closest("[role='menuitem']")).toHaveAttribute(
+    expect(screen.getByText("上移").closest("[role='menuitem']")).toHaveAttribute(
       "aria-disabled",
       "true",
     );
-    expect(screen.getByText("Move down").closest("[role='menuitem']")).not.toHaveAttribute(
+    expect(screen.getByText("下移").closest("[role='menuitem']")).not.toHaveAttribute(
       "aria-disabled",
       "true",
     );
@@ -171,14 +171,14 @@ describe("SidebarNavList", () => {
   it("hides a row from the menu", () => {
     const handlers = renderList();
     rightClick("nav-pipes");
-    fireEvent.click(screen.getByText("Hide from sidebar"));
+    fireEvent.click(screen.getByText("从侧边栏隐藏"));
     expect(handlers.onSetHidden).toHaveBeenCalledWith("pipes", true);
   });
 
   it("restores hidden rows through progressive disclosure", () => {
     const handlers = renderCustomizationMenu();
     openDropdown("sidebar-options");
-    fireEvent.click(screen.getByText("Show Meetings"));
+    fireEvent.click(screen.getByText("显示会议"));
     expect(handlers.onSetHidden).toHaveBeenCalledWith("meetings", false);
   });
 
@@ -199,7 +199,7 @@ describe("SidebarNavList", () => {
   it("exposes the same menu from the row options button", () => {
     const handlers = renderList();
     openDropdown("nav-brain-options");
-    fireEvent.click(screen.getByText("Move down"));
+    fireEvent.click(screen.getByText("下移"));
     expect(handlers.onShift).toHaveBeenCalledWith("brain", 1);
   });
 
@@ -207,7 +207,7 @@ describe("SidebarNavList", () => {
     renderList({ items: [ITEMS[0]] });
     rightClick("nav-home");
     expect(
-      screen.getByText("Hide from sidebar").closest("[role='menuitem']"),
+      screen.getByText("从侧边栏隐藏").closest("[role='menuitem']"),
     ).toHaveAttribute("aria-disabled", "true");
   });
 

@@ -235,7 +235,7 @@ export function useChatConversations(opts: UseChatConversationsOpts) {
 
     const meta: ConversationMeta = {
       id: conversation.id,
-      title: typeof conversation.title === "string" ? conversation.title : "untitled",
+      title: typeof conversation.title === "string" ? conversation.title : "未命名",
       createdAt: typeof conversation.createdAt === "number" ? conversation.createdAt : 0,
       updatedAt: typeof conversation.updatedAt === "number" ? conversation.updatedAt : 0,
       messageCount: msgs.length,
@@ -1389,7 +1389,7 @@ export function useChatConversations(opts: UseChatConversationsOpts) {
         if (!sessionAfterLoad) {
           store.actions.upsert({
             id: conv.id,
-            title: persisted.title || "untitled",
+            title: persisted.title || "未命名",
             ...(persisted.titleSource ? { titleSource: persisted.titleSource } : {}),
             preview: "",
             status: "idle",
@@ -1409,7 +1409,7 @@ export function useChatConversations(opts: UseChatConversationsOpts) {
           });
         } else {
           store.actions.patch(conv.id, {
-            title: persisted.title || sessionAfterLoad.title || "untitled",
+            title: persisted.title || sessionAfterLoad.title || "未命名",
             ...(persisted.titleSource ? { titleSource: persisted.titleSource } : {}),
             pinned: persisted.pinned === true,
             hidden: persisted.hidden === true,
@@ -1512,7 +1512,7 @@ export function useChatConversations(opts: UseChatConversationsOpts) {
       if (!sessionBeforeSeed) {
         store.actions.upsert({
           id: conv.id,
-          title: full.title || "untitled",
+          title: full.title || "未命名",
           ...(full.titleSource ? { titleSource: full.titleSource } : {}),
           preview: "",
           status: "idle",
@@ -1535,7 +1535,7 @@ export function useChatConversations(opts: UseChatConversationsOpts) {
         });
       } else if (conv.kind || conv.pipeContext || conv.sidebarGroup || full.sidebarGroup) {
         store.actions.patch(conv.id, {
-          title: full.title || sessionBeforeSeed.title || "untitled",
+          title: full.title || sessionBeforeSeed.title || "未命名",
           ...(full.titleSource ? { titleSource: full.titleSource } : {}),
           pinned: full.pinned === true,
           hidden: full.hidden === true,
@@ -1838,7 +1838,7 @@ export function useChatConversations(opts: UseChatConversationsOpts) {
         id: newSid,
         title: options.sideConversationParentId
           ? "temporary side chat"
-          : "untitled",
+          : "未命名",
         preview: "",
         status: "idle",
         messageCount: 0,

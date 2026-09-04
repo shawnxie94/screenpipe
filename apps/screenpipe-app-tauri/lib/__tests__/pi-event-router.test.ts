@@ -1340,7 +1340,7 @@ describe("pi-event-router: lazy-created rows stay hidden until they are real", (
    * the chat panel spawns one for its mount-time uuid, home and the
    * pre-created chat window each prewarm their own, and a crash auto-restarts
    * them. Those processes emit lifecycle / state events, and the router used
-   * to lazy-create a *visible* row for them — which is how an empty "untitled"
+   * to lazy-create a *visible* row for them — which is how an empty "未命名"
    * chat kept appearing in RECENTS beside the real ones.
    */
   it("marks a lazy-created row draft so an orphan Pi session never shows up", async () => {

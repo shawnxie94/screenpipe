@@ -161,7 +161,7 @@ describe("AiToolsCard", () => {
 
     render(<AiToolsCard />);
     fireEvent.click(await screen.findByRole("button", { name: /manage/i }));
-    fireEvent.click(await screen.findByRole("button", { name: "Remove" }));
+    fireEvent.click(await screen.findByRole("button", { name: "移除" }));
 
     await waitFor(() => {
       expect(libMocks.disconnectAiToolTargets).toHaveBeenCalledWith(["claude", "claude-code"]);

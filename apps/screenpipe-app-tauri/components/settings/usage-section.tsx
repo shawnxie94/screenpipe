@@ -476,10 +476,10 @@ export function UsageSection() {
   };
 
   const ranges: { value: TimeRange; label: string }[] = [
-    { value: "day", label: "24h" },
-    { value: "week", label: "7d" },
-    { value: "month", label: "30d" },
-    { value: "all", label: "all" },
+    { value: "day", label: "24 小时" },
+    { value: "week", label: "7 天" },
+    { value: "month", label: "30 天" },
+    { value: "all", label: "全部" },
   ];
 
   if (loading) {
@@ -525,14 +525,14 @@ export function UsageSection() {
       <HostedUsageLimits query={hostedUsageQuery} />
 
       <div className="border-t border-border pt-6">
-        <h2 className="text-base font-medium lowercase">activity</h2>
+        <h2 className="text-base font-medium">活动</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          local conversations and scheduled runs. these do not determine your allowance.
+          本地对话和定时任务。这些不计入你的额度。
         </p>
       </div>
 
       {updating && (
-        <p className="text-xs text-muted-foreground">Updating...</p>
+        <p className="text-xs text-muted-foreground">更新中…</p>
       )}
 
       <div className="grid grid-cols-3 gap-4">
@@ -575,11 +575,11 @@ export function UsageSection() {
           <p className="text-sm text-muted-foreground">
             {timeRange === "all"
               ? "暂无模型数据 — 从你下一次对话开始统计"
-              : `No usage in the last ${timeRange === "day" ? "24 hours" : timeRange === "week" ? "7 days" : "30 days"}`}
+              : `过去 ${timeRange === "day" ? "24 小时" : timeRange === "week" ? "7 天" : "30 天"}内无使用记录`}
           </p>
           {timeRange === "all" && untrackedMessages > 0 && (
             <p className="text-xs text-muted-foreground mt-2">
-              {untrackedMessages} older chat responses without model info.
+              {untrackedMessages} 条较早的聊天回复没有模型信息。
             </p>
           )}
         </div>
@@ -587,10 +587,10 @@ export function UsageSection() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium text-muted-foreground">
-              Requests per model
+              按模型划分的请求数
             </h3>
             <span className="text-xs text-muted-foreground">
-              {totalTracked} Tracked
+              {totalTracked} 条已追踪
             </span>
           </div>
           {usage.map((u) => {

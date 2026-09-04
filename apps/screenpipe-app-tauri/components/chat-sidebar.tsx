@@ -1410,7 +1410,7 @@ export function ChatSidebar({
         const fresh = crypto.randomUUID();
         actions.upsert({
           id: fresh,
-          title: "untitled",
+          title: "未命名",
           preview: "",
           status: "idle",
           messageCount: 0,
@@ -1511,7 +1511,7 @@ export function ChatSidebar({
         const fresh = crypto.randomUUID();
         actions.upsert({
           id: fresh,
-          title: "untitled",
+          title: "未命名",
           preview: "",
           status: "idle",
           messageCount: 0,
@@ -1659,7 +1659,7 @@ export function ChatSidebar({
       const fresh = crypto.randomUUID();
       actions.upsert({
         id: fresh,
-        title: "untitled",
+        title: "未命名",
         preview: "",
         status: "idle",
         messageCount: 0,
@@ -1708,7 +1708,7 @@ export function ChatSidebar({
     ) {
       return;
     }
-    const nextTitle = nextTitleRaw.trim() || "untitled";
+    const nextTitle = nextTitleRaw.trim() || "未命名";
     actions.patch(id, { title: nextTitle, titleSource: "user" });
     try {
       await updateConversationFlags(id, { title: nextTitle, titleSource: "user" });
@@ -1992,10 +1992,10 @@ export function ChatSidebar({
               ) : visibleRecents.length === 0 ? (
                 <div className="px-2.5 py-2 text-xs sidebar-text-secondary italic">
                   {recents.length > 0
-                    ? "no chats match filters"
+                    ? "没有聊天符合筛选条件"
                     : pinned.length === 0 && pipes.length === 0
-                    ? "no chats yet — click + to start"
-                    : "no recent chats"}
+                    ? "暂无聊天 — 点击 + 开始"
+                    : "暂无最近聊天"}
                 </div>
               ) : (
                 <RecentsBody
@@ -2098,7 +2098,7 @@ export function ChatSidebar({
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeletingSessionId(null)}>
-              Cancel
+              取消
             </Button>
             <Button
               variant="destructive"
@@ -2149,7 +2149,7 @@ export function ChatSidebar({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRenamingSessionId(null)}>
-              Cancel
+              取消
             </Button>
             <Button
               onClick={async () => {
@@ -2159,7 +2159,7 @@ export function ChatSidebar({
                 await handleRenameConfirmed(id, renameTitle);
               }}
             >
-              Save
+              保存
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2203,7 +2203,7 @@ export function ChatSidebar({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setNewGroupSessionId(null); setNewGroupName(""); }}>
-              Cancel
+              取消
             </Button>
             <Button
               onClick={async () => {
@@ -2215,7 +2215,7 @@ export function ChatSidebar({
                 setNewGroupName("");
               }}
             >
-              Create
+              创建
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2956,7 +2956,7 @@ function RowMenuItems({
         }}
       >
         <Pencil className="h-3 w-3 text-muted-foreground" />
-        Rename
+        重命名
         <P.Shortcut className={shortcutCls}>R</P.Shortcut>
       </P.Item>
       {onBranch && (
@@ -3271,7 +3271,7 @@ export function SidebarChatRow({
                 : "sidebar-text-secondary"
           )}
           >
-            {session.streamingTitle || (isInjectedTitle(session.title) ? undefined : session.title) || "untitled"}
+            {session.streamingTitle || (isInjectedTitle(session.title) ? undefined : session.title === "untitled" ? "未命名" : session.title) || "未命名"}
           </span>
         </span>
         <span className="ml-1 h-4 w-10 shrink-0 relative flex items-center justify-end">

@@ -141,7 +141,7 @@ describe("buildMeetingChatPrompt", () => {
 
   it("falls back to a title placeholder", () => {
     expect(buildMeetingChatPrompt({ ...context, title: "" }, "q", [])).toContain(
-      "untitled meeting",
+      "未命名会议",
     );
   });
 

@@ -133,7 +133,7 @@ Rules:
       : ""
   }
 
-Meeting: ${context.title || "untitled meeting"}
+Meeting: ${context.title || "未命名会议"}
 Started: ${context.startIso ?? "unknown"}
 Ended: ${context.endIso ?? "still recording"}
 

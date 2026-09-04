@@ -126,7 +126,7 @@ describe("buildMeetingSummaryShare", () => {
       meeting: { ...meeting, title: "  " },
       summary: "x",
     });
-    expect(share!.subject).toBe("Meeting summary: untitled meeting");
+    expect(share!.subject).toBe("Meeting summary: 未命名会议");
   });
 
   it("omits the meta line when the start timestamp is unusable", () => {

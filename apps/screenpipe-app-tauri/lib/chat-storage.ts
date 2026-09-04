@@ -501,7 +501,7 @@ export function conversationMetaFromJson(conv: any): ConversationMeta | null {
 
   return {
     id: conv.id,
-    title: typeof conv.title === "string" ? conv.title : "untitled",
+    title: typeof conv.title === "string" ? conv.title : "未命名",
     createdAt: typeof conv.createdAt === "number" ? conv.createdAt : 0,
     updatedAt: typeof conv.updatedAt === "number" ? conv.updatedAt : 0,
     messageCount: messages.length,

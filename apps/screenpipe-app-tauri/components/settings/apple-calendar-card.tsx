@@ -260,7 +260,7 @@ export function AppleCalendarCard({
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-medium text-foreground truncate">
-                                  {event.title || "untitled event"}
+                                  {event.title || "未命名事件"}
                                 </span>
                                 {isHappeningNow(event.start, event.end) && (
                                   <span className="text-[10px] bg-foreground text-background px-1 rounded">

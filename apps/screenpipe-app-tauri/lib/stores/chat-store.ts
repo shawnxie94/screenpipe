@@ -75,7 +75,7 @@ export type SplitChatPosition = "left" | "right";
 export interface SessionRecord {
   /** Pi `session_id` — also the uuid used by `commands.piStart`. */
   id: string;
-  /** Display title — derived from first user message or `"untitled"`. */
+  /** Display title — derived from first user message or `"未命名"`. */
   title: string;
   /** Who currently owns the title. User titles always win over AI/fallback. */
   titleSource?: ChatTitleSource;
@@ -409,7 +409,7 @@ export interface ChatSessionActivityPayload {
  * Activity is a lightweight, status-only mirror and cannot prove a
  * conversation exists. Unknown ids are therefore ignored until disk hydration
  * or `chat-conversation-saved` supplies canonical content. This prevents a
- * stale or foreign process pulse from creating an empty "untitled" sidebar
+ * stale or foreign process pulse from creating an empty "未命名" sidebar
  * row. `now` is injected so the `lastContentAt` write is deterministic under
  * test.
  */
@@ -643,7 +643,7 @@ export const useChatStore = create<ChatStore>((set) => ({
         // The panel creates one empty session on mount so first-send events have
         // an owner immediately. If another chat wins navigation before that
         // placeholder is used, keeping both ids in the tab set paints a second
-        // unexplained "untitled" tab. Prune only disposable, inactive blanks
+        // unexplained "未命名" tab. Prune only disposable, inactive blanks
         // after the visual panel switch commits. Real chats, active turns, and
         // blanks with composer text or attachments remain untouched.
         const disposableIds = s.openChatIds.filter((openId) => {
@@ -970,7 +970,7 @@ export const useChatActions = () => useChatStore((s) => s.actions);
 export function sessionRecordFromMeta(m: ConversationMeta): SessionRecord {
   const record: SessionRecord = {
     id: m.id,
-    title: m.title || "untitled",
+    title: m.title || "未命名",
     titleSource: m.titleSource,
     preview: "",
     status: "idle",
@@ -981,7 +981,7 @@ export function sessionRecordFromMeta(m: ConversationMeta): SessionRecord {
     hidden: m.hidden,
     unread: false,
     // Empty persisted chat files are abandoned drafts, not durable history.
-    // Mark them here so a restart cannot resurrect stray "untitled" rows.
+    // Mark them here so a restart cannot resurrect stray "未命名" rows.
     ...(m.messageCount === 0 && m.kind === "chat" ? { draft: true } : {}),
     lastUserMessageAt: m.lastUserMessageAt,
     lastContentAt: m.lastContentAt,
@@ -1054,7 +1054,7 @@ export function ensureBlankChatSession(
 
   const draft: SessionRecord = {
     id,
-    title: "untitled",
+    title: "未命名",
     preview: "",
     status: "idle",
     messageCount: 0,
@@ -1249,7 +1249,7 @@ export function dedupeSessionRecords(
  * The `draft` boolean is bookkeeping — every creator of a blank session has to
  * remember to set it, and any path that forgets (the event router's
  * lazy-create did, for prewarmed / auto-restarted Pi processes) leaks an empty
- * "untitled" row into RECENTS. This predicate is the derived backstop: the
+ * "未命名" row into RECENTS. This predicate is the derived backstop: the
  * sidebar renders a chat only when a chat exists. Pipe rows are exempt — a
  * finished run is history even with an empty in-memory message array.
  */

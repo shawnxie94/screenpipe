@@ -1159,17 +1159,17 @@ function HomeContent() {
       setSidebarNavItemHidden(sidebarLayout, availableSidebarIds, id, true),
     );
     toast({
-      title: `${label} hidden`,
+      title: `${label} 已隐藏`,
       description:
         id === "meetings"
-          ? "still one click away from the icon in the top bar."
-          : "use sidebar options in the top bar to bring it back.",
+          ? "顶部栏的图标仍可一键打开。"
+          : "在顶部栏的侧边栏选项中可以重新显示。",
       action: (
         <ToastAction
-          altText={`Show ${label} in the sidebar again`}
+          altText={`在侧边栏中重新显示${label}`}
           onClick={() => persistSidebarLayout(previous)}
         >
-          Undo
+          撤销
         </ToastAction>
       ),
     });

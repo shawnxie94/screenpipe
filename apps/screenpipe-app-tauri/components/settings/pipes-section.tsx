@@ -3410,12 +3410,12 @@ export function PipesSection() {
                             </p>
                             <dl className="mt-4 grid gap-2 font-mono text-xs sm:grid-cols-2">
                               <div>
-                                <dt className="text-muted-foreground">schedule</dt>
+                                <dt className="text-muted-foreground">计划</dt>
                                 <dd>{pipeScheduleLabel(pipe.config)}</dd>
                               </div>
                               <div>
-                                <dt className="text-muted-foreground">AI preset</dt>
-                                <dd>{Array.isArray(pipe.config.preset) ? pipe.config.preset[0] : pipe.config.preset || "organization default"}</dd>
+                                <dt className="text-muted-foreground">AI 预设</dt>
+                                <dd>{Array.isArray(pipe.config.preset) ? pipe.config.preset[0] : pipe.config.preset || "组织默认值"}</dd>
                               </div>
                             </dl>
                           </div>

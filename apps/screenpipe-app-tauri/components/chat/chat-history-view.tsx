@@ -52,10 +52,10 @@ type HistoryTab = "chats" | "pipes" | "archived" | "all";
 
 const HISTORY_PAGE_SIZE = 30;
 const TABS: ReadonlyArray<{ value: HistoryTab; label: string }> = [
-  { value: "chats", label: "Chats" },
+  { value: "chats", label: "聊天" },
   { value: "pipes", label: "自动化" },
-  { value: "archived", label: "Archived" },
-  { value: "all", label: "All" },
+  { value: "archived", label: "已归档" },
+  { value: "all", label: "全部" },
 ];
 
 export function ChatHistoryView({
@@ -521,7 +521,7 @@ export function ChatHistoryView({
                         void load();
                       } catch {
                         toast({
-                          title: "Update failed",
+                          title: "更新失败",
                           description: "无法更新此聊天，请重试。",
                         });
                       } finally {
@@ -535,13 +535,13 @@ export function ChatHistoryView({
                   }}
                 >
                   <Pin className="h-3 w-3 text-muted-foreground" />
-                  {conv.pinned ? "Unpin" : "Pin"}
+                  {conv.pinned ? "取消置顶" : "置顶"}
                 </DropdownMenuItem>
                 {conv.kind !== "pipe-run" && conv.kind !== "pipe-watch" && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger className="text-[11px] h-[30px] px-2 gap-2 rounded-none focus:bg-muted/30">
                     <FolderOpen className="h-3 w-3 text-muted-foreground" />
-                    Move to group
+                    移动到分组
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="w-[196px] rounded-none border border-border bg-background p-0 shadow-none overflow-hidden">
                     {availableMoveGroups.length > 0 && (
@@ -585,7 +585,7 @@ export function ChatHistoryView({
                         className="text-[11px] h-[30px] px-2 rounded-none whitespace-nowrap focus:bg-muted/30"
                         onSelect={() => setNewGroupSessionId(conv.id)}
                       >
-                        New group...
+                        新建分组…
                       </DropdownMenuItem>
                     </div>
                   </DropdownMenuSubContent>
@@ -632,7 +632,7 @@ export function ChatHistoryView({
                     }}
                   >
                     <Archive className="h-3 w-3 text-muted-foreground" />
-                    Archive
+                    归档
                   </DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem
@@ -652,7 +652,7 @@ export function ChatHistoryView({
                     }}
                   >
                     <Undo2 className="h-3 w-3 text-muted-foreground" />
-                    Unarchive
+                    取消归档
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
@@ -663,7 +663,7 @@ export function ChatHistoryView({
                   }}
                 >
                   <Trash2 className="h-3 w-3 text-destructive" />
-                  Delete
+                  删除
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -759,7 +759,7 @@ export function ChatHistoryView({
                   {/* Col 2: Selection count + pending state */}
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-sm tabular-nums text-muted-foreground">
-                      {selectedIds.size} selected
+                      已选 {selectedIds.size} 项
                     </span>
                     {bulkPending && (
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/70">
@@ -807,7 +807,7 @@ export function ChatHistoryView({
                                 if (result.failed.length > 0) {
                                   toast({
                                     title: "部分聊天无法归档",
-                                    description: `${result.failed.length} failed.`,
+                                    description: `${result.failed.length} 个失败。`,
                                   });
                                   return;
                                 }
@@ -844,7 +844,7 @@ export function ChatHistoryView({
                               }}
                             >
                               <Archive className="h-3.5 w-3.5" />
-                              Archive
+                              归档
                             </button>
                           )}
                           {showRestore && (
@@ -864,7 +864,7 @@ export function ChatHistoryView({
                                 if (result.failed.length > 0) {
                                   toast({
                                     title: "部分聊天无法恢复",
-                                    description: `${result.failed.length} failed.`,
+                                    description: `${result.failed.length} 个失败。`,
                                   });
                                   return;
                                 }
@@ -887,7 +887,7 @@ export function ChatHistoryView({
                       disabled={bulkPending != null}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                      Delete
+                      删除
                     </button>
 
                     <button
@@ -908,10 +908,10 @@ export function ChatHistoryView({
                   <Input
                     ref={searchInputRef}
                     placeholder={
-                      tab === "chats" ? "search chats"
-                      : tab === "pipes" ? "search scheduled tasks"
-                      : tab === "archived" ? "search archived"
-                      : "search all"
+                      tab === "chats" ? "搜索聊天"
+                      : tab === "pipes" ? "搜索定时任务"
+                      : tab === "archived" ? "搜索已归档"
+                      : "搜索全部"
                     }
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
@@ -930,7 +930,7 @@ export function ChatHistoryView({
                         "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                       )}
                       aria-label="清除搜索"
-                      title="Clear"
+                      title="清除"
                       onClick={() => setQuery("")}
                     >
                       <X className="h-3.5 w-3.5" />
@@ -944,7 +944,7 @@ export function ChatHistoryView({
                   title="导入聊天"
                 >
                   <Download className="h-4 w-4" />
-                  Import
+                  导入
                 </Button>
                 <Button
                   variant="default"
@@ -957,7 +957,7 @@ export function ChatHistoryView({
                   title="新聊天"
                 >
                   <Plus className="h-4 w-4" />
-                  New chat
+                  新建聊天
                 </Button>
               </div>
             )}
@@ -974,7 +974,7 @@ export function ChatHistoryView({
               <span>
                 {tab === "chats" ? "正在加载聊天…"
                   : tab === "pipes" ? "正在加载定时任务…"
-                  : "Loading…"}
+                  : "正在加载…"}
               </span>
             </div>
           </div>
@@ -1001,7 +1001,7 @@ export function ChatHistoryView({
             {loadingMore && (
               <div className="flex items-center justify-center py-4 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" aria-hidden />
-                <span>loading more…</span>
+                <span>正在加载更多…</span>
               </div>
             )}
             {!hasMore && !loadingMore && list.length >= HISTORY_PAGE_SIZE && (
@@ -1025,7 +1025,7 @@ export function ChatHistoryView({
             <DialogTitle>{deleteIds.length > 1 ? "删除聊天" : "删除聊天"}</DialogTitle>
             <DialogDescription>
               {deleteIds.length > 1
-                ? `Delete ${deleteIds.length} chats? This cannot be undone.`
+                ? `删除 ${deleteIds.length} 个聊天？此操作无法撤销。`
                 : "删除此聊天？此操作无法撤销。"}
             </DialogDescription>
           </DialogHeader>
@@ -1035,7 +1035,7 @@ export function ChatHistoryView({
               onClick={() => setDeleteIds([])}
               disabled={bulkPending === "deleting"}
             >
-              Cancel
+              取消
             </Button>
             <Button
               variant="destructive"
@@ -1071,7 +1071,7 @@ export function ChatHistoryView({
                 if (failed.length > 0) {
                   toast({
                     title: "部分聊天无法删除",
-                    description: `${failed.length} failed.`,
+                    description: `${failed.length} 个失败。`,
                   });
                   // Keep dialog open + selection intact so the user can retry.
                   return;
@@ -1081,7 +1081,7 @@ export function ChatHistoryView({
                 void load();
               }}
             >
-              {bulkPending === "deleting" ? "Deleting…" : "Delete"}
+              {bulkPending === "deleting" ? "删除中…" : "删除"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1125,7 +1125,7 @@ export function ChatHistoryView({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setNewGroupSessionId(null); setNewGroupName(""); }}>
-              Cancel
+              取消
             </Button>
             <Button
               onClick={async () => {
@@ -1137,7 +1137,7 @@ export function ChatHistoryView({
                 setNewGroupName("");
               }}
             >
-              Create
+              创建
             </Button>
           </DialogFooter>
         </DialogContent>

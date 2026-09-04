@@ -1262,7 +1262,7 @@ export const TimelineSlider = ({
 								expandedFilterSection === "app" && "bg-foreground/10",
 								selectedAppName !== "all" && "ring-1 ring-primary/50",
 							)}
-							title="Apps"
+							title="应用"
 						>
 							<AppWindow className="w-3.5 h-3.5 text-foreground/70" />
 						</button>
@@ -1406,7 +1406,7 @@ export const TimelineSlider = ({
 								expandedFilterSection === "calls" && "bg-foreground/10",
 								selectedMeeting !== "all" && "ring-1 ring-primary/50",
 							)}
-							title="Calls"
+							title="通话"
 						>
 							<Phone className="w-3.5 h-3.5 text-foreground/70" />
 						</button>
@@ -1461,7 +1461,7 @@ export const TimelineSlider = ({
 								expandedFilterSection === "tag" && "bg-foreground/10",
 								selectedTag !== "all" && "ring-1 ring-primary/50",
 							)}
-							title="Tags"
+							title="标签"
 						>
 							<Hash className="w-3.5 h-3.5 text-foreground/70" />
 						</button>
@@ -2096,7 +2096,7 @@ export const TimelineSlider = ({
 					<div className="flex items-center gap-1.5">
 						<PipeAIIcon size={12} animated={false} className="shrink-0" />
 						<span className="text-popover-foreground font-medium truncate">
-							{hoveredChatConv.conv.title || "Chat"}
+							{hoveredChatConv.conv.title || "聊天"}
 						</span>
 					</div>
 					<p className="text-muted-foreground text-[10px] mt-0.5">

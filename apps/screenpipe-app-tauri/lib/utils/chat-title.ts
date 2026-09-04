@@ -103,6 +103,7 @@ export function isFallbackLikeTitle(
     title === "New Chat" ||
     title === "new chat" ||
     title === "untitled" ||
+    title === "未命名" ||
     // Raw content-slice match (pre-stripPromptPlumbing era)
     (firstUserContent
       ? title === firstUserContent.slice(0, 50).trim()

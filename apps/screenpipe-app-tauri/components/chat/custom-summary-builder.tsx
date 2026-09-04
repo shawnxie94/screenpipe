@@ -19,22 +19,22 @@ import { format, parse } from "date-fns";
 import { type DateRange } from "react-day-picker";
 
 const TIME_RANGES = [
-  { label: "Last 5 min", value: "5 minutes" },
-  { label: "Last 30 min", value: "30 minutes" },
-  { label: "Last 2 hours", value: "2 hours" },
-  { label: "Today", value: "today" },
-  { label: "Past 24h", value: "24 hours" },
-  { label: "Yesterday", value: "yesterday" },
-  { label: "This Week", value: "this week" },
-  { label: "Last Week", value: "last week" },
+  { label: "最近 5 分钟", value: "5 minutes" },
+  { label: "最近 30 分钟", value: "30 minutes" },
+  { label: "最近 2 小时", value: "2 hours" },
+  { label: "今天", value: "today" },
+  { label: "过去 24 小时", value: "24 hours" },
+  { label: "昨天", value: "yesterday" },
+  { label: "本周", value: "this week" },
+  { label: "上周", value: "last week" },
 ];
 
 const QUICK_TEMPLATES = [
-  { label: "Status Update", prompt: "生成我已完成工作的简短状态更新" },
-  { label: "Key Decisions", prompt: "我做出或遇到了哪些关键决定？" },
-  { label: "Action Items", prompt: "从我的活动中提取所有行动项和待办" },
-  { label: "Meeting Prep", prompt: "总结我为即将到来的会议所需的上下文" },
-  { label: "Blockers", prompt: "我遇到了什么问题、错误或阻碍？" },
+  { label: "状态更新", prompt: "生成我已完成工作的简短状态更新" },
+  { label: "关键决策", prompt: "我做出或遇到了哪些关键决定？" },
+  { label: "行动项", prompt: "从我的活动中提取所有行动项和待办" },
+  { label: "会议准备", prompt: "总结我为即将到来的会议所需的上下文" },
+  { label: "阻碍项", prompt: "我遇到了什么问题、错误或阻碍？" },
 ];
 
 interface CustomSummaryBuilderProps {
@@ -110,7 +110,7 @@ export function CustomSummaryBuilder({
   const quickTemplatesBlock = (
     <div>
       <label className="text-[10px] font-mono font-medium text-muted-foreground/60 uppercase tracking-wider mb-1.5 block">
-        Quick Templates
+        快速模板
       </label>
       <div className="flex flex-wrap gap-1">
         {QUICK_TEMPLATES.map((qt) => (
@@ -160,8 +160,8 @@ export function CustomSummaryBuilder({
     setShowSave(false);
     setTemplateTitle("");
     toast({
-      title: "Template saved",
-      description: `"${template.title}" added to your templates`,
+      title: "模板已保存",
+      description: `"${template.title}" 已添加到你的模板`,
     });
     onClose();
   };
@@ -177,8 +177,8 @@ export function CustomSummaryBuilder({
       instructions: instructions.trim(),
     });
     toast({
-      title: "Template updated",
-      description: `"${editingTemplate.title}" has been updated`,
+      title: "模板已更新",
+      description: `"${editingTemplate.title}" 已更新`,
     });
     onClose();
   };
@@ -212,13 +212,13 @@ export function CustomSummaryBuilder({
             {editingTemplate ? (
               editingTemplate.title
             ) : (
-              "custom summary"
+              "自定义摘要"
             )}
           </DialogTitle>
           <DialogDescription>
             {editingTemplate
-              ? "edit the time range or instructions, then run or save your changes"
-              : "pick a time range and tell us what to focus on"}
+              ? "编辑时间范围或指令，然后运行或保存你的更改"
+              : "选择时间范围并告诉我们重点关注什么"}
           </DialogDescription>
         </DialogHeader>
 
@@ -226,7 +226,7 @@ export function CustomSummaryBuilder({
           {/* Left: Time Range */}
           <div>
             <label className="text-[11px] font-mono font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
-              Time Period
+              时间段
             </label>
             <div className="flex flex-wrap gap-1">
               {TIME_RANGES.map((range) => (
@@ -257,7 +257,7 @@ export function CustomSummaryBuilder({
                 }`}
               >
                 <CalendarIcon className="w-3 h-3" />
-                {dateRange?.from ? getTimeLabel() : "Custom Range"}
+                {dateRange?.from ? getTimeLabel() : "自定义范围"}
               </button>
             </div>
             {calendarOpen ? (
@@ -304,12 +304,12 @@ export function CustomSummaryBuilder({
           {/* Right: Instructions */}
           <div className="flex flex-col">
             <label className="text-[11px] font-mono font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
-              What should the summary focus on?
+              摘要应关注什么？
             </label>
             <Textarea
               value={instructions}
               onChange={(e) => setInstructions(e.target.value.slice(0, 1000))}
-              placeholder={hasValidTime ? `Type your custom instructions for ${getTimeLabel().toLowerCase()}...` : "输入你的自定义指令..."}
+              placeholder={hasValidTime ? `输入对${getTimeLabel()}的自定义指令...` : "输入你的自定义指令..."}
               className="flex-1 min-h-[208px] text-[12px] resize-none border border-border/30"
             />
             <div className="text-[10px] text-muted-foreground/50 text-right mt-1 font-mono">
@@ -334,13 +334,13 @@ export function CustomSummaryBuilder({
               className="h-8 text-[11px] text-muted-foreground hover:text-foreground"
             >
               <Trash2 className="w-3 h-3 mr-1" />
-              Delete
+              删除
             </Button>
           ) : (
             <div className="text-[11px] text-muted-foreground font-mono">
               {hasValidTime
                 ? <>正在总结 <span className="font-medium text-foreground">{getTimeLabel().toLowerCase()}</span></>
-                : "select a time period"}
+                : "请选择时间段"}
             </div>
           )}
           <div className="flex items-center gap-2">
@@ -353,7 +353,7 @@ export function CustomSummaryBuilder({
                 className="h-8 text-[11px]"
               >
                 <Save className="w-3 h-3 mr-1" />
-                Update Template
+                更新模板
               </Button>
             ) : showSave ? (
               <div className="flex items-center gap-1.5">
@@ -367,20 +367,20 @@ export function CustomSummaryBuilder({
                 />
                 <Button size="sm" variant="outline" onClick={handleSave} disabled={!templateTitle.trim() || !hasValidTime} className="h-8 text-[11px]">
                   <Save className="w-3 h-3 mr-1" />
-                  Save
+                  保存
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setShowSave(false)} className="h-8 text-[11px]">
-                  Cancel
+                  取消
                 </Button>
               </div>
             ) : (
               <Button size="sm" variant="outline" onClick={() => setShowSave(true)} disabled={!hasValidTime} className="h-8 text-[11px]">
                 <Save className="w-3 h-3 mr-1" />
-                Save as Template
+                另存为模板
               </Button>
             )}
             <Button size="sm" onClick={handleGenerate} disabled={!hasValidTime} className="h-8 text-[11px]">
-              {editingTemplate ? "Run" : "Generate"}
+              {editingTemplate ? "运行" : "生成"}
             </Button>
           </div>
         </div>

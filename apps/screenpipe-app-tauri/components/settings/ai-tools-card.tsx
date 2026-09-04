@@ -335,7 +335,7 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
       {expanded && (
         <div className="mt-3 border-t border-border">
           <p className="text-xs text-muted-foreground pt-3 pb-1">
-            Connected apps can search your screen and audio history. Remove access any time.
+            已连接的应用可以搜索你的屏幕和音频历史。随时可以移除访问权限。
           </p>
           <div>
             {rows.map((row) => {
@@ -394,7 +394,7 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
                         disabled={bulkRunning}
                         className="text-xs text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
                       >
-                        Remove
+                        移除
                       </button>
                     </>
                   ) : (
@@ -408,8 +408,8 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
                         variant="outline"
                         onClick={() => connectTool(row)}
                         disabled={bulkRunning}
-                        aria-label={`${err || isPartial ? "Retry" : "Connect"} ${DISPLAY_NAMES[id]}`}
-                        title={`${err || isPartial ? "Retry" : "Connect"} ${DISPLAY_NAMES[id]}`}
+                        aria-label={`${err || isPartial ? "重试" : "连接"} ${DISPLAY_NAMES[id]}`}
+                        title={`${err || isPartial ? "重试" : "连接"} ${DISPLAY_NAMES[id]}`}
                         className="h-7 w-7 p-0 shrink-0"
                       >
                         {err || isPartial ? (
@@ -425,7 +425,7 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
                           disabled={bulkRunning}
                           className="text-xs text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
                         >
-                          Remove
+                          移除
                         </button>
                       )}
                     </>

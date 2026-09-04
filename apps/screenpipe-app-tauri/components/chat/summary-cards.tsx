@@ -505,7 +505,7 @@ export function SummaryCards({
           }}
           className="cursor-pointer rounded-md border border-dashed border-foreground/25 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors duration-150 hover:border-foreground hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-offset-1 focus-visible:ring-offset-background motion-reduce:transition-none"
         >
-          + custom
+          + 自定义
         </button>
       </div>
 
@@ -551,7 +551,7 @@ export function SummaryCards({
             setShowBuilder(false);
             onSendMessage(
               prompt,
-              `\u2728 Custom Summary \u2014 ${timeRange}`,
+              `\u2728 自定义摘要 — ${timeRange}`,
               "home_card",
               "custom",
             );

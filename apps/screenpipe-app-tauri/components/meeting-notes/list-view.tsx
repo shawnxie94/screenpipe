@@ -298,7 +298,7 @@ function RecordingStrip({
   stopping: boolean;
   captureState?: LiveCaptureState;
 }) {
-  const title = meeting.title?.trim() || "untitled meeting";
+  const title = meeting.title?.trim() || "未命名会议";
   const duration = formatDuration(meeting.meeting_start, meeting.meeting_end);
   const statusLabel = captureState?.shortLabel ?? "recording";
   const degraded = captureState?.severity === "warning";

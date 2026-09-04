@@ -138,7 +138,7 @@ function RowMenuItems({
     <>
       <Item className={ITEM_CLS} disabled={index === 0} onSelect={() => onShift(-1)}>
         <ArrowUp />
-        Move up
+        上移
       </Item>
       <Item
         className={ITEM_CLS}
@@ -146,20 +146,20 @@ function RowMenuItems({
         onSelect={() => onShift(1)}
       >
         <ArrowDown />
-        Move down
+        下移
       </Item>
       <Separator />
       {/* The last remaining row cannot be hidden — an empty nav has no way back. */}
       <Item className={ITEM_CLS} disabled={total <= 1} onSelect={onHide}>
         <EyeOff />
-        Hide from sidebar
+        从侧边栏隐藏
       </Item>
       {canReset && (
         <>
           <Separator />
           <Item className={ITEM_CLS} data-testid="sidebar-reset" onSelect={onReset}>
             <RotateCcw />
-            Reset sidebar
+            重置侧边栏
           </Item>
         </>
       )}
@@ -366,7 +366,7 @@ export function SidebarCustomizationMenu({
             onSelect={() => onSetHidden(hidden.id, false)}
           >
             <Eye />
-            Show {hidden.label}
+            显示{hidden.label}
           </DropdownMenuItem>
         ))}
         {hiddenItems.length > 0 && <DropdownMenuSeparator />}
@@ -376,7 +376,7 @@ export function SidebarCustomizationMenu({
           onSelect={onReset}
         >
           <RotateCcw />
-          Reset sidebar
+          重置侧边栏
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

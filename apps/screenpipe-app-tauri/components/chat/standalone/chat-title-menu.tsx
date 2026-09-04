@@ -198,14 +198,14 @@ export function ChatTitleMenu({
             onClick={() => void handleTogglePin()}
           >
             <Pin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {isPinned ? "Unpin" : "Pin"}
+            {isPinned ? "取消置顶" : "置顶"}
           </button>
           <button
             className="flex h-8 w-full items-center gap-2 px-2 text-left text-sm hover:bg-muted focus-visible:outline-none focus-visible:bg-muted"
             onClick={handleStartRename}
           >
             <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            Rename
+            重命名
           </button>
           <div className="my-1 border-t border-border" />
           <button
@@ -214,7 +214,7 @@ export function ChatTitleMenu({
             aria-label="归档"
           >
             <Archive className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            Archive
+            归档
             <span className="ml-auto text-[10px] tracking-normal text-muted-foreground/55">
               {archiveShortcut}
             </span>

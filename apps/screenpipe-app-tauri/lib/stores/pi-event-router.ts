@@ -206,7 +206,7 @@ export async function handlePiEvent(envelope: AgentEventEnvelope) {
   // tombstone blocks those in the creating renderer, while the reserved id
   // namespace blocks them after reload and in other renderers that never held
   // the temporary record. Without this guard, the lazy-create path below would
-  // resurrect the chat as a durable "untitled" history row.
+  // resurrect the chat as a durable "未命名" history row.
   const initialChatState = useChatStore.getState();
   if (
     !initialChatState.sessions[sid] &&
@@ -224,7 +224,7 @@ export async function handlePiEvent(envelope: AgentEventEnvelope) {
   // Mode/option changes stream as generic acp_update notifications. Like
   // acp_session_config above, this is pure runtime metadata: capture it for the
   // composer picker and stop — it must not fall through to the lazy-create
-  // upsert and materialize a phantom "untitled" chat row for a session that has
+  // upsert and materialize a phantom "未命名" chat row for a session that has
   // no content yet.
   if ((inner as { type?: string }).type === "acp_update") {
     const update = (inner as { update?: { sessionUpdate?: string } }).update;
@@ -253,7 +253,7 @@ export async function handlePiEvent(envelope: AgentEventEnvelope) {
   // ACP lifecycle/metadata events (acp_status / acp_ready / acp_fatal /
   // acp_external_auth_required / acp_auth_cancelled / acp_authenticated) carry
   // no chat content. For a session the store hasn't hydrated yet they must not
-  // fall through to the lazy-create below and materialize a phantom "untitled"
+  // fall through to the lazy-create below and materialize a phantom "未命名"
   // row pinned to "streaming" (mirrors the acp_session_config / acp_update
   // guards above). If the row already exists they proceed to normal handling.
   if (!existing && (inner as { type?: string }).type?.startsWith("acp_")) {
@@ -271,7 +271,7 @@ export async function handlePiEvent(envelope: AgentEventEnvelope) {
     const now = Date.now();
     store.actions.upsert({
       id: sid,
-      title: "untitled",
+      title: "未命名",
       preview: snippet ?? "",
       status: nextStatus ?? "streaming",
       lastError: err ?? undefined,
@@ -286,7 +286,7 @@ export async function handlePiEvent(envelope: AgentEventEnvelope) {
       // pre-created chat panel) prewarms its own, and crashes auto-restart
       // them. Those processes emit startup/state/lifecycle events, and
       // lazy-creating a *visible* row for them is what put an empty
-      // "untitled" chat in RECENTS every time the user opened a new chat.
+      // "未命名" chat in RECENTS every time the user opened a new chat.
       // The row is revealed by the paths that prove real content exists:
       // `applyEventToSessionContent` on a user `message_start`, and
       // `persistBackgroundSession` after the first save.
@@ -365,7 +365,7 @@ export async function handlePiEvent(envelope: AgentEventEnvelope) {
 export function handleSessionEvicted(payload: AgentSessionEvictedPayload) {
   // Pool eviction only kills the Pi process. The conversation still exists
   // on disk and in the sidebar — dropping the store row made RECENTS jump:
-  // the chat vanished, then the next token lazy-created it as untitled with
+  // the chat vanished, then the next token lazy-created it as 未命名 with
   // createdAt=now (no lastUserMessageAt), so it popped to a new position.
   // Stay put and go idle, same as a clean process exit. The next send
   // respawns Pi under this same id.

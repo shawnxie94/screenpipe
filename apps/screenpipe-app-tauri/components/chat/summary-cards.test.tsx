@@ -141,7 +141,7 @@ describe("SummaryCards", () => {
       screen.getByRole("button", { name: "Client recap" }),
     ).toHaveAttribute("data-home-card-agent", "custom-tpl-1");
     expect(
-      screen.getByRole("button", { name: "+ custom" }),
+      screen.getByRole("button", { name: "+ 自定义" }),
     ).toBeInTheDocument();
   });
 
@@ -252,7 +252,7 @@ describe("SummaryCards", () => {
     );
 
     expect(screen.getByText("Client recap")).toBeInTheDocument();
-    expect(screen.getByText("+ custom")).toBeInTheDocument();
+    expect(screen.getByText("+ 自定义")).toBeInTheDocument();
   });
 
   it("dispatches every built-in home card once with its visible label", () => {
@@ -456,7 +456,7 @@ describe("SummaryCards", () => {
       expect(
         screen.getByDisplayValue("Summarize my day focusing on PRs"),
       ).toBeTruthy();
-      expect(screen.getByRole("button", { name: /run/i })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /运行/ })).toBeTruthy();
     });
 
     it("runs the edited prompt without mutating the saved template", () => {
@@ -467,7 +467,7 @@ describe("SummaryCards", () => {
         screen.getByDisplayValue("Summarize my day focusing on PRs"),
         { target: { value: "Summarize my day focusing on issue triage" } },
       );
-      fireEvent.click(screen.getByRole("button", { name: /run/i }));
+      fireEvent.click(screen.getByRole("button", { name: /运行/ }));
 
       expect(onSendMessage).toHaveBeenCalledWith(
         expect.stringContaining("Summarize my day focusing on issue triage"),
@@ -498,7 +498,7 @@ describe("SummaryCards", () => {
         screen.getByDisplayValue("Summarize my day focusing on PRs"),
         { target: { value: "Summarize my day focusing on reviews" } },
       );
-      fireEvent.click(screen.getByRole("button", { name: /update template/i }));
+      fireEvent.click(screen.getByRole("button", { name: /更新模板/ }));
 
       expect(onUpdateCustomTemplate).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -517,7 +517,7 @@ describe("SummaryCards", () => {
       const { onDeleteCustomTemplate } = renderWithTemplate();
 
       openTemplate();
-      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.click(screen.getByRole("button", { name: /删除/ }));
 
       expect(onDeleteCustomTemplate).toHaveBeenCalledWith("custom-123");
     });

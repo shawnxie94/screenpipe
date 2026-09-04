@@ -2130,7 +2130,7 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
               <div className="flex min-h-[320px] items-center justify-center py-12 text-center">
                 <div className="max-w-sm">
                   <h2 className="font-sans text-xl font-medium tracking-tight">
-                    Enable activities
+                    启用活动记录
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
                     <span role={historyError ? "alert" : undefined}>

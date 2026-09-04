@@ -595,7 +595,7 @@ function NotionPicker({ instance, onAdd }: { instance?: string; onAdd: (s: Trigg
         const j = await r.json();
         const list: NotionDb[] = (j?.results ?? []).map((d: { id: string; title?: { plain_text?: string }[] }) => ({
           id: d.id,
-          name: (d.title ?? []).map((t) => t.plain_text ?? "").join("") || "untitled database",
+          name: (d.title ?? []).map((t) => t.plain_text ?? "").join("") || "未命名数据库",
         }));
         setDbs(list);
       } catch {

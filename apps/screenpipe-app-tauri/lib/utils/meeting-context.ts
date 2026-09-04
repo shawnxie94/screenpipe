@@ -76,7 +76,7 @@ function isGenericMeetingTitle(
 ): boolean {
   const normalizedTitle = title?.trim().toLowerCase();
   if (!normalizedTitle) return true;
-  if (["untitled", "untitled meeting", "meeting"].includes(normalizedTitle)) {
+  if (["untitled", "未命名", "未命名会议", "meeting", "会议"].includes(normalizedTitle)) {
     return true;
   }
 
@@ -654,7 +654,7 @@ export function buildMeetingMarkdown({
   const parts: string[] = [];
 
   // Header
-  parts.push(`# ${meeting.title?.trim() || "untitled meeting"}`);
+  parts.push(`# ${meeting.title?.trim() || "未命名会议"}`);
 
   const meta: string[] = [];
   meta.push(`**Time:** ${formatHumanRange(start, end)}`);
