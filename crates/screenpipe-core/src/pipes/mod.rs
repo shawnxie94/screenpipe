@@ -9314,15 +9314,15 @@ mod tests {
             .find_map(|(name, source)| (*name == "meeting-summary").then_some(*source))
             .expect("meeting-summary should be bundled");
         let naming_start = bundled
-            .find("step 2d — give every distinct speaker")
+            .find("第 2d 步——给每个不同的说话人")
             .expect("bundled naming step should start");
         let naming_end = naming_start
             + bundled[naming_start..]
-                .find("step 3 — write the summary")
+                .find("第 3 步——在保存之前")
                 .expect("bundled naming step should end");
         let audio_shape = bundled
             .lines()
-            .find(|line| line.starts_with("  - audio `content`:"))
+            .find(|line| line.starts_with("  - audio `content`："))
             .expect("bundled audio shape should exist");
         let audio_render = bundled
             .lines()
@@ -9352,11 +9352,11 @@ mod tests {
         assert!(!install_bundled_pipe(dir.path(), "meeting-summary").unwrap());
 
         let installed = std::fs::read_to_string(pipe_dir.join("pipe.md")).unwrap();
-        assert!(installed.contains("`device_type` (`Input` or `Output`)"));
+        assert!(installed.contains("`device_type`（`Input` 或 `Output`）"));
         assert!(installed.contains(r#"id=${c.speaker?.id??"?"}"#));
-        assert!(installed.contains("deterministic call topology"));
-        assert!(installed.contains("`device_type=Input` rows as the local participant"));
-        assert!(installed.contains("never emit an unnamed, blank, `unknown`"));
+        assert!(installed.contains("确定性通话拓扑"));
+        assert!(installed.contains("把 `device_type=Input` 行标为本地参与者"));
+        assert!(installed.contains("绝不要出现无名字、空白、`unknown`"));
         assert!(!installed.contains("leave the speaker unnamed"));
         assert!(!installed.contains("\n  jq "));
         assert_eq!(
@@ -9395,17 +9395,17 @@ mod tests {
             .trigger
             .as_ref()
             .is_some_and(|trigger| trigger.events.iter().any(|event| event == "meeting_ended")));
-        assert!(body.contains("Automatic event runs are always preview-only"));
+        assert!(body.contains("自动事件运行**始终只预览**"));
         assert!(body.contains("APPROVE SPEAKER <numeric_id> AS <display name> FROM <proposal_id>"));
         assert!(body.contains("GET /meetings/<id>/transcript"));
-        assert!(body.contains("no more than 5 minutes before this run began"));
-        assert!(body.contains("duration of at least 2\n   minutes"));
-        assert!(body.contains("Meeting-local mappings"));
-        assert!(body.contains("must never\nemit an `APPROVE SPEAKER` command"));
-        assert!(body.contains("Never call `/feedback`, send a\nnotification, or call port 11435"));
+        assert!(body.contains("不超过本次运行开始前 5 分钟"));
+        assert!(body.contains("至少 2 分钟"));
+        assert!(body.contains("会议内映射（Meeting-local mappings）"));
+        assert!(body.contains("也绝不允许发出 `APPROVE SPEAKER` 命令"));
+        assert!(body.contains("绝不要调用 `/feedback`、发送通知或访问 11435 端口"));
         assert!(body.contains("content_type=accessibility&on_screen=true"));
         assert!(body.contains("content_type=parsed"));
-        assert!(body.contains("Never call `content_type=ocr`"));
+        assert!(body.contains("绝不要调用 `content_type=ocr`"));
         let permissions = permissions::PipePermissions::from_config(&config);
         assert!(permissions.is_endpoint_allowed("GET", "/meetings/42"));
         assert!(permissions.is_endpoint_allowed("GET", "/meetings/42/transcript"));

@@ -60,14 +60,14 @@ fn line_starting_with(text: &'static str, start: &str) -> Option<&'static str> {
 
 /// Anchors around the latency preamble (budget + verified response shapes) in
 /// the shipped `meeting-summary` prompt.
-const FAST_PATH_START: &str = "the user is staring at a spinner";
-const FAST_PATH_END: &str = "step 1 — pull everything";
+const FAST_PATH_START: &str = "在打印出 step 3 之前用户一直在盯着转圈动画";
+const FAST_PATH_END: &str = "第 1 步——用**一条命令**";
 const MEETING_MEMORY_START: &str = "## 🧠 Continuous improvement (memory)";
-const MEETING_MEMORY_END: &str = "a meeting just ended.";
-const MEETING_RUNTIME_PREAMBLE_START: &str = "the user is staring at a spinner";
+const MEETING_MEMORY_END: &str = "一场会议刚刚结束";
+const MEETING_RUNTIME_PREAMBLE_START: &str = "在打印出 step 3 之前用户一直在盯着转圈动画";
 const MEETING_FETCH_PREAMBLE_START: &str =
     "  A=\"Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY\"";
-const MEETING_FETCH_PREAMBLE_END: &str = "  # screen evidence priority:";
+const MEETING_FETCH_PREAMBLE_END: &str = "  # 屏幕证据优先级：";
 const MEETING_ROW_COUNTS_START: &str = "  A11_ROWS=$(bun -e";
 const MEETING_ROW_COUNTS_END: &str = "  if [ \"$A11_ROWS\"";
 
@@ -81,12 +81,12 @@ const PRESET_CHAIN_ANCHOR: &str = "preset:\n  - screenpipe-cloud\ntimeout: 600";
 
 const MEETING_SEARCH_SHAPE_START: &str = "- `GET /search?...`";
 const MEETING_SEARCH_SHAPE_END: &str = "- `GET /speakers/unnamed";
-const MEETING_AUDIO_SHAPE_START: &str = "  - audio `content`:";
+const MEETING_AUDIO_SHAPE_START: &str = "  - audio `content`：";
 const MEETING_AUDIO_SHAPE_END: &str = "  - accessibility";
-const MEETING_SCREEN_FETCH_START: &str = "  # screen evidence priority:";
+const MEETING_SCREEN_FETCH_START: &str = "  # 屏幕证据优先级：";
 const MEETING_SCREEN_FETCH_END: &str = "  tail -40 ./memory.md";
-const MEETING_RENDER_START: &str = "step 2 — render the transcript";
-const MEETING_RENDER_END: &str = "step 2c — skip this step";
+const MEETING_RENDER_START: &str = "第 2 步——再用**一条命令**";
+const MEETING_RENDER_END: &str = "第 2c 步——默认跳过这一步";
 const MEETING_AUDIO_RENDER_START: &str = "  bun -e 'const d=await Bun.file(\"/tmp/audio.json\")";
 const MEETING_A11_RENDER_START: &str = "  bun -e 'const d=await Bun.file(\"/tmp/a11.json\")";
 const MEETING_PARSED_RENDER_START: &str = "  bun -e 'const d=await Bun.file(\"/tmp/parsed.json\")";
@@ -95,13 +95,13 @@ const MEETING_PAYLOAD_BUILDER_START: &str = "  cat > /tmp/title.txt";
 const MEETING_PAYLOAD_BUILDER_END: &str = "  curl -sf -X POST";
 const MEETING_CONNECTION_RENDER_START: &str =
     "  bun -e 'const d=await Bun.file(\"/tmp/conn.json\")";
-const MEETING_REVIEW_ACTION_START: &str = "          {\"label\": \"review in chat\"";
-const MEETING_ACTION_RULE_START: &str = "each button maps to a connection's endpoint";
-const MEETING_MEDIA_START: &str = "step 2c — skip this step";
-const MEETING_MEDIA_END: &str = "step 2d — give every distinct speaker";
-const MEETING_NAMING_START: &str = "step 2d — give every distinct speaker";
-const MEETING_NAMING_END: &str = "step 3 — write the summary";
-const MEETING_EVIDENCE_START: &str = "step 1 — pull everything";
+const MEETING_REVIEW_ACTION_START: &str = "          {\"label\": \"在聊天中查看\"";
+const MEETING_ACTION_RULE_START: &str = "每个按钮都映射到其 `/connections` `description` 里的一个连接端点";
+const MEETING_MEDIA_START: &str = "第 2c 步——默认跳过这一步";
+const MEETING_MEDIA_END: &str = "第 2d 步——给每个不同的说话人";
+const MEETING_NAMING_START: &str = "第 2d 步——给每个不同的说话人";
+const MEETING_NAMING_END: &str = "第 3 步——在保存之前";
+const MEETING_EVIDENCE_START: &str = "第 1 步——用**一条命令**";
 
 /// Older installs read their entire memory in a separate first turn. A busy
 /// user's accumulated one-off meeting lessons can then consume the context
@@ -514,8 +514,8 @@ const SAVE_STEP_ANCHOR: &str = "step 3b — now save it. if your summary is wort
 fn meeting_summary_save_step() -> Option<&'static str> {
     section_between(
         bundled_prompt("meeting-summary")?,
-        "step 3b — now save it through the dedicated summary endpoint",
-        "step 4 — offer to push",
+        "第 3b 步——现在通过专用的 summary 端点保存",
+        "第 4 步——提议把摘要推送",
     )
 }
 
@@ -525,8 +525,8 @@ fn meeting_summary_save_step() -> Option<&'static str> {
 fn meeting_summary_output_and_save_steps() -> Option<&'static str> {
     section_between(
         bundled_prompt("meeting-summary")?,
-        "step 3 — write the summary",
-        "step 4 — offer to push",
+        "第 3 步——在保存之前",
+        "第 4 步——提议把摘要推送",
     )
 }
 
@@ -767,9 +767,9 @@ mod tests {
     fn meeting_summary_fast_path_is_sliced_from_the_bundled_prompt() {
         let fast_path = meeting_summary_fast_path().expect("bundled prompt carries the fast path");
         assert!(bundled("meeting-summary").contains(fast_path));
-        assert!(fast_path.contains("do not read any skill file"));
-        assert!(fast_path.contains("6 tool calls or fewer"));
-        assert!(fast_path.contains("these are the exact response shapes"));
+        assert!(fast_path.contains("不要读取任何 skill 文件"));
+        assert!(fast_path.contains("6 次工具调用以内"));
+        assert!(fast_path.contains("以下就是精确的响应结构"));
         // it stops before the step it precedes.
         assert!(!fast_path.contains(FAST_PATH_END));
     }
@@ -843,7 +843,7 @@ mod tests {
         assert!(bundled("meeting-summary").contains(save_step));
         assert!(save_step.contains("/meetings/<MEETING_ID>/summary"));
         assert!(save_step.contains("curl -sf"));
-        assert!(!save_step.contains("step 4 — offer to push"));
+        assert!(!save_step.contains("第 4 步——提议把摘要推送"));
 
         let stale = bundled("meeting-summary").replace(save_step, SAVE_STEP_ANCHOR);
         assert!(
@@ -875,15 +875,15 @@ mod tests {
                 "preset:\n  - screenpipe-cloud\n  - cursor\n  - codexxx\n  - d\ntimeout: 600",
             );
 
-        assert!(stale.contains("step 3 — if your summary is worth saving"));
-        assert!(!stale.contains("step 3 — write the summary"));
+        assert!(stale.contains(LEGACY_DIRECT_SAVE_STEP));
+        assert!(!stale.contains("第 3 步——在保存之前"));
 
         let fixed = migrate_builtin_pipe_text("meeting-summary", &stale)
             .expect("save-only meeting summary should migrate");
-        assert!(fixed.contains("step 3 — write the summary"));
-        assert!(fixed.contains("the meeting UI streams this section live"));
+        assert!(fixed.contains("第 3 步——在保存之前"));
+        assert!(fixed.contains("会议 UI 会实时流式显示这一节"));
         assert!(fixed.contains("/meetings/<MEETING_ID>/summary"));
-        assert!(!fixed.contains("step 3 — if your summary is worth saving"));
+        assert!(!fixed.contains(SAVE_STEP_ANCHOR));
         assert!(!fixed.contains("<EXISTING_NOTE>"));
         let (fixed_config, fixed_body) =
             parse_frontmatter(&fixed).expect("migrated Pipe should parse");
@@ -911,7 +911,7 @@ mod tests {
             .expect("source-search instruction should migrate");
         assert!(!fixed.contains("buildMeetingSummarizeInstructions"));
         assert!(fixed.contains("screenpipe API search is required"));
-        assert!(fixed.contains("never run recursive `find` or `grep`"));
+        assert!(fixed.contains("never run recursive `find` or `grep` over the user's home or `~/.screenpipe`"));
         assert!(fixed.ends_with("read the screenpipe skill first.\n"));
         assert!(migrate_builtin_pipe_text("meeting-summary", &fixed).is_none());
     }
@@ -970,8 +970,8 @@ mod tests {
             .expect("OCR-first meeting summary should migrate");
         assert!(fixed.contains("content_type=accessibility"));
         assert!(fixed.contains("content_type=parsed"));
-        assert!(fixed.contains("OCR only if neither has useful rows"));
-        assert!(fixed.contains("4. OCR fallback:"));
+        assert!(fixed.contains("只有两者都没有可用行时才用 OCR"));
+        assert!(fixed.contains("4. OCR 回退："));
         assert!(!fixed.contains("the four fetches below are independent"));
         assert!(!fixed.contains("bounded OCR search"));
         assert!(migrate_builtin_pipe_text("meeting-summary", &fixed).is_none());
@@ -985,7 +985,7 @@ mod tests {
             );
         let fixed_simple = migrate_builtin_pipe_text("meeting-summary", &stale_simple)
             .expect("older unbatched meeting summary should migrate");
-        assert!(fixed_simple.contains("screen evidence priority:"));
+        assert!(fixed_simple.contains("屏幕证据优先级"));
         assert!(fixed_simple.contains("content_type=accessibility"));
         assert!(fixed_simple.contains("content_type=parsed"));
         assert!(!fixed_simple.contains("step 2b — also query the screen"));
@@ -1015,13 +1015,13 @@ mod tests {
 
             let fixed = migrate_builtin_pipe_text("meeting-summary", &stale)
                 .expect("two-person speaker refusal should migrate");
-            assert!(fixed.contains("`device_type` (`Input` or `Output`)"));
+            assert!(fixed.contains("`device_type`（`Input` 或 `Output`）"));
             assert!(fixed.contains(r#"id=${c.speaker?.id??"?"}"#));
-            assert!(fixed.contains("deterministic call topology"));
-            assert!(fixed.contains("`device_type=Input` rows as the local participant"));
-            assert!(fixed.contains("`device_type=Output` rows as the sole remote participant"));
-            assert!(fixed.contains("`Speaker 1`, `Speaker 2`, …"));
-            assert!(fixed.contains("never emit an unnamed, blank, `unknown`"));
+            assert!(fixed.contains("确定性通话拓扑"));
+            assert!(fixed.contains("把 `device_type=Input` 行标为本地参与者"));
+            assert!(fixed.contains("把 `device_type=Output` 行标为唯一的远程参与者"));
+            assert!(fixed.contains("`Speaker 1`、`Speaker 2`……"));
+            assert!(fixed.contains("绝不要出现无名字、空白、`unknown`"));
             assert!(!fixed.contains("leave the speaker unnamed"));
             assert!(migrate_builtin_pipe_text("meeting-summary", &fixed).is_none());
         }
@@ -1039,8 +1039,8 @@ mod tests {
         let fixed = migrate_builtin_pipe_text("meeting-summary", &stale)
             .expect("separate full-memory read should migrate");
         assert!(!fixed.contains("Before you do anything else this run"));
-        assert!(fixed.contains("Step 1 already reads it as part of the one batched command"));
-        assert!(fixed.contains("Write it at the very end"));
+        assert!(fixed.contains("第 1 步已经把它并入那一条批量命令里读取"));
+        assert!(fixed.contains("在最末尾才写经验"));
         assert!(migrate_builtin_pipe_text("meeting-summary", &fixed).is_none());
     }
 
@@ -1093,7 +1093,7 @@ mod tests {
             .expect("jq-dependent meeting summary should migrate");
         assert!(!fixed.contains("$(jq"));
         assert!(!fixed.contains("\n  jq "));
-        assert!(fixed.contains("never require `jq`"));
+        assert!(fixed.contains("绝不要依赖 `jq`"));
         assert!(fixed.contains("Bun.file(\"/tmp/audio.json\")"));
         assert!(fixed.contains("Bun.write(\"/tmp/summary.json\""));
         assert!(migrate_builtin_pipe_text("meeting-summary", &fixed).is_none());
@@ -1114,7 +1114,7 @@ mod tests {
             .expect("recursive post-summary actions should migrate");
         assert!(fixed.contains(r#""type": "chat""#));
         assert!(fixed.contains("Do not rerun meeting-summary"));
-        assert!(fixed.contains("never use `type: \"pipe\"` with `pipe: \"meeting-summary\"`"));
+        assert!(fixed.contains("绝不要在摘要后按钮上使用 `type: \"pipe\"` 配合 `pipe: \"meeting-summary\"`"));
         assert!(!fixed.contains(LEGACY_MEETING_REVIEW_ACTION));
         assert!(migrate_builtin_pipe_text("meeting-summary", &fixed).is_none());
     }
@@ -1138,12 +1138,12 @@ mod tests {
 
         // the discovery loop is gone.
         assert!(!fixed.contains("read the screenpipe skill first"));
-        assert!(fixed.contains("do not read any skill file"));
+        assert!(fixed.contains("不要读取任何 skill 文件"));
         // and it is replaced by a budget plus the shapes it used to guess at.
-        assert!(fixed.contains("6 tool calls or fewer"));
-        assert!(fixed.contains("these are the exact response shapes"));
-        assert!(fixed.contains("`offset` is required"));
-        assert!(fixed.contains("filter on `connected == true`"));
+        assert!(fixed.contains("6 次工具调用以内"));
+        assert!(fixed.contains("以下就是精确的响应结构"));
+        assert!(fixed.contains("`offset` 是必需的"));
+        assert!(fixed.contains("过滤 `connected == true`"));
 
         // the user's own edits and the surrounding steps survive.
         assert!(fixed.starts_with("a meeting just ended.\n"));
@@ -1163,13 +1163,13 @@ mod tests {
         assert_eq!(config.timeout, Some(600));
         assert_eq!(config.preset, ["screenpipe-cloud", "*"]);
         assert!(!body.contains("buildMeetingSummarizeInstructions"));
-        assert!(body.contains("screenpipe API search is required"));
-        assert!(body.contains("never run recursive `find` or `grep`"));
-        assert!(body.contains("screenpipe bundles `bun`"));
-        assert!(body.contains("never require `jq`"));
+        assert!(body.contains("必须使用 screenpipe API 检索"));
+        assert!(body.contains("绝不要对用户主目录或 `~/.screenpipe` 运行递归的 `find` 或 `grep`"));
+        assert!(body.contains("screenpipe 自带 `bun`"));
+        assert!(body.contains("绝不要依赖 `jq`"));
         assert!(body.contains(r#""type": "chat""#));
         assert!(body.contains("Do not rerun meeting-summary"));
-        assert!(body.contains("never use `type: \"pipe\"` with `pipe: \"meeting-summary\"`"));
+        assert!(body.contains("绝不要在摘要后按钮上使用 `type: \"pipe\"` 配合 `pipe: \"meeting-summary\"`"));
         assert!(!body.contains(r#""type": "pipe", "pipe": "meeting-summary""#));
         assert!(!body.contains("$(jq"));
         assert!(!body.contains("\n  jq "));
@@ -1182,7 +1182,7 @@ mod tests {
         let (_, body) = parse_frontmatter(bundled("meeting-summary")).expect("prompt should parse");
 
         // Primary reads are batched, backgrounded, and joined.
-        assert!(body.contains("pull everything the summary needs in ONE command"));
+        assert!(body.contains("把摘要所需的全部数据拉下来"));
         assert!(body.contains("-o /tmp/audio.json &"));
         assert!(body.contains("content_type=accessibility"));
         assert!(body.contains("content_type=parsed"));
@@ -1200,15 +1200,15 @@ mod tests {
         assert!(!body.contains("-o /tmp/ocr.json &"));
 
         // bounded up front, so there is no "too big, fetch again" round trip.
-        assert!(body.contains("do not fetch unbounded and then re-fetch smaller"));
+        assert!(body.contains("不要先无上限地拉、再重拉更小的"));
 
         // the endpoints reused from that batch are not re-fetched later.
-        assert!(body.contains("already fetched to /tmp/spk.json in step 1"));
+        assert!(body.contains("第 1 步已拉到 /tmp/spk.json"));
         assert!(body.contains("/tmp/conn.json"));
 
         // and the discovery loop stays gone.
         assert!(!body.contains("read the screenpipe skill first"));
-        assert!(body.contains("6 tool calls or fewer"));
+        assert!(body.contains("6 次工具调用以内"));
 
         // the streaming contract the UI depends on is preserved.
         assert!(body.contains("## Summary"));
@@ -1228,13 +1228,13 @@ mod tests {
         }
         assert!(body.contains(r#"id=${c.speaker?.id??"?"}"#));
         assert!(body.contains(r#"label=${c.speaker_label??c.speaker?.name??"unknown"}"#));
-        assert!(body.contains("deterministic call topology"));
-        assert!(body.contains("exactly two participants"));
-        assert!(body.contains("`device_type=Input` rows as the local participant"));
-        assert!(body.contains("`device_type=Output` rows as the sole remote participant"));
-        assert!(body.contains("stable meeting-local label"));
-        assert!(body.contains("never rename speaker id `0`"));
-        assert!(body.contains("current-run evidence outranks any older `memory.md` lesson"));
+        assert!(body.contains("确定性通话拓扑"));
+        assert!(body.contains("恰好两位参与者"));
+        assert!(body.contains("把 `device_type=Input` 行标为本地参与者"));
+        assert!(body.contains("把 `device_type=Output` 行标为唯一的远程参与者"));
+        assert!(body.contains("稳定的会议内标签"));
+        assert!(body.contains("绝不要重命名 speaker id `0`"));
+        assert!(body.contains("本次运行的证据优先于任何旧 `memory.md` 里"));
         assert!(!body.contains("if the matching evidence is not clear, leave the speaker unnamed"));
     }
 
