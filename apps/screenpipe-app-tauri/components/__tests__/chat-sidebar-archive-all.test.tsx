@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   emit: vi.fn(async () => {}),
   listen: vi.fn(async () => () => {}),
   listConversations: vi.fn(async () => []),
+  deleteConversationFile: vi.fn(async () => {}),
   piAbort: vi.fn(async () => {}),
   showArchiveUndo: vi.fn(() => ({ dismiss: vi.fn() })),
   updateConversationFlags: vi.fn(async () => {}),
@@ -57,6 +58,7 @@ vi.mock("@/lib/chat-storage", async (importOriginal) => {
   return {
     ...actual,
     listConversations: mocks.listConversations,
+    deleteConversationFile: mocks.deleteConversationFile,
     updateConversationFlags: mocks.updateConversationFlags,
   };
 });
@@ -176,6 +178,28 @@ describe("archive all recent chats", () => {
     expect(mocks.piAbort).not.toHaveBeenCalledWith(
       "__title:activity-history-run",
     );
+  });
+
+  it("deletes an activity-history run from the system activity section", async () => {
+    const id = "__title:activity-history-deletable";
+    useChatStore.getState().actions.upsert(
+      session(id, {
+        title: "活动生成 · 12:34",
+        internalCategory: "activity-history",
+      }),
+    );
+    renderSidebar();
+
+    fireEvent.click(screen.getByTestId("sidebar-section-系统活动"));
+    fireEvent.click(screen.getByRole("button", { name: "删除系统活动" }));
+    expect(screen.getByText("删除此系统活动记录？此操作无法撤销。")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "删除" }));
+
+    await waitFor(() => {
+      expect(mocks.deleteConversationFile).toHaveBeenCalledWith(id);
+      expect(useChatStore.getState().sessions[id]).toBeUndefined();
+    });
   });
 
   it("allows only the current summary chat during the trial restriction", () => {

@@ -1294,6 +1294,9 @@ export function ChatSidebar({
   );
 
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+  const deletingSession = useChatStore((state) =>
+    deletingSessionId ? state.sessions[deletingSessionId] : undefined,
+  );
   const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
   const [renameTitle, setRenameTitle] = useState("");
   // "New group" dialog state — stores the session id being moved.
@@ -2117,9 +2120,10 @@ export function ChatSidebar({
                       || session.status === "thinking"
                       || session.status === "tool";
                     return (
-                      <button
+                      <div
                         key={session.id}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         className={cn(
                           "group/activity flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left transition-colors",
                           "hover:bg-muted/15",
@@ -2147,6 +2151,12 @@ export function ChatSidebar({
                             targetWindow: "home",
                           });
                         }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            event.currentTarget.click();
+                          }
+                        }}
                       >
                         <span
                           className={cn(
@@ -2165,7 +2175,19 @@ export function ChatSidebar({
                         <span className="shrink-0 text-[10px] tabular-nums sidebar-text-tertiary">
                           {formatCompactAge(session.updatedAt, nowTick)}
                         </span>
-                      </button>
+                        <button
+                          type="button"
+                          className="shrink-0 rounded p-1 text-muted-foreground/0 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive group-hover/activity:text-muted-foreground"
+                          aria-label="删除系统活动"
+                          title="删除系统活动"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDeletingSessionId(session.id);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" aria-hidden />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -2183,8 +2205,14 @@ export function ChatSidebar({
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>删除聊天</DialogTitle>
-            <DialogDescription>删除此聊天？此操作无法撤销。</DialogDescription>
+            <DialogTitle>
+              {deletingSession?.internalCategory ? "删除系统活动" : "删除聊天"}
+            </DialogTitle>
+            <DialogDescription>
+              {deletingSession?.internalCategory
+                ? "删除此系统活动记录？此操作无法撤销。"
+                : "删除此聊天？此操作无法撤销。"}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeletingSessionId(null)}>
@@ -2199,7 +2227,7 @@ export function ChatSidebar({
                 await handleDeleteConfirmed(id);
               }}
             >
-              Delete
+              删除
             </Button>
           </DialogFooter>
         </DialogContent>

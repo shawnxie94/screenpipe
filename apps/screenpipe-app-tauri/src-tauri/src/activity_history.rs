@@ -89,25 +89,25 @@ struct StoredActivityHistory {
     coverage: Vec<ActivityHistoryCoverage>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct ActivityPreflight {
     data_status: String,
     total_active_minutes: f64,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct ActivityLedgerSnapshot {
     intervals: Vec<ActivityLedgerInterval>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct ActivityLedgerInterval {
     kind: String,
     start_at: String,
     end_at: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct MeetingAnchor {
     id: i64,
     meeting_start: String,
@@ -591,7 +591,10 @@ fn provider_config(
                     .collect::<Vec<_>>()
                     .join("\n\n"),
             ),
-            allowed_tools: None,
+            // Activity generation preloads a bounded evidence snapshot below;
+            // disabling tools prevents the model from entering an unbounded
+            // terminal/API exploration loop before returning JSON.
+            allowed_tools: Some(Vec::new()),
             resume_session_id: None,
             // Generation runs with no window open and no approval card to show,
             // so an agent that asks before reading would hang until the run
@@ -703,13 +706,26 @@ fn classify_activity_run_event(event: &Value, empty_completion_retries: u8) -> A
 }
 
 fn generation_prompt(start: DateTime<Utc>, end: DateTime<Utc>, minimum_entries: usize) -> String {
+    generation_prompt_with_context(start, end, minimum_entries, None)
+}
+
+fn generation_prompt_with_context(
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    minimum_entries: usize,
+    context: Option<&str>,
+) -> String {
+    let supplied_context = context.unwrap_or("No preloaded evidence is available.");
     format!(
-        r#"Build a concise activity timeline for the exact boundary below.
+        r#"Build a concise activity timeline for the exact boundary below."
 
 start_time: {start}
 end_time: {end}
 
-Resolve the local API from SCREENPIPE_LOCAL_API_URL. Query /meetings, /activity-summary, and /activity-ledger for the exact boundary. Then query /search without a keyword for accessibility and audio evidence in each observed 30-minute window. Use bounded follow-up searches only to resolve concrete names or artifacts.
+The application has already performed the bounded read-only API queries. Use the preloaded evidence below as your primary and authoritative input. Do not call tools, use a terminal, run shell commands, or query the API again. If the evidence is incomplete, omit unsupported activities rather than investigating further.
+
+Preloaded evidence:
+{supplied_context}
 
 Coverage requirements: return at least {minimum_entries} source-backed activities; audit every recorded, non-unobserved 30-minute window; keep idle and unobserved time as gaps rather than inventing activities.
 
@@ -722,6 +738,7 @@ Rules: return every start_at, end_at, and evidence.at in UTC ending in Z; when a
         start = start.to_rfc3339(),
         end = end.to_rfc3339(),
         minimum_entries = minimum_entries,
+        supplied_context = supplied_context,
     )
 }
 
@@ -731,6 +748,17 @@ fn repair_prompt(
     draft: &str,
     audit: &QualityAudit,
     meetings: &[MeetingAnchor],
+) -> String {
+    repair_prompt_with_context(start, end, draft, audit, meetings, None)
+}
+
+fn repair_prompt_with_context(
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    draft: &str,
+    audit: &QualityAudit,
+    meetings: &[MeetingAnchor],
+    context: Option<&str>,
 ) -> String {
     let rejection_reasons = if audit.rejection_reasons.is_empty() {
         "none".to_string()
@@ -791,8 +819,13 @@ Repair requirements:
 - keep idle and unobserved time as gaps rather than inventing activities;
 - preserve exact activity ranges and split gaps longer than 15 minutes.
 
-Run the required local API queries again. Return only the corrected JSON."#,
-        base = generation_prompt(start, end, audit.minimum_entries),
+Use the evidence already present in the draft and the validation details above. Do not call tools or query the API again. Return only the corrected JSON."#,
+        base = generation_prompt_with_context(
+            start,
+            end,
+            audit.minimum_entries,
+            context,
+        ),
         draft = draft,
         parse_error = audit.parse_error,
         rejected_entries = audit.rejected_entries,
@@ -950,6 +983,45 @@ async fn meeting_anchors(
         ],
     )
     .await
+}
+
+async fn activity_evidence_snapshot(
+    app: &AppHandle,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    preflight: &ActivityPreflight,
+    ledger: &[ActivityLedgerInterval],
+    meetings: &[MeetingAnchor],
+) -> Result<String, String> {
+    let query = |content_type: &str| {
+        vec![
+            ("content_type", content_type.to_string()),
+            ("start_time", start.to_rfc3339()),
+            ("end_time", end.to_rfc3339()),
+            ("limit", "100".to_string()),
+            ("max_content_length", "600".to_string()),
+        ]
+    };
+    let accessibility = get_local_json::<Value>(app, "/search", &query("accessibility")).await?;
+    let audio = get_local_json::<Value>(app, "/search", &query("audio")).await?;
+    let snapshot = json!({
+        "boundary": {"start": start.to_rfc3339(), "end": end.to_rfc3339()},
+        "summary": preflight,
+        "ledger": ledger,
+        "meetings": meetings,
+        "accessibility": accessibility,
+        "audio": audio,
+    });
+    let serialized = serde_json::to_string(&snapshot)
+        .map_err(|error| format!("Could not serialize activity evidence: {error}"))?;
+    const MAX_SNAPSHOT_CHARS: usize = 60_000;
+    let mut chars = serialized.chars();
+    let bounded = chars.by_ref().take(MAX_SNAPSHOT_CHARS).collect::<String>();
+    Ok(if chars.next().is_some() {
+        format!("{bounded}…")
+    } else {
+        bounded
+    })
 }
 
 fn parse_document(
@@ -1441,10 +1513,13 @@ async fn generate_inner(
     let meetings = meeting_anchors(app, start, end).await?;
     let observed_windows = required_observed_windows(&ledger_intervals, start, end);
     let minimum_entries = minimum_history_entry_count(preflight.total_active_minutes, start, end);
+    let evidence_snapshot =
+        activity_evidence_snapshot(app, start, end, &preflight, &ledger_intervals, &meetings)
+            .await?;
     let first_raw = run_pi(
         app,
         "activity-history",
-        generation_prompt(start, end, minimum_entries),
+        generation_prompt_with_context(start, end, minimum_entries, Some(&evidence_snapshot)),
     )
     .await?;
     let first = parse_or_rejected(&first_raw, start, end);
@@ -1470,7 +1545,14 @@ async fn generate_inner(
         let repaired_raw = run_pi(
             app,
             "activity-history-repair",
-            repair_prompt(start, end, &first_raw, &first_audit, &meetings),
+            repair_prompt_with_context(
+                start,
+                end,
+                &first_raw,
+                &first_audit,
+                &meetings,
+                Some(&evidence_snapshot),
+            ),
         )
         .await;
         match repaired_raw {
@@ -2025,7 +2107,12 @@ mod tests {
         let end = parse_time("2026-08-19T11:00:00Z").unwrap();
 
         let generation = generation_prompt(start, end, 1);
-        assert!(generation.contains("write title, summary, and evidence.label in Simplified Chinese"));
+        assert!(generation.contains(
+            "Do not call tools, use a terminal, run shell commands, or query the API again"
+        ));
+        assert!(
+            generation.contains("write title, summary, and evidence.label in Simplified Chinese")
+        );
 
         let audit = QualityAudit {
             rejected_entries: 0,
@@ -2255,6 +2342,7 @@ mod tests {
         assert!(config.acp_agent.is_none());
         assert_eq!(config.model, "auto");
         assert!(!config.unattended);
+        assert!(config.allowed_tools.as_deref() == Some(&[] as &[String]));
     }
 
     #[test]
