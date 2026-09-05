@@ -494,8 +494,6 @@ fn generate_and_validate_tauri_commands() {
     });
     for required in [
         "screenpipe_app::config::get_screenpipe_base_dir",
-        "screenpipe_app::commands::get_cloud_token",
-        "screenpipe_app::commands::is_enterprise_build_cmd",
     ] {
         assert!(
             commands.lines().any(|command| command == required),
@@ -593,17 +591,6 @@ fn main() {
 
     ensure_frontend_dist();
 
-    // Stamp the build time so `main.rs` can self-quiesce Sentry reports
-    // for ancient builds. This makes the Sentry inbox reflect what's
-    // actually running today; users who never update gradually fall
-    // silent instead of polluting signal for months after a known bug
-    // has been fixed. 90-day TTL is enforced in the `before_send` hook.
-    let build_time = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    println!("cargo:rustc-env=SCREENPIPE_BUILD_UNIX_TIME={}", build_time);
-    // Re-run the build script on every compile so the timestamp is fresh.
     println!("cargo:rerun-if-changed=build.rs");
 
     #[cfg(target_os = "macos")]

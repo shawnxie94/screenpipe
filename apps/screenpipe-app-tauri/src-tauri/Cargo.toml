@@ -120,8 +120,6 @@ dirs = "6.0.0"
 tauri-plugin-deep-link = "=2.4.9"
 
 once_cell = "1.20.0"
-tauri-plugin-sentry = "0.5.0"
-sentry = { version = "0.42", features = ["tracing"] }
 regex = "1"
 raw-window-handle = "0.6"
 
@@ -140,7 +138,7 @@ async-trait = "0.1"
 hostname = "0.4"
 
 # Screenpipe core (for sync)
-screenpipe-core = { path = "../../../crates/screenpipe-core", features = ["cloud-sync", "secrets", "acp"] }
+screenpipe-core = { path = "../../../crates/screenpipe-core", features = ["secrets", "acp"] }
 
 # Embedded screenpipe server
 screenpipe-config = { path = "../../../crates/screenpipe-config", features = ["specta"] }
@@ -165,9 +163,6 @@ eventkit-rs = { git = "https://github.com/screenpipe/eventkit-rs", rev = "9dd527
 screenpipe-redact = { path = "../../../crates/screenpipe-redact", features = ["onnx-coreml", "opf-text"] }
 image = "0.25.5"
 
-# Telemetry wire contract shared by Enterprise telemetry and opt-in consumer
-# data sync so both upload byte-compatible JSONL records.
-screenpipe-telemetry-wire = { path = "../../../crates/screenpipe-telemetry-wire" }
 
 # jemalloc — aggressively returns freed pages to OS, reducing RSS bloat
 [target.'cfg(not(target_os = "windows"))'.dependencies]
@@ -323,7 +318,7 @@ minisign = "0.7"
 # wiring lands in a follow-up. Cargo compiles it for the workspace either way.
 # eventkit-rs: lib crate is imported as `eventkit` (calendar.rs, permissions.rs);
 # cargo-machete matches the package name `eventkit_rs` so it can't see the use.
-ignored = ["tauri-utils", "screenpipe-redact", "screenpipe-telemetry-wire", "eventkit-rs"]
+ignored = ["tauri-utils", "screenpipe-redact", "eventkit-rs"]
 
 [patch.crates-io]
 # macOS tray menus can outlive the Rust `Menu` that created them while the

@@ -21,15 +21,6 @@ fn handle_shortcut_overlay_hour_snooze(app: &tauri::AppHandle) {
         let persist_succeeded = crate::commands::snooze_shortcut_reminder_for_hour(app.clone())
             .await
             .is_ok();
-        track_native_overlay_event(
-            &app,
-            "shortcut_reminder_dismissed",
-            serde_json::json!({
-                "dismiss_scope": "hour",
-                "snooze_hours": 1,
-                "persist_succeeded": persist_succeeded,
-            }),
-        );
     });
 }
 
@@ -101,12 +92,10 @@ fn install_native_timeline_placement(app_handle: &tauri::AppHandle) {
         let Ok(mut payload) = serde_json::from_str::<serde_json::Value>(event.payload()) else {
             return;
         };
-        payload["historyAccessRestricted"] = serde_json::json!(
-            attach_handle
-                .state::<crate::recording::RecordingState>()
-                .history_access
-                .is_restricted()
-        );
+        // Local-first builds retain the full local history window. Keep the
+        // field in the native protocol for compatibility with older timeline
+        // clients, but never advertise a cloud-plan restriction.
+        payload["historyAccessRestricted"] = serde_json::json!(false);
         payload["hostWindow"] = serde_json::json!(-1);
         let pointer = host_window_pointer(&attach_handle, &payload);
         if let Some(pointer) = pointer {
@@ -615,26 +604,6 @@ extern "C" fn native_notif_action_callback(json_ptr: *const std::os::raw::c_char
     }));
 }
 
-/// Fire-and-forget product analytics for native overlay interactions, tagged
-/// so PostHog funnels line up with the webview's identically-named events.
-pub(crate) fn track_native_overlay_event(
-    app: &tauri::AppHandle,
-    event: &'static str,
-    mut props: serde_json::Value,
-) {
-    if let Some(analytics) =
-        app.try_state::<std::sync::Arc<crate::analytics::AnalyticsManager>>()
-    {
-        let analytics = std::sync::Arc::clone(&analytics);
-        if let Some(obj) = props.as_object_mut() {
-            obj.insert("surface".into(), serde_json::json!("native_overlay"));
-        }
-        tauri::async_runtime::spawn(async move {
-            let _ = analytics.send_event(event, Some(props)).await;
-        });
-    }
-}
-
 #[cfg(target_os = "macos")]
 fn native_notif_action_callback_inner(json_ptr: *const std::os::raw::c_char) {
     if json_ptr.is_null() {
@@ -664,72 +633,27 @@ pub(crate) fn dispatch_notification_action(json: String) {
         .and_then(|v| v.get("type"))
         .and_then(|v| v.as_str());
 
-    // Native inbox housekeeping (mark read / remove / clear) + product
-    // analytics. Internal to the inbox panel — handled before the JS emit so
-    // React handlers never see them. Event names mirror the webview bell's
-    // (notification_bell_*) with surface="native_overlay", so PostHog funnels
-    // unify across surfaces. The store's write_all pushes the updated list +
-    // bell dot back.
+    // Native inbox housekeeping (mark read / remove / clear). Internal to the
+    // inbox panel — handled before the JS emit so React handlers never see
+    // them. The store's write_all pushes the updated list + bell dot back.
     if let Some(inbox_op) = action_type.and_then(|t| t.strip_prefix("inbox_")) {
         let id = parsed
             .as_ref()
             .and_then(|v| v.get("id"))
             .and_then(|v| v.as_str());
-        // Look up before mutating — a removed entry can't be described after.
-        let entry_props = |id: Option<&str>| -> serde_json::Value {
-            let Some(id) = id else {
-                return serde_json::json!({});
-            };
-            match crate::notifications::store::read_all()
-                .into_iter()
-                .find(|e| e.id == id)
-            {
-                Some(e) => serde_json::json!({
-                    "notification_type": e.notification_type,
-                    "pipe_name": e.pipe_name,
-                }),
-                None => serde_json::json!({}),
-            }
-        };
         match inbox_op {
             "mark_read" => {
-                let props = entry_props(id);
                 if let Some(id) = id {
                     crate::notifications::store::mark_read_by_id(id);
                 }
-                track_native_overlay_event(app, "notification_bell_expand", props);
             }
             "remove" => {
-                let props = entry_props(id);
                 if let Some(id) = id {
                     crate::notifications::store::remove_by_id(id);
                 }
-                track_native_overlay_event(app, "notification_bell_dismiss", props);
             }
             "clear_all" => {
-                let count = crate::notifications::store::read_all().len();
                 crate::notifications::store::clear();
-                track_native_overlay_event(
-                    app,
-                    "notification_bell_clear_all",
-                    serde_json::json!({ "count": count }),
-                );
-            }
-            "copy" => {
-                track_native_overlay_event(app, "notification_bell_copy", entry_props(id));
-            }
-            "action_clicked" => {
-                let mut props = entry_props(id);
-                if let (Some(obj), Some(label)) = (
-                    props.as_object_mut(),
-                    parsed
-                        .as_ref()
-                        .and_then(|v| v.get("label"))
-                        .and_then(|v| v.as_str()),
-                ) {
-                    obj.insert("action_label".into(), serde_json::json!(label));
-                }
-                track_native_overlay_event(app, "notification_bell_action", props);
             }
             _ => {}
         }
@@ -1074,11 +998,6 @@ pub(crate) fn dispatch_notification_action(json: String) {
             // Mirrors the `notification_action` capture the JS handler did
             // when it (sometimes) received these events.
             let track = |app: &tauri::AppHandle| {
-                track_native_overlay_event(
-                    app,
-                    "notification_action",
-                    serde_json::json!({ "action_type": action_type }),
-                );
             };
             if let Some(prefill) = chat_prefill_payload_from_action(action) {
                 track(app);
@@ -1283,11 +1202,6 @@ fn stop_native_overlay_meeting(app: &tauri::AppHandle) -> Result<(), String> {
     .error_for_status()
     .map_err(|error| format!("meeting stop request failed: {error}"))?;
 
-    track_native_overlay_event(
-        app,
-        "shortcut_reminder_meeting_toggled",
-        serde_json::json!({ "active": false, "control": "transcript_preview" }),
-    );
     native_shortcut_reminder::set_meeting_stop_result(true);
     native_shortcut_reminder::set_meeting_active(false);
     let _ = app.emit(
@@ -1326,14 +1240,6 @@ fn native_shortcut_action_callback_inner(action_ptr: *const std::os::raw::c_char
             let app_for_show = app_clone.clone();
             if let Some(anchor) = parse_overlay_anchor(&action) {
                 let persisted = persist_shortcut_overlay_anchor(&app_clone, anchor);
-                track_native_overlay_event(
-                    &app_clone,
-                    "shortcut_reminder_anchor_changed",
-                    serde_json::json!({
-                        "anchor": anchor,
-                        "persist_succeeded": persisted,
-                    }),
-                );
                 return;
             }
             if let Some(display) = parse_overlay_display(&action) {
@@ -1343,11 +1249,6 @@ fn native_shortcut_action_callback_inner(action_ptr: *const std::os::raw::c_char
                 return;
             }
             if let Some(meeting_id) = native_overlay_meeting_note_id(&action) {
-                track_native_overlay_event(
-                    &app_clone,
-                    "shortcut_reminder_meeting_note_clicked",
-                    serde_json::json!({ "control": "transcript_preview" }),
-                );
                 let deeplink_url = format!("screenpipe://meeting/{meeting_id}");
                 let meeting_page = meeting_page_with_id(&deeplink_url);
                 let app_for_note = app_clone.clone();
@@ -1367,41 +1268,21 @@ fn native_shortcut_action_callback_inner(action_ptr: *const std::os::raw::c_char
             }
             match action.as_str() {
                 "open_timeline" => {
-                    track_native_overlay_event(
-                        &app_clone,
-                        "shortcut_reminder_timeline_clicked",
-                        serde_json::json!({}),
-                    );
                     let _ = app_clone.run_on_main_thread(move || {
                         let _ = ShowRewindWindow::Main.show(&app_for_show);
                     });
                 }
                 "open_chat" => {
-                    track_native_overlay_event(
-                        &app_clone,
-                        "shortcut_reminder_chat_clicked",
-                        serde_json::json!({}),
-                    );
                     let _ = app_clone.run_on_main_thread(move || {
                         let _ = ShowRewindWindow::Chat.show(&app_for_show);
                     });
                 }
                 "open_search" => {
-                    track_native_overlay_event(
-                        &app_clone,
-                        "shortcut_reminder_search_clicked",
-                        serde_json::json!({}),
-                    );
                     let _ = app_clone.run_on_main_thread(move || {
                         let _ = (ShowRewindWindow::Search { query: None }).show(&app_for_show);
                     });
                 }
                 "open_overlay_settings" => {
-                    track_native_overlay_event(
-                        &app_clone,
-                        "shortcut_reminder_overlay_settings_clicked",
-                        serde_json::json!({}),
-                    );
                     let _ = app_clone.run_on_main_thread(move || {
                         if let Err(error) = (ShowRewindWindow::Home {
                             page: Some("display".to_string()),
@@ -1462,11 +1343,6 @@ fn native_shortcut_action_callback_inner(action_ptr: *const std::os::raw::c_char
                                     .body(r#"{"app":"manual"}"#),
                             );
                             if let Ok(res) = req.send() {
-                                track_native_overlay_event(
-                                    &app_clone,
-                                    "shortcut_reminder_meeting_toggled",
-                                    serde_json::json!({ "active": true }),
-                                );
                                 let meeting = res.json::<serde_json::Value>().ok();
                                 native_shortcut_reminder::set_meeting_active(true);
                                 let _ = app_clone.emit(

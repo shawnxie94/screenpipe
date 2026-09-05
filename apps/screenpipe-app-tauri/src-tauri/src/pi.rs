@@ -1995,13 +1995,6 @@ pub struct AcpAgentConfig {
     /// adapter request; omitted or `ask` keeps the normal approval cards.
     #[serde(default)]
     pub approval_mode: Option<String>,
-    /// Send the agent's model calls through Screenpipe Cloud instead of the
-    /// user's own provider account. Only honoured for agents whose catalog
-    /// entry declares `cloudRouting`; a closed agent (Cursor, Copilot) talks to
-    /// its own service and ignores this. `None` means the preset predates the
-    /// choice, which keeps the agent on its own account.
-    #[serde(default)]
-    pub use_screenpipe_cloud: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -2344,7 +2337,7 @@ async fn ensure_pi_config(
     provider_config: Option<&PiProviderConfig>,
 ) -> Result<(), String> {
     if provider_config.is_some_and(|config| {
-        matches!(config.provider.as_str(), "screenpipe-cloud" | "pi")
+        matches!(config.provider.as_str(), "pi")
     }) {
         return Err(
             "Screenpipe-hosted AI has been removed. Select a local or third-party provider.".to_string(),
@@ -2669,7 +2662,7 @@ fn pi_registry_provider(provider: &str, url: &str) -> Result<&'static str, Strin
         "anthropic" => "anthropic-byok",
         "custom" if !url.is_empty() => "custom",
         "acp" => return Err(ACP_PRESET_WITHOUT_BACKEND.to_string()),
-        "screenpipe-cloud" | "pi" => {
+        "pi" => {
             return Err("Screenpipe-hosted AI has been removed. Select a local or third-party provider.".to_string())
         }
         _ => return Err(format!("Unsupported AI provider: {provider}")),
@@ -6073,9 +6066,9 @@ mod tests {
         let config = super::PiProviderConfig {
             backend: None,
             acp_agent: None,
-            provider: "screenpipe-cloud".to_string(),
-            url: String::new(),
-            model: "auto".to_string(),
+            provider: "custom".to_string(),
+            url: "http://localhost:11434/v1".to_string(),
+            model: "local-model".to_string(),
             api_key: None,
             max_tokens: 4096,
             max_context_chars: Some(512_000),
@@ -7545,7 +7538,7 @@ error: InstallFailed extracting tarball"#;
             "custom"
         );
         assert!(pi_registry_provider("custom", "").is_err());
-        assert!(pi_registry_provider("screenpipe-cloud", "").is_err());
+        assert!(pi_registry_provider("retired-cloud", "").is_err());
     }
 
     #[tokio::test]
@@ -7555,8 +7548,8 @@ error: InstallFailed extracting tarball"#;
     }
 
     #[tokio::test]
-    async fn test_build_models_json_omits_removed_screenpipe_cloud_provider() {
-        let pc = make_provider_config("screenpipe-cloud", "auto");
+    async fn test_build_models_json_omits_removed_pi_provider() {
+        let pc = make_provider_config("pi", "auto");
         let config = build_models_json(None, Some(&pc)).await;
         assert!(config["providers"].as_object().unwrap().is_empty());
     }
@@ -7656,7 +7649,7 @@ error: InstallFailed extracting tarball"#;
 
     #[test]
     fn test_tool_allowlist_restricts_bounded_pi_sessions() {
-        let mut config = make_provider_config("screenpipe-cloud", "auto");
+        let mut config = make_provider_config("custom", "http://localhost:11434/v1");
         config.allowed_tools = Some(vec!["screenpipe_live_view".to_string()]);
         let mut command = Command::new("pi");
         super::apply_pi_tool_allowlist(&mut command, Some(&config));
@@ -7670,7 +7663,7 @@ error: InstallFailed extracting tarball"#;
 
     #[test]
     fn test_empty_tool_allowlist_disables_all_pi_tools() {
-        let mut config = make_provider_config("screenpipe-cloud", "auto");
+        let mut config = make_provider_config("custom", "http://localhost:11434/v1");
         config.allowed_tools = Some(vec![]);
         let mut command = Command::new("pi");
         super::apply_pi_tool_allowlist(&mut command, Some(&config));

@@ -22,7 +22,7 @@ use screenpipe_audio::transcription::stt::{
 };
 use screenpipe_db::DatabaseManager;
 use screenpipe_engine::{
-    analytics, hot_frame_cache::HotFrameCache, power::PowerManagerHandle, server::bind_listener,
+    hot_frame_cache::HotFrameCache, power::PowerManagerHandle, server::bind_listener,
     start_power_manager_with_pref, start_sleep_monitor, RecordingConfig, ResourceTelemetryReporter,
     SCServer,
 };
@@ -56,7 +56,6 @@ pub struct ServerCore {
     /// Local API auth key — exposed to the frontend via Tauri command so
     /// localFetch can inject it synchronously (no async store race).
     pub local_api_key: Option<String>,
-    pub history_access: screenpipe_engine::history_access::HistoryAccessPolicy,
     /// Shutdown signal for the redaction reconciliation workers. Fired
     /// from `shutdown()` so the workers exit before the tokio runtime
     /// tears down — otherwise their in-flight sqlx queries (which use
@@ -295,14 +294,6 @@ impl ServerCore {
         owned_browser: Option<
             std::sync::Arc<screenpipe_connect::connections::browser::OwnedBrowser>,
         >,
-        // App-scoped cloud-token handle. Outlives Server (which is recreated
-        // on every recording restart) so a token pushed via `set_cloud_token`
-        // survives capture toggles and is automatically picked up by the next
-        // Server + PiExecutor pair. Pre-existing per-Server cloud_token is
-        // replaced with this Arc so all three observers (cloud_proxy.rs,
-        // PiExecutor, the Tauri command writer) share one storage cell.
-        cloud_token_handle: std::sync::Arc<arc_swap::ArcSwap<Option<String>>>,
-        history_access: screenpipe_engine::history_access::HistoryAccessPolicy,
     ) -> Result<Self, String> {
         info!("Starting server core on port {}", config.port);
         crate::health::set_boot_phase("starting", Some("starting server"));
@@ -312,16 +303,6 @@ impl ServerCore {
 
         // --- Environment setup ---
         std::env::set_var("SCREENPIPE_FD_LIMIT", "8192");
-        if !config.analytics_id.is_empty() {
-            std::env::set_var("SCREENPIPE_ANALYTICS_ID", &config.analytics_id);
-        }
-        // Tag engine telemetry as the desktop app (vs cli / source) so WAU can be
-        // split by distribution. Respect an explicit override (e.g. enterprise embeds).
-        if std::env::var("SCREENPIPE_DISTRIBUTION").is_err() {
-            std::env::set_var("SCREENPIPE_DISTRIBUTION", "desktop-app");
-        }
-        analytics::init(config.analytics_enabled);
-
         if config.use_chinese_mirror {
             std::env::set_var("HF_ENDPOINT", "https://hf-mirror.com");
             info!("Using Chinese HuggingFace mirror");
@@ -566,20 +547,6 @@ impl ServerCore {
         // Without this, a token captured at engine boot was permanent until
         // restart — paying users who signed in after the sidecar started got
         // anonymous-tier 403s on every Sonnet/Opus pipe.
-        server.cloud_token = cloud_token_handle.clone();
-        server.history_access = history_access.clone();
-        // Seed the shared cell from persisted settings, but ONLY when empty
-        // — if `set_cloud_token` has already pushed a fresher value (e.g. the
-        // user signed in between sidecar boots), don't clobber it with the
-        // stale `config.user_id` snapshot.
-        if let Some(ref t) = config.user_id {
-            if !t.is_empty() {
-                let existing = cloud_token_handle.load();
-                if existing.is_none() {
-                    cloud_token_handle.store(std::sync::Arc::new(Some(t.clone())));
-                }
-            }
-        }
         server.owned_browser = owned_browser;
 
         // Handles to the background schedulers created below, kept on Self so
@@ -700,15 +667,6 @@ impl ServerCore {
                 ),
             ),
         );
-        let cloud_agent_executor = Arc::new(
-            screenpipe_core::agents::cloud::CloudAgentExecutor::new(
-                config.port,
-                config.api_auth_key.clone(),
-            )
-            .with_secret_store(server.secret_store.clone()),
-        );
-        agent_executors.insert("cloud-agent".to_string(), cloud_agent_executor);
-
         let pipe_store: Option<Arc<dyn screenpipe_core::pipes::PipeStore>> = Some(Arc::new(
             screenpipe_engine::pipe_store::SqlitePipeStore::new(db.clone()),
         ));
@@ -774,20 +732,6 @@ impl ServerCore {
             let pm_for_cb = shared_pipe_manager.clone();
             shared_pipe_manager.lock().await.set_on_run_complete(Arc::new(
                 move |pipe_name, execution_id, trigger_type, success, duration_secs, error_type| {
-                    let mut props = serde_json::json!({
-                        "pipe": pipe_name,
-                        "execution_id": execution_id,
-                        "trigger_type": trigger_type,
-                        "telemetry_schema_version": 2,
-                        "success": success,
-                        "duration_secs": duration_secs,
-                    });
-                    if let Some(et) = error_type {
-                        props["error_type"] = serde_json::Value::String(et.to_string());
-                    }
-                    // Keep the legacy event name so existing dashboards continue to work.
-                    analytics::capture_event_nonblocking("pipe_scheduled_run", props);
-
                     // Auto-register pipe artifacts to ~/.screenpipe/outputs/
                     if success {
                         let db = db_for_cb.clone();
@@ -1374,7 +1318,6 @@ impl ServerCore {
             data_path,
             port: config.port,
             local_api_key: config.api_auth_key.clone(),
-            history_access,
             redact_shutdown,
             oauth_refresher: oauth_refresher_handle,
             external_memory_sync: external_memory_sync_handle,

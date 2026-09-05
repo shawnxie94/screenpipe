@@ -32,7 +32,7 @@ fn provider_name(provider: &AIProviderType) -> String {
     serde_json::to_value(provider)
         .ok()
         .and_then(|value| value.as_str().map(str::to_string))
-        .unwrap_or_else(|| "screenpipe-cloud".to_string())
+        .unwrap_or_else(|| "custom".to_string())
 }
 
 fn provider_config_for_chat(
@@ -73,7 +73,6 @@ fn provider_config_for_chat(
             config: agent.config.clone(),
             mode_id: agent.mode_id.clone(),
             approval_mode: agent.approval_mode.clone(),
-            use_screenpipe_cloud: agent.use_screenpipe_cloud,
         })
     } else {
         None
@@ -82,8 +81,7 @@ fn provider_config_for_chat(
         .user
         .token
         .clone()
-        .filter(|token| !token.is_empty())
-        .or_else(crate::auth_token::cached_cloud_token);
+        .filter(|token| !token.is_empty());
     Ok((
         PiProviderConfig {
             backend: is_acp.then_some(PiBackend::Acp),

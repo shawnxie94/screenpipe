@@ -73,7 +73,7 @@ pub struct BootPhaseSnapshot {
     pub since_epoch_secs: u64,
     /// True when this CPU lacks AVX2 (pre-2013 x86-64 / Atom-line): local
     /// whisper/qwen3 STT is disabled at runtime (their kernels are
-    /// AVX2-compiled); parakeet + cloud engines still work. Drives the
+    /// AVX2-compiled); parakeet remains available. Drives the
     /// "compatibility mode" notice in onboarding/settings.
     pub cpu_compat_mode: bool,
 }
@@ -1849,15 +1849,6 @@ pub async fn start_health_check(app: tauri::AppHandle) -> Result<()> {
                         }
                         if stall_reported {
                             stall_reported = false;
-                            send_capture_stall_event(
-                                &app,
-                                "capture_stall_recovered",
-                                json!({
-                                    "stale_checks": recovered_after,
-                                    "user_active": user_active,
-                                }),
-                            )
-                            .await;
                         }
                     }
 
@@ -1868,17 +1859,6 @@ pub async fn start_health_check(app: tauri::AppHandle) -> Result<()> {
                     // presence flag only, never window titles, app names or pixels.
                     if !stall_reported && stale_tier.confirmed() {
                         stall_reported = true;
-                        send_capture_stall_event(
-                            &app,
-                            "capture_stall_detected",
-                            json!({
-                                "stale_checks": stale_tier.consecutive(),
-                                "user_active": user_active,
-                                "loop_stage": health.loop_stage.clone(),
-                                "loop_stage_age_secs": health.loop_stage_age_secs,
-                            }),
-                        )
-                        .await;
                     }
 
                     // After wake from sleep, reset stall counters and notification
@@ -2054,26 +2034,6 @@ async fn show_port_conflict_notification(app: &tauri::AppHandle, error_msg: &str
     crate::commands::show_notification_panel(app.clone(), payload.to_string())
         .await
         .map_err(|e| anyhow::anyhow!(e))
-}
-
-/// Report a capture-stall incident edge to analytics.
-///
-/// Deliberately NOT gated on `show_restart_notifications`: that setting
-/// defaults off, so gating here would undercount the incident to near zero and
-/// leave us unable to answer "how many users hit this". Respects the user's
-/// analytics opt-out, which `AnalyticsManager::send_event` already enforces.
-///
-/// Payload is content-free by construction: a stage name from a fixed enum,
-/// integer ages and a presence flag. No window titles, app names, monitor
-/// names, paths or pixels.
-async fn send_capture_stall_event(app: &tauri::AppHandle, event: &str, props: serde_json::Value) {
-    let Some(analytics) = app.try_state::<std::sync::Arc<crate::analytics::AnalyticsManager>>()
-    else {
-        return;
-    };
-    if let Err(e) = analytics.send_event(event, Some(props)).await {
-        debug!("failed to send {event} analytics: {e}");
-    }
 }
 
 /// Show a notification telling the user that capture has stalled, with a restart button.

@@ -1282,10 +1282,6 @@ pub struct SettingsStore {
     /// Auto-update store-installed pipes that haven't been locally modified.
     #[serde(rename = "autoUpdatePipes", default = "default_true")]
     pub auto_update_pipes: bool,
-    /// Use screenpipe cloud for AI-powered features like suggestions.
-    /// Better quality but sends activity context to the cloud (zero data retention).
-    #[serde(rename = "enhancedAI", default)]
-    pub enhanced_ai: bool,
     /// Explicit consumer opt-in for on-demand remote diagnostic log requests.
     /// Enterprise builds enforce remote log collection separately; this stored
     /// value remains false unless a consumer chooses to enable it.
@@ -1412,8 +1408,6 @@ pub enum AIProviderType {
     NativeOllama,
     #[serde(rename = "custom")]
     Custom,
-    #[serde(rename = "screenpipe-cloud", alias = "claude-code")]
-    ScreenpipeCloud,
     #[serde(rename = "acp")]
     Acp,
     #[serde(rename = "pi", alias = "opencode")]
@@ -1444,10 +1438,6 @@ pub struct AcpAgentPresetConfig {
     /// Screenpipe-owned ACP permission response policy (`ask` or `allow-all`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub approval_mode: Option<String>,
-    /// Send this agent's model calls through Screenpipe Cloud. `None` keeps
-    /// presets saved before this choice on the agent's own provider account.
-    #[serde(default)]
-    pub use_screenpipe_cloud: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Type, Clone)]
@@ -1630,22 +1620,22 @@ pub(crate) enum LocalPlanPolicy {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum AudioEngineFallbackReason {
-    NotLoggedIn,
+    DeprecatedCloudEngine,
     MissingDeepgramKey,
 }
 
 impl AudioEngineFallbackReason {
     pub fn notification_title(&self) -> &'static str {
         match self {
-            Self::NotLoggedIn => "Screenpipe Cloud unavailable",
+            Self::DeprecatedCloudEngine => "Local transcription selected",
             Self::MissingDeepgramKey => "Deepgram unavailable",
         }
     }
 
     pub fn notification_body(&self) -> &'static str {
         match self {
-            Self::NotLoggedIn => {
-                "You are not logged in, so audio is being transcribed locally with Whisper Turbo (fast). Log in to use Screenpipe Cloud."
+            Self::DeprecatedCloudEngine => {
+                "The retired cloud transcription engine is no longer available, so audio is being transcribed locally."
             }
             Self::MissingDeepgramKey => {
                 "Deepgram has no API key configured, so audio is being transcribed locally with Whisper Turbo (fast)."
@@ -1869,7 +1859,6 @@ impl Default for SettingsStore {
             auto_update: true,
             update_channel: default_update_channel(),
             auto_update_pipes: true,
-            enhanced_ai: false,
             remote_log_collection_enabled: false,
             remote_log_collection_user_id: None,
             #[cfg(target_os = "macos")]
@@ -1938,7 +1927,6 @@ impl SettingsStore {
                 "openai-chatgpt",
                 "native-ollama",
                 "custom",
-                "screenpipe-cloud",
                 "acp",
                 "opencode",
                 "pi",
@@ -2053,29 +2041,24 @@ impl SettingsStore {
     /// Since RecordingSettings is now embedded via flatten, this is mostly a
     /// clone with overrides for fields that need special handling (e.g. user_id
     /// comes from the User auth object, user_name has a fallback chain).
-    fn resolved_cloud_auth_token(&self, cached_token: Option<String>) -> Option<String> {
+    fn resolved_cloud_auth_token(&self) -> Option<String> {
         self.user
             .token
             .clone()
             .filter(|token| !token.is_empty())
-            .or_else(|| cached_token.filter(|token| !token.is_empty()))
     }
 
     pub(crate) fn has_cloud_authentication(&self) -> bool {
-        self.resolved_cloud_auth_token(crate::auth_token::cached_cloud_token())
-            .is_some()
+        self.resolved_cloud_auth_token().is_some()
     }
 
     pub fn to_recording_settings(&self) -> screenpipe_config::RecordingSettings {
         let mut settings = self.recording.clone();
-        // Override user_id with the Clerk JWT token from the auth user object.
-        // This token is used as the Bearer credential for screenpipe cloud
-        // (transcription proxy, Pi agent, etc.), not as a database ID.
-        // #3943: the token no longer persists in store.bin; fall back to the
-        // secret-store-backed cache (seeded at startup and on every sign-in)
-        // so the engine still gets the cloud Bearer.
+        // Local-only build: the secret-store-backed cache no longer exists.
+        // user.token is the only place a cloud JWT could live and is empty
+        // by construction; the engine's cloud proxy will see an empty Bearer.
         settings.user_id = self
-            .resolved_cloud_auth_token(crate::auth_token::cached_cloud_token())
+            .resolved_cloud_auth_token()
             .unwrap_or_default();
         // Fallback chain: userName setting → cloud name → cloud email
         settings.user_name = settings
@@ -2341,16 +2324,6 @@ impl SettingsStore {
     }
 
     pub fn audio_engine_resolution(&self) -> AudioEngineResolution {
-        let has_cloud_auth = self
-            .resolved_cloud_auth_token(crate::auth_token::cached_cloud_token())
-            .is_some();
-        self.audio_engine_resolution_with_cloud_auth(has_cloud_auth)
-    }
-
-    fn audio_engine_resolution_with_cloud_auth(
-        &self,
-        has_cloud_auth: bool,
-    ) -> AudioEngineResolution {
         let engine = self.recording.audio_transcription_engine.clone();
         let has_deepgram_key = !self.recording.deepgram_api_key.is_empty()
             && self.recording.deepgram_api_key != "default";
@@ -2362,13 +2335,12 @@ impl SettingsStore {
         };
 
         match engine.as_str() {
-            // Any signed-in account may use cloud transcription — the free tier
-            // includes a cloud transcription allowance enforced server-side.
-            // Never gate on subscription/entitlement here.
-            "screenpipe-cloud" if !has_cloud_auth => {
-                tracing::warn!("screenpipe-cloud selected but user not logged in, falling back to whisper-large-v3-turbo-quantized");
+            // The hosted engine is retained only as a one-time migration value
+            // for old settings files. It is never a valid runtime engine.
+            "screenpipe-cloud" => {
+                tracing::warn!("retired cloud transcription engine selected; falling back to local transcription");
                 resolution.active = fallback;
-                resolution.fallback_reason = Some(AudioEngineFallbackReason::NotLoggedIn);
+                resolution.fallback_reason = Some(AudioEngineFallbackReason::DeprecatedCloudEngine);
             }
             "deepgram" if !has_deepgram_key => {
                 tracing::warn!("deepgram selected but no API key configured, falling back to whisper-large-v3-turbo-quantized");
@@ -3684,100 +3656,6 @@ mod tests {
     }
 
     #[test]
-    fn screenpipe_cloud_falls_back_when_not_logged_in() {
-        let mut store = SettingsStore::default();
-        store.recording.audio_transcription_engine = "screenpipe-cloud".to_string();
-        store.user.id = None;
-        store.user.token = None;
-        store.user.cloud_subscribed = Some(true);
-
-        // Keep this assertion independent of the process-global auth-token
-        // cache, which other tests intentionally populate in parallel.
-        let resolution = store.audio_engine_resolution_with_cloud_auth(false);
-
-        assert_eq!(resolution.requested, "screenpipe-cloud");
-        assert_eq!(resolution.active, FALLBACK_ENGINE);
-        assert_eq!(
-            resolution.fallback_reason,
-            Some(AudioEngineFallbackReason::NotLoggedIn)
-        );
-    }
-
-    #[test]
-    fn raw_user_id_is_not_cloud_authentication() {
-        let mut store = SettingsStore::default();
-        store.recording.audio_transcription_engine = "screenpipe-cloud".to_string();
-        store.user.id = Some("550e8400-e29b-41d4-a716-446655440000".to_string());
-        store.user.token = None;
-        store.user.cloud_subscribed = Some(true);
-
-        let token = store.resolved_cloud_auth_token(None);
-        assert!(token.is_none());
-
-        let resolution = store.audio_engine_resolution_with_cloud_auth(token.is_some());
-        assert_eq!(resolution.requested, "screenpipe-cloud");
-        assert_eq!(resolution.active, FALLBACK_ENGINE);
-        assert_eq!(
-            resolution.fallback_reason,
-            Some(AudioEngineFallbackReason::NotLoggedIn)
-        );
-    }
-
-    #[test]
-    fn screenpipe_cloud_stays_active_for_signed_in_free_users() {
-        // Free tier includes cloud transcription; the allowance is enforced
-        // server-side, never by a local subscription gate.
-        let mut store = SettingsStore::default();
-        store.recording.audio_transcription_engine = "screenpipe-cloud".to_string();
-        store.user.token = Some("token".to_string());
-        store.user.id = Some("user_free".to_string());
-        store.user.cloud_subscribed = Some(false);
-
-        let resolution = store.audio_engine_resolution();
-
-        assert_eq!(resolution.active, "screenpipe-cloud");
-        assert_eq!(resolution.fallback_reason, None);
-    }
-
-    #[test]
-    fn screenpipe_cloud_stays_active_for_app_entitled_users() {
-        let mut store = SettingsStore::default();
-        store.recording.audio_transcription_engine = "screenpipe-cloud".to_string();
-        store.user.id = Some("user_paid".to_string());
-        store.user.token = Some("token".to_string());
-        store.user.cloud_subscribed = Some(false);
-        store.user.app_entitled = Some(true);
-        store.user.subscription_plan = Some("standard".to_string());
-        store.user.entitlement = Some(json!({
-            "active": true,
-            "plan": "standard",
-            "source": "subscription",
-            "checked_at": chrono::Utc::now().to_rfc3339(),
-            "features": { "app": true, "cloud": false }
-        }));
-
-        let resolution = store.audio_engine_resolution();
-
-        assert_eq!(resolution.active, "screenpipe-cloud");
-        assert_eq!(resolution.fallback_reason, None);
-    }
-
-    #[test]
-    fn screenpipe_cloud_stays_active_for_stale_legacy_cloud_subscribed_without_entitlement() {
-        // Even without verified entitlement evidence, a signed-in token is
-        // enough for cloud transcription (free tier allowance, server-enforced).
-        let mut store = SettingsStore::default();
-        store.recording.audio_transcription_engine = "screenpipe-cloud".to_string();
-        store.user.token = Some("token".to_string());
-        store.user.cloud_subscribed = Some(true);
-
-        let resolution = store.audio_engine_resolution();
-
-        assert_eq!(resolution.active, "screenpipe-cloud");
-        assert_eq!(resolution.fallback_reason, None);
-    }
-
-    #[test]
     fn deepgram_falls_back_without_api_key() {
         let mut store = SettingsStore::default();
         store.recording.audio_transcription_engine = "deepgram".to_string();
@@ -3808,7 +3686,7 @@ mod tests {
 
     fn presets_n(n: usize) -> Vec<Value> {
         (0..n)
-            .map(|i| json!({"id": format!("p{}", i), "model": "x", "provider": "screenpipe-cloud"}))
+            .map(|i| json!({"id": format!("p{}", i), "model": "x", "provider": "custom"}))
             .collect()
     }
 
@@ -4759,30 +4637,8 @@ mod tests {
         assert_eq!(preset["acpAgent"]["id"].as_str(), Some("codex-acp"));
     }
 
-    #[test]
-    fn acp_cloud_billing_route_survives_preset_persistence() {
-        let preset: AIPreset = serde_json::from_value(json!({
-            "id": "claude code",
-            "provider": "acp",
-            "model": "claude-acp",
-            "acpAgent": {
-                "id": "claude-acp",
-                "useScreenpipeCloud": true
-            }
-        }))
-        .expect("ACP preset should deserialize");
-
-        let persisted = serde_json::to_value(preset).expect("ACP preset should serialize");
-        assert_eq!(
-            persisted["acpAgent"]["useScreenpipeCloud"].as_bool(),
-            Some(true)
-        );
-    }
-
     /// The exact shape an ACP-unaware build leaves behind: provider rewritten
-    /// to "custom", no URL, agent id still sitting in `model`. Without the
-    /// repair the desktop asks the cloud gateway for a model named "codex-acp"
-    /// and shows the 403 as "upgrade to Screenpipe Business".
+    /// to "custom", no URL, agent id still sitting in `model".
     #[test]
     fn orphaned_acp_preset_gets_its_provider_back() {
         let downgraded = json!({
@@ -4810,8 +4666,8 @@ mod tests {
         let intentional = json!({
             "aiPresets": [
                 {
-                    // switched to cloud: editor rewrote the model
-                    "provider": "screenpipe-cloud",
+                    // switched away from the retired hosted provider
+                    "provider": "custom",
                     "url": "",
                     "model": "auto",
                     "acpAgent": {"id": "codex-acp"}
@@ -4834,7 +4690,7 @@ mod tests {
 
         let sanitized = SettingsStore::sanitize_legacy_fields(intentional);
         let presets = sanitized["aiPresets"].as_array().unwrap();
-        assert_eq!(presets[0]["provider"].as_str(), Some("screenpipe-cloud"));
+        assert_eq!(presets[0]["provider"].as_str(), Some("custom"));
         assert_eq!(presets[1]["provider"].as_str(), Some("native-ollama"));
         assert_eq!(presets[2]["provider"].as_str(), Some("custom"));
     }

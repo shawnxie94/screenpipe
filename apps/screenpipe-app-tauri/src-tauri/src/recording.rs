@@ -244,18 +244,6 @@ pub struct RecordingState {
     pub wants_recording: Arc<AtomicBool>,
     /// Recently active meeting to revive when capture is immediately restarted.
     pub(crate) interrupted_meeting: Arc<Mutex<Option<InterruptedMeeting>>>,
-    /// App-scoped cloud-auth token (Clerk JWT). Outlives the Server (which
-    /// is recreated on every recording restart) so that writes from the
-    /// `set_cloud_token` Tauri command — pushed by the frontend on every
-    /// sign-in / sign-out — survive capture toggles. The Server's own
-    /// `cloud_token` field is replaced with this same Arc at start, and
-    /// `PiExecutor` is constructed with `with_shared_user_token(this)`, so
-    /// one update propagates to all three readers (cloud_proxy.rs, the
-    /// pi-agent's models.json apiKey, and any future Tauri-side consumer).
-    pub cloud_token: Arc<arc_swap::ArcSwap<Option<String>>>,
-    /// Live rolling-history policy shared with the local HTTP server. Consumer
-    /// plan refreshes update this in place; server restart is not required.
-    pub history_access: screenpipe_engine::history_access::HistoryAccessPolicy,
     /// Restart-storm guard for DB-wedge auto-recovery. Shared across server
     /// restarts so a DB that stays broken after N restarts stops retrying.
     pub db_wedge_breaker: DbWedgeBreaker,
@@ -289,12 +277,10 @@ impl RecordingState {
     }
 }
 
-pub(crate) fn refresh_history_access_policy(
-    policy: &screenpipe_engine::history_access::HistoryAccessPolicy,
-    _settings: &SettingsStore,
-) {
-    policy.set_last_24_hours(false);
-}
+// `refresh_history_access_policy` previously forced the rolling history
+// policy back to unrestricted on every sign-in. Local-only builds carry no
+// plan signal, so the engine-side `HistoryAccessPolicy` already defaults to
+// `unrestricted()`. Nothing to refresh — the policy is already correct.
 
 fn capture_intended_now(wants_recording: &AtomicBool) -> bool {
     wants_recording.load(Ordering::SeqCst)
@@ -1254,8 +1240,6 @@ async fn spawn_screenpipe_inner(
     let server_arc = state.server.clone();
     let capture_arc = state.capture.clone();
     let wants_recording = state.wants_recording.clone();
-    let cloud_token_arc = state.cloud_token.clone();
-    let history_access = state.history_access.clone();
     // Orphan-closing exists to clean up meetings a *crash* left open. When this
     // restart is the thing that interrupted the meeting we already know which
     // one is still running, so sweeping it is not cleanup — it is the bug: the
@@ -1325,8 +1309,6 @@ async fn spawn_screenpipe_inner(
                     &recording_config,
                     on_pipe_output,
                     Some(owned_browser),
-                    cloud_token_arc.clone(),
-                    history_access.clone(),
                 )
                 .await
                 {
@@ -1437,7 +1419,7 @@ async fn spawn_screenpipe_inner(
             // that startup race.
             let retention_app = app.clone();
             tauri::async_runtime::spawn(async move {
-                crate::sync::auto_start_retention(&retention_app).await;
+                crate::local_retention::auto_start_retention(&retention_app).await;
             });
             Ok(())
         }
@@ -1573,147 +1555,6 @@ mod local_api_auth_tests {
         let config = store.to_recording_config(std::path::PathBuf::from("test-data"));
 
         assert!(config.api_auth);
-    }
-}
-
-#[cfg(test)]
-mod recording_access_tests {
-    use super::{recording_access_policy, server_access_policy};
-    use crate::startup_auth::AuthenticationStatus;
-
-    #[test]
-    fn verified_free_consumer_can_record_without_a_paid_entitlement() {
-        assert!(recording_access_policy(
-            false,
-            false,
-            true,
-            false,
-            false,
-            false,
-            AuthenticationStatus::Authenticated,
-        ));
-    }
-
-    #[test]
-    fn consumer_with_unknown_plan_cannot_record() {
-        assert!(!recording_access_policy(
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            AuthenticationStatus::Authenticated,
-        ));
-    }
-
-    #[test]
-    fn signed_out_consumer_cannot_start_recording() {
-        assert!(!recording_access_policy(
-            false,
-            false,
-            true,
-            false,
-            false,
-            false,
-            AuthenticationStatus::LoggedOut,
-        ));
-    }
-
-    #[test]
-    fn enterprise_build_requires_verified_enterprise_session() {
-        assert!(!recording_access_policy(
-            true,
-            false,
-            true,
-            false,
-            false,
-            false,
-            AuthenticationStatus::Authenticated,
-        ));
-        assert!(recording_access_policy(
-            true,
-            false,
-            false,
-            true,
-            false,
-            false,
-            AuthenticationStatus::Authenticated,
-        ));
-    }
-
-    #[test]
-    fn mandatory_enterprise_org_cannot_record_from_consumer_binary() {
-        assert!(!recording_access_policy(
-            false,
-            false,
-            true,
-            true,
-            true,
-            false,
-            AuthenticationStatus::Authenticated,
-        ));
-    }
-
-    #[test]
-    fn summary_paywall_blocks_capture_even_in_debug_builds() {
-        assert!(!recording_access_policy(
-            false,
-            true,
-            true,
-            false,
-            false,
-            true,
-            AuthenticationStatus::Authenticated,
-        ));
-    }
-
-    #[test]
-    fn signup_free_startup_does_not_require_account_or_enterprise_auth() {
-        assert!(recording_access_policy(
-            false,
-            false,
-            false,
-            false,
-            false,
-            false,
-            AuthenticationStatus::NotRequired,
-        ));
-        assert!(recording_access_policy(
-            true,
-            false,
-            false,
-            false,
-            false,
-            false,
-            AuthenticationStatus::NotRequired,
-        ));
-    }
-
-    #[test]
-    fn summary_paywall_keeps_the_local_read_server_available() {
-        assert!(server_access_policy(false, true, true, false, false));
-        assert!(server_access_policy(false, false, true, false, false));
-    }
-}
-
-#[cfg(test)]
-mod history_access_tests {
-    use super::history_access_restricted;
-
-    #[test]
-    fn consumer_free_and_unattributed_accounts_are_restricted() {
-        assert!(history_access_restricted(false, true));
-    }
-
-    #[test]
-    fn verified_paid_consumer_is_unrestricted() {
-        assert!(!history_access_restricted(false, false));
-    }
-
-    #[test]
-    fn enterprise_build_is_unrestricted_without_consumer_plan_truth() {
-        assert!(!history_access_restricted(true, true));
     }
 }
 

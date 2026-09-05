@@ -124,92 +124,12 @@ fn attempt_timeout(file_len: u64, remaining: Duration) -> Duration {
     size_aware.min(remaining)
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn upload_file_to_s3(file_path: &str, signed_url: &str) -> Result<bool, String> {
-    debug!("Starting upload for file: {}", file_path);
-
-    // Read file contents - do this outside retry loop to avoid multiple reads
-    let file_contents = match tokio::fs::read(file_path).await {
-        Ok(contents) => {
-            debug!("Successfully read file of size: {} bytes", contents.len());
-            contents
-        }
-        Err(e) => {
-            error!("Failed to read file: {}", e);
-            return Err(e.to_string());
-        }
-    };
-
-    // The default client has no timeout, so a stalled connection hung this
-    // command forever — the stuck "sending..." state in #5360. Requests get
-    // a size-aware deadline per attempt via `attempt_timeout`.
-    let client = reqwest::Client::builder()
-        .connect_timeout(Duration::from_secs(10))
-        .build()
-        .map_err(|e| e.to_string())?;
-    let max_retries = 3;
-    let mut attempt = 0;
-    let mut last_error = String::new();
-    let started = std::time::Instant::now();
-
-    while attempt < max_retries {
-        attempt += 1;
-        let remaining = UPLOAD_OVERALL_BUDGET.saturating_sub(started.elapsed());
-        if remaining < Duration::from_secs(5) {
-            last_error = format!("upload budget exhausted ({last_error})");
-            break;
-        }
-        debug!("Upload attempt {} of {}", attempt, max_retries);
-
-        match client
-            .put(signed_url)
-            // Supabase records the object's content type from this header;
-            // without it videos land as application/octet-stream.
-            .header("Content-Type", get_mime_type(file_path))
-            .body(file_contents.clone())
-            .timeout(attempt_timeout(file_contents.len() as u64, remaining))
-            .send()
-            .await
-        {
-            Ok(response) => {
-                let status = response.status();
-                if status.is_success() {
-                    debug!("Successfully uploaded file on attempt {}", attempt);
-                    return Ok(true);
-                }
-                // Surface the response body — S3/Supabase wraps the reason for
-                // 400/403 (signed URL expired, content-type mismatch, etc.) in
-                // an XML payload that we'd otherwise discard.
-                let body = response.text().await.unwrap_or_default();
-                let snippet: String = body.chars().take(500).collect();
-                last_error = format!("Upload failed with status: {} body: {}", status, snippet);
-                error!("{} (attempt {}/{})", last_error, attempt, max_retries);
-            }
-            Err(e) => {
-                last_error = format!("Request failed: {}", e);
-                error!("{} (attempt {}/{})", last_error, attempt, max_retries);
-            }
-        }
-
-        if attempt < max_retries {
-            let delay = Duration::from_secs(2u64.pow(attempt as u32 - 1)); // Exponential backoff
-            debug!("Waiting {}s before retry...", delay.as_secs());
-            sleep(delay).await;
-        }
-    }
-
-    Err(format!(
-        "Upload failed after {} attempts. Last error: {}",
-        max_retries, last_error
-    ))
-}
 
 #[cfg(test)]
 mod tests {
-    use super::{attempt_timeout, get_media_file, get_mime_type, upload_file_to_s3};
+    use super::{attempt_timeout, get_media_file, get_mime_type};
     use std::time::Duration;
-    use wiremock::matchers::{body_bytes, method, path};
+    use wiremock::matchers::{path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[test]
@@ -267,27 +187,4 @@ mod tests {
         assert_eq!(media["mimeType"], "video/mp4");
     }
 
-    #[tokio::test]
-    async fn uploads_file_bytes_with_put() {
-        let dir = tempfile::tempdir().unwrap();
-        let file_path = dir.path().join("upload.bin");
-        let contents = b"screenpipe-media-upload";
-        std::fs::write(&file_path, contents).unwrap();
-
-        let server = MockServer::start().await;
-        Mock::given(method("PUT"))
-            .and(path("/signed-upload"))
-            .and(body_bytes(contents.to_vec()))
-            .respond_with(ResponseTemplate::new(200))
-            .expect(1)
-            .mount(&server)
-            .await;
-
-        let signed_url = format!("{}/signed-upload", server.uri());
-        let uploaded = upload_file_to_s3(file_path.to_str().unwrap(), &signed_url)
-            .await
-            .unwrap();
-
-        assert!(uploaded);
-    }
 }

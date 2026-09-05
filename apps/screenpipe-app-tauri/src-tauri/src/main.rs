@@ -16,7 +16,6 @@
 // (128) overflows while expanding the macro. Raise it for the whole crate.
 #![recursion_limit = "256"]
 
-use analytics::AnalyticsManager;
 use serde_json::json;
 use std::env;
 use std::str::FromStr;
@@ -41,15 +40,11 @@ use window::ShowRewindWindow;
 
 mod activity_history;
 mod first_run_summary;
-mod analytics;
-mod auth_session;
 mod focus_handoff;
 #[allow(deprecated)]
 mod icons;
-use crate::analytics::start_analytics;
 mod agent_event_emitter;
 mod audio_exclusions;
-mod auth_token;
 mod brain_views;
 mod calendar;
 mod capture_session;
@@ -58,7 +53,6 @@ mod chatgpt_oauth;
 mod coding_workspace;
 #[allow(deprecated)]
 mod commands;
-mod data_sync;
 mod db_recovery_notifications;
 mod db_relaunch;
 mod db_self_heal;
@@ -70,16 +64,15 @@ mod disk_pressure_notifications;
 #[cfg(feature = "e2e")]
 mod e2e;
 mod embedded_server;
-mod enterprise_config_file;
 mod events;
 mod feedback_redact;
-mod feedback_upload;
 mod google_calendar;
 mod hardware;
 mod ics_calendar;
 mod livetext;
 #[cfg(target_os = "macos")]
 mod livetext_ffi;
+mod local_retention;
 mod local_ui_visibility;
 mod meeting_export;
 mod meeting_live_notes;
@@ -103,7 +96,6 @@ mod port_conflict;
 mod process_exit;
 mod provider_automations;
 mod recording;
-mod remote_support_logs;
 mod remote_sync_commands;
 mod secrets;
 mod server;
@@ -113,12 +105,10 @@ mod server_core;
 mod space_monitor;
 mod store;
 mod suggestions;
-mod sync;
 mod tray;
 #[cfg(target_os = "macos")]
 mod staged_update;
 mod stale_tier;
-mod startup_auth;
 mod updates;
 mod voice_training;
 mod window;
@@ -154,7 +144,6 @@ pub use server::spawn_server;
 pub use permissions::do_permissions_check;
 pub use permissions::open_permission_settings;
 pub use permissions::request_permission;
-use sentry;
 use tauri::AppHandle;
 #[cfg(target_os = "macos")]
 mod dock_menu;
@@ -178,7 +167,6 @@ mod skills;
 mod specta_bindings;
 mod vault;
 mod viewer;
-mod web_base;
 
 #[cfg(target_os = "macos")]
 /// Tracks the observed permission transition so repeated focus events cannot
@@ -341,9 +329,6 @@ macro_rules! define_specta_builder {
             .commands(tauri_helper::specta_collect_commands!())
             .typ::<SettingsStore>()
             .typ::<OnboardingStore>()
-            .typ::<sync::SyncStatusResponse>()
-            .typ::<sync::SyncDeviceInfo>()
-            .typ::<sync::SyncConfig>()
             .typ::<calendar::CalendarStatus>()
             .typ::<calendar::CalendarEventItem>()
             .typ::<store::IcsCalendarEntry>()
@@ -559,143 +544,6 @@ async fn main() {
     #[cfg(target_os = "windows")]
     windows_crash_dump::install();
 
-    // Check if telemetry is disabled via store setting (analyticsEnabled)
-    let store_path = screenpipe_core::paths::default_screenpipe_data_dir().join("store.bin");
-    let store_json = std::fs::read(&store_path).ok().and_then(|data| {
-        if data.len() >= 8 && &data[..8] == b"SPSTORE1" {
-            // The encrypted file is authoritative: every reader asks the OS
-            // vault for its existing key instead of relying on a separate flag.
-            let key = match secrets::get_key() {
-                secrets::KeyResult::Found(k) => k,
-                _ => return None,
-            };
-            let plain = screenpipe_vault::crypto::decrypt_small(&data[8..], &key).ok()?;
-            serde_json::from_slice::<serde_json::Value>(&plain).ok()
-        } else {
-            serde_json::from_slice::<serde_json::Value>(&data).ok()
-        }
-    });
-    // Helper: look up a bool key in the store JSON (check both top-level and nested "settings")
-    let store_bool = |key: &str| -> Option<bool> {
-        store_json.as_ref().and_then(|data| {
-            data.get(key).and_then(|v| v.as_bool()).or_else(|| {
-                data.get("settings")
-                    .and_then(|s| s.get(key))
-                    .and_then(|v| v.as_bool())
-            })
-        })
-    };
-    // CI / automation (GitHub Actions, etc.) always wins over the settings
-    // opt-in so the desktop-app e2e suite never reaches Sentry/PostHog.
-    let telemetry_disabled = store_bool("analyticsEnabled")
-        .map(|enabled| !enabled)
-        .unwrap_or(false)
-        || screenpipe_engine::analytics::telemetry_disabled_by_env();
-    // The webview gets this same decision through the
-    // `is_telemetry_disabled_by_env` command (see commands.rs); it cannot read
-    // the process env itself.
-
-    let app_version = env!("CARGO_PKG_VERSION");
-    let sentry_guard = if !telemetry_disabled && crate::config::screenpipe_hosted_services_enabled() {
-        Some(sentry::init((
-            "https://da4edafe2c8e5e8682505945695ecad7@o4505591122886656.ingest.us.sentry.io/4510761355116544",
-            sentry::ClientOptions {
-                release: Some(format!("screenpipe-app@{}", app_version).into()),
-                send_default_pii: false,
-                server_name: Some("screenpipe-app".into()),
-                before_send: Some(std::sync::Arc::new(|mut event| {
-                    // Self-expiring Sentry reports. Each build stamps the
-                    // unix epoch seconds of its build time (see build.rs) and
-                    // we refuse to emit events once it's > 90 days old. This
-                    // is the "never get an error from an older version" lever:
-                    // users who never update gradually fall silent, so the
-                    // inbox reflects what's running on current releases
-                    // instead of a 6-month tail of ancient builds. 90d is
-                    // loose enough that even slow updaters stay reporting
-                    // for a full release cycle but tight enough that truly
-                    // stale installs age out.
-                    const SENTRY_REPORT_TTL_SECS: u64 = 90 * 24 * 60 * 60;
-                    let build_time: u64 = env!("SCREENPIPE_BUILD_UNIX_TIME")
-                        .parse()
-                        .unwrap_or(0);
-                    if build_time > 0 {
-                        let now = std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .map(|d| d.as_secs())
-                            .unwrap_or(0);
-                        if now.saturating_sub(build_time) > SENTRY_REPORT_TTL_SECS {
-                            return None;
-                        }
-                    }
-
-                    fn strip_user_paths(s: &str) -> String {
-                        let re_unix = regex::Regex::new(r"/Users/[^/\s]+").unwrap();
-                        let re_win = regex::Regex::new(r"(?i)C:\\Users\\[^\\\s]+").unwrap();
-                        let s = re_unix.replace_all(s, "~").to_string();
-                        re_win.replace_all(&s, "~").to_string()
-                    }
-                    if let Some(ref mut msg) = event.message {
-                        *msg = strip_user_paths(msg);
-                    }
-
-                    // Noise filter: drop events whose root cause is a user
-                    // environment problem we can't fix from code. These were
-                    // cluttering the Sentry inbox and drowning real bugs.
-                    // Patterns compiled lazily and shared across calls to
-                    // avoid per-event regex recompilation overhead.
-                    static USER_ENV_PATTERNS: std::sync::OnceLock<Vec<regex::Regex>> =
-                        std::sync::OnceLock::new();
-                    let env_patterns = USER_ENV_PATTERNS.get_or_init(|| {
-                        [
-                            // WKWebView IndexedDB crash — handled via auto-reload in layout.tsx (APP-2E)
-                            r"Indexed Database server lost",
-                            // User hasn't granted screen recording permission (CLI-49 — 706 users)
-                            r"Screen recording permission denied",
-                            // Linux system library missing — distro-local, not our bug (APP-70)
-                            r"Failed to load ayatana-appindicator3 or appindicator3 dynamic library",
-                            // Broken Homebrew install — external dylib missing (CLI-NN)
-                            r"Library not loaded.*libx265\.",
-                            // Local DB corruption — user dropped/restored part of their db.sqlite
-                            r"no such table: main\.speaker_embeddings",
-                            // Concurrent DB access / user ran CLI while app was running
-                            r"database is locked",
-                            // Transient network failures on /api/app-update — offline / DNS blip (APP-8X)
-                            r"failed to check for updates: error sending request",
-                            r"failed to lookup address information",
-                            // WebView2 runtime errors — Windows user env (APP-8T, APP-91)
-                            r"WebView2 error: WindowsError",
-                            // Deepgram DNS / connectivity blips — already logged locally, not Sentry-worthy
-                            r"deepgram transcription failed: Cannot resolve audio transcription server",
-                        ]
-                        .into_iter()
-                        .filter_map(|p| regex::Regex::new(p).ok())
-                        .collect()
-                    });
-
-                    let matches_noise = |text: &str| env_patterns.iter().any(|re| re.is_match(text));
-                    if event.message.as_deref().map(matches_noise).unwrap_or(false) {
-                        return None;
-                    }
-                    for val in event.exception.values.iter() {
-                        if let Some(ref v) = val.value {
-                            if matches_noise(v) {
-                                return None;
-                            }
-                        }
-                    }
-                    for val in event.exception.values.iter_mut() {
-                        if let Some(ref mut v) = val.value {
-                            *v = strip_user_paths(v);
-                        }
-                    }
-                    Some(event)
-                })),
-                ..Default::default()
-            },
-        )))
-    } else {
-        None
-    };
 
     // Install a panic hook that logs to stderr + Sentry BEFORE the default hook runs.
     // This is critical because panics inside `tao::send_event` (called from Obj-C)
@@ -770,18 +618,6 @@ async fn main() {
             let _ = f.sync_all(); // fsync before abort() kills us
         }
 
-        // Also report to Sentry if initialized
-        sentry::capture_message(
-            &format!(
-                "panic on thread '{}' at {}: {}",
-                thread_name, location, payload
-            ),
-            sentry::Level::Fatal,
-        );
-        // Flush Sentry so the event is sent before abort
-        if let Some(client) = sentry::Hub::current().client() {
-            client.flush(Some(std::time::Duration::from_secs(2)));
-        }
         // Call the default hook (prints backtrace etc.)
         default_hook(info);
     }));
@@ -834,28 +670,17 @@ async fn main() {
         }
     }
 
-    // #3943: migrate the cloud auth token out of the plaintext store.bin /
-    // auth.json (and the .last-good snapshot) into the encrypted secret store,
-    // seed the in-process cache, and scrub the plaintext copies. Runs here in
-    // `async main` — BEFORE the store plugin loads store.bin and before the
-    // engine spawn / `to_recording_settings` read the token. Must NOT run
-    // inside `.setup()`: a `block_on` there nests runtimes under
-    // #[tokio::main] and panics ("Cannot start a runtime from within a
-    // runtime"), killing the app at launch.
-    let initial_cloud_token = if crate::config::screenpipe_hosted_services_enabled() {
-        crate::auth_token::migrate_plaintext_token(
-            &screenpipe_core::paths::default_screenpipe_data_dir(),
-        )
-        .await
-    } else {
-        if let Err(error) = crate::auth_token::store_cloud_token(None).await {
-            warn!("failed to clear retired Screenpipe credentials: {error}");
-        }
-        if let Err(error) = crate::pi::clear_screenpipe_auth_token_files() {
-            warn!("failed to clear retired Pi Screenpipe credentials: {error}");
-        }
-        None
-    };
+    // Local-only build: there is no Screenpipe cloud session, so no
+    // cloud-token migration runs. `merge_pi_config` already scrubs any
+    // leftover `screenpipe` provider entry from pi's `auth.json` on every
+    // refresh, and the on-disk secret store no longer holds a cloud JWT.
+    // The Pi auth cleanup below is the safety net for users upgrading from
+    // old versions that may still have stale credentials in `~/.pi/agent/`.
+    // Must NOT run inside `.setup()`: a `block_on` there nests runtimes under
+    // #[tokio::main] and panics.
+    if let Err(error) = crate::pi::clear_screenpipe_auth_token_files() {
+        warn!("failed to clear retired Pi Screenpipe credentials: {error}");
+    }
 
     let recording_state = RecordingState {
         server_lifecycle: Arc::new(tokio::sync::Mutex::new(())),
@@ -866,8 +691,6 @@ async fn main() {
         last_spawn_epoch: Arc::new(AtomicU64::new(0)),
         wants_recording: Arc::new(AtomicBool::new(false)),
         interrupted_meeting: Arc::new(tokio::sync::Mutex::new(None)),
-        cloud_token: Arc::new(arc_swap::ArcSwap::new(Arc::new(initial_cloud_token))),
-        history_access: screenpipe_engine::history_access::HistoryAccessPolicy::unrestricted(),
         db_wedge_breaker: recording::new_db_wedge_breaker(),
     };
     let pi_state = pi::PiState(Arc::new(tokio::sync::Mutex::new(pi::PiPool::new())));
@@ -1026,15 +849,11 @@ async fn main() {
         let _ = app.run_on_main_thread(move || {
             let deep_link_url = deep_link::url_from_args(&args_clone);
             // A second app launch is usually the Windows taskbar/dock entry point.
-            // Deep links use route-specific foregrounding: auth returns through
-            // the app-entry gate, explicit timeline links open Timeline, and
-            // every other route starts from Home.
-            let login_duplicate = should_suppress_startup_handoff(&args_clone);
-            if !login_duplicate {
+            // Explicit timeline links open Timeline; every other local route
+            // starts from Home.
+            let startup_handoff = should_suppress_startup_handoff(&args_clone);
+            if !startup_handoff {
                 match deep_link::handoff_window(deep_link_url.as_deref()) {
-                    deep_link::HandoffWindow::AppEntry => {
-                        let _ = ShowRewindWindow::Onboarding.show(&app_for_closure);
-                    }
                     deep_link::HandoffWindow::Home => {
                         let _ = ShowRewindWindow::Home { page: None }.show(&app_for_closure);
                     }
@@ -1042,8 +861,8 @@ async fn main() {
                         commands::show_main_window(app_for_closure.clone());
                     }
                 }
-            } else if login_duplicate {
-                info!("autostart: ignored duplicate login LaunchAgent handoff");
+            } else {
+                info!("autostart: ignored duplicate LaunchAgent handoff");
             }
 
             // Forward deep-link URL from args
@@ -1064,13 +883,6 @@ async fn main() {
         .plugin(tauri_plugin_webdriver::init())
         .plugin(e2e::plugin());
 
-    // Only add Sentry plugin if telemetry is enabled
-    let app = if let Some(ref _guard) = sentry_guard {
-        let client = sentry::Hub::current().client().unwrap();
-        app.plugin(tauri_plugin_sentry::init(&client))
-    } else {
-        app
-    };
 
     #[cfg(target_os = "macos")]
     let app = app.plugin(tauri_nspanel::init());
@@ -1264,8 +1076,7 @@ async fn main() {
                 .with_writer(std::io::stdout)
                 .with_filter(EnvFilter::new(LOG_FILTER));
 
-            // Initialize the tracing subscriber with both layers + optional Sentry layer
-            // The Sentry layer captures error!() and warn!() events (not just panics)
+            // Initialize the tracing subscriber.
             let registry = tracing_subscriber::registry()
                 .with(file_layer)
                 .with(console_layer);
@@ -1273,19 +1084,13 @@ async fn main() {
             #[cfg(target_os = "macos")]
             let registry = registry.with(OsLogger::new("pe.screenpi", "app"));
 
-            if sentry_guard.is_some() {
-                registry
-                    .with(sentry::integrations::tracing::layer())
-                    .init();
-            } else {
-                registry.init();
-            }
+            registry.init();
 
             // Repeat the pre-logging compatibility-mode eprintln! now that the
             // subscriber is up, so it lands in the log files users send us.
             if !screenpipe_core::cpu_features::has_avx2() {
                 warn!(
-                    "cpu lacks AVX2 ({}); running in compatibility mode — local whisper/qwen3 STT disabled, parakeet/cloud engines still available",
+                    "cpu lacks AVX2 ({}); running in compatibility mode — local whisper/qwen3 STT disabled, parakeet remains available",
                     screenpipe_core::cpu_features::snapshot().as_log_string()
                 );
             }
@@ -1323,9 +1128,6 @@ async fn main() {
             info!("App version: {}", env!("CARGO_PKG_VERSION"));
             info!("Local data directory: {}", base_dir.display());
 
-            // PostHog analytics setup
-            let posthog_api_key = "phc_z7FZXE8vmXtdTQ78LMy3j1BQWW4zP6PGDUP46rgcdnb".to_string();
-            let interval_hours = 6;
 
             // Store setup and initialization - must be done first. A locked
             // encrypted store is fatal: continuing would let the webview load
@@ -1349,19 +1151,6 @@ async fn main() {
             e2e::seeds::apply_settings(app.handle(), &mut store);
 
             app.manage(store.clone());
-
-            // Resolve authentication at the first point its settings
-            // prerequisite is available, before beginning any application
-            // runtime. Consumer and Enterprise builds deliberately share these
-            // two sequential steps; only the credential check inside the
-            // resolver varies by build. `SCREENPIPE_SKIP_ONBOARDING` returns
-            // `NotRequired` without invoking either checker.
-            startup_auth::bootstrap(&app_handle, &store);
-
-            crate::recording::refresh_history_access_policy(
-                &app.state::<RecordingState>().history_access,
-                &store,
-            );
 
             // Set Chinese HuggingFace mirror early — before any model downloads
             if store.recording.use_chinese_mirror {
@@ -1424,56 +1213,6 @@ async fn main() {
                 });
             }
 
-            // Attach non-sensitive settings to all future Sentry events
-            if !telemetry_disabled {
-                sentry::configure_scope(|scope| {
-                    // Set user.id to the persistent analytics UUID. Support
-                    // context env vars are attached as tags so managed
-                    // deployments can be filtered without replacing the app id.
-                    scope.set_user(Some(sentry::protocol::User {
-                        id: Some(store.recording.analytics_id.clone()),
-                        ..Default::default()
-                    }));
-                    let telemetry_context = screenpipe_engine::telemetry_context::TelemetryContext::from_env();
-                    for (key, value) in telemetry_context.pairs() {
-                        scope.set_tag(key, value);
-                    }
-                    if !telemetry_context.is_empty() {
-                        scope.set_context(
-                            "screenpipe_support",
-                            sentry::protocol::Context::Other(telemetry_context.to_json_map()),
-                        );
-                    }
-                    scope.set_context("app_settings", sentry::protocol::Context::Other({
-                        let mut map = std::collections::BTreeMap::new();
-                        map.insert("audio_chunk_duration".into(), serde_json::json!(store.recording.audio_chunk_duration));
-                        map.insert("port".into(), serde_json::json!(store.recording.port));
-                        map.insert("disable_audio".into(), serde_json::json!(store.recording.disable_audio));
-                        map.insert("audio_transcription_engine".into(), serde_json::json!(store.recording.audio_transcription_engine));
-                        map.insert("ocr_engine".into(), serde_json::json!(store.ocr_engine));
-                        map.insert("monitor_ids".into(), serde_json::json!(store.recording.monitor_ids));
-                        map.insert("use_all_monitors".into(), serde_json::json!(store.recording.use_all_monitors));
-                        map.insert("languages".into(), serde_json::json!(store.recording.languages));
-                        map.insert("use_pii_removal".into(), serde_json::json!(store.recording.use_pii_removal));
-                        map.insert("disable_vision".into(), serde_json::json!(store.recording.disable_vision));
-                        map.insert("auto_start_enabled".into(), serde_json::json!(store.auto_start_enabled));
-                        map.insert("platform".into(), serde_json::json!(store.platform));
-                        map.insert("embedded_llm_enabled".into(), serde_json::json!(store.embedded_llm.enabled));
-                        map.insert("embedded_llm_model".into(), serde_json::json!(store.embedded_llm.model));
-                        // Only send counts for privacy-sensitive lists (not actual values)
-                        map.insert("audio_device_count".into(), serde_json::json!(store.recording.audio_devices.len()));
-                        map.insert("ignored_windows_count".into(), serde_json::json!(store.recording.ignored_windows.len()));
-                        map.insert("included_windows_count".into(), serde_json::json!(store.recording.included_windows.len()));
-                        map.insert("ignored_urls_count".into(), serde_json::json!(store.recording.ignored_urls.len()));
-                        map.insert("ai_preset_count".into(), serde_json::json!(store.ai_presets.len()));
-                        map
-                    }));
-                });
-            }
-
-            // Initialize sync state
-            app.manage(sync::SyncState::default());
-
             // Initialize onboarding store
             let mut onboarding_store = store::init_onboarding_store(&app.handle()).unwrap_or_else(|e| {
                 error!("Failed to init onboarding store, using defaults: {}", e);
@@ -1522,7 +1261,7 @@ async fn main() {
                     }
                     // Determine which whisper model the user's config needs
                     let engine = match store_for_download.recording.audio_transcription_engine.as_str() {
-                        "deepgram" | "screenpipe-cloud" => None, // Cloud engines don't need local model
+                        "deepgram" => None, // Deepgram does not need a local model
                         // Non-whisper local engines (parakeet MLX, qwen3) download their own
                         // models at load time — don't fetch the 834MB whisper file for them.
                         // If the user later switches to a whisper engine, TranscriptionEngine::new
@@ -1623,10 +1362,8 @@ async fn main() {
                 info!("launched from OS startup enrollment; starting in background");
             }
 
-            // Show onboarding/home unless managed background agent, or login
+            // Show onboarding/home unless managed background agent or hidden
             // autostart (tray + server only; UI via tray/dock/shortcut).
-            // Incomplete onboarding still shows so required enterprise access
-            // can finish; an authenticated login launch skips Home below.
             if app_ui_hidden {
                 info!("enterprise: hidden UI mode active, skipping startup app windows");
             } else if headless_startup {
@@ -1829,8 +1566,6 @@ async fn main() {
                 let capture_arc = recording_state.capture.clone();
                 let wants_recording = recording_state.wants_recording.clone();
                 let is_starting_clone = recording_state.is_starting.clone();
-                let cloud_token_arc = recording_state.cloud_token.clone();
-                let history_access = recording_state.history_access.clone();
                 // DB-wedge auto-recovery hook wiring — captured into the server
                 // thread so the freshly-built `ServerCore`'s DB gets the hook.
                 let app_for_db_wedge = app_handle.clone();
@@ -1992,8 +1727,6 @@ async fn main() {
                                 &config,
                                 on_pipe_output,
                                 Some(owned_browser),
-                                cloud_token_arc.clone(),
-                                history_access.clone(),
                             )
                             .await
                             {
@@ -2122,8 +1855,6 @@ async fn main() {
                 });
             }
 
-            let is_analytics_enabled = store.recording.analytics_enabled;
-
             let is_autostart_enabled = store
                 .auto_start_enabled;
 
@@ -2145,31 +1876,6 @@ async fn main() {
                 autostart_manager.is_enabled().unwrap_or(false)
             );
 
-
-            // Use persistent analytics_id for PostHog (consistent across frontend and backend)
-            let unique_id = store.recording.analytics_id.clone();
-            let email = store.user.email.unwrap_or_default();
-            let local_api = crate::recording::local_api_context_from_app(&app_handle);
-
-            if is_analytics_enabled && crate::config::screenpipe_hosted_services_enabled() {
-                match start_analytics(
-                    unique_id,
-                    email,
-                    posthog_api_key,
-                    interval_hours,
-                    local_api.url(""),
-                    local_api.api_key.clone(),
-                    data_dir.clone(),
-                    is_analytics_enabled,
-                ) {
-                    Ok(analytics_manager) => {
-                        app.manage(analytics_manager);
-                    }
-                    Err(e) => {
-                        error!("Failed to start analytics: {}", e);
-                    }
-                }
-            }
 
             // Start health check service (macos only)
             let app_handle_clone = app_handle.clone();
@@ -2287,35 +1993,9 @@ async fn main() {
 
             // Auto-start suggestions scheduler (always on)
             let suggestions_state = app_handle.state::<suggestions::SuggestionsState>();
-            // Initialize enhanced AI config from saved settings
-            {
-                if let Ok(Some(store)) = crate::store::SettingsStore::get(&app_handle) {
-                    if store.enhanced_ai {
-                        // #3943: the token no longer persists in store.bin —
-                        // fall back to the secret-store-backed cache.
-                        let token = store
-                            .user
-                            .token
-                            .clone()
-                            .filter(|t| !t.is_empty())
-                            .or_else(crate::auth_token::cached_cloud_token)
-                            .unwrap_or_default();
-                        if !token.is_empty() {
-                            // Use try_lock — blocking_lock panics inside a tokio runtime context
-                            if let Ok(mut guard) = suggestions_state.enhanced_ai.try_lock() {
-                                *guard = Some(suggestions::EnhancedAIConfig {
-                                    enabled: true,
-                                    token,
-                                });
-                            }
-                        }
-                    }
-                }
-            }
             let suggestions_state_clone = suggestions::SuggestionsState {
                 cache: suggestions_state.cache.clone(),
                 scheduler_handle: suggestions_state.scheduler_handle.clone(),
-                enhanced_ai: suggestions_state.enhanced_ai.clone(),
             };
             let app_handle_for_suggestions = app_handle.clone();
             tauri::async_runtime::spawn(async move {
@@ -2347,46 +2027,11 @@ async fn main() {
                 google_calendar::start_google_calendar_publisher(gcal_app_handle).await;
             });
 
-            if crate::config::screenpipe_hosted_services_enabled() {
-                // Account data sync. Runtime eligibility keeps customer-managed
-                // Enterprise accounts out while allowing Screenpipe's own org.
-                data_sync::spawn(&app_handle);
-
-                // Standard builds: account-bound, explicit opt-in support logs.
-                // Enterprise builds compile this as a no-op because their managed
-                // license-authenticated collector above is mandatory.
-                remote_support_logs::spawn(&app_handle);
-            }
-
-            // Disable removed Storage cloud backends if old settings enabled them.
-            let app_handle_clone = app_handle.clone();
-            let sync_state = app_handle.state::<sync::SyncState>();
-            let sync_state_clone = sync::SyncState {
-                enabled: sync_state.enabled.clone(),
-                is_syncing: sync_state.is_syncing.clone(),
-                last_sync: sync_state.last_sync.clone(),
-                last_error: sync_state.last_error.clone(),
-                manager: sync_state.manager.clone(),
-                machine_id: sync_state.machine_id.clone(),
-            };
-            tauri::async_runtime::spawn(async move {
-                // Wait for server to be ready
-                tokio::time::sleep(tokio::time::Duration::from_secs(12)).await;
-                sync::auto_start_sync(&app_handle_clone, &sync_state_clone).await;
-            });
-
-            // Disable removed Storage archive backend if old settings enabled it.
-            let app_handle_clone = app_handle.clone();
-            tauri::async_runtime::spawn(async move {
-                tokio::time::sleep(tokio::time::Duration::from_secs(15)).await;
-                sync::auto_start_archive(&app_handle_clone).await;
-            });
-
-            // Auto-start local data retention if it was enabled
+            // Auto-start local data retention if it was enabled.
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
                 tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
-                sync::auto_start_retention(&app_handle_clone).await;
+                local_retention::auto_start_retention(&app_handle_clone).await;
             });
 
             Ok(())
@@ -2414,26 +2059,6 @@ async fn main() {
             match event {
                 tauri::RunEvent::Ready { .. } => {
                     debug!("Ready event");
-                    // Send app started event
-                    let app_handle = app_handle.app_handle().clone();
-                    tauri::async_runtime::spawn(async move {
-                        if let Some(analytics) = app_handle.try_state::<Arc<AnalyticsManager>>() {
-                            // cpu_avx2/cpu_features size the pre-AVX2 population
-                            // running in compatibility mode (local whisper/qwen3
-                            // STT disabled) — see cpu_features in screenpipe-core.
-                            let cpu = screenpipe_core::cpu_features::snapshot();
-                            let _ = analytics
-                                .send_event(
-                                    "app_started",
-                                    Some(json!({
-                                        "startup_type": "normal",
-                                        "cpu_avx2": cpu.avx2,
-                                        "cpu_features": cpu.as_log_string()
-                                    })),
-                                )
-                                .await;
-                        }
-                    });
                 }
                 tauri::RunEvent::ExitRequested { code, api, .. } => {
                     if code == Some(tauri::RESTART_EXIT_CODE) {
@@ -2455,21 +2080,6 @@ async fn main() {
                 tauri::RunEvent::Exit => {
                     info!("App exiting — running cleanup");
 
-                    // Best-effort analytics; do not block _exit on network.
-                    let app_handle_v2 = app_handle.app_handle().clone();
-                    tauri::async_runtime::spawn(async move {
-                        if let Some(analytics) = app_handle_v2.try_state::<Arc<AnalyticsManager>>()
-                        {
-                            let _ = analytics
-                                .send_event(
-                                    "app_closed",
-                                    Some(json!({
-                                        "shutdown_type": "normal"
-                                    })),
-                                )
-                                .await;
-                        }
-                    });
 
                     process_exit::run_blocking_pre_exit_teardown(app_handle.app_handle().clone());
 
@@ -2536,7 +2146,7 @@ async fn main() {
 mod autostart_arg_tests {
     use super::{
         args_contain_autostart, classify_login_launch, should_suppress_startup_handoff,
-        PendingPlainLoginDuplicate, AUTOSTART_ARG, MACOS_LOGIN_DUPLICATE_WINDOW,
+        AUTOSTART_ARG,
     };
 
     #[test]
@@ -2568,33 +2178,6 @@ mod autostart_arg_tests {
         assert!(classify_login_launch(true, true));
     }
 
-    #[test]
-    fn plain_login_duplicate_is_bounded_and_one_shot() {
-        let start = std::time::Instant::now();
-        let mut pending = PendingPlainLoginDuplicate::default();
-
-        pending.arm(true, true, start);
-        assert!(!pending.consume_if_plain(&["screenpipe", "--manual"], start));
-        assert!(!pending.consume_if_plain(&["screenpipe://open"], start));
-        assert!(pending.consume_if_plain(&["screenpipe"], start));
-        assert!(!pending.consume_if_plain(&["screenpipe"], start));
-
-        pending.arm(true, true, start);
-        assert!(!pending.consume_if_plain(
-            &["screenpipe"],
-            start + MACOS_LOGIN_DUPLICATE_WINDOW + std::time::Duration::from_millis(1)
-        ));
-    }
-
-    #[test]
-    fn plain_login_duplicate_arms_only_for_legacy_with_main_app_enabled() {
-        let start = std::time::Instant::now();
-        for (legacy_launch, main_app_enabled) in [(false, true), (true, false), (false, false)] {
-            let mut pending = PendingPlainLoginDuplicate::default();
-            pending.arm(legacy_launch, main_app_enabled, start);
-            assert!(!pending.consume_if_plain(&["screenpipe"], start));
-        }
-    }
 }
 
 #[cfg(test)]

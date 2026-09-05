@@ -222,56 +222,6 @@ impl ActivityHistoryState {
     }
 }
 
-fn track_generation_event(app: &AppHandle, event: &'static str, properties: Value) {
-    if let Some(analytics) = app.try_state::<std::sync::Arc<crate::analytics::AnalyticsManager>>() {
-        let analytics = std::sync::Arc::clone(&analytics);
-        tauri::async_runtime::spawn(async move {
-            if let Err(error) = analytics.send_event(event, Some(properties)).await {
-                warn!(%error, event, "activity generation telemetry delivery failed");
-            }
-        });
-    }
-}
-
-fn generation_event_properties(
-    run_id: &str,
-    source: &str,
-    start: DateTime<Utc>,
-    end: DateTime<Utc>,
-    elapsed: std::time::Duration,
-) -> Value {
-    json!({
-        "telemetry_schema_version": 1,
-        "run_id": run_id,
-        "source": source,
-        "duration_ms": elapsed.as_millis().min(u64::MAX as u128) as u64,
-        "requested_range_seconds": (end - start).num_seconds().max(0),
-    })
-}
-
-fn degraded_generation_event_properties(
-    run_id: &str,
-    source: &str,
-    start: DateTime<Utc>,
-    end: DateTime<Utc>,
-    elapsed: std::time::Duration,
-    error_message: &str,
-    partial_activity_count: usize,
-    activity_count: usize,
-) -> Value {
-    let mut properties = generation_event_properties(run_id, source, start, end, elapsed);
-    if let Some(object) = properties.as_object_mut() {
-        object.insert("outcome".into(), json!("partial"));
-        object.insert("error_message".into(), json!(error_message));
-        object.insert("coverage_complete".into(), json!(false));
-        object.insert(
-            "partial_activity_count".into(),
-            json!(partial_activity_count),
-        );
-        object.insert("activity_count".into(), json!(activity_count));
-    }
-    properties
-}
 
 fn repair_run_failure(error: &str) -> String {
     format!("activity_quality_failed:repair_run_failed:{error}")
@@ -546,7 +496,6 @@ fn provider_config(
             config: agent.config.clone(),
             mode_id: agent.mode_id.clone(),
             approval_mode: agent.approval_mode.clone(),
-            use_screenpipe_cloud: agent.use_screenpipe_cloud,
         })
     } else {
         None
@@ -564,8 +513,7 @@ fn provider_config(
         .user
         .token
         .clone()
-        .filter(|token| !token.is_empty())
-        .or_else(crate::auth_token::cached_cloud_token);
+        .filter(|token| !token.is_empty());
     Ok((
         PiProviderConfig {
             backend: is_acp.then_some(PiBackend::Acp),
@@ -573,7 +521,7 @@ fn provider_config(
             provider: serde_json::to_value(&preset.provider)
                 .ok()
                 .and_then(|value| value.as_str().map(str::to_owned))
-                .unwrap_or_else(|| "screenpipe-cloud".to_string()),
+                .unwrap_or_else(|| "custom".to_string()),
             url: preset.url.clone(),
             model,
             api_key: preset.api_key.clone(),
@@ -1390,11 +1338,6 @@ async fn generate(
     };
     let run_id = uuid::Uuid::new_v4().to_string();
     let started_at = Instant::now();
-    track_generation_event(
-        app,
-        "activity_generation_run_started",
-        generation_event_properties(&run_id, source, start, end, started_at.elapsed()),
-    );
 
     match generate_inner(app, state, start, end, source).await {
         Ok(result) => {
@@ -1405,20 +1348,6 @@ async fn generate(
             } = result;
             let activity_count = history.entries.len();
             if let Some(error_message) = degraded_error {
-                track_generation_event(
-                    app,
-                    "activity_generation_run_degraded",
-                    degraded_generation_event_properties(
-                        &run_id,
-                        source,
-                        start,
-                        end,
-                        started_at.elapsed(),
-                        &error_message,
-                        generated_activity_count,
-                        activity_count,
-                    ),
-                );
                 error!(
                     activity_run_id = %run_id,
                     activity_source = source,
@@ -1430,13 +1359,6 @@ async fn generate(
                     error_message,
                 );
             } else {
-                let mut properties =
-                    generation_event_properties(&run_id, source, start, end, started_at.elapsed());
-                if let Some(object) = properties.as_object_mut() {
-                    object.insert("outcome".into(), json!("completed"));
-                    object.insert("activity_count".into(), json!(activity_count));
-                }
-                track_generation_event(app, "activity_generation_run_completed", properties);
                 info!(
                     activity_run_id = %run_id,
                     activity_source = source,
@@ -1449,25 +1371,6 @@ async fn generate(
         }
         Err(error_message) => {
             let skipped = error_message.starts_with("activity_no_data:");
-            let mut properties =
-                generation_event_properties(&run_id, source, start, end, started_at.elapsed());
-            if let Some(object) = properties.as_object_mut() {
-                object.insert(
-                    "outcome".into(),
-                    json!(if skipped { "skipped" } else { "failed" }),
-                );
-                object.insert("error_message".into(), json!(error_message));
-            }
-            track_generation_event(
-                app,
-                if skipped {
-                    "activity_generation_run_skipped"
-                } else {
-                    "activity_generation_run_failed"
-                },
-                properties,
-            );
-
             if skipped {
                 info!(
                     activity_run_id = %run_id,
@@ -2324,7 +2227,7 @@ mod tests {
             "cloud",
             vec![crate::store::AIPreset {
                 id: "cloud".to_string(),
-                provider: AIProviderType::ScreenpipeCloud,
+                provider: AIProviderType::Custom,
                 model: "auto".to_string(),
                 ..Default::default()
             }],
@@ -2347,7 +2250,7 @@ mod tests {
             vec![
                 crate::store::AIPreset {
                     id: "cloud".to_string(),
-                    provider: AIProviderType::ScreenpipeCloud,
+                    provider: AIProviderType::Custom,
                     model: "auto".to_string(),
                     default_preset: true,
                     ..Default::default()
@@ -2398,26 +2301,6 @@ mod tests {
         // Tagging is idempotent, and a model preset's failure stays untouched.
         assert_eq!(agent_failure(true, tagged.clone()), tagged);
         assert_eq!(agent_failure(false, "boom".to_string()), "boom");
-    }
-
-    #[test]
-    fn only_the_enterprise_build_bypasses_missing_consumer_plan_evidence() {
-        let mut enterprise = SettingsStore::default();
-        enterprise.user.enterprise_account = Some(json!({
-            "org_name": "Acme",
-            "role": "member",
-            "requires_enterprise_app": true
-        }));
-
-        assert!(settings_restrict_activity_history(&enterprise, false));
-        assert!(!settings_restrict_activity_history(
-            &SettingsStore::default(),
-            true,
-        ));
-        assert!(settings_restrict_activity_history(
-            &SettingsStore::default(),
-            false,
-        ));
     }
 
     #[test]
@@ -2658,49 +2541,4 @@ mod tests {
         );
     }
 
-    #[test]
-    fn generation_health_properties_are_content_free_and_correlatable() {
-        let start = parse_time("2026-08-24T10:00:00Z").unwrap();
-        let end = parse_time("2026-08-24T11:00:00Z").unwrap();
-        let properties = generation_event_properties(
-            "run-123",
-            "automatic",
-            start,
-            end,
-            std::time::Duration::from_millis(321),
-        );
-
-        assert_eq!(properties["run_id"], "run-123");
-        assert_eq!(properties["source"], "automatic");
-        assert_eq!(properties["duration_ms"], 321);
-        assert_eq!(properties["requested_range_seconds"], 3_600);
-        assert!(properties.get("title").is_none());
-        assert!(properties.get("summary").is_none());
-        assert!(properties.get("evidence").is_none());
-    }
-
-    #[test]
-    fn degraded_generation_preserves_the_exact_error_and_partial_counts() {
-        let start = parse_time("2026-08-24T10:00:00Z").unwrap();
-        let end = parse_time("2026-08-24T11:00:00Z").unwrap();
-        let error_message =
-            "activity_quality_failed:repair_run_failed:HTTP 429 daily_cost_limit_exceeded";
-
-        let properties = degraded_generation_event_properties(
-            "run-123",
-            "automatic",
-            start,
-            end,
-            std::time::Duration::from_millis(321),
-            error_message,
-            2,
-            5,
-        );
-
-        assert_eq!(properties["outcome"], "partial");
-        assert_eq!(properties["error_message"], error_message);
-        assert_eq!(properties["coverage_complete"], false);
-        assert_eq!(properties["partial_activity_count"], 2);
-        assert_eq!(properties["activity_count"], 5);
-    }
 }

@@ -17,7 +17,7 @@ use tokio::time::{timeout, Duration as TokioDuration};
 use tracing::{info, warn};
 
 use crate::recording::RecordingState;
-use crate::store::{OnboardingStore, SettingsStore, User};
+use crate::store::{OnboardingStore, SettingsStore};
 
 pub(super) fn flags() -> Vec<String> {
     std::env::var("SCREENPIPE_E2E_SEED")
@@ -108,19 +108,6 @@ pub(crate) fn apply_settings(app: &AppHandle, store: &mut SettingsStore) {
     if e2e_flags.iter().any(|f| f == "keyboard-db-capture") {
         store.recording.disable_keyboard_capture = false;
         info!("E2E seed: keyboard DB capture enabled");
-    }
-    if e2e_flags.iter().any(|f| f == "cloud-audio-fallback") {
-        store.recording.disable_audio = false;
-        store.recording.disable_vision = true;
-        store.recording.audio_transcription_engine = "screenpipe-cloud".to_string();
-        store.user = User::default();
-        store
-            .extra
-            .insert("_parakeetDefaultMigrationDone".to_string(), json!(true));
-        store
-            .extra
-            .insert("_proCloudMigrationDone".to_string(), json!(true));
-        info!("E2E seed: screenpipe cloud audio fallback");
     }
     if e2e_flags.iter().any(|f| f == "meetings-only-audio") {
         // Real audio lifecycle lane for meetings-only capture. Keep

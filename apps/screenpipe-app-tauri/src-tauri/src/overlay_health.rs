@@ -568,19 +568,6 @@ fn boot_phase_detail() -> &'static str {
     }
 }
 
-/// Fire-and-forget product analytics — mirrors the webview's posthog events
-/// but works for both overlay surfaces (the native panel has no JS).
-fn track(app: &tauri::AppHandle, event: &'static str) {
-    if let Some(analytics) =
-        app.try_state::<std::sync::Arc<crate::analytics::AnalyticsManager>>()
-    {
-        let analytics = std::sync::Arc::clone(&analytics);
-        tauri::async_runtime::spawn(async move {
-            let _ = analytics.send_event(event, None).await;
-        });
-    }
-}
-
 /// Called once per health-loop tick.
 ///
 /// `broken`  — confirmed incident (engine down with capture intended, a
@@ -646,12 +633,10 @@ pub async fn on_tick(
         TickEffect::Push(s, detail) => {
             if s == OverlayHealthState::Recovered {
                 mark_capture_recovery_e2e();
-                track(app, "recording_incident_recovered");
             }
             push_state(app, s, detail.as_deref());
         }
         TickEffect::PushAndReveal(s) => {
-            track(app, "recording_incident_shown");
             push_state(app, s, (!state_detail.is_empty()).then_some(state_detail.as_str()));
             reveal_overlay_if_hidden(app).await;
         }
@@ -744,7 +729,6 @@ pub async fn restart_recording(app: tauri::AppHandle) {
             return;
         }
     }
-    track(&app, "recording_incident_restart_clicked");
     push_state(&app, OverlayHealthState::Fixing, None);
     clear_simulated_break();
 
@@ -866,7 +850,6 @@ pub async fn dismiss_incident(app: tauri::AppHandle) {
         }
     };
     info!("overlay health: incident dismissed by user");
-    track(&app, "recording_incident_dismissed");
     push_state(&app, OverlayHealthState::Normal, None);
     if was_auto_revealed {
         let _ = crate::commands::hide_shortcut_reminder(app.clone()).await;

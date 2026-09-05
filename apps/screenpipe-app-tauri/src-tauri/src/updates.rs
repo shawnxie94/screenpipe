@@ -67,14 +67,16 @@ pub async fn install_specific_version(app: &tauri::AppHandle, version: &str) -> 
             .map_err(|e| format!("invalid url: {}", e))?])
         .map_err(|e| format!("failed to build updater: {}", e))?;
 
-    // Add auth header so R2 download works for paid users
-    if let Ok(Some(settings)) = SettingsStore::get(app) {
+    // Local-only builds never carry a Screenpipe cloud session; the legacy
+        // user.token field is empty, the secret-store cache was deleted with
+        // the auth_token module, and the R2 endpoint behind this auth is
+        // unreachable. No-op.
+        if let Ok(Some(settings)) = SettingsStore::get(app) {
         if let Some(token) = settings
             .user
             .token
             .clone()
             .filter(|t| !t.is_empty())
-            .or_else(crate::auth_token::cached_cloud_token)
         {
             builder = builder
                 .header("Authorization", format!("Bearer {}", token))
@@ -911,12 +913,15 @@ impl UpdatesManager {
             builder = builder.endpoints(vec![consumer_update_endpoint(channel).parse()?])?;
         }
         if let Some(settings) = settings {
+            // Local-only build: the secret-store cache no longer exists, so
+            // user.token is the only place a cloud JWT could live. That field
+            // is empty by construction; keep the read in case a future
+            // explicit user-configured endpoint ever needs it.
             if let Some(token) = settings
                 .user
                 .token
                 .clone()
                 .filter(|t| !t.is_empty())
-                .or_else(crate::auth_token::cached_cloud_token)
             {
                 builder = builder.header("Authorization", format!("Bearer {}", token))?;
             }
@@ -1967,36 +1972,6 @@ mod tests {
         assert!(!resolve_auto_update_enabled(false, true, true));
         // and an explicitly-on setting is still honored
         assert!(resolve_auto_update_enabled(true, true, true));
-    }
-
-    #[test]
-    fn persistent_enterprise_package_always_uses_package_updates() {
-        assert!(enterprise_updates_managed_locally_for(None, false, true));
-        assert!(enterprise_updates_managed_locally_for(
-            Some("screenpipe"),
-            false,
-            true
-        ));
-    }
-
-    #[test]
-    fn ordinary_enterprise_update_policy_is_unchanged() {
-        assert!(!enterprise_updates_managed_locally_for(None, false, false));
-        assert!(!enterprise_updates_managed_locally_for(
-            Some("screenpipe"),
-            true,
-            false
-        ));
-        assert!(enterprise_updates_managed_locally_for(
-            Some("auto_detect"),
-            true,
-            false
-        ));
-        assert!(enterprise_updates_managed_locally_for(
-            Some("manual"),
-            false,
-            false
-        ));
     }
 
     #[test]

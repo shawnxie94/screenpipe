@@ -178,9 +178,6 @@ async fn handle_focus(
         let _ = (ShowRewindWindow::Home { page: None }).show(&state.app_handle);
     } else {
         match crate::deep_link::handoff_window(payload.deep_link_url.as_deref()) {
-            crate::deep_link::HandoffWindow::AppEntry => {
-                let _ = ShowRewindWindow::Onboarding.show(&state.app_handle);
-            }
             crate::deep_link::HandoffWindow::Home => {
                 let _ = (ShowRewindWindow::Home { page: None }).show(&state.app_handle);
             }
