@@ -472,8 +472,7 @@ impl AudioManager {
 
         let deepgram_status = match &options.deepgram_config {
             Some(c) if c.is_ready() => format!(
-                "provider={} host={}",
-                c.provider_slug_for_log(),
+                "host={}",
                 crate::transcription::deepgram::transcription_endpoint_host_for_log(&c.endpoint)
             ),
             Some(_) => "credentials_incomplete".to_string(),

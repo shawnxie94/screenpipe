@@ -6,13 +6,10 @@ pub mod agent;
 pub mod audio;
 pub mod auth;
 pub mod backup;
-mod browser;
 pub mod connection;
 pub mod db;
-pub mod diagnose;
 pub mod export;
 pub mod install;
-pub mod login;
 pub mod mcp;
 pub mod pipe;
 pub mod presets;
@@ -21,7 +18,6 @@ pub mod search;
 pub mod service;
 pub mod status;
 pub(crate) mod store_file;
-pub mod survey;
 pub mod sync;
 pub mod team;
 pub mod team_pipes;
@@ -334,39 +330,9 @@ pub enum Command {
         allow_untrusted: bool,
     },
 
-    /// Authenticate with screenpipe cloud
-    Login,
-
-    /// Sign out of screenpipe cloud
-    Logout,
-
-    /// Show current auth status
-    Whoami,
-
-    /// Open the screenpipe survey in your browser
-    Survey,
 
     /// Check system readiness (permissions, ffmpeg, etc.)
     Doctor,
-
-    /// Collect recent logs + system info and send them to screenpipe support,
-    /// returning a ticket id. The headless twin of the app's "send logs &
-    /// feedback" button — for VPS/boxes with no UI, or for an agent to
-    /// self-report a crash. Use `--dry-run` to only save the bundle locally.
-    Diagnose {
-        /// Short description of the problem (attached as feedback)
-        #[arg(short = 'm', long)]
-        message: Option<String>,
-        /// Data directory. Default to $HOME/.screenpipe
-        #[arg(long, value_hint = ValueHint::DirPath)]
-        data_dir: Option<String>,
-        /// Local API port to probe for a live /health snapshot
-        #[arg(short = 'p', long, default_value_t = 3030)]
-        port: u16,
-        /// Collect + save the bundle to a temp file without uploading
-        #[arg(long, default_value_t = false)]
-        dry_run: bool,
-    },
 
     /// Manage local API authentication
     Auth {
@@ -1249,7 +1215,6 @@ impl RecordArgs {
             prioritize_input_latency: self.prioritize_input_latency,
             extraction_thread_priority: self.extraction_thread_priority.clone(),
             pause_extraction_on_input_ms: self.pause_extraction_on_input_ms,
-            analytics_enabled: !self.disable_telemetry,
             keep_computer_awake: self.keep_computer_awake,
             ignore_incognito_windows: self.ignore_incognito_windows,
             enhanced_incognito_detection: self.enhanced_incognito_detection,
@@ -1300,17 +1265,6 @@ impl RecordArgs {
         let mut settings = persisted_settings.unwrap_or_else(|| self.to_recording_settings());
         if loaded_from_store {
             self.apply_explicit_overrides(&mut settings, sources);
-        }
-
-        // #3943: the desktop app migrates the cloud token out of plaintext
-        // store.bin into the shared encrypted SecretStore. A standalone CLI
-        // run whose persisted settings carry no user token must look there,
-        // or cloud features (STT, screenpipe-cloud pipes) silently lose auth
-        // once the app has migrated.
-        if settings.effective_user_id().is_none() {
-            if let Some(token) = crate::auth_key::find_cloud_token(&data_dir).await {
-                settings.user_id = token;
-            }
         }
 
         // First-launch tier detection for CLI users
@@ -1572,9 +1526,6 @@ impl RecordArgs {
                 CliTranscriptionMode::Batch => "batch".to_string(),
             };
         }
-        if sources.disable_telemetry {
-            settings.analytics_enabled = !self.disable_telemetry;
-        }
         if sources.video_quality {
             settings.video_quality = self.video_quality.clone();
         }
@@ -1733,11 +1684,6 @@ pub enum PipeCommand {
         #[command(subcommand)]
         subcommand: ModelCommand,
     },
-    /// Publish a local pipe to the registry
-    Publish {
-        /// Pipe name (directory name under ~/.screenpipe/pipes/)
-        name: String,
-    },
     /// Search the pipe registry
     Search {
         /// Search query
@@ -1745,11 +1691,6 @@ pub enum PipeCommand {
     },
     /// Show pipe detail from the registry
     Info {
-        /// Pipe slug (registry identifier)
-        slug: String,
-    },
-    /// Check publish/review status of a pipe you own
-    Status {
         /// Pipe slug (registry identifier)
         slug: String,
     },
@@ -2879,15 +2820,6 @@ mod tests {
                 assert!(!ui.record_clipboard_events);
             }
             _ => panic!("expected Record command"),
-        }
-    }
-
-    #[test]
-    fn test_survey_command_parses() {
-        let cli = Cli::try_parse_from(["screenpipe", "survey"]).unwrap();
-        match cli.command {
-            Command::Survey => {}
-            _ => panic!("expected Survey command"),
         }
     }
 

@@ -13,10 +13,6 @@ use crate::meeting_watcher::shared::ignore::{
     meeting_app_is_ignored_with_terms, normalize_ignored_meeting_apps,
 };
 use crate::meeting_watcher::shared::profiles::{load_detection_profiles, MeetingDetectionProfile};
-use crate::meeting_watcher::shared::telemetry::{
-    capture_detection_decision, capture_detection_outcome, capture_detection_transition,
-    MeetingDetectionTransitionTelemetry,
-};
 use crate::routes::meetings::{emit_meeting_status_changed, resolve_meeting_status_from};
 use chrono::{DateTime, Utc};
 use futures::{FutureExt, StreamExt};
@@ -403,8 +399,8 @@ pub async fn run_audio_process_meeting_detection_loop(
             live_pid,
             published_pid_in_input_snapshot,
             live_pid_in_input_snapshot,
-            has_candidates,
-            has_live_candidates,
+            _has_candidates,
+            _has_live_candidates,
         )) = transition
         {
             let published_meeting_after = detector.as_ref().and_then(|d| d.active_meeting());
@@ -430,23 +426,6 @@ pub async fn run_audio_process_meeting_detection_loop(
                 candidates.len(),
                 live_candidates.len(),
                 flap_count,
-            );
-            capture_detection_transition(
-                &edge.platform,
-                MeetingDetectionTransitionTelemetry {
-                    meeting_id: edge.meeting_id,
-                    transition: edge.transition,
-                    flap_count,
-                    published_meeting_before,
-                    published_meeting_after: published_meeting_after.is_some(),
-                    published_pid_before: published_pid_before.is_some(),
-                    published_pid_after: published_pid_after.is_some(),
-                    live_pid: live_pid.is_some(),
-                    published_pid_in_input_snapshot,
-                    live_pid_in_input_snapshot,
-                    has_candidates,
-                    has_live_candidates,
-                },
             );
         }
         interval = if processes.is_empty() {

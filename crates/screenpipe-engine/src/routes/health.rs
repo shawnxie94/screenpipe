@@ -330,7 +330,8 @@ impl VisionReason {
 /// must not be handed a permission instruction for a permission that is fine.
 /// `permission_granted` is the last-known result from the permission monitor's
 /// 5s poll and capture-side enumeration, never a fresh syscall.
-pub(crate) fn classify_vision_reason(
+#[cfg(test)]
+fn classify_vision_reason(
     vision_disabled: bool,
     displays_expected: bool,
     screenshot_state: screenpipe_screen::ScreenshotCaptureState,

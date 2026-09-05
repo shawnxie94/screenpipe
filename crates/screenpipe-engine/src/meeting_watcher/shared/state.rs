@@ -6,7 +6,6 @@
 
 use super::*;
 use chrono::{DateTime, Utc};
-use screenpipe_db::DatabaseManager;
 use std::time::{Duration, Instant};
 use tracing::{debug, info};
 
@@ -137,17 +136,6 @@ pub(crate) fn is_active_ending_flap(
 /// Fetch the just-ended meeting and emit the privacy-safe outcome telemetry.
 /// Shared by every auto-end site so the metric covers them uniformly.
 /// Best-effort: a failed lookup just skips the event.
-pub(crate) async fn capture_meeting_outcome(
-    db: &DatabaseManager,
-    meeting_id: i64,
-    end_reason: &'static str,
-    flap_count: u32,
-) {
-    if let Ok(meeting) = db.get_meeting_by_id(meeting_id).await {
-        capture_detection_outcome(&meeting, end_reason, flap_count);
-    }
-}
-
 /// Advance the state machine based on scan results.
 ///
 /// Returns the new state plus an optional action to perform (DB insert/update).

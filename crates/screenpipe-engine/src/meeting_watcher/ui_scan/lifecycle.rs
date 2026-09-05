@@ -242,8 +242,6 @@ pub(crate) async fn handle_no_apps_path(
             .await
         {
             Ok(persisted_end) => {
-                // End-detection health telemetry (privacy-safe buckets only).
-                capture_meeting_outcome(db, meeting_id, "auto_timeout", *flap_count).await;
                 *flap_count = 0;
                 let event_data = crate::meeting_watcher::shared::events::meeting_ended_event_data(
                     db,
@@ -302,8 +300,8 @@ pub(crate) async fn apply_state_action(
     flap_count: &mut u32,
     last_explicit_stop_id: Option<i64>,
     calendar_events: &[CalendarEventSignal],
-    scan_results: &[ScanResult],
-    has_output_audio: bool,
+    _scan_results: &[ScanResult],
+    _has_output_audio: bool,
 ) {
     match action {
         StateAction::StartMeeting { app } => {
@@ -329,7 +327,7 @@ pub(crate) async fn apply_state_action(
                 other => other,
             };
 
-            let (meeting_id, decision_trigger) = match merge_candidate {
+            let (meeting_id, _decision_trigger) = match merge_candidate {
                 Ok(Some(recent)) => match db.reopen_meeting(recent.id).await {
                     Ok(()) => {
                         info!(
@@ -409,16 +407,6 @@ pub(crate) async fn apply_state_action(
             if let Ok(status) = resolve_meeting_status_from(db, manual_meeting).await {
                 emit_meeting_status_changed(&status);
             }
-            if let Ok(meeting) = db.get_meeting_by_id(meeting_id).await {
-                capture_detection_decision(
-                    &meeting,
-                    decision_trigger,
-                    Some(MeetingDetectionScanSummary::from_scan_results(
-                        scan_results,
-                        has_output_audio,
-                    )),
-                );
-            }
         }
         StateAction::EndMeeting { meeting_id } => {
             if meeting_id >= 0 {
@@ -433,8 +421,6 @@ pub(crate) async fn apply_state_action(
                 {
                     Ok(persisted_end) => {
                         info!("meeting v2: meeting ended (id={})", meeting_id);
-                        // End-detection health telemetry (privacy-safe buckets only).
-                        capture_meeting_outcome(db, meeting_id, "auto_timeout", *flap_count).await;
                         *flap_count = 0;
                         // Emit event so triggered pipes can react
                         let event_data =

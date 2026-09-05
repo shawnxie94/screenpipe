@@ -72,89 +72,6 @@ const PI_INSTALL_ARGS: [&str; 5] = [
     "@anthropic-ai/sdk",
 ];
 const CUSTOM_PROVIDER_USER_AGENT: &str = "screenpipe";
-const GEMINI_OPENAI_BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta/openai";
-const DEFAULT_CLOUD_MAX_OUTPUT_TOKENS: u64 = 32_000;
-
-/// Apply compatibility settings required by OpenAI-compatible custom endpoints.
-///
-/// The OpenAI JavaScript SDK identifies itself as `OpenAI/JS ...`. Some generic
-/// API gateways reject that user agent even though they implement the OpenAI
-/// wire protocol. Identify the actual application instead. Preserve a user-set
-/// header, including alternate casing, so manually managed providers keep their
-/// explicit choice.
-///
-/// AI Genesis publishes `/v1` as its API root, but its dashboard origin and API
-/// origin both serve non-API routes at `/`. Older presets commonly saved one of
-/// those bare origins; repair only those proven aliases instead of guessing that
-/// every custom provider uses `/v1`.
-///
-/// Google's Gemini OpenAI-compatible endpoint rejects the optional `store`
-/// request field. Pi otherwise sends `store: false` for standard-compatible
-/// providers, so disable that capability on each Gemini model while preserving
-/// any other explicit compatibility overrides.
-pub fn apply_custom_provider_compat(provider: &mut serde_json::Value) {
-    let normalized_base_url = provider
-        .get("baseUrl")
-        .and_then(serde_json::Value::as_str)
-        .map(|base_url| base_url.trim().trim_end_matches('/').to_string());
-
-    if let Some(trimmed) = normalized_base_url.as_deref() {
-        if trimmed.eq_ignore_ascii_case("https://ai.ai-genesis.app")
-            || trimmed.eq_ignore_ascii_case("https://api.ai-genesis.app")
-        {
-            provider["baseUrl"] = json!(format!("{trimmed}/v1"));
-        }
-    }
-
-    let Some(provider_object) = provider.as_object_mut() else {
-        return;
-    };
-    let headers = provider_object
-        .entry("headers".to_string())
-        .or_insert_with(|| json!({}));
-    if !headers.is_object() {
-        *headers = json!({});
-    }
-    let headers = headers
-        .as_object_mut()
-        .expect("custom provider headers were initialized as an object");
-    if !headers
-        .keys()
-        .any(|header| header.eq_ignore_ascii_case("user-agent"))
-    {
-        headers.insert("User-Agent".to_string(), json!(CUSTOM_PROVIDER_USER_AGENT));
-    }
-
-    let is_gemini_openai = normalized_base_url
-        .as_deref()
-        .is_some_and(|base_url| base_url.eq_ignore_ascii_case(GEMINI_OPENAI_BASE_URL));
-    if !is_gemini_openai {
-        return;
-    }
-
-    let Some(models) = provider_object
-        .get_mut("models")
-        .and_then(serde_json::Value::as_array_mut)
-    else {
-        return;
-    };
-    for model in models {
-        let Some(model_object) = model.as_object_mut() else {
-            continue;
-        };
-        let compat = model_object
-            .entry("compat".to_string())
-            .or_insert_with(|| json!({}));
-        if !compat.is_object() {
-            *compat = json!({});
-        }
-        compat
-            .as_object_mut()
-            .expect("custom provider model compat was initialized as an object")
-            .insert("supportsStore".to_string(), json!(false));
-    }
-}
-
 /// A single model entry as listed under `providers.<name>.models[]` in the
 /// user's standalone-pi `~/.pi/agent/models.json`.
 ///
@@ -556,115 +473,71 @@ where
     Ok(output)
 }
 
-/// Fetch the model catalog from the Cloudflare Worker gateway and convert
-/// it into the format Pi's `models.json` expects.
-///
-/// The gateway (`/v1/models`) is the single source of truth. On failure
-/// (offline, timeout, gateway down) we fall back to a minimal hardcoded list
-/// so the app still works without network.
-pub async fn screenpipe_cloud_models(api_url: &str, token: Option<&str>) -> serde_json::Value {
-    match fetch_models_from_gateway(api_url, token).await {
-        Some(models) => models,
-        None => {
-            warn!("failed to fetch models from gateway, using fallback list");
-            fallback_cloud_models()
+const GEMINI_OPENAI_BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta/openai";
+
+pub fn apply_custom_provider_compat(provider: &mut serde_json::Value) {
+    let normalized_base_url = provider
+        .get("baseUrl")
+        .and_then(serde_json::Value::as_str)
+        .map(|base_url| base_url.trim().trim_end_matches('/').to_string());
+
+    if let Some(trimmed) = normalized_base_url.as_deref() {
+        if trimmed.eq_ignore_ascii_case("https://ai.ai-genesis.app")
+            || trimmed.eq_ignore_ascii_case("https://api.ai-genesis.app")
+        {
+            provider["baseUrl"] = json!(format!("{trimmed}/v1"));
         }
     }
-}
 
-/// Fetch models from the gateway and transform into Pi's format.
-async fn fetch_models_from_gateway(
-    api_url: &str,
-    token: Option<&str>,
-) -> Option<serde_json::Value> {
-    let url = format!("{}/models", api_url.trim_end_matches('/'));
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .build()
-        .ok()?;
-
-    let mut req = client.get(&url);
-    if let Some(t) = token {
-        req = req.bearer_auth(t);
-    }
-
-    let resp = req.send().await.ok()?;
-    if !resp.status().is_success() {
-        warn!("gateway /v1/models returned {}", resp.status());
-        return None;
-    }
-
-    let body: serde_json::Value = resp.json().await.ok()?;
-    let data = body.get("data")?.as_array()?;
-
-    let Some(models) = selectable_gateway_models(data) else {
-        warn!("gateway /v1/models returned no selectable models");
-        return None;
+    let Some(provider_object) = provider.as_object_mut() else {
+        return;
     };
+    let headers = provider_object
+        .entry("headers".to_string())
+        .or_insert_with(|| json!({}));
+    if !headers.is_object() {
+        *headers = json!({});
+    }
+    let headers = headers
+        .as_object_mut()
+        .expect("custom provider headers were initialized as an object");
+    if !headers
+        .keys()
+        .any(|header| header.eq_ignore_ascii_case("user-agent"))
+    {
+        headers.insert("User-Agent".to_string(), json!(CUSTOM_PROVIDER_USER_AGENT));
+    }
 
-    info!("fetched {} models from gateway", models.len());
-    Some(json!(models))
+    let is_gemini_openai = normalized_base_url
+        .as_deref()
+        .is_some_and(|base_url| base_url.eq_ignore_ascii_case(GEMINI_OPENAI_BASE_URL));
+    if !is_gemini_openai {
+        return;
+    }
+
+    let Some(models) = provider_object
+        .get_mut("models")
+        .and_then(serde_json::Value::as_array_mut)
+    else {
+        return;
+    };
+    for model in models {
+        let Some(model_object) = model.as_object_mut() else {
+            continue;
+        };
+        let compat = model_object
+            .entry("compat".to_string())
+            .or_insert_with(|| json!({}));
+        if !compat.is_object() {
+            *compat = json!({});
+        }
+        compat
+            .as_object_mut()
+            .expect("custom provider model compat was initialized as an object")
+            .insert("supportsStore".to_string(), json!(false));
+    }
 }
 
-/// Turn the gateway catalog into Pi's provider catalog. The gateway retains
-/// locked models for UI upgrade prompts, while Pi treats every listed model as
-/// selectable. Omit locked entries here so a pipe never appears to select a
-/// model only for the gateway to silently rewrite it to `auto`.
-fn gateway_models_to_pi_models(data: &[serde_json::Value]) -> Vec<serde_json::Value> {
-    data.iter()
-        .filter(|m| !m.get("locked").and_then(|v| v.as_bool()).unwrap_or(false))
-        .map(|m| {
-            let id = m.get("id").and_then(|v| v.as_str()).unwrap_or("");
-            let name = m.get("name").and_then(|v| v.as_str()).unwrap_or(id);
-            let ctx = m
-                .get("context_window")
-                .and_then(|v| v.as_u64())
-                .filter(|value| *value > 0)
-                .unwrap_or(128000);
-            let max_tokens = m
-                .get("max_output_tokens")
-                .and_then(|v| v.as_u64())
-                .filter(|value| *value > 0)
-                .unwrap_or(DEFAULT_CLOUD_MAX_OUTPUT_TOKENS)
-                .min(ctx);
-            let intelligence = m
-                .get("intelligence")
-                .and_then(|v| v.as_str())
-                .unwrap_or("standard");
-            let reasoning = intelligence == "highest" || intelligence == "high";
-
-            json!({
-                "id": id,
-                "name": name,
-                "reasoning": reasoning,
-                "input": ["text", "image"],
-                "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
-                "contextWindow": ctx,
-                "maxTokens": max_tokens,
-                // Pi sends its stable agent session ID as x-session-affinity.
-                // The hosted gateway uses that plus the user-message ordinal to
-                // count one visible turn once across a multi-call tool loop.
-                "compat": {"sendSessionAffinityHeaders": true},
-            })
-        })
-        .collect()
-}
-
-/// An HTTP-successful catalog can still be unusable after locked entries are
-/// removed. Treat that like an unavailable catalog so callers use the safe
-/// `auto` fallback instead of writing an empty Pi provider.
-fn selectable_gateway_models(data: &[serde_json::Value]) -> Option<Vec<serde_json::Value>> {
-    let models = gateway_models_to_pi_models(data);
-    (!models.is_empty()).then_some(models)
-}
-
-/// Minimal fallback when the gateway is unreachable.
-/// Only auto — if the gateway is down, nothing works anyway.
-fn fallback_cloud_models() -> serde_json::Value {
-    json!([
-        {"id": "auto", "name": "Auto (recommended)", "reasoning": true, "input": ["text", "image"], "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0}, "contextWindow": 128000, "maxTokens": DEFAULT_CLOUD_MAX_OUTPUT_TOKENS, "compat": {"sendSessionAffinityHeaders": true}},
-    ])
-}
 
 pub(crate) const MALFORMED_TOOL_USE_ERROR: &str =
     "provider_protocol_error: assistant ended with toolUse but emitted no executable tool call";
@@ -707,11 +580,9 @@ pub struct PiExecutor {
     ///
     /// Wrapped in `ArcSwap` so the desktop app can refresh it at
     /// runtime via the `set_cloud_token` Tauri command — without this the
-    /// token captured at engine boot would be permanent for the lifetime of
-    /// the process. Users who sign in AFTER the engine started would stay on
-    /// the gateway's anonymous tier (allowed_models = haiku/gemini only)
-    /// until they fully quit and restart, because logout/login from the
-    /// webview doesn't restart the screenpipe sidecar.
+    /// Screenpipe-hosted model credential. The local-only build has no
+    /// Screenpipe login, so this is always `None` and the hosted-model
+    /// branches in this file stay dormant.
     pub user_token: Arc<ArcSwap<Option<String>>>,
     /// Screenpipe API base URL (default: `https://api.screenpipe.com/v1`).
     pub api_url: String,
@@ -724,46 +595,19 @@ pub struct PiExecutor {
 }
 
 impl PiExecutor {
-    pub fn new(user_token: Option<String>) -> Self {
+    pub fn new() -> Self {
         Self {
-            user_token: Arc::new(ArcSwap::new(Arc::new(user_token))),
+            user_token: Arc::new(ArcSwap::new(Arc::new(None))),
             api_url: SCREENPIPE_API_URL.to_string(),
             api_auth_key: None,
         }
     }
 
-    /// Construct a PiExecutor that shares its cloud-token storage with an
-    /// external `Arc<ArcSwap>` — typically the same Arc held by the server's
-    /// `AppState.cloud_token`. A single update via `set_user_token` (or a
-    /// store through the shared Arc) is then visible to both the cloud
-    /// proxy and pi-agent on the next pipe run.
-    pub fn with_shared_user_token(user_token: Arc<ArcSwap<Option<String>>>) -> Self {
-        Self {
-            user_token,
-            api_url: SCREENPIPE_API_URL.to_string(),
-            api_auth_key: None,
-        }
-    }
-
-    /// Read the current cloud token. Returns an owned `Option<String>`.
+    /// Read the current hosted-model credential. Always `None` in the
+    /// local-only build; kept so the dormant hosted branches compile.
     pub fn current_user_token(&self) -> Option<String> {
         let token = self.user_token.load();
         (**token).clone().filter(|s| !s.is_empty())
-    }
-
-    /// Push a new cloud token. Called by the desktop app on login/logout so
-    /// the next pipe run picks up the fresh token instead of using whatever
-    /// was present at engine boot.
-    pub fn set_user_token(&self, token: Option<String>) {
-        self.user_token
-            .store(Arc::new(token.filter(|s| !s.is_empty())));
-    }
-
-    /// Expose the underlying `Arc` so it can be shared with other components
-    /// (the cloud_proxy.rs reader, Tauri-managed state) — write through any
-    /// of them is observed by all.
-    pub fn user_token_arc(&self) -> Arc<ArcSwap<Option<String>>> {
-        self.user_token.clone()
     }
 
     /// Attach the local server's api_auth_key so Pi's bash tool can include
@@ -1306,15 +1150,7 @@ impl PiExecutor {
     }
 
     /// Remove the retired hosted web-search extension from old Pi workspaces.
-    pub fn ensure_web_search_extension(project_dir: &Path, provider: Option<&str>) -> Result<()> {
-        Self::ensure_web_search_extension_with_api_url(project_dir, provider, SCREENPIPE_API_URL)
-    }
-
-    fn ensure_web_search_extension_with_api_url(
-        project_dir: &Path,
-        _provider: Option<&str>,
-        _api_url: &str,
-    ) -> Result<()> {
+    pub fn ensure_web_search_extension(project_dir: &Path) -> Result<()> {
         let ext_dir = project_dir.join(".pi").join("extensions");
         let ext_path = ext_dir.join("web-search.ts");
 
@@ -1337,8 +1173,6 @@ impl PiExecutor {
     /// the resolved `provider`, `model`, and optional `provider_url` so the
     /// corresponding entry is written to `models.json`.
     pub async fn ensure_pi_config(
-        _user_token: Option<&str>,
-        _api_url: &str,
         provider: Option<&str>,
         model: Option<&str>,
         provider_url: Option<&str>,
@@ -1556,128 +1390,13 @@ impl PiExecutor {
     /// custom) we don't have an allow-list and must not touch the model — the
     /// user owns that provider. We only strip the `@date` suffix via
     /// [`resolve_model`].
-    ///
-    /// Tier-flicker self-heal: tier resolution can momentarily report a LOWER
-    /// tier than the user actually has (stale token captured at engine boot,
-    /// sidecar restart, token refresh mid-run). To avoid silently downgrading
-    /// a paying subscriber who deliberately picked a premium model, when the
-    /// requested model is missing we re-read the CURRENT token and re-fetch
-    /// the catalog once. If the fresh token reveals the model is allowed after
-    /// all, we keep it. Only if it's still disallowed do we fall back.
-    ///
-    /// Returns `(resolved_model, fell_back_from)` — `fell_back_from` is
-    /// `Some(original)` only when we actually downgraded, so the caller can
-    /// surface a visible notice instead of silently swapping the model.
+    /// Resolve the effective model name. The hosted Screenpipe catalog is
+    /// gone in the local-only build, so this is a pure passthrough.
     async fn resolve_screenpipe_model(
-        &self,
         requested: &str,
         provider: &str,
     ) -> (String, Option<String>) {
-        let base = Self::resolve_model(requested, provider);
-        if provider != "screenpipe" {
-            return (base, None);
-        }
-
-        let api_url = self.api_url.clone();
-
-        // Fetch the tier-filtered catalog. On any failure (offline, gateway
-        // down) we get the minimal fallback list — in that case we trust the
-        // requested model rather than forcing a fallback, since validation is
-        // best-effort and we don't want to break offline/degraded runs.
-        let fetch_allowed = |token: Option<String>| {
-            let api_url = api_url.clone();
-            async move {
-                let models = screenpipe_cloud_models(&api_url, token.as_deref()).await;
-                models
-                    .as_array()
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(|m| m.get("id").and_then(|v| v.as_str()).map(String::from))
-                            .collect::<Vec<String>>()
-                    })
-                    .unwrap_or_default()
-            }
-        };
-
-        let allowed = fetch_allowed(self.current_user_token()).await;
-
-        let mut decision = Self::pick_allowed_model(&base, &allowed);
-
-        // Tier-flicker self-heal: model looks disallowed → re-read the token
-        // (it may have refreshed to the real tier since boot) and re-check
-        // once before committing to a downgrade.
-        if decision.is_err() {
-            let fresh = self.current_user_token();
-            let fresh_allowed = fetch_allowed(fresh).await;
-            if !fresh_allowed.is_empty() && fresh_allowed != allowed {
-                let retry = Self::pick_allowed_model(&base, &fresh_allowed);
-                if retry.is_ok() {
-                    info!(
-                        "model '{}' allowed after token refresh (tier flicker self-healed)",
-                        base
-                    );
-                }
-                decision = retry;
-            }
-        }
-
-        match decision {
-            Ok(m) => (m, None),
-            Err(fallback) => {
-                warn!(
-                    "model '{}' is not available on this tier (allowed: [{}]); \
-                     falling back to '{}' so the pipe doesn't fail",
-                    base,
-                    allowed.join(", "),
-                    fallback
-                );
-                (fallback, Some(base))
-            }
-        }
-    }
-
-    /// Pure validation step for [`resolve_screenpipe_model`] (network-free so
-    /// it's unit-testable).
-    ///
-    /// `Ok(model)`  → the requested model is allowed (or we can't validate).
-    /// `Err(model)` → requested not allowed; the returned value is the fallback.
-    fn pick_allowed_model(requested: &str, allowed: &[String]) -> Result<String, String> {
-        // No catalog, or only the gateway fallback sentinel → we
-        // couldn't actually validate, so don't second-guess the requested
-        // model. Without the sentinel check the `["auto"]` list returned by
-        // `fallback_cloud_models` when the gateway is unreachable would
-        // masquerade as a one-model tier and spuriously downgrade a
-        // deliberately-chosen premium model, firing a bogus `model_fallback`
-        // notice on every degraded run.
-        if allowed.is_empty() || Self::is_gateway_fallback_catalog(allowed) {
-            return Ok(requested.to_string());
-        }
-        // "auto" is always valid: the gateway picks an allowed model server-side.
-        if requested == "auto" || allowed.iter().any(|m| m == requested) {
-            return Ok(requested.to_string());
-        }
-        // Requested model is NOT in the tier's allow-list. Pick a safe default:
-        // prefer "auto" (gateway chooses), else the first allowed model.
-        let fallback = if allowed.iter().any(|m| m == "auto") {
-            "auto".to_string()
-        } else {
-            allowed[0].clone()
-        };
-        Err(fallback)
-    }
-
-    /// `true` when `allowed` is exactly the unvalidated gateway fallback catalog
-    /// (`["auto"]`) produced by [`fallback_cloud_models`] when the gateway's
-    /// `/v1/models` is unreachable. It carries no real tier information, so we
-    /// treat it like an empty catalog and never let it drive a downgrade.
-    ///
-    /// Trade-off: this collides with a hypothetical real tier whose allow-list
-    /// is genuinely only `["auto"]`. No such tier exists today (real tiers list
-    /// concrete model ids), and even if one appeared `auto` is always accepted
-    /// by the gateway, so passing the requested model through for its
-    /// server-side auto-pick stays correct.
-    fn is_gateway_fallback_catalog(allowed: &[String]) -> bool {
-        allowed.len() == 1 && allowed[0] == "auto"
+        (Self::resolve_model(requested, provider), None)
     }
 
     /// Spawn the pi subprocess and wait for its output.
@@ -2094,33 +1813,15 @@ impl AgentExecutor for PiExecutor {
             ));
         }
 
-        let (resolved_model, fell_back_from) = self
-            .resolve_screenpipe_model(model, &resolved_provider)
-            .await;
-        if let Some(ref original) = fell_back_from {
-            warn!(
-                "pipe model '{}' unavailable on current tier — ran on '{}' instead",
-                original, resolved_model
-            );
-        }
+        let (resolved_model, _fell_back_from) =
+            Self::resolve_screenpipe_model(model, &resolved_provider).await;
 
-        let cloud_token = self.current_user_token();
-        Self::ensure_pi_config(
-            cloud_token.as_deref(),
-            &self.api_url,
-            provider,
-            Some(&resolved_model),
-            provider_url,
-        )
+        Self::ensure_pi_config(provider, Some(&resolved_model), provider_url)
         .await?;
         // Use filtered skills if permissions are configured, unfiltered otherwise
         Self::ensure_screenpipe_skill_auto(working_dir)?;
 
-        Self::ensure_web_search_extension_with_api_url(
-            working_dir,
-            Some(&resolved_provider),
-            &self.api_url,
-        )?;
+        Self::ensure_web_search_extension(working_dir)?;
         Self::ensure_context_pruning_extension(working_dir)?;
         Self::ensure_orphan_guard_extension(working_dir)?;
         Self::ensure_self_improvement_extension(working_dir)?;
@@ -2162,18 +1863,7 @@ impl AgentExecutor for PiExecutor {
                 "pi model not found, re-merging managed providers (stderr: {})",
                 output.stderr.trim()
             );
-            // Re-read the cloud token — it may have been refreshed via
-            // `set_user_token` since the run started (e.g. user signed in
-            // mid-pipe). Picking up the fresh value avoids re-running with
-            // the same stale token that triggered the not-found.
-            let cloud_token = self.current_user_token();
-            Self::ensure_pi_config(
-                cloud_token.as_deref(),
-                &self.api_url,
-                provider,
-                Some(&resolved_model),
-                provider_url,
-            )
+            Self::ensure_pi_config(provider, Some(&resolved_model), provider_url)
             .await?;
             return self
                 .spawn_pi(
@@ -2218,38 +1908,13 @@ impl AgentExecutor for PiExecutor {
                 "Screenpipe-hosted AI has been removed; choose a local or third-party provider"
             ));
         }
-        let (resolved_model, fell_back_from) = self
-            .resolve_screenpipe_model(model, &resolved_provider)
-            .await;
-        // Surface the downgrade to the UI so a user who deliberately picked a
-        // premium model isn't silently served a weaker one (e.g. during a tier
-        // flicker). The UI renders this status line as a non-blocking notice.
-        if let Some(ref original) = fell_back_from {
-            let _ = line_tx.send(format!(
-                r#"{{"type":"status","kind":"model_fallback","requested":{},"used":{}}}"#,
-                serde_json::Value::String(original.clone()),
-                serde_json::Value::String(resolved_model.clone()),
-            ));
-        }
-        // Re-read after resolution: resolve_screenpipe_model may have refreshed
-        // the token internally; use the current value for config + spawn.
-        let cloud_token = self.current_user_token();
+        let resolved_model = Self::resolve_model(model, &resolved_provider);
 
-        Self::ensure_pi_config(
-            cloud_token.as_deref(),
-            &self.api_url,
-            provider,
-            Some(&resolved_model),
-            provider_url,
-        )
+        Self::ensure_pi_config(provider, Some(&resolved_model), provider_url)
         .await?;
         // Use filtered skills if permissions are configured, unfiltered otherwise
         Self::ensure_screenpipe_skill_auto(working_dir)?;
-        Self::ensure_web_search_extension_with_api_url(
-            working_dir,
-            Some(&resolved_provider),
-            &self.api_url,
-        )?;
+        Self::ensure_web_search_extension(working_dir)?;
         Self::ensure_context_pruning_extension(working_dir)?;
         Self::ensure_orphan_guard_extension(working_dir)?;
         Self::ensure_self_improvement_extension(working_dir)?;
@@ -2295,15 +1960,7 @@ impl AgentExecutor for PiExecutor {
                 "pi model not found, re-merging managed providers (stderr: {})",
                 output.stderr.trim()
             );
-            // Re-read cloud token (see comment in `run` above).
-            let cloud_token = self.current_user_token();
-            Self::ensure_pi_config(
-                cloud_token.as_deref(),
-                &self.api_url,
-                provider,
-                Some(&resolved_model),
-                provider_url,
-            )
+            Self::ensure_pi_config(provider, Some(&resolved_model), provider_url)
             .await?;
             output = self
                 .spawn_pi_streaming(
@@ -2462,10 +2119,6 @@ impl AgentExecutor for PiExecutor {
 
     fn user_token(&self) -> Option<String> {
         self.current_user_token()
-    }
-
-    fn screenpipe_api_url(&self) -> &str {
-        &self.api_url
     }
 }
 
@@ -2804,13 +2457,16 @@ pub fn upgrade_legacy_pi_credentials(auth: &mut serde_json::Value) -> bool {
     let Some(obj) = auth.as_object_mut() else {
         return false;
     };
+    // Local-only build never stores a Screenpipe credential: drop any legacy
+    // entry (the hosted login that seeded it is gone).
+    let scrubbed = obj.remove("screenpipe").is_some();
     let upgrades: Vec<(String, serde_json::Value)> = obj
         .iter()
         .filter_map(|(provider, value)| {
             upgrade_legacy_pi_credential(value).map(|upgraded| (provider.clone(), upgraded))
         })
         .collect();
-    if upgrades.is_empty() {
+    if !scrubbed && upgrades.is_empty() {
         return false;
     }
     for (provider, upgraded) in upgrades {
@@ -2855,27 +2511,6 @@ fn write_auth_json(auth_path: &Path, auth: &serde_json::Value) -> Result<()> {
     }
 
     Ok(())
-}
-
-fn remove_screenpipe_auth_from_path(auth_path: &Path) -> Result<()> {
-    if !auth_path.exists() {
-        return Ok(());
-    }
-
-    let content = std::fs::read_to_string(auth_path)?;
-    let mut auth: serde_json::Value = serde_json::from_str(&content).unwrap_or_else(|_| json!({}));
-    let removed = auth
-        .as_object_mut()
-        .map(|obj| obj.remove("screenpipe").is_some())
-        .unwrap_or(false);
-    // Signed-out users keep their BYOK credentials — upgrade those too.
-    let upgraded = upgrade_legacy_pi_credentials(&mut auth);
-
-    if !removed && !upgraded {
-        return Ok(());
-    }
-
-    write_auth_json(auth_path, &auth)
 }
 
 fn stock_bun_is_safe(is_windows: bool, has_avx2: bool) -> bool {
@@ -4343,12 +3978,8 @@ mod tests {
         let ext_path = ext_dir.join("web-search.ts");
         std::fs::write(&ext_path, "retired").expect("seed retired extension");
 
-        PiExecutor::ensure_web_search_extension_with_api_url(
-            dir.path(),
-            Some("screenpipe"),
-            "http://127.0.0.1:8787/v1",
-        )
-        .expect("remove retired web-search extension");
+        PiExecutor::ensure_web_search_extension(dir.path())
+            .expect("remove retired web-search extension");
         assert!(!ext_path.exists());
     }
 
@@ -4621,70 +4252,6 @@ mod tests {
     /// Live parent -> subagent -> parent smoke test.
     ///
     /// Run with:
-    /// SCREENPIPE_E2E_CLOUD_TOKEN=... cargo test -p screenpipe-core \
-    ///   pi_subagents_parent_child_e2e -- --ignored --nocapture
-    #[tokio::test]
-    #[ignore]
-    async fn pi_subagents_parent_child_e2e() {
-        let token = std::env::var("SCREENPIPE_E2E_CLOUD_TOKEN")
-            .expect("SCREENPIPE_E2E_CLOUD_TOKEN is required for this live test");
-        assert!(
-            pi_package_enabled("pi-subagents"),
-            "enable npm:pi-subagents in Settings > Pi extensions first"
-        );
-
-        let working_dir = tempfile::tempdir().expect("temp working dir");
-        let output = PiExecutor::new(Some(token))
-            .run(
-                "Use the subagent tool exactly once. Ask the child to reply with only CHILD_OK. This is read-only, so pass acceptance.level=none. After the child succeeds, reply with only PARENT_OK.",
-                "auto",
-                working_dir.path(),
-                None,
-                None,
-                None,
-                None,
-                false,
-            )
-            .await
-            .expect("run parent Pi agent");
-
-        assert!(output.success, "parent failed: {}", output.stderr);
-        assert!(
-            output.stdout.contains("PARENT_OK"),
-            "parent did not finish after its child: {}",
-            output.stdout
-        );
-
-        let artifacts_dir = working_dir.path().join(".pi-subagents").join("artifacts");
-        let child_succeeded = std::fs::read_dir(&artifacts_dir)
-            .into_iter()
-            .flatten()
-            .filter_map(Result::ok)
-            .filter(|entry| entry.file_name().to_string_lossy().ends_with("_meta.json"))
-            .any(|entry| {
-                let Ok(raw_meta) = std::fs::read_to_string(entry.path()) else {
-                    return false;
-                };
-                let Ok(meta) = serde_json::from_str::<serde_json::Value>(&raw_meta) else {
-                    return false;
-                };
-                let output_name = entry
-                    .file_name()
-                    .to_string_lossy()
-                    .replace("_meta.json", "_output.md");
-                let output = std::fs::read_to_string(entry.path().with_file_name(output_name))
-                    .unwrap_or_default();
-                meta.get("exitCode").and_then(serde_json::Value::as_i64) == Some(0)
-                    && output.contains("CHILD_OK")
-            });
-        assert!(
-            child_succeeded,
-            "no successful CHILD_OK run found under {} (parent output: {})",
-            artifacts_dir.display(),
-            output.stdout
-        );
-    }
-
     #[test]
     fn clear_screenpipe_auth_preserves_other_provider_tokens() {
         let dir = tempfile::tempdir().expect("tempdir");
@@ -4700,7 +4267,7 @@ mod tests {
         )
         .expect("write auth");
 
-        remove_screenpipe_auth_from_path(&auth_path).expect("clear screenpipe auth");
+        upgrade_legacy_pi_credentials_at_path(&auth_path).expect("scrub screenpipe auth");
 
         let auth: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&auth_path).unwrap()).unwrap();
@@ -4730,10 +4297,7 @@ mod tests {
 
         assert!(upgrade_legacy_pi_credentials(&mut auth));
 
-        assert_eq!(
-            auth["screenpipe"],
-            serde_json::json!({"type": "api_key", "key": "bare-jwt"})
-        );
+        assert!(auth.get("screenpipe").is_none());
         assert_eq!(
             auth["anthropic"],
             serde_json::json!({"type": "api_key", "key": "sk-ant"})
@@ -4747,14 +4311,19 @@ mod tests {
 
     #[test]
     fn already_tagged_credentials_are_left_alone() {
-        let original = serde_json::json!({
+        let mut auth = serde_json::json!({
             "screenpipe": {"type": "api_key", "key": "jwt"},
             "anthropic": {"type": "oauth", "access": "a", "refresh": "r", "expires": 1},
         });
-        let mut auth = original.clone();
 
-        assert!(!upgrade_legacy_pi_credentials(&mut auth));
-        assert_eq!(auth, original);
+        // Local-only: the screenpipe entry is scrubbed even when tagged; the
+        // untouched BYOK oauth entry alone is not a change worth reporting.
+        assert!(upgrade_legacy_pi_credentials(&mut auth));
+        assert!(auth.get("screenpipe").is_none());
+        assert_eq!(
+            auth["anthropic"],
+            serde_json::json!({"type": "oauth", "access": "a", "refresh": "r", "expires": 1})
+        );
     }
 
     #[test]
@@ -4767,12 +4336,13 @@ mod tests {
 
         let auth: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&auth_path).unwrap()).unwrap();
-        assert_eq!(
-            auth["screenpipe"],
-            serde_json::json!({"type": "api_key", "key": "bare-jwt"})
+        assert!(
+            auth.get("screenpipe").is_none(),
+            "the Screenpipe credential is scrubbed, not upgraded"
         );
 
-        // Second pass is a no-op: already tagged, file must not be rewritten.
+        // Second pass is a no-op: nothing left to scrub or upgrade, the file
+        // must not be rewritten.
         let before = std::fs::read_to_string(&auth_path).unwrap();
         upgrade_legacy_pi_credentials_at_path(&auth_path).expect("second upgrade");
         assert_eq!(std::fs::read_to_string(&auth_path).unwrap(), before);
@@ -4783,7 +4353,7 @@ mod tests {
         let dir = tempfile::tempdir().expect("tempdir");
         let auth_path = dir.path().join("missing-auth.json");
 
-        remove_screenpipe_auth_from_path(&auth_path).expect("missing auth is ok");
+        upgrade_legacy_pi_credentials_at_path(&auth_path).expect("missing auth is ok");
 
         assert!(!auth_path.exists());
     }
@@ -5044,206 +4614,6 @@ mod tests {
         // hosted_ai_capacity_reserved uses "retry_after_seconds", not "reset_in".
         let capacity_reserved = r#"429 {"error":"hosted_ai_capacity_reserved","message":"Other AI chats are still running. Wait for one to finish, then retry.","retry_after_seconds":5}"#;
         assert_eq!(parse_rate_limit_reset_secs(capacity_reserved), Some(5));
-    }
-
-    #[test]
-    fn test_pick_allowed_model() {
-        let allowed: Vec<String> = ["auto", "claude-haiku-4-5", "gemini-3.5-flash"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
-
-        // Allowed model passes through unchanged.
-        assert_eq!(
-            PiExecutor::pick_allowed_model("gemini-3.5-flash", &allowed),
-            Ok("gemini-3.5-flash".to_string())
-        );
-        // "auto" is always valid.
-        assert_eq!(
-            PiExecutor::pick_allowed_model("auto", &allowed),
-            Ok("auto".to_string())
-        );
-        // Disallowed model (the reported bug: opus on a haiku/gemini tier)
-        // falls back to "auto" when present.
-        assert_eq!(
-            PiExecutor::pick_allowed_model("claude-opus-4", &allowed),
-            Err("auto".to_string())
-        );
-
-        // When "auto" is NOT offered, fall back to the first allowed model.
-        let no_auto: Vec<String> = ["claude-haiku-4-5", "gemini-3.5-flash"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
-        assert_eq!(
-            PiExecutor::pick_allowed_model("claude-opus-4", &no_auto),
-            Err("claude-haiku-4-5".to_string())
-        );
-
-        // Empty catalog (gateway returned an empty list) → trust the requested
-        // model, don't break degraded runs.
-        assert_eq!(
-            PiExecutor::pick_allowed_model("claude-opus-4", &[]),
-            Ok("claude-opus-4".to_string())
-        );
-
-        // Gateway fallback sentinel ["auto"] (gateway unreachable → fallback_cloud_models)
-        // must be treated like an empty catalog: it is NOT a one-model tier, so
-        // a deliberately-chosen premium model passes through unchanged instead
-        // of being spuriously downgraded. This is the #3763 offline regression.
-        let gateway_fallback = vec!["auto".to_string()];
-        assert_eq!(
-            PiExecutor::pick_allowed_model("claude-opus-4", &gateway_fallback),
-            Ok("claude-opus-4".to_string())
-        );
-        assert_eq!(
-            PiExecutor::pick_allowed_model("auto", &gateway_fallback),
-            Ok("auto".to_string())
-        );
-        assert!(PiExecutor::is_gateway_fallback_catalog(&gateway_fallback));
-        // A real single-model tier on a concrete id is NOT the sentinel.
-        assert!(!PiExecutor::is_gateway_fallback_catalog(&[
-            "claude-haiku-4-5".to_string()
-        ]));
-    }
-
-    #[test]
-    fn gateway_catalog_omits_locked_models_from_pi() {
-        let models = gateway_models_to_pi_models(&[
-            json!({
-                "id": "auto",
-                "name": "Auto",
-                "context_window": 128000,
-                "intelligence": "standard",
-            }),
-            json!({
-                "id": "gpt-5.6-terra",
-                "name": "GPT-5.6 Terra",
-                "locked": true,
-                "context_window": 128000,
-                "intelligence": "highest",
-            }),
-            json!({
-                "id": "gpt-5.6-luna",
-                "name": "GPT-5.6 Luna",
-                "locked": null,
-                "context_window": 128000,
-                "intelligence": "high",
-            }),
-        ]);
-
-        let ids: Vec<&str> = models
-            .iter()
-            .filter_map(|model| model.get("id").and_then(|id| id.as_str()))
-            .collect();
-        assert_eq!(ids, vec!["auto", "gpt-5.6-luna"]);
-        assert!(models.iter().all(|model| {
-            model
-                .pointer("/compat/sendSessionAffinityHeaders")
-                .and_then(|value| value.as_bool())
-                == Some(true)
-        }));
-
-        let fallback = fallback_cloud_models();
-        assert_eq!(
-            fallback.pointer("/0/compat/sendSessionAffinityHeaders"),
-            Some(&json!(true))
-        );
-
-        assert!(selectable_gateway_models(&[json!({
-            "id": "gpt-5.6-terra",
-            "locked": true,
-        })])
-        .is_none());
-    }
-
-    #[test]
-    fn gateway_catalog_uses_advertised_output_budget_with_safe_fallback() {
-        let models = gateway_models_to_pi_models(&[
-            json!({
-                "id": "claude-sonnet-5",
-                "context_window": 1_000_000,
-                "max_output_tokens": 128_000,
-            }),
-            json!({
-                "id": "legacy-model-without-output-metadata",
-                "context_window": 128_000,
-            }),
-            json!({
-                "id": "invalid-model-budget",
-                "context_window": 64_000,
-                "max_output_tokens": 0,
-            }),
-            json!({
-                "id": "oversized-model-budget",
-                "context_window": 64_000,
-                "max_output_tokens": 128_000,
-            }),
-        ]);
-
-        assert_eq!(models[0].get("maxTokens"), Some(&json!(128_000)));
-        assert_eq!(models[1].get("maxTokens"), Some(&json!(32_000)));
-        assert_eq!(models[2].get("maxTokens"), Some(&json!(32_000)));
-        assert_eq!(models[3].get("maxTokens"), Some(&json!(64_000)));
-    }
-
-    #[tokio::test]
-    async fn gateway_output_budget_flows_from_http_to_pi_catalog() {
-        use wiremock::{
-            matchers::{method, path},
-            Mock, MockServer, ResponseTemplate,
-        };
-
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/models"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "data": [
-                    {
-                        "id": "claude-sonnet-5",
-                        "name": "Claude Sonnet 5",
-                        "context_window": 1_000_000,
-                        "max_output_tokens": 128_000,
-                        "intelligence": "highest",
-                    },
-                    {
-                        "id": "legacy-model",
-                        "name": "Legacy model",
-                        "context_window": 128_000,
-                    },
-                ]
-            })))
-            .mount(&server)
-            .await;
-
-        let models = screenpipe_cloud_models(&server.uri(), None).await;
-        assert_eq!(models.pointer("/0/maxTokens"), Some(&json!(128_000)));
-        assert_eq!(models.pointer("/1/maxTokens"), Some(&json!(32_000)));
-    }
-
-    #[tokio::test]
-    async fn all_locked_gateway_catalog_uses_auto_fallback() {
-        use wiremock::{
-            matchers::{method, path},
-            Mock, MockServer, ResponseTemplate,
-        };
-
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/models"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "data": [{
-                    "id": "gpt-5.6-terra",
-                    "name": "GPT-5.6 Terra",
-                    "locked": true,
-                }]
-            })))
-            .mount(&server)
-            .await;
-
-        let models = screenpipe_cloud_models(&server.uri(), None).await;
-        assert_eq!(models.as_array().map(Vec::len), Some(1));
-        assert_eq!(models.pointer("/0/id"), Some(&json!("auto")));
     }
 
     #[test]
@@ -5578,8 +4948,6 @@ mod tests {
 
         // Call ensure_pi_config with ollama provider info
         PiExecutor::ensure_pi_config(
-            None,
-            SCREENPIPE_API_URL,
             Some("ollama"),
             Some("qwen3:8b"),
             Some("http://localhost:11434/v1"),
@@ -5609,62 +4977,6 @@ mod tests {
         assert_eq!(models[0].get("id").unwrap().as_str().unwrap(), "qwen3:8b");
 
         std::env::remove_var("SCREENPIPE_PI_AGENT_DIR");
-    }
-
-    /// Regression: the engine used to capture the cloud user token once at
-    /// boot via `PiExecutor::new(user_token)` and never refresh it. Users
-    /// who signed in AFTER the sidecar started stayed on tier=anonymous
-    /// until they fully quit + relaunched. The fix is `set_user_token` +
-    /// `with_shared_user_token` — verify both work end-to-end.
-    #[tokio::test]
-    async fn set_user_token_updates_subsequent_reads() {
-        let exec = PiExecutor::new(None);
-        assert_eq!(exec.current_user_token(), None);
-
-        exec.set_user_token(Some("token-v1".to_string()));
-        assert_eq!(exec.current_user_token(), Some("token-v1".to_string()));
-
-        exec.set_user_token(Some("token-v2".to_string()));
-        assert_eq!(exec.current_user_token(), Some("token-v2".to_string()));
-
-        // Empty strings normalize to None so downstream `is_some()` checks
-        // can't be tricked into sending an empty Bearer token.
-        exec.set_user_token(Some("".to_string()));
-        assert_eq!(exec.current_user_token(), None);
-
-        exec.set_user_token(None);
-        assert_eq!(exec.current_user_token(), None);
-    }
-
-    /// Confirms the design promise: a single shared `ArcSwap` written
-    /// from one place is observed by every PiExecutor that was constructed
-    /// with `with_shared_user_token` against that same Arc. This is what
-    /// lets the Tauri `set_cloud_token` command update the running
-    /// pi-agent's apiKey AND the cloud_proxy.rs forwarder in one write.
-    #[tokio::test]
-    async fn shared_arc_propagates_token_writes_across_executors() {
-        let shared = Arc::new(ArcSwap::new(Arc::new(None::<String>)));
-        let exec_a = PiExecutor::with_shared_user_token(shared.clone());
-        let exec_b = PiExecutor::with_shared_user_token(shared.clone());
-
-        assert_eq!(exec_a.current_user_token(), None);
-        assert_eq!(exec_b.current_user_token(), None);
-
-        // Write via executor A — both see it.
-        exec_a.set_user_token(Some("fresh-jwt".to_string()));
-        assert_eq!(exec_a.current_user_token(), Some("fresh-jwt".to_string()));
-        assert_eq!(exec_b.current_user_token(), Some("fresh-jwt".to_string()));
-
-        // Write directly through the Arc (simulates the Tauri command
-        // path which holds only the Arc, not the executor) — both see it.
-        shared.store(Arc::new(Some("from-tauri".to_string())));
-        assert_eq!(exec_a.current_user_token(), Some("from-tauri".to_string()));
-        assert_eq!(exec_b.current_user_token(), Some("from-tauri".to_string()));
-
-        // Sign-out path.
-        exec_b.set_user_token(None);
-        assert_eq!(exec_a.current_user_token(), None);
-        assert_eq!(exec_b.current_user_token(), None);
     }
 
     /// Regression guard for SCREENPIPE-APP-AR: a corrupted package.json

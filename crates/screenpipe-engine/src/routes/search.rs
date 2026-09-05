@@ -67,7 +67,6 @@ use tokio::{
 };
 use tracing::{debug, error, warn};
 
-use crate::analytics;
 use crate::history_access::HistoryAccessPolicy;
 use crate::server::AppState;
 use crate::video_utils::extract_frame;
@@ -395,9 +394,6 @@ fn parse_flexible_bool(s: &str) -> Result<bool, String> {
 pub struct SearchResponse {
     pub data: Vec<ContentItem>,
     pub pagination: PaginationInfo,
-    /// Metadata about cloud search availability (only present when cloud sync is available)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cloud: Option<crate::cloud_search::CloudSearchMetadata>,
     /// Tags that co-occur with the requested `tags`, grouped by namespace
     /// (`people`, `projects`, `workflows`, …) and ordered most-frequent
     /// first. Present only when `include_related=true` and a `tags` filter
@@ -518,7 +514,6 @@ fn group_related_tags(rows: Vec<(String, i64)>) -> std::collections::HashMap<Str
 
 pub struct SearchCacheEntry {
     json_body: Bytes,
-    result_count: usize,
 }
 
 const SEARCH_CACHE_MAX_ITEMS: usize = 200;
@@ -543,39 +538,7 @@ fn build_search_cache_entry(response: &SearchResponse) -> Option<SearchCacheEntr
     }
     Some(SearchCacheEntry {
         json_body: Bytes::from(json_body),
-        result_count: response.data.len(),
     })
-}
-
-fn capture_direct_api_search_value(client: &ExplicitApiClient, result_count: usize) {
-    if client.is_direct_api() && result_count > 0 {
-        analytics::capture_event_nonblocking(
-            "qualified_value_event",
-            crate::qualified_value::api_outcome_properties(
-                crate::qualified_value::ApiOutcomeKind::SearchResult,
-            ),
-        );
-    }
-}
-
-fn parsed_parser_profiles(content_items: &[ContentItem]) -> Vec<String> {
-    let mut parser_ids = Vec::new();
-    for item in content_items {
-        let ContentItem::Parsed(content) = item else {
-            continue;
-        };
-        if parser_ids
-            .iter()
-            .any(|parser_id| parser_id == &content.parser_id)
-        {
-            continue;
-        }
-        parser_ids.push(content.parser_id.clone());
-        if parser_ids.len() == 16 {
-            break;
-        }
-    }
-    parser_ids
 }
 
 /// Middle-truncate a string to at most `max_chars` characters.
@@ -1016,7 +979,6 @@ fn empty_search_response(
                 offset: query.pagination.offset,
                 total: 0,
             },
-            cloud: None,
             related: None,
         },
     )
@@ -1028,7 +990,7 @@ pub(crate) async fn search(
     Query(mut query): Query<SearchQuery>,
     State(state): State<Arc<AppState>>,
     OptionalPipePerms(pipe_perms): OptionalPipePerms,
-    api_client: ExplicitApiClient,
+    _api_client: ExplicitApiClient,
 ) -> Result<Response<Body>, (StatusCode, JsonResponse<serde_json::Value>)> {
     // Presentation-only: parsed up front so a bad `format` 400s before any
     // DB work. Only the default JSON representation is cached; alternate
@@ -1108,7 +1070,6 @@ pub(crate) async fn search(
     if !history_restricted && !query.include_frames && cacheable_render && !pipe_data_restricted {
         if let Some(cached) = state.search_cache.get(&cache_key).await {
             debug!("search cache hit for key {}", cache_key);
-            capture_direct_api_search_value(&api_client, cached.result_count);
             return Ok(render_cached_search(&cached));
         }
     }
@@ -1459,30 +1420,8 @@ pub(crate) async fn search(
 
     debug!("search completed: found {} results", total);
 
-    let response_non_empty = !content_items.is_empty();
-    let parsed_parser_profiles = if parsed_search {
-        parsed_parser_profiles(&content_items)
-    } else {
-        Vec::new()
-    };
 
-    // Track search analytics
-    analytics::capture_event_nonblocking(
-        "search_performed",
-        serde_json::json!({
-            "query_length": query.q.as_ref().map(|q| q.len()).unwrap_or(0),
-            "content_type": format!("{:?}", query.content_type),
-            "request_source": api_client.source_label(),
-            "has_date_filter": query.start_time.is_some() || query.end_time.is_some(),
-            "has_app_filter": query.app_name.is_some(),
-            "result_count": total,
-            "non_empty": response_non_empty,
-            "parsed_non_empty": parsed_search && response_non_empty,
-            "parsed_parser_profiles": parsed_parser_profiles,
-            "limit": query.pagination.limit,
-            "offset": query.pagination.offset,
-        }),
-    );
+
 
     let response = SearchResponse {
         data: content_items,
@@ -1491,14 +1430,8 @@ pub(crate) async fn search(
             offset: query.pagination.offset,
             total: total as i64,
         },
-        // Cloud search is intentionally unavailable in the local-first build.
-        // Keep the nullable response field for wire compatibility with older
-        // clients, but never perform a remote lookup.
-        cloud: None,
         related,
     };
-
-    capture_direct_api_search_value(&api_client, response.data.len());
 
     // Cache the result (only for queries without frame extraction). Cache hits
     // serve the pre-serialized JSON bytes directly for the common response
@@ -2563,7 +2496,6 @@ mod tests {
                 offset: 0,
                 total: 1,
             },
-            cloud: None,
             related: None,
         };
 

@@ -12,9 +12,6 @@
 //! - [`lifecycle`]: meeting start/end DB side effects, the no-apps path, and
 //!   in-meeting flag sync.
 
-use crate::meeting_watcher::shared::telemetry::{
-    capture_detection_decision, MeetingDetectionScanSummary,
-};
 use crate::meeting_watcher::shared::*;
 use crate::routes::meetings::{emit_meeting_status_changed, resolve_meeting_status_from};
 use chrono::{DateTime, Utc};

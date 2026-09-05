@@ -11,7 +11,6 @@
 
 use chrono::{DateTime, Utc};
 use screenpipe_a11y::tree::{AccessibilityTreeNode, TreeSnapshot};
-use screenpipe_config::SemanticContextMode;
 use screenpipe_core::pii_removal::remove_pii;
 use screenpipe_db::DatabaseManager;
 use screenpipe_semantic::{
@@ -19,7 +18,6 @@ use screenpipe_semantic::{
     CapturedAccessibilityNode, NodeBounds, OutputBudget, ParseContext, ParserRegistry, Platform,
     TreeBudget, ValidatedParseOutcome,
 };
-use serde_json::{json, Value};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
@@ -28,7 +26,6 @@ use tokio::sync::watch;
 use tokio::time::Instant as DeadlineInstant;
 use tracing::{debug, info, warn};
 
-const SEMANTIC_TELEMETRY_SAMPLE_DENOMINATOR: i64 = 100;
 
 /// Remembered parse runs for screens this process already stored. Bounded so a
 /// long session cannot grow the worker's memory with stale app states.
@@ -44,22 +41,6 @@ const SEMANTIC_ATTACH_MAX_DELAY: Duration = Duration::from_secs(2);
 #[derive(Clone)]
 pub(crate) struct SemanticProjectionSender {
     tx: watch::Sender<Option<Arc<SemanticProjectionJob>>>,
-    mode_label: &'static str,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum SemanticCaptureGap {
-    TreeMissing,
-    FocusIncoherent,
-}
-
-impl SemanticCaptureGap {
-    const fn label(self) -> &'static str {
-        match self {
-            Self::TreeMissing => "tree_missing",
-            Self::FocusIncoherent => "focus_incoherent",
-        }
-    }
 }
 
 pub(crate) struct SemanticProjectionJob {
@@ -99,49 +80,23 @@ impl SemanticProjectionSender {
     pub(crate) fn submit(&self, job: SemanticProjectionJob) -> bool {
         let frame_id = job.frame_id;
         let replaced = self.tx.send_replace(Some(Arc::new(job))).is_some();
-        emit_sampled_semantic_capture_telemetry(
-            frame_id,
-            if replaced {
-                "submitted_replaced"
-            } else {
-                "submitted"
-            },
-            self.mode_label,
-        );
+        let _ = frame_id;
         replaced
     }
 
-    pub(crate) fn record_capture_gap(&self, frame_id: i64, gap: SemanticCaptureGap) {
-        emit_sampled_semantic_capture_telemetry(frame_id, gap.label(), self.mode_label);
-    }
 }
 
 pub(crate) fn spawn_semantic_projection_worker(
     db: Arc<DatabaseManager>,
     runtime: &Handle,
-    mode: SemanticContextMode,
 ) -> SemanticProjectionSender {
-    let mode_label = semantic_mode_label(mode);
-    let (tx, rx) = semantic_projection_channel(mode_label);
-    runtime.spawn(run_semantic_projection_worker(
-        db,
-        rx,
-        tx.tx.clone(),
-        mode_label,
-    ));
+    let (tx, rx) = semantic_projection_channel();
+    runtime.spawn(run_semantic_projection_worker(db, rx, tx.tx.clone()));
     info!("semantic projection worker enabled");
     tx
 }
 
 /// Static rollout dimension for telemetry; never derived from capture content.
-const fn semantic_mode_label(mode: SemanticContextMode) -> &'static str {
-    match mode {
-        SemanticContextMode::Memory => "memory",
-        SemanticContextMode::ComputerUse => "computer_use",
-        SemanticContextMode::Both => "both",
-    }
-}
-
 /// Identifies one stored parse run without holding any captured content.
 ///
 /// These are exactly the fields the persisted run fingerprint is derived from,
@@ -262,21 +217,18 @@ async fn wait_for_flush_deadline(deadline: Option<DeadlineInstant>) {
     }
 }
 
-fn semantic_projection_channel(
-    mode_label: &'static str,
-) -> (
+fn semantic_projection_channel() -> (
     SemanticProjectionSender,
     watch::Receiver<Option<Arc<SemanticProjectionJob>>>,
 ) {
     let (tx, rx) = watch::channel(None);
-    (SemanticProjectionSender { tx, mode_label }, rx)
+    (SemanticProjectionSender { tx }, rx)
 }
 
 async fn run_semantic_projection_worker(
     db: Arc<DatabaseManager>,
     mut rx: watch::Receiver<Option<Arc<SemanticProjectionJob>>>,
     tx: watch::Sender<Option<Arc<SemanticProjectionJob>>>,
-    mode_label: &'static str,
 ) {
     let registry = match builtin_parser_registry() {
         Ok(registry) => registry,
@@ -319,7 +271,7 @@ async fn run_semantic_projection_worker(
                 false
             }
         });
-        if let Err(error) = process_semantic_job(&db, &registry, &job, mode_label, &mut state).await
+        if let Err(error) = process_semantic_job(&db, &registry, &job, &mut state).await
         {
             warn!(
                 frame_id = job.frame_id,
@@ -339,7 +291,6 @@ async fn process_semantic_job(
     db: &DatabaseManager,
     registry: &ParserRegistry,
     job: &SemanticProjectionJob,
-    mode_label: &'static str,
     state: &mut SemanticProjectionState,
 ) -> anyhow::Result<()> {
     let app = AppIdentity {
@@ -358,14 +309,6 @@ async fn process_semantic_job(
         .map(|plan| plan.parser_ids)
         .unwrap_or_default();
     if candidate_parser_ids.is_empty() {
-        emit_sampled_semantic_telemetry(
-            job.frame_id,
-            &candidate_parser_ids,
-            None,
-            "no_candidate",
-            0,
-            mode_label,
-        );
         return Ok(());
     }
 
@@ -376,14 +319,6 @@ async fn process_semantic_job(
     // copies before parsing and database work.
     drop(nodes);
     if adapted.tree.is_empty() {
-        emit_sampled_semantic_telemetry(
-            job.frame_id,
-            &candidate_parser_ids,
-            None,
-            "empty",
-            0,
-            mode_label,
-        );
         return Ok(());
     }
 
@@ -394,14 +329,6 @@ async fn process_semantic_job(
     let cache_key = SemanticRunCacheKey::new(&app, input_content_hash);
     if let Some(run_id) = state.cache.get(&cache_key) {
         state.queue_attachment(job.frame_id, run_id);
-        emit_sampled_semantic_telemetry(
-            job.frame_id,
-            &candidate_parser_ids,
-            None,
-            "handled_cached",
-            0,
-            mode_label,
-        );
         return Ok(());
     }
 
@@ -419,9 +346,7 @@ async fn process_semantic_job(
         app: &app,
         input_content_hash,
     };
-    let parse_started = Instant::now();
     let result = registry.parse(&context, &adapted.tree, OutputBudget::default());
-    let parse_duration_us = parse_started.elapsed().as_micros() as u64;
     for failure in &result.failures {
         debug!(
             frame_id = job.frame_id,
@@ -432,6 +357,9 @@ async fn process_semantic_job(
     }
 
     match result.outcome {
+        // Local-only build: the sampled coverage telemetry that used the other
+        // outcomes is gone; nothing to do for Empty/NotHandled.
+        ValidatedParseOutcome::Empty | ValidatedParseOutcome::NotHandled => {}
         ValidatedParseOutcome::Handled(projection) => {
             let Some(parser_id) = result.selected_parser_id.as_deref() else {
                 anyhow::bail!("handled semantic projection did not select a parser");
@@ -447,7 +375,6 @@ async fn process_semantic_job(
                 adapted.stats.suppressed_offscreen_content_nodes;
             let suppressed_offscreen_content_bytes =
                 adapted.stats.suppressed_offscreen_content_bytes;
-            let store_started = Instant::now();
             let write = db
                 .store_semantic_projection(
                     job.frame_id,
@@ -458,20 +385,7 @@ async fn process_semantic_job(
                     &projection,
                 )
                 .await?;
-            let store_duration_us = store_started.elapsed().as_micros() as u64;
             state.cache.insert(cache_key, write.run_id);
-            emit_sampled_semantic_telemetry_with_write(
-                job.frame_id,
-                &candidate_parser_ids,
-                Some(parser_id),
-                "handled",
-                parse_duration_us,
-                mode_label,
-                Some(SemanticWriteSample {
-                    store_duration_us,
-                    reused_run: write.reused_run,
-                }),
-            );
             debug!(
                 frame_id = job.frame_id,
                 run_id = write.run_id,
@@ -486,22 +400,6 @@ async fn process_semantic_job(
                 "semantic projection stored"
             );
         }
-        ValidatedParseOutcome::Empty => emit_sampled_semantic_telemetry(
-            job.frame_id,
-            &candidate_parser_ids,
-            result.selected_parser_id.as_deref(),
-            "empty",
-            parse_duration_us,
-            mode_label,
-        ),
-        ValidatedParseOutcome::NotHandled => emit_sampled_semantic_telemetry(
-            job.frame_id,
-            &candidate_parser_ids,
-            None,
-            "not_handled",
-            parse_duration_us,
-            mode_label,
-        ),
     }
     Ok(())
 }
@@ -509,113 +407,6 @@ async fn process_semantic_job(
 /// Emits a small, deterministic sample of semantic coverage data. This runs
 /// after capture has completed and delegates the HTTP request to the existing
 /// analytics task, so semantic processing never awaits telemetry.
-fn emit_sampled_semantic_telemetry(
-    frame_id: i64,
-    candidate_parser_ids: &[String],
-    selected_parser_id: Option<&str>,
-    outcome: &'static str,
-    parse_duration_us: u64,
-    mode_label: &'static str,
-) {
-    emit_sampled_semantic_telemetry_with_write(
-        frame_id,
-        candidate_parser_ids,
-        selected_parser_id,
-        outcome,
-        parse_duration_us,
-        mode_label,
-        None,
-    );
-}
-
-fn emit_sampled_semantic_capture_telemetry(
-    frame_id: i64,
-    outcome: &'static str,
-    mode_label: &'static str,
-) {
-    if !should_sample_semantic_telemetry(frame_id) {
-        return;
-    }
-    crate::analytics::capture_event_nonblocking(
-        "semantic_capture_sample",
-        semantic_capture_telemetry_properties(outcome, mode_label),
-    );
-}
-
-fn semantic_capture_telemetry_properties(outcome: &'static str, mode_label: &'static str) -> Value {
-    json!({
-        "semantic_capture_outcome": outcome,
-        "semantic_platform": platform_label(current_platform()),
-        "semantic_mode": mode_label,
-    })
-}
-
-/// Content-free cost of one persisted projection. Without this the write path
-/// is invisible in production and a storage regression cannot be measured.
-#[derive(Debug, Clone, Copy)]
-struct SemanticWriteSample {
-    store_duration_us: u64,
-    reused_run: bool,
-}
-
-fn emit_sampled_semantic_telemetry_with_write(
-    frame_id: i64,
-    candidate_parser_ids: &[String],
-    selected_parser_id: Option<&str>,
-    outcome: &'static str,
-    parse_duration_us: u64,
-    mode_label: &'static str,
-    write: Option<SemanticWriteSample>,
-) {
-    if !should_sample_semantic_telemetry(frame_id) {
-        return;
-    }
-
-    crate::analytics::capture_event_nonblocking(
-        "semantic_parser_sample",
-        semantic_telemetry_properties(
-            candidate_parser_ids,
-            selected_parser_id,
-            outcome,
-            parse_duration_us,
-            mode_label,
-            write,
-        ),
-    );
-}
-
-fn should_sample_semantic_telemetry(frame_id: i64) -> bool {
-    frame_id.rem_euclid(SEMANTIC_TELEMETRY_SAMPLE_DENOMINATOR) == 0
-}
-
-fn semantic_telemetry_properties(
-    candidate_parser_ids: &[String],
-    selected_parser_id: Option<&str>,
-    outcome: &'static str,
-    parse_duration_us: u64,
-    mode_label: &'static str,
-    write: Option<SemanticWriteSample>,
-) -> Value {
-    json!({
-        "semantic_candidate_parser_ids": candidate_parser_ids,
-        "semantic_selected_parser_id": selected_parser_id,
-        "semantic_outcome": outcome,
-        "semantic_parse_duration_us": parse_duration_us,
-        "semantic_platform": platform_label(current_platform()),
-        "semantic_mode": mode_label,
-        "semantic_store_duration_us": write.map(|write| write.store_duration_us),
-        "semantic_reused_run": write.map(|write| write.reused_run),
-    })
-}
-
-const fn platform_label(platform: Platform) -> &'static str {
-    match platform {
-        Platform::Macos => "macos",
-        Platform::Windows => "windows",
-        Platform::Linux => "linux",
-    }
-}
-
 fn captured_semantic_nodes(
     snapshot: &TreeSnapshot,
     redact_pii: bool,
@@ -877,7 +668,7 @@ mod tests {
 
     #[tokio::test]
     async fn pending_slot_keeps_only_latest_frame() {
-        let (sender, mut receiver) = semantic_projection_channel("test");
+        let (sender, mut receiver) = semantic_projection_channel();
         assert!(!sender.submit(job(1, "first")));
         assert!(sender.submit(job(2, "second")));
 
@@ -917,72 +708,7 @@ mod tests {
         assert_eq!(normalize_locale_hint("x".repeat(65)), None);
     }
 
-    #[test]
-    fn semantic_telemetry_sampling_is_deterministic_and_bounded() {
-        assert!(should_sample_semantic_telemetry(100));
-        assert!(should_sample_semantic_telemetry(-100));
-        assert!(!should_sample_semantic_telemetry(99));
-        assert!(!should_sample_semantic_telemetry(101));
-    }
-
-    #[test]
-    fn semantic_telemetry_properties_exclude_capture_content() {
-        let properties = semantic_telemetry_properties(
-            &[
-                "app.macos.slack.content_list".into(),
-                "family.conversation".into(),
-            ],
-            Some("family.conversation"),
-            "handled",
-            73,
-            "memory",
-            Some(SemanticWriteSample {
-                store_duration_us: 1_200,
-                reused_run: true,
-            }),
-        );
-
-        assert_eq!(properties["semantic_outcome"], "handled");
-        assert_eq!(properties["semantic_parse_duration_us"], 73);
-        assert_eq!(
-            properties["semantic_platform"],
-            platform_label(current_platform())
-        );
-        assert_eq!(properties["semantic_mode"], "memory");
-        assert_eq!(properties["semantic_store_duration_us"], 1_200);
-        assert_eq!(properties["semantic_reused_run"], true);
-        assert_eq!(properties.as_object().map(|object| object.len()), Some(8));
-        let serialized = properties.to_string();
-        assert!(!serialized.contains("app_identifier"));
-        assert!(!serialized.contains("display_name"));
-        assert!(!serialized.contains("executable"));
-        assert!(!serialized.contains("browser_url"));
-        assert!(!serialized.contains("window_name"));
-        assert!(!serialized.contains("frame_id"));
-        assert!(!serialized.contains("text_content"));
-    }
-
-    #[test]
-    fn semantic_capture_telemetry_exposes_pipeline_gaps_without_content() {
-        for outcome in [
-            "submitted",
-            "submitted_replaced",
-            "tree_missing",
-            "focus_incoherent",
-        ] {
-            let properties = semantic_capture_telemetry_properties(outcome, "memory");
-            assert_eq!(properties["semantic_capture_outcome"], outcome);
-            assert_eq!(properties["semantic_mode"], "memory");
-            assert_eq!(properties.as_object().map(|object| object.len()), Some(3));
-            let serialized = properties.to_string();
-            assert!(!serialized.contains("frame_id"));
-            assert!(!serialized.contains("app_name"));
-            assert!(!serialized.contains("browser_url"));
-            assert!(!serialized.contains("text_content"));
-        }
-    }
-
-    #[tokio::test]
+        #[tokio::test]
     async fn unchanged_screen_stores_once_and_batches_later_frames() {
         let db = DatabaseManager::new("sqlite::memory:", Default::default())
             .await
@@ -1022,7 +748,7 @@ mod tests {
                 slack_snapshot("notarization is blocking the release"),
                 false,
             );
-            process_semantic_job(&db, &registry, &job, "memory", &mut state)
+            process_semantic_job(&db, &registry, &job, &mut state)
                 .await
                 .expect("process semantic projection");
         }
@@ -1091,7 +817,7 @@ mod tests {
         );
 
         let mut state = SemanticProjectionState::default();
-        process_semantic_job(&db, &registry, &projection_job, "memory", &mut state)
+        process_semantic_job(&db, &registry, &projection_job, &mut state)
             .await
             .expect("process semantic projection");
 

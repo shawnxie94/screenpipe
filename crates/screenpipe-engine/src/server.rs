@@ -10,11 +10,9 @@ use chrono::{DateTime, Utc};
 use screenpipe_db::DatabaseManager;
 
 use screenpipe_audio::audio_manager::AudioManager;
-use screenpipe_core::sync::SyncServiceHandle;
 use tracing::{debug, error, info};
 
 use crate::{
-    analytics,
     history_access::HistoryAccessPolicy,
     hot_frame_cache::HotFrameCache,
     routes::{
@@ -77,14 +75,12 @@ use crate::{
             ws_meeting_status_handler, ws_metrics_handler, WebSocketLifecycle,
         },
     },
-    sync_api::{self, SyncState},
     video_cache::FrameCache,
 };
 use arc_swap::ArcSwap;
 use dashmap::DashMap;
 use lru::LruCache;
 use moka::future::Cache as MokaCache;
-use serde_json::json;
 use std::{
     future::Future,
     net::SocketAddr,
@@ -92,7 +88,7 @@ use std::{
     panic::AssertUnwindSafe,
     path::PathBuf,
     sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::AtomicUsize,
         Arc,
     },
     time::Duration,
@@ -183,15 +179,11 @@ pub struct AppState {
     /// Enable PII removal from text content
     pub use_pii_removal: bool,
     /// Cloud search client for hybrid local + cloud queries
-    pub cloud_search: Arc<crate::cloud_search::CloudSearchClient>,
     /// Cloud sync service handle (if enabled via CLI)
-    pub sync_handle: Option<Arc<SyncServiceHandle>>,
     /// Runtime sync state (initialized via /sync/init endpoint)
-    pub sync_state: SyncState,
     /// Video quality preset for frame extraction (JPEG quality).
     pub video_quality: String,
     /// API request counter for usage analytics
-    pub api_request_count: Arc<AtomicUsize>,
     /// Pipe manager for scheduled agent execution
     pub pipe_manager: Option<crate::pipes_api::SharedPipeManager>,
     /// Vision pipeline metrics (shared across all monitors)
@@ -229,12 +221,6 @@ pub struct AppState {
     pub api_auth: bool,
     /// The API key to validate against (from SCREENPIPE_API_KEY or auth.json)
     pub api_auth_key: Option<String>,
-    /// Cloud JWT (Clerk) used to authenticate proxied requests to api.screenpipe.com.
-    /// Held in ArcSwap so the desktop shell can refresh it after login/logout
-    /// without rebuilding the server. The pi-agent's bash deliberately can't see
-    /// this token — agent calls localhost/v1/chat/completions and the server
-    /// signs the upstream request here. See routes/cloud_proxy.rs.
-    pub cloud_token: Arc<ArcSwap<Option<String>>>,
     /// Unified credential store for OAuth tokens, API keys, etc.
     pub secret_store: Option<Arc<screenpipe_secrets::SecretStore>>,
     /// Runtime control for the high-FPS screen-capture override. Shared
@@ -260,7 +246,6 @@ pub struct SCServer {
     vision_disabled: bool,
     audio_disabled: bool,
     use_pii_removal: bool,
-    sync_handle: Option<Arc<SyncServiceHandle>>,
     video_quality: String,
     pipe_manager: Option<crate::pipes_api::SharedPipeManager>,
     pub vision_metrics: Arc<screenpipe_screen::PipelineMetrics>,
@@ -285,8 +270,6 @@ pub struct SCServer {
     pub api_auth: bool,
     /// API key for remote auth validation
     pub api_auth_key: Option<String>,
-    /// Cloud JWT for proxied /v1/chat/completions calls. See AppState::cloud_token.
-    pub cloud_token: Arc<ArcSwap<Option<String>>>,
     /// Unified credential store for OAuth tokens, API keys, etc.
     pub secret_store: Option<Arc<screenpipe_secrets::SecretStore>>,
     /// Background OAuth refresh scheduler. Owned here so its JoinHandle
@@ -392,7 +375,6 @@ impl SCServer {
             audio_disabled,
             audio_manager,
             use_pii_removal,
-            sync_handle: None,
             video_quality,
             pipe_manager: None,
             vision_metrics: Arc::new(screenpipe_screen::PipelineMetrics::new()),
@@ -405,7 +387,6 @@ impl SCServer {
             owned_browser: None,
             api_auth: false,
             api_auth_key: None,
-            cloud_token: Arc::new(ArcSwap::new(Arc::new(None))),
             secret_store: None,
             oauth_refresher: None,
             external_memory_sync: None,
@@ -426,21 +407,6 @@ impl SCServer {
         self
     }
 
-    /// Set the cloud JWT used to authenticate proxied chat-completion calls
-    /// to api.screenpipe.com. Safe to call before or after `start()` — the route
-    /// reads the inner Arc on each request. Callers can also clone the Arc
-    /// directly (see `cloud_token_handle`) to update it from elsewhere.
-    pub fn with_cloud_token(self, token: Option<String>) -> Self {
-        self.cloud_token.store(Arc::new(token));
-        self
-    }
-
-    /// Clone the cloud-token handle so the desktop shell can refresh it
-    /// after the server has started (e.g. when settings.user.token changes).
-    pub fn cloud_token_handle(&self) -> Arc<ArcSwap<Option<String>>> {
-        self.cloud_token.clone()
-    }
-
     /// Set the pipe manager
     pub fn with_pipe_manager(mut self, pm: crate::pipes_api::SharedPipeManager) -> Self {
         self.pipe_manager = Some(pm);
@@ -457,17 +423,6 @@ impl SCServer {
     }
 
     /// Set the sync service handle
-    pub fn with_sync_handle(mut self, handle: SyncServiceHandle) -> Self {
-        self.sync_handle = Some(Arc::new(handle));
-        self
-    }
-
-    /// Set the sync service handle from an Arc
-    pub fn with_sync_handle_arc(mut self, handle: Arc<SyncServiceHandle>) -> Self {
-        self.sync_handle = Some(handle);
-        self
-    }
-
     pub async fn start(self) -> Result<(), std::io::Error> {
         // Validate the complete OpenAPI + Axum router before binding or
         // advertising readiness. oasgen panics when a plain Axum handler is
@@ -605,9 +560,6 @@ impl SCServer {
     }
 
     async fn create_router_inner(&self) -> Router {
-        let api_request_count = Arc::new(AtomicUsize::new(0));
-        let analytics_enabled = analytics::is_enabled();
-        let api_usage_counter = analytics_enabled.then(|| api_request_count.clone());
 
         // Recording-coverage sampler: accumulates working-time-vs-healthy-capture
         // seconds every 5s. Spawned UNCONDITIONALLY (accumulation is cheap, local,
@@ -624,134 +576,6 @@ impl SCServer {
         // binary and the desktop's embedded server) build their router through
         // this path; the finalizer itself is once-per-process.
         crate::meeting_summary::spawn_meeting_summary_finalizer(self.db.clone());
-
-        if analytics_enabled {
-            // Spawn periodic API usage reporter (every 5 minutes)
-            let counter_clone = api_request_count.clone();
-            tokio::spawn(async move {
-                let mut interval = tokio::time::interval(Duration::from_secs(300));
-                loop {
-                    interval.tick().await;
-                    let count = counter_clone.swap(0, Ordering::Relaxed);
-                    if count > 0 {
-                        info!("api_usage_5min: {} requests", count);
-                        // Fire analytics event for API usage tracking
-                        analytics::track_api_usage(count);
-                    }
-                }
-            });
-
-            // Spawn periodic vision pipeline metrics reporter (every 60 seconds)
-            let metrics_for_posthog = self.vision_metrics.clone();
-            tokio::spawn(async move {
-                let mut interval = tokio::time::interval(Duration::from_secs(60));
-                loop {
-                    interval.tick().await;
-                    let snap = metrics_for_posthog.snapshot();
-                    // Only report if the pipeline has captured any frames
-                    if snap.frames_captured > 0 {
-                        // Recording-coverage reliability metric: what % of the
-                        // user's working time had healthy capture. Sampled
-                        // independently (5s sampler); snapshotted here so the
-                        // fleet sees coverage alongside raw pipeline counters.
-                        let cov = crate::recording_coverage::coverage_snapshot();
-                        analytics::capture_event_nonblocking(
-                            "vision_pipeline_health",
-                            json!({
-                                "uptime_secs": snap.uptime_secs,
-                                "frames_captured": snap.frames_captured,
-                                "frames_skipped": snap.frames_skipped,
-                                "ocr_completed": snap.ocr_completed,
-                                "ocr_cache_hits": snap.ocr_cache_hits,
-                                "ocr_cache_misses": snap.ocr_cache_misses,
-                                "avg_ocr_latency_ms": snap.avg_ocr_latency_ms,
-                                "frames_video_written": snap.frames_video_written,
-                                "frames_db_written": snap.frames_db_written,
-                                "frames_dropped": snap.frames_dropped,
-                                "avg_db_latency_ms": snap.avg_db_latency_ms,
-                                "frame_drop_rate": snap.frame_drop_rate,
-                                "capture_fps_actual": snap.capture_fps_actual,
-                                "time_to_first_frame_ms": snap.time_to_first_frame_ms,
-                                "ocr_queue_depth": snap.ocr_queue_depth,
-                                "video_queue_depth": snap.video_queue_depth,
-                                "pipeline_stall_count": snap.pipeline_stall_count,
-                                // OCR gate (#5054/#5060): the skip/ocr split is the
-                                // production fast-path ratio that validates the
-                                // gate's savings; detect latency prices the gate.
-                                "ocr_gate_skips": snap.ocr_gate_skips,
-                                "ocr_gate_crop_ocr": snap.ocr_gate_crop_ocr,
-                                "ocr_gate_detects": snap.ocr_gate_detects,
-                                "avg_ocr_gate_detect_latency_ms": snap.avg_ocr_gate_detect_latency_ms,
-                                // Recording-coverage reliability metric.
-                                "recording_coverage_ratio": cov.coverage_ratio,
-                                "recording_secs": cov.recording_secs,
-                                "active_secs": cov.active_secs,
-                                "recording_active_stalled_secs": cov.active_stalled_secs,
-                                "recording_active_paused_secs": cov.active_paused_secs,
-                                "recording_idle_secs": cov.idle_secs,
-                            }),
-                        );
-                    }
-                }
-            });
-
-            // Spawn periodic audio pipeline metrics reporter (every 60 seconds)
-            let audio_metrics_for_posthog = self.audio_metrics.clone();
-            let audio_manager_for_posthog = self.audio_manager.clone();
-            tokio::spawn(async move {
-                let mut interval = tokio::time::interval(Duration::from_secs(60));
-                loop {
-                    interval.tick().await;
-                    let snap = audio_metrics_for_posthog.snapshot();
-                    // Only report if the pipeline has processed any chunks
-                    if snap.chunks_sent > 0 || snap.vad_rejected > 0 {
-                        let devices: Vec<String> = audio_manager_for_posthog
-                            .current_devices()
-                            .iter()
-                            .map(|d| d.to_string())
-                            .collect();
-                        let device_count = devices.len();
-                        analytics::capture_event_nonblocking(
-                            "audio_pipeline_health",
-                            json!({
-                                "uptime_secs": snap.uptime_secs,
-                                "chunks_sent": snap.chunks_sent,
-                                "chunks_received": snap.chunks_received,
-                                "chunks_channel_full": snap.chunks_channel_full,
-                                "stream_timeouts": snap.stream_timeouts,
-                                "chunks_lagged": snap.chunks_lagged,
-                                "process_errors": snap.process_errors,
-                                "vad_passed": snap.vad_passed,
-                                "vad_rejected": snap.vad_rejected,
-                                "avg_speech_ratio": snap.avg_speech_ratio,
-                                "vad_passthrough_rate": snap.vad_passthrough_rate,
-                                "transcriptions_completed": snap.transcriptions_completed,
-                                "transcriptions_empty": snap.transcriptions_empty,
-                                "transcription_errors": snap.transcription_errors,
-                                "db_inserted": snap.db_inserted,
-                                "db_duplicates_blocked": snap.db_duplicates_blocked,
-                                "db_overlaps_trimmed": snap.db_overlaps_trimmed,
-                                "total_words": snap.total_words,
-                                "words_per_minute": snap.words_per_minute,
-                                "audio_level_rms": snap.audio_level_rms,
-                                "segments_deferred": snap.segments_deferred,
-                                "segments_batch_processed": snap.segments_batch_processed,
-                                "batch_pause_events": snap.batch_pause_events,
-                                "batch_resume_events": snap.batch_resume_events,
-                                "audio_devices": devices,
-                                "audio_device_count": device_count,
-                            }),
-                        );
-                    }
-                }
-            });
-
-            // Permanent subscriber that forwards allowlisted piggyback telemetry
-            // (meeting summaries + mic capture health) from the in-process events
-            // bus to PostHog. Runs in both CLI and app-embedded modes since it's
-            // spawned here rather than gated behind an app websocket connection.
-            crate::piggyback_telemetry::spawn_piggyback_telemetry_forwarder();
-        }
 
         // Use pre-set hot frame cache or create a new one, then warm from DB.
         // Spawn warm_from_db in the background — the cache starts empty but fills
@@ -817,14 +641,7 @@ impl SCServer {
                 search_query_concurrency(self.db.pool.options().get_max_connections()),
             )),
             use_pii_removal: self.use_pii_removal,
-            // Cloud search client (disabled by default, can be enabled via API)
-            cloud_search: Arc::new(crate::cloud_search::CloudSearchClient::new()),
-            // Cloud sync service handle (from CLI)
-            sync_handle: self.sync_handle.clone(),
-            // Runtime sync state (initialized via /sync/init)
-            sync_state: sync_api::new_sync_state(),
             video_quality: self.video_quality.clone(),
-            api_request_count: api_request_count.clone(),
             pipe_manager: self.pipe_manager.clone(),
             vision_metrics: self.vision_metrics.clone(),
             audio_metrics: self.audio_metrics.clone(),
@@ -855,7 +672,6 @@ impl SCServer {
             ),
             api_auth: self.api_auth,
             api_auth_key: self.api_auth_key.clone(),
-            cloud_token: self.cloud_token.clone(),
             secret_store: self.secret_store.clone(),
             high_fps_controller: self.high_fps_controller.clone(),
             vision_manager: self.vision_manager.clone(),
@@ -1030,14 +846,6 @@ impl SCServer {
             // Renderer-agnostic structured outputs are deliberately outside
             // the public OpenAPI surface for now. Consumers define targets;
             // authenticated pipes can discover and fill only their bindings.
-            // Private MCP transport adapter (not in OpenAPI spec — a plain
-            // axum handler; registering an un-#[oasgen] handler on the oasgen
-            // Server panics at startup with "Operation ... not found in
-            // OpenAPI spec", which broke the engine test suite on main).
-            .route(
-                "/internal/telemetry/mcp-value",
-                axum::routing::post(crate::routes::internal_telemetry::record_mcp_value),
-            )
             .route(
                 "/outputs/targets",
                 get(crate::routes::structured_outputs::assigned_targets_handler),
@@ -1423,17 +1231,6 @@ impl SCServer {
             .layer(axum::middleware::from_fn_with_state(
                 app_state.clone(),
                 crate::routes::vault::vault_lock_middleware,
-            ))
-            .layer(axum::middleware::from_fn(
-                move |req: axum::extract::Request, next: axum::middleware::Next| {
-                    let counter = api_usage_counter.clone();
-                    async move {
-                        if let Some(counter) = counter {
-                            counter.fetch_add(1, Ordering::Relaxed);
-                        }
-                        next.run(req).await
-                    }
-                },
             ))
             .layer(axum::middleware::from_fn(
                 crate::routes::timezone::timestamp_middleware,

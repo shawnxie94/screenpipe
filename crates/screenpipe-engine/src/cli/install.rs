@@ -89,8 +89,7 @@ pub async fn handle_install(url: &str, allow_untrusted: bool) -> Result<()> {
     let pipes_dir = screenpipe_core::paths::default_screenpipe_data_dir().join("pipes");
     std::fs::create_dir_all(&pipes_dir)?;
 
-    let user_token = std::env::var("SCREENPIPE_API_KEY").ok();
-    let pi: Arc<dyn AgentExecutor> = Arc::new(PiExecutor::new(user_token));
+    let pi: Arc<dyn AgentExecutor> = Arc::new(PiExecutor::new());
     let mut executors: HashMap<String, Arc<dyn AgentExecutor>> = HashMap::new();
     executors.insert("pi".to_string(), pi);
     let manager = PipeManager::new(pipes_dir, executors, None, 3030);

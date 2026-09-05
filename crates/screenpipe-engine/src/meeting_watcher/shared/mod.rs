@@ -11,7 +11,6 @@ pub(crate) mod profiles;
 pub(crate) mod scanner;
 pub(crate) mod signal_match;
 pub(crate) mod state;
-pub(crate) mod telemetry;
 
 pub(crate) use calendar::*;
 pub(crate) use ignore::*;
@@ -21,4 +20,3 @@ pub(crate) use scanner::*;
 #[cfg_attr(not(any(target_os = "macos", test)), allow(unused_imports))]
 pub(crate) use signal_match::*;
 pub(crate) use state::*;
-pub(crate) use telemetry::*;

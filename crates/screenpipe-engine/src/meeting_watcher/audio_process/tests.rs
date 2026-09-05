@@ -6,7 +6,7 @@
 
 use super::*;
 use crate::meeting_watcher::shared::calendar::{
-    find_calendar_event_for_meeting, find_overlapping_calendar_event, CalendarMatchMethod,
+    find_calendar_event_for_meeting, CalendarMatchMethod,
 };
 use screenpipe_db::DatabaseManager;
 
@@ -2854,67 +2854,6 @@ async fn calendar_event_cannot_be_claimed_twice() {
 }
 
 /// Matching must not depend on the order the publisher emitted events in.
-#[test]
-fn calendar_match_prefers_the_event_in_progress() {
-    let now = Utc::now();
-    let upcoming = calendar_event(
-        "upcoming",
-        "Next call",
-        chrono::Duration::seconds(60),
-        chrono::Duration::minutes(30),
-        &[],
-    );
-    let in_progress = calendar_event(
-        "in-progress",
-        "Current call",
-        chrono::Duration::minutes(-5),
-        chrono::Duration::minutes(30),
-        &[],
-    );
-
-    for events in [
-        vec![upcoming.clone(), in_progress.clone()],
-        vec![in_progress.clone(), upcoming.clone()],
-    ] {
-        let m = find_overlapping_calendar_event(&events, now).expect("expected a match");
-        assert_eq!(
-            m.key, "in-progress",
-            "an event already running wins over one about to start, in any order"
-        );
-    }
-}
-
-#[test]
-fn calendar_match_ignores_events_outside_the_join_window() {
-    let now = Utc::now();
-    let too_early = vec![calendar_event(
-        "later",
-        "Much later",
-        chrono::Duration::minutes(30),
-        chrono::Duration::minutes(30),
-        &[],
-    )];
-    assert!(
-        find_overlapping_calendar_event(&too_early, now).is_none(),
-        "an event 30 minutes out must not name the meeting happening now"
-    );
-
-    let all_day = vec![CalendarEventSignal {
-        is_all_day: true,
-        ..calendar_event(
-            "all-day",
-            "Offsite",
-            chrono::Duration::hours(-2),
-            chrono::Duration::hours(8),
-            &[],
-        )
-    }];
-    assert!(
-        find_overlapping_calendar_event(&all_day, now).is_none(),
-        "all-day events describe a day, not a meeting"
-    );
-}
-
 /// Events from feeds that omit a provider id still get a stable identity, so
 /// the one-event-one-meeting rule holds for them too.
 #[test]
@@ -2928,8 +2867,8 @@ fn events_without_a_provider_id_still_get_a_stable_key() {
         &[],
     );
     event.id = String::new();
-    let first = find_overlapping_calendar_event(std::slice::from_ref(&event), now).unwrap();
-    let second = find_overlapping_calendar_event(&[event], now).unwrap();
+    let first = find_calendar_event_for_meeting(std::slice::from_ref(&event), now, None).unwrap();
+    let second = find_calendar_event_for_meeting(&[event], now, None).unwrap();
     assert_eq!(first.key, second.key, "the same event yields the same key");
     assert!(first.key.contains("Weekly review"));
 }
@@ -2976,7 +2915,7 @@ async fn manually_started_meeting_claims_its_calendar_event() {
         .insert_meeting("manual", "manual", None, None)
         .await
         .unwrap();
-    let binding = find_overlapping_calendar_event(&events, Utc::now()).unwrap();
+    let binding = find_calendar_event_for_meeting(&events, Utc::now(), None).unwrap();
     assert!(db.bind_calendar_event(manual, &binding.key).await.unwrap());
     db.update_meeting(
         manual,
@@ -3027,8 +2966,8 @@ fn binding_key_is_stable_across_timestamp_formats() {
         base.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string(),
         end.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string(),
     );
-    let a = find_overlapping_calendar_event(&[rfc], now).unwrap();
-    let b = find_overlapping_calendar_event(&[zulu], now).unwrap();
+    let a = find_calendar_event_for_meeting(&[rfc], now, None).unwrap();
+    let b = find_calendar_event_for_meeting(&[zulu], now, None).unwrap();
     assert_eq!(
         a.key, b.key,
         "the same instant in two RFC3339 spellings is one event"

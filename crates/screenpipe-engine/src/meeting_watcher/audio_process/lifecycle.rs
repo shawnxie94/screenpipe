@@ -103,9 +103,6 @@ pub(crate) async fn start_or_adopt_auto_meeting(
                         ),
                     }
                 }
-                if let Ok(meeting) = db.get_meeting_by_id(recent.id).await {
-                    capture_detection_decision(&meeting, "audio_process_reopen", None);
-                }
                 AutoStartOutcome::AdoptedActive(recent.id)
             }
             Err(e) => {
@@ -165,9 +162,6 @@ pub(crate) async fn insert_new_audio_process_meeting(
                     e
                 );
             }
-            if let Ok(meeting) = db.get_meeting_by_id(id).await {
-                capture_detection_decision(&meeting, "audio_process_start", None);
-            }
             AutoStartOutcome::Started(id)
         }
         Err(e) => {
@@ -209,16 +203,6 @@ pub(crate) async fn emit_ended_and_status(
     }
     if let Ok(status) = resolve_meeting_status_from(db, manual_meeting).await {
         emit_meeting_status_changed(&status);
-    }
-}
-
-pub(crate) async fn capture_meeting_outcome(
-    db: &DatabaseManager,
-    meeting_id: i64,
-    flap_count: u32,
-) {
-    if let Ok(meeting) = db.get_meeting_by_id(meeting_id).await {
-        capture_detection_outcome(&meeting, "auto_timeout", flap_count);
     }
 }
 
@@ -363,7 +347,6 @@ pub(crate) async fn apply_state_action(
                 .await
             {
                 Ok(persisted_end) => {
-                    capture_meeting_outcome(db, meeting_id, *flap_count).await;
                     *flap_count = 0;
                     emit_ended_and_status(db, manual_meeting, meeting_id, &persisted_end).await;
                 }

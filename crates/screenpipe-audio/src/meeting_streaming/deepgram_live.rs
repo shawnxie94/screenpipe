@@ -92,11 +92,6 @@ async fn run_stream(
     mut rx: mpsc::Receiver<MeetingAudioFrame>,
 ) -> Result<()> {
     let credential = match config.provider {
-        MeetingStreamingProvider::ScreenpipeCloud => config
-            .auth_token
-            .as_deref()
-            .filter(|s| !s.trim().is_empty())
-            .context("ScreenPipe Cloud login is required for live meeting transcription")?,
         MeetingStreamingProvider::DeepgramLive => config
             .api_key
             .as_deref()
@@ -262,7 +257,6 @@ fn configure_live_query(url: &mut Url, config: &MeetingStreamingConfig) {
 
 fn auth_header(provider: &MeetingStreamingProvider, credential: &str) -> String {
     match provider {
-        MeetingStreamingProvider::ScreenpipeCloud => format!("Bearer {credential}"),
         MeetingStreamingProvider::DeepgramLive => format!("Token {credential}"),
         MeetingStreamingProvider::Disabled | MeetingStreamingProvider::SelectedEngine => {
             String::new()

@@ -7,9 +7,7 @@ use std::{env, str::FromStr};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-const SCREENPIPE_CLOUD_REALTIME_URL: &str = "wss://api.screenpipe.com/v1/realtime";
 const DEEPGRAM_LIVE_URL: &str = "wss://api.deepgram.com/v1/listen";
-const SCREENPIPE_CLOUD_REALTIME_PATH: &str = "/v1/realtime";
 const DEEPGRAM_LIVE_PATH: &str = "/v1/listen";
 
 /// Live transcription provider for meeting-only streaming.
@@ -22,7 +20,6 @@ const DEEPGRAM_LIVE_PATH: &str = "/v1/listen";
 pub enum MeetingStreamingProvider {
     Disabled,
     SelectedEngine,
-    ScreenpipeCloud,
     DeepgramLive,
 }
 
@@ -31,7 +28,6 @@ impl MeetingStreamingProvider {
         match self {
             Self::Disabled => "disabled",
             Self::SelectedEngine => "selected-engine",
-            Self::ScreenpipeCloud => "screenpipe-cloud",
             Self::DeepgramLive => "deepgram-live",
         }
     }
@@ -80,15 +76,15 @@ impl Default for MeetingStreamingConfig {
             ),
             _ => endpoint_from_env(
                 &["SCREENPIPE_MEETING_REALTIME_URL"],
-                SCREENPIPE_CLOUD_REALTIME_URL,
-                SCREENPIPE_CLOUD_REALTIME_PATH,
+                DEEPGRAM_LIVE_URL,
+                DEEPGRAM_LIVE_PATH,
             ),
         };
         let default_model = match provider {
             MeetingStreamingProvider::SelectedEngine => "selected transcription engine",
-            MeetingStreamingProvider::Disabled
-            | MeetingStreamingProvider::ScreenpipeCloud
-            | MeetingStreamingProvider::DeepgramLive => "nova-3",
+            MeetingStreamingProvider::Disabled | MeetingStreamingProvider::DeepgramLive => {
+                "nova-3"
+            }
         };
 
         Self {
@@ -130,9 +126,6 @@ impl FromStr for MeetingStreamingProvider {
             | "local"
             | "local-engine"
             | "local_engine" => Ok(Self::SelectedEngine),
-            "screenpipe-cloud" | "screenpipe_cloud" | "screenpipe" | "cloud" => {
-                Ok(Self::ScreenpipeCloud)
-            }
             "deepgram" | "deepgram_live" | "deepgram-live" => Ok(Self::DeepgramLive),
             "auto" => Err(()),
             _ => Err(()),
@@ -156,18 +149,6 @@ impl MeetingStreamingConfig {
                 self.api_key = None;
                 self.endpoint = String::new();
                 self.model = Some("selected transcription engine".to_string());
-            }
-            MeetingStreamingProvider::ScreenpipeCloud => {
-                self.api_key = None;
-                self.endpoint = endpoint_from_env(
-                    &["SCREENPIPE_MEETING_REALTIME_URL"],
-                    SCREENPIPE_CLOUD_REALTIME_URL,
-                    SCREENPIPE_CLOUD_REALTIME_PATH,
-                );
-                self.model = Some(
-                    env_non_empty("SCREENPIPE_MEETING_TRANSCRIPTION_MODEL")
-                        .unwrap_or_else(|| "nova-3".to_string()),
-                );
             }
             MeetingStreamingProvider::DeepgramLive => {
                 self.api_key = provider_api_key(&self.provider);
@@ -224,16 +205,6 @@ impl MeetingStreamingConfig {
                 env_non_empty("SCREENPIPE_MEETING_TRANSCRIPTION_MODEL")
                     .unwrap_or_else(|| "nova-3".to_string()),
             );
-        } else if config.provider == MeetingStreamingProvider::ScreenpipeCloud {
-            config.endpoint = endpoint_from_env(
-                &["SCREENPIPE_MEETING_REALTIME_URL"],
-                SCREENPIPE_CLOUD_REALTIME_URL,
-                SCREENPIPE_CLOUD_REALTIME_PATH,
-            );
-            config.model = Some(
-                env_non_empty("SCREENPIPE_MEETING_TRANSCRIPTION_MODEL")
-                    .unwrap_or_else(|| "nova-3".to_string()),
-            );
         }
 
         config
@@ -243,10 +214,6 @@ impl MeetingStreamingConfig {
         match self.provider {
             MeetingStreamingProvider::Disabled => false,
             MeetingStreamingProvider::SelectedEngine => true,
-            MeetingStreamingProvider::ScreenpipeCloud => self
-                .auth_token
-                .as_deref()
-                .is_some_and(|token| !token.trim().is_empty()),
             MeetingStreamingProvider::DeepgramLive => self
                 .api_key
                 .as_deref()
@@ -260,9 +227,7 @@ fn provider_api_key(provider: &MeetingStreamingProvider) -> Option<String> {
         MeetingStreamingProvider::DeepgramLive => {
             &["SCREENPIPE_MEETING_DEEPGRAM_API_KEY", "DEEPGRAM_API_KEY"]
         }
-        MeetingStreamingProvider::Disabled
-        | MeetingStreamingProvider::SelectedEngine
-        | MeetingStreamingProvider::ScreenpipeCloud => &[],
+        MeetingStreamingProvider::Disabled | MeetingStreamingProvider::SelectedEngine => &[],
     };
 
     keys.iter().find_map(|key| env_non_empty(key))
@@ -322,31 +287,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn screenpipe_cloud_uses_cloud_token_for_readiness() {
-        let config = MeetingStreamingConfig::from_settings(
-            true,
-            "screenpipe-cloud",
-            Some("cloud-token".to_string()),
-            None,
-            None,
-            Some("Alice".to_string()),
-        );
-
-        assert_eq!(config.provider, MeetingStreamingProvider::ScreenpipeCloud);
-        assert!(config.live_transcription_ready());
-        assert_eq!(config.local_speaker_name.as_deref(), Some("Alice"));
-    }
-
-    #[test]
-    fn screenpipe_cloud_is_not_ready_without_cloud_login() {
-        let config =
-            MeetingStreamingConfig::from_settings(true, "screenpipe-cloud", None, None, None, None);
-
-        assert_eq!(config.provider, MeetingStreamingProvider::ScreenpipeCloud);
-        assert!(!config.live_transcription_ready());
-    }
-
-    #[test]
     fn selected_engine_is_the_non_cloud_default_provider() {
         let config = MeetingStreamingConfig::from_settings(true, "", None, None, None, None);
 
@@ -386,11 +326,6 @@ mod tests {
             (
                 "selected-engine",
                 MeetingStreamingProvider::SelectedEngine,
-                None,
-            ),
-            (
-                "screenpipe-cloud",
-                MeetingStreamingProvider::ScreenpipeCloud,
                 None,
             ),
             (
@@ -468,25 +403,16 @@ mod tests {
     #[test]
     fn realtime_endpoint_normalization_rejects_hostless_urls() {
         assert_eq!(
-            normalize_realtime_endpoint("wss://", SCREENPIPE_CLOUD_REALTIME_PATH),
+            normalize_realtime_endpoint("wss://", "/v1/realtime"),
             None
         );
         assert_eq!(
-            normalize_realtime_endpoint("https://", SCREENPIPE_CLOUD_REALTIME_PATH),
+            normalize_realtime_endpoint("https://", "/v1/realtime"),
             None
         );
         assert_eq!(
-            normalize_realtime_endpoint("", SCREENPIPE_CLOUD_REALTIME_PATH),
+            normalize_realtime_endpoint("", "/v1/realtime"),
             None
-        );
-    }
-
-    #[test]
-    fn realtime_endpoint_normalization_accepts_https_base_url() {
-        assert_eq!(
-            normalize_realtime_endpoint("https://api.screenpi.pe", SCREENPIPE_CLOUD_REALTIME_PATH)
-                .as_deref(),
-            Some("wss://api.screenpi.pe/v1/realtime")
         );
     }
 

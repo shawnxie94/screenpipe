@@ -777,20 +777,6 @@ pub struct RecordingSettings {
     #[serde(rename = "useChineseMirror")]
     pub use_chinese_mirror: bool,
 
-    /// Enable product analytics (PostHog). Events carry only a random device
-    /// ID when signed out; when signed in they are linked to the account,
-    /// including its email. Never includes recordings, audio, or OCR text.
-    #[serde(rename = "analyticsEnabled")]
-    pub analytics_enabled: bool,
-
-    /// Persistent analytics ID (UUID, stable across sessions).
-    #[serde(rename = "analyticsId")]
-    pub analytics_id: String,
-
-    /// Enable AI workflow event detection (cloud feature, requires subscription).
-    /// When enabled, classifies desktop activity and triggers event-based pipes.
-    #[serde(rename = "enableWorkflowEvents", default)]
-    pub enable_workflow_events: bool,
 
     /// Detected hardware tier ("high", "mid", "low").
     /// Set once on first launch; `None` for existing installs (treated as High).
@@ -947,9 +933,6 @@ impl Default for RecordingSettings {
             power_mode: None,
             keep_computer_awake: false,
             use_chinese_mirror: false,
-            analytics_enabled: true,
-            analytics_id: String::new(),
-            enable_workflow_events: false,
             device_tier: None,
             schedule_enabled: false,
             schedule_rules: vec![],
@@ -1274,8 +1257,6 @@ mod tests {
             "userId": "abc-123",
             "port": 3030,
             "useChineseMirror": false,
-            "analyticsEnabled": true,
-            "analyticsId": "posthog-uuid",
             "enableInputCapture": true,
             "enableAccessibility": true,
 
@@ -1300,7 +1281,6 @@ mod tests {
             settings.ignored_windows,
             vec!["Control Center", "Notification Center"]
         );
-        assert_eq!(settings.analytics_id, "posthog-uuid");
 
         // Fields that don't exist in RecordingSettings (UI-only) are silently ignored
         // This is critical for flatten compat — SettingsStore has aiPresets, shortcuts, etc.

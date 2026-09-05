@@ -36,7 +36,7 @@
 #[cfg(any(windows, test))]
 fn keep_normal_requested(value: Option<&str>) -> bool {
     value
-        .map(crate::analytics::env_value_truthy)
+        .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
         .unwrap_or(false)
 }
 

@@ -149,9 +149,6 @@ pub struct RecordingConfig {
     pub openai_compatible_headers: Option<std::collections::HashMap<String, String>>,
     pub openai_compatible_raw_audio: bool,
 
-    // Workflow events
-    /// Enable AI workflow event detection (cloud, requires subscription).
-    pub enable_workflow_events: bool,
 
     // Speaker identification
     /// User's display name for calendar-assisted speaker ID.
@@ -165,8 +162,6 @@ pub struct RecordingConfig {
 
     // Misc
     pub use_chinese_mirror: bool,
-    pub analytics_enabled: bool,
-    pub analytics_id: String,
 
     /// Custom vocabulary for transcription biasing and word replacement.
     pub vocabulary: Vec<VocabularyEntry>,
@@ -307,7 +302,6 @@ impl RecordingConfig {
             pii_redaction_columns: settings.pii_redaction_columns.clone(),
             pii_redaction_pseudonyms: settings.pii_redaction_pseudonyms,
             filter_music: settings.filter_music,
-            enable_workflow_events: settings.enable_workflow_events,
             audio_transcription_engine: engine_str
                 .parse()
                 .unwrap_or(AudioTranscriptionEngine::WhisperLargeV3Turbo),
@@ -369,9 +363,6 @@ impl RecordingConfig {
                 .collect(),
             deepgram_api_key: settings.effective_deepgram_key().map(|s| s.to_string()),
             deepgram_config: match engine_str {
-                "screenpipe-cloud" => settings
-                    .effective_user_id()
-                    .map(|s| DeepgramTranscriptionConfig::screenpipe_cloud(s.to_string())),
                 "deepgram" => settings
                     .effective_deepgram_key()
                     .map(|s| DeepgramTranscriptionConfig::direct(s.to_string())),
@@ -386,8 +377,6 @@ impl RecordingConfig {
             user_name: settings.user_name.clone(),
             video_quality: settings.video_quality.clone(),
             use_chinese_mirror: settings.use_chinese_mirror,
-            analytics_enabled: settings.analytics_enabled,
-            analytics_id: settings.analytics_id.clone(),
             vocabulary: settings
                 .vocabulary
                 .iter()

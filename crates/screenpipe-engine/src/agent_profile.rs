@@ -136,7 +136,7 @@ pub(crate) async fn manage_profile_handler(
                 .get_or_init(|| tokio::sync::Mutex::new(()))
                 .lock()
                 .await;
-            delete_profile(&state.db, &state.screenpipe_dir, id, confirmed).await
+            delete_profile(&state.db, id, confirmed).await
         }
     };
 
@@ -287,7 +287,6 @@ async fn save_profile(
 
 async fn delete_profile(
     db: &screenpipe_db::DatabaseManager,
-    screenpipe_dir: &std::path::Path,
     id: i64,
     confirmed: bool,
 ) -> Result<Value, ProfileError> {
@@ -297,11 +296,9 @@ async fn delete_profile(
         ));
     }
     require_profile(db, id).await?;
-    let sync_uuid = db.get_memory_sync_uuid(id).await.ok().flatten();
     db.delete_memory(id).await.map_err(|error| {
         ProfileError::Internal(format!("could not delete profile memory: {error}"))
     })?;
-    crate::sync_api::record_memory_tombstone(screenpipe_dir, sync_uuid.as_deref());
     Ok(json!({ "ok": true }))
 }
 

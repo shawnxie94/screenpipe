@@ -12,9 +12,6 @@ use oasgen::{oasgen, OaSchema};
 use screenpipe_db::DatabaseManager;
 use screenpipe_db::{MeetingRecord, MeetingTranscriptSegment, MEETING_END_REASON_EXPLICIT_STOP};
 
-use crate::meeting_watcher::shared::telemetry::{
-    capture_detection_decision, capture_detection_feedback,
-};
 use crate::routes::meeting_summary_status::{
     resolve_summary_state, ExecutionSnapshot, SummaryState, SummaryStatusInputs,
 };
@@ -617,19 +614,12 @@ pub(crate) async fn delete_meeting_handler(
     State(state): State<Arc<AppState>>,
     Path(id): Path<i64>,
 ) -> Result<JsonResponse<Value>, (StatusCode, JsonResponse<Value>)> {
-    let meeting_before = state.db.get_meeting_by_id(id).await.ok();
     let rows_affected = state.db.delete_meeting(id).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             JsonResponse(json!({"error": e.to_string()})),
         )
     })?;
-
-    if rows_affected > 0 {
-        if let Some(meeting) = meeting_before {
-            capture_detection_feedback("delete", "likely_false_positive", &[meeting], None);
-        }
-    }
 
     Ok(JsonResponse(json!({"deleted": rows_affected})))
 }
@@ -756,15 +746,6 @@ pub(crate) async fn bulk_delete_meetings_handler(
         }
     }
 
-    if total_deleted > 0 {
-        capture_detection_feedback(
-            "bulk_delete",
-            "likely_false_positive",
-            &meetings_before,
-            None,
-        );
-    }
-
     Ok(JsonResponse(json!({"deleted": total_deleted})))
 }
 
@@ -794,7 +775,6 @@ pub(crate) async fn merge_meetings_handler(
         )
     })?;
 
-    capture_detection_feedback("merge", "false_split", &meetings_before, Some(&meeting));
 
     Ok(JsonResponse(meeting))
 }
@@ -814,8 +794,6 @@ pub(crate) async fn split_meeting_handler(
         ));
     }
 
-    let meeting_before = state.db.get_meeting_by_id(id).await.ok();
-
     let (before, after) = state.db.split_meeting(id, &body.at).await.map_err(|e| {
         // Distinguish "bad split point" (400) and "no such meeting" (404) from
         // genuine 500s. RowNotFound is what split_meeting returns when the id
@@ -830,10 +808,6 @@ pub(crate) async fn split_meeting_handler(
         };
         (status, JsonResponse(json!({"error": msg})))
     })?;
-
-    if let Some(meeting) = meeting_before {
-        capture_detection_feedback("split", "false_merge", &[meeting], Some(&before));
-    }
 
     Ok(JsonResponse(SplitMeetingResponse { before, after }))
 }
@@ -1056,14 +1030,6 @@ pub(crate) async fn start_meeting_handler(
         )
     })?;
 
-    capture_detection_decision(&meeting, "manual_start", None);
-    capture_detection_feedback(
-        "manual_start",
-        "manual_start_possible_missed_detection",
-        std::slice::from_ref(&meeting),
-        None,
-    );
-
     // Emit event so triggered pipes can react
     if let Err(e) = screenpipe_events::send_event(
         "meeting_started",
@@ -1201,13 +1167,6 @@ pub(crate) async fn stop_meeting_handler(
             JsonResponse(json!({"error": format!("meeting not found: {}", e)})),
         )
     })?;
-
-    capture_detection_feedback(
-        "stop",
-        "user_stopped_meeting",
-        std::slice::from_ref(&meeting),
-        None,
-    );
 
     Ok(JsonResponse(meeting))
 }

@@ -5,7 +5,7 @@
 use super::presets::{self, PresetInput, PresetPatch, Provider};
 use super::{ModelCommand, PipeCommand};
 use screenpipe_core::agents::acp::AcpExecutor;
-use screenpipe_core::agents::pi::{PiExecutor, SCREENPIPE_API_URL};
+use screenpipe_core::agents::pi::PiExecutor;
 use screenpipe_core::agents::AgentExecutor;
 use screenpipe_core::pipes::PipeManager;
 use serde_json::{json, Value};
@@ -18,19 +18,8 @@ pub async fn handle_pipe_command(command: &PipeCommand) -> anyhow::Result<()> {
     let pipes_dir = data_dir.join("pipes");
     std::fs::create_dir_all(&pipes_dir)?;
 
-    // SCREENPIPE_API_KEY is also the local HTTP bearer returned by `auth token`.
-    // The resolver accepts it here only when it is a cloud-session JWT; a local
-    // `sp-*` key cannot override the desktop's shared SecretStore session.
-    let user_token = if matches!(command, PipeCommand::Run { .. }) {
-        crate::auth_key::resolve_cloud_token(&data_dir, std::env::var("SCREENPIPE_API_KEY").ok())
-            .await
-    } else {
-        None
-    };
-    let pi: Arc<dyn AgentExecutor> = Arc::new(PiExecutor::new(user_token.clone()));
+    let pi: Arc<dyn AgentExecutor> = Arc::new(PiExecutor::new());
     let acp: Arc<dyn AgentExecutor> = Arc::new(AcpExecutor::new(
-        user_token,
-        SCREENPIPE_API_URL.to_string(),
         3030,
         std::env::var("SCREENPIPE_LOCAL_API_KEY").ok(),
     ));
@@ -149,17 +138,11 @@ pub async fn handle_pipe_command(command: &PipeCommand) -> anyhow::Result<()> {
         PipeCommand::Models { subcommand } => {
             handle_model_command(subcommand)?;
         }
-        PipeCommand::Publish { name } => {
-            handle_publish_command(name, &pipes_dir).await?;
-        }
         PipeCommand::Search { query } => {
             handle_search_command(query).await?;
         }
         PipeCommand::Info { slug } => {
             handle_info_command(slug).await?;
-        }
-        PipeCommand::Status { slug } => {
-            handle_status_command(slug).await?;
         }
         PipeCommand::SetPreset { name, preset } => {
             handle_set_preset_command(&manager, name, preset).await?;
@@ -173,88 +156,6 @@ pub async fn handle_pipe_command(command: &PipeCommand) -> anyhow::Result<()> {
 pub fn api_base_url() -> String {
     std::env::var("SCREENPIPE_API_BASE_URL")
         .unwrap_or_else(|_| "https://screenpipe.com".to_string())
-}
-
-/// Resolve the cloud session from a JWT override or the shared SecretStore.
-pub async fn get_cloud_auth_token() -> Option<String> {
-    let data_dir = screenpipe_core::paths::default_screenpipe_data_dir();
-    crate::auth_key::resolve_cloud_token(&data_dir, std::env::var("SCREENPIPE_API_KEY").ok()).await
-}
-
-/// Publish a local pipe to the registry.
-async fn handle_publish_command(name: &str, pipes_dir: &std::path::Path) -> anyhow::Result<()> {
-    let pipe_dir = pipes_dir.join(name);
-    let pipe_md_path = pipe_dir.join("pipe.md");
-
-    if !pipe_md_path.exists() {
-        anyhow::bail!(
-            "pipe.md not found at {}\nhint: make sure the pipe '{}' exists in ~/.screenpipe/pipes/",
-            pipe_md_path.display(),
-            name
-        );
-    }
-
-    let source_md = std::fs::read_to_string(&pipe_md_path)?;
-
-    // Check for README.md alongside pipe.md
-    let readme_md_path = pipe_dir.join("README.md");
-    let readme_md = if readme_md_path.exists() {
-        let content = std::fs::read_to_string(&readme_md_path)?;
-        println!("including README.md");
-        Some(content)
-    } else {
-        println!("no README.md found, pipe.md body will be used as description");
-        None
-    };
-
-    // Parse YAML frontmatter if present (between --- delimiters)
-    let (title, description, icon, category) = parse_frontmatter(&source_md);
-
-    let title = title.unwrap_or_else(|| name.to_string());
-    let description = description.unwrap_or_default();
-
-    let token = get_cloud_auth_token()
-        .await
-        .ok_or_else(|| anyhow::anyhow!("no cloud session found. run `screenpipe login`"))?;
-
-    let base = api_base_url();
-    let client = reqwest::Client::new();
-
-    let payload = json!({
-        "source_md": source_md,
-        "title": title,
-        "description": description,
-        "icon": icon,
-        "category": category,
-        "readme_md": readme_md,
-    });
-
-    let url = format!("{}/api/pipes/store/publish", base);
-    let resp = client
-        .post(&url)
-        .bearer_auth(&token)
-        .json(&payload)
-        .send()
-        .await?;
-
-    let status = resp.status();
-    let body: Value = resp.json().await.unwrap_or(json!({}));
-
-    if status.is_success() {
-        println!("published pipe '{}' to the registry", name);
-        if let Some(slug) = body.get("slug").and_then(|v| v.as_str()) {
-            println!("slug: {}", slug);
-            println!("view at: {}/pipes/{}", base, slug);
-        }
-    } else {
-        let msg = body
-            .get("error")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown error");
-        eprintln!("error: {} ({})", msg, status);
-    }
-
-    Ok(())
 }
 
 /// Parse YAML frontmatter from pipe.md content.
@@ -424,74 +325,6 @@ async fn handle_info_command(slug: &str) -> anyhow::Result<()> {
 
     println!();
     println!("install with: screenpipe pipe install {}", slug);
-
-    Ok(())
-}
-
-/// Check the publish/review status of a pipe you own.
-async fn handle_status_command(slug: &str) -> anyhow::Result<()> {
-    let token = get_cloud_auth_token()
-        .await
-        .ok_or_else(|| anyhow::anyhow!("no cloud session found. run `screenpipe login`"))?;
-
-    let base = api_base_url();
-    let client = reqwest::Client::new();
-
-    let url = format!("{}/api/pipes/store/{}", base, slug);
-    let resp = client.get(&url).bearer_auth(&token).send().await?;
-
-    if !resp.status().is_success() {
-        anyhow::bail!("pipe '{}' not found in the registry", slug);
-    }
-
-    let body: Value = resp.json().await?;
-    let pipe = body.get("data").unwrap_or(&body);
-
-    let title = pipe.get("title").and_then(|v| v.as_str()).unwrap_or(slug);
-    let version = pipe.get("version").and_then(|v| v.as_str()).unwrap_or("-");
-    let review_status = pipe
-        .get("review_status")
-        .and_then(|v| v.as_str())
-        .unwrap_or("unknown");
-    let installs = pipe
-        .get("install_count")
-        .or_else(|| pipe.get("installs"))
-        .and_then(|v| v.as_u64())
-        .unwrap_or(0);
-    let rating = pipe
-        .get("average_rating")
-        .or_else(|| pipe.get("rating"))
-        .and_then(|v| v.as_f64());
-
-    println!("{}", title);
-    println!("{}", "=".repeat(title.len()));
-    println!();
-    println!("slug:           {}", slug);
-    println!("version:        {}", version);
-    println!("review_status:  {}", review_status);
-    println!("install_count:  {}", installs);
-    if let Some(r) = rating {
-        println!("avg_rating:     {:.1}/5", r);
-    }
-
-    match review_status {
-        "rejected" => {
-            if let Some(note) = pipe.get("review_note").and_then(|v| v.as_str()) {
-                println!();
-                println!("rejection reason: {}", note);
-            }
-        }
-        "pending" => {
-            if let Some(flags) = pipe.get("ai_review_flags") {
-                println!();
-                println!("ai review flags: {}", flags);
-            }
-            if let Some(reason) = pipe.get("ai_review_reason").and_then(|v| v.as_str()) {
-                println!("ai review reason: {}", reason);
-            }
-        }
-        _ => {}
-    }
 
     Ok(())
 }

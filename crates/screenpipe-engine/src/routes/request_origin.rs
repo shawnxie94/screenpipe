@@ -22,10 +22,13 @@ enum RequestSource {
 }
 
 impl ExplicitApiClient {
+    /// True when the request came from an explicitly identified API client
+    /// (the fixed `api` header value), not a bundled app surface.
     pub(crate) fn is_direct_api(&self) -> bool {
-        self.0 == RequestSource::Api
+        matches!(self.0, RequestSource::Api)
     }
 
+    /// Stable lowercase label for logs. Never user-controlled input.
     pub(crate) fn source_label(&self) -> &'static str {
         match self.0 {
             RequestSource::App => "app",

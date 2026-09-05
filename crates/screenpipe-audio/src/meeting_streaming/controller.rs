@@ -697,7 +697,7 @@ fn route_frame_to_provider(
                 );
                 session.device_senders.insert(key.clone(), tx);
             }
-            MeetingStreamingProvider::ScreenpipeCloud | MeetingStreamingProvider::DeepgramLive => {
+            MeetingStreamingProvider::DeepgramLive => {
                 deepgram_live::spawn_deepgram_live_stream(
                     config.clone(),
                     session.meeting_id,
@@ -977,22 +977,6 @@ async fn effective_streaming_config(
         return config.clone();
     };
 
-    if background.is_screenpipe_cloud() {
-        let mut cloud_config = config
-            .clone()
-            .with_provider(MeetingStreamingProvider::ScreenpipeCloud);
-        cloud_config.auth_token = (!background.auth_token.trim().is_empty())
-            .then(|| background.auth_token.trim().to_string());
-        if cloud_config.live_transcription_ready() {
-            info!(
-                "meeting streaming: selected-engine resolved to screenpipe-cloud live because the selected transcription engine is screenpipe cloud"
-            );
-            return cloud_config;
-        }
-
-        return config.clone();
-    }
-
     let mut direct_deepgram_config = config
         .clone()
         .with_provider(MeetingStreamingProvider::DeepgramLive);
@@ -1017,20 +1001,15 @@ async fn readiness_error(
         MeetingStreamingProvider::SelectedEngine => match transcription_engine.read().await.as_ref()
         {
             Some(engine) if engine.config() == AudioTranscriptionEngine::Disabled => Some(
-                "Choose an audio transcription engine to use live meeting notes without ScreenPipe Cloud"
+                "Choose an audio transcription engine to use live meeting notes"
                     .to_string(),
             ),
             Some(_) => None,
             None => Some("Selected transcription engine is still loading".to_string()),
         },
-        MeetingStreamingProvider::ScreenpipeCloud if config.live_transcription_ready() => None,
-        MeetingStreamingProvider::ScreenpipeCloud => Some(
-            "Log in to ScreenPipe Cloud to enable live meeting transcription".to_string(),
-        ),
         MeetingStreamingProvider::DeepgramLive if config.live_transcription_ready() => None,
         MeetingStreamingProvider::DeepgramLive => Some(
-            "Direct Deepgram live transcription needs a Deepgram API key; ScreenPipe Cloud does not"
-                .to_string(),
+            "Direct Deepgram live transcription needs a Deepgram API key".to_string(),
         ),
     }
 }
@@ -1279,9 +1258,9 @@ mod tests {
         let mut active = None;
         let config = MeetingStreamingConfig::from_settings(
             true,
-            "screenpipe-cloud",
-            Some("cloud-token".to_string()),
+            "deepgram-live",
             None,
+            Some("direct-key".to_string()),
             None,
             None,
         );
@@ -1544,39 +1523,6 @@ mod tests {
         assert!(effective.live_transcription_ready());
         assert_eq!(effective.model.as_deref(), Some("nova-3"));
         assert!(effective.endpoint.starts_with("wss://"));
-    }
-
-    #[tokio::test]
-    async fn selected_screenpipe_cloud_uses_cloud_live() {
-        let engine = TranscriptionEngine::new(
-            Arc::new(AudioTranscriptionEngine::Deepgram),
-            Some(DeepgramTranscriptionConfig::screenpipe_cloud(
-                "cloud-token".to_string(),
-            )),
-            None,
-            Vec::new(),
-            Vec::new(),
-        )
-        .await
-        .expect("deepgram engine");
-        let engine_ref = Arc::new(RwLock::new(Some(engine)));
-        let config = MeetingStreamingConfig::from_settings(
-            true,
-            "selected-engine",
-            Some("cloud-token".to_string()),
-            None,
-            None,
-            None,
-        );
-
-        let effective = effective_streaming_config(&config, &engine_ref).await;
-
-        assert_eq!(
-            effective.provider,
-            MeetingStreamingProvider::ScreenpipeCloud
-        );
-        assert_eq!(effective.auth_token.as_deref(), Some("cloud-token"));
-        assert!(effective.live_transcription_ready());
     }
 
     #[tokio::test]

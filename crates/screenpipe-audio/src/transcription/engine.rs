@@ -202,8 +202,7 @@ impl TranscriptionEngine {
                     .filter(DeepgramTranscriptionConfig::is_ready)
                     .ok_or_else(|| anyhow!("Deepgram transcription config is missing"))?;
                 info!(
-                    "transcription engine runtime: Deepgram background_provider={} endpoint_host={}",
-                    dg.provider_slug_for_log(),
+                    "transcription engine runtime: Deepgram endpoint_host={}",
                     crate::transcription::deepgram::transcription_endpoint_host_for_log(
                         &dg.endpoint
                     ),

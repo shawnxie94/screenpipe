@@ -362,10 +362,6 @@ pub(crate) async fn delete_memory_handler(
     // If this row was already published to the cloud sync, remember the
     // sync_uuid before we drop the row so the next push can publish a
     // tombstone. Reads should never block the delete on failure — a
-    // missing tombstone means the deletion only takes effect locally,
-    // which is the safer outcome.
-    let sync_uuid = state.db.get_memory_sync_uuid(id).await.ok().flatten();
-
     state.db.delete_memory(id).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -373,7 +369,6 @@ pub(crate) async fn delete_memory_handler(
         )
     })?;
 
-    crate::sync_api::record_memory_tombstone(&state.screenpipe_dir, sync_uuid.as_deref());
 
     Ok(JsonResponse(json!({"ok": true})))
 }

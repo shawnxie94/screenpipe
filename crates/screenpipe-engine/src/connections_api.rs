@@ -2785,15 +2785,6 @@ async fn browser_pair_start(
 
     let origin = browser_pair_origin(&headers);
     let response = state.browser_pairing.start(body, origin.clone()).await;
-    crate::analytics::capture_event_nonblocking(
-        "browser_pairing_requested",
-        json!({
-            "browser": &response.browser,
-            "has_extension_id": response.extension_id.is_some(),
-            "has_origin": origin.is_some(),
-        }),
-    );
-
     (StatusCode::OK, Json(json!(response))).into_response()
 }
 
@@ -2819,13 +2810,6 @@ async fn browser_pair_status(
         .browser_pairing
         .status(&query.id, state.api_auth_key.as_deref())
         .await;
-
-    if status == BrowserPairingStatus::Approved {
-        crate::analytics::capture_event_nonblocking(
-            "browser_pairing_connected",
-            json!({ "auth_required": token.is_some() }),
-        );
-    }
 
     (
         StatusCode::OK,
@@ -2854,15 +2838,6 @@ async fn browser_pair_approve(
         )
             .into_response();
     }
-
-    crate::analytics::capture_event_nonblocking(
-        if body.approved {
-            "browser_pairing_approved"
-        } else {
-            "browser_pairing_denied"
-        },
-        json!({}),
-    );
 
     (StatusCode::OK, Json(json!({ "ok": true }))).into_response()
 }

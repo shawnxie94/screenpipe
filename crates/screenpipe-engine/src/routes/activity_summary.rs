@@ -29,7 +29,6 @@ use tracing::error;
 use super::request_origin::ExplicitApiClient;
 use crate::history_access::HistoryAccessPolicy;
 use crate::server::AppState;
-use crate::{analytics, qualified_value::ApiOutcomeKind};
 use screenpipe_db::{DatabaseManager, Order, SemanticContextQuery};
 
 /// Frames more than this many seconds apart are treated as idle (screen
@@ -313,7 +312,7 @@ pub struct ActivitySummaryResponse {
 pub async fn get_activity_summary(
     State(state): State<Arc<AppState>>,
     Query(mut query): Query<ActivitySummaryQuery>,
-    api_client: ExplicitApiClient,
+    _api_client: ExplicitApiClient,
 ) -> Result<JsonResponse<ActivitySummaryResponse>, (StatusCode, JsonResponse<Value>)> {
     if query.start_time >= query.end_time {
         return Err((
@@ -393,13 +392,6 @@ pub async fn get_activity_summary(
     let data_status =
         compute_data_status(&summary_core, recording_opt.as_ref(), snippets_for_status);
     let query_status = compute_query_status(memory_query, memories_for_status, snippets_for_status);
-
-    if api_client.is_direct_api() && data_status == "ok" {
-        analytics::capture_event_nonblocking(
-            "qualified_value_event",
-            crate::qualified_value::api_outcome_properties(ApiOutcomeKind::ActivitySummary),
-        );
-    }
 
     let guidance = if query.include_guidance {
         Some(build_guidance(

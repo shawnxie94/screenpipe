@@ -6,13 +6,11 @@
 
 use crate::agents::{install_spawned_pid, AgentExecutor, AgentOutput, ExecutionHandle, SharedPid};
 use anyhow::{anyhow, Context, Result};
-use arc_swap::ArcSwap;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Stdio;
-use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::process::Command;
 
@@ -44,26 +42,7 @@ pub struct AcpExecutor {
 }
 
 impl AcpExecutor {
-    pub fn new(
-        _user_token: Option<String>,
-        _gateway_url: String,
-        local_api_port: u16,
-        local_api_key: Option<String>,
-    ) -> Self {
-        Self::with_shared_user_token(
-            Arc::new(ArcSwap::from_pointee(None)),
-            String::new(),
-            local_api_port,
-            local_api_key,
-        )
-    }
-
-    pub fn with_shared_user_token(
-        _user_token: Arc<ArcSwap<Option<String>>>,
-        _gateway_url: String,
-        local_api_port: u16,
-        local_api_key: Option<String>,
-    ) -> Self {
+    pub fn new(local_api_port: u16, local_api_key: Option<String>) -> Self {
         Self {
             local_api_port,
             local_api_key: local_api_key.filter(|key| !key.is_empty()),

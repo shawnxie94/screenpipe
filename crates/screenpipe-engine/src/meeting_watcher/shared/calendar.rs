@@ -348,13 +348,6 @@ fn select_calendar_event(
 /// An event that is already in progress wins over one about to start; ties
 /// break toward the event whose start is nearest `now`. Deterministic — it
 /// never depends on the order the publisher happened to emit events in.
-pub(crate) fn find_overlapping_calendar_event(
-    events: &[CalendarEventSignal],
-    now: DateTime<Utc>,
-) -> Option<CalendarBinding> {
-    select_calendar_event(events, now, None).binding
-}
-
 #[cfg(test)]
 pub(crate) fn find_calendar_event_for_meeting(
     events: &[CalendarEventSignal],

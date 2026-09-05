@@ -24,7 +24,6 @@ use screenpipe_core::find_ffmpeg_path;
 use screenpipe_core::paths;
 use screenpipe_db::DatabaseManager;
 use screenpipe_engine::{
-    analytics,
     cli::{
         audio::handle_audio_command,
         mcp::handle_mcp_command,
@@ -32,7 +31,7 @@ use screenpipe_engine::{
         profile::handle_profile_command,
         search::handle_search_command,
         status::handle_status_command,
-        sync::{handle_sync_command, start_sync_service},
+        sync::handle_sync_command,
         team::handle_team_command,
         view::handle_view_command,
         vision::handle_vision_command,
@@ -44,10 +43,9 @@ use screenpipe_engine::{
     start_meeting_watcher, start_power_manager, start_sleep_monitor, start_speaker_identification,
     start_ui_recording,
     vision_manager::{start_monitor_watcher, stop_monitor_watcher, VisionManager},
-    watch_pid, ResourceTelemetryReporter, SCServer,
+    watch_pid, SCServer,
 };
 use screenpipe_screen::monitor::list_monitors;
-use serde_json::json;
 use std::{
     env, fs,
     net::{IpAddr, SocketAddr},
@@ -145,11 +143,7 @@ fn get_base_dir(custom_path: &Option<String>) -> anyhow::Result<PathBuf> {
     Ok(base_dir)
 }
 
-fn setup_logging(
-    local_data_dir: &PathBuf,
-    debug: bool,
-    disable_telemetry: bool,
-) -> anyhow::Result<WorkerGuard> {
+fn setup_logging(local_data_dir: &PathBuf, debug: bool) -> anyhow::Result<WorkerGuard> {
     let file_appender = screenpipe_engine::logging::SizedRollingWriter::builder()
         .directory(local_data_dir)
         .prefix("screenpipe")
@@ -243,14 +237,7 @@ fn setup_logging(
         ),
     );
 
-    // Build the final registry with conditional Sentry layer
-    if !disable_telemetry {
-        tracing_registry
-            .with(sentry::integrations::tracing::layer())
-            .init();
-    } else {
-        tracing_registry.init();
-    };
+    tracing_registry.init();
 
     Ok(guard)
 }
@@ -287,7 +274,7 @@ async fn main() -> anyhow::Result<()> {
             port,
         } => {
             let local_data_dir = get_base_dir(data_dir)?;
-            let _log_guard = Some(setup_logging(&local_data_dir, false, true)?);
+            let _log_guard = Some(setup_logging(&local_data_dir, false)?);
             handle_status_command(json, data_dir, port).await?;
             return Ok(());
         }
@@ -355,22 +342,6 @@ async fn main() -> anyhow::Result<()> {
             screenpipe_engine::cli::install::handle_install(url, allow_untrusted).await?;
             return Ok(());
         }
-        Command::Login => {
-            screenpipe_engine::cli::login::handle_login_command().await?;
-            return Ok(());
-        }
-        Command::Logout => {
-            screenpipe_engine::cli::login::handle_logout_command().await?;
-            return Ok(());
-        }
-        Command::Whoami => {
-            screenpipe_engine::cli::login::handle_whoami_command().await?;
-            return Ok(());
-        }
-        Command::Survey => {
-            screenpipe_engine::cli::survey::handle_survey_command().await?;
-            return Ok(());
-        }
         Command::Auth { ref subcommand } => {
             screenpipe_engine::cli::auth::handle_auth_command(subcommand).await?;
             return Ok(());
@@ -431,22 +402,6 @@ async fn main() -> anyhow::Result<()> {
             }
             return Ok(());
         }
-        Command::Diagnose {
-            ref message,
-            ref data_dir,
-            port,
-            dry_run,
-        } => {
-            let local_data_dir = get_base_dir(data_dir)?;
-            screenpipe_engine::cli::diagnose::handle_diagnose_command(
-                &local_data_dir,
-                message.as_deref(),
-                port,
-                dry_run,
-            )
-            .await?;
-            return Ok(());
-        }
         Command::Record(args) => args,
     };
 
@@ -459,18 +414,11 @@ async fn main() -> anyhow::Result<()> {
     screenpipe_engine::cli::agent::maybe_prompt_connect_detected(&local_data_dir);
 
     // Build unified RecordingConfig from shared app settings plus explicit CLI args.
-    let mut config = record_args
+    let config = record_args
         .clone()
         .into_recording_config(local_data_dir.clone(), &record_arg_sources)
         .await?;
 
-    // Force telemetry off in CI / automation (GitHub Actions, etc.) so test runs
-    // never reach Sentry/PostHog. Done here, before any telemetry is initialized,
-    // so the startup banner and the logging Sentry layer also reflect it.
-    if config.analytics_enabled && screenpipe_engine::analytics::telemetry_disabled_by_env() {
-        info!("telemetry force-disabled: detected CI / automation environment");
-        config.analytics_enabled = false;
-    }
 
     // mDNS LAN discovery is opt-in (off by default) so we don't trigger the
     // macOS "Local Network" permission prompt unless the user wants it.
@@ -480,7 +428,6 @@ async fn main() -> anyhow::Result<()> {
     let _log_guard = Some(setup_logging(
         &local_data_dir,
         record_args.debug,
-        !config.analytics_enabled,
     )?);
 
     if let Err(e) = screenpipe_engine::power::set_keep_awake(config.keep_computer_awake) {
@@ -501,193 +448,13 @@ async fn main() -> anyhow::Result<()> {
     // Periodic terminal nudge to install the desktop app (CLI-only).
     screenpipe_engine::cli_reminder::spawn();
 
-    // Initialize Sentry only if telemetry is enabled
-    let _sentry_guard = if config.analytics_enabled {
-        let sentry_release_name_append = env::var("SENTRY_RELEASE_NAME_APPEND").unwrap_or_default();
-        let release_name = format!(
-            "{}{}",
-            sentry::release_name!().unwrap_or_default(),
-            sentry_release_name_append
-        );
-        let guard = sentry::init((
-            "https://123656092b01a72b0417355ebbfb471f@o4505591122886656.ingest.us.sentry.io/4510761360949248",
-            sentry::ClientOptions {
-                release: Some(release_name.into()),
-                sample_rate: 0.1,
-                traces_sample_rate: 0.01,
-                send_default_pii: false,
-                server_name: Some("screenpipe-cli".into()),
-                before_send: Some(std::sync::Arc::new(|mut event| {
-                    // Strip file paths containing usernames from error messages
-                    fn strip_user_paths(s: &str) -> String {
-                        let re_unix = regex::Regex::new(r"/Users/[^/\s]+").unwrap();
-                        let re_win = regex::Regex::new(r"(?i)C:\\Users\\[^\\\s]+").unwrap();
-                        let s = re_unix.replace_all(s, "~").to_string();
-                        re_win.replace_all(&s, "~").to_string()
-                    }
-
-                    // Noise filter: drop events whose root cause is a user
-                    // environment problem we can't fix from code. Mirrors the
-                    // Tauri-app filter in apps/screenpipe-app-tauri/src-tauri/
-                    // src/main.rs — the CLI binary was missing the same
-                    // suppression so the events kept flowing in (CLI-49
-                    // alone hit 744 users on stale builds).
-                    static USER_ENV_PATTERNS: std::sync::OnceLock<Vec<regex::Regex>> =
-                        std::sync::OnceLock::new();
-                    let env_patterns = USER_ENV_PATTERNS.get_or_init(|| {
-                        [
-                            // User hasn't granted screen recording permission (CLI-49)
-                            r"Screen recording permission denied",
-                            // User hasn't granted microphone access — Windows WASAPI
-                            // E_ACCESSDENIED building the input stream (CLI-F4: top live
-                            // engine issue, 45 users / 200+ events). The OS (or another
-                            // app holding the device exclusively) refuses capture;
-                            // retrying can't clear it, so it's not an actionable bug.
-                            r"backend-specific error has occurred: Access is denied",
-                            // device_monitor's periodic capture-device check failing with an
-                            // OS backend error — overwhelmingly a denied macOS TCC permission
-                            // (screen/audio capture), which the OS reports in the user's
-                            // LOCALE, so the English "Screen recording permission denied"
-                            // pattern above misses it (CLI-WH: 1 user / 126 events, a
-                            // Japanese TCC-denied string). The check re-runs each cycle, so a
-                            // standing denial floods Sentry. Matching the English wrapper
-                            // prefix catches every locale; device-check backend errors
-                            // (permission, unplugged) are user-environment, not our bug.
-                            r"device check error: A backend-specific error has occurred",
-                            // Local DB corruption — user dropped/restored part of their db.sqlite
-                            r"no such table: main\.speaker_embeddings",
-                            // Concurrent DB access / user ran CLI while app was running
-                            r"database is locked",
-                            // Port conflict — another screenpipe instance is already bound
-                            // (CLI-2J: 659 events / 649 users — user environment, not a bug)
-                            r"you're likely already running screenpipe instance",
-                            // Broken Homebrew install — external dylib missing
-                            r"Library not loaded.*libx265\.",
-                            // Linux system library missing — distro-local, not our bug
-                            r"Failed to load ayatana-appindicator3 or appindicator3 dynamic library",
-                            // libwayshot reports an older Wayland compositor's wl_output
-                            // protocol as an error even though it deliberately ignores that
-                            // output and continues (CLI-ZY: 130 duplicate events, one user).
-                            // Keep the local log for diagnosis, but do not send it to Sentry.
-                            r"^Ignoring a wl_output with version < 4\.$",
-                            // Deepgram DNS / connectivity blips — already logged locally
-                            r"deepgram transcription failed: Cannot resolve audio transcription server",
-                        ]
-                        .into_iter()
-                        .filter_map(|p| regex::Regex::new(p).ok())
-                        .collect()
-                    });
-                    let matches_noise = |text: &str| env_patterns.iter().any(|re| re.is_match(text));
-                    if event.message.as_deref().map(matches_noise).unwrap_or(false) {
-                        return None;
-                    }
-                    for val in event.exception.values.iter() {
-                        if let Some(ref v) = val.value {
-                            if matches_noise(v) {
-                                return None;
-                            }
-                        }
-                    }
-
-                    if let Some(ref mut msg) = event.message {
-                        *msg = strip_user_paths(msg);
-                    }
-                    for val in event.exception.values.iter_mut() {
-                        if let Some(ref mut v) = val.value {
-                            *v = strip_user_paths(v);
-                        }
-                    }
-                    Some(event)
-                })),
-                ..Default::default()
-            }
-        ));
-
-        // Attach non-sensitive CLI settings to all future Sentry events
-        sentry::configure_scope(|scope| {
-            // Set user.id to the same analytics ID used by PostHog. Embedded
-            // customers can set SCREENPIPE_SUPPORT_ID to make standalone CLI
-            // events searchable by customer without using email.
-            scope.set_user(Some(sentry::protocol::User {
-                id: Some(analytics::get_distinct_id().to_string()),
-                ..Default::default()
-            }));
-            let telemetry_context =
-                screenpipe_engine::telemetry_context::TelemetryContext::from_env();
-            for (key, value) in telemetry_context.pairs() {
-                scope.set_tag(key, value);
-            }
-            if !telemetry_context.is_empty() {
-                scope.set_context(
-                    "screenpipe_support",
-                    sentry::protocol::Context::Other(telemetry_context.to_json_map()),
-                );
-            }
-            scope.set_context(
-                "cli_settings",
-                sentry::protocol::Context::Other({
-                    let mut map = std::collections::BTreeMap::new();
-                    map.insert(
-                        "audio_chunk_duration".into(),
-                        json!(config.audio_chunk_duration),
-                    );
-                    map.insert("port".into(), json!(config.port));
-                    map.insert("disable_audio".into(), json!(config.disable_audio));
-                    map.insert(
-                        "audio_transcription_engine".into(),
-                        json!(format!("{:?}", config.audio_transcription_engine)),
-                    );
-                    map.insert("monitor_ids".into(), json!(config.monitor_ids));
-                    map.insert("use_all_monitors".into(), json!(config.use_all_monitors));
-                    map.insert("languages".into(), json!(config.languages));
-                    map.insert("use_pii_removal".into(), json!(config.use_pii_removal));
-                    map.insert("disable_vision".into(), json!(config.disable_vision));
-                    map.insert("vad_engine".into(), json!("Silero"));
-                    map.insert("enable_sync".into(), json!(record_args.enable_sync));
-                    map.insert(
-                        "sync_interval_secs".into(),
-                        json!(record_args.sync_interval_secs),
-                    );
-                    map.insert("debug".into(), json!(record_args.debug));
-                    map.insert("api_auth".into(), json!(config.api_auth));
-                    map.insert("encrypt_secrets".into(), json!(config.encrypt_secrets));
-                    map.insert("retention_days".into(), json!(record_args.retention_days));
-                    map.insert("retention_mode".into(), json!(record_args.retention_mode));
-                    // Only send counts for privacy-sensitive lists (not actual values)
-                    map.insert(
-                        "audio_device_count".into(),
-                        json!(config.audio_devices.len()),
-                    );
-                    map.insert(
-                        "ignored_windows_count".into(),
-                        json!(config.ignored_windows.len()),
-                    );
-                    map.insert(
-                        "included_windows_count".into(),
-                        json!(config.included_windows.len()),
-                    );
-                    map.insert(
-                        "ignored_urls_count".into(),
-                        json!(config.ignored_urls.len()),
-                    );
-                    map
-                }),
-            );
-        });
-
-        Some(guard)
-    } else {
-        None
-    };
-
     // Crash diagnostics. Integrators embed this binary as a child process
     // inside their own wrapper (e.g. an Electron app) and, when it dies, see
     // only the exit code — never *why*. Install a panic hook that writes the
-    // message + backtrace to last-panic.log so the parent (and we, via Sentry)
+    // message + backtrace to last-panic.log so the parent
     // can read the cause after the process exits. Installed only on the Record
     // path (the long-running server; subcommands return earlier) and written
-    // regardless of telemetry, so analytics-disabled customers still get a
-    // local crash record. Mirrors the desktop app's hook in
+    // unconditionally: the local crash record is written even when no telemetry exists. Mirrors the desktop app's hook in
     // apps/screenpipe-app-tauri/src-tauri/src/main.rs.
     {
         // Write to the resolved data dir (honors --data-dir) so the crash log
@@ -699,26 +466,6 @@ async fn main() -> anyhow::Result<()> {
         // A relaunch right after a crash is the common case: rotate last run's
         // log to .prev so we don't truncate the message we most need.
         crash_log::rotate_panic_log(&panic_dir);
-
-        // Reuse the existing embedder attribution (SCREENPIPE_EMBEDDER /
-        // SCREENPIPE_CUSTOMER_ID / ...) so the local crash record is identifiable
-        // even when telemetry is off. When telemetry is on, the Sentry scope is
-        // already tagged with the same context above, so panic events inherit it
-        // and no per-event tagging is needed here.
-        let attribution = {
-            use screenpipe_engine::telemetry_context::TelemetryContext;
-            let joined = TelemetryContext::from_env()
-                .pairs()
-                .iter()
-                .map(|(k, v)| format!("{}={}", k, v))
-                .collect::<Vec<_>>()
-                .join(" ");
-            if joined.is_empty() {
-                String::new()
-            } else {
-                format!("\n{}", joined)
-            }
-        };
 
         let default_hook = std::panic::take_hook();
         std::panic::set_hook(Box::new(move |info| {
@@ -757,27 +504,12 @@ async fn main() -> anyhow::Result<()> {
             let backtrace = std::backtrace::Backtrace::force_capture();
             let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
             let record = format!(
-                "[{}] PANIC on thread '{}' at {}: {}{}\n\nBacktrace:\n{}",
-                timestamp, thread_name, location, payload, attribution, backtrace
+                "[{}] PANIC on thread '{}' at {}: {}\n\nBacktrace:\n{}",
+                timestamp, thread_name, location, payload, backtrace
             );
 
             eprintln!("{}", record);
             crash_log::write_panic_log(&panic_dir, &record);
-
-            // Best-effort Sentry report. No-op when telemetry is disabled; and
-            // the CLI sample_rate (0.1) applies here, so last-panic.log is the
-            // reliable record while Sentry is the convenience copy.
-            sentry::capture_message(
-                &format!(
-                    "panic on thread '{}' at {}: {}",
-                    thread_name, location, payload
-                ),
-                sentry::Level::Fatal,
-            );
-            // Flush so the event leaves before the process dies.
-            if let Some(client) = sentry::Hub::current().client() {
-                client.flush(Some(std::time::Duration::from_secs(2)));
-            }
 
             // Default hook last (prints the standard panic output).
             default_hook(info);
@@ -932,16 +664,6 @@ async fn main() -> anyhow::Result<()> {
 
     let audio_devices_clone = audio_devices.clone();
 
-    let resource_reporter = ResourceTelemetryReporter::new(config.analytics_enabled);
-    resource_reporter.start_monitoring(Duration::from_secs(30), Some(Duration::from_secs(60)));
-
-    // Initialize analytics for API tracking
-    analytics::init(config.analytics_enabled);
-
-    // Check macOS version and send telemetry if below supported versions
-    // This helps track users who may have screen capture issues due to old macOS
-    analytics::check_macos_version();
-
     let db = Arc::new(
         DatabaseManager::new(
             &format!("{}/db.sqlite", local_data_dir.to_string_lossy()),
@@ -966,22 +688,6 @@ async fn main() -> anyhow::Result<()> {
     // Capture modules emit loss events eagerly on OS errors; this task covers
     // accessibility transitions and confirms restorations across all three.
     let _permission_monitor_handle = screenpipe_engine::permission_monitor::start();
-
-    // Start cloud sync service if enabled
-    let sync_service_handle = if record_args.enable_sync {
-        match start_sync_service(&record_args, db.clone()).await {
-            Ok(handle) => {
-                info!("cloud sync service started");
-                Some(handle)
-            }
-            Err(e) => {
-                error!("failed to start sync service: {}", e);
-                None
-            }
-        }
-    } else {
-        None
-    };
 
     let db_server = db.clone();
 
@@ -1338,15 +1044,6 @@ async fn main() -> anyhow::Result<()> {
     server.manual_meeting = Some(manual_meeting.clone());
     server.api_auth = config.api_auth;
     server.api_auth_key = config.api_auth_key.clone();
-    // Cloud JWT for the /v1/chat/completions proxy. CLI/binary path reads
-    // SCREENPIPE_API_KEY directly; desktop path overrides via
-    // SCServer::cloud_token_handle after spawn.
-    if let Ok(t) = std::env::var("SCREENPIPE_API_KEY") {
-        if !t.is_empty() {
-            server.cloud_token.store(std::sync::Arc::new(Some(t)));
-        }
-    }
-
     // Initialize secret store for unified credential management
     let encryption_requested =
         config.encrypt_secrets || screenpipe_secrets::is_encryption_requested(&local_data_dir);
@@ -1405,44 +1102,15 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    // Attach sync handle if sync is enabled
-    let server = if let Some(ref handle) = sync_service_handle {
-        server.with_sync_handle_arc(handle.clone())
-    } else {
-        server
-    };
 
     // Initialize pipe manager
     let pipes_dir = local_data_dir.join("pipes");
     std::fs::create_dir_all(&pipes_dir).ok();
 
-    let user_token = std::env::var("SCREENPIPE_API_KEY").ok();
     let pi_executor = std::sync::Arc::new(
-        screenpipe_core::agents::pi::PiExecutor::new(user_token.clone())
+        screenpipe_core::agents::pi::PiExecutor::new()
             .with_api_auth_key(config.api_auth_key.clone()),
     );
-
-    // Workflow event classifier — opt-in cloud feature. Polls recent activity
-    // and emits `WorkflowEvent`s on the bus so pipes with `trigger.events`
-    // frontmatter can run. Routed through the gateway by default; self-host
-    // can override with SCREENPIPE_EVENT_CLASSIFIER_URL.
-    if config.enable_workflow_events {
-        let classifier_url =
-            std::env::var("SCREENPIPE_EVENT_CLASSIFIER_URL").unwrap_or_else(|_| {
-                screenpipe_engine::workflow_classifier::DEFAULT_CLASSIFIER_URL.to_string()
-            });
-        let token = user_token.clone().unwrap_or_default();
-        let port = config.port;
-        tokio::spawn(async move {
-            screenpipe_engine::workflow_classifier::start_workflow_classifier(
-                classifier_url,
-                token,
-                port,
-                std::time::Duration::from_secs(30),
-            )
-            .await;
-        });
-    }
 
     let mut agent_executors: std::collections::HashMap<
         String,
@@ -1452,8 +1120,6 @@ async fn main() -> anyhow::Result<()> {
     agent_executors.insert(
         "acp".to_string(),
         std::sync::Arc::new(screenpipe_core::agents::acp::AcpExecutor::new(
-            user_token.clone(),
-            screenpipe_core::agents::pi::SCREENPIPE_API_URL.to_string(),
             config.port,
             config.api_auth_key.clone(),
         )),
@@ -1478,29 +1144,7 @@ async fn main() -> anyhow::Result<()> {
             server.pipe_permissions.clone(),
         ),
     ));
-    let (event_runs_active, event_runs_peak) = pipe_manager.event_run_concurrency();
-    pipe_manager.set_on_run_complete(std::sync::Arc::new(
-        move |pipe_name, execution_id, trigger_type, success, duration_secs, error_type| {
-            let mut props = serde_json::json!({
-                "pipe": pipe_name,
-                "execution_id": execution_id,
-                "trigger_type": trigger_type,
-                "telemetry_schema_version": 2,
-                "success": success,
-                "duration_secs": duration_secs,
-                // Concurrency of event-triggered runs: live count as this run
-                // completes plus the process-lifetime peak. This makes the
-                // EVENT_TRIGGERED_CONCURRENCY_LIMIT behavior observable.
-                "event_runs_active": event_runs_active.load(std::sync::atomic::Ordering::Relaxed),
-                "event_runs_peak": event_runs_peak.load(std::sync::atomic::Ordering::Relaxed),
-            });
-            if let Some(et) = error_type {
-                props["error_type"] = serde_json::Value::String(et.to_string());
-            }
-            // Keep the legacy event name so existing dashboards continue to work.
-            analytics::capture_event_nonblocking("pipe_scheduled_run", props);
-        },
-    ));
+
     // Give scheduled runs the same Live View target authority the foreground
     // refresh button sends, so a Pipe feeding several dashboards refreshes all
     // of them instead of leaving the ones it skipped stale until a manual click.
@@ -1579,10 +1223,6 @@ async fn main() -> anyhow::Result<()> {
     );
     println!("│ debug mode             │ {:<34} │", record_args.debug);
     println!(
-        "│ telemetry              │ {:<34} │",
-        config.analytics_enabled
-    );
-    println!(
         "│ use pii removal        │ {:<34} │",
         config.use_pii_removal
     );
@@ -1598,20 +1238,6 @@ async fn main() -> anyhow::Result<()> {
         "│ included windows       │ {:<34} │",
         format_cell(&format!("{:?}", &included_windows_clone), VALUE_WIDTH)
     );
-    println!(
-        "│ cloud sync             │ {:<34} │",
-        if record_args.enable_sync {
-            "enabled"
-        } else {
-            "disabled"
-        }
-    );
-    if record_args.enable_sync {
-        println!(
-            "│ sync interval          │ {:<34} │",
-            format!("{} seconds", record_args.sync_interval_secs)
-        );
-    }
     println!(
         "│ auto-destruct pid      │ {:<34} │",
         record_args.auto_destruct_pid.unwrap_or(0)
@@ -1776,22 +1402,6 @@ async fn main() -> anyhow::Result<()> {
                 .bright_green()
         );
     }
-
-    // Add warning for telemetry
-    if config.analytics_enabled {
-        println!(
-            "{}",
-            "warning: telemetry is enabled. only error-level data will be sent.\n\
-            to disable, use the --disable-telemetry flag."
-                .bright_yellow()
-        );
-    } else {
-        println!(
-            "{}",
-            "telemetry is disabled. no data will be sent to external services.".bright_green()
-        );
-    }
-
     // Add changelog link
     println!(
         "\n{}",
@@ -2262,11 +1872,6 @@ async fn main() -> anyhow::Result<()> {
             if let Some(ref handle) = ui_recorder_handle {
                 info!("stopping UI event capture");
                 handle.stop();
-            }
-            // Stop sync service if running
-            if let Some(ref handle) = sync_service_handle {
-                info!("stopping sync service");
-                let _ = handle.stop().await;
             }
             let _ = shutdown_tx.send(());
         }

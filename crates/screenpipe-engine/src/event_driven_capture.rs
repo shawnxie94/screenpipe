@@ -13,7 +13,7 @@ use crate::capture_exclusions::{
 };
 use crate::hot_frame_cache::{HotFrame, HotFrameCache};
 use crate::power::PowerProfile;
-use crate::semantic_worker::{SemanticCaptureGap, SemanticProjectionJob, SemanticProjectionSender};
+use crate::semantic_worker::{SemanticProjectionJob, SemanticProjectionSender};
 use crate::visual_probe::bounded_visual_probe;
 use anyhow::Result;
 use chrono::Utc;
@@ -3491,10 +3491,8 @@ async fn do_capture(
                 ));
             }
             Some(_) => {
-                sender.record_capture_gap(result.frame_id, SemanticCaptureGap::FocusIncoherent);
             }
             None => {
-                sender.record_capture_gap(result.frame_id, SemanticCaptureGap::TreeMissing);
             }
         }
     }
