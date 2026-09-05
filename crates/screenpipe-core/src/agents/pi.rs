@@ -780,43 +780,8 @@ impl PiExecutor {
         self
     }
 
-    /// User policy: when the marker file
-    /// `<data_dir>/cloud_media_analysis.disabled` exists, the
-    /// screenpipe-api skill is installed WITHOUT the Gemma 4 E4B
-    /// confidential-enclave block. Default (no marker) = enabled, so
-    /// fresh installs ship the capability documented and Pi knows to
-    /// call `api.screenpipe.com` with `model: "gemma4-e4b"` for audio /
-    /// video / image analysis.
-    ///
-    /// Gating happens at install time (here) rather than by mutating
-    /// the rendered SKILL.md after the fact — those copies get
-    /// overwritten on every Pi run, so post-install edits don't stick.
-    fn cloud_media_analysis_enabled() -> bool {
-        // Data-dir scoped, not `~/.screenpipe` scoped: a dev or relocated
-        // instance must read the marker its own Settings toggle wrote, not
-        // another install's. Identical path for a default install.
-        !crate::paths::default_screenpipe_data_dir()
-            .join("cloud_media_analysis.disabled")
-            .exists()
-    }
-
     fn render_screenpipe_api_skill() -> String {
-        let mut s = String::from(include_str!("../../assets/skills/screenpipe-api/SKILL.md"));
-        if Self::cloud_media_analysis_enabled() {
-            // Trim trailing whitespace before appending so we don't
-            // accumulate blank lines on rebuild.
-            while s.ends_with(char::is_whitespace) {
-                s.pop();
-            }
-            s.push('\n');
-            s.push('\n');
-            s.push_str(
-                include_str!("../../assets/skills/screenpipe-api/cloud_media_analysis_block.md")
-                    .trim_end(),
-            );
-            s.push('\n');
-        }
-        s
+        include_str!("../../assets/skills/screenpipe-api/SKILL.md").to_string()
     }
 
     /// Install or wipe the `screenpipe-team` enterprise-admin skill under an
@@ -1340,46 +1305,28 @@ impl PiExecutor {
         Ok(())
     }
 
-    /// Install or remove the web-search extension based on provider.
-    /// Web search uses the screenpipe cloud backend, so we only enable it
-    /// for screenpipe-cloud to avoid sending data to our backend when the
-    /// user chose a local/custom provider.
+    /// Remove the retired hosted web-search extension from old Pi workspaces.
     pub fn ensure_web_search_extension(project_dir: &Path, provider: Option<&str>) -> Result<()> {
         Self::ensure_web_search_extension_with_api_url(project_dir, provider, SCREENPIPE_API_URL)
     }
 
     fn ensure_web_search_extension_with_api_url(
         project_dir: &Path,
-        provider: Option<&str>,
-        api_url: &str,
+        _provider: Option<&str>,
+        _api_url: &str,
     ) -> Result<()> {
         let ext_dir = project_dir.join(".pi").join("extensions");
         let ext_path = ext_dir.join("web-search.ts");
 
-        let is_screenpipe_cloud = matches!(
-            provider,
-            None | Some("screenpipe") | Some("screenpipe-cloud") | Some("pi")
-        );
-
-        if is_screenpipe_cloud {
-            std::fs::create_dir_all(&ext_dir)?;
-            let ext_content = include_str!("../../assets/extensions/web-search.ts")
-                .replace(SCREENPIPE_API_URL, api_url);
-            std::fs::write(&ext_path, ext_content)?;
-            debug!("web-search extension installed at {:?}", ext_path);
-        } else if ext_path.exists() {
+        if ext_path.exists() {
             std::fs::remove_file(&ext_path)?;
-            info!(
-                "web-search extension removed (provider {:?} is not screenpipe-cloud)",
-                provider
-            );
+            info!("retired hosted web-search extension removed from {:?}", ext_path);
         }
 
         Ok(())
     }
 
-    /// Merge screenpipe provider (and optionally the pipe's own provider) into
-    /// pi's existing config files.
+    /// Merge the pipe's selected provider into pi's existing config files.
     ///
     /// Unlike the old `write_pi_config`, this preserves any existing providers
     /// and auth credentials already present in the config dir (e.g. entries
@@ -1390,8 +1337,8 @@ impl PiExecutor {
     /// the resolved `provider`, `model`, and optional `provider_url` so the
     /// corresponding entry is written to `models.json`.
     pub async fn ensure_pi_config(
-        user_token: Option<&str>,
-        api_url: &str,
+        _user_token: Option<&str>,
+        _api_url: &str,
         provider: Option<&str>,
         model: Option<&str>,
         provider_url: Option<&str>,
@@ -1423,55 +1370,6 @@ impl PiExecutor {
             .is_none()
         {
             models_config = json!({"providers": {}});
-        }
-
-        // Only add screenpipe cloud provider if it's the intended provider
-        // (or no provider specified). If the user explicitly chose ollama/openai/custom,
-        // do NOT write screenpipe into models.json to avoid silent credit drain via fallback.
-        let should_add_screenpipe = match provider {
-            None => true,
-            Some("screenpipe") | Some("screenpipe-cloud") | Some("pi") => true,
-            Some(_) => false,
-        };
-
-        if should_add_screenpipe {
-            // Use actual token value in apiKey — Pi doesn't resolve bare env var
-            // names, so writing the literal string "SCREENPIPE_API_KEY" causes
-            // tier=anonymous. Resolve from: argument > env var > `$` env-var
-            // reference (last resort; resolves at pi runtime if the var appears).
-            let api_key_value = user_token
-                .map(|t| t.to_string())
-                .or_else(|| std::env::var("SCREENPIPE_API_KEY").ok())
-                .unwrap_or_else(|| "$SCREENPIPE_API_KEY".to_string());
-            let api_key_value = api_key_value.as_str();
-            let models = screenpipe_cloud_models(api_url, user_token).await;
-            // PiExecutor only runs pipes (PipeManager: scheduled / run-now),
-            // which are latency-tolerant, so tag every cloud LLM call as
-            // background. The gateway then serves it on the cheaper, best-effort
-            // Vertex flex tier (resolveLatencyClass). The workload marker keeps
-            // safety-refusal rescue scoped to unattended Pipes rather than
-            // interactive chat or other background helpers. Pi merges provider
-            // `headers` into each request (see pi-coding-agent model-registry),
-            // and an old gateway simply ignores the unknown header (→ standard),
-            // so there's no deploy-order coupling.
-            let screenpipe_provider = json!({
-                "baseUrl": api_url,
-                "api": "openai-completions",
-                "apiKey": api_key_value,
-                "authHeader": true,
-                "headers": {
-                    "x-screenpipe-latency": "background",
-                    "x-screenpipe-workload": "pipe"
-                },
-                "models": models
-            });
-
-            if let Some(providers) = models_config
-                .get_mut("providers")
-                .and_then(|p| p.as_object_mut())
-            {
-                providers.insert("screenpipe".to_string(), screenpipe_provider);
-            }
         }
 
         // Add the pipe's own provider (ollama, openai, custom) if specified
@@ -1613,34 +1511,11 @@ impl PiExecutor {
             let _ = std::fs::set_permissions(&models_path, std::fs::Permissions::from_mode(0o600));
         }
 
-        // -- auth.json: merge/remove screenpipe token, preserve other providers --
-        // Only manage screenpipe auth when screenpipe provider is actually being used.
+        // -- auth.json: local-only build never stores a Screenpipe credential.
+        // Upgrades scrub legacy entries that older versions seeded from the
+        // user's global `~/.pi/agent/auth.json`; BYOK providers keep theirs.
         let auth_path = config_dir.join("auth.json");
-        if should_add_screenpipe {
-            if let Some(token) = user_token.filter(|token| !token.is_empty()) {
-                let mut auth: serde_json::Value = if auth_path.exists() {
-                    let content = std::fs::read_to_string(&auth_path).unwrap_or_default();
-                    serde_json::from_str(&content).unwrap_or_else(|_| json!({}))
-                } else {
-                    json!({})
-                };
-
-                upgrade_legacy_pi_credentials(&mut auth);
-
-                if let Some(obj) = auth.as_object_mut() {
-                    obj.insert("screenpipe".to_string(), api_key_credential(token));
-                }
-
-                write_auth_json(&auth_path, &auth)?;
-            } else {
-                remove_screenpipe_auth_from_path(&auth_path)?;
-            }
-        } else {
-            // BYOK-only users never reach the screenpipe branch, but their
-            // auth.json can still hold legacy entries seeded from the user's
-            // global `~/.pi/agent/auth.json` — upgrade those too.
-            upgrade_legacy_pi_credentials_at_path(&auth_path)?;
-        }
+        upgrade_legacy_pi_credentials_at_path(&auth_path)?;
 
         debug!("pi config written at {:?}", models_path);
         Ok(())
@@ -2210,10 +2085,14 @@ impl AgentExecutor for PiExecutor {
         shared_pid: Option<super::SharedPid>,
         continue_session: bool,
     ) -> Result<AgentOutput> {
-        // Provider resolution:
-        // 1. Explicit provider from pipe frontmatter → use it
-        // 2. No provider specified → screenpipe cloud (default)
-        let resolved_provider = provider.unwrap_or("screenpipe").to_string();
+        let resolved_provider = provider
+            .ok_or_else(|| anyhow!("pipe AI provider is not configured; choose a local or third-party provider"))?
+            .to_string();
+        if matches!(resolved_provider.as_str(), "screenpipe" | "screenpipe-cloud" | "pi") {
+            return Err(anyhow!(
+                "Screenpipe-hosted AI has been removed; choose a local or third-party provider"
+            ));
+        }
 
         let (resolved_model, fell_back_from) = self
             .resolve_screenpipe_model(model, &resolved_provider)
@@ -2331,7 +2210,14 @@ impl AgentExecutor for PiExecutor {
         session_owner: Option<&str>,
         _executor_config: Option<&serde_json::Value>,
     ) -> Result<AgentOutput> {
-        let resolved_provider = provider.unwrap_or("screenpipe").to_string();
+        let resolved_provider = provider
+            .ok_or_else(|| anyhow!("pipe AI provider is not configured; choose a local or third-party provider"))?
+            .to_string();
+        if matches!(resolved_provider.as_str(), "screenpipe" | "screenpipe-cloud" | "pi") {
+            return Err(anyhow!(
+                "Screenpipe-hosted AI has been removed; choose a local or third-party provider"
+            ));
+        }
         let (resolved_model, fell_back_from) = self
             .resolve_screenpipe_model(model, &resolved_provider)
             .await;
@@ -4450,26 +4336,20 @@ mod tests {
     }
 
     #[test]
-    fn web_search_extension_uses_executor_gateway_url() {
+    fn retired_web_search_extension_is_removed() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let api_url = "http://127.0.0.1:8787/v1";
+        let ext_dir = dir.path().join(".pi").join("extensions");
+        std::fs::create_dir_all(&ext_dir).expect("create extension dir");
+        let ext_path = ext_dir.join("web-search.ts");
+        std::fs::write(&ext_path, "retired").expect("seed retired extension");
 
         PiExecutor::ensure_web_search_extension_with_api_url(
             dir.path(),
             Some("screenpipe"),
-            api_url,
+            "http://127.0.0.1:8787/v1",
         )
-        .expect("install web-search extension");
-
-        let content = std::fs::read_to_string(
-            dir.path()
-                .join(".pi")
-                .join("extensions")
-                .join("web-search.ts"),
-        )
-        .expect("read web-search extension");
-        assert!(content.contains("http://127.0.0.1:8787/v1/web-search"));
-        assert!(!content.contains(SCREENPIPE_API_URL));
+        .expect("remove retired web-search extension");
+        assert!(!ext_path.exists());
     }
 
     #[test]

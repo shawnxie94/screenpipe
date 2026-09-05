@@ -4,7 +4,7 @@
 
 // Minimal, dependency-free MCP server that gives ACP coding-agent harnesses
 // core screenpipe capabilities: query_recordings, search_chats, send_to_chat, list_connections,
-// save_artifact, sp_web_search, screenpipe_connect_app, live_view,
+// save_artifact, screenpipe_connect_app, live_view,
 // user_profile, skill_manage, and the sp_mcp_* bridge. It speaks newline-
 // delimited JSON-RPC on stdin/stdout (MCP
 // stdio) or, when SCREENPIPE_TOOLS_HTTP_PORT is set, a stateless Streamable-HTTP
@@ -13,9 +13,8 @@
 // keyword_search, search/get frame elements, meetings, health) that the core
 // screenpipe HTTP server does not expose, so those agents reach parity. Uses
 // only runtime built-ins, so it needs no npm install and runs from the bundled
-// bun. It talks to the local screenpipe engine over REST; it never sees the
-// cloud credential (that stays out of ACP process trees — web search goes
-// through a local engine proxy that injects the cloud JWT server-side).
+// bun. It talks to the local screenpipe engine over REST and never handles
+// Screenpipe account credentials.
 
 import { writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -680,40 +679,6 @@ const TOOLS = [
       });
       if (!res.ok) throw new Error(`POST /artifacts/register returned ${res.status}`);
       return JSON.stringify({ status: "saved", filename, kind });
-    },
-  },
-  {
-    name: "sp_web_search",
-    description:
-      "Search the public internet via Google Search. Use ONLY for public, external information the user explicitly asks about (current events, news, public people or companies, public product docs). Do NOT use it for the user's own screenpipe data. When unsure, do not search. Returns results with sources.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: { type: "string", description: "The search query" },
-      },
-      required: ["query"],
-      additionalProperties: false,
-    },
-    async run(args) {
-      const query = String(args?.query ?? "").trim();
-      if (!query) throw new Error("query is required");
-      // Hit the LOCAL engine proxy, not the cloud directly: the engine injects
-      // the cloud JWT server-side, so this process never holds that credential.
-      const res = await fetch(`${apiBase()}/v1/web-search`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({ query }),
-      });
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        if (res.status === 503) {
-          throw new Error("web search unavailable: sign in to screenpipe first");
-        }
-        throw new Error(`web search failed (${res.status})${detail ? `: ${detail}` : ""}`);
-      }
-      const body = await res.json();
-      const sources = Array.isArray(body?.sources) ? body.sources : [];
-      return JSON.stringify({ content: body?.content ?? "", sources });
     },
   },
   {

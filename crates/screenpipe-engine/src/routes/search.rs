@@ -1484,20 +1484,6 @@ pub(crate) async fn search(
         }),
     );
 
-    // Get cloud search metadata
-    let time_range = match (query.start_time, query.end_time) {
-        (Some(start), Some(end)) => Some(crate::cloud_search::TimeRange { start, end }),
-        _ => None,
-    };
-    let cloud_metadata = state.cloud_search.get_metadata(query_str, time_range).await;
-
-    // Only include cloud metadata if cloud search is available or was requested
-    let cloud = if cloud_metadata.cloud_search_available || query.include_cloud {
-        Some(cloud_metadata)
-    } else {
-        None
-    };
-
     let response = SearchResponse {
         data: content_items,
         pagination: PaginationInfo {
@@ -1505,7 +1491,10 @@ pub(crate) async fn search(
             offset: query.pagination.offset,
             total: total as i64,
         },
-        cloud,
+        // Cloud search is intentionally unavailable in the local-first build.
+        // Keep the nullable response field for wire compatibility with older
+        // clients, but never perform a remote lookup.
+        cloud: None,
         related,
     };
 

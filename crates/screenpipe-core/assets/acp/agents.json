@@ -25,12 +25,6 @@
       "kind": "npx",
       "package": "@agentclientprotocol/claude-agent-acp@0.66.0",
       "args": ["--hide-claude-auth"]
-    },
-    "cloudRouting": {
-      "baseUrlEnv": "ANTHROPIC_BASE_URL",
-      "tokenEnv": "ANTHROPIC_AUTH_TOKEN",
-      "pathPrefix": "/anthropic",
-      "clearEnv": ["ANTHROPIC_API_KEY"]
     }
   },
   {

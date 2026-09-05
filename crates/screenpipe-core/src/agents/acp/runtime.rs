@@ -398,7 +398,7 @@ Never access Screenpipe's live db.sqlite, db.sqlite-wal, or db.sqlite-shm direct
 - `search_chats` finds exact existing screenpipe, Codex, Claude, and Cursor chat targets. `send_to_chat` delivers to one returned source + id only after the user explicitly authorizes that exact send. Read `.pi/skills/screenpipe-chats/SKILL.md` for the search, disambiguation, and delivery workflow.
 - `list_connections` shows the user's connected apps; `screenpipe_connect_app` connects one and waits for the user when a task needs it.
 - for a connection returned with mcp=true (Linear, Notion, Stripe, Sentry, Jira, Gmail, Zoom, Drive), use `sp_mcp_list_tools` then `sp_mcp_call` (with its `mcp_server_id`) to actually use it — not the connection proxy.
-- `sp_web_search` searches the public web; `save_artifact` saves a finished, user-facing deliverable (text or, with encoding=base64, an image) to the Artifacts library.
+- `save_artifact` saves a finished, user-facing deliverable (text or, with encoding=base64, an image) to the Artifacts library.
 - `live_view` reads or edits the user's saved Live Views (dashboards): action=list to find one, action=get for its definition, action=save to persist edits — only when the user asks about a dashboard.
 - screenpipe seeds on-demand task guides in `.pi/skills/*/SKILL.md` under your working directory. When tool descriptions are not enough for specialized work, read only the closest matching skill. Do not enumerate or preload unrelated skills. If the task already supplies a complete tool workflow, use that narrower contract instead of loading a general skill.
 Do not curl localhost for these; call the tools.";
@@ -3514,14 +3514,8 @@ fn model_access_guidance(text: &str, agent_id: &str) -> Option<String> {
     }
 
     let agent_name = agent_display_name(agent_id);
-    if agent_cloud_routing(agent_id).is_some() {
-        return Some(format!(
-            "The selected model is not included in this {agent_name} account. Choose a different model, sign in with an account that includes it, or turn on Screenpipe Cloud for this preset."
-        ));
-    }
-
     Some(format!(
-        "The selected model is not included in this {agent_name} account. Choose a different {agent_name} model or update the account's plan. Screenpipe Cloud cannot provide models to {agent_name} because this agent manages its own model access."
+        "The selected model is not included in this {agent_name} account. Choose a different {agent_name} model or update the account's plan."
     ))
 }
 
@@ -3588,7 +3582,7 @@ fn is_screenpipe_read_tool(tool_title: &str) -> bool {
     // http-only agents (Cursor, Copilot) — all plain GETs of the user's own
     // recordings, so auto-approved exactly like their mcp__screenpipe__*
     // equivalents on stdio. The write/bridge tools (save_artifact, sp_mcp_call,
-    // screenpipe_connect_app, live_view, sp_web_search, send_to_chat) stay NOT
+    // screenpipe_connect_app, live_view, send_to_chat) stay NOT
     // auto-approved. `search_chats` is local and read-only.
     matches!(
         tool_title,
@@ -5975,10 +5969,10 @@ mod tests {
             Some("# screenpipe self-improvement\n\nUser prefers short reports.".to_string()),
             Some("Be terse.".to_string()),
         );
-        assert!(combined.contains("sp_web_search"));
+        assert!(combined.contains("save_artifact"));
         assert!(combined.contains("Use the weekly-report skill."));
         assert!(combined.contains("User prefers short reports."));
-        assert!(combined.find("sp_web_search") < combined.find("Use the weekly-report skill."));
+        assert!(combined.find("save_artifact") < combined.find("Use the weekly-report skill."));
         assert!(combined.trim_end().ends_with("Be terse."));
     }
 
@@ -7137,11 +7131,11 @@ mod tests {
         let cursor = model_access_guidance("Upgrade your plan to continue", "cursor")
             .expect("cursor access guidance");
         assert!(cursor.contains("different Cursor model"));
-        assert!(cursor.contains("Screenpipe Cloud cannot provide models to Cursor"));
+        assert!(cursor.contains("different Cursor model"));
 
         let claude = model_access_guidance("You don't have access to this model.", "claude-acp")
             .expect("claude access guidance");
-        assert!(claude.contains("turn on Screenpipe Cloud"));
+        assert!(claude.contains("update the account's plan"));
 
         let ordinary_answer = "Here is a detailed comparison of plans and why a user might say \"upgrade your plan to continue\" in product copy. This is normal assistant content, not a provider denial.";
         assert_eq!(model_access_guidance(ordinary_answer, "cursor"), None);

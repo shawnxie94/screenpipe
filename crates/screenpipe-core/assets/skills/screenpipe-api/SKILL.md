@@ -1,6 +1,6 @@
 ---
 name: screenpipe-api
-description: Query the user's local and synced-device data via the screenpipe REST API at localhost:3030 — recordings, audio, UI, meetings, connected services, and memory. Use for screen activity, other-device or cross-device history, productivity, media export, connections, or durable memory.
+description: Query the user's local data via the screenpipe REST API at localhost:3030 — recordings, audio, UI, meetings, connected services, and memory. Use for screen activity, productivity, media export, connections, or durable memory.
 ---
 
 # Screenpipe API
@@ -132,28 +132,6 @@ Response: `{"data": [{"type":"OCR","content":{"frame_id":...,"text":...,"app_nam
 
 ---
 
-## Synced devices — `GET /data-sync/devices` and `/data-sync/search`
-
-Use these endpoints when the user says **another device**, **across devices**, or
-names a machine that is not the current one. For the current machine only, keep
-using `/search`; it is faster and has richer local filters. Prefer the MCP tools
-`synced-devices` and `search-synced-content` when they are available.
-
-```bash
-curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/data-sync/devices"
-
-curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/data-sync/search?device_name=MacBook&since_hours_ago=24&q=pricing&limit=10"
-```
-
-Start with `/data-sync/devices` when the device name is ambiguous. Search accepts
-`q`, `device_name`, `device_id`, `app_name`, `since`, `until`,
-`since_hours_ago`, and `limit`. Cite the returned device and timestamp. If Data
-Sync is disabled or unavailable, say so plainly; never ask for a cloud token,
-account ID, user ID, or R2 bucket and never access R2 directly. The local API
-supplies the signed-in identity.
-
 ---
 
 ## 3. Elements — `GET /elements`
@@ -236,7 +214,7 @@ curl -X POST "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/audio/retranscr
   -d '{"start": "1h ago", "end": "now"}'
 ```
 
-Optional: `engine` (`deepgram`, `screenpipe-cloud`, `whisper-large`, `whisper-large-v3-turbo`, `whisper-large-v3-turbo-quantized`, `qwen3-asr`, `parakeet`, `parakeet-mlx`, `openai-compatible`), `vocabulary` (array of `{"word","replacement"}`), `prompt` (Whisper topic context). Keep ranges ≤1h. Show old vs new.
+Optional: `engine` (`deepgram`, `whisper-large`, `whisper-large-v3-turbo`, `whisper-large-v3-turbo-quantized`, `qwen3-asr`, `parakeet`, `parakeet-mlx`, `openai-compatible`), `vocabulary` (array of `{"word","replacement"}`), `prompt` (Whisper topic context). Keep ranges ≤1h. Show old vs new.
 
 ---
 

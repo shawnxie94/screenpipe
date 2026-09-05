@@ -35,50 +35,39 @@ pub struct AcpAgentConfig {
     pub mode_id: Option<String>,
     #[serde(default)]
     pub approval_mode: Option<String>,
-    #[serde(default)]
-    pub use_screenpipe_cloud: Option<bool>,
 }
 
 /// Runs a provider preset through the shared hidden ACP runtime.
 pub struct AcpExecutor {
-    user_token: Arc<ArcSwap<Option<String>>>,
-    gateway_url: String,
     local_api_port: u16,
     local_api_key: Option<String>,
 }
 
 impl AcpExecutor {
     pub fn new(
-        user_token: Option<String>,
-        gateway_url: String,
+        _user_token: Option<String>,
+        _gateway_url: String,
         local_api_port: u16,
         local_api_key: Option<String>,
     ) -> Self {
         Self::with_shared_user_token(
-            Arc::new(ArcSwap::from_pointee(user_token)),
-            gateway_url,
+            Arc::new(ArcSwap::from_pointee(None)),
+            String::new(),
             local_api_port,
             local_api_key,
         )
     }
 
     pub fn with_shared_user_token(
-        user_token: Arc<ArcSwap<Option<String>>>,
-        gateway_url: String,
+        _user_token: Arc<ArcSwap<Option<String>>>,
+        _gateway_url: String,
         local_api_port: u16,
         local_api_key: Option<String>,
     ) -> Self {
         Self {
-            user_token,
-            gateway_url,
             local_api_port,
             local_api_key: local_api_key.filter(|key| !key.is_empty()),
         }
-    }
-
-    fn current_user_token(&self) -> Option<String> {
-        let token = self.user_token.load();
-        (**token).clone().filter(|value| !value.is_empty())
     }
 
     fn pipe_token(working_dir: &Path) -> Option<String> {
@@ -111,27 +100,7 @@ impl AcpExecutor {
                 .or_insert_with(|| "true".to_string());
         }
 
-        let routing = agent
-            .use_screenpipe_cloud
-            .unwrap_or(false)
-            .then(|| super::runtime::agent_cloud_routing(&agent.id))
-            .flatten();
-        let mut routed_to_cloud = false;
-        if let Some(routing) = routing {
-            let (set, clear) = super::runtime::cloud_routing_env(
-                &routing,
-                &self.gateway_url,
-                self.current_user_token().as_deref().unwrap_or_default(),
-            );
-            if !set.is_empty() {
-                for name in clear {
-                    env.remove(&name);
-                }
-                env.extend(set);
-                routed_to_cloud = true;
-            }
-        }
-        if agent.id == "claude-acp" && !routed_to_cloud {
+        if agent.id == "claude-acp" {
             env.insert("ANTHROPIC_API_KEY".to_string(), String::new());
         }
         env

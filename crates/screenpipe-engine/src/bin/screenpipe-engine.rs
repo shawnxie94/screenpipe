@@ -1458,15 +1458,6 @@ async fn main() -> anyhow::Result<()> {
             config.api_auth_key.clone(),
         )),
     );
-    let cloud_agent_executor = std::sync::Arc::new(
-        screenpipe_core::agents::cloud::CloudAgentExecutor::new(
-            config.port,
-            config.api_auth_key.clone(),
-        )
-        .with_secret_store(server.secret_store.clone()),
-    );
-    agent_executors.insert("cloud-agent".to_string(), cloud_agent_executor);
-
     // Create pipe store backed by the main SQLite DB
     let pipe_store: Option<std::sync::Arc<dyn screenpipe_core::pipes::PipeStore>> =
         Some(std::sync::Arc::new(

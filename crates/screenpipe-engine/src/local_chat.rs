@@ -5,9 +5,7 @@
 //! Plain streaming chat against the user's own AI preset.
 //!
 //! `pipe_stream` streams *agent runs*. This is the other half: a normal chat
-//! completion, no pipe involved, served by the local app on `localhost:3030` so
-//! a client on the same machine or tailnet can stream tokens without going
-//! through the hosted gateway.
+//! completion, no pipe involved, served by the local app on `localhost:3030`.
 //!
 //! Credentials come from the user's configured preset (provider, model, base
 //! URL, key) — the same ones the desktop app uses — so this works with a local
@@ -45,11 +43,11 @@ pub fn base_url_for(preset: &ResolvedPreset) -> Option<String> {
     if let Some(url) = preset.url.as_ref().filter(|u| !u.trim().is_empty()) {
         return Some(url.trim_end_matches('/').to_string());
     }
-    let provider = preset.provider.as_deref().unwrap_or("screenpipe-cloud");
+    let provider = preset.provider.as_deref().unwrap_or("custom");
     let base = match provider {
         "openai" | "openai-chatgpt" => "https://api.openai.com/v1",
         "native-ollama" | "ollama" => "http://localhost:11434/v1",
-        // screenpipe-cloud and anything unknown have no local default: the
+        // custom and anything unknown have no default endpoint: the
         // preset must carry an explicit url, otherwise we would be guessing
         // where to send the user's key.
         _ => return None,

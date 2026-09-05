@@ -983,54 +983,11 @@ impl SCServer {
             .get("/frames/:frame_id/elements", get_frame_elements)
             .get("/activity-summary", get_activity_summary)
             .get("/activity-ledger", get_activity_ledger)
-            .get(
-                "/cloud-agents/status",
-                crate::routes::cloud_agents::cloud_agent_status,
-            )
-            .post(
-                "/cloud-agents/:provider/connect",
-                crate::routes::cloud_agents::connect_cloud_agent,
-            )
-            .get(
-                "/cloud-agents/cursor-agents",
-                crate::routes::cloud_agents::list_cursor_cloud_agents,
-            )
-            .get(
-                "/cloud-agents/:provider/codebases",
-                crate::routes::cloud_agents::list_cloud_agent_codebases,
-            )
-            .put(
-                "/cloud-agents/cursor-key",
-                crate::routes::cloud_agents::set_cursor_cloud_key,
-            )
             // Vault routes
             .get("/vault/status", crate::routes::vault::vault_status)
             .post("/vault/lock", crate::routes::vault::vault_lock)
             .post("/vault/unlock", crate::routes::vault::vault_unlock)
             .post("/vault/setup", crate::routes::vault::vault_setup)
-            // Cloud Sync API routes
-            .post("/sync/init", sync_api::sync_init)
-            .get("/sync/status", sync_api::sync_status)
-            .post("/sync/trigger", sync_api::sync_trigger)
-            .post("/sync/lock", sync_api::sync_lock)
-            .post("/sync/reset-account", sync_api::sync_reset_account)
-            .post("/sync/download", sync_api::sync_download)
-            .post("/sync/pipes/push", sync_api::sync_pipes_push)
-            .post("/sync/pipes/pull", sync_api::sync_pipes_pull)
-            .post("/sync/connections/push", sync_api::sync_connections_push)
-            .post("/sync/connections/pull", sync_api::sync_connections_pull)
-            .post("/sync/memories/push", sync_api::sync_memories_push)
-            .post("/sync/memories/pull", sync_api::sync_memories_pull)
-            // Cloud Archive API routes
-            .post("/archive/init", crate::archive::archive_init)
-            .post("/archive/configure", crate::archive::archive_configure)
-            .get("/archive/status", crate::archive::archive_status)
-            .post("/archive/run", crate::archive::archive_run)
-            .post("/archive/download", crate::archive::archive_download)
-            .get(
-                "/archive/download/status",
-                crate::archive::archive_download_status,
-            )
             // Local data retention (auto-delete old data)
             .post(
                 "/retention/configure",
@@ -1188,32 +1145,6 @@ impl SCServer {
                 axum::routing::post(crate::routes::transcribe::transcribe_handler)
                     .layer(axum::extract::DefaultBodyLimit::max(250 * 1024 * 1024)), // 250MB
             )
-            // Local proxy → api.screenpipe.com/v1/chat/completions. Lets the
-            // pi-agent's bash do cloud media analysis without ever seeing the
-            // cloud JWT (which the wrapper unsets). Body limit bumped because
-            // requests embed base64'd audio/images.
-            .route(
-                "/v1/chat/completions",
-                axum::routing::post(crate::routes::cloud_proxy::chat_completions)
-                    .layer(axum::extract::DefaultBodyLimit::max(50 * 1024 * 1024)), // 50MB
-            )
-            // Local proxy → api.screenpipe.com/v1/web-search. Lets coding-agent
-            // harnesses web-search through their bundled MCP tool without ever
-            // holding the cloud JWT (scrubbed from third-party adapter trees).
-            .route(
-                "/v1/web-search",
-                axum::routing::post(crate::routes::web_search::web_search),
-            )
-            // User-scoped cloud data reads. The signed-in identity determines
-            // the bucket upstream; callers cannot provide an account or bucket.
-            .route(
-                "/data-sync/devices",
-                get(crate::routes::data_sync_proxy::devices),
-            )
-            .route(
-                "/data-sync/search",
-                get(crate::routes::data_sync_proxy::search),
-            )
             // Blocking connect broker for the harness MCP `screenpipe_connect_app`
             // tool: raise the in-chat connect card and wait for the user's answer.
             .route(
@@ -1357,10 +1288,9 @@ impl SCServer {
             router.merge(
                 Router::new()
                     .route(
-                        // /v1/chat/completions is already taken by the cloud proxy.
-                        // Mounted under /v1/local so an OpenAI SDK reaches it by
-                        // setting base_url to http://<host>:3030/v1/local.
-                        "/v1/local/chat/completions",
+                        // OpenAI-compatible local endpoint. Set base_url to
+                        // http://<host>:3030/v1.
+                        "/v1/chat/completions",
                         axum::routing::post(crate::local_chat::local_chat_completions),
                     )
                     .with_state(pm.clone()),
