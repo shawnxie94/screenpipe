@@ -60,7 +60,6 @@ import { useSettings } from "@/lib/hooks/use-settings";
 import { useToast } from "@/components/ui/use-toast";
 import { MemoizedReactMarkdown } from "@/components/markdown";
 import remarkGfm from "remark-gfm";
-import posthog from "posthog-js";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { PipesSection } from "@/components/settings/pipes-section";
 import { NotificationBell } from "@/components/notification-bell";
@@ -472,7 +471,6 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
   const { settings } = useSettings();
   const { toast } = useToast();
   const openFeedback = useFeedbackStore((s) => s.openFeedback);
-  const token = settings.user?.token;
 
   // Browse state
   const [pipes, setPipes] = useState<StorePipe[]>([]);
@@ -656,9 +654,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
     setReviewRating(0);
     setReviewComment("");
     try {
-      const res = await localFetch(`/pipes/store/${slug}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const res = await localFetch(`/pipes/store/${slug}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const pipeData = data.data || data;
@@ -716,7 +712,6 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-      posthog.capture("pipe_updated_from_store", { slug });
       // Clear just this card's update state → re-renders one card, no reload.
       setAvailableUpdates((prev) => {
         const next = { ...prev };
@@ -764,7 +759,6 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
     setInstalling(slug);
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
       const res = await localFetch("/pipes/store/install", {
         method: "POST",
         headers,
@@ -772,7 +766,6 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-      posthog.capture("pipe_installed_from_store", { slug });
 
       // Override the pipe's preset so it works out of the box (published
       // pipes may reference presets the user doesn't have). Prefer the
@@ -833,7 +826,6 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
     setSubmittingReview(true);
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
       const res = await localFetch(
         `/pipes/store/${selectedPipe.slug}/review`,
         {
@@ -865,14 +857,12 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
     setUnpublishing(true);
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
       const res = await localFetch(`/pipes/store/${slug}`, {
         method: "DELETE",
         headers,
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-      posthog.capture("pipe_unpublished_from_store", { slug });
       toast({ title: `"${slug}" unpublished from store` });
       setShowDetail(false);
       setSelectedPipe(null);
@@ -967,7 +957,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
             hasUpdate={!!availableUpdates[selectedPipe.slug]}
             sourceExpanded={sourceExpanded}
             onToggleSource={() => setSourceExpanded(!sourceExpanded)}
-            currentUserId={settings.user?.id}
+            currentUserId={null}
             onUnpublish={handleUnpublish}
             unpublishing={unpublishing}
             onRefresh={() => openDetail(selectedPipe.slug)}

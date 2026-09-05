@@ -16,20 +16,30 @@ import {
   type SemanticContextMode,
 } from "@/lib/semantic-context-mode";
 import {
-  getAecModeSettings,
-  getRemoteAecModePolicy,
-  getRemoteBooleanPolicy,
-  normalizeAecModeForPlatform,
-  normalizeDesktopRemotePreferences,
-  resolveAecModeRemoteValue,
-  resolveBooleanRemoteValue,
-  type AecMode,
-} from "@/lib/desktop-remote-control";
-import {
   createSettingsWriteQueue,
   enqueueSettingsWrite,
   flushSettingsWrites,
 } from "./settings-write-queue";
+
+/** Local AEC (echo cancellation) mode selection. Remote-control policy was removed. */
+export type AecMode = "off" | "screenpipe" | "macos" | "windows";
+
+const normalizeAecModeForPlatform = (
+  mode: AecMode | null | undefined,
+  platform?: string,
+): AecMode => {
+  if (mode === "screenpipe") return mode;
+  if (mode === "macos" && platform === "macos") return mode;
+  if (mode === "windows" && platform === "windows") return mode;
+  return "off";
+};
+
+const getAecModeSettings = (mode: AecMode) => ({
+  aecMode: mode,
+  screenpipeAecEnabled: mode === "screenpipe",
+  macosInputVpioEnabled: mode === "macos",
+  windowsInputAecEnabled: mode === "windows",
+});
 
 /** Search fields for the Audio & meetings destination. */
 export const audioSearchIndex: SettingsField[] = [
@@ -68,7 +78,6 @@ export const searchIndex: SettingsField[] = [
   ...audioSearchIndex,
   ...screenSearchIndex,
 ];
-import { LockedSetting, ManagedSwitch } from "@/components/enterprise-locked-setting";
 import {
   Select,
   SelectContent,
@@ -149,7 +158,6 @@ import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { platform } from "@tauri-apps/plugin-os";
-import posthog from "posthog-js";
 import {
   Language,
   areLanguageSelectionsEqual,
@@ -226,7 +234,6 @@ const getOpenAICompatibleDraft = (settings: Settings): OpenAICompatibleDraft => 
 });
 
 const TRANSCRIPTION_ENGINE_LABELS: Record<string, string> = {
-  "screenpipe-cloud": "Screenpipe Cloud",
   deepgram: "Deepgram",
   "whisper-large-v3-turbo": "Whisper Turbo",
   "whisper-large-v3-turbo-quantized": "Whisper Turbo (fast)",
@@ -240,7 +247,6 @@ const TRANSCRIPTION_ENGINE_LABELS: Record<string, string> = {
 };
 
 type AudioEngineFallbackReason =
-  | "notLoggedIn"
   | "missingDeepgramKey";
 
 type AudioEngineResolution = {
@@ -251,7 +257,7 @@ type AudioEngineResolution = {
 
 type AudioEngineResolutionSettings = Pick<
   Settings,
-  "audioTranscriptionEngine" | "deepgramApiKey" | "user"
+  "audioTranscriptionEngine" | "deepgramApiKey"
 >;
 
 const getTranscriptionEngineLabel = (engine: string) =>
@@ -261,26 +267,14 @@ const getAudioEngineResolution = (
   settings: AudioEngineResolutionSettings
 ): AudioEngineResolution => {
   const requested = settings.audioTranscriptionEngine;
-  const fallback = FALLBACK_TRANSCRIPTION_ENGINE;
-  const hasCloudAuth = Boolean(settings.user?.token);
   const hasDeepgramKey = Boolean(
     settings.deepgramApiKey && settings.deepgramApiKey !== "default"
   );
 
-  if (requested === "screenpipe-cloud" && !hasCloudAuth) {
-    return {
-      requested,
-      active: fallback,
-      fallbackReason: "notLoggedIn",
-    };
-  }
-
-  // Signed-in users get cloud transcription on every plan (the free tier
-  // includes an allowance enforced server-side) — never gate on subscription.
   if (requested === "deepgram" && !hasDeepgramKey) {
     return {
       requested,
-      active: fallback,
+      active: FALLBACK_TRANSCRIPTION_ENGINE,
       fallbackReason: "missingDeepgramKey",
     };
   }
@@ -294,8 +288,6 @@ const getAudioEngineResolution = (
 
 const getAudioFallbackMessage = (reason: AudioEngineFallbackReason) => {
   switch (reason) {
-    case "notLoggedIn":
-      return "你未登录，因此音频在本地转写。";
     case "missingDeepgramKey":
       return "未配置 Deepgram API 密钥，因此音频在本地转写。";
   }
@@ -1753,7 +1745,7 @@ function HighFpsCard({
 type RecordingSettingsSection = "audio" | "screen";
 
 export function RecordingSettings({ section }: { section: RecordingSettingsSection }) {
-  const { settings, updateSettings, getDataDir, loadUser } = useSettings();
+  const { settings, updateSettings, getDataDir } = useSettings();
   const [openLanguages, setOpenLanguages] = React.useState(false);
   // Dev-only: warn if searchIndex drifts from rendered headings. State-gated
   // fields are marked `conditional: true` in the index above, so no false
@@ -1963,11 +1955,6 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     [
       settings.audioTranscriptionEngine,
       settings.deepgramApiKey,
-      settings.user?.cloud_subscribed,
-      settings.user?.app_entitled,
-      settings.user?.entitlement,
-      settings.user?.id,
-      settings.user?.token,
     ]
   );
   const languageSupportEngine = audioEngineResolution.active;
@@ -2079,35 +2066,17 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     settings.aecMode ?? "off",
     currentPlatform,
   );
-  const remoteControlPreferences = normalizeDesktopRemotePreferences(settings);
-  const semanticContextRemotePolicy = getRemoteBooleanPolicy(
-    settings,
-    "semanticContext",
-  );
-  const smartRecordingRemotePolicy = getRemoteBooleanPolicy(
-    settings,
-    "smartRecording",
-  );
-  const aecModeRemotePolicy = getRemoteAecModePolicy(settings);
   const screenContextEnabled = !settings.disableVision;
   const screenshotImagesEnabled = screenContextEnabled && !(settings.disableScreenshots ?? false);
 
   const handleAecModeChange = useCallback((mode: AecMode) => {
-    const preferences = normalizeDesktopRemotePreferences(settings);
-    const policy = getRemoteAecModePolicy(settings);
-    const effectiveMode = resolveAecModeRemoteValue(
-      mode,
-      policy,
-      currentPlatform,
-    );
     handleSettingsChange(
       {
-        remoteControlPreferences: { ...preferences, aecMode: mode },
-        ...getAecModeSettings(effectiveMode),
+        ...getAecModeSettings(mode),
       },
       true,
     );
-  }, [currentPlatform, handleSettingsChange, settings]);
+  }, [handleSettingsChange]);
 
   useEffect(() => {
     if (!platformReady) return;
@@ -2344,19 +2313,11 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
       await flushSettingsWrites(settingsWriteQueueRef.current);
 
       if (!settings.analyticsEnabled) {
-        posthog.capture("telemetry", {
-          enabled: false,
-        });
-        posthog.opt_out_capturing();
         Sentry.close();
         console.log("Telemetry disabled");
       } else {
         const isDebug = process.env.TAURI_ENV_DEBUG === "true";
         if (!isDebug) {
-          posthog.opt_in_capturing();
-          posthog.capture("telemetry", {
-            enabled: true,
-          });
           console.log("Telemetry enabled");
           Sentry.init({
             ...defaultOptions,
@@ -2441,15 +2402,6 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
       setOpenAICompatibleDraft(getOpenAICompatibleDraft(settings));
       setIsOpenAICompatibleSetupOpen(true);
       setOpenAICompatibleTestError(null);
-      return;
-    }
-
-    if (value === "screenpipe-cloud") {
-      toast({
-        title: "此转写引擎已移除",
-        description: "请选择本地 Whisper、Ollama 或自行配置的第三方服务。",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -2735,7 +2687,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
       <div className="space-y-2 pt-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">音频与会议</h2>
 
-        <LockedSetting settingKey="audio_recording">
         <div className="space-y-2">
         {/* Audio Recording Toggle */}
         <Card className="border-border bg-card">
@@ -2748,7 +2699,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                   <p className="text-xs text-muted-foreground">从麦克风和系统采集音频</p>
                 </div>
               </div>
-              <ManagedSwitch settingKey="disableAudio" id="disableAudio" checked={!settings.disableAudio} onCheckedChange={(checked) => handleDisableAudioChange(!checked)} />
+              <Switch id="disableAudio" checked={!settings.disableAudio} onCheckedChange={(checked) => handleDisableAudioChange(!checked)} />
             </div>
           </CardContent>
         </Card>
@@ -2816,9 +2767,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                   <SelectContent>
                     <SelectGroup>
                       <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">云端</SelectLabel>
-                      <SelectItem value="screenpipe-cloud">
-                        Screenpipe Cloud{hwCapability?.recommendedEngine === "screenpipe-cloud" && " ★"}
-                      </SelectItem>
                       <SelectItem value="deepgram">Deepgram</SelectItem>
                     </SelectGroup>
                     <SelectGroup>
@@ -3225,7 +3173,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                   <Switch
                     id="aecToggle"
                     checked={aecMode !== "off"}
-                    disabled={aecModeRemotePolicy.forceDisabled}
                     onCheckedChange={(checked) => {
                       const mode: AecMode = checked
                         ? (isMacOS ? "macos" : isWindows ? "windows" : "screenpipe")
@@ -3234,11 +3181,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                     }}
                   />
                 </div>
-                {aecModeRemotePolicy.forceDisabled && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    已临时禁用（远程安全控制）。你的偏好已保留。
-                  </p>
-                )}
               </div>
             )}
           </CardContent>
@@ -3364,7 +3306,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="selected-engine">当前转写引擎</SelectItem>
-                      <SelectItem value="screenpipe-cloud">screenpipe cloud 实时</SelectItem>
                       <SelectItem value="deepgram-live">Deepgram 实时直连</SelectItem>
                     </SelectContent>
                   </Select>
@@ -3385,13 +3326,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                 />
               </div>
             </div>
-            {(settings.meetingLiveTranscriptionEnabled ?? true) &&
-              (settings.meetingLiveTranscriptionProvider ?? "selected-engine") === "screenpipe-cloud" &&
-              !settings.user?.token && (
-              <p className="mt-2 ml-[26px] text-xs text-muted-foreground">
-                登录 screenpipe cloud 以使用云端实时提供商。
-              </p>
-            )}
             {(settings.meetingLiveTranscriptionEnabled ?? true) &&
               (settings.meetingLiveTranscriptionProvider ?? "selected-engine") === "selected-engine" &&
               settings.audioTranscriptionEngine === "disabled" && (
@@ -3453,8 +3387,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                     )}
                   </Button>
                 )}
-                <ManagedSwitch
-                  settingKey="disableMeetingDetector"
+                <Switch
                   id="disableMeetingDetector"
                   checked={!settings.disableMeetingDetector}
                   onCheckedChange={(checked) => handleSettingsChange({ disableMeetingDetector: !checked }, true)}
@@ -3504,32 +3437,17 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
               <Switch
                 id="experimentalMeetingPiggyback"
                 checked={Boolean(settings.experimentalMeetingPiggyback ?? false)}
-                disabled={
-                  Boolean(settings.disableMeetingDetector) ||
-                  smartRecordingRemotePolicy.forceDisabled
-                }
+                disabled={Boolean(settings.disableMeetingDetector)}
                 onCheckedChange={(checked) =>
                   handleSettingsChange(
                     {
-                      remoteControlPreferences: {
-                        ...remoteControlPreferences,
-                        smartRecording: checked,
-                      },
-                      experimentalMeetingPiggyback: resolveBooleanRemoteValue(
-                        checked,
-                        smartRecordingRemotePolicy,
-                      ),
+                      experimentalMeetingPiggyback: checked,
                     },
                     true,
                   )
                 }
               />
             </div>
-            {smartRecordingRemotePolicy.forceDisabled && (
-              <p className="mt-2 ml-[26px] text-xs text-muted-foreground">
-                已临时禁用（远程安全控制）。你的偏好已保留。
-              </p>
-            )}
           </CardContent>
         </Card>
         )}
@@ -3750,7 +3668,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
         )}
 
       </div>
-      </LockedSetting>
       </div>
       </>
       )}
@@ -3758,7 +3675,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
       {section === "screen" && (
       <>
       {/* Screen */}
-      <LockedSetting settingKey="screen_recording">
       <div className="space-y-2 pt-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">屏幕</h2>
 
@@ -3773,7 +3689,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                   <p className="text-xs text-muted-foreground">采集应用/窗口上下文、无障碍文本、屏幕截图和 OCR 兜底</p>
                 </div>
               </div>
-              <ManagedSwitch settingKey="disableVision" id="disableVision" checked={!settings.disableVision} onCheckedChange={(checked) => handleSettingsChange({ disableVision: !checked }, true)} />
+              <Switch id="disableVision" checked={!settings.disableVision} onCheckedChange={(checked) => handleSettingsChange({ disableVision: !checked }, true)} />
             </div>
           </CardContent>
         </Card>
@@ -3797,42 +3713,22 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                       </p>
                     </div>
                   </div>
-                  {semanticContextRemotePolicy.forceDisabled ? (
-                    <Switch id="enableSemanticContext" checked={false} disabled />
-                  ) : (
-                    <ManagedSwitch
-                      settingKey="enableSemanticContext"
-                      id="enableSemanticContext"
-                      checked={Boolean(settings.enableSemanticContext ?? false)}
-                      onCheckedChange={(checked) =>
-                        handleSettingsChange(
-                          {
-                            remoteControlPreferences: {
-                              ...remoteControlPreferences,
-                              semanticContext: checked,
-                            },
-                            enableSemanticContext: resolveBooleanRemoteValue(
-                              checked,
-                              semanticContextRemotePolicy,
-                            ),
-                          },
-                          true,
-                        )
-                      }
-                    />
-                  )}
+                  <Switch
+                    id="enableSemanticContext"
+                    checked={Boolean(settings.enableSemanticContext ?? false)}
+                    onCheckedChange={(checked) =>
+                      handleSettingsChange(
+                        {
+                          enableSemanticContext: checked,
+                        },
+                        true,
+                      )
+                    }
+                  />
                 </div>
 
-                {semanticContextRemotePolicy.forceDisabled && (
-                  <p className="border-t border-border pt-3 text-xs text-muted-foreground">
-                    已临时禁用（远程安全控制）。你的偏好已保留。
-                  </p>
-                )}
-
-                {settings.enableSemanticContext &&
-                  !semanticContextRemotePolicy.forceDisabled && (
-                  <LockedSetting settingKey="semanticContextMode">
-                    <div className="flex flex-col gap-3 border-t border-border pt-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                {settings.enableSemanticContext && (
+                  <div className="flex flex-col gap-3 border-t border-border pt-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                       <div className="min-w-0">
                         <label htmlFor="semanticContextMode" className="text-xs font-medium text-foreground">
                           用途
@@ -3861,8 +3757,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                         </SelectContent>
                       </Select>
                     </div>
-                  </LockedSetting>
-                  )}
+                )}
               </div>
             </CardContent>
           </Card>
@@ -3879,8 +3774,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                     <p className="text-xs text-muted-foreground">为时间线和纯图像文字录制屏幕像素。关闭后将停止屏幕录制；无障碍文本仍保持可搜索。</p>
                   </div>
                 </div>
-                <ManagedSwitch
-                  settingKey="disableScreenshots"
+                <Switch
                   id="disableScreenshots"
                   checked={!(settings.disableScreenshots ?? false)}
                   onCheckedChange={(checked) => handleSettingsChange({ disableScreenshots: !checked }, true)}
@@ -4082,8 +3976,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
         )}
 
       </div>
-      </LockedSetting>
-
 
       {/* System */}
       <div className="space-y-2 pt-2">

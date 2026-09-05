@@ -6,7 +6,6 @@
 
 import { useState } from "react";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
-import posthog from "posthog-js";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { submitChatResponseFeedback } from "@/lib/ai-feedback";
 import {
@@ -61,15 +60,6 @@ export function ChatResponseFeedback({
       return;
     }
 
-    posthog.capture(
-      "chat_response_feedback",
-      chatResponseFeedbackProperties(
-        message,
-        nextRating,
-        rating === null ? "submitted" : "changed",
-        telemetryContext,
-      ),
-    );
     setRating(nextRating);
     setReason(null);
     setReasonOpen(nextRating === "negative");
@@ -85,10 +75,6 @@ export function ChatResponseFeedback({
     }
 
     setReason(nextReason);
-    posthog.capture(
-      "chat_response_feedback_reason_selected",
-      chatResponseFeedbackReasonProperties(message, nextReason, telemetryContext),
-    );
     void persistFeedback("negative", nextReason);
   };
 

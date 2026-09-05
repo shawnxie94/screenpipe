@@ -10,7 +10,6 @@ import { Bell, Check, ChevronRight, ChevronDown, Copy, ExternalLink, MessageSqua
 import ReactMarkdown from "react-markdown";
 import { notificationUrlTransform, openScreenpipeViewerLink } from "@/components/markdown";
 import remarkGfm from "remark-gfm";
-import posthog from "posthog-js";
 import { commands } from "@/lib/utils/tauri";
 import { cn } from "@/lib/utils";
 import {
@@ -25,10 +24,6 @@ import {
 import { useRouter } from "next/navigation";
 import { showChatWithPrefill } from "@/lib/chat-utils";
 import { emit } from "@tauri-apps/api/event";
-import {
-  notificationActionAnalyticsProperties,
-  notificationAnalyticsProperties,
-} from "@/lib/notification-analytics";
 import { NotificationFeedback } from "@/components/notification-feedback";
 import {
   isHighPriorityNotification,
@@ -203,7 +198,6 @@ export function NotificationInboxPanel({
   }, []);
 
   const clearAll = async () => {
-    posthog.capture("notification_bell_clear_all", { count: history.length, surface });
     setHistory([]);
     try {
       await appServerFetch("/notifications", { method: "DELETE" });
@@ -220,19 +214,10 @@ export function NotificationInboxPanel({
 
   const dismissOne = (id: string) => {
     const entry = history.find((n) => n.id === id);
-    posthog.capture("notification_bell_dismiss", {
-      ...notificationAnalyticsProperties(entry, "bell"),
-      surface,
-    });
     removeEntry(id);
   };
 
   const runAction = async (entry: NotificationEntry, action: NotificationAction) => {
-    posthog.capture("notification_bell_action", {
-      ...notificationActionAnalyticsProperties(action.type),
-      ...notificationAnalyticsProperties(entry, "bell"),
-      surface,
-    });
     // Navigating actions need the popover closed so the target surface (chat,
     // a window) isn't hidden behind it.
     if (
@@ -255,11 +240,6 @@ export function NotificationInboxPanel({
       // (e.g. "approve sharing this data", which fires a pipe) would tell the
       // user it worked when the pipe never ran. Surface it instead.
       console.error("notification action failed", { action: action.action, type: action.type }, err);
-      posthog.capture("notification_bell_action_error", {
-        ...notificationActionAnalyticsProperties(action.type),
-        ...notificationAnalyticsProperties(entry, "bell"),
-        surface,
-      });
       return;
     }
     // Resolve in place: once acted on successfully, the row leaves the inbox.
@@ -316,12 +296,6 @@ export function NotificationInboxPanel({
                 data-testid={`notification-bell-view-${view}`}
                 onClick={() => {
                   setInboxView(view);
-                  posthog.capture("notification_bell_view_changed", {
-                    view,
-                    high_priority_count: highPriority.length,
-                    total_count: history.length,
-                    surface,
-                  });
                 }}
                 className={cn(
                   "rounded px-2 py-1 text-[10px] transition-colors",
@@ -392,10 +366,6 @@ export function NotificationInboxPanel({
                     setExpandedId(willExpand ? entry.id : null);
                     if (willExpand) {
                       markRead(entry.id);
-                      posthog.capture("notification_bell_expand", {
-                        ...notificationAnalyticsProperties(entry, "bell"),
-                        surface,
-                      });
                     }
                   }}
                   onKeyDown={(e) => {
@@ -405,10 +375,6 @@ export function NotificationInboxPanel({
                     setExpandedId(willExpand ? entry.id : null);
                     if (willExpand) {
                       markRead(entry.id);
-                      posthog.capture("notification_bell_expand", {
-                        ...notificationAnalyticsProperties(entry, "bell"),
-                        surface,
-                      });
                     }
                   }}
                 >
@@ -550,10 +516,6 @@ export function NotificationInboxPanel({
                           if (copiedResetRef.current) clearTimeout(copiedResetRef.current);
                           setCopiedId(entry.id);
                           copiedResetRef.current = setTimeout(() => setCopiedId(null), 1400);
-                          posthog.capture("notification_bell_copy", {
-                            ...notificationAnalyticsProperties(entry, "bell"),
-                            surface,
-                          });
                         }}
                         className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                       >
@@ -566,10 +528,6 @@ export function NotificationInboxPanel({
                           onClick={async (e) => {
                             e.stopPropagation();
                             onRequestClose?.();
-                            posthog.capture("notification_bell_open_source", {
-                              ...notificationAnalyticsProperties(entry, "bell"),
-                              surface,
-                            });
                             await openNotificationSource(entry.source_url!);
                           }}
                           className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
@@ -582,10 +540,6 @@ export function NotificationInboxPanel({
                         data-testid={`notification-bell-ask-ai-${entry.id}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          posthog.capture("notification_bell_ask_ai", {
-                            ...notificationAnalyticsProperties(entry, "bell"),
-                            surface,
-                          });
                           onRequestClose?.();
                           showChatWithPrefill({
                             context: `notification from ${entry.pipe_name || "screenpipe"}:\n\n**${entry.title}**\n${entry.body}`,
@@ -659,10 +613,6 @@ export function NotificationBell() {
       onOpenChange={(o) => {
         setOpen(o);
         if (o) {
-          posthog.capture("notification_bell_opened", {
-            high_priority_unread_count: unreadCount,
-            surface: "pipe_store",
-          });
         } else {
           void pollUnread();
         }

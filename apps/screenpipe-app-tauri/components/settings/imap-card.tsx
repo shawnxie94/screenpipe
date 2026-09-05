@@ -13,7 +13,6 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { localFetch } from "@/lib/api";
 import { notifyConnectionsUpdated } from "@/lib/connections-events";
 import { useInterval } from "@/lib/hooks/use-interval";
-import posthog from "posthog-js";
 
 const APP_PASSWORDS_URL = "https://myaccount.google.com/apppasswords";
 // Gmail app passwords are 16 lowercase letters, copied as "abcd efgh ijkl mnop".
@@ -105,7 +104,6 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
       setWatching(false);
       setSavedUsername(email.trim());
       notifyConnectionsUpdated();
-      posthog.capture("connection_saved", { integration: "imap" });
       onChanged?.();
     } catch (e: any) {
       setError(e?.message || "unknown error");

@@ -4,27 +4,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { UsageLimitsPanel } from "@/components/usage/usage-limits-panel";
 import { UsageRing } from "@/components/usage/usage-meter";
-import {
-  presetAllowanceExemption,
-  presetUsesHostedAllowance,
-} from "@/lib/chat/model-allowance-cost";
-import { quotaPlanLabel } from "@/lib/chat/quota-errors";
-import {
-  formatUsagePercent,
-  formatUsageUpdatedAt,
-  tightestHostedAiAllowance,
-  usageAllowanceState,
-  useUsageStatusQuery,
-} from "@/lib/hooks/use-usage-status";
 import { cn } from "@/lib/utils";
 import type { AIPreset } from "@/lib/utils/tauri";
 import { useContextUsage } from "@/components/chat/standalone/hooks/use-context-usage";
@@ -34,65 +20,29 @@ import {
   contextUsageState,
 } from "@/components/usage/context-usage-panel";
 
+/**
+ * The composer's usage chip. Entirely local: it reads the context-window
+ * usage the agent reports for the active session. The hosted-AI allowance
+ * meters that shared this popover were removed with the cloud.
+ *
+ * `activePreset` stays in the signature for the composer controls row; it no
+ * longer changes what is shown.
+ */
 export function UsagePopover({
-  activePreset,
   sessionId,
 }: {
   activePreset: AIPreset | null | undefined;
   sessionId: string | null;
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const usesCloudAllowance = presetUsesHostedAllowance(activePreset);
-  // BYOK, local, and own-account ACP chats never start a composer-only cloud
-  // usage poll in the background. They still need the account's plan the moment
-  // someone opens this panel to check it, so opening is itself a reason to
-  // fetch: the cost is one request while a panel the user deliberately opened
-  // is on screen, and the alternative is a plan line that appears only when
-  // some other surface happened to poll.
-  const query = useUsageStatusQuery(usesCloudAllowance || open);
   const context = useContextUsage(sessionId);
   const contextPercent = contextUsagePercent(context);
-  const { usage } = query;
-  const hosted = usage?.hosted_ai;
-  const allowances = hosted?.allowances ?? [];
-  const tightest = tightestHostedAiAllowance(allowances);
-  // Two different questions. Whether the ACCOUNT is on a Cloudflare-managed
-  // allowance decides if there is a plan to report at all; whether this PRESET
-  // spends it decides if there are meters to draw.
-  const accountOnCloudAllowance = hosted?.allowance_managed_by === "cloudflare";
-  const cloudManaged = usesCloudAllowance && accountOnCloudAllowance;
-  const allowanceExemption = presetAllowanceExemption(activePreset);
-  const plan = hosted ? quotaPlanLabel(hosted.plan) : null;
-  const cloudPercent = tightest
-    ? formatUsagePercent(tightest.used_percent)
-    : null;
-  // Context is the primary composer reading. Before the harness reports it,
-  // Screenpipe Cloud allowance remains the useful fallback for hosted chats.
-  const ringPercent =
-    contextPercent ?? (cloudManaged ? (tightest?.used_percent ?? null) : null);
   const state =
-    contextPercent !== null
-      ? contextUsageState(contextPercent)
-      : cloudManaged && tightest
-        ? usageAllowanceState(tightest.used_percent)
-        : "ok";
-  const readings = [
+    contextPercent !== null ? contextUsageState(contextPercent) : "ok";
+  const accessibleLabel =
     contextPercent !== null
       ? `上下文用量，已用 ${Math.round(contextPercent)}%`
-      : null,
-    cloudManaged
-      ? cloudPercent
-        ? `Screenpipe Cloud 用量，已用 ${cloudPercent}`
-        : "Screenpipe Cloud 用量不可用"
-      : null,
-  ].filter((reading): reading is string => reading !== null);
-  const accessibleLabel =
-    readings.length > 0 ? readings.join("; ") : "用量详情";
-  const unavailableMessage =
-    hosted?.plan === "unknown"
-      ? "登录以查看你的用量限制。"
-      : (allowanceExemption ?? "用量数据不可用。请尝试刷新。");
+      : "用量详情";
 
   return (
     // Click, not hover: this panel is something you go and read, and a chip
@@ -105,7 +55,7 @@ export function UsagePopover({
           size="icon"
           className={cn(
             "h-7 w-7 hover:bg-muted/50 hover:text-foreground",
-            // The ring only earns full contrast once either reading is worth
+            // The ring only earns full contrast once the reading is worth
             // acting on; otherwise it stays background chrome.
             state === "ok" ? "text-muted-foreground" : "text-foreground",
           )}
@@ -115,9 +65,9 @@ export function UsagePopover({
           data-state-usage={state}
         >
           <UsageRing
-            percent={ringPercent ?? 0}
+            percent={contextPercent ?? 0}
             state={state}
-            measured={ringPercent !== null}
+            measured={contextPercent !== null}
           />
         </Button>
       </PopoverTrigger>
@@ -128,31 +78,7 @@ export function UsagePopover({
         className="w-[min(420px,calc(100vw-24px))] rounded-lg border-border p-3.5 shadow-lg shadow-black/5"
         data-testid="usage-popover-content"
       >
-        <div className="space-y-3.5">
-          <ContextUsagePanel snapshot={context} />
-          {accountOnCloudAllowance && hosted && (
-            <div className="border-t border-border pt-3.5">
-              <UsageLimitsPanel
-                planLabel={plan}
-                // Meters only for a preset that actually spends the allowance.
-                // On any other preset the panel still names the plan and says
-                // where this one bills instead, rather than disappearing and
-                // reading as a lost subscription.
-                allowances={cloudManaged ? allowances : []}
-                updatedLabel={formatUsageUpdatedAt(hosted.usage_as_of)}
-                unavailableMessage={unavailableMessage}
-                isRefreshing={query.isRefreshing}
-                onRefresh={
-                  hosted.plan === "unknown" ? undefined : query.refresh
-                }
-                onOpenSettings={() => {
-                  setOpen(false);
-                  router.push("/settings?section=usage");
-                }}
-              />
-            </div>
-          )}
-        </div>
+        <ContextUsagePanel snapshot={context} />
       </PopoverContent>
     </Popover>
   );

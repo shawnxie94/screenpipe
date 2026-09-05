@@ -13,7 +13,6 @@ import {
   type PointerEvent,
   type ReactElement,
 } from "react";
-import posthog from "posthog-js";
 
 import {
   AlertDialog,
@@ -115,19 +114,12 @@ export function HomeCardAgentActions({
   const trackViewed = (trigger: "hover" | "keyboard") => {
     if (viewed.current) return;
     viewed.current = true;
-    posthog.capture("home_card_agent_action_viewed", { card, trigger });
   };
 
   const start = (agentId: HomeCardAgentId) => {
     onMenuOpenChange(false);
     const started =
       onStartWithAgent?.(agentId, prompt, displayLabel, card) === true;
-    posthog.capture("home_card_agent_start_clicked", { agent: agentId, card });
-    posthog.capture("home_card_agent_start_completed", {
-      agent: agentId,
-      card,
-      outcome: started ? "started" : "setup_required",
-    });
     if (!started) setSetupAgent(agentId);
   };
 

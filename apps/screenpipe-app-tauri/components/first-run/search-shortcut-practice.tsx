@@ -7,7 +7,6 @@
 import React from "react";
 import { listen } from "@tauri-apps/api/event";
 import { Check, Keyboard } from "lucide-react";
-import posthog from "posthog-js";
 
 import { Button } from "@/components/ui/button";
 import { formatShortcutDisplay } from "@/lib/chat-utils";
@@ -102,13 +101,6 @@ export function dismissFirstRunSearchShortcutFromParent(): void {
     status: "dismissed",
     exposureCount: stored.exposureCount,
   });
-  posthog.capture("shortcut_teach_dismissed", {
-    schema_version: 1,
-    surface: "first_run_summary",
-    shortcut_name: "show_search",
-    dismissal_source: "parent_tips",
-    final_dismissal: true,
-  });
 }
 
 export function FirstRunSearchShortcutPractice() {
@@ -152,12 +144,6 @@ export function FirstRunSearchShortcutPractice() {
     const stored = readStoredPractice();
     const exposureCount = stored.exposureCount + 1;
     writeStoredPractice({ status: "available", exposureCount });
-    posthog.capture("shortcut_teach_shown", {
-      schema_version: 1,
-      surface: "first_run_summary",
-      shortcut_name: "show_search",
-      exposure_number: Math.min(exposureCount, 2),
-    });
   }, [isSettingsLoaded, phase, shortcut]);
 
   React.useEffect(() => {
@@ -179,12 +165,6 @@ export function FirstRunSearchShortcutPractice() {
         practiceStartedAtRef.current = null;
         setIssue("failed");
         setPhase("prompt");
-        posthog.capture("shortcut_practice_failed", {
-          schema_version: 1,
-          surface: "first_run_summary",
-          shortcut_name: "show_search",
-          reason: "window_not_shown",
-        });
         return;
       }
 
@@ -197,20 +177,6 @@ export function FirstRunSearchShortcutPractice() {
         status: "completed",
         exposureCount: Math.max(1, stored.exposureCount),
         acknowledged: false,
-      });
-      posthog.capture("shortcut_practice_completed", {
-        schema_version: 1,
-        surface: "first_run_summary",
-        shortcut_name: "show_search",
-        practice_started: practiceStartedAtRef.current !== null,
-        seconds_to_practice_bucket:
-          elapsedMs === null
-            ? "not_armed"
-            : elapsedMs <= 10_000
-              ? "0_10"
-              : elapsedMs <= 30_000
-                ? "11_30"
-                : "31_90",
       });
       setPhase("complete");
     })
@@ -238,11 +204,6 @@ export function FirstRunSearchShortcutPractice() {
     const timer = window.setTimeout(() => {
       practiceStartedAtRef.current = null;
       setIssue("timeout");
-      posthog.capture("shortcut_practice_timed_out", {
-        schema_version: 1,
-        surface: "first_run_summary",
-        shortcut_name: "show_search",
-      });
       setPhase("prompt");
     }, PRACTICE_TIMEOUT_MS);
     return () => window.clearTimeout(timer);
@@ -257,11 +218,6 @@ export function FirstRunSearchShortcutPractice() {
         status: "completed",
         exposureCount: Math.max(1, stored.exposureCount),
         acknowledged: true,
-      });
-      posthog.capture("shortcut_practice_acknowledged", {
-        schema_version: 1,
-        surface: "first_run_summary",
-        shortcut_name: "show_search",
       });
       setPhase("hidden");
     };
@@ -303,11 +259,6 @@ export function FirstRunSearchShortcutPractice() {
     practiceStartedAtRef.current = Date.now();
     setIssue(null);
     setPhase("waiting");
-    posthog.capture("shortcut_practice_started", {
-      schema_version: 1,
-      surface: "first_run_summary",
-      shortcut_name: "show_search",
-    });
   };
 
   const snooze = () => {
@@ -317,12 +268,6 @@ export function FirstRunSearchShortcutPractice() {
       status: finalDismissal ? "dismissed" : "snoozed",
       exposureCount: stored.exposureCount,
       ...(finalDismissal ? {} : { snoozedUntil: Date.now() + SNOOZE_MS }),
-    });
-    posthog.capture("shortcut_teach_dismissed", {
-      schema_version: 1,
-      surface: "first_run_summary",
-      shortcut_name: "show_search",
-      final_dismissal: finalDismissal,
     });
     setPhase("hidden");
   };

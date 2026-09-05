@@ -21,18 +21,7 @@ import {
   DEFAULT_PROMPT,
   useSettings,
 } from "@/lib/hooks/use-settings";
-import {
-  useUsageStatus,
-  messagesLeftForModel,
-  shouldWarnLowQuota,
-  formatResetTime,
-  formatAllowanceReset,
-  formatUsagePercent,
-  hostedAiAllowanceForModel,
-  shouldWarnLowHostedAiAllowance,
-} from "@/lib/hooks/use-usage-status";
 import { testAiPresetConnection } from "@/lib/utils/ai-preset-connection";
-import { openBusinessUpgradeSurface } from "@/lib/upgrade-flow";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import {
@@ -74,8 +63,6 @@ import {
   ChevronDown,
   ChevronUp,
   GripVertical,
-  Share2,
-  Lock,
 } from "lucide-react";
 import {
   DndContext,
@@ -114,9 +101,6 @@ import { Badge } from "../ui/badge";
 import { toast } from "../ui/use-toast";
 import { Card } from "../ui/card";
 import { AIProviderType } from "@/lib/hooks/use-settings";
-import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
-import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
-import { useTeam } from "@/lib/hooks/use-team";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -130,7 +114,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { AIPreset, commands } from "@/lib/utils/tauri";
-import { useModelUpsellGating } from "@/lib/hooks/use-model-upsell-gating";
 import {
   aiPresetConnectionFingerprint,
   extractAiProviderErrorMessage,
@@ -144,11 +127,6 @@ import {
   FieldValidationResult,
 } from "@/lib/utils/validation";
 import { parseOpenAiModelList } from "@/lib/utils/ai-model-list";
-import {
-  DEFAULT_ENTERPRISE_AI_PRESET_POLICY,
-  filterPresetsForEnterprisePolicy,
-  isEnterpriseManagedPreset,
-} from "@/lib/enterprise-ai-preset-policy";
 import {
   filterAcpPresets,
   useAcpRolloutEnabled,
@@ -237,17 +215,6 @@ const AISection = ({
   isDuplicating?: boolean;
 }) => {
   const { settings, updateSettings } = useSettings();
-  const { isManagedDeployment, policy: enterprisePolicy } = useManagedPolicy();
-  const aiPresetPolicy = enterprisePolicy.aiPresetPolicy ?? DEFAULT_ENTERPRISE_AI_PRESET_POLICY;
-  const employeePresetsAllowed =
-    !isManagedDeployment || aiPresetPolicy.allow_employee_custom_presets || (preset ? isEnterpriseManagedPreset(preset) : false);
-  // Hosted usage snapshot — Cloudflare rules drive the current dollar meter;
-  // legacy deployments keep the weighted "N left today" fallback.
-  const usage = useUsageStatus();
-  // Whether to surface the proactive "Business" lock UI. Off unless the PostHog
-  // flag, hydrated local entitlement, and gateway eligibility all agree. The
-  // gateway's `locked` flag only takes visual effect when this is true.
-  const showUpsell = useModelUpsellGating(usage?.upgrade_eligible);
   const [settingsPreset, setSettingsPreset] = useState<
     Partial<AIPreset> | undefined
   >(preset);
@@ -276,9 +243,6 @@ const AISection = ({
   const acpAdapters = useSelectableAcpAdapters(settingsPreset?.acpAgent?.id);
   const primaryAcpAdapters = primaryAcpAdapterChoices(acpAdapters);
   const customAcpAdapter = acpAdapters.find((adapter) => adapter.id === "custom");
-  const showScreenpipeCloud =
-    !IS_LOCAL_ONLY_BUILD &&
-    (!isManagedDeployment || aiPresetPolicy.allow_screenpipe_cloud);
 
   // A preset created while the flag was on must not keep the editor pinned to
   // a provider the user can no longer see once it is turned off.
@@ -290,13 +254,8 @@ const AISection = ({
 
   // Filter presets the same way the UI does so hidden presets don't block creation
   const visiblePresets = useMemo(
-    () => {
-      const policyVisiblePresets = !isManagedDeployment
-        ? settings.aiPresets
-        : filterPresetsForEnterprisePolicy(settings.aiPresets, aiPresetPolicy);
-      return filterAcpPresets(policyVisiblePresets, acpEnabled);
-    },
-    [settings.aiPresets, isManagedDeployment, aiPresetPolicy, acpEnabled]
+    () => filterAcpPresets(settings.aiPresets, acpEnabled),
+    [settings.aiPresets, acpEnabled]
   );
 
   // Optimized validation with debouncing
@@ -394,15 +353,6 @@ const AISection = ({
   }, [formErrors, settingsPreset, acpInstallBlocked, connectionTestRequired, connectionTestPassed]);
 
   const updateStoreSettings = async () => {
-    if (!employeePresetsAllowed) {
-      toast({
-        title: "由你的组织管理",
-        description: "你的管理员控制可用的 AI 预设",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!isFormValid) {
       const needsConnectionTest = connectionTestRequired && !connectionTestPassed;
       toast({
@@ -571,10 +521,6 @@ const AISection = ({
         newUrl = "https://api.anthropic.com";
         newModel = "claude-sonnet-5";
         break;
-      case "screenpipe-cloud":
-        newUrl = ""; // Pi uses RPC mode, not HTTP
-        newModel = "auto";
-        break;
       case "acp":
         newUrl = "";
         newModel = settingsPreset?.acpAgent?.id || "pi-acp";
@@ -728,7 +674,7 @@ const AISection = ({
   }, [settingsPreset?.provider, settingsPreset?.model, settingsPreset?.url]);
 
   const runDiagnostics = useCallback(async () => {
-    if (settingsPreset?.provider === "screenpipe-cloud" || settingsPreset?.provider === "acp") return;
+    if (settingsPreset?.provider === "acp") return;
 
     const testedConnectionFingerprint = aiPresetConnectionFingerprint({
       provider: settingsPreset?.provider,
@@ -1184,11 +1130,6 @@ const AISection = ({
           break;
         }
 
-        case "screenpipe-cloud": {
-          setModels([]);
-          break;
-        }
-
         default:
           setModels([]);
       }
@@ -1202,7 +1143,7 @@ const AISection = ({
       setIsLoadingModels(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settingsPreset?.provider, settingsPreset?.url, settingsPreset?.apiKey, settings.user?.id, chatgptLoggedIn]);
+  }, [settingsPreset?.provider, settingsPreset?.url, settingsPreset?.apiKey, chatgptLoggedIn]);
 
   const apiKey = useMemo(() => {
     if (settingsPreset && "apiKey" in settingsPreset) {
@@ -1227,7 +1168,7 @@ const AISection = ({
 
   // Auto-trigger diagnostics when provider + url + apiKey are set (debounced)
   useEffect(() => {
-    if (settingsPreset?.provider === "screenpipe-cloud" || settingsPreset?.provider === "acp") return;
+    if (settingsPreset?.provider === "acp") return;
     if (!settingsPreset?.provider) return;
     if (Object.keys(connectionFieldErrors).length > 0) return;
 
@@ -1279,8 +1220,8 @@ const AISection = ({
           <AIProviderChoices
             selectedProvider={settingsPreset?.provider}
             selectedAcpAgentId={settingsPreset?.acpAgent?.id}
-            showScreenpipeCloud={showScreenpipeCloud}
-            screenpipeDisabled={!settings.user?.token}
+            showScreenpipeCloud={false}
+            screenpipeDisabled={true}
             acpEnabled={acpEnabled}
             primaryAcpAdapters={primaryAcpAdapters}
             customAcpAdapter={customAcpAdapter}
@@ -1567,30 +1508,14 @@ const AISection = ({
                           ))}
                         </CommandGroup>
                       )}
-                      <CommandGroup heading={showUpsell && models?.some((m) => !m.free && m.locked) ? "更多模型" : models?.some((m) => m.free) ? "随 Screenpipe 提供" : "可用模型"}>
-                        {models?.filter((m) => !m.free).slice().sort((a, b) => ((showUpsell && a.locked) ? 1 : 0) - ((showUpsell && b.locked) ? 1 : 0)).map((model) => {
+                      <CommandGroup heading={models?.some((m) => m.free) ? "随 Screenpipe 提供" : "可用模型"}>
+                        {models?.filter((m) => !m.free).map((model) => {
                           const costLabel = model.cost_tier === 'low' ? '$' : model.cost_tier === 'medium' ? '$$' : model.cost_tier === 'high' ? '$$$' : model.cost_tier === 'very_high' ? '$$$$' : '';
-                          // Effective lock = gateway said so AND we're allowed to surface it.
-                          const locked = !!model.locked && showUpsell;
-                          const cloudflareAllowance = hostedAiAllowanceForModel(usage, model.id);
-                          const lowCloudflareAllowance = shouldWarnLowHostedAiAllowance(cloudflareAllowance);
-                          const lowLegacyAllowance = !usage?.hosted_ai &&
-                            shouldWarnLowQuota(usage, model.query_weight);
                           return (
                           <CommandItem
                             key={model.id}
                             value={model.id}
-                            className={locked ? "opacity-60" : undefined}
-                            onSelect={async () => {
-                              // Locked = above the user's plan. Review the
-                              // native Business offer instead of selecting it.
-                              if (locked) {
-                                setIsModelPickerOpen(false);
-                                await openBusinessUpgradeSurface(
-                                  "locked-model-picker",
-                                );
-                                return;
-                              }
+                            onSelect={() => {
                               updateSettingsPreset({ model: model.id });
                               setIsModelPickerOpen(false);
                             }}
@@ -1599,30 +1524,8 @@ const AISection = ({
                               <div className="flex items-center justify-between">
                                 <span className="font-medium">{model.name}</span>
                                 <div className="flex items-center gap-1 ml-2">
-                                  {locked && (
-                                    <Badge variant="outline" className="text-[10px] gap-0.5 border-foreground/40 text-foreground/80">
-                                      <Lock className="h-2.5 w-2.5" />
-                                      商业版
-                                    </Badge>
-                                  )}
-                                  {!locked && costLabel && <Badge variant="outline" className="text-[10px]">{costLabel}</Badge>}
-                                  {!locked && model.speed === "fast" && <Badge variant="outline" className="text-[10px]">快速</Badge>}
-                                  {/* Cloudflare lanes always show percentage remaining; the badge
-                                      turns yellow near exhaustion. Legacy counters stay quiet until
-                                      they are low. Never render either beside a locked model. */}
-                                  {!locked && (cloudflareAllowance || lowLegacyAllowance) && (
-                                    <Badge
-                                      variant="outline"
-                                      className={`text-[10px] ${lowCloudflareAllowance || lowLegacyAllowance ? "bg-yellow-500/10 text-yellow-700 border-yellow-500/40 dark:text-yellow-400" : ""}`}
-                                      title={cloudflareAllowance
-                                        ? `${formatUsagePercent(cloudflareAllowance.used_percent)} used${cloudflareAllowance.resets_at ? ` — resets ${formatAllowanceReset(cloudflareAllowance.resets_at)}` : ""}`
-                                        : `approaching daily limit${usage?.resets_at ? ` — resets ${formatResetTime(usage.resets_at)}` : ""}`}
-                                    >
-                                      {cloudflareAllowance
-                                        ? `${formatUsagePercent(cloudflareAllowance.remaining_percent)} left`
-                                        : `≈ ${messagesLeftForModel(usage, model.query_weight)} left`}
-                                    </Badge>
-                                  )}
+                                  {costLabel && <Badge variant="outline" className="text-[10px]">{costLabel}</Badge>}
+                                  {model.speed === "fast" && <Badge variant="outline" className="text-[10px]">快速</Badge>}
                                 </div>
                               </div>
                               <span className="text-xs text-muted-foreground">
@@ -1716,8 +1619,7 @@ const AISection = ({
         helperText="此提示词将用于引导 AI 的回复"
       />
 
-      {settingsPreset?.provider !== "screenpipe-cloud" &&
-        settingsPreset?.provider !== "acp" &&
+      {settingsPreset?.provider !== "acp" &&
         (!resolvedModelLimits?.contextWindow || !resolvedModelLimits?.maxOutputTokens) && (
           <div className="w-full border rounded-lg">
             <button
@@ -1785,7 +1687,7 @@ const AISection = ({
           </div>
         )}
 
-      {settingsPreset?.provider !== "screenpipe-cloud" && settingsPreset?.provider !== "acp" && (
+      {settingsPreset?.provider !== "acp" && (
         <div className="w-full border rounded-lg">
           <button
             type="button"
@@ -1964,11 +1866,7 @@ function SortablePresetCard({
   onDuplicate,
   onSetDefault,
   onDelete,
-  onShareToTeam,
   isLoading,
-  isTeamAdmin,
-  readOnly = false,
-  defaultLocked = false,
   chatgptTokenExpired = false,
 }: {
   preset: AIPreset;
@@ -1978,11 +1876,7 @@ function SortablePresetCard({
   onDuplicate: () => void;
   onSetDefault: () => void;
   onDelete?: () => void;
-  onShareToTeam?: () => void;
   isLoading: boolean;
-  isTeamAdmin?: boolean;
-  readOnly?: boolean;
-  defaultLocked?: boolean;
   chatgptTokenExpired?: boolean;
 }) {
   const {
@@ -1992,7 +1886,7 @@ function SortablePresetCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: preset.id, disabled: readOnly });
+  } = useSortable({ id: preset.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -2006,12 +1900,11 @@ function SortablePresetCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "p-3 relative group transition-all hover:shadow-md border-border bg-card",
-        readOnly ? "cursor-default" : "cursor-pointer",
+        "p-3 relative group transition-all hover:shadow-md border-border bg-card cursor-pointer",
         isDefault && "ring-2 ring-primary/20",
         isDragging && "shadow-lg"
       )}
-      onClick={readOnly ? undefined : onEdit}
+      onClick={onEdit}
     >
       <div className="space-y-2">
         <div className="flex justify-between items-center">
@@ -2051,11 +1944,6 @@ function SortablePresetCard({
                 默认
               </Badge>
             )}
-            {readOnly && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                组织管理
-              </Badge>
-            )}
             {!hasValidation && (
               <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
             )}
@@ -2086,25 +1974,13 @@ function SortablePresetCard({
           </span>
         </div>
         <div className="flex items-center gap-0.5 pt-1.5 border-t border-border">
-          <Button variant="ghost" size="sm" className="text-[11px] h-6 px-2" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} disabled={isLoading || readOnly}>
+          <Button variant="ghost" size="sm" className="text-[11px] h-6 px-2" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} disabled={isLoading}>
             <Copy className="w-3 h-3 mr-1" />复制
           </Button>
-          <Button variant="ghost" size="sm" className="text-[11px] h-6 px-2" onClick={(e) => { e.stopPropagation(); onSetDefault(); }} disabled={isLoading || isDefault || defaultLocked}>
+          <Button variant="ghost" size="sm" className="text-[11px] h-6 px-2" onClick={(e) => { e.stopPropagation(); onSetDefault(); }} disabled={isLoading || isDefault}>
             <Star className="w-3 h-3 mr-1" />{isDefault ? "默认" : "设为默认"}
           </Button>
-          {isTeamAdmin && onShareToTeam && !readOnly && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={(e) => { e.stopPropagation(); onShareToTeam(); }} disabled={isLoading}>
-                    <Share2 className="w-3 h-3" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>分享到团队（端到端加密）</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {!readOnly && onDelete && (
+          {onDelete && (
             <Button
               aria-label={`删除 ${preset.id}`}
               variant="ghost"
@@ -2132,28 +2008,8 @@ export const AIPresets = () => {
     null
   );
   const [isDuplicating, setIsDuplicating] = useState(false);
-  const { isManagedDeployment, policy: enterprisePolicy } = useManagedPolicy();
-  const aiPresetPolicy = enterprisePolicy.aiPresetPolicy ?? DEFAULT_ENTERPRISE_AI_PRESET_POLICY;
-  const visiblePresets = useMemo(
-    () =>
-      !isManagedDeployment
-        ? settings.aiPresets
-        : filterPresetsForEnterprisePolicy(settings.aiPresets, aiPresetPolicy),
-    [settings.aiPresets, isManagedDeployment, aiPresetPolicy]
-  );
-  const canManageEmployeePresets = !isManagedDeployment || aiPresetPolicy.allow_employee_custom_presets;
+  const visiblePresets = settings.aiPresets;
   const [chatgptTokenValid, setChatgptTokenValid] = useState<boolean | null>(null);
-  const team = useTeam();
-  const isTeamAdmin = !!team.team && team.role === "admin";
-
-  const sharePresetToTeam = async (preset: AIPreset) => {
-    try {
-      await team.pushConfig("ai_provider", preset.id, preset);
-      toast({ title: "已分享到团队", description: `“${formatPresetName(preset.id)}” 现在对所有团队成员可用（端到端加密）` });
-    } catch (err: any) {
-      toast({ title: "分享到团队失败", description: err.message, variant: "destructive" });
-    }
-  };
 
   // Drag-and-drop sensors with activation distance to avoid conflicts with clicks
   const sensors = useSensors(
@@ -2211,18 +2067,6 @@ useEffect(() => {
   const removePreset = async (id: string) => {
     setIsLoading(true);
     try {
-      const presetToRemove = settings.aiPresets.find((preset) => preset.id === id);
-      if (
-        isManagedDeployment &&
-        ((presetToRemove && isEnterpriseManagedPreset(presetToRemove)) || !aiPresetPolicy.allow_employee_custom_presets)
-      ) {
-        toast({
-          title: "由你的组织管理",
-          description: "你的管理员控制可用的 AI 预设",
-          variant: "destructive",
-        });
-        return;
-      }
       if (settings.aiPresets.length <= 1) {
         toast({
           title: "无法删除预设",
@@ -2286,15 +2130,6 @@ useEffect(() => {
   const setDefaultPreset = async (id: string) => {
     setIsLoading(true);
     try {
-      if (isManagedDeployment && aiPresetPolicy.lock_default_preset) {
-        toast({
-          title: "默认预设已被锁定",
-          description: "你的管理员控制默认 AI 预设",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const selectedPreset = settings.aiPresets.find((p) => p.id === id);
       if (!selectedPreset) return;
 
@@ -2336,17 +2171,6 @@ useEffect(() => {
   const duplicatePreset = async (id: string) => {
     const presetToDuplicate = settings.aiPresets.find((p) => p.id === id);
     if (!presetToDuplicate) return;
-    if (
-      isManagedDeployment &&
-      (isEnterpriseManagedPreset(presetToDuplicate) || !aiPresetPolicy.allow_employee_custom_presets)
-    ) {
-      toast({
-        title: "由你的组织管理",
-        description: "你的管理员控制可用的 AI 预设",
-        variant: "destructive",
-      });
-      return;
-    }
 
     // Find a unique name by appending a number
     const baseName = presetToDuplicate.id.replace(/ \d+$/, "");
@@ -2381,16 +2205,12 @@ useEffect(() => {
             No AI presets yet
           </h2>
           <p className="text-sm text-muted-foreground text-center max-w-md">
-            {canManageEmployeePresets
-              ? "Create your first AI preset to get started with intelligent features. Presets allow you to quickly switch between different AI configurations."
-              : "你的组织未在此设备上提供任何 AI 预设。"}
+            Create your first AI preset to get started with intelligent features. Presets allow you to quickly switch between different AI configurations.
           </p>
-          {canManageEmployeePresets && (
-            <Button onClick={() => setCreatePresentDialog(true)} size="lg">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Your First Preset
-            </Button>
-          )}
+          <Button onClick={() => setCreatePresentDialog(true)} size="lg">
+            <Plus className="w-4 h-4 mr-2" />
+            Create Your First Preset
+          </Button>
         </div>
       </div>
     );
@@ -2414,12 +2234,10 @@ useEffect(() => {
             </div>
           )}
         </div>
-        {canManageEmployeePresets && (
-          <Button onClick={() => setCreatePresentDialog(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            创建预设
-          </Button>
-        )}
+        <Button onClick={() => setCreatePresentDialog(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          创建预设
+        </Button>
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -2431,9 +2249,6 @@ useEffect(() => {
             {(() => {
               const isOnlyPreset = settings.aiPresets.length <= 1;
               return visiblePresets.map((preset) => {
-                const readOnly =
-                  isManagedDeployment &&
-                  (!aiPresetPolicy.allow_employee_custom_presets || isEnterpriseManagedPreset(preset));
                 return (
                   <SortablePresetCard
                     key={preset.id}
@@ -2441,7 +2256,7 @@ useEffect(() => {
                     isDefault={preset.defaultPreset}
                     hasValidation={preset.provider === "acp"
                       ? Boolean(preset.acpAgent?.id && (preset.acpAgent.id !== "custom" || preset.acpAgent.command?.trim()))
-                      : !!(preset.provider && preset.model && (preset.url || preset.provider === "screenpipe-cloud" || preset.provider === "openai-chatgpt"))}
+                      : !!(preset.provider && preset.model && (preset.url || preset.provider === "openai-chatgpt"))}
                     chatgptTokenExpired={preset.provider === "openai-chatgpt" && chatgptTokenValid === false}
                     onEdit={() => {
                       setSelectedPreset(preset);
@@ -2451,11 +2266,7 @@ useEffect(() => {
                     onDuplicate={() => duplicatePreset(preset.id)}
                     onSetDefault={() => setPresetToSetDefault(preset.id)}
                     onDelete={isOnlyPreset ? undefined : () => setPresetToDelete(preset.id)}
-                    onShareToTeam={isTeamAdmin ? () => sharePresetToTeam(preset) : undefined}
                     isLoading={isLoading}
-                    isTeamAdmin={isTeamAdmin}
-                    readOnly={readOnly}
-                    defaultLocked={isManagedDeployment && aiPresetPolicy.lock_default_preset}
                   />
                 );
               });

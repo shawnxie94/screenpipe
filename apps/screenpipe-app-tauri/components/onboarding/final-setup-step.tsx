@@ -19,7 +19,6 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react";
-import posthog from "posthog-js";
 
 import { Button } from "@/components/ui/button";
 import { localFetch } from "@/lib/api";
@@ -391,7 +390,6 @@ export default function FinalSetupStep({
             }
           })
           .catch(() => {
-            posthog.capture("onboarding_final_setup_engine_resume_failed");
           });
       });
   }, []);
@@ -438,10 +436,6 @@ export default function FinalSetupStep({
       if (connected === true || connectionImpressionsRef.current.has(id))
         return;
       connectionImpressionsRef.current.add(id);
-      posthog.capture("onboarding_connection_cta_impression", {
-        ...connectionCtaProperties(id),
-        cta_state: connected === null ? "retry" : "connect",
-      });
     });
   }, [calendarConnected, checking, gmailConnected]);
 
@@ -482,7 +476,6 @@ export default function FinalSetupStep({
       if (currentState === "missing") await installPipe(slug, bundled);
       if (currentState !== "enabled") await enablePipe(slug);
       setPipeStates((current) => ({ ...current, [slug]: "enabled" }));
-      posthog.capture("first_run_next_step_selected", { step: slug });
     } catch (setupError) {
       if (!(
         setupError instanceof DOMException && setupError.name === "AbortError"
@@ -498,15 +491,7 @@ export default function FinalSetupStep({
   }, []);
 
   const connectGmail = useCallback(async () => {
-    posthog.capture(
-      "onboarding_connection_cta_attempted",
-      connectionCtaProperties("gmail"),
-    );
     if (!userToken) {
-      posthog.capture("onboarding_connection_cta_failed", {
-        ...connectionCtaProperties("gmail"),
-        failure_stage: "authentication",
-      });
       setError("sign in to connect Gmail, then try again.");
       return;
     }
@@ -528,10 +513,6 @@ export default function FinalSetupStep({
       if (!connected) throw new Error("Gmail 连接未完成。");
       setGmailConnected(true);
       notifyConnectionsUpdated();
-      posthog.capture("connection_saved", {
-        integration: "composio-gmail",
-        source: "onboarding_final_setup",
-      });
 
       // Registration helps the local engine use Gmail, but it must not make
       // the connection screen depend on engine startup.
@@ -542,10 +523,6 @@ export default function FinalSetupStep({
         connectError instanceof DOMException &&
         connectError.name === "AbortError"
       )) {
-        posthog.capture("onboarding_connection_cta_failed", {
-          ...connectionCtaProperties("gmail"),
-          failure_stage: failureStage,
-        });
         setError(
           connectError instanceof Error
             ? connectError.message
@@ -558,10 +535,6 @@ export default function FinalSetupStep({
   }, [userToken]);
 
   const connectCalendar = useCallback(async () => {
-    posthog.capture(
-      "onboarding_connection_cta_attempted",
-      connectionCtaProperties("google-calendar"),
-    );
     setBusyConnection("google-calendar");
     setError(null);
     try {
@@ -572,14 +545,7 @@ export default function FinalSetupStep({
       }
       setCalendarConnected(true);
       notifyConnectionsUpdated();
-      posthog.capture("google_calendar_connected", {
-        source: "onboarding_final_setup",
-      });
     } catch (connectError) {
-      posthog.capture("onboarding_connection_cta_failed", {
-        ...connectionCtaProperties("google-calendar"),
-        failure_stage: "oauth_connect",
-      });
       setError(
         connectError instanceof Error
           ? connectError.message

@@ -38,7 +38,6 @@ import { useSettings } from "@/lib/hooks/use-settings";
 import { usePipes, type TemplatePipe } from "@/lib/hooks/use-pipes";
 import type { FrameLoadSuccessDetails } from "@/components/rewind/hooks/use-frame-loading";
 
-import posthog from "posthog-js";
 import { toast } from "@/components/ui/use-toast";
 import { useTimelineFilters } from "@/components/rewind/hooks/use-timeline-filters";
 import { useScrollZoom } from "@/components/rewind/hooks/use-scroll-zoom";
@@ -46,8 +45,6 @@ import { useDateNavigation } from "@/components/rewind/hooks/use-date-navigation
 import { useTimelineKeyboard } from "@/components/rewind/hooks/use-timeline-keyboard";
 import { localFetch } from "@/lib/api";
 import { hydrateSearchResultNavigation } from "@/lib/search-result-navigation";
-import type { AppUser } from "@/lib/app-entitlement";
-import { useEnterpriseBuildStatus } from "@/lib/hooks/use-is-enterprise-build";
 import {
 	shouldRestrictTimelineHistory,
 	useAuthoritativeTimelineHistoryAccess,
@@ -106,14 +103,7 @@ const easeOutCubic = (x: number): number => {
 export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 	const { isMac } = usePlatform();
 	const { settings } = useSettings();
-	const enterpriseBuild = useEnterpriseBuildStatus();
-	const locallyRestrictedHistory = shouldRestrictTimelineHistory(
-		settings?.user as AppUser | null | undefined,
-		enterpriseBuild.isEnterprise,
-	);
-	const historyAccessRestricted = useAuthoritativeTimelineHistoryAccess(
-		locallyRestrictedHistory,
-	);
+	const historyAccessRestricted = useAuthoritativeTimelineHistoryAccess();
 	const { health } = useHealthCheck();
 	const [currentIndex, setCurrentIndex] = useState(0);
 	const [showAudioTranscript, setShowAudioTranscript] = useState(false);
@@ -207,7 +197,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 	const { frames, isLoading, error, message, fetchNextDayData, websocket } =
 		useTimelineData(currentDate, (frame) => {
 			setCurrentFrame(frame);
-		}, historyAccessRestricted, enterpriseBuild.resolved);
+		}, historyAccessRestricted, true);
 
 	useEffect(() => {
 		if (!historyAccessRestricted || !currentFrame) return;
@@ -706,15 +696,6 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 		if (startedAt === null || !readyFrame || firstFrameMeasuredRef.current) return;
 
 		firstFrameMeasuredRef.current = true;
-		posthog.capture("timeline_time_to_first_frame", {
-			measurement_version: 2,
-			duration_ms: Math.max(0, Math.round(performance.now() - startedAt)),
-			had_cache: firstFrameHadCacheRef.current,
-			frames_count: firstFrameCountRef.current,
-			frame_id: readyFrame.frameId,
-			load_mode: readyFrame.mode,
-			surface: embedded ? "home" : "overlay",
-		});
 	}, [embedded]);
 
 	const beginFirstFrameMeasurement = useCallback(() => {
@@ -787,7 +768,6 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 		framesFailedRef.current = 0;
 		dateChangesRef.current = 0;
 		
-		posthog.capture("timeline_opened");
 
 
 		
@@ -798,14 +778,6 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 				? (totalLoadingTimeRef.current / sessionDuration) * 100 
 				: 0;
 			
-			posthog.capture("timeline_loading_time_total", {
-				session_duration_ms: Math.round(sessionDuration),
-				loading_time_ms: Math.round(totalLoadingTimeRef.current),
-				loading_percentage: Math.round(loadingPercentage * 10) / 10,
-				frames_viewed: framesViewedRef.current,
-				frames_failed: framesFailedRef.current,
-				date_changes: dateChangesRef.current,
-			});
 		};
 	}, []);
 	
@@ -907,11 +879,6 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 			await showChatWithPrefill({ context, prompt: `Based on my activity from ${startTime} to ${endTime}, `, source: "timeline" });
 		}
 
-		posthog.capture("timeline_selection_to_chat", {
-			selection_duration_ms: selectionRange.end.getTime() - selectionRange.start.getTime(),
-			frames_in_selection: selectedFrames.length,
-			pipe_name: pipe?.name,
-		});
 
 		if (pipe) {
 			toast({ title: `${pipe.icon} ${pipe.title}`, description: "正在使用所选内容上下文运行定时任务" });

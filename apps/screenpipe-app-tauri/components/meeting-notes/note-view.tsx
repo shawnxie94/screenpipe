@@ -42,8 +42,6 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 import { save as saveDialog } from "@tauri-apps/plugin-dialog";
 import { readFile } from "@tauri-apps/plugin-fs";
-import posthog from "posthog-js";
-import { qualifiedValue } from "@/lib/analytics/qualified-value";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -116,11 +114,6 @@ import {
   useSettings,
   type Settings,
 } from "@/lib/hooks/use-settings";
-import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
-import {
-  DEFAULT_ENTERPRISE_AI_PRESET_POLICY,
-  filterPresetsForEnterprisePolicy,
-} from "@/lib/enterprise-ai-preset-policy";
 import {
   MeetingNoteSaveQueue,
   sameMeetingNoteDraft,
@@ -163,9 +156,6 @@ import {
   type MeetingSummaryLifecycle,
   type MeetingSummaryStatus,
 } from "./meeting-summary-lifecycle";
-import { QUOTA_PLAN_LABELS } from "@/lib/chat/quota-errors";
-import { openExternalUrl } from "@/lib/open-external-url";
-import { openBusinessUpgradeSurface } from "@/lib/upgrade-flow";
 import { MeetingSummaryTransition } from "./meeting-summary-transition";
 import {
   advanceMeetingSummaryStream,
@@ -215,10 +205,6 @@ import {
   summaryPresetModelLabel,
   summaryPresetOptions,
 } from "./meeting-summary-presets";
-import {
-  hostedAiAllowanceForModel,
-  useUsageStatus,
-} from "@/lib/hooks/use-usage-status";
 
 const AUTOSAVE_DEBOUNCE_MS = 800;
 // Transcript window handed to a chat turn. Long meetings are windowed to the
@@ -373,9 +359,6 @@ export function NoteView({
     "retranscribe" | "delete" | null
   >(null);
   const { settings, updateSettings } = useSettings();
-  const { isManagedDeployment, policy: enterprisePolicy } =
-    useManagedPolicy();
-  const chatUsage = useUsageStatus();
   const noteEditorRef = useRef<NoteEditorHandle>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
@@ -469,15 +452,8 @@ export function NoteView({
     () =>
       summaryPresetOptions(settings.aiPresets, {
         acpEnabled,
-        isManagedDeployment,
-        aiPresetPolicy: enterprisePolicy.aiPresetPolicy,
       }),
-    [
-      acpEnabled,
-      enterprisePolicy.aiPresetPolicy,
-      isManagedDeployment,
-      settings.aiPresets,
-    ],
+    [acpEnabled, settings.aiPresets],
   );
   const defaultSummaryPresetId = useMemo(
     () => implicitSummaryPresetId(summaryPresets),
@@ -529,10 +505,6 @@ export function NoteView({
           currentPresetIds: previousPresetIds,
         });
         setSummaryPresetIds(saved.presetIds);
-        posthog.capture("meeting_summary_model_changed", {
-          pipe_slug: summaryPipeSlug,
-          provider: preset.provider,
-        });
         return true;
       } catch (error) {
         setSummaryPresetIds(previousPresetIds);
@@ -826,11 +798,6 @@ export function NoteView({
         if (images.length === 0) return;
         const { x, y } = toClient(pos);
         noteEditorRef.current?.insertImages(images, { clientX: x, clientY: y });
-        posthog.capture("meeting_note_images_inserted", {
-          meeting_id: meeting.id,
-          count: images.length,
-          source: "drag_drop",
-        });
       } catch (err) {
         console.error("failed to insert dropped meeting note image", err);
         toast({
@@ -949,14 +916,7 @@ export function NoteView({
   // is needed. (A dedicated effect below applies explicit transcript intent.)
 
   useEffect(() => {
-    posthog.capture("meeting_note_opened", {
-      meeting_id: meeting.id,
-      is_live: isLive,
-      has_title: !!meeting.title,
-      has_note: !!meeting.note,
-    });
     if (meeting.note?.trim()) {
-      qualifiedValue.meetingNoteOpened();
     }
   }, [meeting.id]);
 
@@ -1140,11 +1100,6 @@ export function NoteView({
   }, [saveState.kind, save, title, attendees, note]);
 
   const handleSummarize = async () => {
-    posthog.capture("meeting_summarize_clicked", {
-      meeting_id: meeting.id,
-      was_live: isLive,
-      pipe_slug: settings.meetingSummaryPipeSlug || "meeting-summary",
-    });
     if (!canSummarizeMeeting) {
       toast({
         title: "请先结束会议",
@@ -1245,12 +1200,6 @@ export function NoteView({
 
   const handleStopClick = async () => {
     if (savingBeforeStop) return;
-    posthog.capture("meeting_stop_clicked", {
-      meeting_id: meeting.id,
-      summarize_automatically: autoSummaryEnabled !== false,
-      pipe_slug: summaryPipeSlug,
-      source: "meeting_note",
-    });
     setSavingBeforeStop(true);
     try {
       const current = { title, attendees, note };
@@ -1740,31 +1689,6 @@ export function NoteView({
     visibleSummaryLifecycle.kind === "failed"
       ? meetingSummaryFailure(visibleSummaryLifecycle.execution)
       : null;
-  const summaryUpgrade = summaryFailure?.upgrade ?? null;
-  const handleSummaryUpgrade = useCallback(async () => {
-    if (!summaryUpgrade) return;
-    posthog.capture("meeting_summary_upgrade_clicked", {
-      source: "meeting-summary-limit",
-      target_plan: summaryUpgrade.requiredPlan,
-    });
-    try {
-      // The native account surface owns the common Basic → Business offer.
-      // Higher tiers and Basic have gateway-owned billing URLs whose exact
-      // target cannot be represented by that one offer card.
-      if (summaryUpgrade.requiredPlan === "business") {
-        await openBusinessUpgradeSurface("meeting-summary-limit");
-      } else {
-        await openExternalUrl(summaryUpgrade.upgradeUrl);
-      }
-    } catch (error) {
-      console.error("failed to open meeting summary upgrade", error);
-      toast({
-        title: "couldn't open upgrade options",
-        description: "try again from Settings → Account.",
-        variant: "destructive",
-      });
-    }
-  }, [summaryUpgrade, toast]);
   // Notes and Summary now own their summary lifecycle in the reading area.
   // Repeating the same state in the footer made the page look like two jobs
   // were running. Transcript still gets the global footer because it has no
@@ -1836,17 +1760,8 @@ export function NoteView({
   // The rail can ask during or after a meeting and reports while it is working.
   // Everything decidable without React lives in meeting-chat-state.ts.
   const chatPresets = useMemo(() => {
-    const presets = (settings.aiPresets ?? []) as AIPreset[];
-    if (!isManagedDeployment) return presets;
-    return filterPresetsForEnterprisePolicy(
-      presets,
-      enterprisePolicy.aiPresetPolicy ?? DEFAULT_ENTERPRISE_AI_PRESET_POLICY,
-    );
-  }, [
-    enterprisePolicy.aiPresetPolicy,
-    isManagedDeployment,
-    settings.aiPresets,
-  ]);
+    return (settings.aiPresets ?? []) as AIPreset[];
+  }, [settings.aiPresets]);
   const resolvedChatPreset = useMemo(
     () => resolveActiveAiPreset(chatPresets, chatPresetId),
     [chatPresetId, chatPresets],
@@ -1895,17 +1810,9 @@ export function NoteView({
     },
     [chatPreset, settings.aiPresets, updateSettings],
   );
-  const chatCloudflareAllowance = hostedAiAllowanceForModel(
-    chatUsage,
-    chatPreset?.model,
-  );
-  const chatQuotaExhausted = Boolean(
-    chatPreset?.provider === "screenpipe-cloud" &&
-      chatUsage &&
-      (chatUsage.hosted_ai?.allowance_managed_by === "cloudflare"
-        ? chatCloudflareAllowance?.remaining_percent === 0
-        : chatUsage.remaining <= 0),
-  );
+  // Chat runs on the user's configured local preset; hosted quota no longer
+  // applies in the local-only build.
+  const chatQuotaExhausted = false;
 
   const readChatTranscript = useCallback(
     async (): Promise<MeetingChatTranscriptSnapshot> => {
@@ -1968,7 +1875,7 @@ export function NoteView({
     context: meetingChatContext,
     refreshContext: refreshMeetingChatContext,
     preset: chatPreset,
-    userToken: settings.user?.token ?? null,
+    userToken: null,
   });
 
   const chatConditions: MeetingChatConditions = {
@@ -2338,10 +2245,6 @@ export function NoteView({
                 onClick={() => {
                   setChatOpen((open) => {
                     if (!open) {
-                      posthog.capture("meeting_chat_opened", {
-                        tab: activeTab,
-                        has_summary: canShareSummary,
-                      });
                     }
                     return !open;
                   });
@@ -2369,22 +2272,10 @@ export function NoteView({
                 // and did not find what they wanted.
                 onMenuOpenChange={(open) => {
                   if (!open) return;
-                  posthog.capture("meeting_share_menu_opened", {
-                    has_summary: canShareSummary,
-                    can_send: shareArtifact.sections.length > 0,
-                  });
                 }}
                 resendLabel={oneTapSend.label ?? undefined}
                 suggestedDestinations={oneTapSend.suggestions}
                 onShare={(action) => {
-                  posthog.capture("meeting_share_action", {
-                    action,
-                    from_rule:
-                      action === "summary" ||
-                      action === "send" ||
-                      action === "resend",
-                    has_summary: canShareSummary,
-                  });
                   if (action === "summary") void handleCopySummary();
                   else if (action === "email") void handleEmailSummary();
                   else if (action === "transcript") void handleCopyTranscript();
@@ -2399,10 +2290,6 @@ export function NoteView({
                   const suggestion = oneTapSend.suggestions.find(
                     (item) => item.destination === destination,
                   );
-                  posthog.capture("meeting_share_destination_clicked", {
-                    destination,
-                    observed_in_meeting: suggestion?.observed === true,
-                  });
                   setRequestedShareDestination(destination);
                   setShareOpen(true);
                 }}
@@ -2497,14 +2384,6 @@ export function NoteView({
                     title: summaryFailure.title,
                     detail: summaryFailure.copy,
                     retryable: summaryFailure.retryable,
-                    upgrade: summaryUpgrade
-                      ? {
-                          label: `upgrade to ${QUOTA_PLAN_LABELS[
-                            summaryUpgrade.requiredPlan
-                          ].toLowerCase()}`,
-                          onSelect: () => void handleSummaryUpgrade(),
-                        }
-                      : undefined,
                     model: summaryFailure.changeModelRecommended
                       ? {
                           selectedId: summaryPresetId,
@@ -2707,22 +2586,6 @@ export function NoteView({
                   </span>
                   <span aria-hidden>·</span>
                   <span>{summaryStatus.detail}</span>
-                  {summaryUpgrade && (
-                    <>
-                      <span aria-hidden>·</span>
-                      <button
-                        type="button"
-                        data-testid="meeting-summary-upgrade-link"
-                        className="underline underline-offset-2 transition-colors hover:text-foreground"
-                        onClick={() => void handleSummaryUpgrade()}
-                      >
-                        upgrade to{" "}
-                        {QUOTA_PLAN_LABELS[
-                          summaryUpgrade.requiredPlan
-                        ].toLowerCase()}
-                      </button>
-                    </>
-                  )}
                   {hasSaveStatus && (
                     <>
                       <span aria-hidden>·</span>
@@ -3405,9 +3268,8 @@ function providerLabel(
       return transcriptionEngineLabel(selectedEngine);
     case "deepgram-live":
       return "deepgram live";
-    case "screenpipe-cloud":
     default:
-      return "screenpipe cloud";
+      return "disabled";
   }
 }
 

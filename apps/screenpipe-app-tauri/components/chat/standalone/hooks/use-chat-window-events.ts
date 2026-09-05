@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef } from "react";
 import type * as React from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import posthog from "posthog-js";
 import { localFetch } from "@/lib/api";
 import {
   type ChatLoadConversationPayload,
@@ -65,12 +64,6 @@ export function usePipeGenerationCompletion({
         const newPipes = installedNames.filter((name) => !baseline.has(name));
         if (newPipes.length === 0) return;
 
-        posthog.capture("pipe_generation_completed", {
-          generation_id: ctx.generation_id,
-          pipe_name: newPipes[0],
-          new_pipes_count: newPipes.length,
-          duration_ms: Date.now() - ctx.started_at,
-        });
         sessionStorage.removeItem("pipeGenerationContext");
       } catch {
         // Leave context in place. The next assistant turn may install the pipe.

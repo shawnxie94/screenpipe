@@ -38,10 +38,6 @@ import { usePlatform } from "@/lib/hooks/use-platform";
 import { useEventListener } from "@/lib/hooks/use-event-listener";
 import type { SidebarNavId } from "@/lib/utils/sidebar-nav-layout";
 import {
-  commandPalette,
-  type CommandPaletteActionId,
-} from "@/lib/analytics/command-palette";
-import {
   globalShortcutHint,
   inAppShortcutLabel,
   matchesInAppShortcut,
@@ -49,6 +45,26 @@ import {
 } from "@/lib/shortcuts";
 
 export { globalShortcutHint } from "@/lib/shortcuts";
+
+export type CommandPaletteActionId =
+  | "open_search"
+  | "open_timeline_overlay"
+  | "new_chat"
+  | "pause_recording"
+  | "resume_recording"
+  | "next_recent_chat"
+  | "previous_recent_chat"
+  | "go_chat"
+  | "go_brain"
+  | "go_meetings"
+  | "go_scheduled"
+  | "go_timeline"
+  | "go_activity"
+  | "go_connections"
+  | "toggle_sidebar"
+  | "open_settings"
+  | "open_shortcut_guide"
+  | "open_shortcut_settings";
 
 // In-app command palette (⌘K / Ctrl+K), home window only. Every row prints
 // its keyboard shortcut so each palette use doubles as a shortcut lesson —
@@ -279,7 +295,6 @@ export function CommandPalette({
       setOpen(false);
       return;
     }
-    commandPalette.opened("keyboard");
     setOpen(true);
   });
 
@@ -292,7 +307,6 @@ export function CommandPalette({
 
   const runEntry = (entry: PaletteEntry) => {
     setOpen(false);
-    commandPalette.actionExecuted(entry.id);
     entry.run();
   };
 

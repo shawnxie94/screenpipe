@@ -6,7 +6,6 @@
 import * as React from "react";
 import { Check, Clock, Copy, GitBranch, MoreHorizontal, Pencil, RefreshCw } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import posthog from "posthog-js";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SourceCitationFooter } from "@/components/chat/source-citation-footer";
 import { CollapsedSteerWorkRow } from "@/components/chat/standalone/collapsed-steer-work-row";
@@ -16,7 +15,6 @@ import {
   chatResponseValueActionProperties,
   chatTelemetryContextForResponse,
 } from "@/lib/chat/response-feedback";
-import { qualifiedValue } from "@/lib/analytics/qualified-value";
 import { MessageContent } from "@/components/chat/standalone/message-content";
 import { TurnStatus } from "@/components/chat/standalone/turn-status";
 import type { TurnSignals } from "@/lib/chat/turn-phase";
@@ -507,18 +505,6 @@ export function ChatMessageList({
                             onClick={async () => {
                               await onCopyMessage(message);
                               if (message.role === "assistant") {
-                                posthog.capture(
-                                  "chat_response_value_action",
-                                  chatResponseValueActionProperties(
-                                    message,
-                                    "copy",
-                                    chatTelemetryContextForResponse(
-                                      visibleMessages,
-                                      message.id,
-                                    ),
-                                  ),
-                                );
-                                qualifiedValue.chatResponseCopied();
                               }
                             }}
                             className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground"

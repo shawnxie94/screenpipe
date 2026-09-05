@@ -4,7 +4,6 @@
 "use client";
 
 import React from "react";
-import { ShareLogsButton } from "@/components/share-logs-button";
 import { MessageSquare, Github, Lightbulb, FileText, Youtube, BookOpen, Play, ClipboardList } from "lucide-react";
 import { open } from "@tauri-apps/plugin-shell";
 import { screenpipeWebUrl } from "@/lib/web-url";
@@ -30,17 +29,6 @@ export function FeedbackSection() {
       </p>
 
       <div className="space-y-2">
-        <div className="px-3 py-2.5 bg-card border border-border">
-          <div className="flex items-center gap-2.5 mb-2.5">
-            <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div>
-              <h3 className="text-sm font-medium text-foreground">发送日志</h3>
-              <p className="text-xs text-muted-foreground">日志会自动包含</p>
-            </div>
-          </div>
-          <ShareLogsButton />
-        </div>
-
         <button
           type="button"
           onClick={() => open("https://youtu.be/OLUMknhvxWY")}

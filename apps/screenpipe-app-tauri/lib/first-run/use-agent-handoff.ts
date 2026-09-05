@@ -5,7 +5,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import posthog from "posthog-js";
 
 import { type ConnectAllToolId, detectAiTools } from "@/lib/ai-tools-mcp";
 import { areExternalAgentSkillsInstalled } from "@/lib/external-agent-skills";
@@ -114,10 +113,6 @@ export function useAgentHandoff(
           // The impression. Without it `handoff_clicked` has no denominator:
           // a quiet week is indistinguishable from "we never offered", and
           // those have opposite fixes.
-          posthog.capture("first_run_agent_handoff_shown", {
-            agents: resolved.map((t) => t.id),
-            agent_count: resolved.length,
-          });
         }
       } catch {
         // A failed probe means no handoff, never a broken banner. The summary
@@ -151,19 +146,11 @@ export function useAgentHandoff(
       },
     });
     if (!result.copied) {
-      posthog.capture("first_run_agent_handoff_failed", {
-        agent: target.id,
-        stage: "clipboard",
-      });
     }
 
     if (result.failedStage) {
       // When the clipboard succeeded this degrades to copy-only. When both
       // paths fail, the in-app summary remains the recovery action.
-      posthog.capture("first_run_agent_handoff_failed", {
-        agent: target.id,
-        stage: result.failedStage,
-      });
     }
 
     if (result.prefilled) {
@@ -180,14 +167,6 @@ export function useAgentHandoff(
     // The loop closes outside this app: screenpipe-mcp reports a privacy-safe
     // `client` on every tool call, so a call arriving from this agent shortly
     // after is the completion signal for this event.
-    posthog.capture("first_run_agent_handoff_clicked", {
-      agent: target.id,
-      opened: result.launched,
-      prefilled: result.prefilled,
-      replayed: result.replayed,
-      copy_only: !result.prefilled,
-      clipboard_copied: result.copied,
-    });
   }, []);
 
   return {

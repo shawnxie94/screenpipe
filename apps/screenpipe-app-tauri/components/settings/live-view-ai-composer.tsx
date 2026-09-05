@@ -16,11 +16,6 @@ import { AIPresetsSelector } from "@/components/rewind/ai-presets-selector";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useSettings } from "@/lib/hooks/use-settings";
-import {
-  hostedAiAllowanceForModel,
-  useUsageStatus,
-} from "@/lib/hooks/use-usage-status";
-import { openBusinessUpgradeSurface } from "@/lib/upgrade-flow";
 import type { AIPreset } from "@/lib/utils/tauri";
 import type { LiveViewGenerationScope } from "@/lib/live-views/generate-live-view-with-pi";
 
@@ -110,7 +105,6 @@ export function LiveViewAiComposer({
   onGenerate,
 }: LiveViewAiComposerProps) {
   const { settings } = useSettings();
-  const usage = useUsageStatus();
   const presets = useMemo(
     () => (settings.aiPresets ?? []) as AIPreset[],
     [settings.aiPresets],
@@ -121,37 +115,13 @@ export function LiveViewAiComposer({
   const selectedPreset = presets.find(
     (preset) => preset.id === selectedPresetId,
   );
-  const cloudflareAllowance = hostedAiAllowanceForModel(
-    usage,
-    selectedPreset?.model,
-  );
-  const hostedUsageExhausted = Boolean(
-    selectedPreset?.provider === "screenpipe-cloud" &&
-    usage &&
-    (usage.hosted_ai?.allowance_managed_by === "cloudflare"
-      ? cloudflareAllowance?.remaining_percent === 0
-      : usage.remaining <= 0),
-  );
-  const canUpgrade = Boolean(
-    hostedUsageExhausted &&
-    usage?.upgrade_eligible === true &&
-    usage.upsell_banner !== false &&
-    usage.tier !== "subscribed" &&
-    usage.tier !== "business_max" &&
-    usage.tier !== "business_ultra",
-  );
-  const canSubmit = Boolean(
-    prompt.trim() && selectedPreset && !busy && !hostedUsageExhausted,
-  );
+  const canSubmit = Boolean(prompt.trim() && selectedPreset && !busy);
   const compactExpanded =
-    compact &&
-    !hostedUsageExhausted &&
-    (compactFocused || busy || Boolean(feedback));
+    compact && (compactFocused || busy || Boolean(feedback));
   // Keep the model control independent from the textarea's focus disclosure.
   // Radix renders its menu in a portal, so hiding this row on blur can make the
   // trigger disappear while the user is moving focus into the menu.
-  const compactOptionsVisible =
-    compact && !hostedUsageExhausted && !busy && !feedback;
+  const compactOptionsVisible = compact && !busy && !feedback;
   const intent = inferLiveViewGenerationIntent(
     prompt,
     Boolean(currentViewTitle),
@@ -178,7 +148,7 @@ export function LiveViewAiComposer({
     <div
       data-testid="live-view-ai-composer"
       onFocusCapture={() => {
-        if (compact && !hostedUsageExhausted) setCompactFocused(true);
+        if (compact) setCompactFocused(true);
       }}
       onBlurCapture={(event) => {
         if (
@@ -207,7 +177,7 @@ export function LiveViewAiComposer({
           data-testid="live-view-ai-prompt"
           autoFocus={autoFocus}
           value={prompt}
-          disabled={busy || hostedUsageExhausted}
+          disabled={busy}
           rows={compactExpanded ? 2 : compact ? 1 : 3}
           maxLength={1_500}
           className={
@@ -218,11 +188,9 @@ export function LiveViewAiComposer({
               : "min-h-16 resize-none rounded-none border-0 px-4 py-3 text-sm shadow-none focus-visible:ring-0"
           }
           placeholder={
-            hostedUsageExhausted
-              ? "AI limit reached"
-              : compact
-                ? "让 AI 更改此实时视图..."
-                : "例如：展示我的时间分配方式以及本周的变化"
+            compact
+              ? "让 AI 更改此实时视图..."
+              : "例如：展示我的时间分配方式以及本周的变化"
           }
           onChange={(event) => {
             setPrompt(event.target.value);
@@ -235,38 +203,25 @@ export function LiveViewAiComposer({
             }
           }}
         />
-        {compact &&
-          (canUpgrade ? (
-            <Button
-              data-testid="live-view-ai-upgrade"
-              type="button"
-              size="sm"
-              className="h-10 shrink-0 rounded-none px-3 text-xs"
-              onClick={() =>
-                void openBusinessUpgradeSurface("live-view-ai-composer")
-              }
-            >
-              upgrade
-            </Button>
-          ) : (
-            <Button
-              data-testid="live-view-ai-generate"
-              type="button"
-              size="icon"
-              className="h-10 w-10 shrink-0 rounded-none"
-              aria-label={actionLabel}
-              title={actionLabel}
-              disabled={busy ? !onCancel : !canSubmit}
-              onClick={busy ? onCancel : () => void submit()}
-            >
-              {busy ? (
-                <X className="h-3.5 w-3.5" />
-              ) : (
-                <ArrowUp className="h-3.5 w-3.5" />
-              )}
-              <span className="sr-only">{actionLabel}</span>
-            </Button>
-          ))}
+        {compact && (
+          <Button
+            data-testid="live-view-ai-generate"
+            type="button"
+            size="icon"
+            className="h-10 w-10 shrink-0 rounded-none"
+            aria-label={actionLabel}
+            title={actionLabel}
+            disabled={busy ? !onCancel : !canSubmit}
+            onClick={busy ? onCancel : () => void submit()}
+          >
+            {busy ? (
+              <X className="h-3.5 w-3.5" />
+            ) : (
+              <ArrowUp className="h-3.5 w-3.5" />
+            )}
+            <span className="sr-only">{actionLabel}</span>
+          </Button>
+        )}
       </div>
       {compact ? (
         <div
@@ -321,40 +276,26 @@ export function LiveViewAiComposer({
               </span>
             )}
           </div>
-          {canUpgrade ? (
-            <Button
-              data-testid="live-view-ai-upgrade"
-              type="button"
-              size="sm"
-              className="h-8 rounded-none"
-              onClick={() =>
-                void openBusinessUpgradeSurface("live-view-ai-composer")
-              }
-            >
-              upgrade
-            </Button>
-          ) : (
-            <Button
-              data-testid="live-view-ai-generate"
-              type="button"
-              size="sm"
-              className="h-8 rounded-none"
-              disabled={busy ? !onCancel : !canSubmit}
-              onClick={busy ? onCancel : () => void submit()}
-            >
-              {busy ? (
-                <>
-                  <X className="mr-1.5 h-3.5 w-3.5" />
-                  <span>停止</span>
-                </>
-              ) : (
-                <>
-                  <span className="mr-1.5">更新实时视图</span>
-                  <ArrowUp className="h-3.5 w-3.5" />
-                </>
-              )}
-            </Button>
-          )}
+          <Button
+            data-testid="live-view-ai-generate"
+            type="button"
+            size="sm"
+            className="h-8 rounded-none"
+            disabled={busy ? !onCancel : !canSubmit}
+            onClick={busy ? onCancel : () => void submit()}
+          >
+            {busy ? (
+              <>
+                <X className="mr-1.5 h-3.5 w-3.5" />
+                <span>停止</span>
+              </>
+            ) : (
+              <>
+                <span className="mr-1.5">更新实时视图</span>
+                <ArrowUp className="h-3.5 w-3.5" />
+              </>
+            )}
+          </Button>
         </div>
       )}
       {feedback && (
@@ -369,7 +310,7 @@ export function LiveViewAiComposer({
             <button
               key={suggestion}
               type="button"
-              disabled={busy || hostedUsageExhausted}
+              disabled={busy}
               className="border border-border px-2 py-1 text-[11px] text-muted-foreground hover:border-foreground hover:text-foreground disabled:opacity-50"
               onClick={() => setPrompt(suggestion)}
             >

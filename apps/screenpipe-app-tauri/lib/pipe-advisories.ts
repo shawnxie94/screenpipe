@@ -12,11 +12,6 @@ export interface PipeAdvisoryRow {
   is_running?: boolean;
 }
 
-interface BuildPipeAdvisoriesOptions {
-  subscribed: boolean;
-  startUpgrade: () => void | Promise<void>;
-}
-
 type PendingAdvisory = Omit<Advisory, "createdAt">;
 
 /**
@@ -26,7 +21,6 @@ type PendingAdvisory = Omit<Advisory, "createdAt">;
  */
 export function buildPipeAdvisories(
   rows: PipeAdvisoryRow[],
-  { subscribed, startUpgrade }: BuildPipeAdvisoriesOptions,
 ): PendingAdvisory[] {
   const failures = rows.flatMap((row) => {
     const name = row.config?.name?.trim();
@@ -68,9 +62,6 @@ export function buildPipeAdvisories(
             ),
           },
         }),
-    // Preserve the existing recovery path: Business users should not be told
-    // to upgrade when they have already reached the highest hosted allowance.
-    ...(subscribed ? {} : { action: { label: "upgrade", run: startUpgrade } }),
   };
 
   return [advisory];

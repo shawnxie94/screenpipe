@@ -12,7 +12,6 @@
  * sites now import from here so the next new section cannot drift again.
  */
 export type SettingsSection =
-  | "account"
   | "audio"
   | "recording"
   | "ai"
@@ -24,16 +23,12 @@ export type SettingsSection =
   | "privacy"
   | "permissions"
   | "storage"
-  | "team"
   | "notifications"
-  | "referral"
-  | "usage"
   | "speakers";
 
 export const ALL_SETTINGS_SECTIONS: SettingsSection[] = [
   "display", "general", "ai", "ai-settings", "activities", "recording", "audio", "shortcuts", "notifications",
-  "usage", "privacy", "permissions", "storage", "speakers",
-  "team", "account", "referral",
+  "privacy", "permissions", "storage", "speakers",
 ];
 
 /** Retired section ids that still arrive from old deep links and notifications. */
@@ -41,6 +36,10 @@ const LEGACY_SECTION_ALIASES: Record<string, SettingsSection> = {
   "disk-usage": "storage",
   "cloud-archive": "storage",
   "cloud-sync": "storage",
+  "account": "general",
+  "team": "general",
+  "referral": "general",
+  "usage": "ai-settings",
 };
 
 /**

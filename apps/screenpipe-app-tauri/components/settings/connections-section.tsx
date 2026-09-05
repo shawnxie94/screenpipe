@@ -58,7 +58,6 @@ import { CustomMcpCard } from "./custom-mcp-card";
 import { SkillsCard } from "./skills-card";
 import { PiExtensionsCard } from "./pi-extensions-card";
 import { WhatsAppPanel } from "./whatsapp-panel";
-import posthog from "posthog-js";
 import { areExternalAgentSkillsInstalled } from "@/lib/external-agent-skills";
 // Shared MCP matrix (build/install/uninstall per tool) — same module the
 // onboarding connect-all uses, so connect and disconnect can never drift.
@@ -1566,7 +1565,6 @@ function useMemorySyncDestination(integrationId: string) {
 
       setConnected(true);
       notifyConnectionsUpdated();
-      posthog.capture("connection_saved", { integration: integrationId });
       await triggerSyncNow();
     } catch (e: any) {
       setError(e?.message || "connection failed");
@@ -2632,7 +2630,6 @@ export function ConnectionCredentialForm({
       setStatus("idle");
       setIsSaved(true);
       notifyConnectionsUpdated();
-      posthog.capture("connection_saved", { integration: integrationId });
       onSaved?.();
     } catch (e: any) {
       setError(e?.message || "unknown error");
@@ -2845,7 +2842,6 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
       setManualPath("");
       await loadConnected();
       notifyConnectionsUpdated();
-      posthog.capture("connection_saved", { integration: "obsidian" });
       onConnected?.();
     } catch (e: any) {
       setError(e?.message || "connection failed");
@@ -3811,12 +3807,13 @@ export function ConnectionsSection({
   const [importedSkillsCount, setImportedSkillsCount] = useState(0);
   // Composio-backed connections (managed auth through screenpipe.com; see
   // composio-card.tsx): gmail, zoom, google drive/docs/sheets.
-  const { settings: composioSettings } = useSettings();
   const [composioConnected, setComposioConnected] = useState<ComposioStatusMap>(
     () =>
       Object.fromEntries(COMPOSIO_TOOLKITS.map((t) => [t, false])) as ComposioStatusMap
   );
-  const composioToken = composioSettings.user?.token;
+  // Composio status was fetched with the screenpipe.com account token, which
+  // the local-only build no longer has — treat it as unavailable.
+  const composioToken: string | null = null;
   useEffect(() => {
     if (!composioToken) return;
     fetch(screenpipeWebUrl("/api/composio/status", "https://screenpipe.com"), {
@@ -3978,9 +3975,6 @@ export function ConnectionsSection({
           const connected = data.data
             .filter((i: any) => i.connected)
             .map((i: any) => i.id);
-          posthog.capture("connections_loaded", {
-            $set: { active_connections: connected, connection_count: connected.length },
-          });
           return;
         }
       } catch { /* server may not be running yet */ }

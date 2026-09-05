@@ -12,7 +12,6 @@ import React, {
 } from "react";
 import { emit } from "@tauri-apps/api/event";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import {
   AppWindow,
   AudioLines,
@@ -64,12 +63,7 @@ import {
 } from "@/lib/frame-thumbnails";
 import { presentQuotaError } from "@/lib/chat/quota-errors";
 import { showChatWithPrefill } from "@/lib/chat-utils";
-import {
-  isFreeOrUnattributedUser,
-  type AppUser,
-} from "@/lib/app-entitlement";
 import { useSettings } from "@/lib/hooks/use-settings";
-import { useEnterpriseBuildStatus } from "@/lib/hooks/use-is-enterprise-build";
 import { useTauriEvent } from "@/lib/hooks/use-tauri-event";
 import { useTimelineStore } from "@/lib/hooks/use-timeline-store";
 import { getAppServerBaseUrl } from "@/lib/notifications/app-server";
@@ -302,15 +296,10 @@ export function rangeForPreset(
 
 export function effectiveActivityRange(
   range: TimeRange | null,
-  user: AppUser | null | undefined,
   now: Date,
-  isEnterpriseBuild = false,
 ): TimeRange | null {
-  return effectiveActivityRangeForAccess(
-    range,
-    !isEnterpriseBuild && isFreeOrUnattributedUser(user),
-    now,
-  );
+  // Local-only build: activity history access is never restricted.
+  return effectiveActivityRangeForAccess(range, false, now);
 }
 
 function effectiveActivityRangeForAccess(
@@ -1419,7 +1408,6 @@ export function ActivityLedger({
     string | null
   >(null);
   const { settings, updateSettings } = useSettings();
-  const enterpriseBuild = useEnterpriseBuildStatus();
   useEffect(() => {
     if (!selectedReviewPresetId && settings.activitiesAiPresetId) {
       setSelectedReviewPresetId(settings.activitiesAiPresetId);
@@ -1429,10 +1417,7 @@ export function ActivityLedger({
     settings.activitiesEnabled === undefined && historyCoverage.length > 0;
   const activitiesEnabled =
     settings.activitiesEnabled ?? legacyActivitiesEnabled;
-  const activityUser = settings.user as AppUser | null | undefined;
-  const activityHistoryRestricted =
-    !enterpriseBuild.isEnterprise &&
-    isFreeOrUnattributedUser(activityUser);
+  const activityHistoryRestricted = false;
   useEffect(() => {
     if (
       activityHistoryRestricted &&
@@ -1484,17 +1469,13 @@ export function ActivityLedger({
     const now = new Date();
     return effectiveActivityRange(
       rangeForPreset(preset, now, customStart, customEnd),
-      settings.user as AppUser | null | undefined,
       now,
-      enterpriseBuild.isEnterprise,
     );
   }, [
     customEnd,
     customStart,
-    enterpriseBuild.isEnterprise,
     preset,
     recentEligibilityTick,
-    settings.user,
   ]);
   const recentActivityAvailable = Boolean(
     recentRange && canAddRecentActivity(recentRange, historyCoverage),
@@ -1524,7 +1505,6 @@ export function ActivityLedger({
   ]);
 
   useEffect(() => {
-    posthog.capture("activity_viewed", { range: initialPresetRef.current });
   }, []);
 
   useEffect(() => {
@@ -1709,10 +1689,6 @@ export function ActivityLedger({
       viewRange: TimeRange = range!,
     ) => {
       if (!range || historyLoadingRef.current) return;
-      posthog.capture("activity_generation_started", {
-        range: preset,
-        source,
-      });
       historyAbortRef.current?.abort();
       const controller = new AbortController();
       historyAbortRef.current = controller;
@@ -1730,12 +1706,6 @@ export function ActivityLedger({
         if (controller.signal.aborted) return;
         setHistory(historyDocumentFromNative(persisted.entries));
         setHistoryCoverage(persisted.coverage);
-        posthog.capture("activity_generation_completed", {
-          range: preset,
-          source,
-          outcome: "generated",
-          activity_count: persisted.entries.length,
-        });
       } catch (reason) {
         if (controller.signal.aborted) return;
         const rawError =
@@ -1763,19 +1733,7 @@ export function ActivityLedger({
                     : "无法更新历史记录，请重试。",
         );
         if (noDataStatus) {
-          posthog.capture("activity_generation_completed", {
-            range: preset,
-            source,
-            outcome: "no_activity",
-            activity_count: 0,
-            data_status: noDataStatus,
-          });
         } else {
-          posthog.capture("activity_generation_failed", {
-            range: preset,
-            source,
-            error_kind: qualityFailure ? "quality_validation" : quota.kind,
-          });
         }
       } finally {
         if (historyAbortRef.current === controller) {
@@ -1792,9 +1750,7 @@ export function ActivityLedger({
       const now = new Date();
       const clickedRange = effectiveActivityRange(
         rangeForPreset(preset, now, customStart, customEnd),
-        settings.user as AppUser | null | undefined,
         now,
-        enterpriseBuild.isEnterprise,
       );
       if (!clickedRange) return;
       void generateHistory(clickedRange, source, clickedRange);
@@ -1802,10 +1758,8 @@ export function ActivityLedger({
     [
       customEnd,
       customStart,
-      enterpriseBuild.isEnterprise,
       generateHistory,
       preset,
-      settings.user,
     ],
   );
 
@@ -1813,9 +1767,7 @@ export function ActivityLedger({
     const now = new Date();
     const clickedRange = effectiveActivityRange(
       rangeForPreset(preset, now, customStart, customEnd),
-      settings.user as AppUser | null | undefined,
       now,
-      enterpriseBuild.isEnterprise,
     );
     if (!clickedRange) return;
     try {
@@ -1830,10 +1782,8 @@ export function ActivityLedger({
   }, [
     customEnd,
     customStart,
-    enterpriseBuild.isEnterprise,
     generateHistory,
     preset,
-    settings.user,
     updateSettings,
   ]);
 
@@ -1841,9 +1791,7 @@ export function ActivityLedger({
     const now = new Date();
     const clickedRange = effectiveActivityRange(
       rangeForPreset(preset, now, customStart, customEnd),
-      settings.user as AppUser | null | undefined,
       now,
-      enterpriseBuild.isEnterprise,
     );
     const clickedHistoryRange = clickedRange
       ? nextActivityHistoryRange(clickedRange, historyCoverage, 0)
@@ -1864,14 +1812,12 @@ export function ActivityLedger({
     cacheReady,
     customEnd,
     customStart,
-    enterpriseBuild.isEnterprise,
     generateHistory,
     historyCoverage,
     historyLoading,
     invalidRange,
     loading,
     preset,
-    settings.user,
   ]);
 
   const recentActivityDisabled =
@@ -1882,7 +1828,6 @@ export function ActivityLedger({
     !recentActivityAvailable;
 
   const makeSkill = (entry: ActivityHistoryEntry) => {
-    posthog.capture("activity_skill_clicked");
     void showChatWithPrefill({
       context: compactEntryContext(entry),
       displayLabel: `从 “${entry.title}” 创建技能`,
@@ -1894,7 +1839,6 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
   };
 
   const askAboutActivity = (entry: ActivityHistoryEntry) => {
-    posthog.capture("activity_chat_clicked");
     void showChatWithPrefill({
       context: compactEntryContext(entry),
       displayLabel: `询问 “${entry.title}”`,
@@ -1906,13 +1850,6 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
   const openEvidence = useCallback(
     (evidence: ActivityArtifact) => {
       onOpenArtifact?.();
-      posthog.capture("activity_evidence_opened", {
-        evidence_kind: evidence.kind,
-        destination:
-          evidence.kind === "meeting" && evidence.meeting_id
-            ? "meetings"
-            : "timeline",
-      });
       if (
         evidence.kind === "meeting" &&
         evidence.meeting_id &&
@@ -1957,9 +1894,6 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
                 onValueChange={(value) => {
                   const nextPreset = value as RangePreset;
                   setPreset(nextPreset);
-                  posthog.capture("activity_range_changed", {
-                    range: nextPreset,
-                  });
                 }}
               >
                 <SelectTrigger

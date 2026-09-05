@@ -7,7 +7,6 @@ import { isSameDay, isAfter, startOfDay, endOfDay } from "date-fns";
 import { findNearestDateWithFrames } from "@/lib/actions/has-frames-date";
 import { useSearchHighlight } from "@/lib/hooks/use-search-highlight";
 import { useKeywordSearchStore } from "@/lib/hooks/use-keyword-search-store";
-import posthog from "posthog-js";
 import type { StreamTimeSeriesResponse } from "@/components/rewind/timeline";
 
 // How far the arrow keys walk past empty days. The underlying SQL uses
@@ -141,10 +140,6 @@ export function useDateNavigation(opts: {
 		setIsNavigating(true);
 
 		dateChangesRef.current += 1;
-		posthog.capture("timeline_date_changed", {
-			from_date: currentDate.toISOString(),
-			to_date: targetDate.toISOString(),
-		});
 
 		clearFramesForNavigation();
 		clearSentRequestForDate(targetDate);
@@ -285,10 +280,6 @@ export function useDateNavigation(opts: {
 
 			// Track date change
 			dateChangesRef.current += 1;
-			posthog.capture("timeline_date_changed", {
-				from_date: currentDate.toISOString(),
-				to_date: targetDate.toISOString(),
-			});
 
 			// CRITICAL: Clear old frames before navigating to prevent confusion
 			// This ensures we wait for the new date's frames to load

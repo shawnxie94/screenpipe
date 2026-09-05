@@ -88,8 +88,6 @@ import {
   type MemoryCardDisplay,
 } from "@/lib/utils/memory-display";
 import { useChatStore } from "@/lib/stores/chat-store";
-import posthog from "posthog-js";
-import { qualifiedValue } from "@/lib/analytics/qualified-value";
 import {
   consumeOnboardingBrainHandoff,
   ONBOARDING_BRAIN_HANDOFF_EVENT,
@@ -453,9 +451,6 @@ export function BrainSection() {
   } | null>(null);
 
   useEffect(() => {
-    posthog.capture("brain_viewed", {
-      tab: initialTypeFilterRef.current,
-    });
   }, []);
 
   const refreshTabCounts = useCallback(async () => {
@@ -520,15 +515,6 @@ export function BrainSection() {
       filePreviewPath: string,
       surface: ArtifactOpenSurface,
     ) => {
-      posthog.capture("brain_artifact_opened", {
-        artifact_kind: analyticsArtifactKind(artifact.kind),
-        open_mode: target.mode,
-        registered: artifact.registered,
-        surface,
-      });
-      qualifiedValue.artifactOpened(
-        artifact.source_type === "pipe" || artifact.source_type === "pipe-run",
-      );
       if (target.mode === "artifact-only") {
         void commands.openViewerWindow(filePreviewPath);
         return;
@@ -544,25 +530,12 @@ export function BrainSection() {
 
   const openArtifactViewer = useCallback(
     (artifact: UnifiedArtifact, surface: ArtifactOpenSurface) => {
-      posthog.capture("brain_artifact_opened", {
-        artifact_kind: analyticsArtifactKind(artifact.kind),
-        open_mode: "viewer",
-        registered: artifact.registered,
-        surface,
-      });
-      qualifiedValue.artifactOpened(
-        artifact.source_type === "pipe" || artifact.source_type === "pipe-run",
-      );
       void commands.openViewerWindow(artifact.path);
     },
     [],
   );
 
   const askAboutArtifact = useCallback(async (artifact: UnifiedArtifact) => {
-    posthog.capture("brain_artifact_ask_ai", {
-      artifact_kind: analyticsArtifactKind(artifact.kind),
-      registered: artifact.registered,
-    });
     await showChatWithPrefill({
       context: "",
       prompt: `help me understand the Screenpipe artifact at ${artifact.path}`,
@@ -582,26 +555,12 @@ export function BrainSection() {
     key: string,
     surface: ArtifactOpenSurface,
   ) => {
-    posthog.capture("brain_artifact_opened", {
-      artifact_kind: analyticsArtifactKind(artifact.kind),
-      open_mode: "detail",
-      registered: artifact.registered,
-      surface,
-    });
-    qualifiedValue.artifactOpened(
-      artifact.source_type === "pipe" || artifact.source_type === "pipe-run",
-    );
     void loadArtifactContent(key, artifact.path);
     setSelectedItem({ kind: "artifact", key });
   };
 
   const openMemory = useCallback(
     (memory: MemoryRecord, key: string) => {
-      posthog.capture("brain_memory_opened", {
-        ...memoryAnalyticsProperties(memory),
-        surface: "list",
-      });
-      qualifiedValue.memoryOpened();
       setSelectedItem({ kind: "memory", key });
     },
     [],
@@ -659,7 +618,6 @@ export function BrainSection() {
   const switchTypeFilter = useCallback(
     (nextTypeFilter: TypeFilter) => {
       if (nextTypeFilter === typeFilter) return;
-      posthog.capture("brain_tab_selected", { tab: nextTypeFilter });
       saveCurrentListPosition();
       brainViewState.typeFilter = nextTypeFilter;
       setTypeFilter(nextTypeFilter);
@@ -728,11 +686,6 @@ export function BrainSection() {
         );
         if (!artifact) {
           setArtifactRequestState({ request, status: "missing", attempt });
-          posthog.capture("brain_notification_artifact_opened", {
-            result: "missing",
-            target_type:
-              request.registeredId != null ? "registered_id" : "legacy_path",
-          });
           return;
         }
 
@@ -741,21 +694,9 @@ export function BrainSection() {
         void loadArtifactContent(key, artifact.path);
         setSelectedItem({ kind: "artifact", key });
         setArtifactRequestState({ request, status: "resolved", attempt });
-        posthog.capture("brain_notification_artifact_opened", {
-          result: "resolved",
-          target_type:
-            request.registeredId != null ? "registered_id" : "legacy_path",
-          artifact_kind: analyticsArtifactKind(artifact.kind),
-          registered: artifact.registered,
-        });
       } catch {
         if (sequence !== artifactRequestSequenceRef.current) return;
         setArtifactRequestState({ request, status: "error", attempt });
-        posthog.capture("brain_notification_artifact_opened", {
-          result: "error",
-          target_type:
-            request.registeredId != null ? "registered_id" : "legacy_path",
-        });
       }
     },
     [loadArtifactContent, switchTypeFilter],
@@ -966,10 +907,6 @@ export function BrainSection() {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      posthog.capture("brain_memory_deleted", {
-        mode: "single",
-        count: 1,
-      });
       toast({ title: "memory deleted" });
       setMemories((prev) => prev.filter((m) => m.id !== id));
       setSelectedItem((prev) =>
@@ -1026,11 +963,6 @@ export function BrainSection() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      posthog.capture("brain_memory_updated", {
-        content_changed: contentChanged,
-        tags_changed: tagsChanged,
-        tag_count: editTags.length,
-      });
       setMemories((prev) =>
         prev.map((m) =>
           m.id === id
@@ -1098,9 +1030,6 @@ export function BrainSection() {
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      posthog.capture("brain_memory_created", {
-        tag_count: newTags.length,
-      });
       toast({ title: "memory created" });
       closeAddMemoryDialog();
       fetchPage(0, false);
@@ -1460,11 +1389,6 @@ export function BrainSection() {
     async (a: UnifiedArtifact, mode: DeleteMode = "single") => {
       if (!a.registered || a.id == null) return;
       await deleteRegistered(a.id);
-      posthog.capture("brain_artifact_deleted", {
-        artifact_kind: analyticsArtifactKind(a.kind),
-        mode,
-        count: 1,
-      });
       const key = artifactItemKey(a);
       setSelectedItem((prev) =>
         prev?.kind === "artifact" && prev.key === key ? null : prev,
@@ -1521,10 +1445,6 @@ export function BrainSection() {
       });
       setTotal((prev) => prev - memIds.length);
       if (memIds.length > 0) {
-        posthog.capture("brain_memory_deleted", {
-          mode: "batch",
-          count: memIds.length,
-        });
       }
 
       // delete output-type artifacts (registered ones only — fs artifacts

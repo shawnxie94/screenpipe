@@ -30,7 +30,6 @@ import { writeTextFile, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { downloadDir, join } from "@tauri-apps/api/path";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { toast } from "@/components/ui/use-toast";
-import posthog from "posthog-js";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { connectionResponseState } from "@/lib/utils/connection-credentials";
 
@@ -559,10 +558,8 @@ function RemoteSyncSection({
       const res = await commands.remoteSyncTest(toRustConfig(config));
       if (res.status === "error") throw new Error(res.error);
       setTestResult({ ok: true });
-      posthog.capture(`${eventPrefix}_ssh_test`, { success: true });
     } catch (e) {
       setTestResult({ ok: false, error: String(e) });
-      posthog.capture(`${eventPrefix}_ssh_test`, { success: false });
     }
     setIsTesting(false);
   };
@@ -586,11 +583,9 @@ function RemoteSyncSection({
       } else {
         setSyncError(result.error || "sync failed");
       }
-      posthog.capture(`${eventPrefix}_sync_manual`, { success: result.ok });
     } catch (e) {
       if (syncCancelledRef.current) return;
       setSyncError(String(e));
-      posthog.capture(`${eventPrefix}_sync_manual`, { success: false });
     }
     setIsSyncing(false);
   };
@@ -608,7 +603,6 @@ function RemoteSyncSection({
           const dataDir = await getDataDir();
           const res = await commands.remoteSyncStartScheduler(toRustConfig(config), dataDir);
           if (res.status === "error") throw new Error(res.error);
-          posthog.capture(`${eventPrefix}_sync_enabled`, { interval: config.intervalMinutes });
           if (statusPollRef.current) clearInterval(statusPollRef.current);
           statusPollRef.current = setInterval(pollSchedulerStatus, 30_000);
         } catch (e) {
@@ -833,7 +827,6 @@ function RemoteSyncSection({
               checked={config.enabled}
               onCheckedChange={(val) => {
                 updateConfig({ enabled: val });
-                if (!val) posthog.capture(`${eventPrefix}_sync_disabled`);
               }}
               className="scale-75"
             />
@@ -985,7 +978,6 @@ function SecondBrainCallout({ name }: { name: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast({ title: "copied second-brain prompt", description: `粘贴到 ${name} 中` });
-      posthog.capture("second_brain_prompt_copied", { agent: name });
     } catch (e) {
       toast({ title: "复制失败", description: String(e), variant: "destructive" });
     }
@@ -1000,7 +992,6 @@ function SecondBrainCallout({ name }: { name: string }) {
       const dir = await downloadDir();
       setSavedPath(await join(dir, "screenpipe-second-brain.md"));
       toast({ title: "已保存到下载文件夹", description: "screenpipe-second-brain.md" });
-      posthog.capture("second_brain_prompt_saved", { agent: name });
     } catch (e) {
       toast({ title: "保存失败", description: String(e), variant: "destructive" });
     } finally {

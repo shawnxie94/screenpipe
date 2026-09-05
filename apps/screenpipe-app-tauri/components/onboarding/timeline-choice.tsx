@@ -7,7 +7,6 @@
 import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Camera, Check, EyeOff, HardDrive, Loader } from "lucide-react";
-import posthog from "posthog-js";
 import { useSettings } from "@/lib/hooks/use-settings";
 
 interface TimelineChoiceProps {
@@ -174,13 +173,6 @@ export default function TimelineChoice({
     inFlight.current = true;
     setPending(enabled);
     setError(null);
-    posthog.capture("onboarding_timeline_choice", {
-      timeline_enabled: enabled,
-      screenshots_enabled: enabled,
-      device_tier: settings.deviceTier ?? "unknown",
-      followed_recommendation: enabled === recommendEnabled,
-      time_spent_ms: Date.now() - mountTimeRef.current,
-    });
 
     // Fail closed: advancing after a failed write would start the engine with
     // capture still on, i.e. the opposite of what the user just asked for —
@@ -196,9 +188,6 @@ export default function TimelineChoice({
       });
     } catch (e) {
       console.error("failed to save timeline choice:", e);
-      posthog.capture("onboarding_timeline_choice_failed", {
-        stage: "persist",
-      });
       setError("couldn't save that choice. check disk space and try again.");
       inFlight.current = false;
       setPending(null);

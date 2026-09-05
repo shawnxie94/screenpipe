@@ -5,7 +5,6 @@
 
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import posthog from "posthog-js";
 
 // Track shortcut usage with PostHog - invisible component
 export function ShortcutTracker() {
@@ -21,10 +20,6 @@ export function ShortcutTracker() {
 
     trayEvents.forEach(({ event, view }) => {
       listen(event, () => {
-        posthog.capture("view_opened", {
-          view,
-          source: "tray_menu",
-        });
       }).then((unlisten) => {
         unsubscribers.push(unlisten);
       });

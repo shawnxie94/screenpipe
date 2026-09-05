@@ -44,8 +44,6 @@ import { NearViewport } from "./near-viewport";
 import { localFetch, getApiBaseUrl, appendAuthToken } from "@/lib/api";
 import { searchInputBehaviorProps } from "@/lib/search-input-behavior";
 import { usePlatform } from "@/lib/hooks/use-platform";
-import posthog from "posthog-js";
-import { qualifiedValue } from "@/lib/analytics/qualified-value";
 
 interface SpeakerResult {
   id: number;
@@ -1194,11 +1192,6 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       settledSearchKeysRef.current.clear();
       searchAnalyticsIdsRef.current.clear();
       searchSessionIdRef.current = createAnalyticsId();
-      posthog.capture("search_ui_opened", {
-        surface: analyticsSurface,
-        search_session_id: searchSessionIdRef.current,
-        has_prefilled_query: initialQuery.trim().length > 0,
-      });
       setQuery(initialQuery);
       resetSearch();
       setSearchEpoch(e => e + 1);
@@ -1622,29 +1615,6 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       selectionMethod: SearchSelectionMethod,
       destination: "timeline" | "chat" | "drilldown",
     ) => {
-      posthog.capture("search_ui_result_selected", {
-        surface: analyticsSurface,
-        search_id: getSearchAnalyticsId(
-          buildSearchAnalyticsKey(
-            searchEpoch,
-            query.trim(),
-            contentFilter,
-            appFilter,
-            domainFilter,
-            timeFilter,
-          ),
-        ),
-        search_session_id: searchSessionIdRef.current,
-        result_type: resultType,
-        selection_method: selectionMethod,
-        destination,
-        query_length: query.trim().length,
-        content_filter: contentFilter,
-        has_app_filter: Boolean(appFilter),
-        has_domain_filter: Boolean(domainFilter),
-        has_time_filter: Boolean(timeFilter),
-      });
-      qualifiedValue.searchResultOpened();
     },
     [
       analyticsSurface,
@@ -1702,25 +1672,6 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     const result = filteredResults[active.index];
     if (!result) return;
 
-    posthog.capture("search_ui_ask_ai", {
-      surface: analyticsSurface,
-      search_id: getSearchAnalyticsId(
-        buildSearchAnalyticsKey(
-          searchEpoch,
-          query.trim(),
-          contentFilter,
-          appFilter,
-          domainFilter,
-          timeFilter,
-        ),
-      ),
-      search_session_id: searchSessionIdRef.current,
-      query_length: query.trim().length,
-      result_type: "screen",
-      has_app_filter: Boolean(appFilter),
-      has_domain_filter: Boolean(domainFilter),
-      has_time_filter: Boolean(timeFilter),
-    });
 
     const context = `Context from search result:\n${result.app_name} - ${result.window_name}\nTime: ${format(new Date(result.timestamp), "PPpp")}\n\nText:\n${result.text || ""}`;
 
@@ -2244,9 +2195,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       has_time_filter: Boolean(timeFilter),
     };
 
-    posthog.capture("search_ui_query_settled", properties);
     if (totalResultCount === 0) {
-      posthog.capture("search_ui_no_results", properties);
     }
   }, [
     analyticsSurface,

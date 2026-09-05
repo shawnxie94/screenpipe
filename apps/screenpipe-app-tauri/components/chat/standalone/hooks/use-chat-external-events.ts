@@ -5,7 +5,6 @@
 import { useEffect, useState } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import posthog from "posthog-js";
 
 export function useChatExternalEvents() {
   const [prefillContext, setPrefillContext] = useState<string | null>(null);
@@ -42,10 +41,6 @@ export function useChatExternalEvents() {
         if (!ctx?.started_at || Date.now() - ctx.started_at > 30 * 60 * 1000) {
           sessionStorage.removeItem("pipeGenerationContext");
           if (ctx?.generation_id) {
-            posthog.capture("pipe_generation_abandoned", {
-              generation_id: ctx.generation_id,
-              age_ms: Date.now() - (ctx.started_at ?? Date.now()),
-            });
           }
         }
       }

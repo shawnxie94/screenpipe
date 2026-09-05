@@ -6,7 +6,6 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import posthog from "posthog-js";
 import {
   AudioLines,
   BrainCircuit,
@@ -566,10 +565,6 @@ export function FirstRunNextSteps({
     await registerComposioMcpServer(userToken);
     await foregroundAfterOAuth();
     notifyConnectionsUpdated();
-    posthog.capture("connection_saved", {
-      integration: "composio-gmail",
-      source: "first_run_next_steps",
-    });
   }, [userToken]);
 
   const connectGoogleCalendar = useCallback(async () => {
@@ -579,9 +574,6 @@ export function FirstRunNextSteps({
       throw new Error("google calendar connection was not completed.");
     }
     notifyConnectionsUpdated();
-    posthog.capture("google_calendar_connected", {
-      source: "first_run_next_steps",
-    });
   }, []);
 
   const setupEverything = useCallback(async () => {
@@ -589,14 +581,6 @@ export function FirstRunNextSteps({
     setupBusyRef.current = true;
     setSetupBusyLabel("getting ready");
     setActionError(null);
-    posthog.capture("first_run_next_step_selected", {
-      step: "recommended-setup-bundle",
-      daily_email_state: snapshot.dailyEmailState,
-      digital_clone_state: snapshot.digitalCloneState,
-      speaker_reconciliation_state: snapshot.speakerReconciliationState,
-      gmail_connected: snapshot.gmailConnected,
-      google_calendar_connected: snapshot.googleCalendarConnected,
-    });
 
     try {
       if (snapshot.dailyEmailState === "missing") {
@@ -638,14 +622,10 @@ export function FirstRunNextSteps({
 
       setSetupBusyLabel("almost done");
       await refresh();
-      posthog.capture("first_run_setup_bundle_completed");
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         await refresh();
         setActionError("Screenpipe couldn't finish setup. try again.");
-        posthog.capture("first_run_setup_bundle_failed", {
-          message: error instanceof Error ? error.message : "unknown error",
-        });
       }
     } finally {
       setupBusyRef.current = false;

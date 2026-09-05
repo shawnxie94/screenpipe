@@ -14,11 +14,9 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, ExternalLink, Loader2, LogOut, Pencil, Plus, X } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useSettings } from "@/lib/hooks/use-settings";
 import { useInterval } from "@/lib/hooks/use-interval";
 import { notifyConnectionsUpdated } from "@/lib/connections-events";
 import { foregroundAfterOAuth } from "@/lib/connections/foreground-oauth";
-import posthog from "posthog-js";
 import {
   COMPOSIO_API,
   COMPOSIO_TOOLKITS,
@@ -102,8 +100,9 @@ export function ComposioCard({
   initialConnected?: boolean;
   onChanged?: (status: ComposioStatusMap) => void;
 }) {
-  const { settings } = useSettings();
-  const token = settings.user?.token;
+  // Composio auth was routed through the screenpipe.com account, which the
+  // local-only build no longer has — treat the cloud token as unavailable.
+  const token: string | null = null;
   const { label, provider } = TOOLKIT_META[toolkit];
 
   const [loaded, setLoaded] = useState(initialConnected !== undefined);
@@ -183,7 +182,6 @@ export function ComposioCard({
         }
         await foregroundAfterOAuth();
         notifyConnectionsUpdated();
-        posthog.capture("connection_saved", { integration: `composio-${toolkit}` });
       }
     })();
   }, waiting ? POLL_MS : null);

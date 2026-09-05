@@ -5,7 +5,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef } from "react";
-import posthog from "posthog-js";
 import {
   FocusedSpotlight,
   type FocusedSpotlightDismissReason,
@@ -40,22 +39,11 @@ export function LiveViewOnboardingGuide({
     if (!visibleStep || visibleStep === "done") return;
     if (viewedStepRef.current === visibleStep) return;
     viewedStepRef.current = visibleStep;
-    posthog.capture("onboarding_live_view_guide_step_viewed", {
-      step: visibleStep,
-      goal_category: activation.goalCategory,
-      setup_status: activation.setupStatus,
-      has_result: hasResult,
-    });
   }, [activation.goalCategory, activation.setupStatus, hasResult, visibleStep]);
 
   const moveTo = useCallback(
     (step: OnboardingLiveViewActivation["guideStep"]) => {
       setOnboardingLiveViewGuideStep(activation.viewId, step);
-      posthog.capture("onboarding_live_view_guide_advanced", {
-        from: activation.guideStep,
-        to: step,
-        goal_category: activation.goalCategory,
-      });
       onActivationChange();
     },
     [
@@ -69,11 +57,6 @@ export function LiveViewOnboardingGuide({
   const dismiss = useCallback(
     (reason: FocusedSpotlightDismissReason) => {
       setOnboardingLiveViewGuideStep(activation.viewId, "done");
-      posthog.capture("onboarding_live_view_guide_dismissed", {
-        step: activation.guideStep,
-        reason,
-        goal_category: activation.goalCategory,
-      });
       onActivationChange();
     },
     [

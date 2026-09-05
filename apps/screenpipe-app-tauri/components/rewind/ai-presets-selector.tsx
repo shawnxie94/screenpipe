@@ -13,9 +13,6 @@ import {
   validateAiPresetConnectionFields,
 } from "@/lib/utils/validation";
 import { useSettings } from "@/lib/hooks/use-settings";
-import { useModelUpsellGating } from "@/lib/hooks/use-model-upsell-gating";
-import { usePiModels } from "@/lib/hooks/use-pi-models";
-import { modelAllowanceNotice } from "@/lib/chat/model-allowance-cost";
 import {
   useMemo,
   useState,
@@ -96,12 +93,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AIPreset, commands } from "@/lib/utils/tauri";
-import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
-import {
-  DEFAULT_ENTERPRISE_AI_PRESET_POLICY,
-  filterPresetsForEnterprisePolicy,
-  isEnterpriseManagedPreset,
-} from "@/lib/enterprise-ai-preset-policy";
 import {
   applyResolvedModelLimits,
   ollamaContextWindowFromShow,
@@ -241,13 +232,6 @@ export function AIProviderConfig({
   );
   const [idError, setIdError] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
-  const { isManagedDeployment, policy: enterprisePolicy } = useManagedPolicy();
-  const aiPresetPolicy = enterprisePolicy.aiPresetPolicy ?? DEFAULT_ENTERPRISE_AI_PRESET_POLICY;
-  const showScreenpipeCloud =
-    !isManagedDeployment || aiPresetPolicy.allow_screenpipe_cloud;
-  const { piModels, isLoading: loadingPiModels, upgradeEligible } = usePiModels();
-  const showUpsell = useModelUpsellGating(upgradeEligible);
-
   const [formData, setFormData] = useState<AIPreset>({
     provider: defaultPreset?.provider || "openai",
     apiKey: defaultPreset?.apiKey || "",
@@ -326,7 +310,7 @@ export function AIProviderConfig({
   // provider whose picker is no longer rendered.
   useEffect(() => {
     if (!acpEnabled && selectedProvider === "acp") {
-      setSelectedProvider("screenpipe-cloud");
+      setSelectedProvider("openai");
     }
   }, [acpEnabled, selectedProvider]);
 
@@ -584,10 +568,8 @@ export function AIProviderConfig({
   }, [selectedProvider, formData.model, formData.url]);
 
   const selectedModelMetadata = useMemo(
-    () => selectedProvider === "screenpipe-cloud"
-      ? piModels.find((candidate) => candidate.id === formData.model)
-      : openaiModels.find((candidate) => candidate.id === formData.model),
-    [selectedProvider, piModels, openaiModels, formData.model],
+    () => openaiModels.find((candidate) => candidate.id === formData.model),
+    [openaiModels, formData.model],
   );
   const resolvedModelLimits = useMemo(
     () => resolveModelLimits(formData.provider, formData.model, selectedModelMetadata),
@@ -670,27 +652,6 @@ export function AIProviderConfig({
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-3 gap-2">
-          {showScreenpipeCloud && (
-            <Button
-              type="button"
-              disabled={!settings?.user?.token}
-              variant={selectedProvider === "screenpipe-cloud" ? "default" : "outline"}
-              className="flex h-8 items-center justify-center gap-1.5 text-xs px-3"
-              onClick={() => {
-                setSelectedProvider("screenpipe-cloud");
-                setFormData({
-                  ...formData,
-                  provider: "screenpipe-cloud",
-                  url: "",
-                  model: "auto",
-                });
-              }}
-            >
-              <Icons.terminal className="h-3.5 w-3.5" />
-              <span>screenpipe</span>
-            </Button>
-          )}
-
           {acpEnabled && primaryAcpAdapters.map((adapter) => {
             const isSelected =
               selectedProvider === "acp" &&
@@ -965,52 +926,6 @@ export function AIProviderConfig({
           </div>
         )}
 
-        {selectedProvider === "screenpipe-cloud" && (
-          <div className="space-y-1">
-            <Label htmlFor="model" className="text-xs">模型</Label>
-            <Select
-              value={formData.model}
-              onValueChange={async (value) => {
-                setFormData({ ...formData, model: value });
-              }}
-            >
-              <SelectTrigger className="h-8 text-sm">
-                <SelectValue placeholder="选择模型" />
-              </SelectTrigger>
-              <SelectContent>
-                {piModels.map((m) => {
-                  const costLabel = m.cost_tier === 'low' ? '$' : m.cost_tier === 'medium' ? '$$' : m.cost_tier === 'high' ? '$$$' : m.cost_tier === 'very_high' ? '$$$$' : '';
-                  const locked = !!m.locked && showUpsell;
-                  return (
-                  <SelectItem key={m.id} value={m.id} disabled={locked} className={locked ? "opacity-60" : undefined}>
-                    <span className="flex items-center gap-1.5">
-                      {m.health?.status === 'down' && <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" title="过载" />}
-                      {m.health?.status === 'degraded' && <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500" title="降级" />}
-                      {m.name}{m.free ? " (free)" : ""}
-                      {locked && <span className="text-[9px] font-medium text-muted-foreground border rounded px-1">business</span>}
-                      {!locked && costLabel && <span className="text-[9px] font-medium text-muted-foreground">{costLabel}</span>}
-                      {m.recommended_for?.includes('pipes') && <span className="text-[9px] text-muted-foreground bg-muted rounded px-1">任务</span>}
-                      {m.health?.status === 'down' && <span className="text-[9px] text-red-400 ml-1">overloaded</span>}
-                    </span>
-                  </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-            {(() => {
-              const selectedModel = piModels.find((m) => m.id === formData.model);
-              if (selectedModel?.warning) {
-                return (
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    ! {selectedModel.warning}
-                  </p>
-                );
-              }
-              return null;
-            })()}
-          </div>
-        )}
-
         {selectedProvider && requiresAiPresetConnectionTest(selectedProvider) && (
           <div className="space-y-2 border p-2.5">
             <div className="flex items-center justify-between gap-2">
@@ -1222,8 +1137,7 @@ export function AIProviderConfig({
                 known model limits are configured automatically
               </p>
             )}
-            {selectedProvider !== "screenpipe-cloud" &&
-              selectedProvider !== "acp" &&
+            {selectedProvider !== "acp" &&
               !resolvedModelLimits?.contextWindow && (
               <div className="space-y-1">
                 <Label htmlFor="maxContextTokens" className="text-xs">模型上下文令牌</Label>
@@ -1245,8 +1159,7 @@ export function AIProviderConfig({
                 </p>
               </div>
             )}
-            {selectedProvider !== "screenpipe-cloud" &&
-              selectedProvider !== "acp" &&
+            {selectedProvider !== "acp" &&
               !resolvedModelLimits?.maxOutputTokens && (
               <div className="space-y-1">
                 <Label htmlFor="maxTokens" className="text-xs">最大输出令牌</Label>
@@ -1371,11 +1284,9 @@ export const AIPresetDialog = ({
       acpAgent: providerData.provider === "acp" ? providerData.acpAgent : undefined,
     };
 
-    // Screenpipe Cloud gets its output budget from the gateway catalog. Direct
-    // providers retain the resolved value or the user's unknown-model fallback.
-    if (providerData.provider !== "screenpipe-cloud") {
-      (newPreset as any).maxTokens = (providerData as any).maxTokens ?? 4096;
-    }
+    // Direct providers retain the resolved value or the user's
+    // unknown-model fallback.
+    (newPreset as any).maxTokens = (providerData as any).maxTokens ?? 4096;
 
     // Add apiKey for providers that require it
     if (
@@ -1397,9 +1308,7 @@ export const AIPresetDialog = ({
         model: preset.model,
         acpAgent: preset.acpAgent,
         maxContextChars: preset.maxContextChars,
-        ...(preset.provider !== "screenpipe-cloud"
-          ? { maxTokens: (preset as any).maxTokens ?? 4096 }
-          : {}),
+        maxTokens: (preset as any).maxTokens ?? 4096,
         prompt: preset.prompt,
         defaultPreset: preset.defaultPreset,
         apiKey: preset.apiKey || null,
@@ -1455,12 +1364,6 @@ export const AIPresetsSelector = ({
     AIPreset | undefined
   >();
   const isControlled = onControlledSelect !== undefined;
-  const { isManagedDeployment, policy: enterprisePolicy } = useManagedPolicy();
-  const aiPresetPolicy = enterprisePolicy.aiPresetPolicy ?? DEFAULT_ENTERPRISE_AI_PRESET_POLICY;
-  const canManageEmployeePresets = !isManagedDeployment || aiPresetPolicy.allow_employee_custom_presets;
-
-  const { piModels, upgradeEligible } = usePiModels();
-  const showUpsell = useModelUpsellGating(upgradeEligible);
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       setOpen(nextOpen);
@@ -1469,13 +1372,10 @@ export const AIPresetsSelector = ({
     [onOpenChange],
   );
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const aiPresets = useMemo(() => {
-    const presets = (settings?.aiPresets || []) as AIPreset[];
-    return isManagedDeployment
-      ? filterPresetsForEnterprisePolicy(presets, aiPresetPolicy)
-      : presets;
-  }, [settings?.aiPresets, isManagedDeployment, aiPresetPolicy]);
+  const aiPresets = useMemo(
+    () => (settings?.aiPresets || []) as AIPreset[],
+    [settings?.aiPresets],
+  );
 
   const selectedPreset = useMemo(() => {
     if (isControlled) {
@@ -1490,27 +1390,9 @@ export const AIPresetsSelector = ({
     return defaultPreset?.id || aiPresets[0]?.id || undefined;
   }, [aiPresets, isControlled, controlledPresetId]);
 
-  // Check if selected preset requires login
-  const selectedPresetRequiresLogin = useMemo(() => {
-    const preset = aiPresets.find((p) => p.id === selectedPreset);
-    return preset?.provider === "screenpipe-cloud" && !settings?.user?.token;
-  }, [aiPresets, selectedPreset, settings?.user?.token]);
-
   const selectedPresetData = useMemo(
     () => aiPresets.find((p) => p.id === selectedPreset),
     [aiPresets, selectedPreset]
-  );
-
-  // Hosted frontier models burn the monthly AI allowance several times faster
-  // than the efficient lane. Surface that next to the model name so the user
-  // learns it before sending, not from a limit error days later.
-  const selectedModelAllowanceNotice = useMemo(
-    () =>
-      modelAllowanceNotice(
-        selectedPresetData?.provider,
-        selectedPresetData?.model,
-      ),
-    [selectedPresetData?.provider, selectedPresetData?.model]
   );
 
   useEffect(() => {
@@ -1557,13 +1439,6 @@ export const AIPresetsSelector = ({
   }, [aiPresets, selectedPreset, updateSettings, shortcutKey, onPresetSaved, isControlled, onControlledSelect]);
 
   const handleSavePreset = (preset: Partial<AIPreset>) => {
-    if (!canManageEmployeePresets) {
-      toast.error("由你的组织管理", {
-        description: "你的管理员控制可用的 AI 预设",
-      });
-      return;
-    }
-
     if (!preset.id) {
       toast.error("请为此预设输入名称", {
         description: "名称必填",
@@ -1706,13 +1581,6 @@ export const AIPresetsSelector = ({
   };
 
   const handleDuplicatePreset = (preset: AIPreset) => {
-    if (!canManageEmployeePresets || isEnterpriseManagedPreset(preset)) {
-      toast.error("由你的组织管理", {
-        description: "你的管理员控制可用的 AI 预设",
-      });
-      return;
-    }
-
     const baseName = preset.id.replace(/ \d+$/, "");
     let counter = 2;
     let newName = `${baseName} ${counter}`;
@@ -1729,13 +1597,6 @@ export const AIPresetsSelector = ({
   };
 
   const handleEditPreset = (preset: AIPreset) => {
-    if (!canManageEmployeePresets || isEnterpriseManagedPreset(preset)) {
-      toast.error("由你的组织管理", {
-        description: "你的管理员控制可用的 AI 预设",
-      });
-      return;
-    }
-
     setSelectedPresetToEdit(preset);
     setDialogOpen(true);
   };
@@ -1743,12 +1604,6 @@ export const AIPresetsSelector = ({
   const handleSetDefaultPreset = (preset: AIPreset) => {
     if (!settings?.aiPresets) return;
     if (preset.defaultPreset) return;
-    if (isManagedDeployment && aiPresetPolicy.lock_default_preset) {
-      toast.error("默认预设已锁定", {
-        description: "你的管理员控制默认 AI 预设",
-      });
-      return;
-    }
 
     const updatedPresets = settings.aiPresets.map((p) => ({
       ...p,
@@ -1771,12 +1626,6 @@ export const AIPresetsSelector = ({
 
   const handleRemovePreset = (preset: AIPreset) => {
     if (!settings?.aiPresets) return;
-    if (!canManageEmployeePresets || isEnterpriseManagedPreset(preset)) {
-      toast.error("由你的组织管理", {
-        description: "你的管理员控制可用的 AI 预设",
-      });
-      return;
-    }
 
     if (settings.aiPresets.length <= 1) {
       toast.error("无法删除预设", {
@@ -1809,27 +1658,6 @@ export const AIPresetsSelector = ({
   return (
     <>
       <div className={cn("flex flex-col w-full gap-2", containerClassName)}>
-        {!isControlled && selectedPresetRequiresLogin && !showModelOnly && (
-          <div className="flex items-center gap-2 p-2 text-sm bg-muted border border-border rounded-lg">
-            <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-foreground flex-1">
-              Login required to use Screenpipe Cloud
-            </span>
-            {showLoginCta && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0 h-7 text-xs border-border hover:bg-muted"
-                onClick={async () => {
-                  await commands.showWindow({ Home: { page: "account" } });
-                }}
-              >
-                <LogIn className="h-3 w-3 mr-1" />
-                Login
-              </Button>
-            )}
-          </div>
-        )}
         <div className="flex w-full items-center gap-2">
         <Popover open={open} onOpenChange={handleOpenChange}>
           <TooltipProvider>
@@ -1849,7 +1677,6 @@ export const AIPresetsSelector = ({
                   className={cn(
                     "w-full justify-between hover:bg-accent hover:text-accent-foreground",
                     compact && "h-8 text-xs",
-                    selectedPresetRequiresLogin && "border-amber-500/50",
                     triggerClassName
                   )}
                 >
@@ -1859,9 +1686,6 @@ export const AIPresetsSelector = ({
                         "flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden",
                         providerIconOnly && "justify-center",
                       )}>
-                        {selectedPresetRequiresLogin && (
-                          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                        )}
                         {/* The model name tells people what is selected; the
                             real colored mark makes the provider scannable when
                             cycling presets. Decorative because the label is the
@@ -1905,38 +1729,10 @@ export const AIPresetsSelector = ({
                                 formatPresetName(selectedPreset)}
                           </span>
                         )}
-                        {!providerIconOnly && selectedModelAllowanceNotice && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span
-                                  data-testid="model-allowance-notice"
-                                  aria-label={selectedModelAllowanceNotice.description}
-                                  className={cn(
-                                    "shrink-0 rounded-sm px-1 py-px text-[10px] font-medium leading-none",
-                                    selectedModelAllowanceNotice.tier === "highest"
-                                      ? "bg-amber-500/15 text-amber-600 dark:text-amber-500"
-                                      : "bg-muted text-muted-foreground",
-                                  )}
-                                >
-                                  {selectedModelAllowanceNotice.tier === "highest"
-                                    ? "$$"
-                                    : "$"}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="max-w-[260px]">
-                                {selectedModelAllowanceNotice.description}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
                       </div>
                     ) : (
                       <div className="flex w-full items-center justify-between gap-2 overflow-hidden min-w-0">
                         <div className="flex items-center gap-2 min-w-0 flex-shrink overflow-hidden">
-                          {selectedPresetRequiresLogin && (
-                            <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-                          )}
                           <span className="font-medium truncate text-left">
                             {formatPresetName(selectedPresetData?.id || '')}
                           </span>
@@ -1964,10 +1760,6 @@ export const AIPresetsSelector = ({
               <TooltipContent>
                 {providerIconOnly ? (
                   <p>{selectedProviderName} · switch provider</p>
-                ) : selectedPresetRequiresLogin ? (
-                  <p className="text-muted-foreground">
-                    Login required to use this preset
-                  </p>
                 ) : (
                   <p className="flex items-center gap-2">
                     <span>按</span>
@@ -2012,7 +1804,7 @@ export const AIPresetsSelector = ({
                     </CommandItem>
                   </CommandGroup>
                 )}
-                {canManageEmployeePresets && recommendedPresets && recommendedPresets.length > 0 && (
+                {recommendedPresets && recommendedPresets.length > 0 && (
                   <CommandGroup heading="Recommended Presets">
                     {recommendedPresets.map((preset) => (
                       <CommandItem
@@ -2080,22 +1872,16 @@ export const AIPresetsSelector = ({
                 )}
                 <CommandGroup>
                   {aiPresets.map((preset) => {
-                    const isCloud = preset.provider === "screenpipe-cloud";
-                    const piModel = isCloud ? piModels.find(m => m.id === preset.model) : null;
-                    const isGated = showUpsell && piModel?.locked;
-
                     return (
                     <CommandItem
                       key={preset.id}
                       value={preset.id}
-                      disabled={isGated}
                       onSelect={() => {
                         // Use preset from closure — cmdk lowercases the value
                         // so string comparison against preset.id would fail
-                        if (isGated) return;
                         if (isControlled) {
                           onControlledSelect(preset);
-                        } else if (preset.id !== selectedPreset && !aiPresetPolicy.lock_default_preset) {
+                        } else if (preset.id !== selectedPreset) {
                           const updatedPresets = (settings.aiPresets || []).map((p) => ({
                             ...p,
                             defaultPreset: p.id === preset.id,
@@ -2148,11 +1934,6 @@ export const AIPresetsSelector = ({
                           <span className="font-medium truncate max-w-[120px]" title={preset.id}>
                             {formatPresetName(preset.id)}
                           </span>
-                          {isGated && (
-                            <span className="rounded bg-muted text-muted-foreground px-1.5 py-0.5 text-[10px] font-medium shrink-0 ml-1 border border-border/50">
-                              business plan only
-                            </span>
-                          )}
                           {preset.defaultPreset && (
                             <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium shrink-0">
                               default
@@ -2171,33 +1952,31 @@ export const AIPresetsSelector = ({
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            {canManageEmployeePresets && !isEnterpriseManagedPreset(preset) && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 shrink-0"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditPreset(preset);
-                                  }}
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 shrink-0"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDuplicatePreset(preset);
-                                  }}
-                                >
-                                  <Copy className="h-3.5 w-3.5" />
-                                </Button>
-                              </>
-                            )}
-                            {!preset.defaultPreset && !aiPresetPolicy.lock_default_preset && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditPreset(preset);
+                                }}
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDuplicatePreset(preset);
+                                }}
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                            {!preset.defaultPreset && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -2210,7 +1989,7 @@ export const AIPresetsSelector = ({
                                 <Star className="h-3.5 w-3.5" />
                               </Button>
                             )}
-                            {canManageEmployeePresets && !isEnterpriseManagedPreset(preset) && !isOnlyPreset && (
+                            {!isOnlyPreset && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -2231,20 +2010,18 @@ export const AIPresetsSelector = ({
                     );
                   })}
                 </CommandGroup>
-                {canManageEmployeePresets && (
-                  <CommandGroup>
-                    <CommandItem
-                      onSelect={() => {
-                        handleOpenChange(false);
-                        setSelectedPresetToEdit(undefined);
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      create new preset
-                    </CommandItem>
-                  </CommandGroup>
-                )}
+                <CommandGroup>
+                  <CommandItem
+                    onSelect={() => {
+                      handleOpenChange(false);
+                      setSelectedPresetToEdit(undefined);
+                      setDialogOpen(true);
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    create new preset
+                  </CommandItem>
+                </CommandGroup>
               </CommandList>
             </Command>
             {popoverFooter && (

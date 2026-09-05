@@ -102,7 +102,7 @@ export function PostInstallConnectionsModal({
   onConnectionRemoved,
 }: PostInstallConnectionsModalProps) {
   const { settings } = useSettings();
-  const composioToken = settings.user?.token;
+  const composioToken: string | null = null;
   const [statuses, setStatuses] = useState<Record<string, ConnectionStatus>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

@@ -7,7 +7,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { listen, emit } from "@tauri-apps/api/event";
 import { commands } from "@/lib/utils/tauri";
-import posthog from "posthog-js";
 import ReactMarkdown from "react-markdown";
 import {
   notificationUrlTransform,
@@ -21,11 +20,6 @@ import {
   executeNotificationAction,
   type NotificationAction,
 } from "@/lib/notifications/actions";
-import {
-  notificationActionAnalyticsProperties,
-  notificationAnalyticsProperties,
-} from "@/lib/notification-analytics";
-import { qualifiedValue } from "@/lib/analytics/qualified-value";
 import { NotificationActionButton } from "@/components/notification-action-button";
 import { NotificationFeedback } from "@/components/notification-feedback";
 
@@ -109,11 +103,6 @@ export default function NotificationPanelPage() {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      posthog.capture("notification_dismissed", {
-        auto: reason === "auto",
-        dismiss_reason: reason,
-        ...notificationAnalyticsProperties(payload, "toast"),
-      });
       try {
         await commands.hideNotificationPanel();
       } catch {
@@ -132,12 +121,6 @@ export default function NotificationPanelPage() {
           : actionOrObj.action || actionOrObj.type;
       const actionObj = typeof actionOrObj === "object" ? actionOrObj : null;
 
-      posthog.capture("notification_action", {
-        ...notificationActionAnalyticsProperties(
-          actionObj?.type ?? actionStr,
-        ),
-        ...notificationAnalyticsProperties(payload, "toast"),
-      });
 
       try {
         // New typed action dispatch (pipe notifications)
@@ -153,12 +136,7 @@ export default function NotificationPanelPage() {
               if (copyResetRef.current) clearTimeout(copyResetRef.current);
               setCopied(true);
               copyResetRef.current = setTimeout(() => setCopied(false), 1400);
-              posthog.capture("notification_copied", {
-                source: "action",
-                ...notificationAnalyticsProperties(payload, "toast"),
-              });
               if (payload?.pipe_name) {
-                qualifiedValue.pipeOutputCopied();
               }
             }
             return;
@@ -244,12 +222,6 @@ export default function NotificationPanelPage() {
           { action: actionStr, type: actionObj?.type },
           e,
         );
-        posthog.capture("notification_action_error", {
-          ...notificationActionAnalyticsProperties(
-            actionObj?.type ?? actionStr,
-          ),
-          ...notificationAnalyticsProperties(payload, "toast"),
-        });
       }
 
       await hide("action");
@@ -267,9 +239,6 @@ export default function NotificationPanelPage() {
   const openSource = useCallback(async () => {
     if (!payload?.source_url) return;
     const url = payload.source_url;
-    posthog.capture("notification_open_source", {
-      ...notificationAnalyticsProperties(payload, "toast"),
-    });
     if (url.startsWith("screenpipe://")) {
       await commands.showWindowActivated(windowForDeeplink(url));
       await new Promise((r) => setTimeout(r, 150));
@@ -293,11 +262,7 @@ export default function NotificationPanelPage() {
       if (copyResetRef.current) clearTimeout(copyResetRef.current);
       setCopied(true);
       copyResetRef.current = setTimeout(() => setCopied(false), 1400);
-      posthog.capture("notification_copied", {
-        ...notificationAnalyticsProperties(payload, "toast"),
-      });
       if (payload.pipe_name) {
-        qualifiedValue.pipeOutputCopied();
       }
     } catch (e) {
       console.error("notification copy failed:", e);
@@ -322,9 +287,6 @@ export default function NotificationPanelPage() {
         setRestartState("idle");
         setRestartError(null);
 
-        posthog.capture("notification_shown", {
-          ...notificationAnalyticsProperties(data, "toast"),
-        });
 
         // Save to notification history (max 100 entries)
         localforage.getItem<any[]>("notification-history").then((history) => {

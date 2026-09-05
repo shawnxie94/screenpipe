@@ -13,7 +13,6 @@ import {
   Pin,
   Zap,
 } from "lucide-react";
-import posthog from "posthog-js";
 import { PipeAIIconLarge } from "@/components/pipe-ai-icon";
 import { type TemplatePipe } from "@/lib/hooks/use-pipes";
 import {
@@ -223,14 +222,6 @@ export function SummaryCards({
   useEffect(() => {
     const visibleSlugs = impressionSignature.split(":").filter(Boolean);
     for (const [index, slug] of visibleSlugs.entries()) {
-      posthog.capture(
-        "home_card_impression",
-        homeCardImpressionProperties(
-          entryCardForHomeTemplate(slug),
-          index + 1,
-          index === 0 ? "hero" : index === 1 ? "secondary" : "quick_action",
-        ),
-      );
     }
   }, [impressionSignature]);
 
@@ -239,11 +230,6 @@ export function SummaryCards({
   const handleCardClick = (pipe: TemplatePipe) => {
     onPreviewPrompt?.(null);
     const entryCard = entryCardForHomeTemplate(pipe.name);
-    posthog.capture("home_card_clicked", {
-      kind: pipe.featured ? "template_featured" : "template_discover",
-      template_name: pipe.name,
-      card: entryCard,
-    });
     const prompt =
       pipe.name === AUTOMATE_MY_WORK_TEMPLATE_NAME
         ? buildAutomateMyWorkPrompt(existingPipes)
@@ -277,9 +263,6 @@ export function SummaryCards({
   // changed since they were saved (#5239). Run lives inside the dialog.
   const handleCustomTemplateClick = (template: CustomTemplate) => {
     onPreviewPrompt?.(null);
-    posthog.capture("home_card_clicked", {
-      kind: "custom_template",
-    });
     setEditingTemplate(template);
   };
 
@@ -440,9 +423,6 @@ export function SummaryCards({
                 )}
                 onClick={() => {
                   onPreviewPrompt?.(null);
-                  posthog.capture("home_card_clicked", {
-                    kind: "quick_summary_chip",
-                  });
                   const prompt = quickSummaryPrompt(task);
                   onSendMessage(
                     prompt,
@@ -498,9 +478,6 @@ export function SummaryCards({
         <button
           type="button"
           onClick={() => {
-            posthog.capture("home_card_clicked", {
-              kind: "custom_summary_open",
-            });
             setShowBuilder(true);
           }}
           className="cursor-pointer rounded-md border border-dashed border-foreground/25 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors duration-150 hover:border-foreground hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-offset-1 focus-visible:ring-offset-background motion-reduce:transition-none"
@@ -545,9 +522,6 @@ export function SummaryCards({
           open={showBuilder}
           onClose={() => setShowBuilder(false)}
           onGenerate={(prompt, timeRange) => {
-            posthog.capture("home_card_clicked", {
-              kind: "custom_summary_generate",
-            });
             setShowBuilder(false);
             onSendMessage(
               prompt,
@@ -574,9 +548,6 @@ export function SummaryCards({
             setEditingTemplate(null);
           }}
           onGenerate={(prompt) => {
-            posthog.capture("home_card_clicked", {
-              kind: "custom_template_run",
-            });
             setEditingTemplate(null);
             onSendMessage(
               prompt,

@@ -19,7 +19,6 @@ import { BrowserSidebar } from "@/components/browser-sidebar";
 import { toast } from "@/components/ui/use-toast";
 import type { AIPreset, JsonValue } from "@/lib/utils/tauri";
 // OpenAI SDK no longer used directly — all providers route through Pi agent
-import posthog from "posthog-js";
 import { useAcpWarmup } from "@/components/chat/standalone/hooks/use-acp-warmup";
 import { piProjectDirForSession } from "@/lib/chat/pi-project-dir";
 import {
@@ -628,23 +627,10 @@ export function StandaloneChat({
     turnIntentTextValuesMatch,
   } = useChatTurnIntents();
 
-  useEffect(() => {
-    if (settings.user?.token) {
-      invalidatedAuthHandledRef.current = false;
-    }
-  }, [settings.user?.token]);
-
   const handleInvalidatedAuthToken = useCallback(async () => {
     if (invalidatedAuthHandledRef.current) return;
     invalidatedAuthHandledRef.current = true;
-    posthog.capture("session_expired", { source: "pi_stream", reason: "token_invalidated" });
 
-    await updateSettings({ user: null as any });
-    try {
-      await commands.setCloudToken(null);
-    } catch (e) {
-      console.warn("failed to clear cloud token after Pi auth error:", e);
-    }
     try {
       const result = await commands.piUpdateConfig(null, null);
       if (result.status === "error") {
@@ -659,13 +645,7 @@ export function StandaloneChat({
       description: buildInvalidatedAuthTokenMessage(),
       variant: "destructive",
     });
-
-    try {
-      await commands.openLoginWindow(null, null);
-    } catch (e) {
-      console.warn("failed to open login after Pi auth error:", e);
-    }
-  }, [updateSettings]);
+  }, []);
 
   const lastUserMessageRef = useRef<string>("");
 
@@ -1054,7 +1034,7 @@ export function StandaloneChat({
     aiPresets: chatAiPresets,
     isSettingsLoaded,
     shouldFreezePresetSelection: Boolean(activePipeExecution),
-    userToken: settings.user?.token,
+    userToken: null,
     appItems,
     allConnectionItems,
     connections,
@@ -1083,7 +1063,7 @@ export function StandaloneChat({
     piSessionIdRef,
     piProjectDirForSession,
     buildProviderConfig,
-    userToken: settings.user?.token,
+    userToken: null,
     setPiInfo,
     setPiStarting,
     setRunningConfigFromProviderConfig,
@@ -1885,7 +1865,7 @@ export function StandaloneChat({
 
   // Sign-in dialog actions.
   const acpDefaultPresetLabel =
-    settings?.aiPresets?.find((preset) => preset.defaultPreset)?.id ?? "screenpipe-cloud";
+    settings?.aiPresets?.find((preset) => preset.defaultPreset)?.id ?? "";
   // Resolve the agent's real name + icon from the catalog so the dialog shows
   // its brand mark (Codex, Kimi, …) instead of a generic key. For CLI login
   // the ACP-reported name is more specific, so prefer it.
@@ -2312,7 +2292,7 @@ export function StandaloneChat({
         hasValidModel={hasValidModel}
         needsLogin={needsLogin}
         onOpenLogin={async () => {
-          await commands.openLoginWindow(null, null);
+          // Local-only build: there is no account login to open.
         }}
         onOpenSettings={async () => {
           await commands.showWindow({ Home: { page: null } });

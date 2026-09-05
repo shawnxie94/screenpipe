@@ -20,13 +20,10 @@ import {
 import { timelineTimestampFromDeepLink } from "@/lib/timeline-deeplink";
 import { describeDeepLinkForLog } from "@/lib/utils/deep-link-log";
 import { rememberSelectedLiveViewDashboard } from "@/lib/live-views/onboarding-activation";
-import { isBusinessSubscriptionPurchaseDeepLink } from "@/lib/utils/purchase-deep-link";
 import { localFetch } from "@/lib/api";
 import { foregroundAfterOAuth } from "@/lib/connections/foreground-oauth";
 import { settingsSectionFromDeepLink } from "@/lib/utils/settings-deep-link";
-import posthog from "posthog-js";
 import { handleExternalDeepLink } from "@/lib/external-deeplink";
-import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 import {
   handoffTargetById,
   performAgentHandoff,
@@ -73,8 +70,7 @@ export function DeeplinkHandler() {
   const { toast } = useToast();
   const { setShowChangelogDialog } = useChangelogDialog();
   const { open: openStatusDialog } = useStatusDialog();
-  const { settings, loadUser, reloadStore } = useSettings();
-  const userToken = settings.user?.token;
+  const { reloadStore } = useSettings();
   const setPendingNavigation = useTimelineStore((s) => s.setPendingNavigation);
 
   useEffect(() => {
@@ -125,9 +121,6 @@ export function DeeplinkHandler() {
         });
         markLearningDone();
         await emit(LEARNING_SUMMARY_OPENED_EVENT);
-        posthog.capture("first_run_summary_opened", {
-          source: "notification",
-        });
         trackFirstRunSummaryNotificationOpened();
         return;
       }
@@ -150,29 +143,10 @@ export function DeeplinkHandler() {
           },
         });
         if (!result.copied) {
-          posthog.capture("first_run_agent_handoff_failed", {
-            agent: target.id,
-            stage: "clipboard",
-            source: "notification",
-          });
         }
         if (result.failedStage) {
-          posthog.capture("first_run_agent_handoff_failed", {
-            agent: target.id,
-            stage: result.failedStage,
-            source: "notification",
-          });
         }
         if (result.prefilled || result.copied) {
-          posthog.capture("first_run_agent_handoff_clicked", {
-            agent: target.id,
-            opened: result.launched,
-            prefilled: result.prefilled,
-            replayed: result.replayed,
-            copy_only: !result.prefilled,
-            clipboard_copied: result.copied,
-            source: "notification",
-          });
         }
         return;
       }
@@ -197,103 +171,6 @@ export function DeeplinkHandler() {
           throw new Error(result.error);
         }
         return;
-      }
-
-      // Screenpipe account and subscription callbacks are disabled in local-only
-      // builds. Other deep links, including third-party OAuth and ACP sign-in,
-      // continue through the handlers below.
-      const isScreenpipeAccountCallback =
-        url.includes("api_key=") ||
-        isBusinessSubscriptionPurchaseDeepLink(parsedUrl) ||
-        parsedUrl.host === "subscription-success" ||
-        parsedUrl.pathname?.includes("subscription-success");
-      if (IS_LOCAL_ONLY_BUILD && isScreenpipeAccountCallback) return;
-
-      // Handle API key auth
-      if (url.includes("api_key=")) {
-        const apiKey = parsedUrl.searchParams.get("api_key");
-        if (apiKey) {
-          try {
-            await loadUser(apiKey);
-            toast({
-              title: "logged in!",
-              description: "you have been logged in",
-            });
-            // Notify the chat UI to restart Pi with the new token so it
-            // picks up the new account immediately. The chat component knows
-            // the active session ID; we just pass the key.
-            try {
-              await emit("pi-reauth", { apiKey });
-              console.log("[deeplink] emitted pi-reauth with new auth token");
-            } catch (e) {
-              console.log("[deeplink] pi-reauth emit skipped:", e);
-            }
-          } catch (error) {
-            const msg = error instanceof Error ? error.message : String(error);
-            console.error("failed to load user:", msg);
-            toast({
-              title: "failed to load user",
-              description: msg || "unknown error",
-            });
-          }
-        }
-      }
-
-      // Hosted Stripe Checkout returns through the website, whose "return to
-      // screenpipe" button opens this link. Refresh the authenticated account
-      // against Stripe-backed entitlement immediately instead of relying only
-      // on AccountSection's background poll.
-      if (isBusinessSubscriptionPurchaseDeepLink(parsedUrl)) {
-        await commands.showWindowActivated({ Home: { page: "account" } });
-        posthog.capture("desktop_upgrade_returned_to_app");
-        if (userToken) {
-          try {
-            await loadUser(userToken, true);
-            toast({
-              title: "subscription active",
-              description: "Screenpipe Business is ready",
-            });
-          } catch (error) {
-            const msg = error instanceof Error ? error.message : String(error);
-            toast({
-              title: "couldn't refresh subscription",
-              description: msg || "try signing in again",
-              variant: "destructive",
-            });
-          }
-        } else {
-          toast({
-            title: "sign in to finish",
-            description: "open Account and sign in with the email used at checkout",
-          });
-        }
-      }
-
-      // Handle subscription activation deep link.
-      // Louis's email/success page can include:
-      //   screenpipe://subscription-success?purchase_token=<token>
-      // This lets existing app users activate pro without re-logging in.
-      if (
-        parsedUrl.host === "subscription-success" ||
-        parsedUrl.pathname?.includes("subscription-success")
-      ) {
-        const purchaseToken = parsedUrl.searchParams.get("purchase_token");
-        if (purchaseToken) {
-          try {
-            await loadUser(purchaseToken);
-            toast({
-              title: "welcome to screenpipe business!",
-              description: "your subscription is now active",
-            });
-          } catch (error) {
-            const msg = error instanceof Error ? error.message : String(error);
-            toast({
-              title: "activation failed",
-              description: msg || "try logging out and back in",
-              variant: "destructive",
-            });
-          }
-        }
       }
 
       // Handle Google Calendar OAuth callback
@@ -683,10 +560,8 @@ export function DeeplinkHandler() {
     toast,
     setShowChangelogDialog,
     openStatusDialog,
-    loadUser,
     reloadStore,
     setPendingNavigation,
-    userToken,
   ]);
 
   return null; // This component doesn't render anything

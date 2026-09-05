@@ -8,7 +8,6 @@ import {
   Brain,
   Video,
   Keyboard,
-  User,
   Settings as SettingsIcon,
   HardDrive,
   Shield,
@@ -16,8 +15,6 @@ import {
   Users,
   Mic,
   Bell,
-  BarChart3,
-  Gift,
   ChevronLeft,
   SlidersHorizontal,
   KeyRound,
@@ -34,7 +31,6 @@ import {
   rememberSettingsSection,
   type SettingsSection,
 } from "@/lib/settings-sections";
-import { AccountSection, searchIndex as accountSearchIndex } from "@/components/settings/account-section";
 import ShortcutSection, { searchIndex as shortcutsSearchIndex } from "@/components/settings/shortcut-section";
 import { AIPresets, searchIndex as aiSearchIndex } from "@/components/settings/ai-presets";
 import { AISettings, searchIndex as aiSettingsSearchIndex } from "@/components/settings/ai-settings";
@@ -44,28 +40,16 @@ import {
   screenSearchIndex,
 } from "@/components/settings/recording-settings";
 import GeneralSettings, { searchIndex as generalSearchIndex } from "@/components/settings/general-settings";
-import { TeamSection, searchIndex as teamSearchIndex } from "@/components/settings/team-section";
 import { DisplaySection, searchIndex as displaySearchIndex } from "@/components/settings/display-section";
 import { PrivacySection, searchIndex as privacySearchIndex } from "@/components/settings/privacy-section";
 import { PermissionsSection, searchIndex as permissionsSearchIndex } from "@/components/settings/permissions-section";
 import { StorageSection, searchIndex as storageSearchIndex } from "@/components/settings/storage-section";
 import { NotificationsSettings, searchIndex as notificationsSearchIndex } from "@/components/settings/notifications-settings";
-import { UsageSection, searchIndex as usageSearchIndex } from "@/components/settings/usage-section";
 import { SpeakersSection, searchIndex as speakersSearchIndex } from "@/components/settings/speakers-section";
 import { ActivitiesSettings, searchIndex as activitiesSearchIndex } from "@/components/settings/activities-settings";
 import { searchIndex as powerSearchIndex } from "@/components/settings/battery-saver-section";
-import { ReferralCard } from "@/components/settings/referral-card";
-import { isDevLoginSkipEnabled } from "@/lib/app-entitlement";
 import { SettingsSearchInput, SettingsSearchPopover, searchSettingsNav, scrollToSettingsField, type IndexedSettingsField, type SettingsField } from "@/components/settings/settings-search";
 import { ExperimentalShortcutGuide } from "@/components/shortcut-guide";
-
-// Settings search index for the inline ReferralSection defined further down in
-// this file. Lives here because the section itself lives here; same co-location
-// principle as the standalone sections.
-const referralSearchIndex: SettingsField[] = [
-  { label: "Invite link", keywords: ["invite", "refer", "promo"] },
-  { label: "Free month", keywords: ["discount", "earn"] },
-];
 
 /**
  * Aggregate every section's co-located `searchIndex` export into one flat list,
@@ -89,57 +73,27 @@ const ALL_SETTINGS_FIELDS: IndexedSettingsField[] = [
   ...powerSearchIndex.map((f) => ({ ...f, section: "recording" })),
   ...shortcutsSearchIndex.map((f) => ({ ...f, section: "shortcuts" })),
   ...notificationsSearchIndex.map((f) => ({ ...f, section: "notifications" })),
-  ...usageSearchIndex.map((f) => ({ ...f, section: "usage" })),
   ...privacySearchIndex.map((f) => ({ ...f, section: "privacy" })),
   ...permissionsSearchIndex.map((f) => ({ ...f, section: "permissions" })),
   ...storageSearchIndex.map((f) => ({ ...f, section: "storage" })),
   ...speakersSearchIndex.map((f) => ({ ...f, section: "speakers" })),
-  ...teamSearchIndex.map((f) => ({ ...f, section: "team" })),
-  ...accountSearchIndex.map((f) => ({ ...f, section: "account" })),
-  ...referralSearchIndex.map((f) => ({ ...f, section: "referral" })),
 ];
-import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
 import { usePlatform } from "@/lib/hooks/use-platform";
-import posthog from "posthog-js";
-
-/**
- * Nav layout revision, stamped onto `settings_viewed`.
- *
- * Section ids are stable across layouts, which is what makes a before/after
- * comparison of `settings_section_viewed` meaningful — but only if we can tell
- * which layout produced a given view. Bump this whenever the grouping or
- * ordering changes so the split is unambiguous in analysis.
- */
-const NAV_LAYOUT_VERSION = "v2-demand-ordered";
-
-function ReferralSection() {
-  return <ReferralCard />;
-}
 
 function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromSection = searchParams.get("from");
-  const { isSectionHidden, isManagedDeployment } = useManagedPolicy();
   const { isTranslucent } = useSidebarContext();
   const { isMac, isLoading: isPlatformLoading } = usePlatform();
   // macOS TCC recovery only. Non-mac must not see the nav item, search hits,
   // or deep-link content. System Settings permissions are not a Windows/Linux surface.
   const showPermissions = isMac;
 
-  // `ai-settings` shares the legacy `ai` policy key so existing managed
-  // deployments that hide AI continue to hide both destinations.
   const isSettingsSectionHidden = useCallback(
-    (sectionId: SettingsSection) => {
-      if (sectionId === "permissions" && !showPermissions) return true;
-      const policySection = sectionId === "ai-settings"
-        ? "ai"
-        : sectionId === "audio"
-          ? "recording"
-          : sectionId;
-      return isSectionHidden(policySection);
-    },
-    [isSectionHidden, showPermissions],
+    (sectionId: SettingsSection) =>
+      sectionId === "permissions" && !showPermissions,
+    [showPermissions],
   );
 
   // Static default, not the remembered section: callers pass an explicit
@@ -200,7 +154,7 @@ function SettingsContent() {
         ...(showPermissions
           ? [{ id: "permissions" as const, label: "权限", icon: <KeyRound className="h-4 w-4" /> }]
           : []),
-      ].filter((s) => !isSettingsSectionHidden(s.id)),
+      ],
     },
     {
       label: "AI 智能",
@@ -208,37 +162,7 @@ function SettingsContent() {
         { id: "activities" as const, label: "活动记录", icon: <ListChecks className="h-4 w-4" /> },
         { id: "ai-settings" as const, label: "AI 功能", icon: <SlidersHorizontal className="h-4 w-4" /> },
         { id: "ai" as const, label: "模型与密钥", icon: <Brain className="h-4 w-4" /> },
-        // "AI credits" is a cloud-quota concept (purchased credits on the
-        // screenpipe cloud) — meaningless in a local/self-hosted build.
-        ...(isDevLoginSkipEnabled()
-          ? []
-          : [{ id: "usage" as const, label: "AI 额度", icon: <BarChart3 className="h-4 w-4" /> }]),
-      ].filter((s) => !isSettingsSectionHidden(s.id)),
-    },
-    {
-      label: "账户",
-      // Local/self-hosted builds have no cloud account, team or referral
-      // program — the whole Account group is meaningless and gets dropped.
-      items: isDevLoginSkipEnabled()
-        ? []
-        : [
-            { id: "account" as const, label: "账户", icon: <User className="h-4 w-4" /> },
-            // Hide "Team" on enterprise builds — those installs are already
-            // org-managed; the desktop has nothing to manage. Admins use the
-            // /enterprise dashboard on the web. On consumer builds we still
-            // surface Team as a marketing entry point to /team.
-            ...(isManagedDeployment
-              ? []
-              : [{ id: "team" as const, label: "团队", icon: <Users className="h-4 w-4" /> }]),
-            // Local/self-hosted builds (DEV_LOGIN_SKIP) skip the referral
-            // marketing entry — there's no signed-in account to earn/claim
-            // referral credit, so "Get free month" only invites confusion.
-            ...(() =>
-              process.env.NEXT_PUBLIC_SCREENPIPE_DEV_LOGIN_SKIP === "true"
-                ? []
-                : [{ id: "referral" as const, label: "推荐奖励", icon: <Gift className="h-4 w-4" /> }]
-            )(),
-          ].filter((s) => !isSectionHidden(s.id)),
+      ],
     },
     {
       label: "应用",
@@ -250,7 +174,7 @@ function SettingsContent() {
         { id: "display" as const, label: "外观", icon: <Layout className="h-4 w-4" /> },
         { id: "notifications" as const, label: "通知", icon: <Bell className="h-4 w-4" /> },
         { id: "shortcuts" as const, label: "快捷键", icon: <Keyboard className="h-4 w-4" /> },
-      ].filter((s) => !isSectionHidden(s.id)),
+      ],
     },
   ];
 
@@ -269,39 +193,12 @@ function SettingsContent() {
   const flatItems = navGroups.flatMap((g) =>
     g.items.map((it) => ({ ...it, group: g.label })),
   );
-  const searchableFields = (() => {
-    // Local/self-hosted builds: don't surface search results for sections
-    // that no longer exist in the nav (account/team/referral/usage).
-    if (isDevLoginSkipEnabled()) {
-      return ALL_SETTINGS_FIELDS.filter(
-        (f) =>
-          f.section !== "permissions" &&
-          f.section !== "account" &&
-          f.section !== "team" &&
-          f.section !== "referral" &&
-          f.section !== "usage",
-      );
-    }
-    return showPermissions
-      ? ALL_SETTINGS_FIELDS
-      : ALL_SETTINGS_FIELDS.filter((f) => f.section !== "permissions");
-  })();
+  const searchableFields = showPermissions
+    ? ALL_SETTINGS_FIELDS
+    : ALL_SETTINGS_FIELDS.filter((f) => f.section !== "permissions");
   const results = searchSettingsNav(searchQuery, flatItems, searchableFields);
 
   useEffect(() => {
-    posthog.capture("settings_viewed", {
-      initial_section: section,
-      nav_layout: NAV_LAYOUT_VERSION,
-    });
-  // The initial page view should be sent once per settings mount.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    posthog.capture("settings_section_viewed", { section });
-    if (section === "general") {
-      posthog.capture("settings_general_opened");
-    }
     // Reopen here next time rather than dropping the user on a fixed page.
     rememberSettingsSection(section);
   }, [section]);
@@ -310,15 +207,6 @@ function SettingsContent() {
   useEffect(() => { setActiveIndex(0); }, [searchQuery]);
 
   const pickResult = (result: { item: { id: string }; matchedFieldLabel?: string }) => {
-    posthog.capture("settings_search_result_selected", {
-      section: result.item.id,
-      matched_field: Boolean(result.matchedFieldLabel),
-      // 98% of searches resolve to a specific field rather than a section name,
-      // and we were discarding which one — the most direct signal we have about
-      // labels people cannot find. The label is a static string from our own
-      // searchIndex, never anything the user typed or stored.
-      matched_field_label: result.matchedFieldLabel ?? null,
-    });
     setSection(result.item.id as SettingsSection);
     setSearchQuery("");
     searchInputRef.current?.blur();
@@ -374,35 +262,19 @@ function SettingsContent() {
   }, []);
 
   const renderSection = () => {
-    // Local/self-hosted builds hide the cloud-account sections entirely
-    // (navigation entries are gone too); a stale deep link lands on nothing
-    // instead of a dead account/upgrade screen.
-    if (isDevLoginSkipEnabled()) {
-      switch (section) {
-        case "account":
-        case "team":
-        case "referral":
-        case "usage":
-          return null;
-      }
-    }
     switch (section) {
       case "general":       return <GeneralSettings />;
       case "display":       return <DisplaySection />;
       case "ai":            return <AIPresets />;
       case "ai-settings":   return <AISettings />;
       case "activities":    return <ActivitiesSettings />;
-      case "account":       return <AccountSection />;
       case "recording":     return <RecordingSettings section="screen" />;
       case "audio":         return <RecordingSettings section="audio" />;
       case "shortcuts":     return <ShortcutSection />;
       case "privacy":       return <PrivacySection />;
       case "permissions":   return showPermissions ? <PermissionsSection /> : null;
       case "storage":       return <StorageSection />;
-      case "team":          return <TeamSection />;
       case "notifications": return <NotificationsSettings />;
-      case "referral":      return <ReferralSection />;
-      case "usage":         return <UsageSection />;
       case "speakers":      return <SpeakersSection />;
     }
   };

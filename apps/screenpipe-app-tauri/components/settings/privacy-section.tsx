@@ -22,14 +22,8 @@ export const searchIndex: SettingsField[] = [
     keywords: ["private", "browser", "enhanced", "automation"],
   },
   { label: "PII 打码", keywords: ["mask", "redact", "columns", "url", "fields"] },
-  {
-    label: "远程支持日志",
-    keywords: ["support", "diagnostic", "troubleshooting", "remote", "logs"],
-  },
   { label: "遥测" },
 ];
-import { LockedSetting, ManagedSwitch } from "@/components/enterprise-locked-setting";
-import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
 import { screenpipeWebUrl } from "@/lib/web-url";
 import {
   Eye,
@@ -59,7 +53,6 @@ import { InputMonitoringPanel } from "./input-monitoring-card";
 import { ApplyRestartBar } from "./apply-restart-bar";
 import { useSettings, Settings } from "@/lib/hooks/use-settings";
 import { ScheduleSettings } from "./schedule-settings";
-import { RemoteSupportLogsCard } from "./remote-support-logs-card";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { platform } from "@tauri-apps/plugin-os";
 import { useToast } from "@/components/ui/use-toast";
@@ -67,7 +60,6 @@ import { useSqlAutocomplete } from "@/lib/hooks/use-sql-autocomplete";
 import { useInstalledApps } from "@/lib/hooks/use-installed-apps";
 import { commands } from "@/lib/utils/tauri";
 import { planEnhancedIncognitoPermission } from "@/lib/utils/incognito-permission";
-import posthog from "posthog-js";
 import * as Sentry from "@sentry/react";
 import { defaultOptions } from "tauri-plugin-sentry-api";
 import { cacheAnalyticsEnabled } from "@/lib/analytics-id";
@@ -367,17 +359,6 @@ export function PrivacySection() {
   // renders there (alongside the keyboard/click capture toggles it gates).
   const isMacOS = typeof window !== "undefined" && platform() === "macos";
   const { toast } = useToast();
-  // when the admin forces the PII backend (local/cloud) we lock the radios so
-  // the employee can't override it (the value itself is applied to settings by
-  // The managed policy runtime reapplies PII policy on every policy poll.
-  const { getManagedValue, isManagedDeployment } = useManagedPolicy();
-  const managedPiiBackend = getManagedValue("piiBackend");
-  // Same idea for input capture: the admin can force keyboard/click rows on
-  // or off org-wide (applied by the managed policy runtime).
-  // These settings are inverted ("disable…"), so ManagedSwitch — which assumes
-  // checked == managed value — doesn't fit; lock the switches manually.
-  const managedKeyboardCapture = getManagedValue("disableKeyboardCapture");
-  const managedClickCapture = getManagedValue("disableClickCapture");
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -473,17 +454,13 @@ export function PrivacySection() {
 
       // Cache immediately so the next boot picks up the change before
       // settings IPC resolves (see readCachedAnalyticsEnabled in providers.tsx).
-      cacheAnalyticsEnabled(analyticsEnabled);
+      cacheAnalyticsEnabled(analyticsEnabled !== false);
 
       if (!analyticsEnabled) {
-        posthog.capture("telemetry", { enabled: false });
-        posthog.opt_out_capturing();
         Sentry.close();
       } else {
         const isDebug = process.env.TAURI_ENV_DEBUG === "true";
         if (!isDebug) {
-          posthog.opt_in_capturing();
-          posthog.capture("telemetry", { enabled: true });
           Sentry.init({ ...defaultOptions });
         }
       }
@@ -546,9 +523,6 @@ export function PrivacySection() {
     );
   };
 
-  // Kept for the ManagedSwitch path (enterprise lock on usePiiRemoval).
-  // Falls back to a Basic-mode flip; enterprise admins who pinned the
-  // legacy flag still get exactly what they pinned.
   const handlePiiRemovalChange = (checked: boolean) => {
     handlePiiModeChange(checked ? "basic" : "off");
   };
@@ -858,9 +832,7 @@ export function PrivacySection() {
     const isDebug = process.env.TAURI_ENV_DEBUG === "true";
     if (!isDebug) {
       if (checked) {
-        posthog.opt_in_capturing();
       } else {
-        posthog.opt_out_capturing();
       }
     }
   };
@@ -924,7 +896,6 @@ export function PrivacySection() {
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
           安全
         </h2>
-        <LockedSetting settingKey="api_auth">
         <Card className="border-border bg-card">
           <CardContent className="px-3 py-2.5">
             <div className="flex items-center justify-between">
@@ -953,7 +924,6 @@ export function PrivacySection() {
                 点击上方的“应用并重启”以使认证更改生效；在此之前，现有浏览器连接继续使用旧密钥
               </p>
             )}
-            <LockedSetting settingKey="api_key">
             {(settings.apiAuth ?? true) && (
               <div className="mt-2.5 flex items-center space-x-2.5 pl-6.5">
                 <Input
@@ -1063,17 +1033,12 @@ export function PrivacySection() {
                 </Button>
               </div>
             )}
-            </LockedSetting>
           </CardContent>
         </Card>
-        </LockedSetting>
-
-        {isManagedDeployment && <AdminTeamTokenCard />}
 
         {/* LAN access — off by default. Toggling on force-enables api_auth
             (the backend mirrors this guard in RecordingConfig::from_settings
             so the API is never exposed to the network unauthenticated). */}
-        <LockedSetting settingKey="listen_on_lan">
         <Card className="border-border bg-card">
           <CardContent className="px-3 py-2.5">
             <div className="flex items-center justify-between">
@@ -1105,7 +1070,6 @@ export function PrivacySection() {
             </div>
           </CardContent>
         </Card>
-        </LockedSetting>
 
         <EncryptDataCard
           encryptStore={settings.encryptStore ?? true}
@@ -1231,20 +1195,13 @@ export function PrivacySection() {
                   <HelpTooltip text="开启后，screenpipe 记录你输入的内容（击键）。默认关闭。无障碍树和 OCR 仍会采集屏幕上的文字，因此回放和问答照常工作 — 这里只控制原始击键流，否则你输入的密码、API 密钥和秘密会被记录。" />
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {managedKeyboardCapture !== undefined
-                    ? "由你的组织管理。"
-                    : "默认关闭。记录原始击键流（经常会输入秘密）。屏幕文字仍会被采集。"}
+                  {"默认关闭。记录原始击键流（经常会输入秘密）。屏幕文字仍会被采集。"}
                 </p>
               </div>
             </div>
             <Switch
               id="captureKeyboard"
-              checked={
-                managedKeyboardCapture !== undefined
-                  ? managedKeyboardCapture === "false"
-                  : !(settings.disableKeyboardCapture ?? true)
-              }
-              disabled={managedKeyboardCapture !== undefined}
+              checked={!(settings.disableKeyboardCapture ?? true)}
               onCheckedChange={handleKeyboardCaptureToggle}
             />
           </div>
@@ -1263,20 +1220,13 @@ export function PrivacySection() {
                   <HelpTooltip text="开启后，screenpipe 记录鼠标点击事件（点击位置和对象）。默认开启 — 点击事件不含文本内容，驱动工作流分析和任务挖掘。关闭后只跳过点击行；点击仍会触发屏幕采集。" />
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {managedClickCapture !== undefined
-                    ? "由你的组织管理。"
-                    : "默认开启。点击事件驱动工作流分析；不记录文本。"}
+                  {"默认开启。点击事件驱动工作流分析；不记录文本。"}
                 </p>
               </div>
             </div>
             <Switch
               id="captureClicks"
-              checked={
-                managedClickCapture !== undefined
-                  ? managedClickCapture === "false"
-                  : !(settings.disableClickCapture ?? false)
-              }
-              disabled={managedClickCapture !== undefined}
+              checked={!(settings.disableClickCapture ?? false)}
               onCheckedChange={handleClickCaptureToggle}
             />
           </div>
@@ -1339,7 +1289,6 @@ export function PrivacySection() {
       </div>
 
       {/* Data Protection */}
-      <LockedSetting settingKey="pii_removal">
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
           数据保护
@@ -1368,8 +1317,7 @@ export function PrivacySection() {
                   </p>
                 </div>
               </div>
-              <ManagedSwitch
-                settingKey="usePiiRemoval"
+              <Switch
                 id="usePiiRemoval"
                 checked={piiMode !== "off"}
                 onCheckedChange={(checked) =>
@@ -1472,22 +1420,20 @@ export function PrivacySection() {
               <div className="mt-3 ml-6 space-y-2 border-l-2 border-border pl-3">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                   <span className="font-medium text-foreground">运行位置</span>
-                  <label className={`flex items-center gap-1.5 ${managedPiiBackend ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
                     <input
                       type="radio"
                       name="piiBackend"
                       checked={piiBackend === "local"}
-                      disabled={!!managedPiiBackend}
                       onChange={() => handlePiiBackendChange("local")}
                     />
                     <span className="text-foreground">本地</span>
                   </label>
-                  <label className={`flex items-center gap-1.5 ${managedPiiBackend ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
                     <input
                       type="radio"
                       name="piiBackend"
                       checked={piiBackend === "tinfoil"}
-                      disabled={!!managedPiiBackend}
                       onChange={() => handlePiiBackendChange("tinfoil")}
                     />
                     <span className="text-foreground">云端（机密计算）</span>
@@ -1604,7 +1550,6 @@ export function PrivacySection() {
           </CardContent>
         </Card>
       </div>
-      </LockedSetting>
 
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
@@ -1673,14 +1618,11 @@ export function PrivacySection() {
         />
       </div>
 
-      <RemoteSupportLogsCard />
-
       {/* Telemetry */}
       <div className="space-y-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
           遥测
         </h2>
-        <LockedSetting settingKey="telemetry">
         <Card className="border-border bg-card">
           <CardContent className="px-3 py-2.5">
             <div className="flex items-center justify-between">
@@ -1696,16 +1638,14 @@ export function PrivacySection() {
                   </p>
                 </div>
               </div>
-              <ManagedSwitch
-                settingKey="analyticsEnabled"
+              <Switch
                 id="analyticsEnabled"
-                checked={settings.analyticsEnabled}
+                checked={settings.analyticsEnabled === true}
                 onCheckedChange={handleAnalyticsToggle}
               />
             </div>
           </CardContent>
         </Card>
-        </LockedSetting>
       </div>
 
       {/* Floating apply & restart bar */}
@@ -1733,220 +1673,5 @@ export function PrivacySection() {
         action={picker === "included" ? "include" : "ignore"}
       />
     </div>
-  );
-}
-
-/**
- * Admin team API token — enterprise builds only.
- *
- * Org-wide team-query auth has two intentionally separate pieces:
- * `license_key` is org-level (every employee's machine, deployed by IT);
- * `team_api_token` is per-admin and grants the `read:devices` /
- * `read:search` / `read:records` scopes that the `screenpipe-team` pi
- * skill calls v1 endpoints with. An admin mints one at
- * https://screenpipe.com/enterprise?tab=tokens, pastes it here, and the
- * desktop persists it to ~/.screenpipe/enterprise.json. Every new pi
- * chat reads that file at boot and (un)installs the skill accordingly —
- * no app restart needed, just open a new chat. Revoke from the same
- * dashboard page to kill team access immediately.
- *
- * UX mirrors the local API key card above (Input + Eye reveal + Copy).
- */
-function AdminTeamTokenCard() {
-  const { toast } = useToast();
-  const [liveToken, setLiveToken] = useState<string | null>(null);
-  const [revealToken, setRevealToken] = useState(false);
-  const [pendingToken, setPendingToken] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  const reload = useCallback(async () => {
-    try {
-      const cur = await commands.getEnterpriseTeamApiToken();
-      setLiveToken(cur ?? null);
-    } catch {
-      setLiveToken(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
-  const handleSave = useCallback(async () => {
-    const trimmed = (pendingToken ?? "").trim();
-    if (!trimmed) {
-      toast({ title: "请先粘贴令牌" });
-      return;
-    }
-    if (!trimmed.startsWith("sk_ent_")) {
-      toast({
-        title: "这看起来不像管理员令牌",
-        description: "预期格式：sk_ent_…",
-      });
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await commands.saveEnterpriseTeamConfig(null, null, trimmed, null);
-      if (res.status === "error") throw new Error(res.error);
-      setLiveToken(trimmed);
-      setPendingToken(null);
-      toast({
-        title: "管理员令牌已保存",
-        description: "打开新的 pi 聊天即可使用 — 无需重启应用",
-      });
-    } catch (e) {
-      toast({
-        title: "保存失败",
-        description: e instanceof Error ? e.message : String(e),
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  }, [pendingToken, toast]);
-
-  const handleClear = useCallback(async () => {
-    setSaving(true);
-    try {
-      const res = await commands.saveEnterpriseTeamConfig(null, null, "", null);
-      if (res.status === "error") throw new Error(res.error);
-      setLiveToken(null);
-      setPendingToken(null);
-      setRevealToken(false);
-      toast({ title: "管理员令牌已清除" });
-    } catch (e) {
-      toast({
-        title: "清除失败",
-        description: e instanceof Error ? e.message : String(e),
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  }, [toast]);
-
-  const displayValue =
-    pendingToken !== null
-      ? pendingToken
-      : liveToken
-      ? revealToken
-        ? liveToken
-        : "•".repeat(Math.min(liveToken.length, 32))
-      : "";
-  const hasPending = pendingToken !== null && pendingToken !== (liveToken ?? "");
-
-  return (
-    <Card className="border-border bg-card">
-      <CardContent className="px-3 py-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div>
-              <h3 className="text-sm font-medium text-foreground">
-                管理员团队 API 令牌
-              </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                让 pi agent 查询全组织的团队数据（设备、搜索、
-                记录）。在 
-                <button
-                  className="underline text-foreground hover:text-foreground/80"
-                  onClick={() =>
-                    openUrl(screenpipeWebUrl("/enterprise?tab=tokens", "https://screenpipe.com"))
-                  }
-                >
-                  screenpipe.com/enterprise → API 令牌
-                </button>
-                颁发。
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="mt-2.5 flex items-center space-x-2.5 pl-6.5">
-          <Input
-            type="text"
-            // First-time users have no `liveToken` yet — they must always be able
-            // to type a fresh token in. Only lock the input when we're displaying
-            // an EXISTING token in masked form; clicking the eye unlocks edit mode.
-            readOnly={Boolean(liveToken) && !revealToken && pendingToken === null}
-            placeholder="sk_ent_…"
-            data-testid="privacy-admin-token-input"
-            value={displayValue}
-            onChange={(e) => {
-              setPendingToken(e.target.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && hasPending) {
-                void handleSave();
-              }
-            }}
-            onClick={(e) => (e.target as HTMLInputElement).select()}
-            className="h-8 text-xs font-mono cursor-text select-all"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 shrink-0"
-            title={revealToken ? "隐藏令牌" : "显示令牌"}
-            onClick={() => {
-              setRevealToken((v) => !v);
-              if (pendingToken === null && liveToken) setPendingToken(liveToken);
-            }}
-            // Eye only makes sense when there's a saved token to unmask. Fresh
-            // users typing a new token don't need it.
-            disabled={!liveToken}
-            data-testid="privacy-admin-token-reveal"
-          >
-            {revealToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 shrink-0"
-            title="复制令牌"
-            disabled={!liveToken}
-            data-testid="privacy-admin-token-copy"
-            onClick={async () => {
-              if (!liveToken) return;
-              try {
-                await commands.copyTextToClipboard(liveToken);
-                toast({ title: "管理员令牌已复制到剪贴板" });
-              } catch (error) {
-                toast({
-                  title: "无法复制管理员令牌",
-                  description: error instanceof Error ? error.message : String(error),
-                  variant: "destructive",
-                });
-              }
-            }}
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </Button>
-          {hasPending && (
-            <Button
-              size="sm"
-              className="h-8 text-xs"
-              disabled={saving}
-              onClick={handleSave}
-              data-testid="privacy-admin-token-save"
-            >
-              保存
-            </Button>
-          )}
-          {!hasPending && liveToken && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              disabled={saving}
-              onClick={handleClear}
-              data-testid="privacy-admin-token-clear"
-            >
-              清除
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
   );
 }

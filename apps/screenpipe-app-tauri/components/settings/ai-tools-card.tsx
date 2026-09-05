@@ -13,7 +13,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, Check, Loader2, Plus, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import posthog from "posthog-js";
 import { CursorLogo } from "./tool-logos";
 import { Command } from "@tauri-apps/plugin-shell";
 import { platform } from "@tauri-apps/plugin-os";
@@ -179,7 +178,6 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
       const { succeeded, failed } = await connectAiToolTargets(row.targets);
       for (const id of succeeded) {
         setConnected((prev) => ({ ...prev, [id]: true }));
-        posthog.capture("settings_ai_tool_connected", { tool: id });
       }
       for (const { id, error } of failed) {
         console.warn(`[ai-tools] ${id} connect failed:`, error);
@@ -203,7 +201,6 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
     const { succeeded, failed } = await disconnectAiToolTargets(row.targets);
     for (const id of succeeded) {
       setConnected((prev) => ({ ...prev, [id]: false }));
-      posthog.capture("settings_ai_tool_removed", { tool: id });
     }
     for (const { id, error } of failed) {
       console.warn(`[ai-tools] ${id} remove failed:`, error);
@@ -224,9 +221,6 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
     setBulkRunning(true);
     try {
       const targets = rows.filter((row) => !isRowConnected(row, connected));
-      posthog.capture("settings_ai_tools_connect_all_clicked", {
-        tools: targets.map((row) => row.id),
-      });
       for (const row of targets) {
         await connectTool(row);
       }
@@ -249,9 +243,6 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
     setBulkRunning(true);
     try {
       const targets = rows.filter((row) => hasRowConnection(row, connected));
-      posthog.capture("settings_ai_tools_disconnect_all_clicked", {
-        tools: targets.map((row) => row.id),
-      });
       for (const row of targets) {
         await removeTool(row);
       }

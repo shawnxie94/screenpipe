@@ -5,8 +5,6 @@
 
 import { useEffect, type ComponentProps } from "react";
 import { ArrowRight, RefreshCw, Sparkles } from "lucide-react";
-import posthog from "posthog-js";
-import { useFeatureFlagVariantKey } from "posthog-js/react";
 import { PipeAIIconLarge } from "@/components/pipe-ai-icon";
 import { SummaryCards } from "@/components/chat/summary-cards";
 import type {
@@ -68,10 +66,6 @@ function ContextualSuggestions({
 
   useEffect(() => {
     visibleSuggestions.forEach((suggestion, index) => {
-      posthog.capture("home_card_impression", {
-        ...suggestionAnalyticsProperties(suggestion, index + 1, activityMode),
-        presentation: "suggestion_card",
-      });
     });
     // `impressionSignature` changes only when the three visible, local prompts
     // change. Prompt text is deliberately never sent to analytics.
@@ -126,15 +120,6 @@ function ContextualSuggestions({
                 onBlur={() => onPreviewPrompt?.(null)}
                 onClick={() => {
                   onPreviewPrompt?.(null);
-                  posthog.capture("home_card_clicked", {
-                    ...suggestionAnalyticsProperties(
-                      suggestion,
-                      index + 1,
-                      activityMode,
-                    ),
-                    kind: "contextual_suggestion",
-                    interaction: "fill_composer",
-                  });
                   onFillSuggestion(suggestion.text);
                 }}
                 className="group flex min-h-24 cursor-pointer flex-col border border-border/40 bg-muted/10 p-3 text-left transition-all duration-150 hover:border-foreground hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-offset-2"
@@ -161,12 +146,6 @@ function ContextualSuggestions({
       <button
         type="button"
         onClick={() => {
-          posthog.capture("home_card_clicked", {
-            schema_version: 1,
-            surface: "chat_home",
-            layout_version: "contextual_v1",
-            kind: "contextual_suggestions_refresh",
-          });
           onRefresh();
         }}
         disabled={isLoading || isRefreshing}
@@ -192,11 +171,8 @@ export function HomeStarterSurface({
   onFillSuggestion,
   onRefresh,
 }: HomeStarterSurfaceProps) {
-  const variant = useFeatureFlagVariantKey(HOME_CONTEXTUAL_SUGGESTIONS_FLAG);
-
-  if (variant !== "contextual") {
-    return <SummaryCards {...summaryCardsProps} />;
-  }
+  // The contextual-suggestions A/B experiment is gone; the local suggestions
+  // surface is the default home experience.
 
   if (!isLoading && suggestions.length === 0) {
     return <SummaryCards {...summaryCardsProps} />;

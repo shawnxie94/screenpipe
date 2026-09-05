@@ -125,7 +125,8 @@ export function useDeviceMonitor() {
   // Stable key for effect dependency
   const deviceKey = registeredDevices.map((d) => d.address).sort().join(",");
 
-  const apiKey = settings.user?.api_key || settings.user?.token;
+  // Local-only build: remote calls use the local API auth path (authHeaders).
+  const apiKey: string | null = null;
 
   const localHealthFetch = useCallback(
     async (timeoutMs: number): Promise<Response> => {

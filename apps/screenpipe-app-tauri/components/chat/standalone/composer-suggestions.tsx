@@ -5,7 +5,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, RefreshCw, Sparkles, X } from "lucide-react";
-import posthog from "posthog-js";
 import {
   Popover,
   PopoverContent,
@@ -46,10 +45,6 @@ export function ComposerSuggestions({
 
     lastImpressionSignatureRef.current = impressionSignature;
     visibleSuggestions.forEach((suggestion, index) => {
-      posthog.capture(
-        "chat_suggestion_impression",
-        postChatSuggestionImpressionProperties(suggestion, index + 1),
-      );
     });
     // The signature changes only when the visible local suggestions change.
     // Prompt and preview text are deliberately never sent to analytics.

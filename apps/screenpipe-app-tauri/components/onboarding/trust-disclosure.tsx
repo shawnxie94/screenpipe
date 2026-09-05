@@ -7,7 +7,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { commands } from "@/lib/utils/tauri";
-import posthog from "posthog-js";
 
 /**
  * Where recordings live and how to stop them, as one quiet line.
@@ -74,7 +73,6 @@ export default function TrustDisclosure({
 
   const toggle = useCallback(() => {
     setOpen((wasOpen) => {
-      if (!wasOpen) posthog.capture("onboarding_trust_expanded", { surface });
       return !wasOpen;
     });
   }, [surface]);
@@ -88,7 +86,6 @@ export default function TrustDisclosure({
       // Rust Err instead of throwing, so a plain try/catch reports success on
       // a failed reveal.
       if (res && res.status === "error") throw new Error(res.error);
-      posthog.capture("onboarding_data_dir_revealed", { surface });
     } catch (error) {
       console.error("reveal_in_default_browser failed:", error);
       setRevealFailed(true);

@@ -12,8 +12,6 @@ import { requestPermissionWithFlow } from "@/lib/utils/permission-flow";
 import TrustDisclosure from "./trust-disclosure";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import { motion } from "framer-motion";
-import posthog from "posthog-js";
-import { onboardingFunnel } from "@/lib/analytics/onboarding-funnel";
 
 interface PermissionsStepProps {
   handleNextSlide: () => void;
@@ -268,11 +266,6 @@ export default function PermissionsStep({
             statusesRef.current[id] === false &&
             requestStartedAtRef.current[id]
           ) {
-            posthog.capture("onboarding_permission_grant_confirmed", {
-              permission: id,
-              confirmation_latency_ms:
-                Date.now() - requestStartedAtRef.current[id],
-            });
             delete requestStartedAtRef.current[id];
           }
         }
@@ -322,11 +315,6 @@ export default function PermissionsStep({
   useEffect(() => {
     if (allRequiredGranted && !hasAdvancedRef.current && !isPlatformLoading) {
       hasAdvancedRef.current = true;
-      posthog.capture("onboarding_permissions_granted", {
-        time_spent_ms: Date.now() - mountTimeRef.current,
-        statuses,
-      });
-      onboardingFunnel.permissionsGranted();
       // Small delay so the user sees the last checkmark animate
       setTimeout(() => handleNextSlide(), 600);
     }
@@ -336,9 +324,6 @@ export default function PermissionsStep({
   const handleGrant = async (perm: PermissionDef) => {
     if (requesting || perm.id !== focusedPerm?.id) return;
     requestStartedAtRef.current[perm.id] = Date.now();
-    posthog.capture("onboarding_permission_grant_clicked", {
-      permission: perm.id,
-    });
     setRequesting(true);
     try {
       await perm.request();
@@ -346,9 +331,6 @@ export default function PermissionsStep({
       await pollPermissions();
     } catch (err) {
       delete requestStartedAtRef.current[perm.id];
-      posthog.capture("onboarding_permission_grant_request_failed", {
-        permission: perm.id,
-      });
       console.error("failed to request permission:", err);
     } finally {
       setRequesting(false);
@@ -358,7 +340,6 @@ export default function PermissionsStep({
   const handleRestart = async () => {
     if (restarting) return;
     setRestarting(true);
-    posthog.capture("onboarding_screen_recording_restart_clicked");
     try {
       await commands.restartAfterScreenRecordingPermission();
     } catch (error) {

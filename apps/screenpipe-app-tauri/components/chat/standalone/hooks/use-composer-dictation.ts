@@ -4,7 +4,6 @@
 "use client";
 
 import * as React from "react";
-import { useSettings } from "@/lib/hooks/use-settings";
 import {
   ComposerDictationError,
   insertComposerTranscript,
@@ -68,7 +67,6 @@ export function useComposerDictation({
   disabled,
   sessionId,
 }: UseComposerDictationOptions) {
-  const { settings } = useSettings();
   const [status, setStatus] = React.useState<ComposerDictationStatus>("idle");
   const [error, setError] = React.useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = React.useState(0);
@@ -174,7 +172,7 @@ export function useComposerDictation({
       try {
         const transcript = await transcribeComposerAudio(
           audio,
-          settings.user?.token || "",
+          "",
           controller.signal,
         );
         if (!mountedRef.current || generation !== generationRef.current) return;
@@ -205,7 +203,7 @@ export function useComposerDictation({
         if (requestAbortRef.current === controller) requestAbortRef.current = null;
       }
     },
-    [inputRef, onValueChange, settings.user?.token, updateStatus],
+    [inputRef, onValueChange, updateStatus],
   );
 
   const stopRecorder = React.useCallback(

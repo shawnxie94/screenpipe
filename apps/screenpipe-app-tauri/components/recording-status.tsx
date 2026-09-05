@@ -6,7 +6,6 @@
 
 import React from "react";
 import { Monitor, MonitorOff, Mic, MicOff, Volume2, VolumeX, Pause, Play } from "lucide-react";
-import posthog from "posthog-js";
 import {
   Popover,
   PopoverContent,
@@ -174,11 +173,6 @@ export function RecordingStatus({
       onOpenChange={(o) => {
         setOpen(o);
         if (o) {
-          posthog.capture("recording_status_opened", {
-            device_count: devices.length,
-            paused_count: pausedCount,
-            meeting_active: meetingActive,
-          });
         }
       }}
     >

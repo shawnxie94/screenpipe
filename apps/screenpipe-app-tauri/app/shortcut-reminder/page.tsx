@@ -8,7 +8,6 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
-import posthog from "posthog-js";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import { getStore } from "@/lib/hooks/use-settings";
 import { commands } from "@/lib/utils/tauri";
@@ -242,7 +241,6 @@ export default function ShortcutReminderPage() {
       loadShortcutsFromFile();
     });
 
-    posthog.capture("shortcut_reminder_shown");
 
     return () => {
       unlistenShortcut.then((fn) => fn());
@@ -430,7 +428,6 @@ export default function ShortcutReminderPage() {
     e.preventDefault();
     e.stopPropagation();
     setSettingsOpen(false);
-    posthog.capture("shortcut_reminder_overlay_settings_clicked");
     void commands.showWindow({ Home: { page: "display" } });
   }, []);
 
@@ -443,10 +440,6 @@ export default function ShortcutReminderPage() {
     try {
       const result = await commands.snoozeShortcutReminderForHour();
       if (result.status === "error") throw new Error(result.error);
-      posthog.capture("shortcut_reminder_dismissed", {
-        dismiss_scope: "hour",
-        snooze_hours: 1,
-      });
     } catch (error) {
       console.error("延时快捷键提醒失败：", error);
     }
@@ -739,7 +732,6 @@ export default function ShortcutReminderPage() {
   const openTimeline = guardDragClick((e: React.MouseEvent) => {
     e.stopPropagation();
     void commands.showWindow("Main");
-    posthog.capture("shortcut_reminder_timeline_clicked");
   });
 
   if (!expanded) {
@@ -846,7 +838,6 @@ export default function ShortcutReminderPage() {
           onClick={(e) => {
             e.stopPropagation();
             void commands.showWindow({ Search: { query: null } });
-            posthog.capture("shortcut_reminder_search_clicked");
           }}
         >
           <Search style={{ width: `${12 * overlayScale}px`, height: `${12 * overlayScale}px` }} />
@@ -861,7 +852,6 @@ export default function ShortcutReminderPage() {
           onClick={(e) => {
             e.stopPropagation();
             void commands.showWindow("Chat");
-            posthog.capture("shortcut_reminder_chat_clicked");
           }}
         >
           <MessageCircle style={{ width: `${12 * overlayScale}px`, height: `${12 * overlayScale}px` }} />

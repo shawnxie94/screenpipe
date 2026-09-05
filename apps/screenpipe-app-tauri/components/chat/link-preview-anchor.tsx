@@ -16,7 +16,6 @@ import {
   MessagesSquare,
   Video,
 } from "lucide-react";
-import posthog from "posthog-js";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   fetchRichLinkPreview,
@@ -266,11 +265,6 @@ export function LinkPreviewAnchor({
     if (!previewResult) return;
 
     capturedOpen.current = true;
-    posthog.capture("chat_link_preview_opened", {
-      schema_version: 1,
-      provider: link.provider.id,
-      preview_result: previewResult,
-    });
   }, [displayState.status, link, open]);
 
   if (!link) {

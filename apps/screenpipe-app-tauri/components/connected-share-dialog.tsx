@@ -23,7 +23,6 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
-import posthog from "posthog-js";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 import { Button } from "@/components/ui/button";
 import { ConnectedShareAppIcon } from "@/components/connected-share-app-icon";
@@ -354,10 +353,6 @@ export function ConnectedShareDialog({
     setLinearTeams([]);
     setLinearTeamsError(null);
     setLinearTeamId("");
-    posthog.capture("connected_share_opened", {
-      surface: artifact.surface,
-      section_count: artifact.sections.length,
-    });
   }, [
     allSectionIds,
     artifact.sections.length,
@@ -700,10 +695,6 @@ export function ConnectedShareDialog({
   const outgoingMessage = destination === "slack" ? slackMessage : message;
 
   const openConnection = (connectionId: ConnectedShareApp) => {
-    posthog.capture("connected_share_connection_requested", {
-      surface: artifact.surface,
-      connection: connectionId,
-    });
     onOpenChange(false);
     window.dispatchEvent(
       new CustomEvent("open-settings", {
@@ -761,11 +752,6 @@ export function ConnectedShareDialog({
       source: `connected-share-${artifact.surface}`,
       useHomeChat: true,
     });
-    posthog.capture("connected_share_chat_prepared", {
-      surface: artifact.surface,
-      destination: provider,
-      section_count: selectedSectionIds.length,
-    });
     onOpenChange(false);
   };
 
@@ -774,11 +760,6 @@ export function ConnectedShareDialog({
     setSending(true);
     setReceipt(null);
     setActionError(null);
-    posthog.capture("connected_share_confirmed", {
-      surface: artifact.surface,
-      destination,
-      section_count: selectedSectionIds.length,
-    });
     try {
       if (destination === "slack") await sendToSlack();
       if (destination === "linear") await sendToLinear();
@@ -798,22 +779,12 @@ export function ConnectedShareDialog({
         instance: destination === "slack" ? slackInstance : undefined,
       });
       if (destination === "slack" || destination === "linear") {
-        posthog.capture("connected_share_completed", {
-          surface: artifact.surface,
-          destination,
-          section_count: selectedSectionIds.length,
-        });
         toast({
           title:
             destination === "slack" ? "sent to Slack" : "Linear issue created",
         });
       }
     } catch (error) {
-      posthog.capture("connected_share_failed", {
-        surface: artifact.surface,
-        destination,
-        error_type: error instanceof Error ? error.name : "unknown",
-      });
       const message =
         error instanceof Error ? error.message : "The action did not complete.";
       setActionError(message);
@@ -939,10 +910,6 @@ export function ConnectedShareDialog({
     rememberModeDestination(nextDestination);
     setReceipt(null);
     setActionError(null);
-    posthog.capture("connected_share_mode_selected", {
-      surface: artifact.surface,
-      mode: nextMode,
-    });
   };
   // "Nothing is connected" and "more than one thing is connected and you have
   // not said which" are both `destination === null`, but they need opposite

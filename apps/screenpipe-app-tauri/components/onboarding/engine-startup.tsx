@@ -5,26 +5,19 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Check, Upload, Loader, Calendar } from "lucide-react";
+import { Check, Loader, Calendar } from "lucide-react";
 import { Button } from "../ui/button";
-import posthog from "posthog-js";
 import { commands } from "@/lib/utils/tauri";
 import { openPermissionSettingsWithFlow } from "@/lib/utils/permission-flow";
 import { motion, AnimatePresence } from "framer-motion";
-import { useSettings, makeDefaultPresets } from "@/lib/hooks/use-settings";
+import { useSettings } from "@/lib/hooks/use-settings";
 import { localFetch } from "@/lib/api";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { homeDir, join } from "@tauri-apps/api/path";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { getVersion } from "@tauri-apps/api/app";
-import {
-  version as osVersion,
-  platform as osPlatform,
-} from "@tauri-apps/plugin-os";
 import { ParticleStream, ProgressSteps } from "./particle-stream";
-import { screenpipeWebBase } from "@/lib/web-url";
-import { onboardingFunnel } from "@/lib/analytics/onboarding-funnel";
 
 interface EngineStartupProps {
   handleNextSlide: () => void;
@@ -131,16 +124,9 @@ async function readEngineHealth(
     // only, no values) so a future mismatch names itself instead of costing
     // another week of silence.
     if (!conforms) {
-      posthog.capture("onboarding_engine_health_unrecognized", {
-        http_status: response.status,
-        keys: Object.keys(data ?? {}).slice(0, 20).join(","),
-      });
     }
     return conforms ? data : null;
   } catch {
-    posthog.capture("onboarding_engine_health_unparseable", {
-      http_status: response.status,
-    });
     return null;
   }
 }
@@ -151,8 +137,6 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
   const [audioReady, setAudioReady] = useState(false);
   const [visionReady, setVisionReady] = useState(false);
   const [isTakingLonger, setIsTakingLonger] = useState(false);
-  const [isSendingLogs, setIsSendingLogs] = useState(false);
-  const [logsSent, setLogsSent] = useState(false);
   // When spawn_screenpipe rejects (e.g. TCC permission denied) we used to
   // swallow the error and let the 15s "stuck" timer fire with empty boot phase.
   // PostHog showed 90% of stuck users had serverStarted=false / boot_phase=?,
@@ -259,17 +243,6 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
   useEffect(
     () => () => {
       if (stateRef.current === "running" || leftDeliberatelyRef.current) return;
-      posthog.capture(
-        "onboarding_engine_abandoned",
-        {
-          time_spent_ms: Date.now() - mountTimeRef.current,
-          state: stateRef.current,
-          health_unreachable: hasReportedPollFailureRef.current,
-        },
-        // sendBeacon so the report survives the webview going away, which is
-        // the only situation this event exists to describe.
-        { transport: "sendBeacon" },
-      );
     },
     [],
   );
@@ -334,10 +307,6 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
         // this stops being invisible, then let the poll or the stuck timer own
         // the outcome rather than forcing either one here.
         if (result === SPAWN_TIMED_OUT) {
-          posthog.capture("onboarding_engine_spawn_timeout", {
-            time_spent_ms: Date.now() - mountTimeRef.current,
-            timeout_ms: SPAWN_TIMEOUT_MS,
-          });
           return;
         }
 
@@ -361,11 +330,6 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
         const kind: "permission" | "other" = /permission/i.test(message)
           ? "permission"
           : "other";
-        posthog.capture("onboarding_engine_spawn_failed", {
-          time_spent_ms: Date.now() - mountTimeRef.current,
-          error_message: message,
-          error_kind: kind,
-        });
 
         setSpawnError(message);
         setSpawnErrorKind(kind);
@@ -415,21 +379,6 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
           unreachableForMs >= HEALTH_UNREACHABLE_REPORT_AFTER_MS
         ) {
           hasReportedPollFailureRef.current = true;
-          posthog.capture("onboarding_engine_health_unreachable", {
-            time_spent_ms: Date.now() - mountTimeRef.current,
-            unreachable_for_ms: unreachableForMs,
-            consecutive_failures: consecutivePollFailuresRef.current,
-            reason:
-              pollError instanceof Error
-                ? pollError.name || "error"
-                : typeof pollError,
-            message:
-              pollError instanceof Error
-                ? pollError.message.slice(0, 120)
-                : String(pollError ?? "unknown").slice(0, 120),
-            // Triage needed this and had to join another event to get it.
-            app_version: appVersionRef.current ?? "unknown",
-          });
         }
       }
     };
@@ -474,27 +423,11 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
       ? "port_conflict"
       : "other";
 
-    posthog.capture("onboarding_engine_boot_error", {
-      time_spent_ms: Date.now() - mountTimeRef.current,
-      error_message: bootPhase.error,
-      error_kind: kind,
-    });
 
     setSpawnError(bootPhase.error);
     setSpawnErrorKind(kind);
     setState("stuck");
   }, [state, bootPhase?.phase, bootPhase?.error]);
-
-  const ensureDefaultPreset = useCallback(async () => {
-    if (settings.aiPresets.length === 0) {
-      const isPro = settings.user?.cloud_subscribed === true;
-      await updateSettings({ aiPresets: makeDefaultPresets(isPro) as any });
-    }
-  }, [
-    settings.aiPresets.length,
-    settings.user?.cloud_subscribed,
-    updateSettings,
-  ]);
 
   // Move on as soon as the engine is ready. The activity recap that used to
   // follow this screen added another wait before users could finish setup.
@@ -503,10 +436,6 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
 
     if (!hasReportedReadyRef.current) {
       hasReportedReadyRef.current = true;
-      posthog.capture("onboarding_engine_started", {
-        time_spent_ms: Date.now() - mountTimeRef.current,
-      });
-      onboardingFunnel.engineReady();
     }
 
     // Keep the completed progress visible briefly before advancing.
@@ -520,12 +449,11 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
       if (hasAdvancedRef.current) return;
       hasAdvancedRef.current = true;
       try {
-        await ensureDefaultPreset();
       } catch {}
       handleNextSlide();
     }, delay);
     return () => clearTimeout(timer);
-  }, [state, handleNextSlide, ensureDefaultPreset]);
+  }, [state, handleNextSlide]);
 
   // Timers for taking-longer and stuck.
   //
@@ -576,16 +504,6 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
       // Re-check at fire time — state may have advanced.
       setState((current) => {
         if (current === "running") return current;
-        posthog.capture("onboarding_engine_stuck", {
-          time_spent_ms: Date.now() - mountTimeRef.current,
-          serverStarted,
-          audioReady,
-          visionReady,
-          boot_phase: bootPhase?.phase ?? "unknown",
-          // True means a phase claimed to be progressing right past the
-          // ceiling, which is a stalled engine rather than a slow one.
-          exhausted_budget: !withinBudget,
-        });
         return "stuck";
       });
     }, STUCK_TIMEOUT_MS);
@@ -597,14 +515,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
     // Leaving by choice is not abandonment. `handleContinueWithoutRecording`
     // routes through here too, so this covers both explicit exits.
     leftDeliberatelyRef.current = true;
-    posthog.capture("onboarding_startup_skipped", {
-      serverStarted,
-      audioReady,
-      visionReady,
-      time_spent_ms: Date.now() - mountTimeRef.current,
-    });
     try {
-      await ensureDefaultPreset();
     } catch {}
     handleNextSlide();
   };
@@ -631,83 +542,6 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
     await handleSkip();
   };
 
-  const sendLogs = async () => {
-    setIsSendingLogs(true);
-    try {
-      const BASE_URL = screenpipeWebBase("https://screenpipe.com");
-      const machineId =
-        localStorage?.getItem("machineId") || crypto.randomUUID();
-      try {
-        localStorage?.setItem("machineId", machineId);
-      } catch {}
-      const identifier = settings.user?.id || machineId;
-      const type = settings.user?.id ? "user" : "machine";
-      const logFilesResult = await commands.getLogFiles();
-      if (logFilesResult.status !== "ok")
-        throw new Error("Failed to get log files");
-      const logFiles = logFilesResult.data.slice(0, 3);
-      const MAX_LOG_SIZE = 50 * 1024;
-      const logContents = await Promise.all(
-        logFiles.map(async (file) => {
-          try {
-            const content = await readTextFile(file.path);
-            const truncated =
-              content.length > MAX_LOG_SIZE
-                ? `... [truncated] ...\n` + content.slice(-MAX_LOG_SIZE)
-                : content;
-            return { name: file.name, content: truncated };
-          } catch {
-            return { name: file.name, content: "[Error reading file]" };
-          }
-        }),
-      );
-      const signedRes = await fetch(`${BASE_URL}/api/logs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, type }),
-      });
-      const {
-        data: { signedUrl, path },
-      } = await signedRes.json();
-      const consoleLog = (localStorage?.getItem("console_logs") || "").slice(
-        -50000,
-      );
-      const combinedLogs =
-        logContents
-          .map((log) => `\n=== ${log.name} ===\n${log.content}`)
-          .join("\n\n") +
-        "\n\n=== Browser Console Logs ===\n" +
-        consoleLog +
-        "\n\n=== Onboarding Stuck ===\nUser experienced startup issues during onboarding.";
-      await fetch(signedUrl, {
-        method: "PUT",
-        body: combinedLogs,
-        headers: { "Content-Type": "text/plain" },
-      });
-      const os = osPlatform();
-      const os_version = osVersion();
-      const app_version = await getVersion();
-      await fetch(`${BASE_URL}/api/logs/confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          path,
-          identifier,
-          type,
-          os,
-          os_version,
-          app_version,
-          feedback_text: "引导卡住 - 自动提交日志",
-        }),
-      });
-      setLogsSent(true);
-    } catch (err) {
-      console.error("Failed to send logs:", err);
-    } finally {
-      setIsSendingLogs(false);
-    }
-  };
-
   const openLogsFolder = async () => {
     try {
       const home = await homeDir();
@@ -724,9 +558,6 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
   // from the engine never fires again without a reset.
   const resetScreenRecordingPermission = async () => {
     setIsResettingPerm(true);
-    posthog.capture("onboarding_engine_permission_reset_clicked", {
-      bundle_id: bundleId,
-    });
     try {
       await commands.resetAndRequestPermission("screenRecording");
     } catch (err) {
@@ -970,25 +801,6 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                   className="font-mono text-[10px] h-7 px-2"
                 >
                   logs
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={sendLogs}
-                  disabled={isSendingLogs || logsSent}
-                  className="font-mono text-[10px] h-7 px-2"
-                >
-                  {isSendingLogs ? (
-                    <Loader className="w-3 h-3 animate-spin" />
-                  ) : logsSent ? (
-                    <>
-                      <Check className="w-3 h-3 mr-1" /> sent
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-3 h-3 mr-1" /> send logs
-                    </>
-                  )}
                 </Button>
                 <Button
                   variant="outline"

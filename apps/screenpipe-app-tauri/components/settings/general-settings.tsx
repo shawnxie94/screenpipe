@@ -4,7 +4,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { LockedSetting, ManagedSwitch } from "@/components/enterprise-locked-setting";
 import { useSettings } from "@/lib/hooks/use-settings";
 import type { Settings } from "@/lib/hooks/use-settings";
 import { Switch } from "@/components/ui/switch";
@@ -30,7 +29,6 @@ import {
   normalizeUserGoalCategory,
   type UserGoalCategory,
 } from "@/lib/live-views/onboarding-activation";
-import posthog from "posthog-js";
 
 /** Settings search index for this section. Co-located with the component so adding a field here means updating one file. See `SettingsField` in `./settings-search` for the schema. */
 export const searchIndex: SettingsField[] = [
@@ -38,10 +36,8 @@ export const searchIndex: SettingsField[] = [
   { label: "Reset Onboarding", keywords: ["setup"] },
   { label: "Your goal", keywords: ["onboarding", "purpose", "personalization"] },
 ];
-import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
 
 export default function GeneralSettings() {
-  const { isManagedDeployment } = useManagedPolicy();
   const { settings, updateSettings } = useSettings();
   const resetOnboarding = useOnboarding((state) => state.resetOnboarding);
   const { toast } = useToast();
@@ -53,10 +49,6 @@ export default function GeneralSettings() {
   const handleUserGoalChange = async (category: UserGoalCategory) => {
     try {
       await updateSettings({ userGoalCategory: category });
-      posthog.capture("user_goal_changed", {
-        goal_category: category,
-        source: "general_settings",
-      });
     } catch (error) {
       console.error("failed to save user goal:", error);
       toast({
@@ -117,7 +109,6 @@ export default function GeneralSettings() {
       </p>
 
       <div className="space-y-2">
-        <LockedSetting settingKey="auto_start">
         <Card className="border-border bg-card">
           <CardContent className="px-3 py-2.5">
             <div className="flex items-center justify-between">
@@ -128,8 +119,7 @@ export default function GeneralSettings() {
                   <p className="text-xs text-muted-foreground">登录时在后台启动</p>
                 </div>
               </div>
-              <ManagedSwitch
-                settingKey="autoStartEnabled"
+              <Switch
                 id="auto-start-toggle"
                 checked={settings?.autoStartEnabled ?? false}
                 onCheckedChange={handleAutoStartChange}
@@ -138,7 +128,6 @@ export default function GeneralSettings() {
             </div>
           </CardContent>
         </Card>
-        </LockedSetting>
       </div>
 
       <Separator />

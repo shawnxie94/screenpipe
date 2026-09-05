@@ -4,21 +4,18 @@
 
 "use client";
 
-import { getStore, saveAndEncrypt, useSettings } from "@/lib/hooks/use-settings";
+import { getStore, useSettings } from "@/lib/hooks/use-settings";
 
 import React, { useEffect, useState, useRef, useCallback, ErrorInfo } from "react";
 import NotificationHandler from "@/components/notification-handler";
 import { useToast } from "@/components/ui/use-toast";
 import { useOnboarding } from "@/lib/hooks/use-onboarding";
 import { ChangelogDialog } from "@/components/changelog-dialog";
-import { localFetch } from "@/lib/api";
 
 import { useHealthCheck } from "@/lib/hooks/use-health-check";
 
 import { commands } from "@/lib/utils/tauri";
 import localforage from "localforage";
-import { UpdateBanner } from "@/components/update-banner";
-import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
 import { ModelDownloadTracker } from "@/components/model-download-tracker";
 import Timeline from "@/components/rewind/timeline";
 import { NativeTimeline, NativeTimelineBridge } from "@/components/rewind/native-timeline";
@@ -26,20 +23,18 @@ import { TIMELINE_DISMISS_TOP_OVERLAY_EVENT } from "@/components/rewind/timeline
 import { listen } from "@tauri-apps/api/event";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { RefreshCw, AlertTriangle, WifiOff, Upload, Loader, Check, Calendar, X } from "lucide-react";
+import { RefreshCw, AlertTriangle, WifiOff, FolderOpen, Calendar, X } from "lucide-react";
 import { useFeedbackStore } from "@/lib/stores/feedback-store";
 
 import { open as openUrl } from "@tauri-apps/plugin-shell";
-import { readTextFile } from "@tauri-apps/plugin-fs";
-import { getVersion } from "@tauri-apps/api/app";
-import { version as osVersion, platform as osPlatform } from "@tauri-apps/plugin-os";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { homeDir, join } from "@tauri-apps/api/path";
 import { PermissionButtons } from "@/components/status/permission-buttons";
 import { PermissionBanner } from "@/components/status/permission-banner";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import SplashScreen from "@/components/splash-screen";
 import { useTimelineStore } from "@/lib/hooks/use-timeline-store";
 import { hasCachedData } from "@/lib/hooks/use-timeline-cache";
-import { screenpipeWebBase } from "@/lib/web-url";
 
 function TimelineErrorFallback({
   error,
@@ -102,16 +97,13 @@ class TimelineErrorBoundary extends React.Component<
 }
 
 export default function OverlayPage() {
-  const { settings, updateSettings, loadUser, reloadStore, isSettingsLoaded, loadingError } = useSettings();
+  const { settings, updateSettings, reloadStore, isSettingsLoaded, loadingError } = useSettings();
   const { toast } = useToast();
   const openFeedback = useFeedbackStore((s) => s.openFeedback);
   const { onboardingData } = useOnboarding();
-  const { isManagedDeployment } = useManagedPolicy();
   const { isServerDown, isLoading: isHealthLoading } = useHealthCheck();
   const { isMac } = usePlatform();
   const [isRestarting, setIsRestarting] = useState(false);
-  const [isSendingLogs, setIsSendingLogs] = useState(false);
-  const [logsSent, setLogsSent] = useState(false);
   const isProcessingRef = useRef(false);
   
   // Optimistic UI: track if user has any data (cached or live)
@@ -201,117 +193,12 @@ export default function OverlayPage() {
     }
   }, [onboardingData.isCompleted]);
 
-  // Auto-init cloud sync from saved password on app startup
-  useEffect(() => {
-    if (!isSettingsLoaded || !settings.user?.token) return;
-    
-    const autoInitSync = async () => {
-      try {
-        // Check if sync is already running
-        const resp = await localFetch("/sync/status");
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data.enabled) return; // Already running
-        }
-      } catch {
-        // Server not ready yet, retry after delay
-        return;
-      }
-
-      // Try saved password from store.bin first, then localStorage for migration
-      let password: string | null = null;
-      try {
-        const store = await getStore();
-        password = await store.get<string>("sync_password") || null;
-      } catch {
-        // Store not available yet
-      }
-
-      // Fall back to old localStorage for migration
-      if (!password) {
-        const legacy = localStorage.getItem("sync_password");
-        if (legacy) {
-          password = atob(legacy);
-          // Migrate to store.bin
-          try {
-            const store = await getStore();
-            await store.set("sync_password", password);
-            await saveAndEncrypt(store);
-            localStorage.removeItem("sync_password");
-            console.log("migrated sync password from localStorage to store.bin");
-          } catch {
-            // Non-critical
-          }
-        }
-      }
-
-      if (!password) return;
-
-      try {
-        await commands.initSync(password);
-        console.log("cloud sync auto-initialized from saved password");
-      } catch (e) {
-        console.log("cloud sync auto-init failed:", e);
-        // Don't clear password - might be a transient error (server not ready)
-      }
-    };
-
-    // Delay to let the server start first
-    const timer = setTimeout(autoInitSync, 5000);
-    return () => clearTimeout(timer);
-  }, [isSettingsLoaded, settings.user?.token]);
-
-  const sendLogs = async () => {
-    setIsSendingLogs(true);
+  const openLogsFolder = async () => {
     try {
-      const BASE_URL = screenpipeWebBase("https://screenpipe.com");
-      const machineId = localStorage?.getItem("machineId") || crypto.randomUUID();
-      try { localStorage?.setItem("machineId", machineId); } catch {}
-      const identifier = settings.user?.id || machineId;
-      const type = settings.user?.id ? "user" : "machine";
-      const logFilesResult = await commands.getLogFiles();
-      if (logFilesResult.status !== "ok") throw new Error("Failed to get log files");
-      const logFiles = logFilesResult.data.slice(0, 3);
-      const MAX_LOG_SIZE = 50 * 1024;
-      const logContents = await Promise.all(
-        logFiles.map(async (file) => {
-          try {
-            const content = await readTextFile(file.path);
-            const truncated = content.length > MAX_LOG_SIZE
-              ? `... [truncated] ...\n` + content.slice(-MAX_LOG_SIZE)
-              : content;
-            return { name: file.name, content: truncated };
-          } catch {
-            return { name: file.name, content: "[Error reading file]" };
-          }
-        })
-      );
-      const signedRes = await fetch(`${BASE_URL}/api/logs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, type }),
-      });
-      const { data: { signedUrl, path } } = await signedRes.json();
-      const consoleLog = (localStorage?.getItem("console_logs") || "").slice(-50000);
-      const combinedLogs = logContents
-        .map((log) => `\n=== ${log.name} ===\n${log.content}`)
-        .join("\n\n") +
-        "\n\n=== Browser Console Logs ===\n" + consoleLog +
-        "\n\n=== Server Not Active ===\nServer not active - user submitted logs";
-      await fetch(signedUrl, { method: "PUT", body: combinedLogs, headers: { "Content-Type": "text/plain" } });
-      const os = osPlatform();
-      const os_version = osVersion();
-      const app_version = await getVersion();
-      await fetch(`${BASE_URL}/api/logs/confirm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path, identifier, type, os, os_version, app_version, feedback_text: "Server not active - user submitted logs" }),
-      });
-      setLogsSent(true);
-    } catch (err) {
-      console.error("Failed to send logs:", err);
-    } finally {
-      setIsSendingLogs(false);
+      const dir = await join(await homeDir(), ".screenpipe");
+      await revealItemInDir(dir);
+    } catch (error) {
+      console.error("Failed to open logs folder:", error);
     }
   };
 
@@ -392,8 +279,7 @@ export default function OverlayPage() {
           <ChangelogDialog />
 
           <ModelDownloadTracker />
-          <UpdateBanner />
-          
+
           {showTimeline ? (
             <div className="w-full h-screen scrollbar-hide bg-transparent relative">
               <NativeTimelineBridge />
@@ -494,18 +380,11 @@ export default function OverlayPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={sendLogs}
-                    disabled={isSendingLogs || logsSent}
+                    onClick={() => void openLogsFolder()}
                     className="text-muted-foreground"
                   >
-                    {logsSent ? (
-                      <Check className="h-4 w-4 mr-1.5" />
-                    ) : isSendingLogs ? (
-                      <Loader className="h-4 w-4 mr-1.5 animate-spin" />
-                    ) : (
-                      <Upload className="h-4 w-4 mr-1.5" />
-                    )}
-                    {logsSent ? "logs sent" : isSendingLogs ? "sending..." : "send logs"}
+                    <FolderOpen className="h-4 w-4 mr-1.5" />
+                    open logs folder
                   </Button>
                   <Button
                     variant="outline"

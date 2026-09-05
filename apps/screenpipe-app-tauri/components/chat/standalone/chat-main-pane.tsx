@@ -110,7 +110,7 @@ export function ChatMainPane({
   React.useEffect(() => {
     if (
       !firstRunLearningEnabled ||
-      learning?.activationState !== "summary" ||
+      learning?.phase !== "ready" ||
       !learning.chatId ||
       conversationId !== learning.chatId ||
       isLoading ||

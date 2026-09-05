@@ -15,11 +15,6 @@ import { showNotificationPanel } from "@/lib/hooks/use-notification-panel";
 import { showChatWithPrefill } from "@/lib/chat-utils";
 import { localFetch, isLocalApiUrl } from "@/lib/api";
 import { routeNotificationDeeplink } from "@/lib/notifications/actions";
-import {
-  notificationActionAnalyticsProperties,
-  notificationAnalyticsProperties,
-  type NotificationAnalyticsContext,
-} from "@/lib/notification-analytics";
 import { appServerFetch } from "@/lib/notifications/app-server";
 
 // notify_rust on Linux calls block_on for D-Bus inside the tokio runtime,
@@ -35,9 +30,7 @@ type NotificationRequested = {
 };
 
 const NotificationHandler: React.FC = () => {
-  const nativeNotificationRef = useRef<NotificationAnalyticsContext | null>(
-    null,
-  );
+  const nativeNotificationRef = useRef<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     const checkAndRequestPermission = async () => {
@@ -96,12 +89,6 @@ const NotificationHandler: React.FC = () => {
       try {
         const data = JSON.parse(event.payload);
         nativeNotificationRef.current = data;
-        // PostHog analytics (same as webview panel)
-        const posthog = (await import("posthog-js")).default;
-        posthog.capture("notification_shown", {
-          ...notificationAnalyticsProperties(data, "toast"),
-        });
-
         // Save to notification history (same as webview panel, max 100 entries)
         const localforage = (await import("localforage")).default;
         const history = await localforage.getItem<any[]>("notification-history") || [];
@@ -130,36 +117,14 @@ const NotificationHandler: React.FC = () => {
   useEffect(() => {
     const unlisten = listen<string>("native-notification-action", async (event) => {
       let actionType: string | null = null;
-      let analytics = notificationAnalyticsProperties(
-        nativeNotificationRef.current,
-        "toast",
-      );
       try {
         const action = JSON.parse(event.payload);
         actionType = action.type ?? null;
         console.log("native notification action:", action);
-        const notification = nativeNotificationRef.current;
-        analytics = notificationAnalyticsProperties(
-          notification,
-          "toast",
-        );
-
-        // PostHog tracking for dismiss/action (mirrors webview panel)
-        const posthog = (await import("posthog-js")).default;
         if (action.type === "dismiss" || action.type === "auto_dismiss") {
-          posthog.capture("notification_dismissed", {
-            auto: action.type === "auto_dismiss",
-            dismiss_reason:
-              action.type === "auto_dismiss" ? "auto" : "explicit",
-            ...analytics,
-          });
           nativeNotificationRef.current = null;
           return;
         }
-        posthog.capture("notification_action", {
-          ...notificationActionAnalyticsProperties(action.type),
-          ...analytics,
-        });
         // Copy keeps the native panel open, so retain its source context for a
         // later action or dismiss. Every other action resolves the panel.
         if (action.type !== "copy") {
@@ -331,15 +296,6 @@ const NotificationHandler: React.FC = () => {
         }
       } catch (e) {
         console.error("failed to handle native notification action:", e);
-        try {
-          const posthog = (await import("posthog-js")).default;
-          posthog.capture("notification_action_error", {
-            ...notificationActionAnalyticsProperties(actionType),
-            ...analytics,
-          });
-        } catch {
-          // Analytics must never hide the original action failure.
-        }
       }
     });
 

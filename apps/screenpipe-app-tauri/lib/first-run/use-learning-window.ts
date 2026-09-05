@@ -6,7 +6,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import posthog from "posthog-js";
 
 import { commands, type AIPreset } from "@/lib/utils/tauri";
 import {
@@ -28,15 +27,9 @@ import {
   type FirstRunLearningState,
 } from "@/lib/first-run/learning-window";
 import { fetchRecentActivity } from "@/lib/first-run/recent-activity";
-import {
-  TRIAL_ACTIVATION_PAYWALL_STEP,
-  trialActivationState,
-  type TrialActivationState,
-} from "@/lib/first-run/trial-activation";
 
 export type LearningWindowView = FirstRunLearningState & {
   remainingMs: number;
-  activationState: TrialActivationState;
   markSummaryOpened: () => void;
   markSummaryRendered: () => Promise<void>;
   markNotificationSent: () => void;
@@ -67,8 +60,6 @@ export function useLearningWindow(
   const [remainingMs, setRemainingMs] = useState(() =>
     learningWindowRemainingMs(readLearningWindow().startedAt),
   );
-  const [activationState, setActivationState] =
-    useState<TrialActivationState>("inactive");
 
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +67,6 @@ export function useLearningWindow(
       const result = await commands.getOnboardingStatus();
       if (cancelled || result.status !== "ok" || !result.data.isCompleted) return;
       const native = result.data;
-      setActivationState(trialActivationState(native.currentStep));
       const startedAt = native.firstRunSummaryStartedAt ?? native.completedAt;
       const phase = native.firstRunSummaryPhase ?? "idle";
 
@@ -154,34 +144,20 @@ export function useLearningWindow(
   }, []);
 
   const markSummaryOpened = useCallback(() => setState(markLearningSummaryOpened()), []);
-  const markSummaryRendered = useCallback(async () => {
-    if (activationState !== "summary") return;
-    await commands.setOnboardingStep(TRIAL_ACTIVATION_PAYWALL_STEP);
-    posthog.capture("first_run_summary_rendered", {
-      experiment: "first-summary-card-trial-v1",
-      variant: "summary_first",
-      eligible_new_install: true,
-    });
-    setActivationState("paywall");
-  }, [activationState]);
+  const markSummaryRendered = useCallback(async () => {}, []);
   // Notification persistence is native; retained for the existing view contract.
   const markNotificationSent = useCallback(() => {}, []);
   const markReadyShown = useCallback(() => {
     markLearningReadyShown();
   }, []);
   const dismiss = useCallback(() => {
-    posthog.capture("first_run_learning_dismissed", {
-      phase: state.phase,
-      opened: Boolean(state.summaryOpenedAt),
-    });
     setState(markLearningDone());
-  }, [state.phase, state.summaryOpenedAt]);
+  }, []);
 
   return {
     ...state,
     capturedApps,
     remainingMs,
-    activationState,
     markSummaryOpened,
     markSummaryRendered,
     markNotificationSent,

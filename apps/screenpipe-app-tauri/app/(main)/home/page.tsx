@@ -57,7 +57,6 @@ import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { AppSidebar, useSidebarContext } from "@/components/app-sidebar";
-import { UpdateBanner } from "@/components/update-banner";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import { useIsFullscreen } from "@/lib/hooks/use-is-fullscreen";
 import { FeedbackSection } from "@/components/settings/feedback-section";
@@ -91,7 +90,6 @@ import {
   type ChatLoadConversationPayload,
   shouldActivateHomeSectionForChatLoadConversation,
 } from "@/lib/chat-utils";
-import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
 import { useTauriEvent } from "@/lib/hooks/use-tauri-event";
 import { PipeActivityIndicator } from "@/components/pipe-activity-indicator";
 import FirstRunGuide from "@/components/onboarding/first-run-guide";
@@ -111,13 +109,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { PlanExpirationNotice } from "@/components/plan-expiration-notice";
-import type { AppUser } from "@/lib/app-entitlement";
 import { ONBOARDING_BRAIN_HANDOFF_EVENT } from "@/lib/live-views/onboarding-activation";
 import { ActivityLedger } from "@/components/activity-ledger";
 import { ShortcutKeycap } from "@/components/shortcut-keycap";
 import { ExperimentalShortcutGuide } from "@/components/shortcut-guide";
-import { commandPalette as commandPaletteAnalytics } from "@/lib/analytics/command-palette";
 import { useExperimentalFeaturesEnabled } from "@/lib/experimental-features";
 import {
   dispatchChatShortcutAction,
@@ -125,18 +120,8 @@ import {
   matchesInAppShortcut,
 } from "@/lib/shortcuts";
 import { useFirstRunLearningWindow } from "@/components/first-run/learning-window-provider";
-import {
-  TrialActivationSummaryExperience,
-  TrialActivationUnlockPrompt,
-} from "@/components/first-run/learning-banner";
-import { blocksTrialActivationApp } from "@/lib/first-run/trial-activation";
 
 type MainSection = "home" | "timeline" | "activity" | "brain" | "pipes" | "connections" | "meetings" | "help";
-const TRIAL_ACTIVATION_ALLOWED_SECTIONS = new Set<MainSection>([
-  "home",
-  "timeline",
-  "connections",
-]);
 type ConnectionFocusRequest = {
   id: string | null;
   category: string | null;
@@ -161,13 +146,7 @@ const isSettingsRoute = (value: string) => resolveSettingsSection(value) !== nul
 
 function HomeContent() {
   const router = useRouter();
-  const {
-    learning: firstRunLearning,
-    openTrialActivationPaywall,
-  } = useFirstRunLearningWindow();
-  const trialActivationLocked = blocksTrialActivationApp(
-    firstRunLearning.activationState,
-  );
+  const { learning: firstRunLearning } = useFirstRunLearningWindow();
   const { isMac } = usePlatform();
   const experimentalFeaturesEnabled = useExperimentalFeaturesEnabled();
   const [shortcutGuideOpen, setShortcutGuideOpen] = useState(false);
@@ -210,20 +189,6 @@ function HomeContent() {
     }
   }, [activeSection, activityReturnVisible]);
   const [connectionFocusRequest, setConnectionFocusRequest] = useState<ConnectionFocusRequest | null>(null);
-
-  useEffect(() => {
-    if (!trialActivationLocked) return;
-    if (!TRIAL_ACTIVATION_ALLOWED_SECTIONS.has(activeSection as MainSection)) {
-      setActiveSection("home", { history: "replace" });
-    }
-    const blockShortcut = (event: KeyboardEvent) => {
-      if (!event.metaKey && !event.ctrlKey && !event.altKey) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    };
-    window.addEventListener("keydown", blockShortcut, true);
-    return () => window.removeEventListener("keydown", blockShortcut, true);
-  }, [activeSection, setActiveSection, trialActivationLocked]);
 
   const { settings, updateSettings, isSettingsLoaded } = useSettings();
   const { toast } = useToast();
@@ -302,7 +267,6 @@ function HomeContent() {
     void updateSettings({ firstRunGuideDone: true });
   }, [updateSettings]);
 
-  const { isSectionHidden, isSettingLocked } = useManagedPolicy();
   const runningPipes = useRunningPipes();
   const runningPipeCount = runningPipes.length;
   const selectChatConversation = useCallback((id: string) => {
@@ -350,13 +314,6 @@ function HomeContent() {
       router.push(`/settings?section=${settingsSection}`);
     }
   }, [activeSection, router]);
-
-  // If current section is hidden by enterprise policy, redirect to first visible one
-  useEffect(() => {
-    if (!isSectionHidden(activeSection)) return;
-    const fallback = ["home", "timeline", "pipes"].find((s) => !isSectionHidden(s));
-    setActiveSection(fallback ?? "home", { history: "replace" });
-  }, [activeSection, isSectionHidden, setActiveSection]);
 
   // Timeline can be turned off in Display settings. When it is, the nav item is
   // gone, so bounce out of the (now unreachable) timeline section to chat.
@@ -580,7 +537,6 @@ function HomeContent() {
     const handler = (event: KeyboardEvent) => {
       if (matchesInAppShortcut(event, "command_menu", isMac)) {
         event.preventDefault();
-        if (!commandPaletteOpen) commandPaletteAnalytics.opened("keyboard");
         setCommandPaletteOpen(!commandPaletteOpen);
         return;
       }
@@ -1022,14 +978,6 @@ function HomeContent() {
   }, [setActiveSection]);
 
   const renderMainSection = () => {
-    if (isSectionHidden(activeSection) && activeSection !== "help") {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-          <img src="/128x128.png" alt="screenpipe" className="w-16 h-16 opacity-30 mb-4" />
-          <p className="text-sm font-mono">screenpipe</p>
-        </div>
-      );
-    }
     switch (activeSection) {
       case "home":
         // Chat is rendered separately below — always-mounted so streaming
@@ -1051,13 +999,6 @@ function HomeContent() {
                 showActivityReturn={activityReturnVisible}
               />
             </div>
-            {trialActivationLocked &&
-              firstRunLearning.activationState === "paywall" && (
-                <TrialActivationUnlockPrompt
-                  onStartTrial={openTrialActivationPaywall}
-                  inline
-                />
-              )}
           </div>
         );
       case "activity":
@@ -1131,7 +1072,6 @@ function HomeContent() {
 
   const sidebarLayout = normalizeSidebarNavLayout(settings.sidebarNavLayout);
   const availableSidebarIds = (Object.keys(SIDEBAR_SECTION_DEFS) as SidebarNavId[])
-    .filter((id) => !isSectionHidden(id) && !(id === "brain" && isSectionHidden("memories")))
     // Timeline can be turned off in Display settings — when it is, drop it from
     // the sidebar entirely (the "Timeline Disabled" placeholder was poor UX).
     .filter((id) => !(id === "timeline" && (settings.disableTimeline ?? false)));
@@ -1179,9 +1119,6 @@ function HomeContent() {
     id,
     label: SIDEBAR_SECTION_DEFS[id].label,
     icon: SIDEBAR_SECTION_DEFS[id].icon,
-    disabled:
-      trialActivationLocked &&
-      !TRIAL_ACTIVATION_ALLOWED_SECTIONS.has(id as MainSection),
     trailing:
       id === "pipes" && runningPipeCount > 0 ? (
         <PipeActivityIndicator
@@ -1230,42 +1167,6 @@ function HomeContent() {
     activeSection === "meetings" ||
     activeSection === "history" ||
     activeSection === "brain";
-
-  const trialActivationContent = (() => {
-    if (!trialActivationLocked || activeSection !== "home") return null;
-    if (firstRunLearning.phase === "ready" && firstRunLearning.summaryOpenedAt) {
-      const summaryLocked = firstRunLearning.activationState === "paywall";
-      return (
-        <div
-          className="relative h-full min-h-0 flex-1 bg-background"
-          data-testid="trial-activation-summary-chat"
-        >
-          <div
-            className={cn(
-              "h-full",
-              summaryLocked && "pointer-events-none select-none",
-            )}
-            aria-hidden={summaryLocked || undefined}
-            inert={summaryLocked || undefined}
-          >
-            <StandaloneChat
-              className="h-full"
-              hideInlineHistory
-              chatShortcutsEnabled={false}
-              sidebarCollapsed
-              firstRunLearningEnabled
-            />
-          </div>
-          {summaryLocked && (
-            <TrialActivationUnlockPrompt
-              onStartTrial={openTrialActivationPaywall}
-            />
-          )}
-        </div>
-      );
-    }
-    return <TrialActivationSummaryExperience />;
-  })();
 
   // The outer flex row (sidebar shell + content column) lives in the shared
   // (main)/layout.tsx so the sidebar width survives navigation to /settings.
@@ -1386,7 +1287,7 @@ function HomeContent() {
               </TooltipContent>
             </Tooltip>
 
-            {!trialActivationLocked && !sidebarCollapsed && experimentalFeaturesEnabled && (
+            {!sidebarCollapsed && experimentalFeaturesEnabled && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -1417,7 +1318,7 @@ function HomeContent() {
               </Tooltip>
             )}
 
-            {!trialActivationLocked && !sidebarCollapsed && (
+            {!sidebarCollapsed && (
               <SidebarCustomizationMenu
                 hiddenItems={hiddenSidebarIds.map((id) => ({
                   id,
@@ -1446,12 +1347,10 @@ function HomeContent() {
                     onClick={() => setActiveSection("meetings")}
                     aria-label={meetingState.active ? "meetings — recording" : "meetings"}
                     aria-current={activeSection === "meetings" ? "page" : undefined}
-                    disabled={trialActivationLocked}
                     data-testid="nav-meetings"
                     data-announcement-anchor="top-meetings"
                     className={cn(
                       "relative p-1 rounded-md transition-colors",
-                      trialActivationLocked && "cursor-not-allowed",
                       activeSection === "meetings"
                         ? isTranslucent
                           ? "vibrant-nav-active"
@@ -1514,16 +1413,10 @@ function HomeContent() {
                 isTranslucent={isTranslucent}
                 canReset={!isSidebarNavLayoutDefault(sidebarLayout)}
                 onSelect={(id) => {
-                  if (
-                    trialActivationLocked &&
-                    !TRIAL_ACTIVATION_ALLOWED_SECTIONS.has(id as MainSection)
-                  ) {
-                    return;
-                  }
                   setActiveSection(id);
                   // The "home" slot is the New Chat affordance — clicking it
                   // (from any view) always spawns a new chat session.
-                  if (id === "home" && !trialActivationLocked) startNewChat();
+                  if (id === "home") startNewChat();
                 }}
                 onMove={(id, toIndex) =>
                   persistSidebarLayout(
@@ -1562,29 +1455,11 @@ function HomeContent() {
                 )}
               >
                 <ChatSidebar
-                  allowedConversationId={
-                    trialActivationLocked ? firstRunLearning.chatId : undefined
-                  }
-                  onViewAll={
-                    trialActivationLocked
-                      ? undefined
-                      : () => setActiveSection("history")
-                  }
+                  onViewAll={() => setActiveSection("history")}
                 />
               </div>
 
-              <div
-                className={cn(trialActivationLocked && "pointer-events-none")}
-                aria-disabled={trialActivationLocked || undefined}
-                inert={trialActivationLocked || undefined}
-              >
-                <PlanExpirationNotice
-                  user={settings.user as AppUser | null}
-                  onClick={() => openSettings("account")}
-                />
-
-                <UpdateBanner variant="sidebar" className="mb-2" />
-
+              <div>
                 {/* Remote surveys use this quiet, non-blocking slot when their
                     signed payload selects surface=sidebar. */}
                 <div id="announcement-sidebar-slot" />
@@ -1614,7 +1489,7 @@ function HomeContent() {
                 </button>
 
                 {/* Help stays discoverable without taking a second row. */}
-                {!isSectionHidden("help") && (() => {
+                {(() => {
                   const isActive = activeSection === "help";
                   return (
                     <Tooltip>
@@ -1624,13 +1499,11 @@ function HomeContent() {
                           data-testid="nav-help"
                           data-announcement-anchor="sidebar-help"
                           aria-label="帮助"
-                          disabled={trialActivationLocked}
                           onClick={() => {
                             setActiveSection("help");
                           }}
                           className={cn(
                             "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-150",
-                            trialActivationLocked && "cursor-not-allowed",
                             isActive
                               ? isTranslucent
                                 ? "vibrant-nav-active"
@@ -1676,22 +1549,20 @@ function HomeContent() {
                 of the chat panel, so background sessions keep pulsing in the
                 sidebar even on non-chat views — though the sidebar itself is
                 only visible when the user navigates back to the chat. */}
-            {trialActivationContent ?? (
-              <div
-                className={cn(
-                  "flex-1 min-h-0 overflow-hidden",
-                  activeSection !== "home" && "hidden"
-                )}
-              >
-                <StandaloneChat
-                  className="h-full"
-                  hideInlineHistory
-                  chatShortcutsEnabled={activeSection === "home"}
-                  sidebarCollapsed={sidebarCollapsed}
-                  firstRunLearningEnabled
-                />
-              </div>
-            )}
+            <div
+              className={cn(
+                "flex-1 min-h-0 overflow-hidden",
+                activeSection !== "home" && "hidden"
+              )}
+            >
+              <StandaloneChat
+                className="h-full"
+                hideInlineHistory
+                chatShortcutsEnabled={activeSection === "home"}
+                sidebarCollapsed={sidebarCollapsed}
+                firstRunLearningEnabled
+              />
+            </div>
 
             {/* Non-chat sections render on top when active. */}
             {activeSection !== "home" && (

@@ -10,7 +10,6 @@ import { Zap, ArrowRight, Play } from "lucide-react";
 import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useChatStore } from "@/lib/stores/chat-store";
-import posthog from "posthog-js";
 
 // One-time guided first run, shown on the Home window right after onboarding.
 // It does NOT replace the chat — it guides the REAL chat:
@@ -110,7 +109,6 @@ export default function FirstRunGuide({
   // screen mid-thought. Opt-in tours complete 2-3x more than auto-started
   // ones, and declining must stay cheap and remembered.
   useEffect(() => {
-    posthog.capture("firstrun_guide_viewed");
   }, []);
 
   // Entering ASK (the user accepted): show the chat, drop the prompt into
@@ -194,7 +192,6 @@ export default function FirstRunGuide({
 
       // ASK → streaming
       if (currentPhase === "ask") {
-        posthog.capture("firstrun_prompt_sent");
         setPhase("streaming");
         return;
       }
@@ -234,10 +231,6 @@ export default function FirstRunGuide({
 
   const dismiss = useCallback(
     (method: DismissMethod) => {
-      posthog.capture("firstrun_guide_skipped", {
-        phase: phaseRef.current,
-        method,
-      });
       // The prefilled prompt is the tour's artifact, not the user's words.
       // Dismissing the tour takes its homework with it — but never touch
       // text the user has edited, even by one character.
@@ -270,14 +263,12 @@ export default function FirstRunGuide({
       '[data-firstrun-target="composer"]',
     );
     if (!form) return;
-    posthog.capture("firstrun_send_prompt_clicked");
     form.requestSubmit();
   }, []);
 
   // Step 0 accepted — start the tour. Reset the send baseline so a chat
   // sent while the invite sat open doesn't instantly advance the phase.
   const acceptInvite = useCallback(() => {
-    posthog.capture("firstrun_guide_accepted");
     sendBaselineRef.current = Date.now();
     setPhase("ask");
   }, []);
@@ -308,10 +299,6 @@ export default function FirstRunGuide({
       failures += 1;
       if (failures >= 4) {
         failedOpen = true;
-        posthog.capture("firstrun_guide_target_unavailable", {
-          phase,
-          reason: lastResult,
-        });
         dismiss(lastResult === "missing" ? "target_missing" : "target_blocked");
       }
     };
@@ -325,9 +312,6 @@ export default function FirstRunGuide({
   useEffect(() => {
     const onPageHide = () => {
       if (phaseRef.current === "dismissed") return;
-      posthog.capture("firstrun_guide_abandoned", {
-        phase: phaseRef.current,
-      });
     };
     window.addEventListener("pagehide", onPageHide);
     return () => window.removeEventListener("pagehide", onPageHide);
@@ -347,7 +331,6 @@ export default function FirstRunGuide({
   }, [dismiss]);
 
   const goToPipes = useCallback(() => {
-    posthog.capture("firstrun_explore_clicked");
     onGoToAutomations();
     // Switch to My Pipes tab so user sees the newly created pipe
     setTimeout(() => {
@@ -359,7 +342,6 @@ export default function FirstRunGuide({
   }, [onGoToAutomations]);
 
   const finishGuide = useCallback(() => {
-    posthog.capture("firstrun_guide_completed");
     setPhase("dismissed");
     onDone();
   }, [onDone]);

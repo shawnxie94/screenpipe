@@ -10,7 +10,6 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { commands } from "@/lib/utils/tauri";
 import { requestPermissionWithFlow } from "@/lib/utils/permission-flow";
 import { usePlatform } from "@/lib/hooks/use-platform";
-import posthog from "posthog-js";
 
 // Same permission wheel as onboarding: rows recede in opacity, scale, and
 // depth (blur) by distance from the focused step — plain CSS transitions.
@@ -196,7 +195,6 @@ export default function PermissionRecoveryPage() {
   }, [permissions, isMacOS]);
 
   const handleFix = async (permission: Parameters<typeof commands.requestPermission>[0]) => {
-    posthog.capture("permission_recovery_manual_fix", { permission });
     try {
       if (permission === "screenRecording" || permission === "accessibility") {
         await requestPermissionWithFlow(permission);
@@ -208,7 +206,6 @@ export default function PermissionRecoveryPage() {
   };
 
   const handleFixKeychain = async () => {
-    posthog.capture("permission_recovery_manual_fix", { permission: "keychain" });
     try { await commands.enableKeychainEncryption(); } catch {}
     await checkKeychain();
   };

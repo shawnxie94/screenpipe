@@ -4,7 +4,6 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { StreamTimeSeriesResponse } from "@/components/rewind/timeline";
-import posthog from "posthog-js";
 import { getApiBaseUrl, appendAuthToken } from "@/lib/api";
 
 // Debounce delay for frame loading (ms) — reduced for arrow keys
@@ -345,17 +344,6 @@ export function useFrameLoading(opts: {
 			// Analytics
 			if (frameLoadStartTimeRef.current !== null) {
 				const loadTime = performance.now() - frameLoadStartTimeRef.current;
-				posthog.capture("timeline_frame_load_time", {
-					duration_ms: Math.round(loadTime),
-					frame_id: fid,
-					success: true,
-					mode: "video_seek",
-					fps_source: calibratedFpsCache.has(path) ? "calibrated" : "server",
-					effective_fps: effectiveFps,
-					frames_skipped: framesSkippedRef.current,
-					image_width: video.videoWidth,
-					image_height: video.videoHeight,
-				});
 				frameLoadStartTimeRef.current = null;
 				framesSkippedRef.current = 0;
 			}
@@ -411,13 +399,6 @@ export function useFrameLoading(opts: {
 				});
 				if (frameLoadStartTimeRef.current !== null) {
 					const loadTime = performance.now() - frameLoadStartTimeRef.current;
-					posthog.capture("timeline_frame_load_time", {
-						duration_ms: Math.round(loadTime),
-						frame_id: debouncedFrame.frameId,
-						success: true,
-						mode: "snapshot_direct",
-						frames_skipped: framesSkippedRef.current,
-					});
 					frameLoadStartTimeRef.current = null;
 					framesSkippedRef.current = 0;
 				}
@@ -469,13 +450,6 @@ export function useFrameLoading(opts: {
 			}
 			if (frameLoadStartTimeRef.current !== null) {
 				const loadTime = performance.now() - frameLoadStartTimeRef.current;
-				posthog.capture("timeline_frame_load_time", {
-					duration_ms: Math.round(loadTime),
-					frame_id: debouncedFrame?.frameId,
-					success: true,
-					mode: searchNavFrame ? "search_nav_fallback" : "ffmpeg_fallback",
-					frames_skipped: framesSkippedRef.current,
-				});
 				frameLoadStartTimeRef.current = null;
 				framesSkippedRef.current = 0;
 			}

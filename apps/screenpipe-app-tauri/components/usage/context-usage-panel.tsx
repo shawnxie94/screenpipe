@@ -9,8 +9,7 @@ import {
   hasContextBreakdown,
   type ContextUsageSnapshot,
 } from "@/lib/chat/context-usage";
-import { UsageMeter } from "@/components/usage/usage-meter";
-import type { UsageAllowanceState } from "@/lib/hooks/use-usage-status";
+import { UsageMeter, type UsageMeterState } from "@/components/usage/usage-meter";
 
 export function contextUsagePercent(
   snapshot: ContextUsageSnapshot | null,
@@ -22,7 +21,7 @@ export function contextUsagePercent(
   );
 }
 
-export function contextUsageState(percent: number): UsageAllowanceState {
+export function contextUsageState(percent: number): UsageMeterState {
   return percent >= 90 ? "reached" : percent >= 75 ? "approaching" : "ok";
 }
 

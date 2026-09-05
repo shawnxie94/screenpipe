@@ -24,7 +24,6 @@ import { useEffect, useRef, useState } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import posthog from "posthog-js";
 
 import { commands } from "@/lib/utils/tauri";
 import {
@@ -203,13 +202,6 @@ export function NativeTimelineBridge({
             source: "timeline",
           })
             .then(() => {
-              posthog.capture("timeline_selection_to_chat", {
-                selection_duration_ms:
-                  new Date(event.payload.end).getTime() -
-                  new Date(event.payload.start).getTime(),
-                frames_in_selection: event.payload.frameCount,
-                native_timeline: true,
-              });
             })
             .catch((error) => {
               console.error(
@@ -246,12 +238,6 @@ export function NativeTimelineBridge({
               toast({
                 title: "timeline video exported",
                 description: outputPath || "Saved in screenpipe exports.",
-              });
-              posthog.capture("timeline_selection_exported", {
-                selection_duration_ms:
-                  new Date(selection.end).getTime() -
-                  new Date(selection.start).getTime(),
-                native_timeline: true,
               });
             })
             .catch((error) => {

@@ -28,7 +28,6 @@ import {
   ArrowRight,
   GitFork,
   Search,
-  Share2,
   Link,
   Upload,
   ArrowUpCircle,
@@ -55,10 +54,6 @@ import { Input } from "@/components/ui/input";
 import { PipeTriggerPicker } from "./pipe-trigger-picker";
 import { PipePresetChain } from "./pipe-preset-chain";
 import { ProviderAutomationsPanel } from "./provider-automations-panel";
-import {
-  CloudAgentRunner,
-  type CloudAgentConfig,
-} from "./cloud-agent-runner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
@@ -82,14 +77,10 @@ import {
 } from "@/components/pipe-activity-indicator";
 import { getApiBaseUrl, localFetch } from "@/lib/api";
 import { parsePipeError } from "@/lib/pipe-errors";
-import { useTeam } from "@/lib/hooks/use-team";
-import { useManagedPolicy } from "@/lib/hooks/use-managed-policy";
 import {
   pipeHasSchedule,
   shouldShowInMyPipes,
 } from "@/lib/utils/pipe-visibility";
-import { CloudPipesTab } from "./cloud-pipes-tab";
-import { useCloudAgentRunnerRolloutEnabled } from "@/lib/cloud-agent-rollout";
 import {
   writeTextFile,
   readTextFile,
@@ -97,15 +88,10 @@ import {
   exists,
 } from "@tauri-apps/plugin-fs";
 import { homeDir, join } from "@tauri-apps/api/path";
-import {
-  parseTeamVersion,
-  stripTeamMarker,
-  setEnabledFlag,
-  planTeamPipeSync,
-  nextShareVersion,
-  isSafePipeName,
-  type TeamPipePayload,
-} from "@/lib/team-pipes";
+/** Pipes named for on-disk folders must be filesystem-safe (deep links, share
+ *  imports). Previously lived in the removed team-pipes module. */
+const isSafePipeName = (name: string): boolean =>
+  /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(name) && name.length <= 100;
 import {
   isNotificationsDenied,
   toggleNotificationInContent,
@@ -125,7 +111,6 @@ import {
 import { useSettings } from "@/lib/hooks/use-settings";
 import { useToast } from "@/components/ui/use-toast";
 import { useQueryState } from "nuqs";
-import { parseEnterpriseManagedVersion } from "@/lib/hooks/use-enterprise-pipes";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import {
   clearPendingPipeDeepLink,
@@ -152,10 +137,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PostInstallConnectionsModal } from "@/components/post-install-connections-modal";
-import posthog from "posthog-js";
 import { MarkdownBlock } from "@/components/chat/markdown-block";
 import { useDeviceMonitor } from "@/lib/hooks/use-device-monitor";
-import { Monitor, Wifi, WifiOff, ScanSearch, Lock } from "lucide-react";
+import { Monitor, Wifi, WifiOff, ScanSearch } from "lucide-react";
 import { requestPipeStop } from "@/lib/pipe-stop";
 
 const PIPE_EXECUTIONS_PAGE_LIMIT = 10;
@@ -483,7 +467,6 @@ interface PipeConfig {
   agent: string;
   model: string;
   provider?: string;
-  cloud_agent?: CloudAgentConfig | null;
   effort?: PipeEffort;
   preset?: string | string[];
   enterprise_managed?: boolean;
@@ -1196,15 +1179,8 @@ export function PipesSection() {
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
   const [, setSection] = useQueryState("section");
-  const [sharingPublic, setSharingPublic] = useState<string | null>(null);
   const [publishPipeName, setPublishPipeName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [pipeTypeFilter, setPipeTypeFilter] = useState<"local" | "cloud">("local");
-  // "cloud" (the org's cloud runner) is a managed-deployment-only surface.
-  const { isManagedDeployment } = useManagedPolicy();
-  // The user-owned cloud-agent runner is an early rollout. Fail closed while
-  // PostHog is unresolved so the normal on-device runner remains the default.
-  const cloudAgentRunnerEnabled = useCloudAgentRunnerRolloutEnabled();
   // Favorites — per-machine preference persisted via /pipes/favorites.
   // `showOnly` toggles a filter that hides non-starred pipes.
   const pipeFavorites = usePipeFavorites();
@@ -1252,12 +1228,6 @@ export function PipesSection() {
     } catch {
       // sessionStorage unavailable — funnel will miss this attempt, not fatal
     }
-    posthog.capture("pipe_generation_started", {
-      generation_id: generationId,
-      prompt_length: value.length,
-      baseline_pipe_count: baseline.length,
-      source,
-    });
 
     navigateHomeAndPrefill({
       context: PIPE_CREATION_PROMPT,
@@ -1269,7 +1239,9 @@ export function PipesSection() {
 
   const apiBase = selectedDevice ? `http://${selectedDevice}` : getApiBaseUrl();
   const isRemote = !!selectedDevice;
-  const composioToken = isRemote ? undefined : settings.user?.token;
+  // Composio status was fetched with the screenpipe.com account token, which
+  // the local-only build no longer has — treat it as unavailable.
+  const composioToken: string | undefined = undefined;
   currentApiBase.current = apiBase;
   const displayedPipes = pipesForApi(pipes, pipesApiBase, apiBase);
   const displayedLogs = pipesForApi(logs, logsApiBase, apiBase);
@@ -1308,7 +1280,7 @@ export function PipesSection() {
           return 0;
         }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [displayedPipes, searchQuery, pipeTypeFilter, pipeFavorites.showOnly, pipeFavorites.isFavorite, pipeExecutions]
+    [displayedPipes, searchQuery, pipeFavorites.showOnly, pipeFavorites.isFavorite, pipeExecutions]
   );
 
   // Counts for sub-tab badges — memoized so the filter doesn't re-run on every render
@@ -1324,31 +1296,6 @@ export function PipesSection() {
 
     return "no starred scheduled tasks";
   }, [pipeFavorites.showOnly]);
-
-  const sharePipePublic = async (pipe: PipeStatus) => {
-    setSharingPublic(pipe.config.name);
-    try {
-      const res = await fetch(screenpipeWebUrl("/api/pipes/share", "https://screenpipe.com"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          raw_content: pipe.raw_content,
-          name: pipe.config.name,
-          author_id: settings.user?.id || null,
-          author_email: settings.user?.email || null,
-        }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      await commands.copyTextToClipboard(data.url);
-      posthog.capture("pipe_shared_public", { pipe_name: pipe.config.name, pipe_id: data.id });
-      toast({ title: "链接已复制！", description: data.url });
-    } catch (err: any) {
-      toast({ title: "分享定时任务失败", description: err.message, variant: "destructive" });
-    } finally {
-      setSharingPublic(null);
-    }
-  };
 
   const fetchPipes = useCallback(() => {
     if (!shouldFetchPipesForApi(apiBase, currentApiBase.current)) {
@@ -1501,53 +1448,6 @@ export function PipesSection() {
     fetchPipes();
   };
 
-  // ── Team pipe sharing ─────────────────────────────────────────────────
-  // Driven from the desktop app: a team admin shares one of their own pipes
-  // through the team configs channel (PLAINTEXT envelope — no team key
-  // ceremony; pipes are prompts, not credentials; see team-pipes.ts).
-  // Teammates get a local copy marked `# team-shared:vN` — OFF by default
-  // and read-only (fork to edit). Re-sharing bumps the version and
-  // recipients' copies auto-update, preserving their own on/off choice;
-  // unsharing disables (never deletes) the copies. Sharing is admin-only for
-  // now because the backend gates team-scope config writes to admins.
-  const team = useTeam();
-  const myUserId = settings.user?.id ?? null;
-  const canShareToTeam = !!team.team && team.role === "admin";
-  const [sharingPipe, setSharingPipe] = useState<string | null>(null);
-
-  const teamPipeConfigs = React.useMemo(
-    () => team.configs.filter((c) => c.config_type === "pipe"),
-    [team.configs]
-  );
-  // Config keys are plaintext on the server row, so this set stays valid even
-  // when values can't be decrypted — it drives the unshare sweep.
-  const teamPipeKeys = React.useMemo(
-    () => new Set(teamPipeConfigs.map((c) => c.key)),
-    [teamPipeConfigs]
-  );
-  const sharedByMe = React.useMemo(
-    () =>
-      new Map(
-        teamPipeConfigs
-          .filter((c) => c.updated_by === myUserId)
-          .map((c) => [c.key, c])
-      ),
-    [teamPipeConfigs, myUserId]
-  );
-  const receivedConfigs = React.useMemo(
-    () => teamPipeConfigs.filter((c) => c.updated_by !== myUserId && !!c.value),
-    [teamPipeConfigs, myUserId]
-  );
-  // Managed = the local copy carries the team marker. Matching by name alone
-  // would wrongly lock a user's own pipe that happens to collide with a
-  // teammate's share.
-  const isReceivedTeamPipe = (pipe: PipeStatus) =>
-    parseTeamVersion(pipe.raw_content) !== null;
-  const isEnterpriseManagedPipe = (pipe: PipeStatus) =>
-    parseEnterpriseManagedVersion(pipe.raw_content) !== null;
-  const isReadOnlyPipe = (pipe: PipeStatus) =>
-    isReceivedTeamPipe(pipe) || isEnterpriseManagedPipe(pipe);
-
   const savePipeHistoryMode = async (pipe: PipeStatus, history: boolean) => {
     const pipeName = pipe.config.name;
     const previousHistory = Boolean(pipe.config.history);
@@ -1699,209 +1599,6 @@ export function PipesSection() {
       });
     }
   };
-  const isEnterpriseManagedName = (name: string) => {
-    const pipe = pipes.find((candidate) => candidate.config.name === name);
-    return pipe ? isEnterpriseManagedPipe(pipe) : false;
-  };
-  const isUnsharedLeftover = (pipe: PipeStatus) =>
-    isReceivedTeamPipe(pipe) &&
-    team.configsFetched &&
-    !teamPipeKeys.has(pipe.config.name);
-  const sharerNameForPipe = (name: string): string | null => {
-    const cfg = receivedConfigs.find((c) => c.key === name);
-    if (!cfg) return null;
-    const m = team.members.find((mm) => mm.user_id === cfg.updated_by);
-    return m?.name || m?.email || null;
-  };
-  const sharedContentDiffers = (pipe: PipeStatus) => {
-    const v = sharedByMe.get(pipe.config.name)?.value as
-      | Partial<TeamPipePayload>
-      | undefined;
-    if (!v?.raw_content) return false; // shared copy unreadable — don't offer
-    return v.raw_content !== stripTeamMarker(pipe.raw_content);
-  };
-
-  const sharePipeToTeam = async (pipe: PipeStatus) => {
-    const name = pipe.config.name;
-    setSharingPipe(name);
-    try {
-      const existing = sharedByMe.get(name);
-      const version = nextShareVersion(existing?.value);
-      // raw_content only — the parsed config object is never pushed (it can
-      // hold secrets, and shares are stored plaintext server-side); teammates
-      // bring their own connections and presets.
-      await team.pushConfigPlain("pipe", name, {
-        name,
-        raw_content: stripTeamMarker(pipe.raw_content),
-        version,
-        shared_at: new Date().toISOString(),
-      });
-      posthog.capture(
-        existing ? "team_pipe_update_pushed" : "team_pipe_shared",
-        { pipe: name, version }
-      );
-      toast({
-        title: existing ? `update pushed (v${version})` : "shared with team",
-        description: existing
-          ? "teammates' copies will update automatically"
-          : "teammates can turn it on from their Automations page",
-      });
-    } catch (err: any) {
-      toast({
-        title: "分享失败",
-        description: err?.message,
-        variant: "destructive",
-      });
-    } finally {
-      setSharingPipe(null);
-    }
-  };
-
-  const unsharePipeFromTeam = async (name: string) => {
-    const id = sharedByMe.get(name)?.id;
-    if (!id) return;
-    try {
-      await team.deleteConfig(id);
-      posthog.capture("team_pipe_unshared", { pipe: name });
-      toast({
-        title: "已从团队取消共享",
-        description: "队友的副本将被停用",
-      });
-    } catch (err: any) {
-      toast({
-        title: "取消共享失败",
-        description: err?.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const forkTeamPipe = async (pipe: PipeStatus) => {
-    const base = pipe.config.name.replace(/-fork(-\d+)?$/, "");
-    let forkName = `${base}-fork`;
-    try {
-      const home = await homeDir();
-      const pipesDir = await join(home, ".screenpipe", "pipes");
-      let i = 1;
-      while (await exists(await join(pipesDir, forkName))) {
-        i += 1;
-        forkName = `${base}-fork-${i}`;
-      }
-      const dir = await join(pipesDir, forkName);
-      await mkdir(dir, { recursive: true });
-      // Drop the marker — the fork is the user's own pipe from here on and
-      // stops auto-updating.
-      let content = setEnabledFlag(stripTeamMarker(pipe.raw_content), false);
-      if (/^name:\s*/m.test(content)) {
-        content = content.replace(/^name:\s*.*$/m, `name: ${forkName}`);
-      }
-      await writeTextFile(await join(dir, "pipe.md"), content);
-      posthog.capture("team_pipe_forked", {
-        source: pipe.config.name,
-        fork: forkName,
-      });
-      toast({
-        title: `forked to "${forkName}"`,
-        description: "你的可编辑副本——默认关闭",
-      });
-      fetchPipes();
-    } catch (err: any) {
-      toast({
-        title: "派生副本失败",
-        description: err?.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  // Recipient sync: install new shares (OFF by default), apply version bumps
-  // (preserving each member's own on/off choice), and disable local copies
-  // whose share disappeared. Local machine only — never against a remote
-  // device. Gated on configsFetched so a failed /configs fetch can never look
-  // like "everything was unshared". No team key needed: pipe shares are
-  // plaintext rows, so members in key-limbo still receive them.
-  const teamSyncRunning = useRef(false);
-  useEffect(() => {
-    if (!team.team || !team.configsFetched || isRemote) return;
-    if (teamSyncRunning.current) return;
-    teamSyncRunning.current = true;
-    (async () => {
-      let changed = false;
-      const updatedPipes: string[] = [];
-      try {
-        const home = await homeDir();
-        const pipesDir = await join(home, ".screenpipe", "pipes");
-        for (const c of receivedConfigs) {
-          const v = c.value as Partial<TeamPipePayload> | undefined;
-          if (!c.key || !isSafePipeName(c.key)) continue;
-          try {
-            const dir = await join(pipesDir, c.key);
-            const md = await join(dir, "pipe.md");
-            const local = (await exists(md)) ? await readTextFile(md) : null;
-            const plan = planTeamPipeSync(
-              { name: c.key, raw_content: v?.raw_content, version: v?.version },
-              local
-            );
-            if (plan.action === "install" || plan.action === "update") {
-              if (local == null) await mkdir(dir, { recursive: true });
-              await writeTextFile(md, plan.content);
-              changed = true;
-              if (plan.action === "update") updatedPipes.push(c.key);
-              console.log(`[team-pipes] ${c.key}: ${plan.action} v${v?.version}`);
-            }
-          } catch (e) {
-            console.warn(`[team-pipes] failed to sync ${c.key}:`, e);
-          }
-        }
-        // Unshare sweep — only marked copies whose share key disappeared.
-        for (const p of pipes) {
-          if (!p.config.enabled) continue;
-          if (parseTeamVersion(p.raw_content) === null) continue;
-          if (teamPipeKeys.has(p.config.name)) continue;
-          try {
-            await localFetch(`/pipes/${p.config.name}/config`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ enabled: false }),
-            });
-            changed = true;
-            posthog.capture("team_pipe_disabled_unshared", {
-              pipe: p.config.name,
-            });
-            console.log(`[team-pipes] ${p.config.name}: disabled (unshared)`);
-          } catch (e) {
-            console.warn(`[team-pipes] failed to disable ${p.config.name}:`, e);
-          }
-        }
-      } finally {
-        teamSyncRunning.current = false;
-      }
-      if (updatedPipes.length > 0) {
-        posthog.capture("team_pipe_auto_updated", { pipes: updatedPipes });
-        toast({
-          title: "团队定时任务已更新",
-          description: updatedPipes.join(", "),
-        });
-      }
-      if (changed) fetchPipes();
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    team.team?.id,
-    team.missingKey,
-    team.configsFetched,
-    receivedConfigs,
-    pipes,
-    isRemote,
-  ]);
-
-  // Poll team configs so re-shares and unshares propagate while the app is
-  // open (the hook otherwise only fetches on mount).
-  useInterval(
-    () => team.fetchConfigs(),
-    !team.team || isRemote ? null : 5 * 60_000,
-  );
-
   const trackedPipesView = useRef(false);
   const autoUpdateRan = useRef(false);
   useEffect(() => {
@@ -1940,11 +1637,6 @@ export function PipesSection() {
         trackedPipesView.current = true;
         setPipes((current) => {
           if (current.length > 0) {
-            posthog.capture("pipes_viewed", {
-              count: current.length,
-              enabled_count: current.filter(p => p.config.enabled).length,
-              pipes: current.map(p => p.config.name),
-            });
           }
           return current;
         });
@@ -2111,14 +1803,6 @@ export function PipesSection() {
   };
 
   const togglePipe = async (name: string, enabled: boolean) => {
-    if (isEnterpriseManagedName(name)) {
-      toast({
-        title: "由你的组织管理",
-        description: "由组织管理员控制该任务的运行时间与启用状态",
-      });
-      return;
-    }
-    posthog.capture("pipe_toggled", { pipe: name, enabled });
     // Optimistic update — flip the switch immediately
     setPipes((prev) =>
       prev.map((p) =>
@@ -2163,7 +1847,6 @@ export function PipesSection() {
   };
 
   const runPipe = async (name: string) => {
-    posthog.capture("pipe_run", { pipe: name });
     setRunningPipe(name);
     try {
       // Wait for any pending config save (e.g. preset change) to land first
@@ -2205,7 +1888,6 @@ export function PipesSection() {
   };
 
   const stopPipe = async (name: string) => {
-    posthog.capture("pipe_stopped", { pipe: name });
     setStoppingPipe(name);
     try {
       const result = await requestPipeStop(name, { apiBase });
@@ -2231,8 +1913,6 @@ export function PipesSection() {
   };
 
   const deletePipe = async (name: string) => {
-    if (isEnterpriseManagedName(name)) return;
-    posthog.capture("pipe_deleted", { pipe: name });
     await fetch(`${apiBase}/pipes/${name}`, { method: "DELETE" });
     setExpanded(null);
     setSelectedPipes((prev) => {
@@ -2245,7 +1925,6 @@ export function PipesSection() {
   };
 
   const toggleSelectPipe = (name: string) => {
-    if (isEnterpriseManagedName(name)) return;
     setSelectedPipes((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
@@ -2262,9 +1941,7 @@ export function PipesSection() {
   const selectAllVisible = () => {
     setSelectedPipes(
       new Set(
-        filteredPipes
-          .filter((pipe) => !isEnterpriseManagedPipe(pipe))
-          .map((pipe) => pipe.config.name),
+        filteredPipes.map((pipe) => pipe.config.name),
       ),
     );
   };
@@ -2273,8 +1950,7 @@ export function PipesSection() {
     setBulkDeleting(true);
     try {
       const results = await Promise.allSettled(
-        Array.from(selectedPipes).filter((name) => !isEnterpriseManagedName(name)).map((name) => {
-          posthog.capture("pipe_deleted", { pipe: name, bulk: true });
+        Array.from(selectedPipes).map((name) => {
           return fetch(`${apiBase}/pipes/${name}`, { method: "DELETE" });
         })
       );
@@ -2350,8 +2026,6 @@ export function PipesSection() {
   }, [expanded, loading, pipes, pipesApiBase]);
 
   const savePipeContent = useCallback(async (name: string, content: string) => {
-    const pipe = pipes.find((candidate) => candidate.config.name === name);
-    if (pipe && parseEnterpriseManagedVersion(pipe.raw_content) !== null) return;
     setSaveStatus((prev) => ({ ...prev, [name]: "saving" }));
     setSaveErrors((prev) => { const next = { ...prev }; delete next[name]; return next; });
     try {
@@ -2498,9 +2172,7 @@ export function PipesSection() {
     );
   }
 
-  const selectablePipeCount = filteredPipes.filter(
-    (pipe) => parseEnterpriseManagedVersion(pipe.raw_content) === null,
-  ).length;
+  const selectablePipeCount = filteredPipes.length;
 
   return (
     <div className="space-y-4" data-testid="section-pipes">
@@ -2550,31 +2222,6 @@ export function PipesSection() {
               autoCorrect="off"
             />
           </div>
-          {isManagedDeployment && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs capitalize">
-                  {pipeTypeFilter === "cloud" ? "cloud" : `${pipeTypeFilter} (${tabCounts.local})`}
-                  <ChevronDown className="h-3 w-3 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {(["local", "cloud"] as const).map((tab) => (
-                  <DropdownMenuItem
-                    key={tab}
-                    onClick={() => setPipeTypeFilter(tab)}
-                    className={cn("capitalize gap-2", pipeTypeFilter === tab && "font-medium")}
-                  >
-                    <span className="flex-1">{tab}</span>
-                    {tab === "local" && (
-                      <span className="text-muted-foreground text-xs">{tabCounts.local}</span>
-                    )}
-                    {pipeTypeFilter === tab && <Check className="h-3.5 w-3.5 ml-1" />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
           <Button
             variant="outline"
             size="icon"
@@ -2618,14 +2265,14 @@ export function PipesSection() {
         </div>
       )}
 
-      {pipeTypeFilter === "local" && !selectMode && (
+      {!selectMode && (
         <ProviderAutomationsPanel
           searchQuery={searchQuery}
           refreshToken={providerRefreshToken}
         />
       )}
 
-      {pipeTypeFilter === "local" && !selectMode && (
+      {!selectMode && (
         <div className="flex items-baseline gap-2 px-1 pt-1">
           <h3 className="text-sm font-medium">定时任务</h3>
           <span className="text-xs tabular-nums text-muted-foreground">
@@ -2634,12 +2281,7 @@ export function PipesSection() {
         </div>
       )}
 
-      {pipeTypeFilter === "cloud" ? (
-        // Cloud pipes: the team's shared pipes running on screenpipe-managed
-        // infra against centralized data — different data source from the
-        // local pipe list, so it renders its own component.
-        <CloudPipesTab active />
-      ) : loading || settledApiBase !== apiBase ? (
+      {loading || settledApiBase !== apiBase ? (
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
@@ -2693,7 +2335,7 @@ export function PipesSection() {
           <CardContent className="py-8 text-center text-muted-foreground">
             {searchQuery ? (
               <p>没有符合搜索条件的定时任务</p>
-            ) : pipeFavorites.showOnly && tabCounts[pipeTypeFilter] > 0 ? (
+            ) : pipeFavorites.showOnly && tabCounts.local > 0 ? (
               <div className="space-y-4">
                 <div>
                   <p className="text-foreground font-medium text-base">
@@ -2791,8 +2433,6 @@ export function PipesSection() {
                     : lastExec?.status === "failed"
                       ? "error"
                       : "idle";
-              const enterpriseManaged = isEnterpriseManagedPipe(pipe);
-
               const isSelected = expanded === pipe.config.name;
               const triggerCount =
                 (pipe.config.trigger?.events?.length || 0) +
@@ -2889,7 +2529,7 @@ export function PipesSection() {
                     />
                   )}
                   {/* In select mode the status dot gives way to a checkbox. */}
-                  {selectMode && !enterpriseManaged ? (
+                  {selectMode ? (
                     <Checkbox
                       checked={selectedPipes.has(pipe.config.name)}
                       onCheckedChange={() => toggleSelectPipe(pipe.config.name)}
@@ -2914,12 +2554,6 @@ export function PipesSection() {
 
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <div className="flex min-w-0 items-center gap-1.5">
-                      {enterpriseManaged && (
-                        <Lock
-                          className="h-3 w-3 shrink-0 text-muted-foreground"
-                          aria-label="由你的组织管理"
-                        />
-                      )}
                       <span className="truncate text-sm font-medium">{pipeDisplayTitle(pipe.config.name)}</span>
                       {hasMissingConnections && (
                         <span
@@ -3006,48 +2640,6 @@ export function PipesSection() {
                         <span className="font-mono text-xs text-muted-foreground">
                           · next run {nextRunLabel}
                         </span>
-                      )}
-                      {/* Team sharing badges */}
-                      {enterpriseManaged && (
-                        <Badge
-                          variant="outline"
-                          className="h-5 shrink-0 gap-1 rounded-none text-[10px]"
-                          title={`organization managed v${parseEnterpriseManagedVersion(pipe.raw_content)} — configuration is enforced by your administrator`}
-                        >
-                          <Lock className="h-2.5 w-2.5" /> managed
-                        </Badge>
-                      )}
-                      {sharedByMe.has(pipe.config.name) && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] h-5 shrink-0 gap-1"
-                          title={`shared with your team (v${
-                            (sharedByMe.get(pipe.config.name)?.value as Partial<TeamPipePayload>)
-                              ?.version ?? "?"
-                          })`}
-                        >
-                          <Share2 className="h-2.5 w-2.5" /> shared
-                        </Badge>
-                      )}
-                      {isReceivedTeamPipe(pipe) && !isUnsharedLeftover(pipe) && (
-                        <Badge
-                          variant="secondary"
-                          className="text-[10px] h-5 shrink-0"
-                          title={`team scheduled task v${parseTeamVersion(pipe.raw_content)} — read-only, updates automatically when the author re-shares`}
-                        >
-                          {sharerNameForPipe(pipe.config.name)
-                            ? `team v${parseTeamVersion(pipe.raw_content)} · ${sharerNameForPipe(pipe.config.name)}`
-                            : `team v${parseTeamVersion(pipe.raw_content)}`}
-                        </Badge>
-                      )}
-                      {isUnsharedLeftover(pipe) && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] h-5 shrink-0 text-muted-foreground"
-                          title="已不再与团队共享——自动运行已停用；如需保留请派生副本，否则将被删除"
-                        >
-                          no longer shared
-                        </Badge>
                       )}
                       {pipe.config.history && (
                         <Badge
@@ -3158,29 +2750,26 @@ export function PipesSection() {
 
                     {/* optimize with ai — opens a chat that reads the pipe's prompt
                         + recent run logs and suggests improvements in plain english */}
-                    {!isReadOnlyPipe(pipe) && (
-                      <>
-                        <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border" />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 gap-1.5 px-2 shrink-0 text-muted-foreground hover:text-foreground"
-                          onClick={() => {
-                            posthog.capture("pipe_optimize_started", { source: "row_button" });
-                            navigateHomeAndPrefill({
-                              context: "the user wants to optimize their pipe",
-                              prompt: buildOptimizePrompt(pipe.config.name),
-                              displayLabel: buildOptimizeDisplayLabel(pipe.config.name),
-                              autoSend: true,
-                            });
-                          }}
-                          title="用 AI 优化这个定时任务——读取最近运行并改进提示词"
-                        >
-                          <Sparkles className="h-3.5 w-3.5" />
-                          optimize
-                        </Button>
-                      </>
-                    )}
+                    <>
+                      <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-border" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1.5 px-2 shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          navigateHomeAndPrefill({
+                            context: "the user wants to optimize their pipe",
+                            prompt: buildOptimizePrompt(pipe.config.name),
+                            displayLabel: buildOptimizeDisplayLabel(pipe.config.name),
+                            autoSend: true,
+                          });
+                        }}
+                        title="用 AI 优化这个定时任务——读取最近运行并改进提示词"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        optimize
+                      </Button>
+                    </>
 
                     {/* fork lives in the overflow menu: it creates a *different*
                         task, so it isn't part of operating this one. */}
@@ -3196,91 +2785,20 @@ export function PipesSection() {
                         <DropdownMenuContent align="end">
                           {/* "optimize with ai" stays a visible button — it edits
                               THIS task. Fork spawns a new one, so it lives here. */}
-                          {!isReadOnlyPipe(pipe) && (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                posthog.capture("pipe_remix_started", { source: "row_button" });
-                                navigateHomeAndPrefill({
-                                  context: "the user wants to fork their pipe into a new one",
-                                  prompt: buildForkPrompt(pipe.config.name),
-                                  displayLabel: `复制定时任务：${pipeDisplayTitle(pipe.config.name)}`,
-                                  autoSend: true,
-                                });
-                              }}
-                            >
-                              <GitFork className="h-3.5 w-3.5 mr-2" />
-                              fork into a new task
-                            </DropdownMenuItem>
-                          )}
+                          <DropdownMenuItem
+                            onClick={() => {
+                              navigateHomeAndPrefill({
+                                context: "the user wants to fork their pipe into a new one",
+                                prompt: buildForkPrompt(pipe.config.name),
+                                displayLabel: `复制定时任务：${pipeDisplayTitle(pipe.config.name)}`,
+                                autoSend: true,
+                              });
+                            }}
+                          >
+                            <GitFork className="h-3.5 w-3.5 mr-2" />
+                            fork into a new task
+                          </DropdownMenuItem>
 
-                          {/* Team sharing — own pipes can be shared, updated,
-                              unshared; received team pipes are read-only and can
-                              be forked instead. */}
-                          {canShareToTeam && !isReadOnlyPipe(pipe) && (
-                            sharedByMe.has(pipe.config.name) ? (
-                              <>
-                                {sharedContentDiffers(pipe) && (
-                                  <DropdownMenuItem
-                                    disabled={sharingPipe === pipe.config.name}
-                                    onClick={() => sharePipeToTeam(pipe)}
-                                  >
-                                    {sharingPipe === pipe.config.name ? (
-                                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                                    ) : (
-                                      <ArrowUpCircle className="h-3.5 w-3.5 mr-2" />
-                                    )}
-                                    push update to team (v
-                                    {nextShareVersion(sharedByMe.get(pipe.config.name)?.value)})
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem
-                                  onClick={() => unsharePipeFromTeam(pipe.config.name)}
-                                >
-                                  <Share2 className="h-3.5 w-3.5 mr-2" />
-                                  unshare from team
-                                </DropdownMenuItem>
-                              </>
-                            ) : (
-                              <DropdownMenuItem
-                                disabled={sharingPipe === pipe.config.name}
-                                onClick={() => sharePipeToTeam(pipe)}
-                              >
-                                {sharingPipe === pipe.config.name ? (
-                                  <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                                ) : (
-                                  <Share2 className="h-3.5 w-3.5 mr-2" />
-                                )}
-                                share with team
-                              </DropdownMenuItem>
-                            )
-                          )}
-                          {isReceivedTeamPipe(pipe) && (
-                            <DropdownMenuItem onClick={() => forkTeamPipe(pipe)}>
-                              <Copy className="h-3.5 w-3.5 mr-2" />
-                              fork to edit
-                            </DropdownMenuItem>
-                          )}
-
-                          {enterpriseManaged && (
-                            <DropdownMenuItem disabled>
-                              <Lock className="h-3.5 w-3.5 mr-2" />
-                              managed by organization
-                            </DropdownMenuItem>
-                          )}
-
-                          {!isReadOnlyPipe(pipe) && (
-                            <DropdownMenuItem
-                              disabled={sharingPublic === pipe.config.name}
-                              onClick={() => sharePipePublic(pipe)}
-                            >
-                              {sharingPublic === pipe.config.name ? (
-                                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                              ) : (
-                                <Link className="h-3.5 w-3.5 mr-2" />
-                              )}
-                              copy share link
-                            </DropdownMenuItem>
-                          )}
                           {(pipe.source_slug || (pipe.config as any).config?.source_slug) && (
                             <DropdownMenuItem
                               onClick={() => {
@@ -3292,16 +2810,14 @@ export function PipesSection() {
                               check for updates
                             </DropdownMenuItem>
                           )}
-                          {!isReadOnlyPipe(pipe) && (
-                            <DropdownMenuItem
-                              onClick={() => setPublishPipeName(pipe.config.name)}
-                            >
-                              <Upload className="h-3.5 w-3.5 mr-2" />
-                              publish to store
-                            </DropdownMenuItem>
-                          )}
-                          {!enterpriseManaged && <DropdownMenuSeparator />}
-                          {!enterpriseManaged && <DropdownMenuItem
+                          <DropdownMenuItem
+                            onClick={() => setPublishPipeName(pipe.config.name)}
+                          >
+                            <Upload className="h-3.5 w-3.5 mr-2" />
+                            publish to store
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
                             onClick={() => {
                               if (selectedPipes.has(pipe.config.name)) {
                                 toggleSelectPipe(pipe.config.name);
@@ -3317,18 +2833,14 @@ export function PipesSection() {
                           >
                             <CheckSquare className="h-3.5 w-3.5 mr-2" />
                             {selectedPipes.has(pipe.config.name) ? "deselect" : "select"}
-                          </DropdownMenuItem>}
-                          {/* Delete is hidden while a team share is active (the
-                              sync would reinstall it) but allowed once unshared. */}
-                          {!enterpriseManaged && (!isReceivedTeamPipe(pipe) || isUnsharedLeftover(pipe)) && (
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => deletePipe(pipe.config.name)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5 mr-2" />
-                              delete
-                            </DropdownMenuItem>
-                          )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => deletePipe(pipe.config.name)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-2" />
+                            delete
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -3339,9 +2851,7 @@ export function PipesSection() {
                     <div
                       className="ml-auto flex items-center gap-2"
                       title={
-                        enterpriseManaged
-                          ? "managed by your organization"
-                          : hasMissingConnections && !pipe.config.enabled
+                        hasMissingConnections && !pipe.config.enabled
                           ? "configure required connections before enabling auto-run"
                           : pipe.config.enabled
                             ? "auto-running on schedule — click to disable"
@@ -3355,7 +2865,7 @@ export function PipesSection() {
                       </span>
                       <Switch
                         checked={pipe.config.enabled}
-                        disabled={enterpriseManaged || (hasMissingConnections && !pipe.config.enabled)}
+                        disabled={hasMissingConnections && !pipe.config.enabled}
                         onCheckedChange={(checked) =>
                           togglePipe(pipe.config.name, checked)
                         }
@@ -3399,27 +2909,6 @@ export function PipesSection() {
                       {/* ═══ CONFIG TAB ═══ */}
                       <TabsContent value="config" className="mt-4">
 
-                        {enterpriseManaged ? (
-                          <div className="border border-border p-4">
-                            <div className="flex items-center gap-2">
-                              <Lock className="h-4 w-4" />
-                              <p className="text-sm font-medium">由你的组织管理</p>
-                            </div>
-                            <p className="mt-2 text-xs text-muted-foreground">
-                              schedule, prompt, AI preset, connections, and enabled state are restored from organization policy automatically.
-                            </p>
-                            <dl className="mt-4 grid gap-2 font-mono text-xs sm:grid-cols-2">
-                              <div>
-                                <dt className="text-muted-foreground">计划</dt>
-                                <dd>{pipeScheduleLabel(pipe.config)}</dd>
-                              </div>
-                              <div>
-                                <dt className="text-muted-foreground">AI 预设</dt>
-                                <dd>{Array.isArray(pipe.config.preset) ? pipe.config.preset[0] : pipe.config.preset || "组织默认值"}</dd>
-                              </div>
-                            </dl>
-                          </div>
-                        ) : (
                           <div className="divide-y divide-border border border-border">
 
                         {/* Triggers — Notion-style picker (schedule, events + per-app connection sources) */}
@@ -3552,49 +3041,17 @@ export function PipesSection() {
 
                         <div className="p-4">
                           <div className="divide-y divide-border border border-border">
-                            {cloudAgentRunnerEnabled && (
-                              <CloudAgentRunner
-                                pipeName={pipe.config.name}
-                                agent={pipe.config.agent}
-                                cloudAgent={pipe.config.cloud_agent}
-                                apiBase={apiBase}
-                                onSaved={(agent, cloudAgent) => {
-                                  setPipes((previous) =>
-                                    previous.map((candidate) =>
-                                      candidate.config.name === pipe.config.name
-                                        ? {
-                                            ...candidate,
-                                            is_bundled_builtin: false,
-                                            config: {
-                                              ...candidate.config,
-                                              agent,
-                                              cloud_agent: cloudAgent,
-                                            },
-                                          }
-                                        : candidate,
-                                    ),
-                                  );
-                                }}
-                              />
-                            )}
-
-                            {/* Keep the normal on-device controls available when
-                                the cloud-agent rollout is disabled. */}
-                            {(!cloudAgentRunnerEnabled ||
-                              pipe.config.agent !== "cloud-agent") && (
-                              <PipePresetSelector
-                                pipe={pipe}
-                                setPipes={setPipes}
-                                fetchPipes={fetchPipes}
-                                pendingConfigSaves={pendingConfigSaves}
-                                apiBase={apiBase}
-                              />
-                            )}
+                            <PipePresetSelector
+                              pipe={pipe}
+                              setPipes={setPipes}
+                              fetchPipes={fetchPipes}
+                              pendingConfigSaves={pendingConfigSaves}
+                              apiBase={apiBase}
+                            />
                           </div>
                         </div>
 
                           </div>
-                        )}
 
                       </TabsContent>
 
@@ -3749,8 +3206,7 @@ export function PipesSection() {
 
                       {/* ═══ ADVANCED TAB ═══ */}
                       <TabsContent value="advanced" className="mt-4 space-y-4">
-                      {!enterpriseManaged && (
-                        <>
+                      <>
                       <section className="divide-y divide-border border border-border">
                       <div className="px-4 py-3">
                         <p className="text-sm font-medium">runtime</p>
@@ -3781,7 +3237,6 @@ export function PipesSection() {
                           </p>
                         </div>
                         <Select
-                          disabled={enterpriseManaged}
                           value={pipe.config.effort ?? "low"}
                           onValueChange={(value) => {
                             const pipeName = pipe.config.name;
@@ -3961,7 +3416,6 @@ export function PipesSection() {
                           id={`pipe-history-switch-${pipe.config.name}`}
                           checked={!!pipe.config.history}
                           disabled={
-                            isReadOnlyPipe(pipe) ||
                             historySaveStatus[pipe.config.name] === "saving"
                           }
                           aria-label={`continue ${pipe.config.name} in one chat`}
@@ -3972,8 +3426,7 @@ export function PipesSection() {
                           }}
                         />
                       </section>
-                        </>
-                      )}
+                      </>
 
                       <section className="border border-border">
                       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
@@ -4000,20 +3453,11 @@ export function PipesSection() {
                         )}
                         </div>
                       </div>
-                      {isReadOnlyPipe(pipe) && (
-                        <p className="px-4 pt-3 text-[11px] text-muted-foreground">
-                          {isEnterpriseManagedPipe(pipe)
-                            ? "managed by your organization (read-only, restored automatically)"
-                            : "shared by your team (read-only, updates automatically) — fork it to make an editable copy"}
-                        </p>
-                      )}
                       <Textarea
                         value={promptDrafts[pipe.config.name] ?? pipe.raw_content}
                         onChange={(e) => handlePipeEdit(pipe.config.name, e.target.value)}
-                        readOnly={isReadOnlyPipe(pipe)}
                         className={cn(
-                          "h-72 rounded-none border-0 font-mono text-xs focus-visible:ring-0",
-                          isReadOnlyPipe(pipe) && "opacity-70 cursor-not-allowed"
+                          "h-72 rounded-none border-0 font-mono text-xs focus-visible:ring-0"
                         )}
                         autoCorrect="off"
                         autoCapitalize="off"

@@ -4,7 +4,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { useFeatureFlagEnabled } from "posthog-js/react";
 import { localFetch } from "@/lib/api";
 import { useAdvisoryStore } from "@/lib/advisories";
 import { useSettings } from "@/lib/hooks/use-settings";
@@ -13,7 +12,6 @@ import {
   type PipeAdvisoryRow,
 } from "@/lib/pipe-advisories";
 import { isPrimaryWindow } from "@/lib/utils/is-primary-window";
-import { openBusinessUpgradeSurface } from "@/lib/upgrade-flow";
 
 /**
  * Watches scheduled pipes for the silent failure modes a background automation
@@ -32,14 +30,9 @@ const ADVISORY_PREFIX = "pipe:";
 
 export function PipeAdvisoryWatcher() {
   const reconcile = useAdvisoryStore((s) => s.reconcile);
-  const { settings } = useSettings();
-  const flag = useFeatureFlagEnabled("pipe_advisories");
   // Only the primary window polls — the overlay is mounted in every window, but
-  // N windows each hitting /pipes every 60s is wasteful. Default ON; killable
-  // via the PostHog `pipe_advisories` flag.
-  const enabled = flag !== false && isPrimaryWindow();
-  const subscribed = settings.user?.cloud_subscribed === true;
-
+  // N windows each hitting /pipes every 60s is wasteful. Default ON.
+  const enabled = isPrimaryWindow();
   useEffect(() => {
     if (!enabled) {
       reconcile(ADVISORY_PREFIX, []); // clear any existing advisories if turned off
@@ -48,13 +41,6 @@ export function PipeAdvisoryWatcher() {
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
-    const startUpgrade = async () => {
-      try {
-        await openBusinessUpgradeSurface("pipe-advisory");
-      } catch (e) {
-        console.error("pipe-advisory upgrade surface failed:", e);
-      }
-    };
 
     const poll = async () => {
       try {
@@ -64,10 +50,7 @@ export function PipeAdvisoryWatcher() {
           const rows: PipeAdvisoryRow[] = Array.isArray(data)
             ? data
             : (data?.data ?? data?.pipes ?? []);
-          const advisories = buildPipeAdvisories(rows, {
-            subscribed,
-            startUpgrade,
-          });
+          const advisories = buildPipeAdvisories(rows);
           if (alive) reconcile(ADVISORY_PREFIX, advisories);
         }
       } catch {
@@ -81,7 +64,7 @@ export function PipeAdvisoryWatcher() {
       alive = false;
       if (timer) clearTimeout(timer);
     };
-  }, [enabled, subscribed, reconcile]);
+  }, [enabled, reconcile]);
 
   return null;
 }

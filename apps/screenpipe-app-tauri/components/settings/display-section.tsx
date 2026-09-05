@@ -18,7 +18,6 @@ import { Settings } from "@/lib/hooks/use-settings";
 import { FONT_SIZE_DEFAULT, FONT_SIZE_OPTIONS } from "@/lib/utils/font-size";
 import { open } from "@tauri-apps/plugin-shell";
 import type { SettingsField } from "./settings-search";
-import { ManagedSwitch } from "@/components/enterprise-locked-setting";
 import {
   DEFAULT_SIDEBAR_NAV_LAYOUT,
   SIDEBAR_NAV_ORDER,
@@ -170,8 +169,7 @@ export function DisplaySection() {
                   <p className="text-xs text-muted-foreground">显示回放并持续进行后台缓存工作</p>
                 </div>
               </div>
-              <ManagedSwitch
-                settingKey="disableTimeline"
+              <Switch
                 id="disableTimeline"
                 checked={!(settings?.disableTimeline ?? false)}
                 onCheckedChange={async (checked) => {

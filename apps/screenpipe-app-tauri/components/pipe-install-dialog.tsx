@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { listen } from "@tauri-apps/api/event";
-import posthog from "posthog-js";
 import { InstallRiskSummary, getPipeInstallRisk } from "@/components/pipe-store";
 import { localFetch } from "@/lib/api";
 import {
@@ -131,11 +130,6 @@ export function PipeInstallDialog() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      posthog.capture("pipe_installed_via_deeplink", {
-        url: request.url,
-        name: data.name,
-        source: isRegistrySource(url) ? "registry" : "url",
-      });
 
       const pipeConnections: string[] = data.connections || [];
       if (pipeConnections.length > 0) {
@@ -181,7 +175,6 @@ export function PipeInstallDialog() {
 
   const handleCancel = () => {
     if (!request) return;
-    posthog.capture("pipe_install_cancelled", { url: request?.url });
     publishPipeInstallCancelledReceipt({ url: request.url });
     setRequest(null);
   };

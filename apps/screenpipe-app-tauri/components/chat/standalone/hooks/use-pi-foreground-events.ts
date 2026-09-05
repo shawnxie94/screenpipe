@@ -4,7 +4,6 @@
 
 import { useEffect } from "react";
 import { emit, type UnlistenFn } from "@tauri-apps/api/event";
-import posthog from "posthog-js";
 import { piProjectDirForSession } from "@/lib/chat/pi-project-dir";
 import { mountAgentEventBus, onTerminated as onAgentTerminated } from "@/lib/events/bus";
 import { commands } from "@/lib/utils/tauri";
@@ -25,17 +24,10 @@ import {
   parseRateLimitWaitSeconds,
   PI_MAX_RATE_LIMIT_RETRIES,
 } from "@/lib/chat/quota-errors";
-import { reportChatDailyLimitWall } from "@/lib/card-ask/wall-hit";
-import {
-  clearQuotaUpgrade,
-  setQuotaUpgradeFromError,
-} from "@/lib/chat/quota-upgrade";
-import { clearFreeWall, setFreeWallFromError } from "@/lib/chat/free-wall";
 import { buildInvalidatedAuthTokenMessage, isInvalidatedAuthTokenError } from "@/lib/chat/auth-errors";
 import { buildNoResponseMessage, buildProviderErrorPresentation } from "@/lib/chat/provider-errors";
 import { chatTelemetryContextForResponse } from "@/lib/chat/response-feedback";
 import { optimisticAssistantForUserEcho } from "@/lib/chat/cross-window-transcript-sync";
-import { qualifiedValue } from "@/lib/analytics/qualified-value";
 import { acpAdapterInfo } from "@/lib/utils/preset-appearance";
 import { normalizePlanEntries, upsertPlanBlock } from "@/lib/chat/acp-plan";
 import {
@@ -136,9 +128,6 @@ export function usePiForegroundEvents({
     return { ...preset, agentName: acpAdapterInfo(preset.acpAgent?.id).name };
   };
   const dailyLimitMessage = (errorStr: string) => {
-    setQuotaUpgradeFromError(errorStr);
-    // No-op unless this is the free-plan wall (free_chat_limit_exceeded).
-    setFreeWallFromError(errorStr);
     return buildDailyLimitMessage(errorStr);
   };
   // Listen for Pi / pipe events.
@@ -729,7 +718,6 @@ export function usePiForegroundEvents({
           // Detect rate limit or daily limit from the error
           if (quotaErrorType === "daily" || quotaErrorType === "hosted_busy" || quotaErrorType === "rate") {
             if (quotaErrorType === "daily") {
-              reportChatDailyLimitWall();
             }
 
             if (piMessageIdRef.current) {
@@ -836,8 +824,6 @@ export function usePiForegroundEvents({
         } else if (data.type === "message_start" && data.message?.role === "user") {
           // A new turn is a fresh admission attempt. Hide the previous blocked
           // action while it runs; a repeated structured rejection restores it.
-          clearQuotaUpgrade();
-          clearFreeWall();
           // Pi fires `message_start` for each user turn. When a queued
           // follow-up starts, close the previous streaming target here so the
           // next text_delta creates a fresh assistant bubble instead of
@@ -1050,7 +1036,6 @@ export function usePiForegroundEvents({
                 prev.map((m) => m.id === msgId ? { ...m, content: buildInvalidatedAuthTokenMessage() } : m)
               );
             } else if (quotaErrorType === "daily") {
-              reportChatDailyLimitWall();
               setMessages((prev) =>
                 prev.map((m) => m.id === msgId ? { ...m, content: dailyLimitMessage(errMsg) } : m)
               );
@@ -1270,7 +1255,6 @@ export function usePiForegroundEvents({
                 const lastErr = piLastErrorRef.current;
                 const lastErrKind = lastErr ? classifyQuotaError(lastErr) : "none";
                 if (lastErr && lastErrKind === "daily") {
-                  reportChatDailyLimitWall();
                   content = dailyLimitMessage(lastErr);
                 } else if (lastErr && lastErrKind === "rate") {
                   content = buildRateLimitMessage(lastErr);
@@ -1326,9 +1310,7 @@ export function usePiForegroundEvents({
                 ...telemetryContext,
               };
               setTimeout(() => {
-                posthog.capture("chat_response_received", analyticsPayload);
                 if (isQualifiedChatResult) {
-                  qualifiedValue.chatResponseReceived();
                 }
               }, POST_STREAM_SIDE_EFFECT_DELAY_MS);
             }
@@ -1497,15 +1479,6 @@ export function usePiForegroundEvents({
             : quotaErrorType === "rate" ? "rate_limit"
             : errorStr.includes("model_not_allowed") ? "model_not_allowed"
             : "other";
-          posthog.capture("chat_response_error", {
-            provider: getActivePreset()?.provider,
-            model: getActivePreset()?.model,
-            error_type: errorCategory,
-            ...chatTelemetryContextForResponse(
-              messagesRef.current,
-              piMessageIdRef.current ?? "",
-            ),
-          });
           piStreamingTextRef.current = "";
           optimisticSteerRef.current = null;
           if (piMessageIdRef.current?.startsWith("pipe-")) {
@@ -1651,7 +1624,7 @@ export function usePiForegroundEvents({
             try {
               const providerConfig = buildProviderConfig();
               const dir = await piProjectDirForSession(piSessionIdRef.current);
-              const result = await commands.piStart(piSessionIdRef.current, dir, settings.user?.token ?? null, providerConfig);
+              const result = await commands.piStart(piSessionIdRef.current, dir, null, providerConfig);
               if (result.status === "ok") {
                 setPiInfo(result.data);
                 piSessionSyncedRef.current = false;
@@ -1667,7 +1640,7 @@ export function usePiForegroundEvents({
                     maxTokens: providerConfig.maxTokens,
                     maxContextChars: providerConfig.maxContextChars ?? null,
                     systemPrompt: providerConfig.systemPrompt,
-                    token: settings.user?.token ?? null,
+                    token: null,
                   };
                 }
               } else {
