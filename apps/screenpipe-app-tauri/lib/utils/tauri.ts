@@ -16,18 +16,6 @@ async activateAppAfterOauth() : Promise<void> {
     await TAURI_INVOKE("activate_app_after_oauth");
 },
 /**
- * Reconcile the live app + the next-boot config with the current enterprise
- * hidden-UI policy. The frontend calls this right after pushing a freshly
- * fetched policy via `set_enterprise_policy`, so the moment an admin turns on
- * "hide app", the windows already on screen are retracted and the dock icon
- * drops — without waiting for a restart. Best-effort: never returns an error.
- * Returns the resolved visibility so onboarding can stop after permissions
- * instead of entering UI-only setup steps on a managed-background device.
- */
-async applyEnterpriseUiVisibility() : Promise<boolean> {
-    return await TAURI_INVOKE("apply_enterprise_ui_visibility");
-},
-/**
  * Frontend-callable gate. The banner awaits this before calling
  * `downloadAndInstall` (Windows: triggers process::exit internally) or
  * `relaunch`. Returns `"proceed"` when a restart may go ahead — including
@@ -381,30 +369,6 @@ async deleteCacheFiles(paths: string[]) : Promise<Result<number, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-/**
- * Delete all cloud data.
- */
-async deleteCloudData() : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("delete_cloud_data") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Delete all locally-stored data that was synced from a specific remote device.
- * This calls the local screenpipe server's /data/delete-device endpoint.
- * Refuses to delete data for the current device as a safety guard.
- */
-async deleteDeviceLocalData(machineId: string) : Promise<Result<string, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("delete_device_local_data", { machineId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async disableKeychainEncryption() : Promise<Result<KeychainStatus, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("disable_keychain_encryption") };
@@ -615,21 +579,6 @@ async getChatsDir() : Promise<Result<string, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-/**
- * Read the user's screenpipe cloud session JWT.
- *
- * #3943: the authoritative copy lives in the encrypted secret store and is
- * mirrored into an in-process cache at startup and on every
- * `set_cloud_token`; that cache is served first. The legacy plaintext
- * `~/.screenpipe/auth.json` (the CLI credential file) remains as a fallback
- * for installs that have not migrated yet; sign-out removes it. Returns
- * None when signed out. Used by the settings hydration and the
- * enterprise-policy hook to send the Bearer header even when the in-app
- * user object is still null.
- */
-async getCloudToken() : Promise<string | null> {
-    return await TAURI_INVOKE("get_cloud_token");
-},
 async getDiskUsage(forceRefresh: boolean | null, dataDir: string | null) : Promise<Result<JsonValue, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_disk_usage", { forceRefresh, dataDir }) };
@@ -637,28 +586,6 @@ async getDiskUsage(forceRefresh: boolean | null, dataDir: string | null) : Promi
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
-},
-/**
- * Read the enterprise license key from deployment config (`enterprise.json`
- * or the documented Windows registry value) and the user recovery config.
- * Returns None if no valid key is found.
- */
-async getEnterpriseLicenseKey() : Promise<string | null> {
-    return await TAURI_INVOKE("get_enterprise_license_key");
-},
-/**
- * Read the enterprise admin API token (`team_api_token`) from
- * `~/.screenpipe/enterprise.json`. Returns None when the file is
- * missing, malformed, or the field is empty.
- *
- * Used by the Settings → Enterprise → Admin API token card to render
- * "configured" state without round-tripping the plaintext value through
- * the React state. The token itself is treated as a secret: the
- * frontend only learns "yes there's a value" via this getter, never
- * gets the value back.
- */
-async getEnterpriseTeamApiToken() : Promise<string | null> {
-    return await TAURI_INVOKE("get_enterprise_team_api_token");
 },
 async getEnv(name: string) : Promise<string> {
     return await TAURI_INVOKE("get_env", { name });
@@ -725,15 +652,6 @@ async getMonitors() : Promise<Result<MonitorDevice[], string>> {
     else return { status: "error", error: e  as any };
 }
 },
-/**
- * Return the website UTM attribution already resolved at app startup.
- *
- * This is read-only and never triggers another network request. Analytics can
- * be disabled before the manager is installed, so absence is a normal result.
- */
-async getOnboardingAttribution() : Promise<Attribution | null> {
-    return await TAURI_INVOKE("get_onboarding_attribution");
-},
 async getOnboardingStatus() : Promise<Result<OnboardingStore, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_onboarding_status") };
@@ -776,39 +694,6 @@ async getRecordingHealthState() : Promise<string> {
 async getScreenpipeBaseDir() : Promise<Result<string, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_screenpipe_base_dir") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Get sync configuration.
- */
-async getSyncConfig() : Promise<Result<SyncConfig, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_sync_config") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Get list of registered devices.
- */
-async getSyncDevices() : Promise<Result<SyncDeviceInfo[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_sync_devices") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Get current sync status.
- */
-async getSyncStatus() : Promise<Result<SyncStatusResponse, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_sync_status") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -878,19 +763,6 @@ async importSkill(sourcePath: string) : Promise<Result<ImportedSkill, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-/**
- * Initialize sync with password.
- * This initializes both the local SyncManager (for device queries) and
- * the server's SyncService (for actual data sync).
- */
-async initSync(password: string) : Promise<Result<boolean, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("init_sync", { password }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async installBrainViewTemplateKit(request: InstallBrainViewTemplateKitRequest) : Promise<Result<BrainViewDefinition, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("install_brain_view_template_kit", { request }) };
@@ -937,9 +809,9 @@ async isEnterpriseBuildCmd() : Promise<boolean> {
     return await TAURI_INVOKE("is_enterprise_build_cmd");
 },
 /**
- * Whether the running local API currently enforces the rolling history window.
- * This is the authoritative app-wide value shared by every webview and backend
- * route, so detached windows do not depend on duplicating account hydration.
+ * Local-only build: history access is never restricted.
+ * Kept as a Tauri command so the auto-generated TS bindings keep a stable
+ * surface until the frontend drops its mock in `use-timeline-cache.test.tsx`.
  */
 async isHistoryAccessRestricted() : Promise<boolean> {
     return await TAURI_INVOKE("is_history_access_restricted");
@@ -957,21 +829,6 @@ async isServerRunning() : Promise<Result<boolean, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
-},
-/**
- * Whether an automated environment has force-disabled telemetry
- * (`SCREENPIPE_DISABLE_TELEMETRY` / `GITHUB_ACTIONS` / `CI`).
- *
- * The Rust senders already consult
- * [`screenpipe_engine::analytics::telemetry_disabled_by_env`] directly, but the
- * webview cannot: its PostHog gate in `app/providers.tsx` only sees build-time
- * `process.env`, so a runtime env var never reaches it. Without this command a
- * CI run of the shipped bundle still fires `$identify` and mints a real
- * PostHog person — which is exactly how the Docker AppImage smoke test came to
- * account for a quarter of weekly "app users".
- */
-async isTelemetryDisabledByEnv() : Promise<boolean> {
-    return await TAURI_INVOKE("is_telemetry_disabled_by_env");
 },
 async listBrainViewTemplateKits() : Promise<Result<BrainViewTemplateKit[], string>> {
     try {
@@ -1144,17 +1001,6 @@ async loadBrainViewCanvas(viewId: string) : Promise<Result<BrainViewCanvasDocume
 }
 },
 /**
- * Lock sync (clear keys from memory and stop server sync service).
- */
-async lockSync() : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("lock_sync") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Apply one provider-owned schedule mutation through a live ACP adapter that
  * negotiated the Screenpipe schedule extension. This fails closed when the
  * task, capability, owning session, or provider confirmation disappeared
@@ -1255,37 +1101,12 @@ async oauthStatus(integrationId: string, instance: string | null) : Promise<Resu
 },
 /**
  * Open Google Calendar OAuth inside an in-app WebView.
- * Same pattern as `open_login_window` — intercepts the screenpipe:// deep-link
- * redirect so we don't rely on Safari custom-scheme support.
+ * Intercept the screenpipe:// deep-link redirect so the embedded OAuth window
+ * can close cleanly without relying on Safari custom-scheme support.
  */
 async openGoogleCalendarAuthWindow(authUrl: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("open_google_calendar_auth_window", { authUrl }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Open the screenpipe.com login page.
- * Normal login opens the user's default browser and returns through the
- * versioned app-specific deep-link callback.
- *
- * `fresh_session` is used by "use different account": macOS uses an ephemeral
- * ASWebAuthenticationSession and Windows/Linux use a throwaway webview profile.
- * Returns the device code when this call started the browser device-code flow,
- * and an empty string for every path that needs no out-of-band confirmation
- * (macOS auth session, embedded WebView fallback).
- *
- * The code is returned as well as broadcast on `login-browser-pending` so a
- * caller never has to depend on a global event to render it. #5936 changed
- * this shared command to require the user read a code out of the app, but only
- * taught onboarding to show one; every other login surface silently opened a
- * browser asking for a code nothing displayed.
- */
-async openLoginWindow(freshSession: boolean | null, authMode: LoginMode | null) : Promise<Result<string, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("open_login_window", { freshSession, authMode }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2147,17 +1968,6 @@ async removeImportedSkill(name: string) : Promise<Result<null, string>> {
 }
 },
 /**
- * Remove a device from sync.
- */
-async removeSyncDevice(deviceId: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("remove_sync_device", { deviceId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Request macOS Automation permission for Arc browser.
  * In production: triggers "screenpipe wants to control Arc" prompt via direct FFI.
  * In dev mode: runs the binary itself via launchctl to trigger the prompt with
@@ -2325,42 +2135,6 @@ async saveBrainViewCanvas(request: SaveBrainViewCanvasRequest) : Promise<Result<
 }
 },
 /**
- * Save the enterprise license key to `~/.screenpipe/enterprise.json`.
- * Used by the in-app prompt when enterprise.json is not deployed via MDM.
- */
-async saveEnterpriseLicenseKey(licenseKey: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("save_enterprise_license_key", { licenseKey }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Persist the user's enterprise admin status, team API token, and the org's
- * team API base URL. The Enterprise app uses the role/license/token fields to
- * decide whether to inject `screenpipe-team`; the native CLI resolves the API
- * base and token from the same file when that skill invokes it.
- *
- * Called by the frontend right after a policy fetch confirms admin
- * role. Storing this alongside the license key in `enterprise.json`
- * keeps the Enterprise app and native CLI on one local configuration contract
- * without a Tauri round-trip.
- *
- * All fields are optional so callers can update one at a time —
- * e.g. revoke admin without wiping the cached team token, or refresh
- * just the token after a rotation. To FORCE a field to null, pass
- * an empty string for strings or `false` for `is_admin`/`license_active`.
- */
-async saveEnterpriseTeamConfig(isAdmin: boolean | null, licenseActive: boolean | null, teamApiToken: string | null, gatewayUrl: string | null) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("save_enterprise_team_config", { isAdmin, licenseActive, teamApiToken, gatewayUrl }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Scan the standard locations for skill folders the user could import.
  */
 async scanDeviceSkills() : Promise<Result<DeviceSkill[], string>> {
@@ -2474,70 +2248,6 @@ async setChatAlwaysOnTop(onTop: boolean) : Promise<Result<null, string>> {
 }
 },
 /**
- * Toggle the "Cloud audio + video + image analysis" capability
- * in the screenpipe-api skill that Pi installs on every run.
- *
- * Mechanism: the screenpipe-core `Pi::ensure_screenpipe_skill` reads
- * `<data_dir>/cloud_media_analysis.disabled` at install time and
- * conditionally appends the Gemma 4 E4B confidential-enclave section
- * to `<project>/.pi/skills/screenpipe-api/SKILL.md`. Default (no
- * marker) = enabled. This command just creates or removes the marker.
- *
- * Why a marker file instead of editing the rendered skill: Pi rewrites
- * the rendered skill from a compiled-in template on every run, so any
- * post-install edits get overwritten on the next pipe execution. The
- * only stable seam is at install time.
- *
- * Idempotent. Effect takes hold on the next Pi run (next pipe
- * execution or new pi-chat session).
- */
-async setCloudMediaAnalysisSkill(enabled: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_cloud_media_analysis_skill", { enabled }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Push a fresh cloud-auth token into the running sidecar.
- *
- * The frontend invokes this on every sign-in (after `loadUser` writes
- * `settings.user`) and on sign-out (passing `None`). Without it, the
- * `Server.cloud_token` and `PiExecutor.user_token` captured at engine
- * boot would be permanent for the lifetime of the sidecar process —
- * users who signed in AFTER the engine started would stay on the
- * gateway's anonymous tier (allowed_models = haiku/gemini only) on
- * every pipe run, surfacing as `403 "model_not_allowed"` for any
- * Sonnet/Opus preset even with an active Pro subscription. Logout +
- * log-in from the webview alone does NOT restart the sidecar, which
- * is why the previous user-facing workaround was "fully quit the
- * app from the tray."
- *
- * Both the local `/v1/chat/completions` proxy and the pi-agent's
- * `models.json` apiKey share the same `Arc<ArcSwap<Option<String>>>`,
- * so one write here updates both readers on the next pipe run.
- */
-async setCloudToken(token: string | null) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_cloud_token", { token }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Enable or disable enhanced AI suggestions (uses screenpipe cloud).
- */
-async setEnhancedAiSuggestions(enabled: boolean, token: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_enhanced_ai_suggestions", { enabled, token }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Apply the frontend's experimental rollout decision to native history swipes.
  * The platform implementation keeps every non-Home webview forced off.
  */
@@ -2580,17 +2290,6 @@ async setOnboardingStep(step: string) : Promise<Result<null, string>> {
 async setShortcutOverlayAnchor(anchor: string, display: string | null) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("set_shortcut_overlay_anchor", { anchor, display }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Enable or disable sync.
- */
-async setSyncEnabled(enabled: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_sync_enabled", { enabled }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2765,14 +2464,6 @@ async startExportRecording(meetingId: number | null, start: string | null, end: 
     else return { status: "error", error: e  as any };
 }
 },
-async startFeedbackUpload(request: FeedbackUploadRequest) : Promise<Result<string, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("start_feedback_upload", { request }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 /**
  * Stop recording without killing the server.
  * Pipes, memories, search, and the HTTP API remain accessible.
@@ -2846,17 +2537,6 @@ async trainVoice(name: string, startTime: string, endTime: string) : Promise<Res
 }
 },
 /**
- * Trigger an immediate sync via the screenpipe server.
- */
-async triggerSync() : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("trigger_sync") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * User-initiated update check from Settings → General. Returns:
  * - `Ok(true)`  when an update was found (banner will appear after download).
  * - `Ok(false)` when already up to date or the build can't auto-update.
@@ -2894,25 +2574,6 @@ async updateGlobalShortcuts(showShortcut: string, startShortcut: string, stopSho
 async updateShowScreenpipeShortcut(newShortcut: string, enabled: boolean) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("update_show_screenpipe_shortcut", { newShortcut, enabled }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Update sync configuration.
- */
-async updateSyncConfig(config: SyncConfig) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("update_sync_config", { config }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async uploadFileToS3(filePath: string, signedUrl: string) : Promise<Result<boolean, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("upload_file_to_s3", { filePath, signedUrl }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2997,7 +2658,7 @@ async writeBrowserLogs(entries: BrowserLogEntry[]) : Promise<void> {
 /** user-defined types **/
 
 export type AIPreset = { id: string; prompt: string; provider: AIProviderType; acpAgent?: AcpAgentPresetConfig | null; url?: string; model?: string; defaultPreset: boolean; apiKey: string | null; maxContextChars: number; maxTokens?: number }
-export type AIProviderType = "openai" | "openai-chatgpt" | "native-ollama" | "custom" | "screenpipe-cloud" | "acp" | "pi" | "anthropic"
+export type AIProviderType = "openai" | "openai-chatgpt" | "native-ollama" | "custom" | "acp" | "pi" | "anthropic"
 export type AcpAgentConfig = {
 /**
  * Registry id (for example `codex-acp`) or `custom`.
@@ -3032,15 +2693,7 @@ modeId?: string | null;
  * Screenpipe-owned permission response policy. `allow-all` approves each
  * adapter request; omitted or `ask` keeps the normal approval cards.
  */
-approvalMode?: string | null;
-/**
- * Send the agent's model calls through Screenpipe Cloud instead of the
- * user's own provider account. Only honoured for agents whose catalog
- * entry declares `cloudRouting`; a closed agent (Cursor, Copilot) talks to
- * its own service and ignores this. `None` means the preset predates the
- * choice, which keeps the agent on its own account.
- */
-useScreenpipeCloud?: boolean | null }
+approvalMode?: string | null }
 /**
  * Whether a built-in agent's CLI is installed on this computer. Binary agents
  * (OpenCode, Cursor, Kimi) require the user to install the CLI; npx agents run
@@ -3066,17 +2719,11 @@ modeId?: string | null;
 /**
  * Screenpipe-owned ACP permission response policy (`ask` or `allow-all`).
  */
-approvalMode?: string | null;
-/**
- * Send this agent's model calls through Screenpipe Cloud. `None` keeps
- * presets saved before this choice on the agent's own provider account.
- */
-useScreenpipeCloud?: boolean | null }
+approvalMode?: string | null }
 export type ActivityHistoryCoverage = { start: string; end: string }
 export type ActivityHistoryEntry = { id: string; kind: string; meeting_id: number | null; start_at: string; end_at: string; title: string; summary: string; evidence: ActivityHistoryEvidence[] }
 export type ActivityHistoryEvidence = { kind: string; at: string; frame_id: number | null; meeting_id: number | null; app_name: string | null; label: string }
 export type AecMode = "off" | "screenpipe" | "macos" | "windows"
-export type Attribution = { utmSource: string | null; utmMedium: string | null; utmCampaign: string | null; utmContent: string | null; utmTerm: string | null }
 export type AudioDeviceInfo = { name: string; isDefault: boolean;
 /**
  * True for a Bluetooth *input* device that is also a combo headset (the
@@ -3113,7 +2760,7 @@ sinceEpochSecs: number;
 /**
  * True when this CPU lacks AVX2 (pre-2013 x86-64 / Atom-line): local
  * whisper/qwen3 STT is disabled at runtime (their kernels are
- * AVX2-compiled); parakeet + cloud engines still work. Drives the
+ * AVX2-compiled); parakeet remains available. Drives the
  * "compatibility mode" notice in onboarding/settings.
  */
 cpuCompatMode: boolean }
@@ -3234,7 +2881,6 @@ export type EngineEvent = { name: string; data: JsonValue }
 export type ExcludedApp = { bundleId: string; name: string | null; icon: string | null }
 export type ExportEvent = { kind: "started"; jobId: string; request: ExportRequestInfo } | { kind: "completed"; jobId: string; request: ExportRequestInfo; summary: MeetingExportSummary } | { kind: "failed"; jobId: string; request: ExportRequestInfo; error: string }
 export type ExportRequestInfo = { meetingId: number | null; start: string | null; end: string | null; outputPath: string }
-export type FeedbackUploadRequest = { jobId: string; identifier: string; reportType: string; feedbackText: string; settingsJson: string; chatHistory: string; consoleLog: string; analyticsId: string | null; os: string; osVersion: string; appVersion: string; screenshotDataUrl: string | null; videoDataUrl: string | null; videoPath: string | null; videoExt: string | null }
 export type HardwareCapability = { hasGpu: boolean; cpuCores: number; totalMemoryGb: number; recommendedEngine: string; reason: string }
 export type IcsCalendarEntry = { name: string; url: string; enabled: boolean }
 /**
@@ -3250,7 +2896,6 @@ export type JobEvent = { kind: "started"; jobId: string; label: string; message:
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue }
 export type KeychainStatus = { state: string }
 export type LogFile = { name: string; path: string; modified_at: number }
-export type LoginMode = "sign-in" | "sign-up"
 /**
  * Stable low-disk safety values shared with the settings UI.
  *
@@ -4178,11 +3823,6 @@ updateChannel?: string;
  */
 autoUpdatePipes?: boolean;
 /**
- * Use screenpipe cloud for AI-powered features like suggestions.
- * Better quality but sends activity context to the cloud (zero data retention).
- */
-enhancedAI?: boolean;
-/**
  * Explicit consumer opt-in for on-demand remote diagnostic log requests.
  * Enterprise builds enforce remote log collection separately; this stored
  * value remains false unless a consumer chooses to enable it.
@@ -4265,18 +3905,6 @@ preview?: string | null;
  * Priority: 1 = hero card (most relevant), 2+ = supporting cards
  */
 priority?: number }
-/**
- * Sync configuration.
- */
-export type SyncConfig = { enabled: boolean; syncIntervalMinutes: number; syncTranscripts: boolean; syncOcr: boolean; syncAudio: boolean; syncFrames: boolean }
-/**
- * Device information.
- */
-export type SyncDeviceInfo = { id: string; deviceId: string; deviceName: string | null; deviceOs: string; lastSyncAt: string | null; createdAt: string; isCurrent: boolean }
-/**
- * Sync status response.
- */
-export type SyncStatusResponse = { enabled: boolean; isSyncing: boolean; lastSync: string | null; lastError: string | null; storageUsed: number | null; storageLimit: number | null; deviceCount: number | null; deviceLimit: number | null; syncTier: string | null; machineId: string }
 /**
  * A browser URL block rule.
  *

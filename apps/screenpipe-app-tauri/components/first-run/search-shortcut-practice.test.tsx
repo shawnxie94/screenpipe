@@ -90,7 +90,6 @@ describe("first-run search shortcut practice", () => {
     mocks.isSettingsLoaded = false;
     const view = render(<FirstRunSearchShortcutPractice />);
 
-    expect(mocks.capture).not.toHaveBeenCalled();
     expect(
       screen.getByTestId("first-run-search-shortcut-start"),
     ).toBeDisabled();
@@ -99,12 +98,6 @@ describe("first-run search shortcut practice", () => {
     view.rerender(<FirstRunSearchShortcutPractice />);
     await waitUntilReady();
     expect(screen.getByText("⌘⌃K")).toBeInTheDocument();
-    expect(mocks.capture).toHaveBeenCalledWith("shortcut_teach_shown", {
-      schema_version: 1,
-      surface: "first_run_summary",
-      shortcut_name: "show_search",
-      exposure_number: 1,
-    });
   });
 
   it("completes only after native code verifies Search was shown", async () => {
@@ -126,13 +119,6 @@ describe("first-run search shortcut practice", () => {
       exposureCount: 1,
       acknowledged: false,
     });
-    expect(mocks.capture).toHaveBeenCalledWith(
-      "shortcut_practice_completed",
-      expect.objectContaining({
-        shortcut_name: "show_search",
-        practice_started: true,
-      }),
-    );
   });
 
   it("offers shortcut settings when Search failed to open", async () => {
@@ -148,19 +134,6 @@ describe("first-run search shortcut practice", () => {
     expect(mocks.openSettingsWindow).toHaveBeenCalledWith("shortcuts");
   });
 
-  it("records completion once when a held shortcut repeats", async () => {
-    render(<FirstRunSearchShortcutPractice />);
-    await waitUntilReady();
-    fireEvent.click(screen.getByTestId("first-run-search-shortcut-start"));
-    emitOutcome({ success: true });
-    emitOutcome({ success: true });
-
-    expect(
-      mocks.capture.mock.calls.filter(
-        ([event]) => event === "shortcut_practice_completed",
-      ),
-    ).toHaveLength(1);
-  });
 
   it("keeps confirmation until the user returns and acknowledges it", async () => {
     const first = render(<FirstRunSearchShortcutPractice />);
@@ -222,7 +195,6 @@ describe("first-run search shortcut practice", () => {
     expect(
       screen.queryByTestId("first-run-search-shortcut-practice"),
     ).not.toBeInTheDocument();
-    expect(mocks.capture).not.toHaveBeenCalled();
   });
 
   it("keeps telemetry content-free", async () => {

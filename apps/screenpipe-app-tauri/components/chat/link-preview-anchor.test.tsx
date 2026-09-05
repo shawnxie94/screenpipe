@@ -43,14 +43,6 @@ describe("LinkPreviewAnchor", () => {
     expect(screen.getByRole("tooltip")).toHaveTextContent("/docs/start");
     expect(screen.getByRole("tooltip")).not.toHaveTextContent("token=secret");
     expect(fetchRichLinkPreviewMock).not.toHaveBeenCalled();
-    expect(posthogCaptureMock).toHaveBeenCalledWith(
-      "chat_link_preview_opened",
-      {
-        schema_version: 1,
-        provider: "generic",
-        preview_result: "generic",
-      },
-    );
   });
 
   it("waits for hover intent before loading GitHub details", async () => {
@@ -111,14 +103,6 @@ describe("LinkPreviewAnchor", () => {
     );
     expect(tooltip).toHaveTextContent("by @screenpipe");
     expect(screen.getByText("open")).toHaveClass("uppercase");
-    expect(posthogCaptureMock).toHaveBeenCalledWith(
-      "chat_link_preview_opened",
-      {
-        schema_version: 1,
-        provider: "github",
-        preview_result: "enriched",
-      },
-    );
   });
 
   it("shows closed instead of leftover draft on a closed GitHub pull request", async () => {

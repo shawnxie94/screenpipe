@@ -43,14 +43,6 @@ describe("SummaryCards", () => {
       "summary-card-automate-my-work",
       "summary-card-missed-todos",
     ]);
-    expect(captureMock).toHaveBeenCalledWith("home_card_impression", {
-      schema_version: 1,
-      surface: "chat_home",
-      layout_version: "home_v2",
-      card: "other_builtin",
-      position: 1,
-      presentation: "hero",
-    });
   });
 
   it("reorders an open Home view when the General Settings goal changes", () => {
@@ -332,19 +324,6 @@ describe("SummaryCards", () => {
       "home_card",
       "automate_my_work",
     );
-    expect(captureMock).toHaveBeenCalledWith("home_card_clicked", {
-      kind: "template_featured",
-      template_name: "automate-my-work",
-      card: "automate_my_work",
-    });
-    expect(captureMock).toHaveBeenCalledWith("home_card_impression", {
-      schema_version: 1,
-      surface: "chat_home",
-      layout_version: "home_v2",
-      card: "automate_my_work",
-      position: 1,
-      presentation: "hero",
-    });
     expect(
       screen
         .getByTestId("summary-card-automate-my-work")
@@ -477,17 +456,6 @@ describe("SummaryCards", () => {
       );
       expect(onUpdateCustomTemplate).not.toHaveBeenCalled();
 
-      const customRunEvent = captureMock.mock.calls.find(
-        ([event, properties]) =>
-          event === "home_card_clicked" &&
-          properties.kind === "custom_template_run",
-      );
-      expect(customRunEvent).toEqual([
-        "home_card_clicked",
-        { kind: "custom_template_run" },
-      ]);
-      expect(JSON.stringify(customRunEvent)).not.toContain("Daily Recap");
-      expect(JSON.stringify(customRunEvent)).not.toContain("custom-123");
     });
 
     it("persists edits only via the explicit Update Template action", () => {

@@ -35,7 +35,6 @@ export type AIProviderType =
 	| "anthropic"
 	| "custom"
 	| "embedded"
-	| "screenpipe-cloud"
 	| "acp"
 	| "pi";
 
@@ -53,8 +52,6 @@ export type AcpAgentPresetConfig = {
 	modeId?: string | null;
 	/** Screenpipe-owned ACP permission response policy. */
 	approvalMode?: "ask" | "allow-all" | null;
-	/** True when this ACP agent's model calls use Screenpipe Cloud allowance. */
-	useScreenpipeCloud?: boolean | null;
 };
 
 export type EmbeddedLLMConfig = {
@@ -84,9 +81,6 @@ export type AIPreset = {
 	  }
 	| {
 			provider: "native-ollama";
-	  }
-	| {
-			provider: "screenpipe-cloud";
 	  }
 	| {
 			provider: "acp";
@@ -715,7 +709,7 @@ export function normalizeSettingsArrays(settings: Settings): boolean {
 		aiPresets: makeDefaultPresets(),
 	};
 	let changed = false;
-	if (!Array.isArray(settings.aiPresets) || settings.aiPresets.length > 0 === false) {
+	if (!Array.isArray(settings.aiPresets)) {
 		// Local-only installs start with no presets; the user picks a provider.
 		settings.aiPresets = [] as any;
 		changed = true;

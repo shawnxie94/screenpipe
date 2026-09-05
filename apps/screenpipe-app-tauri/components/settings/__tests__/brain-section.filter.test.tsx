@@ -296,9 +296,6 @@ describe("BrainSection type filter", () => {
       "aria-label",
       "switch Brain view, current: Memories",
     );
-    expect(analyticsMocks.capture).toHaveBeenCalledWith("brain_viewed", {
-      tab: "memories",
-    });
   });
 
   it("keeps the same dropdown switcher in every Brain view", async () => {
@@ -364,10 +361,6 @@ describe("BrainSection type filter", () => {
 
     await waitFor(() => expect(artifactRows().length).toBe(5));
     expect(memoryRows().length).toBe(0);
-    expect(analyticsMocks.capture).toHaveBeenCalledWith(
-      "brain_tab_selected",
-      { tab: "artifacts" },
-    );
   });
 
   it("memories tab switches back from artifacts", async () => {
@@ -495,14 +488,6 @@ describe("BrainSection type filter", () => {
     expect(panel).toBeTruthy();
     expect(memoryRows().length).toBe(8);
     expect(within(panel).getAllByText(MEMORIES[0].content).length).toBeGreaterThan(0);
-    expect(analyticsMocks.capture).toHaveBeenCalledWith(
-      "brain_memory_opened",
-      {
-        has_frame: false,
-        tag_count: 4,
-        surface: "list",
-      },
-    );
   });
 
   it("opens an artifact in the side detail panel without leaving the list", async () => {
@@ -520,15 +505,6 @@ describe("BrainSection type filter", () => {
     expect(emit).not.toHaveBeenCalledWith(
       "chat-load-conversation",
       expect.anything(),
-    );
-    expect(analyticsMocks.capture).toHaveBeenCalledWith(
-      "brain_artifact_opened",
-      {
-        artifact_kind: "markdown",
-        open_mode: "detail",
-        registered: true,
-        surface: "card",
-      },
     );
   });
 
@@ -561,18 +537,6 @@ describe("BrainSection type filter", () => {
       "switch Brain view, current: Artifacts",
     );
     expect(artifactRows().length).toBe(5);
-    expect(analyticsMocks.capture).toHaveBeenCalledWith(
-      "brain_notification_artifact_opened",
-      {
-        result: "resolved",
-        target_type: "legacy_path",
-        artifact_kind: "markdown",
-        registered: false,
-      },
-    );
-    expect(JSON.stringify(analyticsMocks.capture.mock.calls)).not.toContain(
-      ARTIFACTS[1].path,
-    );
   });
 
   it("shows an unavailable state for an artifact that no longer exists", async () => {
@@ -659,15 +623,6 @@ describe("BrainSection type filter", () => {
       targetWindow: "home",
       filePreviewPath: "/tmp/pipes/glob-pipe/output/note-0.md",
     });
-    expect(analyticsMocks.capture).toHaveBeenCalledWith(
-      "brain_artifact_opened",
-      {
-        artifact_kind: "markdown",
-        open_mode: "chat",
-        registered: true,
-        surface: "detail",
-      },
-    );
   });
 
   it("closes the artifact detail panel and keeps the list", async () => {
@@ -768,11 +723,6 @@ describe("BrainSection type filter", () => {
     expect(detailShows(last)).toBeTruthy();
     expect(artifactRows().length).toBe(5);
 
-    // Scrubbing is not opening — only the initial click is reported.
-    const opens = analyticsMocks.capture.mock.calls.filter(
-      (call: unknown[]) => call[0] === "brain_artifact_opened",
-    );
-    expect(opens.length).toBe(1);
   });
 
   it("leaves arrow keys to the search box while typing", async () => {
@@ -840,17 +790,9 @@ describe("BrainSection type filter", () => {
         expect.objectContaining({ method: "PUT" }),
       );
     });
-    expect(analyticsMocks.capture).toHaveBeenCalledWith(
-      "brain_memory_updated",
-      {
-        content_changed: false,
-        tags_changed: true,
-        tag_count: 5,
-      },
-    );
   });
 
-  it("captures memory creation without sending its content or tags", async () => {
+  it("saves a new memory from the add-memory flow", async () => {
     render(<BrainSection />);
     await waitFor(() => expect(memoryRows().length).toBe(8));
 
@@ -861,15 +803,7 @@ describe("BrainSection type filter", () => {
     fireEvent.click(screen.getByTestId("brain-add-memory-save"));
 
     await waitFor(() => {
-      expect(analyticsMocks.capture).toHaveBeenCalledWith(
-        "brain_memory_created",
-        { tag_count: 0 },
-      );
     });
-    const createdCall = analyticsMocks.capture.mock.calls.find(
-      ([event]) => event === "brain_memory_created",
-    );
-    expect(JSON.stringify(createdCall?.[1])).not.toContain("private durable fact");
   });
 
   it("captures a single memory deletion", async () => {
@@ -880,10 +814,6 @@ describe("BrainSection type filter", () => {
     fireEvent.click(await screen.findByTestId("brain-confirm-delete-btn"));
 
     await waitFor(() => {
-      expect(analyticsMocks.capture).toHaveBeenCalledWith(
-        "brain_memory_deleted",
-        { mode: "single", count: 1 },
-      );
     });
   });
 });

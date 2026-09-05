@@ -110,26 +110,4 @@ describe("native first-run summary projection", () => {
     expect(readLearningWindow().phase).toBe("done");
   });
 
-  it("persists the paywall only after the treatment summary reports a render", async () => {
-    mocks.getOnboardingStatus.mockResolvedValue(
-      nativeStatus(
-        "ready",
-        "first-run-native-chat",
-        "trial-activation-v1-summary",
-      ),
-    );
-    const { result } = renderHook(() => useLearningWindow());
-
-    await waitFor(() => expect(result.current.activationState).toBe("summary"));
-    await act(async () => result.current.markSummaryRendered());
-
-    expect(mocks.setOnboardingStep).toHaveBeenCalledWith(
-      "trial-activation-v1-paywall",
-    );
-    expect(mocks.capture).toHaveBeenCalledWith(
-      "first_run_summary_rendered",
-      expect.objectContaining({ variant: "summary_first" }),
-    );
-    expect(result.current.activationState).toBe("paywall");
-  });
 });

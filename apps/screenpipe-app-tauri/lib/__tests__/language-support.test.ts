@@ -35,18 +35,18 @@ describe("transcription engine language support", () => {
     ).toEqual([Language.english, Language.portuguese]);
   });
 
-  it("uses Deepgram Nova-3 support for Deepgram and cloud transcription", () => {
+  it("uses Deepgram Nova-3 support for Deepgram transcription", () => {
     const deepgramCodes = getLanguageOptionsForTranscriptionEngine("deepgram").map(
       (option) => option.code
     );
-    const cloudCodes = getLanguageOptionsForTranscriptionEngine(
-      "screenpipe-cloud"
-    ).map((option) => option.code);
 
-    expect(deepgramCodes).toEqual(cloudCodes);
     expect(deepgramCodes).toContain(Language.japanese);
     expect(deepgramCodes).toContain(Language.vietnamese);
     expect(deepgramCodes).not.toContain(Language.maltese);
+    // The retired hosted engine is gone: unknown engines get the broad list.
+    expect(
+      getLanguageOptionsForTranscriptionEngine("screenpipe-cloud").length
+    ).toBeGreaterThan(deepgramCodes.length);
   });
 
   it("uses the Qwen3-ASR language set for local Qwen transcription", () => {
@@ -79,7 +79,7 @@ describe("transcription engine language support", () => {
 
   it("groups equivalent engines so language choices can be restored by model family", () => {
     expect(getTranscriptionEngineLanguageSupportKey("deepgram")).toBe(
-      getTranscriptionEngineLanguageSupportKey("screenpipe-cloud")
+      "deepgram-nova-3"
     );
     expect(getTranscriptionEngineLanguageSupportKey("parakeet")).toBe(
       getTranscriptionEngineLanguageSupportKey("parakeet-mlx")

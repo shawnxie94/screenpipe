@@ -85,7 +85,9 @@ describe("PostInstallConnectionsModal Composio connections", () => {
 
     expect(await screen.findByText("gmail oauth disconnected")).toBeInTheDocument();
     expect(screen.getByText("not configured")).toBeInTheDocument();
-    expect(mocks.fetchComposioStatus).toHaveBeenCalledWith("token-test");
+    // No account token exists in the local-only build, so the hosted status
+    // fetch never fires and Composio connections read as unconfigured.
+    expect(mocks.fetchComposioStatus).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "complete gmail oauth" }));
 
@@ -94,11 +96,7 @@ describe("PostInstallConnectionsModal Composio connections", () => {
     });
   });
 
-  it("recognizes an already connected Gmail account", async () => {
-    mocks.fetchComposioStatus.mockResolvedValue({
-      gmail: { connected: true, status: "ACTIVE" },
-    });
-
+  it("keeps a Composio connection unconfigured without a hosted token", async () => {
     render(
       <PostInstallConnectionsModal
         open
@@ -108,13 +106,7 @@ describe("PostInstallConnectionsModal Composio connections", () => {
       />
     );
 
-    const gmailRow = await screen.findByRole("button", {
-      name: /Gmail configured/i,
-    });
-    expect(screen.getByText("configured")).toBeInTheDocument();
-
-    fireEvent.click(gmailRow);
-
-    expect(await screen.findByText("gmail oauth connected")).toBeInTheDocument();
+    expect(await screen.findByText("not configured")).toBeInTheDocument();
+    expect(mocks.fetchComposioStatus).not.toHaveBeenCalled();
   });
 });

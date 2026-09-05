@@ -108,14 +108,13 @@ describe("provider error copy", () => {
     ).toBeNull();
   });
 
-  it("maps legacy cloud presets to a migration message", () => {
+  it("treats a retired cloud-preset connection error as generic remote copy", () => {
     const msg = buildProviderErrorMessage("Connection error.", {
       provider: "screenpipe-cloud",
       model: "auto",
     });
 
-    expect(msg).toContain("旧 AI 预设");
-    expect(msg).toContain("第三方服务");
+    expect(msg).toContain("Can't reach the AI provider (screenpipe-cloud)");
   });
 
   it("maps legacy provider socket errors to migration copy", () => {
@@ -127,16 +126,15 @@ describe("provider error copy", () => {
     });
 
     expect(presentation).toMatchObject({ kind: "provider", retryable: true });
-    expect(presentation?.message).toContain("旧 AI 预设");
-    expect(presentation?.message).toContain("第三方服务");
+    expect(presentation?.message).toContain("Can't reach the AI provider (pi)");
     expect(presentation?.message).not.toContain("verbose: true");
   });
 
-  it("maps legacy provider transport errors to the migration message", () => {
+  it("maps provider transport errors to generic remote copy", () => {
     for (const raw of ["tls handshake eof", "error sending request"]) {
       expect(
         buildProviderErrorMessage(raw, { provider: "screenpipe-cloud", model: "auto" }),
-      ).toContain("旧 AI 预设");
+      ).toContain("Can't reach the AI provider (screenpipe-cloud)");
     }
   });
 
@@ -147,50 +145,11 @@ describe("provider error copy", () => {
     );
 
     expect(presentation).toMatchObject({ kind: "provider", retryable: true });
-    expect(presentation?.message).toContain("旧 AI 预设");
-    expect(presentation?.message).toContain("第三方服务");
+    expect(presentation?.message).toContain("Can't reach the AI provider (screenpipe-cloud)");
     expect(presentation?.message).not.toContain("certificate has expired");
   });
 
-  it("maps the daily free-chat wall to tomorrow-or-BYOK copy", () => {
-    const msg = buildProviderErrorMessage(
-      '{"error":"free_chat_limit_exceeded","limit":2}',
-      { provider: "screenpipe-cloud", model: "auto" },
-    );
-    expect(msg).toContain("2 条免费 AI 消息");
-    expect(msg).toContain("明天");
-    expect(msg).toContain("升级");
-    expect(msg).toContain("Ollama");
-    expect(msg).toContain("Claude");
-    expect(msg).toContain("Codex");
-  });
-
-  it("maps the per-message tool-loop cap separately", () => {
-    const msg = buildProviderErrorMessage(
-      '{"error":"free_chat_turn_request_limit_exceeded"}',
-      { provider: "pi", model: "auto" },
-    );
-    expect(msg).toContain("8 步代理上限");
-  });
-
-  it("explains the free background-pipe provider options", () => {
-    const msg = buildProviderErrorMessage(
-      '{"error":"free_plan_hosted_background_disabled"}',
-      { provider: "screenpipe-cloud", model: "auto" },
-    );
-    expect(msg).toContain("后台定时任务");
-    expect(msg).toContain("Ollama");
-  });
-
-  it("asks old clients to update before using the allowance", () => {
-    const msg = buildProviderErrorMessage(
-      '{"error":"free_chat_client_update_required"}',
-      { provider: "screenpipe-cloud", model: "auto" },
-    );
-    expect(msg).toContain("请更新 screenpipe");
-  });
-
-  it("gives a generic connectivity message for other remote providers", () => {
+          it("gives a generic connectivity message for other remote providers", () => {
     expect(
       buildProviderErrorMessage("Connection error.", { provider: "anthropic", model: "claude-opus-4-8" })
     ).toContain("anthropic");
@@ -273,16 +232,7 @@ describe("provider error copy", () => {
     }
   });
 
-  it("keeps hosted quota codes authoritative over the Codex usage-limit phrase", () => {
-    expect(
-      buildProviderErrorMessage(
-        '{"error":"free_chat_limit_exceeded","message":"Codex error: the usage limit has been reached"}',
-        { provider: "screenpipe-cloud", model: "auto" },
-      ),
-    ).toContain("2 条免费 AI 消息");
-  });
-
-  it("does not map unrelated token errors to the ChatGPT account-id message", () => {
+    it("does not map unrelated token errors to the ChatGPT account-id message", () => {
     expect(buildProviderErrorMessage("invalid token", { provider: "openai-chatgpt" })).toBeNull();
     expect(
       buildProviderErrorMessage("failed to extract something else", { provider: "openai-chatgpt" })
@@ -333,10 +283,10 @@ describe("provider error copy", () => {
     );
   });
 
-  it("handles legacy provider transport errors case-insensitively", () => {
+  it("handles provider transport errors case-insensitively", () => {
     expect(
       buildProviderErrorMessage("TLS HANDSHAKE EOF", { provider: "screenpipe-cloud" }),
-    ).toContain("旧 AI 预设");
+    ).toContain("Can't reach the AI provider (screenpipe-cloud)");
   });
 
   it("turns raw context-window JSON into actionable chat copy", () => {

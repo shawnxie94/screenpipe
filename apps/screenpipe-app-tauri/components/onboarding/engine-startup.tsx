@@ -76,7 +76,7 @@ type BootPhaseSnapshot = {
   error: string | null;
   sinceEpochSecs: number;
   // True when the CPU lacks AVX2 (compatibility mode): local whisper/qwen3
-  // STT is disabled at runtime; parakeet + cloud engines still work.
+  // STT is disabled at runtime; parakeet remains available.
   cpuCompatMode: boolean;
 };
 

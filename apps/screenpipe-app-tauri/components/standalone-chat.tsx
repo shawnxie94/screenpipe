@@ -1024,7 +1024,6 @@ export function StandaloneChat({
     handlePiRestart,
     hasPresets,
     hasValidModel,
-    needsLogin,
     restartCurrentPiSession,
     setRunningConfigFromProviderConfig,
     syncThinkingLevelAfterStart,
@@ -2290,10 +2289,6 @@ export function StandaloneChat({
         disabledReason={disabledReason}
         hasPresets={Boolean(hasPresets)}
         hasValidModel={hasValidModel}
-        needsLogin={needsLogin}
-        onOpenLogin={async () => {
-          // Local-only build: there is no account login to open.
-        }}
         onOpenSettings={async () => {
           await commands.showWindow({ Home: { page: null } });
         }}

@@ -183,9 +183,6 @@ describe("CommandPalette", () => {
     openPalette();
 
     expect(await screen.findByTestId("command-palette-input")).toBeVisible();
-    expect(mocks.capture).toHaveBeenCalledWith("command_palette_opened", {
-      trigger: "keyboard",
-    });
   });
 
   it("cmd+k again closes the palette without a second opened event", async () => {
@@ -198,11 +195,6 @@ describe("CommandPalette", () => {
     await waitFor(() =>
       expect(screen.queryByTestId("command-palette-input")).toBeNull(),
     );
-    expect(
-      mocks.capture.mock.calls.filter(
-        ([event]) => event === "command_palette_opened",
-      ),
-    ).toHaveLength(1);
   });
 
   it("runs the filtered action on enter, closes, and reports only the action id", async () => {
@@ -217,9 +209,6 @@ describe("CommandPalette", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     await waitFor(() => expect(deps.pauseRecording).toHaveBeenCalledTimes(1));
-    expect(mocks.capture).toHaveBeenCalledWith("command_palette_action", {
-      action_id: "pause_recording",
-    });
     for (const [, properties] of mocks.capture.mock.calls) {
       expect(JSON.stringify(properties)).not.toContain("privacy");
     }

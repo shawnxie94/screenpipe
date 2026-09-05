@@ -189,10 +189,6 @@ describe("onboarding permission wheel", () => {
     await waitFor(() => expect(accessibilityRow()).toBeEnabled());
     expect(micRow()).toBeDisabled();
     expect(mocks.windowSetFocus).toHaveBeenCalled();
-    expect(mocks.posthogCapture).toHaveBeenCalledWith(
-      "onboarding_permission_grant_confirmed",
-      expect.objectContaining({ permission: "mic" })
-    );
 
     fireEvent.click(accessibilityRow());
     await waitFor(() =>

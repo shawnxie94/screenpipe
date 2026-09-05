@@ -186,10 +186,9 @@ export function buildModelNotAllowedMessage(errorStr: string): string {
     const plan = QUOTA_PLAN_LABELS[upgrade.requiredPlan];
     return `This model needs the ${plan} plan. Switch to Auto to keep going, or upgrade.`;
   }
-  const named = modelNotAllowedName(errorStr)
-    ? `"${modelNotAllowedName(errorStr)}" isn't`
-    : "This model isn't";
-  return `${named} available on Screenpipe Cloud. Switch to Auto, or use your own provider key. If you picked a coding agent, re-select it in Settings → AI presets.`;
+  const modelName = modelNotAllowedName(errorStr);
+  const named = modelName ? `"${modelName}"` : "This model";
+  return `${named} is not available through the selected provider. Choose another model or configure a provider that supports it.`;
 }
 
 export function buildDailyLimitMessage(errorStr: string): string {

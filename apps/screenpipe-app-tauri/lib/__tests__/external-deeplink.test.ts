@@ -114,10 +114,6 @@ describe("external deep-link contract", () => {
       source: "external-deeplink",
       useHomeChat: true,
     });
-    expect(mocks.capture).toHaveBeenCalledWith("external_deeplink_opened", {
-      target: "chat",
-      result: "opened",
-    });
   });
 
   it("only navigates to an installed pipe and keeps a cold-mount fallback", async () => {
@@ -159,9 +155,6 @@ describe("external deep-link contract", () => {
       true,
     );
     expect(mocks.showChatWithPrefill).not.toHaveBeenCalled();
-    expect(mocks.capture).toHaveBeenCalledWith("external_deeplink_opened", {
-      result: "unsupported",
-    });
     expect(JSON.stringify(mocks.capture.mock.calls)).not.toContain("secret");
     expect(JSON.stringify(mocks.capture.mock.calls)).not.toContain("hidden");
   });

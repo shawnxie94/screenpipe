@@ -7,18 +7,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HomeStarterSurface } from "./home-starter-surface";
 
-const mocks = vi.hoisted(() => ({
-  capture: vi.fn(),
-  variant: "control" as string | undefined,
-}));
-
-vi.mock("posthog-js", () => ({
-  default: { capture: mocks.capture },
-}));
-
-vi.mock("posthog-js/react", () => ({
-  useFeatureFlagVariantKey: () => mocks.variant,
-}));
 
 vi.mock("@/components/chat/summary-cards", () => ({
   SummaryCards: () => <div data-testid="control-home">control</div>,
@@ -62,32 +50,7 @@ function renderSurface(overrides: Record<string, unknown> = {}) {
 }
 
 describe("HomeStarterSurface", () => {
-  afterEach(() => {
-    mocks.variant = "control";
-    vi.clearAllMocks();
-  });
-
-  it("keeps the current launcher for control and missing flag values", () => {
-    const { rerender } = renderSurface();
-    expect(screen.getByTestId("control-home")).toBeTruthy();
-
-    mocks.variant = undefined;
-    rerender(
-      <HomeStarterSurface
-        summaryCardsProps={{} as never}
-        suggestions={suggestions}
-        activityMode="meeting"
-        isLoading={false}
-        isRefreshing={false}
-        onFillSuggestion={vi.fn()}
-        onRefresh={vi.fn()}
-      />,
-    );
-    expect(screen.getByTestId("control-home")).toBeTruthy();
-  });
-
   it("shows three contextual prompts and fills the composer without sending", async () => {
-    mocks.variant = "contextual";
     const { onFillSuggestion } = renderSurface();
 
     expect(screen.queryByTestId("control-home")).toBeNull();
@@ -99,25 +62,11 @@ describe("HomeStarterSurface", () => {
     expect(onFillSuggestion).toHaveBeenCalledWith(suggestions[0].text);
 
     await waitFor(() => {
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "home_card_clicked",
-        expect.objectContaining({
-          card: "contextual_suggestion",
-          position: 1,
-          activity_mode: "meeting",
-          suggestion_source: "activity",
-          interaction: "fill_composer",
-        }),
-      );
     });
 
-    const analyticsPayload = JSON.stringify(mocks.capture.mock.calls);
-    expect(analyticsPayload).not.toContain(suggestions[0].text);
-    expect(analyticsPayload).not.toContain(suggestions[0].preview);
   });
 
   it("previews contextual prompts on hover and keyboard focus", () => {
-    mocks.variant = "contextual";
     const { onPreviewPrompt } = renderSurface();
     const card = screen.getByTestId("home-contextual-suggestion-1");
 
@@ -133,7 +82,6 @@ describe("HomeStarterSurface", () => {
   });
 
   it("renders stable placeholders while contextual prompts load", () => {
-    mocks.variant = "contextual";
     renderSurface({ suggestions: [], isLoading: true });
 
     expect(screen.queryByTestId("control-home")).toBeNull();
@@ -142,17 +90,10 @@ describe("HomeStarterSurface", () => {
     ).toHaveLength(3);
   });
 
-  it("refreshes without including prompt content in analytics", () => {
-    mocks.variant = "contextual";
+  it("refreshes from the contextual surface", () => {
     const { onRefresh } = renderSurface();
 
     fireEvent.click(screen.getByRole("button", { name: "refresh" }));
     expect(onRefresh).toHaveBeenCalledTimes(1);
-    expect(mocks.capture).toHaveBeenCalledWith("home_card_clicked", {
-      schema_version: 1,
-      surface: "chat_home",
-      layout_version: "contextual_v1",
-      kind: "contextual_suggestions_refresh",
-    });
   });
 });

@@ -28,7 +28,6 @@ const mocks = vi.hoisted(() => ({
   localFetch: vi.fn(),
   toast: vi.fn(),
   refetchPipes: vi.fn(),
-  capture: vi.fn(),
   usageState: null as any,
   openBusinessUpgradeSurface: vi.fn(),
 }));
@@ -46,10 +45,6 @@ const localStorageMock = (() => {
     },
   } satisfies Storage;
 })();
-
-vi.mock("posthog-js", () => ({
-  default: { capture: mocks.capture },
-}));
 
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(async () => () => {}),
@@ -579,101 +574,6 @@ describe("BrainOverview", () => {
     expect(screen.getByText(/artifact #88 · v2/)).toBeTruthy();
   });
 
-  it("captures a privacy-safe Live View impression with result readiness", async () => {
-    mocks.listBrainViews.mockResolvedValue({
-      status: "ok",
-      data: [populatedView],
-    });
-    render(<BrainOverview />);
-
-    await screen.findByText("How I worked today");
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "live_view_viewed",
-        expect.objectContaining({
-          analytics_schema_version: 3,
-          entry_method: "initial",
-          dashboard_count: 1,
-          block_count: 1,
-          bound_block_count: 1,
-          result_block_count: 1,
-          source_pipe_count: 1,
-          time_range: "today",
-          has_result: true,
-          all_bound_blocks_have_results: true,
-          reviewed_block_count: 0,
-          is_onboarding: false,
-          onboarding_goal_category: "unknown",
-        }),
-      ),
-    );
-    const properties = mocks.capture.mock.calls.find(
-      ([event]) => event === "live_view_viewed",
-    )?.[1];
-    expect(JSON.stringify(properties)).not.toContain("my-overview");
-    expect(JSON.stringify(properties)).not.toContain("How I worked today");
-    expect(JSON.stringify(properties)).not.toContain("daily-summary");
-  });
-
-  it("captures a visible source-backed result separately from a dashboard view", async () => {
-    mocks.listBrainViews.mockResolvedValue({
-      status: "ok",
-      data: [populatedView],
-    });
-    render(<BrainOverview />);
-
-    await screen.findByText("How I worked today");
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "live_view_result_viewed",
-        expect.objectContaining({
-          analytics_schema_version: 3,
-          entry_method: "initial",
-          result_block_count: 1,
-          all_bound_blocks_have_results: true,
-          positive_feedback_block_count: 0,
-          negative_feedback_block_count: 0,
-        }),
-      ),
-    );
-    const properties = mocks.capture.mock.calls.find(
-      ([event]) => event === "live_view_result_viewed",
-    )?.[1];
-    expect(JSON.stringify(properties)).not.toContain("my-overview");
-    expect(JSON.stringify(properties)).not.toContain("How I worked today");
-    expect(JSON.stringify(properties)).not.toContain("daily-summary");
-    expect(properties).not.toHaveProperty("artifactOutputId");
-    expect(properties).not.toHaveProperty("artifact_output_id");
-  });
-
-  it("does not count a result as viewed until the app is visible", async () => {
-    const restoreVisibility = setDocumentVisibility("hidden");
-    try {
-      mocks.listBrainViews.mockResolvedValue({
-        status: "ok",
-        data: [populatedView],
-      });
-      render(<BrainOverview />);
-
-      await screen.findByText("How I worked today");
-      expect(
-        mocks.capture.mock.calls.some(
-          ([event]) => event === "live_view_result_viewed",
-        ),
-      ).toBe(false);
-    } finally {
-      restoreVisibility();
-    }
-
-    fireEvent(document, new Event("visibilitychange"));
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "live_view_result_viewed",
-        expect.objectContaining({ entry_method: "initial" }),
-      ),
-    );
-  });
-
   it("switches between named dashboards without changing either one", async () => {
     const weeklyView: ViewDefinition = {
       ...populatedView,
@@ -832,23 +732,10 @@ describe("BrainOverview", () => {
 
     expect(
       await screen.findByTestId("live-view-data-status"),
-    ).toHaveTextContent("1 of 2 sections updated · 1 not configured");
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "live_view_refresh_completed",
-        expect.objectContaining({
-          status: "partial",
-          requested_block_count: 2,
-          connected_block_count: 1,
-          unconfigured_block_count: 1,
-          refreshed_block_count: 1,
-          all_requested_blocks_refreshed: false,
-        }),
-      ),
-    );
+      ).toHaveTextContent("1 of 2 sections updated · 1 not configured");
   });
 
-  it("captures a failed refresh outcome without sending Pipe names", async () => {
+  it("shows a persistent error status when a refresh cannot start", async () => {
     mocks.listBrainViews.mockResolvedValue({
       status: "ok",
       data: [populatedView],
@@ -863,31 +750,9 @@ describe("BrainOverview", () => {
     fireEvent.click(await screen.findByTestId("overview-refresh-data"));
 
     await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "live_view_refresh_completed",
-        expect.objectContaining({
-          analytics_schema_version: 3,
-          trigger: "manual",
-          status: "error",
-          requested_block_count: 1,
-          requested_pipe_count: 1,
-          refreshed_block_count: 0,
-          pipe_start_failure_count: 1,
-          blocked_reason: "pipe_start_failed",
-          produced_result: false,
-          all_requested_blocks_refreshed: false,
-        }),
+      expect(screen.getByTestId("live-view-data-status")).toHaveTextContent(
+        "数据刷新无法启动。仍显示现有结果。",
       ),
-    );
-    const properties = mocks.capture.mock.calls.find(
-      ([event, eventProperties]) =>
-        event === "live_view_refresh_completed" &&
-        eventProperties?.status === "error",
-    )?.[1];
-    expect(JSON.stringify(properties)).not.toContain("daily-summary");
-    expect(JSON.stringify(properties)).not.toContain("private failure detail");
-    expect(screen.getByTestId("live-view-data-status")).toHaveTextContent(
-      "数据刷新无法启动。仍显示现有结果。",
     );
   });
 
@@ -907,17 +772,7 @@ describe("BrainOverview", () => {
 
     expect(
       await screen.findByTestId("live-view-data-status"),
-    ).toHaveTextContent("AI usage limit");
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "live_view_refresh_completed",
-        expect.objectContaining({
-          status: "error",
-          blocked_reason: "usage_limit",
-          produced_result: false,
-        }),
-      ),
-    );
+      ).toHaveTextContent("AI usage limit");
   });
 
   it("keeps primary controls visible and moves setup actions into More", async () => {
@@ -979,41 +834,6 @@ describe("BrainOverview", () => {
     expect(await screen.findByTestId("overview-new-dashboard")).toBeTruthy();
     expect(screen.getByTestId("overview-edit").textContent).toContain(
       "customize",
-    );
-  });
-
-  it("disables exhausted hosted AI and opens the native upgrade surface", async () => {
-    mocks.usageState = {
-      tier: "logged_in",
-      used_today: 30,
-      limit_today: 30,
-      remaining: 0,
-      resets_at: "2026-08-03T00:00:00.000Z",
-      upsell_banner: true,
-      upgrade_eligible: true,
-    };
-    mocks.listBrainViews.mockResolvedValue({
-      status: "ok",
-      data: [populatedView],
-    });
-    render(<BrainOverview />);
-
-    const prompt = (await screen.findByTestId(
-      "live-view-ai-prompt",
-    )) as HTMLTextAreaElement;
-    expect(prompt).toBeDisabled();
-    expect(prompt.placeholder).toBe("AI limit reached");
-    expect(screen.getByTestId("live-view-ai-options")).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
-    expect(screen.queryByTestId("live-view-ai-generate")).toBeNull();
-
-    fireEvent.click(screen.getByTestId("live-view-ai-upgrade"));
-    await waitFor(() =>
-      expect(mocks.openBusinessUpgradeSurface).toHaveBeenCalledWith(
-        "live-view-ai-composer",
-      ),
     );
   });
 
@@ -1213,21 +1033,6 @@ describe("BrainOverview", () => {
     expect(screen.getByTestId("overview-freshness")).toHaveTextContent(
       "数据源最近检查 刚刚",
     );
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "live_view_result_viewed",
-        expect.objectContaining({
-          result_data_status: "outside_requested_range",
-          data_age_seconds: expect.any(Number),
-        }),
-      ),
-    );
-    const resultProperties = mocks.capture.mock.calls.find(
-      ([event, properties]) =>
-        event === "live_view_result_viewed" &&
-        properties?.result_data_status === "outside_requested_range",
-    )?.[1];
-    expect(JSON.stringify(resultProperties)).not.toContain(evidenceAt);
   });
 
   it("gives a paused manual source a schedule before refreshing it", async () => {
@@ -1497,17 +1302,6 @@ describe("BrainOverview", () => {
     expect(
       screen.getByPlaceholderText(/展示我的时间分配方式以及本周的变化/),
     ).toBeTruthy();
-    expect(mocks.capture).toHaveBeenCalledWith(
-      "live_view_empty_state_initialized",
-      expect.objectContaining({
-        analytics_schema_version: 3,
-        empty_state_reason: "first_live_view",
-      }),
-    );
-    expect(mocks.capture).not.toHaveBeenCalledWith(
-      "live_view_dashboard_saved",
-      expect.objectContaining({ source: "starter" }),
-    );
     fireEvent.click(
       screen.getByTestId("preview-live-view-template-daily-memory"),
     );
@@ -1901,7 +1695,6 @@ describe("BrainOverview", () => {
     const useful = await screen.findByRole("button", {
       name: "mark Focus time useful",
     });
-    mocks.capture.mockClear();
     fireEvent.click(useful);
     await waitFor(() =>
       expect(useful.getAttribute("aria-pressed")).toBe("true"),
@@ -1917,26 +1710,6 @@ describe("BrainOverview", () => {
       artifact_version: 2,
       rating: "up",
       correction: null,
-    });
-    expect(mocks.capture).toHaveBeenCalledWith(
-      "live_view_card_feedback",
-      expect.objectContaining({
-        analytics_schema_version: 3,
-        action: "up",
-        previous_action: "none",
-        is_first_feedback: true,
-        result_block_count: 1,
-        is_onboarding: false,
-      }),
-    );
-    expect(mocks.capture).toHaveBeenCalledWith("qualified_value_event", {
-      metric_version: "repeat_value_d7_v1",
-      surface: "app",
-      action: "artifact",
-      value_strength: "accepted",
-      user_initiated: true,
-      success: true,
-      result_non_empty: true,
     });
 
     fireEvent.click(
@@ -1986,17 +1759,7 @@ describe("BrainOverview", () => {
     const useful = await screen.findByRole("button", {
       name: "mark Focus time useful",
     });
-    mocks.capture.mockClear();
     fireEvent.click(useful);
-
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith("onboarding_funnel_step", {
-        funnel_version: "onboarding_ui_v2",
-        step: "first_result_accepted",
-        goal_category: "work_memory",
-        acceptance_action: "positive_feedback",
-      }),
-    );
   });
 
   it("persists a declared list-item action and renders its reversible receipt", async () => {
@@ -2062,15 +1825,6 @@ describe("BrainOverview", () => {
       snoozed_until: null,
       correction: null,
     });
-    expect(mocks.capture).toHaveBeenCalledWith("qualified_value_event", {
-      metric_version: "repeat_value_d7_v1",
-      surface: "app",
-      action: "artifact",
-      value_strength: "accepted",
-      user_initiated: true,
-      success: true,
-      result_non_empty: true,
-    });
     await waitFor(() =>
       expect(
         mocks.localFetch.mock.calls.some(
@@ -2114,7 +1868,6 @@ describe("BrainOverview", () => {
     const notUseful = await screen.findByRole("button", {
       name: "mark Focus time not useful",
     });
-    mocks.capture.mockClear();
     fireEvent.click(notUseful);
     fireEvent.change(
       await screen.findByPlaceholderText("例如：排除会议"),
@@ -2139,10 +1892,6 @@ describe("BrainOverview", () => {
         }),
       }),
     );
-    expect(mocks.capture).not.toHaveBeenCalledWith(
-      "qualified_value_event",
-      expect.anything(),
-    );
   });
 
   it("does not accept a Live View result when positive feedback fails to persist", async () => {
@@ -2160,19 +1909,7 @@ describe("BrainOverview", () => {
     const useful = await screen.findByRole("button", {
       name: "mark Focus time useful",
     });
-    mocks.capture.mockClear();
     fireEvent.click(useful);
-
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "live_view_card_feedback_failed",
-        expect.objectContaining({ action: "up" }),
-      ),
-    );
-    expect(mocks.capture).not.toHaveBeenCalledWith(
-      "qualified_value_event",
-      expect.anything(),
-    );
   });
 
   it("stages a Block edit in Canvas and persists only after per-Block acceptance", async () => {
@@ -2568,10 +2305,6 @@ describe("BrainOverview", () => {
           ],
         }),
       ),
-    );
-    expect(mocks.capture).not.toHaveBeenCalledWith(
-      "live_view_layout_mode_changed",
-      expect.anything(),
     );
   }, 15_000);
 

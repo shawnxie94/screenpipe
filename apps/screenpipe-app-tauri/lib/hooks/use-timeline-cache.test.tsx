@@ -38,8 +38,6 @@ import {
   filterTimelineFramesForHistoryAccess,
   loadCachedFrames,
   saveFramesToCache,
-  shouldRestrictTimelineHistory,
-  useAuthoritativeTimelineHistoryAccess,
 } from "./use-timeline-cache";
 import type { AppUser } from "@/lib/app-entitlement";
 import type { StreamTimeSeriesResponse } from "@/components/rewind/timeline";
@@ -109,96 +107,5 @@ describe("clearTimelineCache", () => {
     legacyStore.clear.mockRejectedValueOnce(new Error("indexeddb blocked"));
 
     await expect(clearTimelineCache()).rejects.toThrow("indexeddb blocked");
-  });
-});
-
-describe("timeline cache history access", () => {
-  const nowMs = Date.parse("2026-08-24T20:00:00Z");
-  const recent = frame("2026-08-24T19:00:00Z", "/data/recent.jpg");
-  const cutoff = frame("2026-08-23T20:00:00Z", "/data/cutoff.jpg");
-  const old = frame("2026-08-23T19:59:59Z", "/data/old.jpg");
-  const invalid = frame("not-a-date", "/data/invalid.jpg");
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.useFakeTimers();
-    vi.setSystemTime(nowMs);
-    fs.exists.mockResolvedValue(true);
-  });
-
-  afterEach(() => vi.useRealTimers());
-
-  it("keeps only the inclusive latest 24 hours for free or unattributed users", () => {
-    expect(
-      filterTimelineFramesForHistoryAccess(
-        [recent, cutoff, old, invalid],
-        true,
-        nowMs,
-      ),
-    ).toEqual([recent, cutoff]);
-  });
-
-  it("leaves paid users' cached history unchanged", () => {
-    const frames = [recent, old, invalid];
-    expect(
-      filterTimelineFramesForHistoryAccess(frames, false, nowMs),
-    ).toBe(frames);
-  });
-
-  it("fails closed for unknown consumer accounts but never restricts enterprise builds", () => {
-    expect(shouldRestrictTimelineHistory(undefined, true)).toBe(false);
-    expect(shouldRestrictTimelineHistory(undefined, false)).toBe(true);
-    expect(shouldRestrictTimelineHistory(paidUser(nowMs), false)).toBe(false);
-  });
-
-  it("uses the backend policy when a detached timeline window has no local restriction", async () => {
-    tauriCommands.isHistoryAccessRestricted.mockResolvedValueOnce(true);
-
-    const { result } = renderHook(() =>
-      useAuthoritativeTimelineHistoryAccess(false),
-    );
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(result.current).toBe(true);
-  });
-
-  it("keeps detached timeline history restricted while backend policy is loading", () => {
-    tauriCommands.isHistoryAccessRestricted.mockReturnValueOnce(new Promise(() => {}));
-
-    const { result } = renderHook(() =>
-      useAuthoritativeTimelineHistoryAccess(false),
-    );
-
-    expect(result.current).toBe(true);
-  });
-
-  it("does not persist old frame ids or file paths for restricted users", async () => {
-    vi.setSystemTime(nowMs);
-
-    await saveFramesToCache([recent, old], new Date(nowMs), true);
-
-    const written = JSON.parse(fs.writeTextFile.mock.calls.at(-1)![1]);
-    expect(written.frames).toEqual([recent]);
-    expect(JSON.stringify(written)).not.toContain("/data/old.jpg");
-  });
-
-  it("filters an existing cache before restricted hydration", async () => {
-    vi.setSystemTime(nowMs);
-    fs.readTextFile.mockResolvedValue(
-      JSON.stringify({
-        frames: [recent, old],
-        date: new Date(nowMs).toISOString(),
-        timestamp: nowMs,
-      }),
-    );
-
-    await expect(loadCachedFrames(true)).resolves.toMatchObject({
-      frames: [recent],
-    });
-    const sanitized = JSON.parse(fs.writeTextFile.mock.calls.at(-1)![1]);
-    expect(sanitized.frames).toEqual([recent]);
-    expect(JSON.stringify(sanitized)).not.toContain("/data/old.jpg");
   });
 });

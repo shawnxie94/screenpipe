@@ -119,15 +119,6 @@ describe("HomeCardAgentActions", () => {
     await waitFor(() =>
       expect(screen.queryByText("start with agent")).not.toBeInTheDocument(),
     );
-    expect(captureMock).toHaveBeenCalledWith(
-      "home_card_agent_start_completed",
-      {
-        agent: "codex-acp",
-        card: "day_recap",
-        outcome: "started",
-      },
-    );
-    expect(JSON.stringify(captureMock.mock.calls)).not.toContain(PROMPT);
   });
 
   it("prompts for ACP setup when the selected agent has no preset", async () => {
@@ -155,11 +146,5 @@ describe("HomeCardAgentActions", () => {
     fireEvent.pointerEnter(trigger);
     fireEvent.focus(trigger);
 
-    expect(captureMock).toHaveBeenCalledWith("home_card_agent_action_viewed", {
-      card: "day_recap",
-      trigger: "hover",
-    });
-    expect(captureMock).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify(captureMock.mock.calls)).not.toContain(PROMPT);
   });
 });

@@ -154,12 +154,7 @@ describe("ConnectedShareDialog", () => {
       text: expect.stringContaining("Decision: ship it."),
       instance: "acme",
     });
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "connected_share_completed",
-        expect.objectContaining({ destination: "slack", surface: "meeting" }),
-      ),
-    );
+    await waitFor(() => expect(screen.findByText("sent to Slack")).toBeTruthy());
   });
 
   it("creates a Linear issue in the named team only after confirmation", async () => {

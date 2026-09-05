@@ -19,7 +19,6 @@ export interface AIProviderCardProps {
     | "anthropic"
     | "custom"
     | "embedded"
-    | "screenpipe-cloud"
     | "acp";
   title: string;
   description: string;
@@ -88,8 +87,6 @@ export function AIProviderCard({
 interface AIProviderChoicesProps {
   selectedProvider?: AIPreset["provider"];
   selectedAcpAgentId?: string | null;
-  showScreenpipeCloud: boolean;
-  screenpipeDisabled: boolean;
   acpEnabled: boolean;
   primaryAcpAdapters: readonly AcpAdapterInfo[];
   customAcpAdapter?: AcpAdapterInfo;
@@ -100,8 +97,6 @@ interface AIProviderChoicesProps {
 export function AIProviderChoices({
   selectedProvider,
   selectedAcpAgentId,
-  showScreenpipeCloud,
-  screenpipeDisabled,
   acpEnabled,
   primaryAcpAdapters,
   customAcpAdapter,
@@ -123,19 +118,6 @@ export function AIProviderChoices({
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        {showScreenpipeCloud && (
-          <AIProviderCard
-            type="screenpipe-cloud"
-            title="screenpipe"
-            description="Use screenpipe's AI. Included with your plan."
-            imageSrc="/images/screenpipe.png"
-            selected={selectedProvider === "screenpipe-cloud"}
-            onClick={() => onSelectProvider("screenpipe-cloud")}
-            disabled={screenpipeDisabled}
-            warningText={screenpipeDisabled ? "Login required" : undefined}
-          />
-        )}
-
         {acpEnabled &&
           primaryAcpAdapters.map((adapter) => (
             <AIProviderCard

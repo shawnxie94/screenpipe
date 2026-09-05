@@ -320,11 +320,11 @@ describe("onboarding engine startup", () => {
       <EngineStartup handleNextSlide={initialNextSlide} />,
     );
 
+    // The ready delay is pending while the engine reports healthy (already
+    // running, so no spawn happens). Capture-ensure is the readiness signal.
     await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "onboarding_engine_started",
-        expect.any(Object),
-      ),
+      expect(mocks.startCapture).toHaveBeenCalledTimes(1),
+      { timeout: 2000 },
     );
 
     // A settings/context update changes the callback identity while the
@@ -428,21 +428,10 @@ describe("onboarding engine startup", () => {
         });
       }
 
-      const stuckCalls = mocks.capture.mock.calls.filter(
-        ([name]) => name === "onboarding_engine_stuck",
-      );
-      expect(stuckCalls).toHaveLength(1);
-      const [, stuckProps] = stuckCalls[0];
       // The engine claimed to be progressing the whole time and never finished:
-      // that is a stall, and the ceiling is the only thing that ends it.
-      expect(stuckProps.boot_phase).toBe("building_audio");
-      expect(stuckProps.exhausted_budget).toBe(true);
-      // Waited out the real budget rather than tripping the 15s timer.
-      expect(stuckProps.time_spent_ms).toBeGreaterThanOrEqual(
-        MAX_ENGINE_WAIT_MS,
-      );
-      // Stuck is a real screen with a retry and a log-submission path. The bug
-      // was that the user never got any screen at all.
+      // that is a stall, and the ceiling is the only thing that ends it. The
+      // stuck screen (with its retry/escape paths) is the observable.
+      expect(screen.getByTestId("onboarding-startup-skip")).toBeTruthy();
       expect(mocks.handleNextSlide).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
@@ -484,14 +473,9 @@ describe("onboarding engine startup", () => {
         await vi.advanceTimersByTimeAsync(2000);
       });
 
-      expect(mocks.capture).not.toHaveBeenCalledWith(
-        "onboarding_engine_health_unreachable",
-        expect.anything(),
-      );
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "onboarding_engine_started",
-        expect.any(Object),
-      );
+      // Recovered well inside the threshold: no stuck screen, no advance.
+      expect(screen.queryByTestId("onboarding-startup-skip")).toBeNull();
+      expect(mocks.handleNextSlide).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }
@@ -508,25 +492,14 @@ describe("onboarding engine startup", () => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(HEALTH_UNREACHABLE_REPORT_AFTER_MS / 2);
       });
-      expect(mocks.capture).not.toHaveBeenCalledWith(
-        "onboarding_engine_health_unreachable",
-        expect.anything(),
-      );
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(HEALTH_UNREACHABLE_REPORT_AFTER_MS);
       });
 
-      const calls = mocks.capture.mock.calls.filter(
-        ([name]) => name === "onboarding_engine_health_unreachable",
-      );
-      expect(calls).toHaveLength(1);
-      const [, props] = calls[0];
-      expect(props.reason).toBe("Error");
-      expect(props.unreachable_for_ms).toBeGreaterThanOrEqual(
-        HEALTH_UNREACHABLE_REPORT_AFTER_MS,
-      );
-      expect(props.consecutive_failures).toBeGreaterThan(1);
+      // The stuck screen owns recovery once the engine is unreachable past the
+      // threshold; the analytics event that used to carry these fields is gone.
+      expect(mocks.handleNextSlide).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }
@@ -564,20 +537,12 @@ describe("onboarding engine startup", () => {
           await vi.advanceTimersByTimeAsync(5000);
         });
       }
-      expect(mocks.capture).not.toHaveBeenCalledWith(
-        "onboarding_engine_stuck",
-        expect.anything(),
-      );
 
       listening = true;
       await act(async () => {
         await vi.advanceTimersByTimeAsync(1000);
       });
 
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "onboarding_engine_started",
-        expect.any(Object),
-      );
     } finally {
       vi.useRealTimers();
     }
@@ -598,11 +563,6 @@ describe("onboarding engine startup", () => {
 
     unmount();
 
-    expect(mocks.capture).toHaveBeenCalledWith(
-      "onboarding_engine_abandoned",
-      expect.objectContaining({ state: "starting" }),
-      expect.objectContaining({ transport: "sendBeacon" }),
-    );
   });
 
   // Observed in production on 2.6.29: a macOS user skipped Screen Recording,
@@ -624,29 +584,15 @@ describe("onboarding engine startup", () => {
 
     // The spawn error flips straight to the stuck screen, which owns the skip.
     await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "onboarding_engine_spawn_failed",
-        expect.objectContaining({ error_kind: "permission" }),
-      ),
+      expect(getByTestId("onboarding-startup-skip")).toBeTruthy(),
     );
 
     await act(async () => {
       getByTestId("onboarding-startup-skip").click();
     });
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "onboarding_startup_skipped",
-        expect.any(Object),
-      ),
-    );
 
     unmount();
 
-    expect(mocks.capture).not.toHaveBeenCalledWith(
-      "onboarding_engine_abandoned",
-      expect.anything(),
-      expect.anything(),
-    );
   });
 
   it("stays quiet on unmount once the engine is up", async () => {
@@ -665,19 +611,6 @@ describe("onboarding engine startup", () => {
     const { unmount } = render(
       <EngineStartup handleNextSlide={mocks.handleNextSlide} />,
     );
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "onboarding_engine_started",
-        expect.any(Object),
-      ),
-    );
-
     unmount();
-
-    expect(mocks.capture).not.toHaveBeenCalledWith(
-      "onboarding_engine_abandoned",
-      expect.anything(),
-      expect.anything(),
-    );
   });
 });

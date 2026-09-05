@@ -22,10 +22,6 @@ export interface AcpAdapterInfo {
   /** Hidden from the picker but kept in the catalog so the runtime and any
    *  existing presets still resolve its name/icon. Flip in agents.json. */
   disabled?: boolean;
-  /** True when the catalog declares how to point this agent at Screenpipe
-   *  Cloud. Closed agents (Cursor, Copilot) talk to their own service and can
-   *  never be routed, so the choice is not offered for them. */
-  supportsCloudRouting?: boolean;
   /** PostHog flag that has to be on before this agent is offered as a new
    *  choice. Absent means always offered (Pi, Codex, Claude Code). Set it in
    *  agents.json for agents whose sign-in or account requirements are not
@@ -47,7 +43,6 @@ const CATALOG_ACP_ADAPTERS: readonly AcpAdapterInfo[] = (
     invertInDark?: boolean;
     disabled?: boolean;
     flag?: string;
-    cloudRouting?: unknown;
   }>
 ).map((agent) => ({
   id: agent.id,
@@ -58,7 +53,6 @@ const CATALOG_ACP_ADAPTERS: readonly AcpAdapterInfo[] = (
   description: agent.description,
   disabled: agent.disabled === true,
   flag: agent.flag,
-  supportsCloudRouting: !!agent.cloudRouting,
 }));
 
 const CUSTOM_ACP_ADAPTER: AcpAdapterInfo = {
@@ -162,15 +156,11 @@ export const PROVIDER_IMAGE_SRC: Record<string, string> = {
   custom: "/images/custom.png",
   pi: "/images/screenpipe.png",
   screenpipe: "/images/screenpipe.png",
-  "screenpipe-cloud": "/images/screenpipe.png",
   acp: "/images/acp.svg",
 };
 
-/** Resolve the company/model mark a person actually picked, rather than the
- *  transport that happens to carry it. Screenpipe Cloud can serve GPT and
- *  Claude models, while `custom` is also how Gemini's OpenAI-compatible API is
- *  configured. `auto` deliberately stays Screenpipe: its upstream model can
- *  change between requests, so any vendor mark would be false certainty. */
+/** Resolve the company/model mark a person actually picked. `custom` is also
+ *  how OpenAI-compatible third-party APIs are configured. */
 function modelImageSrc(
   provider?: string | null,
   model?: string | null,
@@ -240,7 +230,6 @@ const PROVIDER_PRESET_NAMES: Record<string, string> = {
   openai: "openai",
   anthropic: "claude",
   "native-ollama": "ollama",
-  "screenpipe-cloud": "screenpipe-cloud",
   custom: "custom",
 };
 

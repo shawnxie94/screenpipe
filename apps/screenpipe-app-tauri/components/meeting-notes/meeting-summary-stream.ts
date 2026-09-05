@@ -122,8 +122,8 @@ export function advanceMeetingSummaryStream(
     return replaceCurrentMessage({ ...state, blocks }, joinBlocks(blocks));
   }
 
-  // Not every provider streams token-by-token. The screenpipe cloud route the
-  // summary Pipe actually runs on closes each block with `text_end` carrying
+  // Not every provider streams token-by-token. Some providers close each block
+  // with `text_end` carrying
   // the whole string and emits no `text_delta` at all, so a delta-only reader
   // saw the summary as silence and the tab sat on its skeleton for the entire
   // run. `text_end` is authoritative for its block: assigning rather than

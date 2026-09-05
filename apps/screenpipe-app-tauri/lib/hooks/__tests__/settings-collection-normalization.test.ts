@@ -38,32 +38,17 @@ describe("normalizeSettingsArrays", () => {
     expect(settings.languages).toEqual(["en", "fr"]);
   });
 
-  it.each([
-    [false, "screenpipe"],
-    [true, "chat"],
-  ])(
-    "recovers an empty legacy preset list to one default when subscribed=%s",
-    (cloudSubscribed, expectedId) => {
-      const settings = {
-        ...createDefaultSettingsObject(),
-        aiPresets: [],
-        user: { cloud_subscribed: cloudSubscribed },
-      } as Settings;
+  it("leaves an empty legacy preset list empty — the user picks a provider", () => {
+    const settings = {
+      ...createDefaultSettingsObject(),
+      aiPresets: [],
+    } as Settings;
 
-      expect(normalizeSettingsArrays(settings)).toBe(true);
-      expect(settings.aiPresets).toEqual([
-        expect.objectContaining({
-          id: expectedId,
-          provider: "screenpipe-cloud",
-          defaultPreset: true,
-        }),
-      ]);
-      expect(normalizeSettingsArrays(settings)).toBe(false);
-      expect(settings.aiPresets).toHaveLength(1);
-    },
-  );
+    expect(normalizeSettingsArrays(settings)).toBe(false);
+    expect(settings.aiPresets).toEqual([]);
+  });
 
-  it("preserves a local-only preset list across account refreshes", () => {
+  it("preserves a local-only preset list untouched", () => {
     const localPreset = {
       id: "local",
       provider: "native-ollama",
@@ -76,41 +61,24 @@ describe("normalizeSettingsArrays", () => {
     const settings = {
       ...createDefaultSettingsObject(),
       aiPresets: [localPreset],
-      user: null,
     } as Settings;
 
-    expect(normalizeSettingsArrays(settings)).toBe(false);
-    settings.user = { token: "token", cloud_subscribed: true } as Settings["user"];
-    expect(normalizeSettingsArrays(settings)).toBe(false);
-    settings.user = {
-      ...settings.user,
-      cloud_subscribed: false,
-    } as Settings["user"];
     expect(normalizeSettingsArrays(settings)).toBe(false);
     expect(settings.aiPresets).toEqual([localPreset]);
   });
 
-  it("does not duplicate or change valid cloud preset configurations", () => {
+  it("does not duplicate or change valid preset configurations", () => {
     const settings = {
       ...createDefaultSettingsObject(),
       aiPresets: [
         {
-          id: "cloud",
-          provider: "screenpipe-cloud",
-          model: "auto",
-          url: "",
+          id: "local",
+          provider: "native-ollama",
+          model: "qwen3",
+          url: "http://localhost:11434",
           defaultPreset: true,
           prompt: "",
-          maxContextChars: 200000,
-        },
-        {
-          id: "pipes",
-          provider: "screenpipe-cloud",
-          model: "gpt-5.6-luna",
-          url: "",
-          defaultPreset: false,
-          prompt: "",
-          maxContextChars: 200000,
+          maxContextChars: 128000,
         },
       ],
     } as Settings;

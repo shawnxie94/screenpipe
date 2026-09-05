@@ -36,8 +36,7 @@ describe("agent refusal", () => {
     // Must not send them round the sign-in loop.
     expect(refusal?.message).toContain("Signing in again won't change that");
     // Says whose limit it is, and gives a way forward.
-    expect(refusal?.message).toContain("isn't a screenpipe limit");
-    expect(refusal?.message).toContain("Screenpipe Cloud");
+    expect(refusal?.message).toContain("not a local Screenpipe error");
   });
 
   it("treats an expired credential as a sign-in problem", () => {

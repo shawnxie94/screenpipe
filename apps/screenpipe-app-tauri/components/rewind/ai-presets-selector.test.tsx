@@ -204,7 +204,6 @@ describe("AIPresetsSelector controlled preset creation", () => {
 
     const dialog = screen.getByRole("dialog", { name: "新建预设" });
     const primaryChoices = new Set([
-      "screenpipe",
       "Codex",
       "Claude Code",
       "Cursor",
@@ -217,7 +216,6 @@ describe("AIPresetsSelector controlled preset creation", () => {
         .map((button) => button.textContent?.trim() || "")
         .filter((label) => primaryChoices.has(label)),
     ).toEqual([
-      "screenpipe",
       "Codex",
       "Claude Code",
       "Cursor",
@@ -228,7 +226,7 @@ describe("AIPresetsSelector controlled preset creation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Pi" }));
     expect(screen.queryByText("how this works")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "screenpipe" }));
+    fireEvent.click(screen.getByRole("button", { name: "Codex" }));
     const nameInput = screen.getByLabelText("name");
     expect(nameInput).toBeEnabled();
     fireEvent.change(nameInput, { target: { value: "my claude preset" } });

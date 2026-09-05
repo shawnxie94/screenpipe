@@ -63,7 +63,8 @@ function payloadTimestamps(payload: unknown): number[] {
 }
 
 function formatDataThrough(timestamp: number): string {
-  return new Intl.DateTimeFormat(undefined, {
+  // Chinese-first product copy: pin the locale instead of following the OS.
+  return new Intl.DateTimeFormat("zh-CN", {
     month: "short",
     day: "numeric",
   }).format(timestamp);

@@ -25,17 +25,10 @@ describe("acpSpawnSignature", () => {
     expect(acpSpawnSignature({ id: "codex-acp", args: ["--acp"], env: { A: "1" } })).not.toBe(a);
   });
 
-  it("changes when the model-call billing route changes", () => {
-    const ownAccount = acpSpawnSignature({
-      id: "claude-acp",
-      useScreenpipeCloud: false,
-    });
-    const screenpipeCloud = acpSpawnSignature({
-      id: "claude-acp",
-      useScreenpipeCloud: true,
-    });
-
-    expect(screenpipeCloud).not.toBe(ownAccount);
+  it("ignores the retired cloud-billing flag (local agents only)", () => {
+    const a = acpSpawnSignature({ id: "claude-acp", useScreenpipeCloud: false });
+    const b = acpSpawnSignature({ id: "claude-acp", useScreenpipeCloud: true });
+    expect(a).toBe(b);
   });
 
   it("returns null for no agent", () => {

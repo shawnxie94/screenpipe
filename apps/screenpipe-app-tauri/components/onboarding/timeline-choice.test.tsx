@@ -120,15 +120,6 @@ describe("TimelineChoice", () => {
       disableTimeline: false,
       disableScreenshots: false,
     });
-    expect(mocks.capture).toHaveBeenCalledWith(
-      "onboarding_timeline_choice",
-      expect.objectContaining({
-        timeline_enabled: true,
-        screenshots_enabled: true,
-        device_tier: "low",
-        followed_recommendation: false,
-      }),
-    );
     expect(handleNextSlide).toHaveBeenCalledTimes(1);
   });
 
@@ -147,10 +138,6 @@ describe("TimelineChoice", () => {
     expect(handleNextSlide).not.toHaveBeenCalled();
     expect(await screen.findByRole("alert")).toHaveTextContent(
       /couldn't save that choice/i,
-    );
-    expect(mocks.capture).toHaveBeenCalledWith(
-      "onboarding_timeline_choice_failed",
-      { stage: "persist" },
     );
   });
 

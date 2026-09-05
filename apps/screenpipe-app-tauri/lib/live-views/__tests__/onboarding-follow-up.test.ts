@@ -4,8 +4,6 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const capture = vi.hoisted(() => vi.fn());
-vi.mock("posthog-js", () => ({ default: { capture } }));
 import {
   getOnboardingLiveViewActivation,
   markOnboardingLiveViewSetupReady,
@@ -64,7 +62,6 @@ describe("onboarding Live View follow-up", () => {
       ...followUp,
       dueAt: now.toISOString(),
     }));
-    capture.mockClear();
   });
 
   it("runs each dashboard Pipe once and sends an open-Live-View notification", async () => {
@@ -104,16 +101,6 @@ describe("onboarding Live View follow-up", () => {
     expect(
       getOnboardingLiveViewActivation("first-dashboard")?.followUp,
     ).toMatchObject({ status: "sent", sentAt: now.toISOString() });
-    expect(capture.mock.calls).toEqual([
-      [
-        "onboarding_h1_follow_up",
-        expect.objectContaining({ stage: "delivery_attempted" }),
-      ],
-      [
-        "onboarding_h1_follow_up",
-        expect.objectContaining({ stage: "notification_accepted" }),
-      ],
-    ]);
 
     await expect(
       runDueOnboardingLiveViewFollowUp({

@@ -3286,7 +3286,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                 <div className="min-w-0">
                   <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
                     会议实时笔记
-                    <HelpTooltip text="仅将当前活动会议流入实时笔记。这独立于后台 24/7 录制，可使用你选择的转写引擎、screenpipe cloud 或直连提供商。" />
+                    <HelpTooltip text="仅将当前活动会议流入实时笔记。这独立于后台 24/7 录制，可使用你选择的转写引擎或直连提供商。" />
                   </h3>
                   <p className="text-xs text-muted-foreground">仅限会议的实时字幕，独立于后台转写</p>
                 </div>

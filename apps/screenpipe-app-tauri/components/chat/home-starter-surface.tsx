@@ -173,14 +173,15 @@ export function HomeStarterSurface({
 }: HomeStarterSurfaceProps) {
   // The contextual-suggestions A/B experiment is gone; the local suggestions
   // surface is the default home experience.
+  const visibleSuggestions = suggestions ?? [];
 
-  if (!isLoading && suggestions.length === 0) {
+  if (!isLoading && visibleSuggestions.length === 0) {
     return <SummaryCards {...summaryCardsProps} />;
   }
 
   return (
     <ContextualSuggestions
-      suggestions={suggestions}
+      suggestions={visibleSuggestions}
       activityMode={activityMode}
       isLoading={isLoading}
       isRefreshing={isRefreshing}

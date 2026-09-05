@@ -3275,8 +3275,6 @@ function providerLabel(
 
 function transcriptionEngineLabel(engine: string) {
   switch (engine) {
-    case "screenpipe-cloud":
-      return "screenpipe cloud";
     case "deepgram":
       return "deepgram";
     case "whisper-large-v3-turbo":

@@ -130,7 +130,6 @@ export function TimelineDailySummary({
 	const panelRef = useRef<HTMLElement | null>(null);
 	const handledOpenRequestRef = useRef<number | undefined>(undefined);
 	const dateId = format(currentDate, "yyyy-MM-dd");
-	const enhancedAI = settings?.enhancedAI ?? false;
 	const dailySummaryPreset = useMemo(
 		() => pickPipePreset((settings?.aiPresets ?? []) as AIPreset[]),
 		[settings?.aiPresets],
@@ -230,7 +229,7 @@ export function TimelineDailySummary({
 		}
 
 		void generate();
-	}, [currentDate, dateId, enhancedAI, generate, isGenerating, summary]);
+	}, [currentDate, dateId, generate, isGenerating, summary]);
 
 	useEffect(() => {
 		if (

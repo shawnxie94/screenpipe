@@ -4,7 +4,6 @@
 
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_ENTERPRISE_AI_PRESET_POLICY } from "@/lib/enterprise-ai-preset-policy";
 import {
   implicitSummaryPresetId,
   summaryPresetModelLabel,
@@ -18,7 +17,6 @@ const preset = (
 ) => ({ id, provider, defaultPreset });
 
 const PRESETS = [
-  preset("pipes", "screenpipe-cloud"),
   preset("chat", "openai", true),
   preset("claude-code", "acp"),
 ];
@@ -27,68 +25,23 @@ const ids = (list: { id: string }[]) => list.map((entry) => entry.id);
 
 describe("summary model options", () => {
   // The bug: the picker filtered `provider !== "acp"` unconditionally, so a
-  // coding agent could never be chosen for a meeting summary — no flag, no
-  // setting, no way. The backend has always run an explicitly selected ACP
-  // preset, so the UI was the only thing in the way.
-  it("offers coding agents once the rollout is on", () => {
+  // coding agent could never be chosen for a meeting summary. The backend has
+  // always run an explicitly selected ACP preset; ACP availability is now the
+  // only gate.
+  it("offers coding agents when ACP presets are enabled", () => {
     expect(
-      ids(
-        summaryPresetOptions(PRESETS, {
-          acpEnabled: true,
-          isManagedDeployment: false,
-        }),
-      ),
-    ).toEqual(["pipes", "chat", "claude-code"]);
+      ids(summaryPresetOptions(PRESETS, { acpEnabled: true })),
+    ).toEqual(["chat", "claude-code"]);
   });
 
-  it("hides them while the rollout is off", () => {
+  it("hides them while ACP is disabled", () => {
     expect(
-      ids(
-        summaryPresetOptions(PRESETS, {
-          acpEnabled: false,
-          isManagedDeployment: false,
-        }),
-      ),
-    ).toEqual(["pipes", "chat"]);
-  });
-
-  // Enterprise policy still gets the last word: the rollout widens the
-  // catalog, it does not exempt the picker from a managed deployment's
-  // allow-list.
-  it("still applies enterprise policy on top of the rollout", () => {
-    expect(
-      ids(
-        summaryPresetOptions(PRESETS, {
-          acpEnabled: true,
-          isManagedDeployment: true,
-          aiPresetPolicy: {
-            ...DEFAULT_ENTERPRISE_AI_PRESET_POLICY,
-            allow_employee_custom_presets: false,
-          },
-        }),
-      ),
-    ).toEqual(["pipes"]);
-  });
-
-  it("falls back to the default policy when a managed deployment has none", () => {
-    expect(
-      ids(
-        summaryPresetOptions(PRESETS, {
-          acpEnabled: true,
-          isManagedDeployment: true,
-          aiPresetPolicy: null,
-        }),
-      ),
-    ).toEqual(["pipes", "chat", "claude-code"]);
+      ids(summaryPresetOptions(PRESETS, { acpEnabled: false })),
+    ).toEqual(["chat"]);
   });
 
   it("survives settings that have not loaded their presets yet", () => {
-    expect(
-      summaryPresetOptions(undefined, {
-        acpEnabled: true,
-        isManagedDeployment: false,
-      }),
-    ).toEqual([]);
+    expect(summaryPresetOptions(undefined, { acpEnabled: true })).toEqual([]);
   });
 });
 
@@ -103,9 +56,9 @@ describe("implicit summary model", () => {
     expect(
       implicitSummaryPresetId([
         preset("claude-code", "acp", true),
-        preset("pipes", "screenpipe-cloud"),
+        preset("chat", "openai"),
       ]),
-    ).toBe("pipes");
+    ).toBe("chat");
   });
 
   it("prefers the user's default over list order", () => {
@@ -116,10 +69,9 @@ describe("implicit summary model", () => {
     expect(
       implicitSummaryPresetId([
         preset("claude-code", "acp"),
-        preset("pipes", "screenpipe-cloud"),
         preset("chat", "openai"),
       ]),
-    ).toBe("pipes");
+    ).toBe("chat");
   });
 
   it("reports nothing when there is nothing to run", () => {
@@ -151,13 +103,6 @@ describe("summary model label", () => {
     expect(
       summaryPresetModelLabel({ provider: "openai", model: "gpt-5.6" }),
     ).toBe("gpt-5.6");
-    // Context and recommendation hints belong in the details, not the label.
-    expect(
-      summaryPresetModelLabel({
-        provider: "screenpipe-cloud",
-        model: "claude-haiku-4-5 (200k context)",
-      }),
-    ).toBe("claude-haiku-4-5");
   });
 
   it("says nothing when there is no preset to name", () => {

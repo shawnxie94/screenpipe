@@ -202,13 +202,6 @@ describe("first-run next steps", () => {
     expect(
       mocks.authorizeComposioToolkit.mock.invocationCallOrder[0],
     ).toBeLessThan(mocks.oauthConnect.mock.invocationCallOrder[0]);
-    expect(mocks.capture).toHaveBeenCalledWith(
-      "first_run_next_step_selected",
-      expect.objectContaining({ step: "recommended-setup-bundle" }),
-    );
-    expect(mocks.capture).toHaveBeenCalledWith(
-      "first_run_setup_bundle_completed",
-    );
   });
 
   it("does not reinstall tasks or reopen approvals that are already connected", async () => {

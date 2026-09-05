@@ -14,13 +14,12 @@ import {
 } from "@/lib/chat/response-feedback";
 import type { Message } from "@/lib/chat/types";
 
-const { captureMock, submitFeedbackMock } = vi.hoisted(() => ({
-  captureMock: vi.fn(),
+
+const { submitFeedbackMock } = vi.hoisted(() => ({
   submitFeedbackMock: vi.fn(),
 }));
 
 vi.mock("posthog-js", () => ({
-  default: { capture: captureMock },
 }));
 
 const privateMessage: Message = {
@@ -90,24 +89,7 @@ describe("ChatResponseFeedback", () => {
       },
       undefined,
     );
-    expect(captureMock).toHaveBeenCalledWith("chat_response_feedback", {
-      schema_version: 3,
-      surface: "chat_message",
-      entry_source: "home_card",
-      entry_card: "automate_my_work",
-      response_position: "initial",
-      rating: "positive",
-      action: "submitted",
-      has_tool_use: true,
-      has_sources: true,
-      was_steered: true,
-      was_stopped: false,
-    });
 
-    const payload = JSON.stringify(captureMock.mock.calls[0]);
-    expect(payload).not.toContain("Alice");
-    expect(payload).not.toContain("1234");
-    expect(payload).not.toContain("private");
   });
 
   it("does not duplicate the same rating and records a changed rating", async () => {
@@ -133,11 +115,6 @@ describe("ChatResponseFeedback", () => {
       await screen.findByText("local by default · no chat text shared"),
     ).toBeInTheDocument();
 
-    expect(captureMock).toHaveBeenCalledTimes(2);
-    expect(captureMock).toHaveBeenLastCalledWith(
-      "chat_response_feedback",
-      expect.objectContaining({ rating: "negative", action: "changed" }),
-    );
     expect(goodButton).toHaveAttribute("aria-pressed", "false");
     expect(badButton).toHaveAttribute("aria-pressed", "true");
     fireEvent.keyDown(document, { key: "Escape" });
@@ -183,25 +160,6 @@ describe("ChatResponseFeedback", () => {
     expect(
       await screen.findByText("local by default · no chat text shared"),
     ).toBeInTheDocument();
-    expect(captureMock).toHaveBeenCalledWith(
-      "chat_response_feedback_reason_selected",
-      {
-        schema_version: 1,
-        surface: "chat_message",
-        entry_source: "normal_chat",
-        entry_card: "none",
-        response_position: "followup",
-        reason: "missing_tool_use",
-        has_tool_use: true,
-        has_sources: true,
-        was_steered: true,
-        was_stopped: false,
-      },
-    );
-    const analyticsPayload = JSON.stringify(captureMock.mock.calls);
-    expect(analyticsPayload).not.toContain("Alice");
-    expect(analyticsPayload).not.toContain("1234");
-    expect(analyticsPayload).not.toContain("private");
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() =>
       expect(screen.queryByText("what went wrong?")).not.toBeInTheDocument(),

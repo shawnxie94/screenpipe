@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const transcribeComposerAudio = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/hooks/use-settings", () => ({
-  useSettings: () => ({ settings: { user: { token: "signed-token" } } }),
+  useSettings: () => ({ settings: { user: { token: "" } } }),
 }));
 vi.mock("@/lib/chat/composer-dictation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/chat/composer-dictation")>()),
@@ -138,7 +138,7 @@ describe("useComposerDictation", () => {
 
     expect(transcribeComposerAudio).toHaveBeenCalledWith(
       expect.any(Blob),
-      "signed-token",
+      "",
       expect.any(AbortSignal),
     );
     expect(onValueChange).toHaveBeenCalledWith("Ask now about yesterday");

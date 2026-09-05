@@ -168,7 +168,7 @@ const SYSTEM_ARTIFACT_APP =
 const DEFAULT_ACTIVITY_REVIEW_PRESET: AIPreset = {
   id: "activity-history",
   prompt: "",
-  provider: "screenpipe-cloud",
+  provider: "native-ollama",
   url: "",
   model: "auto",
   defaultPreset: false,

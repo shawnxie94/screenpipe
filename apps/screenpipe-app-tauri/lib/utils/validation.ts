@@ -21,7 +21,7 @@ export const embeddedLLMSchema = z.object({
 });
 
 
-export const aiProviderTypeSchema = z.enum(["openai", "openai-chatgpt", "native-ollama", "custom", "screenpipe-cloud", "pi", "anthropic", "acp"]);
+export const aiProviderTypeSchema = z.enum(["openai", "openai-chatgpt", "native-ollama", "custom", "pi", "anthropic", "acp"]);
 
 export const aiPresetSchema = z.object({
   id: z.string().min(1, "预设名称必填").regex(/^[a-zA-Z0-9\s\-_]+$/, "Only letters, numbers, spaces, hyphens, and underscores allowed").refine(

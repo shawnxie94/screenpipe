@@ -114,15 +114,6 @@ function isConnectionLikeError(errorStr: string): boolean {
   );
 }
 
-export function isHostedScreenpipeProvider(provider?: string | null): boolean {
-  // Retained only to render a useful migration error for legacy presets.
-  return provider === "screenpipe-cloud" || provider === "pi";
-}
-
-export function buildCloudConnectionMessage(): string {
-  return "此旧 AI 预设已不再可用。请选择本地模型或配置第三方服务。";
-}
-
 export function buildRemoteConnectionMessage(provider?: string | null): string {
   const named = provider && provider !== "custom" ? ` (${provider})` : "";
   return `Can't reach the AI provider${named}. Check your internet connection and try again.`;
@@ -222,7 +213,7 @@ export function buildAgentRefusalMessage(
       // Retrying resends the same refused request, and re-authenticating with
       // the same account cannot change the answer.
       retryable: false,
-      message: `${agent} signed in fine, but its own service refused this account: it needs a plan or organization policy you don't have. Signing in again won't change that — it isn't a screenpipe limit and screenpipe can't grant it.\n\nWhat does work: switch this preset's model calls to Screenpipe Cloud in Settings → AI presets, if this agent supports it, or pick a different agent. Ask whoever administers the account to enable it if you need this one specifically.`,
+      message: `${agent} signed in fine, but its own service refused this account: it needs a plan or organization policy you don't have. Signing in again won't change that — this is an account or provider policy, not a local Screenpipe error.\n\nChoose a different configured provider, or ask whoever administers the account to enable this one.`,
     };
   }
 
@@ -285,32 +276,6 @@ function buildGenericProviderErrorMessage(
     return null;
   }
 
-  if (isHostedScreenpipeProvider(provider)) {
-    if (normalized.includes("free_chat_limit_exceeded")) {
-      return "你已用完今日的 2 条免费 AI 消息。请明天再试、升级，或将 AI 预设切换到 Ollama、Claude、Codex 或你自己的提供商密钥。";
-    }
-    if (normalized.includes("free_chat_turn_request_limit_exceeded")) {
-      return "此免费消息已达到 8 步代理上限。请升级以获得更长的代理运行，或将 AI 预设切换到你自己的提供商。";
-    }
-    if (normalized.includes("free_plan_hosted_background_disabled")) {
-      return "后台定时任务的 screenpipe 云端 AI 需要付费计划。你仍可使用 Ollama 或自己的提供商密钥运行此定时任务。";
-    }
-    if (normalized.includes("free_chat_client_update_required")) {
-      return "请更新 screenpipe 以使用每日 2 条免费 AI 消息。";
-    }
-    if (normalized.includes("not allowed")) {
-      return `Model is restricted on your current plan. Please switch to a free model or upgrade your account.`;
-    }
-    if (
-      normalized.includes("rate-limited") ||
-      normalized.includes("rate limit") ||
-      normalized.includes("too many requests") ||
-      normalized.includes("unavailable")
-    ) {
-      return `You are currently rate-limited or the service is temporarily unavailable. Please wait a moment before trying again, or upgrade your plan for higher limits.`;
-    }
-  }
-
   if (normalized.includes("codex error: the usage limit has been reached")) {
     return "The AI provider usage limit has been reached. Wait for it to reset, or switch your AI preset or provider.";
   }
@@ -334,9 +299,7 @@ function buildGenericProviderErrorMessage(
   // the gateway (TLS dropped, DNS, offline). The raw "Connection error." reads
   // like the app is broken — surface a clearer, retryable message instead.
   if (isConnectionLikeError(errorStr)) {
-    return isHostedScreenpipeProvider(provider)
-      ? buildCloudConnectionMessage()
-      : buildRemoteConnectionMessage(provider);
+    return buildRemoteConnectionMessage(provider);
   }
 
   return null;

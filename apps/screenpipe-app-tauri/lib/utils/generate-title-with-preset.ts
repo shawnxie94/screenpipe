@@ -168,7 +168,7 @@ async function generateTitleViaPi(
     }
 
     // turn_end is a mid-agent boundary (e.g. between tool-call turns) —
-    // screenpipe-cloud emits it before agent_end with no content. Ignore it.
+    // Some providers emit it before agent_end with no content. Ignore it.
     if (evt.type === "turn_end") return;
 
     if (evt.type === "agent_end") {

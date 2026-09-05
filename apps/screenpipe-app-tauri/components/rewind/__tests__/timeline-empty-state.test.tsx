@@ -311,65 +311,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("Timeline empty state (mounted)", () => {
-	it("measures a real displayed frame and uses the cache source instead of frame count", () => {
-		let now = 1_000;
-		const nowSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
-		setStore({ frames: [aug5Frame()], hasCachedData: true });
-
-		render(<Timeline embedded />);
-		expect(
-			posthogCapture.mock.calls.some(([event]) => event === "timeline_time_to_first_frame"),
-		).toBe(false);
-
-		now = 1_125;
-		fireEvent.click(screen.getByRole("button", { name: "finish frame load" }));
-
-		expect(posthogCapture).toHaveBeenCalledWith("timeline_time_to_first_frame", {
-			measurement_version: 2,
-			duration_ms: 125,
-			had_cache: true,
-			frames_count: 1,
-			frame_id: "567",
-			load_mode: "snapshot_direct",
-			surface: "home",
-		});
-		nowSpy.mockRestore();
-	});
-
-	it("excludes time while the overlay window is hidden", async () => {
-		let now = 10_000;
-		const nowSpy = vi.spyOn(performance, "now").mockImplementation(() => now);
-		setStore({ frames: [aug5Frame()], hasCachedData: false });
-
-		render(<Timeline />);
-		now = 610_000;
-		fireEvent.click(screen.getByRole("button", { name: "finish frame load" }));
-		expect(
-			posthogCapture.mock.calls.some(([event]) => event === "timeline_time_to_first_frame"),
-		).toBe(false);
-
-		await waitFor(() => {
-			expect(tauriEventListeners.get("window-focused")?.length).toBeGreaterThan(0);
-		});
-		act(() => {
-			for (const listener of tauriEventListeners.get("window-focused") ?? []) {
-				listener({ payload: true });
-			}
-		});
-
-		expect(posthogCapture).toHaveBeenCalledWith("timeline_time_to_first_frame", {
-			measurement_version: 2,
-			duration_ms: 0,
-			had_cache: false,
-			frames_count: 1,
-			frame_id: "567",
-			load_mode: "snapshot_direct",
-			surface: "overlay",
-		});
-		nowSpy.mockRestore();
-	});
-
-	/**
+			/**
 	 * The reported journey. Visit 2 is the one that used to paint a blank
 	 * canvas: the component remounts while the store still holds Aug 5, so
 	 * auto-select grabs a frame, then the list is cleared underneath it.

@@ -10,7 +10,6 @@ import { SummaryCards } from "@/components/chat/summary-cards";
 import { FirstRunLearningBanner } from "@/components/first-run/learning-banner";
 import { HomeStarterSurface } from "@/components/chat/home-starter-surface";
 import { PipeContextBanner } from "@/components/chat/pipe-context-banner";
-import { PipeAIIconLarge } from "@/components/pipe-ai-icon";
 import { InlineChatHistory } from "@/components/chat/standalone/inline-chat-history";
 import { ChatMessageList, type ChatMessageListProps } from "@/components/chat/standalone/chat-message-list";
 import type { ConversationMeta } from "@/lib/chat-storage";
@@ -53,8 +52,6 @@ interface ChatMainPaneProps {
   disabledReason: string | null;
   hasPresets: boolean;
   hasValidModel: boolean | "" | undefined;
-  needsLogin: boolean;
-  onOpenLogin: () => void | Promise<void>;
   onOpenSettings: () => void | Promise<void>;
   onOpenPipeSettings: () => void | Promise<void>;
   summaryCardsProps: React.ComponentProps<typeof SummaryCards>;
@@ -95,8 +92,6 @@ export function ChatMainPane({
   disabledReason,
   hasPresets,
   hasValidModel,
-  needsLogin,
-  onOpenLogin,
   onOpenSettings,
   onOpenPipeSettings,
   summaryCardsProps,
@@ -234,14 +229,10 @@ export function ChatMainPane({
               !isLoading &&
               !isStreaming &&
               disabledReason &&
-              (!hasPresets || !hasValidModel || needsLogin) && (
+              (!hasPresets || !hasValidModel) && (
                 <div className="relative flex flex-col items-center justify-center py-12 space-y-4">
                   <div className="relative p-6 rounded-lg border bg-muted/50 border-border/50">
-                    {needsLogin ? (
-                      <PipeAIIconLarge size={48} thinking={false} className="text-muted-foreground" />
-                    ) : (
-                      <Settings className="h-12 w-12 text-muted-foreground" />
-                    )}
+                    <Settings className="h-12 w-12 text-muted-foreground" />
                   </div>
                   <div className="text-center space-y-2">
                     <h3 className="font-semibold tracking-tight">
@@ -249,24 +240,12 @@ export function ChatMainPane({
                         ? "No AI Presets"
                         : !hasValidModel
                           ? "No Model Selected"
-                          : needsLogin
-                            ? "Login to continue"
                             : "Setup Required"}
                     </h3>
                     <p className="text-sm text-muted-foreground max-w-sm">
-                      {needsLogin ? "登录以使用 AI 助手" : disabledReason}
+                      {disabledReason}
                     </p>
                   </div>
-                  {needsLogin && (
-                    <Button
-                      variant="default"
-                      size="lg"
-                      onClick={onOpenLogin}
-                      className="gap-2 font-medium bg-foreground text-background hover:bg-foreground/90 transition-colors duration-150 px-8"
-                    >
-                      Sign in
-                    </Button>
-                  )}
                   {!hasPresets && (
                     <Button variant="outline" onClick={onOpenSettings} className="gap-2">
                       <Settings className="h-4 w-4" />

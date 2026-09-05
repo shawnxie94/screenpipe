@@ -136,22 +136,6 @@ describe("final onboarding setup", () => {
     expect(mocks.oauthStatus).toHaveBeenCalledWith("google-calendar", null);
     expect(mocks.registerComposioMcpServer).not.toHaveBeenCalled();
     await waitFor(() => {
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "onboarding_connection_cta_impression",
-        {
-          integration: "composio-gmail",
-          source: "onboarding_final_setup",
-          cta_state: "connect",
-        },
-      );
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "onboarding_connection_cta_impression",
-        {
-          integration: "google-calendar",
-          source: "onboarding_final_setup",
-          cta_state: "connect",
-        },
-      );
     });
 
     fireEvent.click(screen.getByRole("button", { name: "continue" }));
@@ -262,13 +246,6 @@ describe("final onboarding setup", () => {
 
     await waitFor(() => expect(gmail).toHaveTextContent("connected"));
     expect(gmail).toBeDisabled();
-    expect(mocks.capture).toHaveBeenCalledWith(
-      "onboarding_connection_cta_attempted",
-      {
-        integration: "composio-gmail",
-        source: "onboarding_final_setup",
-      },
-    );
     expect(mocks.authorizeComposioToolkit).toHaveBeenCalledWith(
       "signed-in-token",
       "gmail",
@@ -296,13 +273,6 @@ describe("final onboarding setup", () => {
 
     await waitFor(() => expect(calendar).toHaveTextContent("connected"));
     expect(calendar).toBeDisabled();
-    expect(mocks.capture).toHaveBeenCalledWith(
-      "onboarding_connection_cta_attempted",
-      {
-        integration: "google-calendar",
-        source: "onboarding_final_setup",
-      },
-    );
     expect(mocks.oauthConnect).toHaveBeenCalledWith(
       "google-calendar",
       null,
@@ -335,23 +305,13 @@ describe("final onboarding setup", () => {
     await waitFor(() => expect(gmail).toHaveTextContent("connect gmail"));
     fireEvent.click(gmail);
 
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "onboarding_connection_cta_failed",
-        {
-          integration: "composio-gmail",
-          source: "onboarding_final_setup",
-          failure_stage: "authorization",
-        },
-      ),
-    );
-    expect(mocks.capture).not.toHaveBeenCalledWith(
-      "onboarding_connection_cta_failed",
-      expect.objectContaining({ message: expect.anything() }),
-    );
+    // The connection simply fails: no connected state, CTA usable again.
+    await waitFor(() => expect(gmail).toBeEnabled());
+    expect(gmail).toHaveTextContent("connect gmail");
+    expect(gmail).not.toHaveTextContent("connected");
   });
 
-  it("tracks Google Calendar connection failures", async () => {
+  it("recovers Google Calendar connection failures in the UI", async () => {
     mocks.oauthConnect.mockResolvedValue({
       status: "error",
       error: "calendar oauth failed",
@@ -366,15 +326,9 @@ describe("final onboarding setup", () => {
     await waitFor(() => expect(calendar).toHaveTextContent("connect calendar"));
     fireEvent.click(calendar);
 
-    await waitFor(() =>
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "onboarding_connection_cta_failed",
-        {
-          integration: "google-calendar",
-          source: "onboarding_final_setup",
-          failure_stage: "oauth_connect",
-        },
-      ),
-    );
+    // The oauth failure never reaches the connected state.
+    await waitFor(() => expect(calendar).toBeEnabled());
+    expect(calendar).toHaveTextContent("connect calendar");
+    expect(calendar).not.toHaveTextContent("connected");
   });
 });

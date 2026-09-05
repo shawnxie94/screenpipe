@@ -82,17 +82,6 @@ describe("NotificationFeedback", () => {
     expect(
       screen.queryByRole("button", { name: "发送反馈" }),
     ).not.toBeInTheDocument();
-    expect(capture).toHaveBeenCalledWith(
-      "notification_feedback_submitted",
-      expect.objectContaining({
-        feedback_rating: "down",
-        notification_category: "pipe",
-      }),
-    );
-    const analyticsPayload = capture.mock.calls[0][1];
-    expect(analyticsPayload).not.toHaveProperty("notification_id");
-    expect(analyticsPayload).not.toHaveProperty("pipe_name");
-    expect(analyticsPayload).not.toHaveProperty("comment");
   });
 
   it("saves up feedback immediately without asking for text", async () => {
@@ -121,18 +110,6 @@ describe("NotificationFeedback", () => {
       screen.queryByRole("group", { name: "通知反馈选项" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-    expect(capture).toHaveBeenCalledWith(
-      "notification_feedback_submitted",
-      expect.objectContaining({ feedback_rating: "up" }),
-    );
-    expect(capture).toHaveBeenCalledWith(
-      "qualified_value_event",
-      expect.objectContaining({
-        action: "artifact",
-        surface: "pipe",
-        value_strength: "accepted",
-      }),
-    );
   });
 
   it("does not rate non-AI system notifications", () => {

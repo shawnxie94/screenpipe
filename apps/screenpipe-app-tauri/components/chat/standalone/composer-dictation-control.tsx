@@ -228,8 +228,8 @@ export function ComposerDictationControl({
             </kbd>
           </div>
           <p className="mt-1 text-muted-foreground">
-            Tap to toggle or hold while speaking. Audio is sent to screenpipe cloud
-            for transcription.
+            Tap to toggle or hold while speaking. Audio is sent to the configured
+            transcription provider.
           </p>
         </TooltipContent>
       </Tooltip>

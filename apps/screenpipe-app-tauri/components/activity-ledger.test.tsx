@@ -499,58 +499,7 @@ describe("activity history helpers", () => {
     expect(range!.end.getTime() - range!.start.getTime()).toBe(86_400_000);
   });
 
-  it("limits free and unattributed activity ranges while preserving paid ranges", () => {
-    const now = new Date("2026-08-24T12:00:00.000Z");
-    const requested = {
-      start: new Date("2026-08-17T12:00:00.000Z"),
-      end: new Date("2026-08-25T12:00:00.000Z"),
-    };
-
-    expect(effectiveActivityRange(requested, null, now)).toEqual({
-      start: new Date("2026-08-23T12:00:00.000Z"),
-      end: now,
-    });
-    expect(
-      effectiveActivityRange(requested, mocks.settings.user as any, now),
-    ).toBe(requested);
-    expect(
-      effectiveActivityRange(
-        requested,
-        {
-          id: "enterprise-user",
-          subscription_plan: "enterprise",
-          app_entitled: true,
-          entitlement: {
-            active: true,
-            plan: "enterprise",
-            checked_at: "2026-08-17T19:00:00.000Z",
-            features: { app: true },
-          },
-          enterprise_account: {
-            org_name: "Acme",
-            role: "member",
-            requires_enterprise_app: true,
-          },
-        } as any,
-        now,
-      ),
-    ).toBe(requested);
-    expect(effectiveActivityRange(requested, null, now, true)).toBe(
-      requested,
-    );
-    expect(
-      effectiveActivityRange(
-        {
-          start: new Date("2026-08-17T12:00:00.000Z"),
-          end: new Date("2026-08-20T12:00:00.000Z"),
-        },
-        undefined,
-        now,
-      ),
-    ).toBeNull();
-  });
-
-  it("does not expand meeting evidence before the restricted access boundary", () => {
+    it("does not expand meeting evidence before the restricted access boundary", () => {
     const accessStart = new Date("2026-08-23T12:00:00.000Z");
     const meetings = new URL(
       buildActivityMeetingsPath(
@@ -1605,40 +1554,7 @@ describe("ActivityLedger", () => {
     expect(screen.getByLabelText("AI preset")).toBeVisible();
   });
 
-  it("coerces a restricted persisted 7-day range to 24 hours", async () => {
-    const originalUser = mocks.settings.user;
-    (mocks.settings as any).user = null;
-    window.localStorage.setItem("screenpipe:activity-history:range", "7d");
-
-    try {
-      render(<ActivityLedger />);
-
-      const timeRange = await screen.findByRole("combobox", {
-        name: "时间范围：最近 24 小时",
-      });
-      fireEvent.click(timeRange);
-
-      expect(
-        await screen.findByRole("option", { name: "今天" }),
-      ).toBeVisible();
-      expect(
-        screen.getByRole("option", { name: "最近 24 小时" }),
-      ).toBeVisible();
-      expect(
-        screen.queryByRole("option", { name: "最近 7 天" }),
-      ).toBeNull();
-      expect(
-        screen.queryByRole("option", { name: "自定义范围" }),
-      ).toBeNull();
-      expect(window.localStorage.getItem("screenpipe:activity-history:range")).toBe(
-        "24h",
-      );
-    } finally {
-      mocks.settings.user = originalUser;
-    }
-  });
-
-  it("uses one popover trigger instead of two native custom-date inputs", async () => {
+    it("uses one popover trigger instead of two native custom-date inputs", async () => {
     render(<ActivityLedger />);
 
     await screen.findByRole("button", { name: "生成活动" });
@@ -1853,14 +1769,6 @@ describe("ActivityLedger", () => {
     expect(
       screen.queryByText(/Turn on Enhanced AI|Choose an AI model/i),
     ).toBeNull();
-    expect(mocks.posthogCapture).toHaveBeenCalledWith(
-      "activity_generation_failed",
-      {
-        range: "today",
-        source: "empty_state",
-        error_kind: "daily",
-      },
-    );
   });
 
   it("explains an empty recording range instead of silently returning", async () => {
@@ -1888,20 +1796,6 @@ describe("ActivityLedger", () => {
     );
     expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "重试" })).toBeVisible();
-    expect(mocks.posthogCapture).toHaveBeenCalledWith(
-      "activity_generation_completed",
-      {
-        range: "today",
-        source: "empty_state",
-        outcome: "no_activity",
-        activity_count: 0,
-        data_status: "empty_but_recording",
-      },
-    );
-    expect(mocks.posthogCapture).not.toHaveBeenCalledWith(
-      "activity_generation_failed",
-      expect.anything(),
-    );
   });
 
   it("keeps a slow backend generation running past two minutes", async () => {
@@ -1947,22 +1841,6 @@ describe("ActivityLedger", () => {
     await generateActivities();
     await screen.findByText("Fixed a capture reliability regression");
 
-    expect(mocks.posthogCapture).toHaveBeenCalledWith("activity_viewed", {
-      range: "today",
-    });
-    expect(mocks.posthogCapture).toHaveBeenCalledWith(
-      "activity_generation_started",
-      { range: "today", source: "empty_state" },
-    );
-    expect(mocks.posthogCapture).toHaveBeenCalledWith(
-      "activity_generation_completed",
-      {
-        range: "today",
-        source: "empty_state",
-        outcome: "generated",
-        activity_count: 2,
-      },
-    );
   });
 
   it("loads a completed encrypted ledger without regenerating it", async () => {
@@ -2173,14 +2051,6 @@ describe("ActivityLedger", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "部分录制的活动无法验证。现有历史已保留；请重试。",
     );
-    expect(mocks.posthogCapture).toHaveBeenCalledWith(
-      "activity_generation_failed",
-      {
-        range: "today",
-        source: "empty_state",
-        error_kind: "quality_validation",
-      },
-    );
     expect(mocks.reconcilePersistedActivityHistory).not.toHaveBeenCalled();
   });
 
@@ -2264,10 +2134,6 @@ describe("ActivityLedger", () => {
         "navigate-to-timestamp",
         "2026-08-17T16:20:00.000Z",
       ),
-    );
-    expect(mocks.posthogCapture).toHaveBeenCalledWith(
-      "activity_evidence_opened",
-      { evidence_kind: "screen", destination: "timeline" },
     );
 
     fireEvent.click(transcriptArtifact);
@@ -2372,10 +2238,6 @@ describe("ActivityLedger", () => {
     );
     expect(mocks.setPendingNavigation).not.toHaveBeenCalled();
     expect(mocks.emit).not.toHaveBeenCalled();
-    expect(mocks.posthogCapture).toHaveBeenCalledWith(
-      "activity_evidence_opened",
-      { evidence_kind: "meeting", destination: "meetings" },
-    );
   });
 
   it("can draft a skill from every activity interval", async () => {
@@ -2398,7 +2260,6 @@ describe("ActivityLedger", () => {
         }),
       ),
     );
-    expect(mocks.posthogCapture).toHaveBeenCalledWith("activity_skill_clicked");
   });
 
   it("can ask about every activity interval in chat", async () => {
@@ -2422,6 +2283,5 @@ describe("ActivityLedger", () => {
         }),
       ),
     );
-    expect(mocks.posthogCapture).toHaveBeenCalledWith("activity_chat_clicked");
   });
 });

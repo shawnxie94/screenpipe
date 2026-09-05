@@ -59,7 +59,7 @@ describe("AIProviderChoices", () => {
   it("matches the quick chooser order and keeps technical choices advanced", () => {
     render(
       <AIProviderChoices
-        showScreenpipeCloud
+        showScreenpipeCloud={false}
         screenpipeDisabled={false}
         acpEnabled
         primaryAcpAdapters={adapters}
@@ -70,7 +70,6 @@ describe("AIProviderChoices", () => {
     );
 
     const primaryLabels = new Set([
-      "screenpipe",
       "Codex",
       "Claude Code",
       "Cursor",
@@ -83,7 +82,6 @@ describe("AIProviderChoices", () => {
         .map((button) => button.getAttribute("aria-label") || "")
         .filter((label) => primaryLabels.has(label)),
     ).toEqual([
-      "screenpipe",
       "Codex",
       "Claude Code",
       "Cursor",

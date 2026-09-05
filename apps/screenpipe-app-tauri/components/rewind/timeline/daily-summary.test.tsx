@@ -41,8 +41,6 @@ const GENERATED_SUMMARY = `The captured evidence shows a focused implementation 
 
 const mocks = vi.hoisted(() => ({
 	settings: {
-		enhancedAI: false,
-		user: { token: "test-token" },
 		aiPresets: [
 			{
 				id: "pipes",
@@ -57,11 +55,7 @@ const mocks = vi.hoisted(() => ({
 	},
 	updateSettings: vi.fn(),
 	runDailySummaryWithPi: vi.fn(),
-	setEnhancedAiSuggestions: vi.fn(),
-	showWindow: vi.fn(),
 	copyTextToClipboard: vi.fn(),
-	posthogCapture: vi.fn(),
-	openExternalUrl: vi.fn(),
 }));
 
 vi.mock("@/lib/hooks/use-settings", () => ({
@@ -77,18 +71,8 @@ vi.mock("@/lib/daily-summary-pi", () => ({
 
 vi.mock("@/lib/utils/tauri", () => ({
 	commands: {
-		setEnhancedAiSuggestions: mocks.setEnhancedAiSuggestions,
-		showWindow: mocks.showWindow,
 		copyTextToClipboard: mocks.copyTextToClipboard,
 	},
-}));
-
-vi.mock("posthog-js", () => ({
-	default: { capture: mocks.posthogCapture },
-}));
-
-vi.mock("@/lib/open-external-url", () => ({
-	openExternalUrl: mocks.openExternalUrl,
 }));
 
 vi.mock("@/components/markdown", () => ({
@@ -150,7 +134,6 @@ describe("daily summary helpers", () => {
 		expect(presentGenerationError(new Error("boom"))).toEqual({
 			kind: "unknown",
 			message: "无法生成每日摘要，请重试。",
-			upgrade: null,
 		});
 	});
 });
@@ -169,23 +152,14 @@ describe("TimelineDailySummary", () => {
 			},
 		});
 		window.localStorage.clear();
-		mocks.settings.enhancedAI = false;
-		mocks.settings.user = { token: "test-token" };
 		mocks.settings.aiPresets = [PIPE_PRESET];
 		mocks.updateSettings.mockReset().mockResolvedValue(undefined);
 		mocks.runDailySummaryWithPi
 			.mockReset()
 			.mockResolvedValue(GENERATED_SUMMARY);
-		mocks.setEnhancedAiSuggestions
-			.mockReset()
-			.mockResolvedValue({ status: "ok", data: null });
-		mocks.showWindow
-			.mockReset()
-			.mockResolvedValue({ status: "ok", data: null });
 		mocks.copyTextToClipboard
 			.mockReset()
 			.mockResolvedValue({ status: "ok", data: null });
-		mocks.posthogCapture.mockReset();
 	});
 
 	it("renders a compact icon-only trigger with an accessible label", () => {
@@ -201,7 +175,6 @@ describe("TimelineDailySummary", () => {
 
 	it("opens from the native timeline request without rendering a duplicate trigger", async () => {
 		const selectedDate = new Date(2026, 6, 25);
-		mocks.settings.user = null;
 		window.localStorage.setItem(
 			dailySummaryCacheKey(selectedDate),
 			GENERATED_SUMMARY,
@@ -227,7 +200,6 @@ describe("TimelineDailySummary", () => {
 
 	it("keeps wheel navigation inside the summary and closes on outside click", async () => {
 		const selectedDate = new Date(2026, 6, 25);
-		mocks.settings.user = null;
 		window.localStorage.setItem(
 			dailySummaryCacheKey(selectedDate),
 			GENERATED_SUMMARY,
@@ -258,7 +230,6 @@ describe("TimelineDailySummary", () => {
 
 	it("closes the top summary before Escape can close its overlay host", async () => {
 		const selectedDate = new Date(2026, 6, 25);
-		mocks.settings.user = null;
 		window.localStorage.setItem(
 			dailySummaryCacheKey(selectedDate),
 			GENERATED_SUMMARY,
@@ -288,44 +259,24 @@ describe("TimelineDailySummary", () => {
 		});
 	});
 
-	it("asks for explicit consent instead of starting Pi when Enhanced AI is off", () => {
-		render(<TimelineDailySummary currentDate={new Date(2026, 6, 25)} />);
-
-		fireEvent.click(screen.getByTestId("timeline-daily-summary-trigger"));
-
-		expect(screen.getByText("开启增强 AI？")).toBeInTheDocument();
-		expect(
-			screen.getByText(/不会定时运行或自动生成/i),
-		).toBeInTheDocument();
-		expect(screen.getByText(/受限的只读访问/i)).toBeInTheDocument();
-		expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
-	});
-
-	it("enables Enhanced AI and runs Pi over the exact selected day", async () => {
+	it("runs Pi over the exact selected day as soon as the trigger is clicked", async () => {
 		const selectedDate = new Date(2026, 6, 25);
 		render(<TimelineDailySummary currentDate={selectedDate} />);
 		fireEvent.click(screen.getByTestId("timeline-daily-summary-trigger"));
-		fireEvent.click(
-			screen.getByRole("button", { name: "开启并生成" }),
-		);
 
 		await waitFor(() => {
 			expect(
 				screen.getByText(/focused implementation session/i),
 			).toBeInTheDocument();
 		});
-		expect(mocks.updateSettings).toHaveBeenCalledWith({ enhancedAI: true });
-		expect(mocks.setEnhancedAiSuggestions).toHaveBeenCalledWith(
-			true,
-			"test-token",
-		);
+		expect(mocks.updateSettings).not.toHaveBeenCalled();
 		expect(mocks.runDailySummaryWithPi).toHaveBeenCalledTimes(1);
 		expect(mocks.runDailySummaryWithPi).toHaveBeenCalledWith(
 			expect.objectContaining({
 				date: selectedDate,
 				range: dailySummaryTimeRange(selectedDate),
 				preset: PIPE_PRESET,
-				userToken: "test-token",
+				userToken: null,
 				signal: expect.any(AbortSignal),
 				recoverTransientRuntimeStart: true,
 			}),
@@ -333,18 +284,9 @@ describe("TimelineDailySummary", () => {
 		expect(
 			window.localStorage.getItem(dailySummaryCacheKey(selectedDate)),
 		).toBe(GENERATED_SUMMARY);
-		expect(mocks.posthogCapture).toHaveBeenCalledWith(
-			"timeline_daily_summary_generated",
-			expect.objectContaining({
-				runtime: "pi-agent",
-				model: "auto",
-				format_valid: true,
-			}),
-		);
 	});
 
-	it("records an explicit terminal event when generation is cancelled", async () => {
-		mocks.settings.enhancedAI = true;
+	it("aborts generation when the panel closes and never shows a stale error", async () => {
 		mocks.runDailySummaryWithPi.mockImplementation(
 			({ signal }: { signal: AbortSignal }) =>
 				new Promise((_resolve, reject) => {
@@ -369,15 +311,14 @@ describe("TimelineDailySummary", () => {
 		);
 
 		await waitFor(() => {
-			expect(mocks.posthogCapture).toHaveBeenCalledWith(
-				"timeline_daily_summary_cancelled",
-				expect.objectContaining({ reason: "panel_closed" }),
-			);
+			expect(
+				screen.queryByTestId("timeline-daily-summary-panel"),
+			).not.toBeInTheDocument();
 		});
+		expect(screen.queryByText("Couldn’t create summary")).toBeNull();
 	});
 
-	it("offers a plan upgrade instead of a bare retry when the usage limit is hit", async () => {
-		mocks.settings.enhancedAI = true;
+	it("shows friendly quota copy and a retry when the usage limit is hit", async () => {
 		mocks.runDailySummaryWithPi
 			.mockReset()
 			.mockRejectedValue(
@@ -389,24 +330,14 @@ describe("TimelineDailySummary", () => {
 
 		fireEvent.click(screen.getByTestId("timeline-daily-summary-trigger"));
 
-		const upgradeButton = await screen.findByTestId(
-			"daily-summary-upgrade-button",
-		);
-		expect(upgradeButton).toHaveTextContent("Upgrade to Business");
-		expect(screen.getByText(/usage limit is reached/i)).toBeInTheDocument();
-		expect(screen.getByText(/limit resets/i)).toBeInTheDocument();
+	expect(await screen.findByText(/usage limit/i)).toBeInTheDocument();
+	// The copy points at the local escape hatch instead of a billing page.
+	expect(screen.getByText(/local model/i)).toBeInTheDocument();
 		// Raw gateway JSON must never surface.
 		expect(
 			screen.queryByText(/daily_cost_limit_exceeded/),
 		).not.toBeInTheDocument();
-
-		fireEvent.click(upgradeButton);
-		expect(mocks.openExternalUrl).toHaveBeenCalledWith(
-			"https://screenpi.pe/account/billing",
-		);
-		expect(mocks.posthogCapture).toHaveBeenCalledWith(
-			"timeline_daily_summary_failed",
-			expect.objectContaining({ error_kind: "daily" }),
-		);
+		// A local provider's quota is the user's to retry, not a paywall.
+		expect(screen.getByText("Try again")).toBeTruthy();
 	});
 });

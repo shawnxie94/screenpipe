@@ -228,14 +228,6 @@ export async function summarizeFirstRunWithAi(
   };
 
   if (!preset) return decline("no_preset");
-  // A hosted preset without a signed-in token cannot authenticate. Real
-  // onboarding signs in on its first slide, so this is mostly a dev-skip or
-  // signed-out state — but it is the single likeliest cause of a silent
-  // fallback, so say so rather than failing deep inside the session.
-  if (preset.provider === "screenpipe-cloud" && !options.userToken) {
-    return decline("cloud_preset_without_token");
-  }
-
   const facts = buildActivityFacts(activity, options.elapsedMs);
   if (!facts.trim()) return decline("no_facts");
 

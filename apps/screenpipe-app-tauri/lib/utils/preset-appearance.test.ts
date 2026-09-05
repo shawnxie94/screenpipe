@@ -46,21 +46,21 @@ describe("presetImageSrc", () => {
 
   it("maps providers and falls back to the custom icon", () => {
     expect(presetImageSrc("openai-chatgpt")).toBe("/images/openai.svg");
-    expect(presetImageSrc("screenpipe-cloud")).toBe("/images/screenpipe.png");
+    expect(presetImageSrc("pi")).toBe("/images/screenpipe.png");
     expect(presetImageSrc("acp")).not.toBe("/images/screenpipe.png");
     expect(presetImageSrc("never-heard-of-it")).toBe("/images/custom.png");
     expect(presetImageSrc(undefined)).toBe("/images/custom.png");
   });
 
-  it("uses the model maker for hosted models", () => {
-    expect(presetImageSrc("screenpipe-cloud", undefined, "gpt-5.6-terra")).toBe(
+  it("uses the model maker for known model families", () => {
+    expect(presetImageSrc("openai-chatgpt", undefined, "gpt-5.6-terra")).toBe(
       "/images/openai.svg",
     );
-    expect(presetImageSrc("screenpipe-cloud", undefined, "claude-sonnet-5")).toBe(
+    expect(presetImageSrc("custom", undefined, "claude-sonnet-5")).toBe(
       "/images/claude-ai.svg",
     );
-    expect(presetImageSrc("screenpipe-cloud", undefined, "auto")).toBe(
-      "/images/screenpipe.png",
+    expect(presetImageSrc("custom", undefined, "unknown-model")).toBe(
+      "/images/custom.png",
     );
   });
 
@@ -146,9 +146,12 @@ describe("generatePresetName", () => {
     ).toBe("llama3-8b");
   });
 
-  it("falls back to the provider when no meaningful model is picked", () => {
-    expect(generatePresetName({ provider: "screenpipe-cloud", model: "auto" }, [])).toBe(
-      "screenpipe-cloud",
+  it("falls back to the provider name when no meaningful model is picked", () => {
+    expect(generatePresetName({ provider: "custom", model: "auto" }, [])).toBe(
+      "custom",
+    );
+    expect(generatePresetName({ provider: "mystery-provider" }, [])).toBe(
+      "preset",
     );
     expect(generatePresetName({ provider: "native-ollama" }, ["ollama"])).toBe("ollama 2");
     expect(generatePresetName({ provider: "openai-chatgpt", model: "..." }, [])).toBe(

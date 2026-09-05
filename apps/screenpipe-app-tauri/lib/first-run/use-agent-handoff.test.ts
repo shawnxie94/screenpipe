@@ -108,33 +108,7 @@ describe("useAgentHandoff — resolving a target", () => {
     ]);
   });
 
-  it("reports the offer so the click has a denominator", async () => {
-    detectAiTools.mockResolvedValue(["claude"]);
-    const { result } = renderHook(() => useAgentHandoff(true));
-    await waitFor(() => expect(result.current.targets).toHaveLength(1));
-
-    const shown = capture.mock.calls.filter(
-      (c) => c[0] === "first_run_agent_handoff_shown",
-    );
-    expect(shown).toHaveLength(1);
-    expect(shown[0]?.[1]).toMatchObject({ agents: ["claude"], agent_count: 1 });
-  });
-
-  it("stays silent when there is nothing to offer", async () => {
-    // An impression for an offer that never rendered would inflate the
-    // denominator and make the handoff look ignored rather than absent.
-    detectAiTools.mockResolvedValue([]);
-    const { result } = renderHook(() => useAgentHandoff(true));
-    await waitFor(() => expect(detectAiTools).toHaveBeenCalled());
-    await waitFor(() => expect(result.current.resolved).toBe(true));
-    expect(
-      capture.mock.calls.filter(
-        (c) => c[0] === "first_run_agent_handoff_shown",
-      ),
-    ).toHaveLength(0);
-  });
-
-  it("prefers the connected agent used most in the recent local window", async () => {
+      it("prefers the connected agent used most in the recent local window", async () => {
     detectAiTools.mockResolvedValue(["claude", "cursor"]);
     isCursorMcpInstalled.mockResolvedValue(true);
     const { result } = renderHook(() =>
@@ -171,13 +145,6 @@ describe("useAgentHandoff — performing the handoff", () => {
       `claude://claude.ai/new?q=${encodeURIComponent(HANDOFF_PROMPT)}`,
     );
     expect(result.current.hint).toMatch(/请审查并发送/);
-    expect(clicked()[0]?.[1]).toMatchObject({
-      agent: "claude",
-      opened: true,
-      prefilled: true,
-      copy_only: false,
-      clipboard_copied: true,
-    });
   });
 
   it("still opens the prefilled app when the clipboard fallback fails", async () => {
@@ -193,15 +160,6 @@ describe("useAgentHandoff — performing the handoff", () => {
 
     expect(openUrl).toHaveBeenCalledTimes(1);
     expect(result.current.hint).toMatch(/请审查并发送/);
-    expect(failed()[0]?.[1]).toMatchObject({
-      agent: "claude",
-      stage: "clipboard",
-    });
-    expect(clicked()[0]?.[1]).toMatchObject({
-      opened: true,
-      prefilled: true,
-      clipboard_copied: false,
-    });
   });
 
   it("degrades to copy-only when the deeplink fails", async () => {
@@ -216,8 +174,6 @@ describe("useAgentHandoff — performing the handoff", () => {
 
     // The question is already copied, so this is a downgrade, not a failure.
     expect(result.current.hint).toMatch(/open claude and paste it/i);
-    expect(failed()[0]?.[1]).toMatchObject({ stage: "open" });
-    expect(clicked()[0]?.[1]).toMatchObject({ opened: false });
   });
 
   it("keeps the in-app summary as recovery when open and copy both fail", async () => {
@@ -232,11 +188,6 @@ describe("useAgentHandoff — performing the handoff", () => {
     });
 
     expect(result.current.hint).toMatch(/open the summary instead/i);
-    expect(failed().map((call) => call[1]?.stage)).toEqual([
-      "clipboard",
-      "open",
-    ]);
-    expect(clicked()).toHaveLength(0);
   });
 
   it("replays Cursor's deeplink after startup before claiming it is prefilled", async () => {
@@ -267,13 +218,6 @@ describe("useAgentHandoff — performing the handoff", () => {
       `cursor://anysphere.cursor-deeplink/prompt?text=${encodeURIComponent(HANDOFF_PROMPT)}`,
     );
     expect(result.current.hint).toMatch(/请审查并发送/);
-    expect(clicked()[0]?.[1]).toMatchObject({
-      agent: "cursor",
-      opened: true,
-      prefilled: true,
-      replayed: true,
-      copy_only: false,
-    });
   });
 
   it("opens the ChatGPT/Codex desktop app with the prompt prefilled", async () => {
@@ -291,7 +235,6 @@ describe("useAgentHandoff — performing the handoff", () => {
     expect(openUrl).toHaveBeenCalledWith(
       `codex://threads/new?prompt=${encodeURIComponent(HANDOFF_PROMPT)}`,
     );
-    expect(clicked()[0]?.[1]).toMatchObject({ copy_only: false, opened: true });
   });
 
   it("does nothing when there is no target", async () => {
@@ -303,7 +246,6 @@ describe("useAgentHandoff — performing the handoff", () => {
     });
 
     expect(copyTextToClipboard).not.toHaveBeenCalled();
-    expect(capture).not.toHaveBeenCalled();
   });
 
   it("sends no prompt text to analytics", async () => {

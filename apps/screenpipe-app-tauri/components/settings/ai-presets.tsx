@@ -1220,8 +1220,6 @@ const AISection = ({
           <AIProviderChoices
             selectedProvider={settingsPreset?.provider}
             selectedAcpAgentId={settingsPreset?.acpAgent?.id}
-            showScreenpipeCloud={false}
-            screenpipeDisabled={true}
             acpEnabled={acpEnabled}
             primaryAcpAdapters={primaryAcpAdapters}
             customAcpAdapter={customAcpAdapter}

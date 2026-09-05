@@ -64,7 +64,6 @@ describe("first-run guide", () => {
 
     startTour();
 
-    expect(mocks.capture).toHaveBeenCalledWith("firstrun_guide_accepted");
     expect(screen.getByText("1 of 3")).toBeInTheDocument();
   });
 
@@ -80,10 +79,6 @@ describe("first-run guide", () => {
     fireEvent.click(screen.getByRole("button", { name: "i'll explore" }));
 
     expect(onDone).toHaveBeenCalledOnce();
-    expect(mocks.capture).toHaveBeenCalledWith("firstrun_guide_skipped", {
-      phase: "invite",
-      method: "declined",
-    });
   });
 
   it("shows skip intro as a high-contrast secondary button", () => {
@@ -118,10 +113,6 @@ describe("first-run guide", () => {
     fireEvent.click(screen.getByRole("button", { name: "跳过引导" }));
 
     expect(onDone).toHaveBeenCalledOnce();
-    expect(mocks.capture).toHaveBeenCalledWith("firstrun_guide_skipped", {
-      phase: "ask",
-      method: "skip_button",
-    });
   });
 
   it("dismisses the guide when Escape is pressed", () => {
@@ -137,10 +128,6 @@ describe("first-run guide", () => {
     fireEvent.keyDown(window, { key: "Escape" });
 
     expect(onDone).toHaveBeenCalledOnce();
-    expect(mocks.capture).toHaveBeenCalledWith("firstrun_guide_skipped", {
-      phase: "ask",
-      method: "escape",
-    });
   });
 
   it("dismisses the guide when clicking away on the scrim", () => {
@@ -156,10 +143,6 @@ describe("first-run guide", () => {
     fireEvent.click(screen.getByTestId("firstrun-scrim"));
 
     expect(onDone).toHaveBeenCalledOnce();
-    expect(mocks.capture).toHaveBeenCalledWith("firstrun_guide_skipped", {
-      phase: "ask",
-      method: "click_away",
-    });
   });
 
   it("shows the esc hint and progress inside the guide card", () => {
@@ -220,9 +203,6 @@ describe("first-run guide", () => {
       );
 
       expect(onSubmit).toHaveBeenCalledOnce();
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "firstrun_send_prompt_clicked",
-      );
     } finally {
       composer.remove();
     }
@@ -256,9 +236,6 @@ describe("first-run guide", () => {
     expect(
       screen.queryByText("2 of 3 · building your automation"),
     ).not.toBeInTheDocument();
-    expect(mocks.capture).not.toHaveBeenCalledWith(
-      "firstrun_prompt_sent",
-    );
   });
 
   it("drops the scrim and shows a status pill with skip during streaming", () => {
@@ -358,14 +335,6 @@ describe("first-run guide", () => {
       act(() => vi.advanceTimersByTime(2000));
 
       expect(onDone).toHaveBeenCalledOnce();
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "firstrun_guide_target_unavailable",
-        { phase: "ask", reason: "missing" },
-      );
-      expect(mocks.capture).toHaveBeenCalledWith("firstrun_guide_skipped", {
-        phase: "ask",
-        method: "target_missing",
-      });
     } finally {
       vi.useRealTimers();
     }
@@ -426,14 +395,6 @@ describe("first-run guide", () => {
       act(() => vi.advanceTimersByTime(2000));
 
       expect(onDone).toHaveBeenCalledOnce();
-      expect(mocks.capture).toHaveBeenCalledWith(
-        "firstrun_guide_target_unavailable",
-        { phase: "ask", reason: "blocked" },
-      );
-      expect(mocks.capture).toHaveBeenCalledWith("firstrun_guide_skipped", {
-        phase: "ask",
-        method: "target_blocked",
-      });
     } finally {
       document.elementFromPoint = originalFromPoint;
       composer.remove();

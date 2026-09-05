@@ -14,7 +14,6 @@ import { commands, type AIPreset, type PiInfo, type PiProviderConfig } from "@/l
 import type { ActivityAppItem, ConnectedIntegration, ConnectionListItem } from "@/lib/chat/connection-suggestions";
 import { useAcpSessionConfig } from "@/lib/stores/acp-session-config";
 import { applyResolvedModelLimits } from "@/lib/model-metadata";
-import { IS_LOCAL_ONLY_BUILD } from "@/lib/local-only";
 
 type PiRunningConfig = {
   backend?: "acp" | null;
@@ -164,10 +163,6 @@ export function usePiSessionLifecycle({
   const hasValidModel = activePreset?.provider === "acp"
     ? Boolean(activePreset.acpAgent?.id?.trim())
     : Boolean(activePreset?.model && activePreset.model.trim() !== "");
-  const needsLogin =
-    !IS_LOCAL_ONLY_BUILD &&
-    activePreset?.provider === "screenpipe-cloud" &&
-    !userToken;
   // Composition and submission do not depend on runtime readiness. A valid
   // preset is enough to accept the user's intent; the send transport waits for
   // an in-flight start/switch before dispatching it to the selected provider.
@@ -474,7 +469,6 @@ export function usePiSessionLifecycle({
     handlePiRestart,
     hasPresets,
     hasValidModel,
-    needsLogin,
     restartCurrentPiSession,
     setRunningConfigFromProviderConfig,
     syncThinkingLevelAfterStart,

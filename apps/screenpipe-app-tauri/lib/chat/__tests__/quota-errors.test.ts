@@ -471,18 +471,17 @@ describe("buildModelNotAllowedMessage", () => {
 
   it("names the rejected model and the ways out", () => {
     const msg = buildModelNotAllowedMessage(GATEWAY_403);
-    expect(msg).toContain('"codex-acp" isn\'t available');
-    expect(msg).toContain("Switch to Auto");
-    expect(msg).toContain("Settings → AI presets");
+    expect(msg).toContain('"codex-acp" is not available');
+    expect(msg).toContain("Choose another model");
   });
 
   it("survives an escaped body and a body with no model name", () => {
     expect(buildModelNotAllowedMessage(JSON.stringify(`403 ${GATEWAY_403}`))).toContain(
-      '"codex-acp" isn\'t available',
+      '"codex-acp" is not available',
     );
     expect(
       buildModelNotAllowedMessage('{"error":"model_not_allowed"}'),
-    ).toContain("This model isn't available");
+    ).toContain("This model is not available");
   });
 
   it("offers the upgrade only when the gateway supplies a validated one", () => {
@@ -514,7 +513,7 @@ describe("buildModelNotAllowedMessage", () => {
     const msg = buildModelNotAllowedMessage(
       `{"message":"Model \\"${"x".repeat(500)}\\" is not available"}`,
     );
-    expect(msg).toContain("This model isn't available");
+    expect(msg).toContain("This model is not available");
     expect(msg.length).toBeLessThan(300);
   });
 });

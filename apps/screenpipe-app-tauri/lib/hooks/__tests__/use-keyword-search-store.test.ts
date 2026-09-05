@@ -126,26 +126,6 @@ describe("useKeywordSearchStore search scheduling", () => {
 		expect(calls[1]).toContain("/search?");
 		expect(calls[1]).toContain("content_type=input");
 		expect(useKeywordSearchStore.getState().isSearchingUiEvents).toBe(true);
-		expect(mocks.capture).toHaveBeenCalledWith(
-			"search_ui_query_started",
-			expect.objectContaining({
-				surface: "standalone",
-				search_id: "search-123",
-				search_session_id: "session-456",
-				query_length: 10,
-			}),
-		);
-		expect(mocks.capture).toHaveBeenCalledWith(
-			"search_ui_keyword_completed",
-			expect.objectContaining({
-				surface: "standalone",
-				search_id: "search-123",
-				search_session_id: "session-456",
-				query_length: 10,
-				screen_result_count: 1,
-				has_screen_results: true,
-			}),
-		);
 		for (const [, properties] of mocks.capture.mock.calls) {
 			expect(properties).not.toHaveProperty("query");
 		}
@@ -322,10 +302,6 @@ describe("useKeywordSearchStore search scheduling", () => {
 		expect(
 			requestedUrls.some((url) => url.includes("/text?persist=false")),
 		).toBe(false);
-		expect(mocks.capture).not.toHaveBeenCalledWith(
-			"search_ui_query_failed",
-			expect.anything(),
-		);
 	});
 
 	it("keeps metadata matches from accessibility-captured frames", async () => {

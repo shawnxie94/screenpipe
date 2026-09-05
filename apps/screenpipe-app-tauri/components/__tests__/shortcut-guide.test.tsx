@@ -47,13 +47,6 @@ afterEach(() => {
 });
 
 describe("ShortcutGuide", () => {
-  it("stays unmounted without the experimental flag", () => {
-    mocks.experimentalEnabled = false;
-    render(<ExperimentalShortcutGuide />);
-
-    fireEvent.keyDown(window, { key: "/", code: "Slash", metaKey: true });
-    expect(screen.queryByTestId("shortcut-guide")).toBeNull();
-  });
 
   it("opens and closes with Cmd+/ and shows in-app plus live global bindings", async () => {
     render(<ShortcutGuide />);

@@ -75,7 +75,6 @@ function view(over: Partial<LearningWindowView> = {}): LearningWindowView {
     emptyReason: null,
     capturedApps: [],
     remainingMs: 5 * 60 * 1_000,
-    activationState: "inactive",
     markSummaryOpened: vi.fn(),
     markSummaryRendered: vi.fn().mockResolvedValue(undefined),
     markNotificationSent: vi.fn(),
@@ -109,78 +108,6 @@ beforeEach(() => {
     hint: null,
     askAgent: vi.fn().mockResolvedValue(undefined),
   };
-});
-
-describe("trial activation summary experience", () => {
-  it("makes the timer primary and keeps the summary CTA disabled while learning", () => {
-    mocks.view = view({
-      activationState: "summary",
-      remainingMs: 120_000,
-    });
-    render(<TrialActivationSummaryExperience />);
-
-    expect(screen.getByTestId("trial-activation-countdown")).toHaveTextContent("2:00");
-    expect(screen.getByTestId("trial-activation-view-summary")).toBeDisabled();
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-  });
-
-  it("opens only a ready valid summary", async () => {
-    const markSummaryOpened = vi.fn();
-    mocks.view = view({
-      activationState: "summary",
-      phase: "ready",
-      chatId: "first-run-ready",
-      markSummaryOpened,
-    });
-    render(<TrialActivationSummaryExperience />);
-
-    fireEvent.click(screen.getByTestId("trial-activation-view-summary"));
-    await waitFor(() =>
-      expect(mocks.emit).toHaveBeenCalledWith("chat-load-conversation", {
-        conversationId: "first-run-ready",
-        targetWindow: "home",
-      }),
-    );
-    expect(
-      window.localStorage.getItem("pending-chat-conversation"),
-    ).toBe("first-run-ready");
-    expect(markSummaryOpened).toHaveBeenCalledTimes(1);
-  });
-
-  it("offers recovery instead of payment after an empty summary", async () => {
-    mocks.view = view({ activationState: "summary", phase: "empty" });
-    render(<TrialActivationSummaryExperience />);
-
-    fireEvent.click(screen.getByRole("button", { name: "retry summary" }));
-    await waitFor(() => expect(mocks.completeOnboarding).toHaveBeenCalled());
-    expect(screen.queryByTestId("trial-activation-paywall")).not.toBeInTheDocument();
-  });
-
-  it("shows checkout only after the locked-summary trial CTA is clicked", () => {
-    const onStartTrial = vi.fn();
-    render(<TrialActivationUnlockPrompt onStartTrial={onStartTrial} />);
-
-    fireEvent.click(screen.getByTestId("trial-activation-start-trial"));
-
-    expect(onStartTrial).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("trial-activation-summary-lock")).toHaveClass(
-      "pointer-events-none",
-    );
-    expect(
-      screen.getByTestId("trial-activation-start-trial").parentElement,
-    ).toHaveClass("pointer-events-auto");
-  });
-
-  it("supports an inline CTA beside native product surfaces", () => {
-    render(
-      <TrialActivationUnlockPrompt onStartTrial={vi.fn()} inline />,
-    );
-
-    const prompt = screen.getByTestId("trial-activation-summary-lock");
-    expect(prompt).toHaveAttribute("data-layout", "inline");
-    expect(prompt).toHaveClass("shrink-0", "border-t");
-    expect(prompt).not.toHaveClass("absolute", "pointer-events-none");
-  });
 });
 
 describe("first-run learning banner", () => {

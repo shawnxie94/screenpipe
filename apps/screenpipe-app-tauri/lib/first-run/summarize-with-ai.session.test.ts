@@ -179,17 +179,6 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
   // the session is guaranteed waste. Real onboarding signs in on its first
   // slide; this is the dev-skip / signed-out path, and it was the actual cause
   // of a silent deterministic fallback in a live dev session.
-  it("declines a hosted preset with no token instead of spawning a doomed session", async () => {
-    reset();
-    expect(
-      await summarizeFirstRunWithAi(activity, {
-        elapsedMs: 60_000,
-        preset,
-        userToken: null,
-      }),
-    ).toBeNull();
-    expect(piStartAndPrompt).not.toHaveBeenCalled();
-  });
 
   it("returns null when the session fails to start", async () => {
     reset();
@@ -214,13 +203,7 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
       preset: null,
       onFallback: (reason) => reasons.push(reason),
     });
-    await summarizeFirstRunWithAi(activity, {
-      elapsedMs: 60_000,
-      preset,
-      userToken: null,
-      onFallback: (reason) => reasons.push(reason),
-    });
-    expect(reasons).toEqual(["no_preset", "cloud_preset_without_token"]);
+    expect(reasons).toEqual(["no_preset"]);
   });
 
   it("keeps waiting for the selected agent instead of timing it out", async () => {
