@@ -428,8 +428,7 @@ async fn invalidate_macos_screen_streams(_reason: &str) {}
 fn log_capture_transcription_config(config: &RecordingConfig, options: &AudioManagerOptions) {
     let deepgram_diag = match &config.deepgram_config {
         Some(c) if c.is_ready() => format!(
-            "{}@{}",
-            c.provider_slug_for_log(),
+            "deepgram@{}",
             transcription_endpoint_host_for_log(&c.endpoint)
         ),
         Some(_) => "deepgram:incomplete_credentials".into(),

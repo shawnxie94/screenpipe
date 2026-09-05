@@ -3726,21 +3726,6 @@ keepComputerAwake?: boolean;
  */
 useChineseMirror: boolean;
 /**
- * Enable product analytics (PostHog). Events carry only a random device
- * ID when signed out; when signed in they are linked to the account,
- * including its email. Never includes recordings, audio, or OCR text.
- */
-analyticsEnabled: boolean;
-/**
- * Persistent analytics ID (UUID, stable across sessions).
- */
-analyticsId: string;
-/**
- * Enable AI workflow event detection (cloud feature, requires subscription).
- * When enabled, classifies desktop activity and triggers event-based pipes.
- */
-enableWorkflowEvents?: boolean;
-/**
  * Detected hardware tier ("high", "mid", "low").
  * Set once on first launch; `None` for existing installs (treated as High).
  */

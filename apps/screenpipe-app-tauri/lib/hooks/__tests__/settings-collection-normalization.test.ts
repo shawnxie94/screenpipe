@@ -98,7 +98,7 @@ describe("assertValidAiPresetUpdate", () => {
 
   it("accepts non-preset updates and non-empty preset lists", () => {
     expect(() =>
-      assertValidAiPresetUpdate({ analyticsEnabled: false }),
+      assertValidAiPresetUpdate({ useChineseMirror: false }),
     ).not.toThrow();
     expect(() =>
       assertValidAiPresetUpdate({

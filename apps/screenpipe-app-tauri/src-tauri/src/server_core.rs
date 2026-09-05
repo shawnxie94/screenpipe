@@ -23,7 +23,7 @@ use screenpipe_audio::transcription::stt::{
 use screenpipe_db::DatabaseManager;
 use screenpipe_engine::{
     hot_frame_cache::HotFrameCache, power::PowerManagerHandle, server::bind_listener,
-    start_power_manager_with_pref, start_sleep_monitor, RecordingConfig, ResourceTelemetryReporter,
+    start_power_manager_with_pref, start_sleep_monitor, RecordingConfig,
     SCServer,
 };
 use tokio::sync::Notify;
@@ -511,9 +511,7 @@ impl ServerCore {
 
         let manual_meeting = Arc::new(tokio::sync::RwLock::new(None::<i64>));
 
-        // --- Resource + sleep monitors (long-lived) ---
-        let resource_reporter = ResourceTelemetryReporter::new(config.analytics_enabled);
-        resource_reporter.start_monitoring(Duration::from_secs(30), Some(Duration::from_secs(60)));
+        // --- Sleep monitor (long-lived) ---
         start_sleep_monitor();
 
         // --- HTTP server ---
@@ -535,18 +533,6 @@ impl ServerCore {
         server.manual_meeting = Some(manual_meeting.clone());
         server.api_auth = config.api_auth;
         server.api_auth_key = config.api_auth_key.clone();
-        // Cloud JWT for /v1/chat/completions proxy. config.user_id carries
-        // the Clerk JWT (despite the name — see line 96 where the same value
-        // is used as the cloud transcription bearer). Pi's bash deliberately
-        // can't see this token; the local proxy signs the upstream request.
-        //
-        // We replace the Server's per-instance cloud_token cell with the
-        // app-scoped Arc so writes from `set_cloud_token` (Tauri command,
-        // pushed on every sign-in/out from the webview) are visible to both
-        // cloud_proxy.rs AND the PiExecutor that shares this same Arc.
-        // Without this, a token captured at engine boot was permanent until
-        // restart — paying users who signed in after the sidecar started got
-        // anonymous-tier 403s on every Sonnet/Opus pipe.
         server.owned_browser = owned_browser;
 
         // Handles to the background schedulers created below, kept on Self so
@@ -640,16 +626,12 @@ impl ServerCore {
         let pipes_dir = config.data_dir.join("pipes");
         std::fs::create_dir_all(&pipes_dir).ok();
 
-        // Keep one credential handle for agent lifecycle compatibility. Desktop
-        // agents resolve their model credentials from user-selected providers.
-        let cloud_token_handle = server.cloud_token.clone();
-        let acp_gateway_url = ai_gateway_url.clone();
+        // Desktop agents resolve their model credentials from user-selected
+        // providers (BYOK / ACP); no Screenpipe-hosted credential exists.
         let pi_executor = Arc::new(
-            screenpipe_core::agents::pi::PiExecutor::with_shared_user_token(
-                cloud_token_handle.clone(),
-            )
-            .with_api_url(ai_gateway_url)
-            .with_api_auth_key(config.api_auth_key.clone()),
+            screenpipe_core::agents::pi::PiExecutor::new()
+                .with_api_url(ai_gateway_url)
+                .with_api_auth_key(config.api_auth_key.clone()),
         );
         let mut agent_executors: std::collections::HashMap<
             String,
@@ -658,14 +640,10 @@ impl ServerCore {
         agent_executors.insert("pi".to_string(), pi_executor.clone());
         agent_executors.insert(
             "acp".to_string(),
-            Arc::new(
-                screenpipe_core::agents::acp::AcpExecutor::with_shared_user_token(
-                    cloud_token_handle.clone(),
-                    acp_gateway_url,
-                    config.port,
-                    config.api_auth_key.clone(),
-                ),
-            ),
+            Arc::new(screenpipe_core::agents::acp::AcpExecutor::new(
+                config.port,
+                config.api_auth_key.clone(),
+            )),
         );
         let pipe_store: Option<Arc<dyn screenpipe_core::pipes::PipeStore>> = Some(Arc::new(
             screenpipe_engine::pipe_store::SqlitePipeStore::new(db.clone()),

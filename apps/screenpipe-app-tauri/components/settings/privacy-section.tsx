@@ -60,9 +60,6 @@ import { useSqlAutocomplete } from "@/lib/hooks/use-sql-autocomplete";
 import { useInstalledApps } from "@/lib/hooks/use-installed-apps";
 import { commands } from "@/lib/utils/tauri";
 import { planEnhancedIncognitoPermission } from "@/lib/utils/incognito-permission";
-import * as Sentry from "@sentry/react";
-import { defaultOptions } from "tauri-plugin-sentry-api";
-import { cacheAnalyticsEnabled } from "@/lib/analytics-id";
 import {
   validateField,
   sanitizeValue,
@@ -449,22 +446,6 @@ export function PrivacySection() {
         setPendingApiKey(null);
       }
 
-      const analyticsEnabled =
-        pendingSettings.analyticsEnabled ?? settings.analyticsEnabled;
-
-      // Cache immediately so the next boot picks up the change before
-      // settings IPC resolves (see readCachedAnalyticsEnabled in providers.tsx).
-      cacheAnalyticsEnabled(analyticsEnabled !== false);
-
-      if (!analyticsEnabled) {
-        Sentry.close();
-      } else {
-        const isDebug = process.env.TAURI_ENV_DEBUG === "true";
-        if (!isDebug) {
-          Sentry.init({ ...defaultOptions });
-        }
-      }
-
       await commands.stopScreenpipe();
       await new Promise((resolve) => setTimeout(resolve, 1000));
       await commands.spawnScreenpipe(null);
@@ -825,17 +806,6 @@ export function PrivacySection() {
     handleSettingsChange({ recordWhileLocked: checked }, true);
   };
 
-  const handleAnalyticsToggle = (checked: boolean) => {
-    // no restart needed — analytics is purely frontend
-    handleSettingsChange({ analyticsEnabled: checked }, false);
-    cacheAnalyticsEnabled(checked);
-    const isDebug = process.env.TAURI_ENV_DEBUG === "true";
-    if (!isDebug) {
-      if (checked) {
-      } else {
-      }
-    }
-  };
 
   // The two window lists travel together: `addRule` and friends drop a pattern
   // from the opposite list so a window can't be included and ignored at once.
@@ -1616,36 +1586,6 @@ export function PrivacySection() {
           }
           onBrowse={(list) => setPicker(list)}
         />
-      </div>
-
-      {/* Telemetry */}
-      <div className="space-y-2">
-        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-          遥测
-        </h2>
-        <Card className="border-border bg-card">
-          <CardContent className="px-3 py-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2.5">
-                <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div>
-                  <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    分析
-                    <HelpTooltip text="仅产品使用事件 — 使用的功能、错误、性能。绝不会包含你的屏幕录制、音频、转写或 OCR 文本。退出登录后，事件仅携带随机设备 ID。登录状态下与你的账户关联，包括你的邮箱。" />
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    使用数据，登录时与你的账户关联
-                  </p>
-                </div>
-              </div>
-              <Switch
-                id="analyticsEnabled"
-                checked={settings.analyticsEnabled === true}
-                onCheckedChange={handleAnalyticsToggle}
-              />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Floating apply & restart bar */}

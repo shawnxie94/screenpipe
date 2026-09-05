@@ -179,8 +179,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { MeetingAppsPicker } from "./meeting-apps-picker";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useSqlAutocomplete } from "@/lib/hooks/use-sql-autocomplete";
-import * as Sentry from "@sentry/react";
-import { defaultOptions } from "tauri-plugin-sentry-api";
 import { BatterySaverSection } from "./battery-saver-section";
 import { ApplyRestartBar } from "./apply-restart-bar";
 // ScheduleSettings moved to privacy-section
@@ -306,7 +304,6 @@ const SERVER_RESTART_SETTINGS = new Set<keyof SettingsStore>([
   "asyncImagePiiRedaction",
   "piiBackend",
   "useChineseMirror",
-  "enableWorkflowEvents",
   "disableSnapshotCompaction",
 ]);
 
@@ -2312,19 +2309,6 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     try {
       await flushSettingsWrites(settingsWriteQueueRef.current);
 
-      if (!settings.analyticsEnabled) {
-        Sentry.close();
-        console.log("Telemetry disabled");
-      } else {
-        const isDebug = process.env.TAURI_ENV_DEBUG === "true";
-        if (!isDebug) {
-          console.log("Telemetry enabled");
-          Sentry.init({
-            ...defaultOptions,
-          });
-        }
-      }
-
       if (pendingAudioExclusions !== null) {
         try {
           const resWriteExcl = await commands.writeAudioExclusions(pendingAudioExclusions);
@@ -2516,11 +2500,6 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
 
   const handleDisableAudioChange = (checked: boolean) => {
     handleSettingsChange({ disableAudio: checked }, true);
-  };
-
-  const handleAnalyticsToggle = (checked: boolean) => {
-    const newValue = checked;
-    handleSettingsChange({ analyticsEnabled: newValue }, true);
   };
 
   const handleChineseMirrorToggle = async (checked: boolean) => {

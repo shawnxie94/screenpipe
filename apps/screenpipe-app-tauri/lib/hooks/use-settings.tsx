@@ -280,7 +280,6 @@ export type Settings = SettingsStore & {
 	/** When true, audio devices follow system default and auto-switch on changes */
 	useSystemDefaultAudio?: boolean;
 	/** Enable AI workflow event detection (cloud, triggers event-based pipes) */
-	enableWorkflowEvents?: boolean;
 	/** Audio transcription scheduling: "batch" (default, longer chunks for quality) or "realtime". */
 	transcriptionMode?: "realtime" | "smart" | "batch";
 	/** Live notes for manually-started meetings. Separate from background 24/7 transcription. */
@@ -568,8 +567,6 @@ let DEFAULT_SETTINGS: Settings = {
 				entitlement: null,
 				enterprise_account: null,
 			},
-			analyticsId: "",
-			analyticsEnabled: false,
 			devMode: false,
 			audioTranscriptionEngine: "whisper-large-v3-turbo-quantized",
 			meetingLiveTranscriptionEnabled: true,

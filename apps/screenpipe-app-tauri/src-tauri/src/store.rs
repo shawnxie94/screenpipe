@@ -1796,7 +1796,6 @@ impl Default for SettingsStore {
                 monitor_ids: vec!["default".to_string()],
                 audio_devices: vec!["default".to_string()],
                 use_pii_removal: true,
-                analytics_id: uuid::Uuid::new_v4().to_string(),
                 ignored_windows,
                 ..screenpipe_config::RecordingSettings::default()
             },

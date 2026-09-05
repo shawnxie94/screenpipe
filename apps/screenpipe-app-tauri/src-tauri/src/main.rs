@@ -539,13 +539,13 @@ async fn main() {
     }
 
     // Register the WER helper DLL that writes a local minidump for fail-fast
-    // crashes such as 0xc0000409, which bypass Rust panic/Sentry hooks, and
+    // crashes such as 0xc0000409, which bypass Rust panic hooks, and
     // recover dumps produced by a previous run.
     #[cfg(target_os = "windows")]
     windows_crash_dump::install();
 
 
-    // Install a panic hook that logs to stderr + Sentry BEFORE the default hook runs.
+    // Install a panic hook that logs to stderr BEFORE the default hook runs.
     // This is critical because panics inside `tao::send_event` (called from Obj-C)
     // hit `panic_cannot_unwind` → `abort()`, and the default hook's output may be lost.
     // By logging here we capture the actual panic message for diagnosis.
