@@ -982,12 +982,9 @@ impl ServerCore {
         let pii_labels = config.pii_redaction_labels.clone();
 
         // Cloud Clerk JWT — same token used for the cloud transcription
-        // bearer (see line 96). Tinfoil's enclave is on the screenpipe
-        // cloud auth boundary, so the user's signed-in token is what
-        // authenticates redactor requests. Without this the worker logs
-        // "no api key — requests will be un-authenticated" on every
-        // restart even when the user is signed in.
-        let tinfoil_api_key = config.user_id.clone().filter(|s| !s.is_empty());
+        // Local-only build: there is no cloud-issued bearer, so the redaction
+        // worker runs un-authenticated (it logs "no api key" on startup).
+        let tinfoil_api_key: Option<String> = None;
 
         // One shutdown signal, shared across both worker spawn paths and
         // stored on Self for `shutdown()` to fire on app quit.

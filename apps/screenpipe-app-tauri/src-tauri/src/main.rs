@@ -103,7 +103,6 @@ mod server_core;
 #[allow(deprecated)]
 mod space_monitor;
 mod store;
-mod suggestions;
 mod tray;
 #[cfg(target_os = "macos")]
 mod staged_update;
@@ -331,8 +330,6 @@ macro_rules! define_specta_builder {
             .typ::<calendar::CalendarStatus>()
             .typ::<calendar::CalendarEventItem>()
             .typ::<store::IcsCalendarEntry>()
-            .typ::<suggestions::CachedSuggestions>()
-            .typ::<suggestions::Suggestion>()
             .typ::<hardware::HardwareCapability>()
             .typ::<chatgpt_oauth::ChatGptOAuthStatus>()
             .typ::<provider_automations::ProviderAutomation>()
@@ -693,7 +690,6 @@ async fn main() {
         db_wedge_breaker: recording::new_db_wedge_breaker(),
     };
     let pi_state = pi::PiState(Arc::new(tokio::sync::Mutex::new(pi::PiPool::new())));
-    let suggestions_state = suggestions::SuggestionsState::new();
     #[allow(clippy::single_match)]
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -893,7 +889,6 @@ async fn main() {
         .manage(first_run_summary::FirstRunSummaryState::default())
         .manage(disk_pressure_notifications::DiskPressureNotificationState::default())
         .manage(pi_state)
-        .manage(suggestions_state)
         .manage(sync_scheduler)
         .invoke_handler(tauri_helper::tauri_collect_commands!())
         .setup(move |app| {
@@ -1989,21 +1984,6 @@ async fn main() {
                     }
                 });
             }
-
-            // Auto-start suggestions scheduler (always on)
-            let suggestions_state = app_handle.state::<suggestions::SuggestionsState>();
-            let suggestions_state_clone = suggestions::SuggestionsState {
-                cache: suggestions_state.cache.clone(),
-                scheduler_handle: suggestions_state.scheduler_handle.clone(),
-            };
-            let app_handle_for_suggestions = app_handle.clone();
-            tauri::async_runtime::spawn(async move {
-                suggestions::auto_start_scheduler(
-                    app_handle_for_suggestions,
-                    &suggestions_state_clone,
-                )
-                .await;
-            });
 
             // Start calendar events publisher (publishes to event bus for meeting detection)
             tauri::async_runtime::spawn(async move {

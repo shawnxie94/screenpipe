@@ -67,23 +67,6 @@ pub async fn install_specific_version(app: &tauri::AppHandle, version: &str) -> 
             .map_err(|e| format!("invalid url: {}", e))?])
         .map_err(|e| format!("failed to build updater: {}", e))?;
 
-    // Local-only builds never carry a Screenpipe cloud session; the legacy
-        // user.token field is empty, the secret-store cache was deleted with
-        // the auth_token module, and the R2 endpoint behind this auth is
-        // unreachable. No-op.
-        if let Ok(Some(settings)) = SettingsStore::get(app) {
-        if let Some(token) = settings
-            .user
-            .token
-            .clone()
-            .filter(|t| !t.is_empty())
-        {
-            builder = builder
-                .header("Authorization", format!("Bearer {}", token))
-                .map_err(|e| format!("failed to set auth header: {}", e))?;
-        }
-    }
-
     let update = builder
         .build()
         .map_err(|e| format!("failed to build updater: {}", e))?
@@ -911,20 +894,6 @@ impl UpdatesManager {
         if !is_beta_build {
             let channel = consumer_update_channel(settings.as_ref());
             builder = builder.endpoints(vec![consumer_update_endpoint(channel).parse()?])?;
-        }
-        if let Some(settings) = settings {
-            // Local-only build: the secret-store cache no longer exists, so
-            // user.token is the only place a cloud JWT could live. That field
-            // is empty by construction; keep the read in case a future
-            // explicit user-configured endpoint ever needs it.
-            if let Some(token) = settings
-                .user
-                .token
-                .clone()
-                .filter(|t| !t.is_empty())
-            {
-                builder = builder.header("Authorization", format!("Bearer {}", token))?;
-            }
         }
         let check_result = builder.build()?.check().await;
         match &check_result {

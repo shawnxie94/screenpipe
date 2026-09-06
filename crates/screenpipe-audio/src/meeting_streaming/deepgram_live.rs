@@ -631,7 +631,6 @@ mod tests {
         let config = MeetingStreamingConfig {
             enabled: true,
             provider: MeetingStreamingProvider::DeepgramLive,
-            auth_token: None,
             api_key: Some("test-key".to_string()),
             endpoint: "wss://api.deepgram.com/v1/listen".to_string(),
             model: Some("nova-3".to_string()),
@@ -656,7 +655,6 @@ mod tests {
         let config = MeetingStreamingConfig {
             enabled: true,
             provider: MeetingStreamingProvider::DeepgramLive,
-            auth_token: None,
             api_key: Some("test-key".to_string()),
             endpoint: "wss://api.deepgram.com/v1/listen".to_string(),
             model: Some("nova-3".to_string()),
@@ -739,7 +737,6 @@ mod tests {
         let config = MeetingStreamingConfig {
             enabled: true,
             provider: MeetingStreamingProvider::DeepgramLive,
-            auth_token: None,
             api_key: Some(api_key.to_string()),
             endpoint: "wss://api.deepgram.com/v1/listen".to_string(),
             model: Some("nova-3".to_string()),

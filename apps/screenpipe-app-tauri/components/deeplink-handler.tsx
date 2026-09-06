@@ -542,10 +542,6 @@ export function DeeplinkHandler() {
         });
       }),
 
-      listen("cli-login", async (event) => {
-        console.log("received cli-login event:", event);
-        await reloadStore();
-      }),
     ]);
 
     return () => {

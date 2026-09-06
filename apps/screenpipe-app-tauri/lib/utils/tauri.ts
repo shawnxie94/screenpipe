@@ -453,18 +453,6 @@ async fetchSkillsRegistry() : Promise<Result<RegistrySkill[], string>> {
     else return { status: "error", error: e  as any };
 }
 },
-/**
- * Force-regenerate suggestions immediately, bypassing the scheduler's
- * CPU/power guards. Returns the fresh suggestions and updates the cache.
- */
-async forceRegenerateSuggestions() : Promise<Result<CachedSuggestions, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("force_regenerate_suggestions") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async generateActivityHistory(start: string, end: string, idempotencyKey: string) : Promise<Result<PersistedActivityHistory, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("generate_activity_history", { start, end, idempotencyKey }) };
@@ -544,18 +532,6 @@ async getBrowserCookieAccessGranted() : Promise<boolean> {
  */
 async getBrowsersAutomationStatus() : Promise<BrowserAutomationStatus[]> {
     return await TAURI_INVOKE("get_browsers_automation_status");
-},
-/**
- * Return cached suggestions. If cache is empty (first load), generate
- * template suggestions from current activity data so the UI is never generic.
- */
-async getCachedSuggestions() : Promise<Result<CachedSuggestions, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_cached_suggestions") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
 },
 /**
  * Resolve the chat-conversations directory under the *active* screenpipe data
@@ -880,14 +856,6 @@ async listChatEntriesByMtime(dir: string) : Promise<Result<ChatDirEntry[], strin
 async listImportedSkills() : Promise<Result<ImportedSkill[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_imported_skills") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async listManagedTeamSkills() : Promise<Result<ManagedTeamSkillLocal[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("list_managed_team_skills") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2498,19 +2466,6 @@ async suspendGlobalShortcuts() : Promise<Result<null, string>> {
 }
 },
 /**
- * Apply the exact organization-managed skill desired state. Only directories
- * written by this command (namespaced + marker-checked) can be refreshed or
- * pruned; personal skills and unrelated agent configuration are untouched.
- */
-async syncManagedTeamSkills(skills: ManagedTeamSkill[], pruneUnlisted: boolean) : Promise<Result<ManagedTeamSkillReceipt[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("sync_managed_team_skills", { skills, pruneUnlisted }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Verifies an OpenAI-compatible endpoint with the exact request path and
  * audio encoding used by the recording engine. A successful response is
  * required before the settings UI can activate this engine, so recordings
@@ -2796,7 +2751,6 @@ export type BrainViewValue = { payload: JsonValue; evidence: BrainViewEvidenceRe
 export type BrowserAutomationStatus = { name: string; status: string; running: boolean }
 export type BrowserLogEntry = { level: string; message: string; windowLabel: string | null; route: string | null; sessionId: string | null; jobId: string | null; conversationId: string | null; stack: string | null; timestampMs: number | null }
 export type CacheFile = { path: string; label: string; size_bytes: number }
-export type CachedSuggestions = { suggestions: Suggestion[]; generatedAt: string; mode: string; aiGenerated: boolean; tags: string[] }
 export type CalendarEventItem = { id: string; title: string;
 /**
  * RFC3339 in UTC — for meeting detection / comparisons.
@@ -2834,7 +2788,6 @@ export type ChatGptOAuthStatus = { logged_in: boolean;
 error: string | null }
 export type CodingWorkspace = { version: number; conversationId: string; repoRoot: string; gitCommonDir: string; worktreePath: string; branch: string; baseCommit: string; sourceDirty: boolean; createdAt: string }
 export type CodingWorkspacePreparation = { status: string; workspace: CodingWorkspace | null; candidates: string[]; reason: string | null; routeSessionId: string | null }
-export type Credits = { amount: number }
 /**
  * A skill folder discovered somewhere on the user's device.
  */
@@ -2903,40 +2856,6 @@ export type LogFile = { name: string; path: string; modified_at: number }
  * from drifting away from the values enforced by the capture engine.
  */
 export type LowDiskGuardConfig = { thresholdBytes: number; checkIntervalSeconds: number }
-/**
- * A reviewed organization skill delivered by the Enterprise policy endpoint.
- * Package files contain no credentials or device-specific filesystem paths.
- */
-export type ManagedTeamSkill = { artifact_id: string;
-/**
- * Desired-state revision. Assignment changes bump this value.
- */
-version: number;
-/**
- * Immutable package release.
- */
-release_version: number; name: string; description?: string; package: ManagedTeamSkillPackage; destinations?: string[] }
-/**
- * Read-only summary rendered in Settings. Organization-managed skills are
- * deliberately separate from user-imported skills and cannot be removed there.
- */
-export type ManagedTeamSkillLocal = { artifact_id: string; version: number; release_version: number; digest: string; name: string; description: string; file_count: number; discovery_chars: number; activation_chars: number; has_scripts: boolean; destinations: string[] }
-/**
- * A portable Agent Skills directory. The server freezes the exact text files;
- * each device verifies the per-file and aggregate digests before installation.
- */
-export type ManagedTeamSkillPackage = { format: string; package_version: number; entrypoint: string; digest: string; name: string; description: string; files: ManagedTeamSkillPackageFile[]; context: ManagedTeamSkillPackageContext; risk: ManagedTeamSkillPackageRisk }
-export type ManagedTeamSkillPackageContext = { discovery_chars: number; activation_chars: number }
-export type ManagedTeamSkillPackageFile = { path: string; content: string; sha256: string; bytes: number }
-export type ManagedTeamSkillPackageRisk = { has_scripts: boolean }
-/**
- * Per-destination receipt from the most recent managed sync attempt.
- */
-export type ManagedTeamSkillReceipt = { artifact_id: string; version: number; release_version: number; digest: string; destination: string;
-/**
- * `installed` or `error`. Errors never prevent the other destinations.
- */
-status: string; detail?: string | null }
 export type MeetingExportSummary = { job_id: string; output_path: string; frame_count: number; audio_chunk_count: number; duration_secs: number; file_size_bytes: number }
 export type MonitorDevice = { id: number; stableId: string; name: string; isDefault: boolean; width: number; height: number }
 export type NotificationActionEvent = { actionType: string | null; rawJson: string; payload: JsonValue }
@@ -3672,11 +3591,6 @@ piiRedactionColumns?: string[];
  */
 piiRedactionPseudonyms?: boolean;
 /**
- * Screenpipe cloud user ID. Empty string means not logged in.
- * Kept as String (not Option) to match existing store.bin schema.
- */
-userId: string;
-/**
  * Display name for speaker identification.
  * Fallback chain: this field → cloud auth name → cloud auth email.
  * Previously stored in SettingsStore.extra["userName"].
@@ -3760,7 +3674,7 @@ listenOnLan?: boolean }) &
  * that the Rust struct doesn't know about. Without this, `save()` would
  * serialize only known fields and silently wipe frontend-only data.
  */
-({ [key in string]: null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue } }) & { aiPresets: AIPreset[]; isLoading: boolean; devMode: boolean; ocrEngine: string; dataDir: string; embeddedLLM: EmbeddedLLM; autoStartEnabled: boolean; platform: string; disabledShortcuts: string[]; user: User; showScreenpipeShortcut: string; startRecordingShortcut: string; stopRecordingShortcut: string; startAudioShortcut: string; stopAudioShortcut: string; showChatShortcut: string; searchShortcut: string; lockVaultShortcut?: string;
+({ [key in string]: null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue } }) & { aiPresets: AIPreset[]; isLoading: boolean; devMode: boolean; ocrEngine: string; dataDir: string; embeddedLLM: EmbeddedLLM; autoStartEnabled: boolean; platform: string; disabledShortcuts: string[]; showScreenpipeShortcut: string; startRecordingShortcut: string; stopRecordingShortcut: string; startAudioShortcut: string; stopAudioShortcut: string; showChatShortcut: string; searchShortcut: string; lockVaultShortcut?: string;
 /**
  * Overlay size: "small" (default), "medium" (1.5x), "large" (2x)
  */
@@ -3816,9 +3730,6 @@ remoteLogCollectionEnabled?: boolean;
 /**
  * Account that granted remote log collection consent on this device.
  * Consumer collection is allowed only while this matches the current user.
- */
-remoteLogCollectionUserId?: string | null;
-/**
  * Timeline overlay mode: "fullscreen" (floating panel above everything) or
  * "window" (normal resizable window with title bar).
  */
@@ -3881,15 +3792,6 @@ headless?: boolean;
 headlessRecordOnly?: boolean }
 export type ShowRewindWindow = "Main" | { Home: { page: string | null } } | { Search: { query: string | null } } | "Onboarding" | "Chat" | "PermissionRecovery"
 export type StartExportRecordingResponse = { jobId: string }
-export type Suggestion = { text: string;
-/**
- * Short preview with real data (e.g. "1h20m in VS Code — auth.rs, api.rs")
- */
-preview?: string | null;
-/**
- * Priority: 1 = hero card (most relevant), 2+ = supporting cards
- */
-priority?: number }
 /**
  * A browser URL block rule.
  *
@@ -3898,7 +3800,6 @@ priority?: number }
  * subdomain, and exception semantics without introducing a second setting.
  */
 export type UrlRule = string | DomainRule
-export type User = { id: string | null; name: string | null; email: string | null; image: string | null; token: string | null; clerk_id: string | null; api_key: string | null; credits: Credits | null; stripe_connected: boolean | null; stripe_account_status: string | null; github_username: string | null; bio: string | null; website: string | null; contact: string | null; cloud_subscribed: boolean | null; credits_balance: number | null; app_entitled: boolean | null; subscription_plan: string | null; entitlement: JsonValue | null; enterprise_account: JsonValue | null }
 export type ViewerContent = { kind: "text"; text: string; name: string; path: string; truncated: boolean; total_bytes: number } | { kind: "image"; data_url: string; name: string; path: string } |
 /**
  * Non-text, non-image file (random binary). The UI surfaces a

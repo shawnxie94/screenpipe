@@ -140,7 +140,6 @@ pub struct RecordingConfig {
     // Cloud/auth
     pub deepgram_api_key: Option<String>,
     pub deepgram_config: Option<DeepgramTranscriptionConfig>,
-    pub user_id: Option<String>,
 
     // OpenAI Compatible transcription
     pub openai_compatible_endpoint: Option<String>,
@@ -316,7 +315,6 @@ impl RecordingConfig {
             meeting_streaming: MeetingStreamingConfig::from_settings(
                 settings.meeting_live_transcription_enabled,
                 &settings.meeting_live_transcription_provider,
-                settings.effective_user_id().map(str::to_string),
                 match settings.meeting_live_transcription_provider.as_str() {
                     "deepgram-live" | "deepgram_live" => Some(settings.deepgram_api_key.clone()),
                     _ => None,
@@ -368,7 +366,6 @@ impl RecordingConfig {
                     .map(|s| DeepgramTranscriptionConfig::direct(s.to_string())),
                 _ => None,
             },
-            user_id: settings.effective_user_id().map(|s| s.to_string()),
             openai_compatible_endpoint: settings.openai_compatible_endpoint.clone(),
             openai_compatible_api_key: settings.openai_compatible_api_key.clone(),
             openai_compatible_model: settings.openai_compatible_model.clone(),

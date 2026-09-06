@@ -1228,8 +1228,6 @@ pub struct SettingsStore {
         deserialize_with = "deserialize_null_as_default"
     )]
     pub disabled_shortcuts: Vec<String>,
-    #[serde(rename = "user", deserialize_with = "deserialize_null_as_default")]
-    pub user: User,
     #[serde(rename = "showScreenpipeShortcut")]
     pub show_screenpipe_shortcut: String,
     #[serde(rename = "startRecordingShortcut")]
@@ -1289,8 +1287,6 @@ pub struct SettingsStore {
     pub remote_log_collection_enabled: bool,
     /// Account that granted remote log collection consent on this device.
     /// Consumer collection is allowed only while this matches the current user.
-    #[serde(rename = "remoteLogCollectionUserId", default)]
-    pub remote_log_collection_user_id: Option<String>,
     /// Timeline overlay mode: "fullscreen" (floating panel above everything) or
     /// "window" (normal resizable window with title bar).
     #[serde(rename = "overlayMode", default = "default_overlay_mode")]
@@ -1483,139 +1479,15 @@ impl Default for AIPreset {
     }
 }
 
-#[derive(Serialize, Deserialize, Type, Clone)]
-#[serde(default)]
-pub struct User {
-    pub id: Option<String>,
-    pub name: Option<String>,
-    pub email: Option<String>,
-    pub image: Option<String>,
-    pub token: Option<String>,
-    pub clerk_id: Option<String>,
-    pub api_key: Option<String>,
-    pub credits: Option<Credits>,
-    pub stripe_connected: Option<bool>,
-    pub stripe_account_status: Option<String>,
-    pub github_username: Option<String>,
-    pub bio: Option<String>,
-    pub website: Option<String>,
-    pub contact: Option<String>,
-    pub cloud_subscribed: Option<bool>,
-    pub credits_balance: Option<i32>,
-    pub app_entitled: Option<bool>,
-    pub subscription_plan: Option<String>,
-    pub entitlement: Option<serde_json::Value>,
-    pub enterprise_account: Option<serde_json::Value>,
-}
 
-impl Default for User {
-    fn default() -> Self {
-        Self {
-            id: None,
-            name: None,
-            email: None,
-            image: None,
-            token: None,
-            clerk_id: None,
-            api_key: None,
-            credits: None,
-            stripe_connected: None,
-            stripe_account_status: None,
-            github_username: None,
-            bio: None,
-            website: None,
-            contact: None,
-            cloud_subscribed: None,
-            credits_balance: None,
-            app_entitled: None,
-            subscription_plan: None,
-            entitlement: None,
-            enterprise_account: None,
-        }
-    }
-}
 
-fn parse_entitlement_time(
-    value: Option<&serde_json::Value>,
-) -> Option<chrono::DateTime<chrono::Utc>> {
-    value
-        .and_then(|value| value.as_str())
-        .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
-        .map(|value| value.with_timezone(&chrono::Utc))
-}
 
-fn entitlement_checked_recently(entitlement: &serde_json::Value) -> bool {
-    let Some(checked_at) = parse_entitlement_time(entitlement.get("checked_at")) else {
-        return false;
-    };
 
-    let now = chrono::Utc::now();
-    checked_at <= now + chrono::Duration::minutes(APP_ENTITLEMENT_CLOCK_SKEW_MINUTES)
-        && now.signed_duration_since(checked_at)
-            <= chrono::Duration::hours(APP_ENTITLEMENT_MAX_STALE_HOURS)
-}
 
-fn entitlement_was_verified(entitlement: &serde_json::Value) -> bool {
-    parse_entitlement_time(entitlement.get("checked_at")).is_some_and(|checked_at| {
-        checked_at
-            <= chrono::Utc::now() + chrono::Duration::minutes(APP_ENTITLEMENT_CLOCK_SKEW_MINUTES)
-    })
-}
 
-fn entitlement_active(entitlement: &serde_json::Value) -> bool {
-    entitlement
-        .get("active")
-        .and_then(|active| active.as_bool())
-        .unwrap_or(false)
-}
 
-fn entitlement_has_future_grace(entitlement: &serde_json::Value) -> bool {
-    parse_entitlement_time(entitlement.get("grace_until"))
-        .map(|grace_until| grace_until > chrono::Utc::now())
-        .unwrap_or(false)
-}
 
-fn entitlement_is_lifetime(entitlement: &serde_json::Value) -> bool {
-    let field = |key: &str| {
-        entitlement
-            .get(key)
-            .and_then(|value| value.as_str())
-            .unwrap_or("")
-    };
-    field("plan") == "lifetime" || field("source") == "lifetime"
-}
 
-fn is_verified_paid_plan_id(plan: &str) -> bool {
-    matches!(
-        plan.trim().to_ascii_lowercase().as_str(),
-        "basic"
-            | "standard"
-            | "business"
-            | "business_max"
-            | "business_ultra"
-            | "pro"
-            | "pro_max"
-            | "pro_ultra"
-            | "team"
-            | "enterprise"
-            | "lifetime"
-    )
-}
-
-fn entitlement_feature(entitlement: &serde_json::Value, feature: &str) -> bool {
-    entitlement
-        .get("features")
-        .and_then(|features| features.get(feature))
-        .and_then(|feature| feature.as_bool())
-        .unwrap_or(false)
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum LocalPlanPolicy {
-    VerifiedFree,
-    VerifiedPaid,
-    Unknown,
-}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
@@ -1652,17 +1524,6 @@ pub struct AudioEngineResolution {
     pub fallback_reason: Option<AudioEngineFallbackReason>,
 }
 
-#[derive(Serialize, Deserialize, Type, Clone)]
-#[serde(default)]
-pub struct Credits {
-    pub amount: i32,
-}
-
-impl Default for Credits {
-    fn default() -> Self {
-        Self { amount: 0 }
-    }
-}
 
 #[derive(Serialize, Deserialize, Type, Clone)]
 #[serde(default)]
@@ -1815,7 +1676,6 @@ impl Default for SettingsStore {
             auto_start_enabled: true,
             platform: "unknown".to_string(),
             disabled_shortcuts: vec![],
-            user: User::default(),
             #[cfg(target_os = "windows")]
             show_screenpipe_shortcut: "Alt+S".to_string(),
             #[cfg(not(target_os = "windows"))]
@@ -1859,7 +1719,6 @@ impl Default for SettingsStore {
             update_channel: default_update_channel(),
             auto_update_pipes: true,
             remote_log_collection_enabled: false,
-            remote_log_collection_user_id: None,
             #[cfg(target_os = "macos")]
             overlay_mode: "fullscreen".to_string(),
             #[cfg(not(target_os = "macos"))]
@@ -2038,12 +1897,10 @@ impl SettingsStore {
     /// Build a `RecordingSettings` from this settings store.
     ///
     /// Since RecordingSettings is now embedded via flatten, this is mostly a
-    /// clone with overrides for fields that need special handling (e.g. user_id
-    /// comes from the User auth object, user_name has a fallback chain).
+    /// clone with overrides for fields that need special handling
+    /// (user_name has a fallback chain).
     pub fn to_recording_settings(&self) -> screenpipe_config::RecordingSettings {
         let mut settings = self.recording.clone();
-        // Local-only build: there is no cloud account, so user_id stays empty.
-        settings.user_id = String::new();
         // userName setting wins; no cloud name/email fallback exists anymore.
         settings.user_name = settings
             .user_name
@@ -2133,110 +1990,11 @@ impl SettingsStore {
         {
             config.port = p;
         }
-        match self.local_plan_policy() {
-            LocalPlanPolicy::VerifiedFree => {
-                config.max_non_template_pipes = Some(2);
-            }
-            LocalPlanPolicy::Unknown => {
-                // Unknown must never inherit paid/unlimited behavior.
-                config.max_non_template_pipes = Some(2);
-            }
-            LocalPlanPolicy::VerifiedPaid => {}
-        }
         config
     }
 
-    fn has_verified_free_plan(&self) -> bool {
-        if self.user.cloud_subscribed == Some(true)
-            || !self
-                .user
-                .subscription_plan
-                .as_deref()
-                .is_some_and(|plan| plan.eq_ignore_ascii_case("none"))
-        {
-            return false;
-        }
 
-        self.user.entitlement.as_ref().is_some_and(|entitlement| {
-            let source_is_paid_override = entitlement
-                .get("source")
-                .and_then(serde_json::Value::as_str)
-                .is_some_and(|source| {
-                    matches!(
-                        source.to_ascii_lowercase().as_str(),
-                        "manual" | "enterprise" | "lifetime" | "dev"
-                    )
-                });
-            !source_is_paid_override
-                && !entitlement_has_future_grace(entitlement)
-                && entitlement
-                .get("plan")
-                .and_then(serde_json::Value::as_str)
-                .is_some_and(|plan| plan.eq_ignore_ascii_case("none"))
-                // Once a successful account refresh marks this install free,
-                // keep the local policy while offline. A later paid refresh
-                // clears it; merely waiting 72 hours must not unlock limits.
-                && entitlement_was_verified(entitlement)
-        })
-    }
 
-    fn has_verified_paid_plan(&self) -> bool {
-        let Some(account_plan) = self
-            .user
-            .subscription_plan
-            .as_deref()
-            .map(str::trim)
-            .filter(|plan| !plan.is_empty() && !plan.eq_ignore_ascii_case("none"))
-        else {
-            return false;
-        };
-        if !is_verified_paid_plan_id(account_plan) {
-            return false;
-        }
-        let Some(entitlement) = self.user.entitlement.as_ref() else {
-            return false;
-        };
-        if !entitlement_was_verified(entitlement) {
-            return false;
-        }
-        let Some(entitlement_plan) = entitlement
-            .get("plan")
-            .and_then(serde_json::Value::as_str)
-            .map(str::trim)
-            .filter(|plan| !plan.is_empty() && !plan.eq_ignore_ascii_case("none"))
-        else {
-            return false;
-        };
-        if !is_verified_paid_plan_id(entitlement_plan) {
-            return false;
-        }
-        if !account_plan.eq_ignore_ascii_case(entitlement_plan) {
-            return false;
-        }
-
-        let has_app_feature = self.user.app_entitled != Some(false)
-            && (self.user.app_entitled == Some(true) || entitlement_feature(entitlement, "app"));
-        if !has_app_feature {
-            return false;
-        }
-
-        entitlement_is_lifetime(entitlement)
-            || entitlement_has_future_grace(entitlement)
-            || (entitlement_checked_recently(entitlement) && entitlement_active(entitlement))
-    }
-
-    /// Local paid-only behavior is unlocked only by internally consistent,
-    /// server-verified plan evidence. Missing, conflicting, stale-paid, and
-    /// future-dated evidence remains explicitly unknown.
-    pub(crate) fn local_plan_policy(&self) -> LocalPlanPolicy {
-        if self.has_verified_paid_plan() {
-            LocalPlanPolicy::VerifiedPaid
-        } else if self.has_verified_free_plan() {
-            LocalPlanPolicy::VerifiedFree
-        } else {
-            LocalPlanPolicy::Unknown
-        }
-    }
 
     pub fn audio_engine_resolution(&self) -> AudioEngineResolution {
         let engine = self.recording.audio_transcription_engine.clone();
@@ -2356,13 +2114,12 @@ pub fn init_store(app: &AppHandle) -> Result<SettingsStore, String> {
             is_new_store = false;
             // Falling straight through to defaults here disabled the product.
             //
-            // Defaults carry no account and no plan, so `local_plan_policy()`
-            // reads `Unknown`, the consumer recording gate refuses with
-            // `account_required`, and the engine never starts — `boot_phase`
-            // stays `idle` while onboarding waits on a readiness signal that
-            // cannot arrive. And because the bad file was deliberately left in
-            // place, it repeated on every launch: 178 Windows users on 2.6.21
-            // relaunched 6.5 times each and never once reached a started engine.
+            // Defaults carry no account, so the engine never starts from a
+            // half-loaded store — `boot_phase` stays `idle` while onboarding
+            // waits on a readiness signal that cannot arrive. And because the
+            // bad file was deliberately left in place, it repeated on every
+            // launch: 178 Windows users on 2.6.21 relaunched 6.5 times each
+            // and never once reached a started engine.
             //
             // L2 already restores a snapshot when store.bin *parses* but is
             // degraded. A torn file — exactly what `durable_write`'s old shared
@@ -2517,11 +2274,10 @@ pub fn init_store(app: &AppHandle) -> Result<SettingsStore, String> {
             // only true when the block is transient. The documented Windows
             // causes — antivirus, Controlled Folder Access, OneDrive — are
             // usually *persistent*, and every later save fails the same way.
-            // That includes the save that persists the account's verified plan,
-            // and without a persisted plan `local_plan_policy()` reads Unknown,
-            // the recording gate refuses with `account_required`, and the engine
-            // never starts. So this is not "not worth paging about": it is one
-            // of the two ways recording silently turns itself off on Windows.
+            // That save is what persists the settings the engine needs, so a
+            // persistent failure here means recording never starts. This is
+            // not "not worth paging about": it is one of the two ways
+            // recording silently turns itself off on Windows.
             //
             // Reported at error. The old level was chosen so Sentry would skip
             // it, which is exactly why the Windows onboarding collapse ran 25

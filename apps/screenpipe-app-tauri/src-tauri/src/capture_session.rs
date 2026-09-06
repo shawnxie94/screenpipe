@@ -440,7 +440,7 @@ fn log_capture_transcription_config(config: &RecordingConfig, options: &AudioMan
 
     let ms = &config.meeting_streaming;
     info!(
-        "capture transcription configured: background_engine={} built_engine={} transcription_mode={:?} deepgram[{}] meeting_live_enabled={} meeting_live_provider={} meeting_live_endpoint_host={} user_id_present={}",
+        "capture transcription configured: background_engine={} built_engine={} transcription_mode={:?} deepgram[{}] meeting_live_enabled={} meeting_live_provider={} meeting_live_endpoint_host={}",
         config.audio_transcription_engine,
         options.transcription_engine,
         config.transcription_mode,
@@ -448,10 +448,6 @@ fn log_capture_transcription_config(config: &RecordingConfig, options: &AudioMan
         ms.enabled,
         ms.provider.as_str(),
         transcription_endpoint_host_for_log(&ms.endpoint),
-        config
-            .user_id
-            .as_ref()
-            .is_some_and(|s| !s.trim().is_empty()),
     );
 
     if config.audio_transcription_engine == AudioTranscriptionEngine::Deepgram

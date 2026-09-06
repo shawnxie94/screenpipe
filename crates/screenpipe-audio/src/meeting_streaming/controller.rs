@@ -1259,7 +1259,6 @@ mod tests {
         let config = MeetingStreamingConfig::from_settings(
             true,
             "deepgram-live",
-            None,
             Some("direct-key".to_string()),
             None,
             None,
@@ -1289,7 +1288,7 @@ mod tests {
         let transcription_engine = Arc::new(RwLock::new(None));
         let mut active = None;
         let config =
-            MeetingStreamingConfig::from_settings(true, "screenpipe-cloud", None, None, None, None);
+            MeetingStreamingConfig::from_settings(true, "screenpipe-cloud", None, None, None);
 
         start_streaming_session(
             &config,
@@ -1510,7 +1509,6 @@ mod tests {
         let config = MeetingStreamingConfig::from_settings(
             true,
             "selected-engine",
-            Some("cloud-token".to_string()),
             None,
             None,
             None,
@@ -1544,7 +1542,6 @@ mod tests {
         let config = MeetingStreamingConfig::from_settings(
             true,
             "selected-engine",
-            Some("cloud-token".to_string()),
             None,
             None,
             None,
@@ -1553,7 +1550,6 @@ mod tests {
         let effective = effective_streaming_config(&config, &engine_ref).await;
 
         assert_eq!(effective.provider, MeetingStreamingProvider::SelectedEngine);
-        assert_eq!(effective.auth_token.as_deref(), Some("cloud-token"));
         assert!(effective.endpoint.is_empty());
         assert_eq!(
             effective.model.as_deref(),

@@ -12,7 +12,7 @@ use crate::capture_session::CaptureSession;
 use crate::config;
 use crate::permissions::{do_permissions_check, OSPermissionStatus};
 use crate::server_core::ServerCore;
-use crate::store::{LocalPlanPolicy, OnboardingStore, SettingsStore};
+use crate::store::{OnboardingStore, SettingsStore};
 use screenpipe_engine::RecordingConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

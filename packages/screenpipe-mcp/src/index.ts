@@ -30,8 +30,6 @@ import {
   createMcpQualifiedValueReporter,
   resolveMcpClient,
 } from "./qualified-value";
-import { discoverTeamApiBase, discoverTeamToken } from "./team-config";
-import { teamFrameContent, teamFramePath } from "./team-frame";
 import { PKG_VERSION } from "./version";
 import { formatForElementPurpose } from "./element-format";
 import { buildActivitySummaryResult } from "./activity-summary-tool";
@@ -49,7 +47,6 @@ const args = process.argv.slice(2);
 let port = 3030;
 let host = "localhost";
 let baseOverride: string | undefined;
-let teamApiOverride: string | undefined;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--port" && args[i + 1]) {
     port = parseInt(args[i + 1], 10);
@@ -60,8 +57,6 @@ for (let i = 0; i < args.length; i++) {
     args[i + 1]
   ) {
     baseOverride = args[i + 1];
-  } else if (args[i] === "--team-api-url" && args[i + 1]) {
-    teamApiOverride = args[i + 1];
   }
 }
 
@@ -278,45 +273,6 @@ function ensureApiKey(): Promise<string> {
       .catch(() => "");
   }
   return apiKeyDiscovery;
-}
-
-// Enterprise team token — when present, this MCP additionally registers
-// `team-*` tools that query the org-wide telemetry control plane instead of
-// just the local recordings. Same audience: an enterprise admin running
-// screenpipe-mcp inside Claude Desktop / Cursor / Windsurf wants to ask "what
-// did MY machine do" AND "what did MY TEAM do" without juggling two MCPs.
-//
-// TWO independent things get resolved here, both in ./team-config:
-//
-//   TOKEN (discoverTeamToken) — `sk_ent_…`:
-//     1. SCREENPIPE_ENTERPRISE_TOKEN env var (Claude config, terminal)
-//     2. team_api_token in ~/.screenpipe/enterprise.json (written by the
-//        desktop app's Settings → Privacy → Admin Team API Token)
-//
-//   BASE URL (discoverTeamApiBase) — where those tools send their requests:
-//     1. --team-api-url flag
-//     2. SCREENPIPE_TEAM_API_URL env var
-//     3. gateway_url in ~/.screenpipe/enterprise.json
-//     4. the hosted default, https://screenpi.pe/api/enterprise/v1
-//
-// The base is NOT always the hosted API: orgs on the write-only archive tier
-// run their own query gateway inside their network, and the hosted API has no
-// read path to their data — pointing there returns 401. The bearer token is
-// the same `sk_ent_` either way; only the base moves.
-//
-// Empty / missing token → team tools are not registered; non-admin users of
-// screenpipe-mcp see exactly what they see today.
-const TEAM_TOKEN = discoverTeamToken();
-const TEAM_API = discoverTeamApiBase(teamApiOverride);
-
-async function fetchTeam(p: string, init: RequestInit = {}): Promise<Response> {
-  return fetch(`${TEAM_API}${p}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${TEAM_TOKEN}`,
-      ...(init.headers || {}),
-    },
-  });
 }
 
 // Initialize server
@@ -953,130 +909,9 @@ const TOOLS: Tool[] = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Enterprise team tools — registered only when a team API token is present.
-// Same endpoint surface as the desktop `screenpipe-team` pi-agent skill:
-// proxy GETs to `${TEAM_API}/*` with Bearer auth, where TEAM_API is the hosted
-// control plane OR the org's own query gateway (see discoverTeamApiBase above).
-//
-// Naming convention: every team tool is `team-*` so it's obvious at a glance
-// which scope (just-me vs the-whole-org) any given call is hitting.
-// ---------------------------------------------------------------------------
-const TEAM_TOOLS: Tool[] = [
-  {
-    name: "team-search",
-    description:
-      "Substring-search across the ENTIRE ORG's telemetry (every enrolled " +
-      "device). Use when the question is about the team or another teammate " +
-      "(\"what did engineering work on yesterday\", \"did alice touch the auth code\"). " +
-      "For your own machine only, use search-content. " +
-      "Auth: enterprise admin token (sk_ent_…). " +
-      "Defaults: since=now-24h, limit=50. Returns matched records with device + timestamp.",
-    annotations: { title: "Team Search", readOnlyHint: true, openWorldHint: true, idempotentHint: true },
-    inputSchema: {
-      type: "object",
-      properties: {
-        q: { type: "string", description: "Substring to match (case-insensitive). Empty = all records in window." },
-        device_id: { type: "string", description: "Restrict to one device. Get the ID from team-devices." },
-        app_name: { type: "string", description: "Restrict to records whose app_name equals this (case-insensitive)." },
-        since: { type: "string", description: "ISO 8601 lower bound. Default = now - 24h." },
-        until: { type: "string", description: "ISO 8601 upper bound. Default = now." },
-        since_hours_ago: { type: "integer", description: "Convenience: equivalent to since=now-N*h." },
-        limit: { type: "integer", description: "Max records (default 50, max 200).", default: 50 },
-      },
-    },
-  },
-  {
-    name: "team-devices",
-    description:
-      "List all devices enrolled under this org's license — hostname, OS, " +
-      "app version, last-seen timestamp. Use to discover device IDs to pass " +
-      "to team-search or team-records, or to spot stale machines.",
-    annotations: { title: "Team Devices", readOnlyHint: true, openWorldHint: true, idempotentHint: true },
-    inputSchema: { type: "object", properties: {} },
-  },
-  {
-    name: "team-records",
-    description:
-      "Chronological dump of the org's data for a time window — both raw " +
-      "telemetry (frame/parsed/audio/feedback) and the structured outputs of the enterprise-" +
-      "worker pipes (sop/skill/trajectory/memory/workflow). " +
-      "Raw kinds return oldest → newest (vs team-search which is recency-ranked). " +
-      "Synthesized kinds return one record per device's latest run by default " +
-      "(set latest_only=false to walk run history). " +
-      "Use raw for ETL / \"walk me through X from Y to Z\". " +
-      "Use synthesized for \"what SOPs / skills / trajectories / memories did " +
-      "we extract from my team's work\" — each item carries evidence-cited " +
-      "event_ids/frame_ids that team-search can resolve back to raw records. " +
-      "Auth: enterprise admin token.",
-    annotations: { title: "Team Records", readOnlyHint: true, openWorldHint: true, idempotentHint: true },
-    inputSchema: {
-      type: "object",
-      properties: {
-        device_id: { type: "string", description: "Restrict to one device (optional). Raw kinds only." },
-        kind: {
-          type: "string",
-          enum: ["frame", "parsed", "audio", "feedback", "all", "sop", "skill", "trajectory", "memory", "workflow"],
-          description:
-            "What to return. Raw: frame|parsed|audio|feedback|all (telemetry and human feedback). " +
-            "Synthesized: sop|skill|trajectory|memory|workflow (pipe outputs). " +
-            "Default: all.",
-          default: "all",
-        },
-        since: { type: "string", description: "ISO 8601 lower bound. Raw kinds only." },
-        until: { type: "string", description: "ISO 8601 upper bound. Raw kinds only." },
-        since_hours_ago: { type: "integer", description: "Convenience: equivalent to since=now-N*h. Raw kinds only." },
-        limit: { type: "integer", description: "Max records (default 50, max 200). Raw kinds only.", default: 50 },
-        latest_only: {
-          type: "boolean",
-          description:
-            "Synthesized kinds only: if true (default), collapse to the newest " +
-            "run per device. Set false to walk run history.",
-          default: true,
-        },
-      },
-    },
-  },
-  {
-    name: "team-frame",
-    description:
-      "Read one PII-redacted team screenshot. Use device_id and frame_id from " +
-      "team-search or team-records. Returns actual JPEG image content when the " +
-      "device has uploaded it, or an explicit unavailable result. Never claim " +
-      "to have seen a frame unless this tool returns image content. " +
-      "Auth: enterprise admin token with read:records.",
-    annotations: { title: "Team Frame", readOnlyHint: true, openWorldHint: true, idempotentHint: true },
-    inputSchema: {
-      type: "object",
-      properties: {
-        device_id: {
-          type: "string",
-          minLength: 1,
-          maxLength: 64,
-          pattern: "^[A-Za-z0-9_-]+$",
-          description: "Device ID from team-search or team-devices.",
-        },
-        frame_id: {
-          type: "integer",
-          minimum: 1,
-          maximum: 999999999999999,
-          description: "Frame ID from team-search or team-records.",
-        },
-      },
-      required: ["device_id", "frame_id"],
-      additionalProperties: false,
-    },
-  },
-];
-
-// Pipe-output kinds map to /workflows/generated, raw kinds map to /records.
-const SYNTHESIZED_KINDS = new Set(["sop", "skill", "trajectory", "memory", "workflow"]);
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  // Team tools only surface when an enterprise token was discovered at boot.
-  // No token = consumer / non-admin user; their MCP looks identical to today.
-  const tools = TEAM_TOKEN ? [...TOOLS, ...TEAM_TOOLS] : TOOLS;
-  return { tools };
+  return { tools: TOOLS };
 });
 
 // ---------------------------------------------------------------------------
@@ -2361,72 +2196,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return {
           content: [{ type: "text", text: `Audio recording action '${action}' executed.` }],
         };
-      }
-
-      // ---------------------------------------------------------------------
-      // Enterprise team tools — only callable when TEAM_TOKEN is set at boot.
-      // If we got this far without one, the tool wasn't in the listed set the
-      // host saw, but a misbehaving client could still try to call it. Fail
-      // loudly so the host surfaces the misconfiguration.
-      // ---------------------------------------------------------------------
-      case "team-search":
-      case "team-devices":
-      case "team-records":
-      case "team-frame": {
-        if (!TEAM_TOKEN) {
-          return {
-            content: [
-              {
-                type: "text",
-                text:
-                  `team-* tools require an enterprise admin token (sk_ent_…). ` +
-                  `Set SCREENPIPE_ENTERPRISE_TOKEN in your MCP env, or paste ` +
-                  `the token into Settings → Privacy → Admin Team API Token in ` +
-                  `the screenpipe desktop app.\n` +
-                  `Where to get it: hosted orgs mint one at ` +
-                  `https://screenpi.pe/enterprise → API Tokens. Orgs running ` +
-                  `their own query gateway use the token their gateway accepts, ` +
-                  `and must ALSO point this MCP at that gateway — ` +
-                  `SCREENPIPE_TEAM_API_URL=https://<gateway>/api/enterprise/v1 ` +
-                  `(or --team-api-url). Requests currently go to ${TEAM_API}.`,
-              },
-            ],
-          };
-        }
-        if (name === "team-frame") {
-          const deviceId = args.device_id;
-          const frameId = args.frame_id;
-          const path = teamFramePath(deviceId, frameId);
-          const response = await fetchTeam(path);
-          return teamFrameContent(response, deviceId as string, frameId as number);
-        }
-        // Map MCP tool name → /api/enterprise/v1 path. team-records also
-        // routes synthesized pipe outputs (kind=sop|skill|...) to the
-        // workflows endpoint so callers see one tool surface for "give me
-        // the org's data."
-        const kindArg = typeof args.kind === "string" ? args.kind : "";
-        const subpath =
-          name === "team-search" ? "/search"
-          : name === "team-devices" ? "/devices"
-          : name === "team-records" && SYNTHESIZED_KINDS.has(kindArg) ? "/workflows/generated"
-          : "/records";
-        // Forward every primitive arg as a query param. The server validates;
-        // unknown params are ignored, so we don't need to gatekeep here.
-        const params = new URLSearchParams();
-        for (const [k, v] of Object.entries(args)) {
-          if (v !== null && v !== undefined && v !== "") {
-            params.append(k, String(v));
-          }
-        }
-        const query = params.toString();
-        const response = await fetchTeam(`${subpath}${query ? `?${query}` : ""}`);
-        const body = await response.text();
-        if (!response.ok) {
-          throw new Error(
-            `${name} failed: HTTP ${response.status} ${response.statusText} — ${body.slice(0, 300)}`
-          );
-        }
-        return { content: [{ type: "text", text: body }] };
       }
 
       default:

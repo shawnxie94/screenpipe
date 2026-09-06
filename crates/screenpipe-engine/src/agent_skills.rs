@@ -30,7 +30,6 @@ const MAX_INSTRUCTIONS_BYTES: usize = 64 * 1024;
 const RESERVED_SKILLS: &[&str] = &[
     "screenpipe-api",
     "screenpipe-cli",
-    "screenpipe-team",
     "render-html-report",
 ];
 

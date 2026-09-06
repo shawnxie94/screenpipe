@@ -46,7 +46,6 @@ impl MeetingStreamingProvider {
 pub struct MeetingStreamingConfig {
     pub enabled: bool,
     pub provider: MeetingStreamingProvider,
-    pub auth_token: Option<String>,
     pub api_key: Option<String>,
     pub endpoint: String,
     pub model: Option<String>,
@@ -90,9 +89,6 @@ impl Default for MeetingStreamingConfig {
         Self {
             enabled: true,
             provider,
-            auth_token: env::var("SCREENPIPE_MEETING_CLOUD_TOKEN")
-                .ok()
-                .filter(|s| !s.trim().is_empty()),
             api_key,
             endpoint,
             model: Some(
@@ -170,20 +166,17 @@ impl MeetingStreamingConfig {
     pub fn from_settings(
         enabled: bool,
         provider: &str,
-        cloud_token: Option<String>,
         provider_api_key_override: Option<String>,
         language: Option<String>,
         local_speaker_name: Option<String>,
     ) -> Self {
         let provider = MeetingStreamingProvider::from_str(provider)
             .unwrap_or(MeetingStreamingProvider::SelectedEngine);
-        let auth_token = cloud_token.and_then(|token| non_empty_trimmed(&token));
         let provider_api_key_override =
             provider_api_key_override.and_then(|key| non_empty_trimmed(&key));
         let mut config = Self {
             enabled,
             provider,
-            auth_token,
             language: language.filter(|s| !s.trim().is_empty()),
             local_speaker_name: local_speaker_name.and_then(|name| non_empty_trimmed(&name)),
             ..Self::default()
@@ -288,32 +281,10 @@ mod tests {
 
     #[test]
     fn selected_engine_is_the_non_cloud_default_provider() {
-        let config = MeetingStreamingConfig::from_settings(true, "", None, None, None, None);
+        let config = MeetingStreamingConfig::from_settings(true, "", None, None, None);
 
         assert_eq!(config.provider, MeetingStreamingProvider::SelectedEngine);
         assert!(config.live_transcription_ready());
-        assert_eq!(
-            config.model.as_deref(),
-            Some("selected transcription engine")
-        );
-    }
-
-    #[test]
-    fn selected_engine_remains_selected_when_cloud_identity_is_configured() {
-        let config = MeetingStreamingConfig::from_settings(
-            true,
-            "selected-engine",
-            Some("cloud-token".to_string()),
-            None,
-            None,
-            None,
-        );
-
-        assert_eq!(config.provider, MeetingStreamingProvider::SelectedEngine);
-        assert!(config.live_transcription_ready());
-        assert_eq!(config.auth_token.as_deref(), Some("cloud-token"));
-        assert!(config.endpoint.is_empty());
-        assert!(config.api_key.is_none());
         assert_eq!(
             config.model.as_deref(),
             Some("selected transcription engine")
@@ -340,7 +311,6 @@ mod tests {
             let config = MeetingStreamingConfig::from_settings(
                 true,
                 persisted,
-                Some("cloud-token".to_string()),
                 direct_key.map(str::to_string),
                 None,
                 None,
@@ -358,7 +328,6 @@ mod tests {
         let config = MeetingStreamingConfig::from_settings(
             false,
             "selected-engine",
-            Some("cloud-token".to_string()),
             None,
             None,
             None,
@@ -389,7 +358,6 @@ mod tests {
         let config = MeetingStreamingConfig::from_settings(
             true,
             "deepgram-live",
-            None,
             Some("settings-deepgram-key".to_string()),
             None,
             None,

@@ -11,10 +11,9 @@ import { PKG_VERSION } from "./version";
  * Version-identity guards (SCR-352).
  *
  * The incident: npm's `screenpipe-mcp@0.18.15` was built from a tree that
- * predated `src/team-config.ts`, so its `team-*` tools registered and then
- * 401'd against any customer query gateway. Nobody bumped `package.json`, so
- * the registry's "0.18.15" and the repo's "0.18.15" were two different trees
- * wearing one version string — and `release-mcp.yml`'s publish step SKIPS
+ * had drifted from the repo. Nobody bumped `package.json`, so the registry's
+ * "0.18.15" and the repo's "0.18.15" were two different trees wearing one
+ * version string — and `release-mcp.yml`'s publish step SKIPS
  * (reporting success) when the version already exists on npm, so re-running
  * the release was a silent no-op. The version string is the only handle
  * support has on "which build is the customer running", so these tests make
@@ -44,11 +43,9 @@ function compareSemver(a: string, b: string): number {
 }
 
 /**
- * The last version npm published from a tree WITHOUT customer-gateway support
- * (no team-config.ts: verified against the published tarball, which contains
- * no dist/team-config.js and zero occurrences of SCREENPIPE_TEAM_API_URL).
- * Any tree that has team-config MUST ship as a strictly higher version, or
- * release-mcp.yml silently publishes nothing.
+ * The last version npm published from the drifted pre-gate tree (verified
+ * against the published tarball). The current tree MUST ship as a strictly
+ * higher version, or release-mcp.yml silently publishes nothing.
  */
 const LAST_PRE_GATEWAY_NPM_VERSION = "0.18.15";
 

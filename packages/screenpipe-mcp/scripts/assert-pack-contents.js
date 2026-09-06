@@ -55,26 +55,6 @@ const REQUIRED_PATHS = [
 const REQUIRED_MARKERS = [
   {
     file: "dist/index.js",
-    marker: "SCREENPIPE_TEAM_API_URL",
-    why: "the env-var override is how gateway orgs repoint the team-* tools",
-  },
-  {
-    file: "dist/index.js",
-    marker: "gateway_url",
-    why: "the ~/.screenpipe/enterprise.json fallback in the precedence ladder",
-  },
-  {
-    file: "dist/index.js",
-    marker: "--team-api-url",
-    why: "the CLI flag override must survive compilation",
-  },
-  {
-    file: "dist/index.js",
-    marker: "Do not claim to have seen this image",
-    why: "missing frames must stay explicit instead of becoming invented visual evidence",
-  },
-  {
-    file: "dist/index.js",
     marker: "Authoritative active time",
     why: "activity summaries must preserve server-owned time instead of inferring it from capture counts",
   },
@@ -87,11 +67,6 @@ const REQUIRED_MARKERS = [
 
 /** Built files that must NOT match a pattern. */
 const FORBIDDEN_MARKERS = [
-  {
-    file: "dist/index.js",
-    pattern: /\bTEAM_API\s*=\s*"https/,
-    why: "the team API base must be resolved at runtime (discoverTeamApiBase), never a literal — a hardcoded base is exactly what 401'd for gateway orgs",
-  },
   {
     file: "dist/index.js",
     pattern: /\bsqlite3(?:\.exe)?\b/i,

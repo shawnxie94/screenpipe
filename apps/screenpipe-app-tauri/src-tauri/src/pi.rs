@@ -1854,18 +1854,6 @@ const SHARED_PI_EXTENSION_FILES: &[&str] = &[
     "connection-gate.ts",
 ];
 
-/// Stage the Enterprise-only team skill outside Pi's auto-discovery tree.
-/// Consumer builds return `None` without touching this path; the Enterprise
-/// app passes the returned file explicitly with `--skill` for this process.
-fn ensure_enterprise_team_skill(project_dir: &str) -> Result<Option<std::path::PathBuf>, String> {
-    use screenpipe_core::agents::pi::PiExecutor;
-    let skill_root = std::path::Path::new(project_dir)
-        .join(".screenpipe")
-        .join("enterprise-skills");
-    PiExecutor::ensure_screenpipe_team_skill(&skill_root)
-        .map_err(|e| format!("Failed to install Enterprise team skill: {}", e))
-}
-
 /// Install the MCP bridge extension. Registers proxy tools that route
 /// `sp_mcp_call` / `sp_mcp_list_tools` requests through the local
 /// `/mcp-servers/*` API. Always installed — does nothing when zero
@@ -2798,7 +2786,6 @@ pub async fn pi_start_inner(
 
     // Ensure screenpipe skills exist in project
     ensure_screenpipe_skill(&project_dir)?;
-    let enterprise_team_skill = ensure_enterprise_team_skill(&project_dir)?;
 
     // The pi-acp ACP agent wraps the SAME @earendil-works/pi-coding-agent we run
     // natively, in the same project dir and PI_CODING_AGENT_DIR — but it drops
@@ -3051,13 +3038,6 @@ pub async fn pi_start_inner(
             command.arg("--approve");
         }
         command.args(["--provider", &pi_provider, "--model", &pi_model]);
-        if let Some(skill_path) = enterprise_team_skill.as_ref() {
-            command.arg("--skill").arg(skill_path);
-            info!(
-                "Injected Enterprise team skill for native Pi session from {:?}",
-                skill_path
-            );
-        }
         if extension_safe_mode {
             warn!(
                 "Starting Pi in extension safe mode for '{}'; third-party extension packages are disabled",
@@ -3078,13 +3058,6 @@ pub async fn pi_start_inner(
             project_dir
         );
         apply_pi_extension_safe_mode(&mut cmd, &project_dir);
-    }
-    if let Some(skill_path) = enterprise_team_skill.as_ref() {
-        cmd.arg("--skill").arg(skill_path);
-        info!(
-            "Injected Enterprise team skill for native Pi session from {:?}",
-            skill_path
-        );
     }
 
     // Isolate the hidden runtime from the desktop process group. The runtime

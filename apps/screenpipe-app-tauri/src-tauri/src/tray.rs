@@ -47,9 +47,6 @@ struct TrayMenuData {
     show_shortcut: String,
     search_shortcut: String,
     chat_shortcut: String,
-    cloud_subscribed: bool,
-    /// Internal plan id from /api/user (standard|pro|team|enterprise|lifetime|none).
-    subscription_plan: Option<String>,
     has_permission_issue: bool,
     app_ui_hidden: bool,
     disable_timeline: bool,
@@ -116,8 +113,6 @@ fn prefetch_tray_menu_data(app: &AppHandle) -> TrayMenuData {
         chat_shortcut.clear();
     }
 
-    let cloud_subscribed = settings.user.cloud_subscribed == Some(true);
-    let subscription_plan = settings.user.subscription_plan.clone();
     let disable_timeline = settings.recording.disable_timeline;
     let all_capture_disabled =
         settings.recording.disable_audio && settings.recording.disable_vision;
@@ -144,8 +139,6 @@ fn prefetch_tray_menu_data(app: &AppHandle) -> TrayMenuData {
         show_shortcut,
         search_shortcut,
         chat_shortcut,
-        cloud_subscribed,
-        subscription_plan,
         has_permission_issue,
         app_ui_hidden,
         disable_timeline,
@@ -745,8 +738,6 @@ fn snapshot_menu_state(data: &TrayMenuData, effective_status: RecordingStatus) -
             .iter()
             .map(|d| (d.name.clone(), d.active))
             .collect(),
-        cloud_subscribed: data.cloud_subscribed,
-        subscription_plan: data.subscription_plan.clone(),
         hd: hd_menu_state(&hd),
         all_capture_disabled: data.all_capture_disabled,
     }
@@ -887,10 +878,6 @@ struct MenuState {
     has_permission_issue: bool,
     /// Device names + active status for change detection
     devices: Vec<(String, bool)>,
-    /// Whether user has a cloud (Business+) subscription (triggers menu rebuild on login)
-    cloud_subscribed: bool,
-    /// Plan id (Free/Basic/Business/…) so plan-label changes also rebuild the menu
-    subscription_plan: Option<String>,
     /// Stable HD session fields determine whether the menu structure changed.
     /// The per-tick countdown is updated on the existing item instead of being
     /// part of this equality key, which avoids rebuilding the native menu.

@@ -190,7 +190,7 @@ mod tests {
     #[test]
     fn unknown_provider_without_url_is_refused_rather_than_guessed() {
         // guessing would mean sending the user's key somewhere they did not choose
-        assert!(base_url_for(&preset(Some("screenpipe-cloud"), None)).is_none());
+        assert!(base_url_for(&preset(Some("some-unknown-provider"), None)).is_none());
         assert!(base_url_for(&preset(None, None)).is_none());
     }
 

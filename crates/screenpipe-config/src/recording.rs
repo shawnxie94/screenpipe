@@ -6,16 +6,6 @@
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-/// The auth-token migration scrubs a JWT-shaped legacy `userId` by persisting
-/// JSON `null`. Keep the historical empty-string sentinel when that store is
-/// read back without accepting nulls for unrelated recording settings.
-fn deserialize_null_user_id_as_default<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Ok(Option::<String>::deserialize(deserializer)?.unwrap_or_default())
-}
-
 /// Older desktop builds persisted a single selected monitor as a string, while
 /// current builds persist an array. Accept both shapes so an upgrade preserves
 /// the user's selection instead of rejecting the entire settings store.
@@ -719,15 +709,6 @@ pub struct RecordingSettings {
     #[serde(rename = "piiRedactionPseudonyms", default)]
     pub pii_redaction_pseudonyms: bool,
 
-    // ── Cloud / Auth ───────────────────────────────────────────────────
-    /// Screenpipe cloud user ID. Empty string means not logged in.
-    /// Kept as String (not Option) to match existing store.bin schema.
-    #[serde(
-        rename = "userId",
-        deserialize_with = "deserialize_null_user_id_as_default"
-    )]
-    pub user_id: String,
-
     /// Display name for speaker identification.
     /// Fallback chain: this field → cloud auth name → cloud auth email.
     /// Previously stored in SettingsStore.extra["userName"].
@@ -825,16 +806,6 @@ impl RecordingSettings {
         }
     }
 
-    /// Returns the user ID if actually set (non-empty).
-    pub fn effective_user_id(&self) -> Option<&str> {
-        let id = self.user_id.as_str();
-        if id.is_empty() {
-            None
-        } else {
-            Some(id)
-        }
-    }
-
     /// Returns the display name/email used to label the local microphone speaker.
     pub fn effective_user_name(&self) -> Option<&str> {
         self.user_name
@@ -922,7 +893,6 @@ impl Default for RecordingSettings {
             pii_redaction_labels: default_pii_redaction_labels(),
             pii_redaction_columns: default_pii_redaction_columns(),
             pii_redaction_pseudonyms: false,
-            user_id: String::new(),
             user_name: None,
             openai_compatible_endpoint: None,
             openai_compatible_api_key: None,
@@ -1276,7 +1246,6 @@ mod tests {
         );
         assert_eq!(settings.audio_devices, vec!["MacBook Pro Microphone"]);
         assert_eq!(settings.deepgram_api_key, "");
-        assert_eq!(settings.user_id, "abc-123");
         assert_eq!(
             settings.ignored_windows,
             vec!["Control Center", "Notification Center"]
@@ -1291,33 +1260,6 @@ mod tests {
         assert!(settings.vocabulary.is_empty()); // default
         assert_eq!(settings.audio_capture_mode, "always"); // backward-compatible default
         assert!(!settings.enhanced_incognito_detection); // old stores stay permission-free
-    }
-
-    #[test]
-    fn scrubbed_legacy_user_id_null_uses_empty_string_sentinel() {
-        let settings: RecordingSettings = serde_json::from_str(
-            r#"{
-            "disableAudio": false,
-            "audioTranscriptionEngine": "whisper-large-v3-turbo",
-            "audioDevices": ["default"],
-            "monitorIds": ["default"],
-            "videoQuality": "balanced",
-            "userId": null
-        }"#,
-        )
-        .expect("the auth-token scrubbed store must remain readable");
-
-        assert_eq!(settings.user_id, "");
-        assert_eq!(
-            settings.audio_transcription_engine,
-            "whisper-large-v3-turbo"
-        );
-
-        let malformed = serde_json::from_str::<RecordingSettings>(r#"{"userId": 42}"#);
-        assert!(
-            malformed.is_err(),
-            "non-null malformed userId must still fail"
-        );
     }
 
     #[test]

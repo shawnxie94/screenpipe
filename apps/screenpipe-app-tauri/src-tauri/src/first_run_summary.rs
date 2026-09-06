@@ -369,13 +369,7 @@ async fn tick(app: &AppHandle, state: &FirstRunSummaryState) -> Result<(), Strin
     info!(elapsed_seconds, "first-run summary: evidence ready; starting native generation");
     update_state(app, "writing", None, None)?;
     let facts = build_facts(&snapshot, elapsed_seconds);
-    let settings = SettingsStore::get(app)?.unwrap_or_default();
-    let has_cloud_auth = settings
-        .user
-        .token
-        .as_deref()
-        .is_some_and(|token| !token.is_empty());
-    let result = if crate::store::trial_activation_dev_force_enabled() && !has_cloud_auth {
+    let result = if crate::store::trial_activation_dev_force_enabled() {
         info!("first-run summary: using account-free development fixture");
         validate_candidate(&dev_summary(&snapshot))
     } else {

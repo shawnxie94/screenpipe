@@ -377,8 +377,8 @@ describe("stdio startup handshake", { timeout: INIT_DEADLINE_MS + 2_000 }, () =>
 
   it("reports this tree's package version over the wire (SCR-352)", async () => {
     // The version in the initialize response is how support tells builds apart.
-    // npm served "0.18.15" from a tree without team-config.ts while the repo
-    // also said "0.18.15", so a customer's reported version proved nothing.
+    // npm served "0.18.15" from a tree that had drifted from the repo while
+    // both said "0.18.15", so a customer's reported version proved nothing.
     // This asserts the BUILT artifact reports package.json's version, read here
     // independently of src/version.ts so the test is a real oracle.
     const expected = JSON.parse(
@@ -409,21 +409,6 @@ describe("stdio startup handshake", { timeout: INIT_DEADLINE_MS + 2_000 }, () =>
     expect(properties?.parsed_context_limit?.maximum).toBe(20);
   });
 
-  it("exposes team-frame only to enterprise-token MCP sessions", async () => {
-    const [personalTools, teamTools] = await Promise.all([
-      listToolsHandshake(),
-      listToolsHandshake({
-        SCREENPIPE_ENTERPRISE_TOKEN: "sk_ent_smoke_test",
-        SCREENPIPE_TEAM_API_URL: "http://127.0.0.1:59998/api/enterprise/v1",
-      }),
-    ]);
-
-    expect(personalTools.some((tool) => tool.name === "team-frame")).toBe(false);
-    const frame = teamTools.find((tool) => tool.name === "team-frame");
-    expect(frame?.annotations?.readOnlyHint).toBe(true);
-    expect(frame?.inputSchema?.required).toEqual(["device_id", "frame_id"]);
-    expect(frame?.inputSchema?.properties?.frame_id?.minimum).toBe(1);
-  }, INIT_DEADLINE_MS * 2);
 
   it("advertises local-calendar literals for every normalized time field", async () => {
     const tools = await listToolsHandshake();
