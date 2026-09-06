@@ -41,7 +41,7 @@ const PASSIVE_RECOVERY_CONFIRM_TICKS: u32 = 90;
 const USER_RESTART_TEARDOWN_TIMEOUT: Duration = Duration::from_secs(15);
 
 pub(crate) const MANUAL_SCREEN_CAPTURE_RECOVERY_DETAIL: &str =
-    "quit and reopen screenpipe to restore screen capture";
+    "restart screenpipe to restore screen capture";
 const MANUAL_RECORDING_RECOVERY_DETAIL: &str = "quit and reopen screenpipe to recover recording";
 pub(crate) const MANUAL_PERMISSION_RECOVERY_DETAIL: &str =
     "quit and reopen screenpipe to finish screen recording access";
@@ -914,7 +914,7 @@ mod tests {
                 OverlayHealthState::Failure,
                 Some(MANUAL_SCREEN_CAPTURE_RECOVERY_DETAIL),
             ),
-            "failure|quit and reopen screenpipe to restore screen capture|screen|manual-reopen",
+            "failure|restart screenpipe to restore screen capture|screen|manual-reopen",
         );
         assert_eq!(
             build_health_payload(
