@@ -6,13 +6,13 @@
 
 status: ready
 stage: prd_to_trd
-iteration: 4
+iteration: 5
 waiting_on: null
 
 source_artifacts:
   - name: prd-personal-brain-local-first
     uri: docs/prd/personal-brain-local-first.md
-    sha256: e4c7082c0329936f4fe8083b7462e6130fb52129b04f09c768a69967ae1b5c41
+    sha256: 72a3aa33ee34a9b3de30f39f8097a7319e57836105040f968a2bd7983a87263e
   - name: company-brain-poc-trd (上游输入，仅取本地子集)
     uri: /Users/shawn/Documents/inspiration/startup/research/company-brain-poc-trd.md
     sha256: f6a946ba9a8283aabf452c621afd8758e2f7a5ad6789ad44594c136ce0e0e4fc
@@ -94,8 +94,8 @@ findings:
     severity: info
     status: resolved
     title: 瘦身阶段完成 §13 部分裁决的提前落地
-    evidence: "iteration 4：自动更新器整套移除（updates.rs/staged_update.rs/插件/菜单/dock/e2e 道/TS 绑定）、远程公告系统移除（含 /notify surface 分支）、MCP synced 工具移除、include_cloud 死参数移除、ocr_text_embeddings 死表 drop、ExplicitApiClient 遥测遗留移除；§13.2 钳制确认已短路（PRD §13.2/13.6 状态已同步）"
-    next_action: "§13 剩余项按 Phase 归属落地；瘦身收尾不再有清单外动作"
+    evidence: "iteration 4-5：自动更新器整套移除（updates.rs/staged_update.rs/插件/菜单/dock/e2e 道/TS 绑定）、远程公告系统移除（含 /notify surface 分支）、MCP synced 工具移除、include_cloud 死参数移除、ocr_text_embeddings 死表 drop、ExplicitApiClient 遥测遗留移除；§13.2 钳制确认已短路；§13.3/13.4/13.6 裁剪项全部物理删除落地（严于裁决原案），云代理直接改走 local_chat 而非 404 壳；PRD §13 已加执行状态总览并按删除现实改写 R3/R4/R6/§13.3/§13.4/§13.6 措辞"
+    next_action: "§13 剩余项按 Phase 归属落地（13.1 → Phase 0，13.5 → Phase 3）；瘦身收尾，无清单外动作"
 
 deviations_from_source_trd:
   - "云端 Team Brain → 本地单机：上传队列/ACL/团队审核/多用户全部裁剪（用户确认）"

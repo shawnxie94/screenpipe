@@ -96,7 +96,7 @@ Company Brain POC TRD（见 sources）定义了一条「工作轨迹 → Work Un
 - 合并策略从纯时间戳排序升级为 RRF / 加权合并；每路召回带诊断标记（沿用 activity-summary 的 `searched_endpoints` 模式）。
 - 任一来源禁用、超时或失败时跳过该路，整体召回不报错。
 - 时间范围 / app / 内容类型过滤下推到各路。
-- 多源清单不含云端搜索腿：`include_cloud` 在 local-only 构建下禁用（见 §13.4）。
+- 多源清单不含云端搜索腿：`include_cloud` 参数已随瘦身删除（见 §13.4）。
 
 验收标准：
 - 禁用外部记忆 provider 后 `/search` 行为正常，仅诊断标记显示该路未命中。
@@ -108,7 +108,7 @@ Company Brain POC TRD（见 sources）定义了一条「工作轨迹 → Work Un
 - 默认实现 `LocalSqliteProvider` 包装现有 `memories` 表，现有 REST `/memories*`、MCP `update-memory`、外部文件同步（出口）行为不变。
 - HTTP provider 对接外部记忆引擎：Mem0（user-scoped）为首选验证对象，Graphiti 预留接口；连接配置（URL / key / enabled）放设置。
 - 多 provider 结果在召回层合并去重，并标注来源。
-- 跨设备同步链路在 local-only 构建下 gate 掉（表内 sync 字段保留不迁移，见 §13.3）；`LocalSqliteProvider` 不承担同步职责，跨设备一致性由外接 provider 与文件生态承担。
+- 跨设备同步链路已随瘦身整体删除（后端 sync 模块与 MCP synced 工具不复存在；表内 sync 字段保留不迁移，见 §13.3）；`LocalSqliteProvider` 不承担同步职责，跨设备一致性由外接 provider 与文件生态承担。
 
 验收标准：
 - Provider 化作为纯重构独立提交，现有行为与测试零回归。
@@ -129,7 +129,7 @@ Company Brain POC TRD（见 sources）定义了一条「工作轨迹 → Work Un
 - 删除传播全链：frames → evidence → work_units → knowledge_versions → 索引（FTS / 向量），不留孤儿副本。
 - 传播区分两类触发：用户主动删除与保留策略自动清理；已发布知识的 frame 文本证据豁免于保留清理（见 §13.1）。
 - 原始采集数据不出本机；发往外部的仅两类：模型调用内容（按用户 AI Preset 配置）、记忆条目（按用户显式配置的 provider）。
-- 团队/企业组件（gateway、MCP team-* 工具、team-memory 格式）在 local-only 构建下隐藏或标记废弃。
+- 团队/企业组件（gateway、MCP team-* 工具、team-memory 格式）已随瘦身整体删除。
 - 可审计：能列出哪些数据类别会发往哪些外部端点。
 
 验收标准：
@@ -227,6 +227,8 @@ v1 仅三种 P0 类型（见 R2）。本节约束其后续演进方向与节奏�
 
 以下裁决于 2026-09-05 与用户确认，处理现有功能与本 PRD 迭代的冲突点。
 
+**执行状态总览（2026-09-07，瘦身收尾后）**：§13.2 / §13.3 / §13.4 / §13.6 的裁剪项已全部落地（多数以物理删除实现，严于裁决原案）；§13.1 待 Phase 0 evidence schema 定稿时落实；§13.5 按计划 Phase 3 实现。
+
 ### 13.1 保留策略与知识证据链（影响 Phase 0 schema，最重要）
 
 - 事实：retention `All` 模式批量删除 frames 与转写（`crates/screenpipe-engine/src/retention.rs`），级联触发器连带清理 activity evidence；而知识的 evidence_ids 指向 frame，自动清理会让来源回链腐烂。
@@ -242,11 +244,13 @@ v1 仅三种 P0 类型（见 R2）。本节约束其后续演进方向与节奏�
 ### 13.3 memories 跨设备同步
 
 - 事实：同步链路依赖云端中继（S3 上传/下载）与账号 JWT（`sync/client.rs`），账号流已在 zh-local 移除。
-- 裁决（用户确认不依赖跨设备，2026-09-05）：同步代码路径 gate 掉；`sync_uuid` 等表字段保留不迁移；`LocalSqliteProvider` 不承担同步职责。跨设备一致性由外接记忆 provider 与外部文件生态承担。Phase 0 裁剪清单内。
+- 裁决（用户确认不依赖跨设备，2026-09-05）：同步代码路径移除；`sync_uuid` 等表字段保留不迁移；`LocalSqliteProvider` 不承担同步职责。跨设备一致性由外接记忆 provider 与外部文件生态承担。
+- 状态（2026-09-07）：已落地——`screenpipe-core/src/sync/` 模块与 MCP `synced-devices` / `search-synced-content` 工具已整体删除。
 
 ### 13.4 云搜索腿与云代理
 
-- 裁决：`include_cloud` 云腿在 local-only 下禁用，R3 多源清单不含 cloud；`/v1/chat/completions` 云代理路由 404（其存在理由——pi 子进程隔离云端 JWT——在 local-only 下不成立）。Phase 0 进裁剪清单，Phase 3 落地。
+- 裁决：`include_cloud` 云腿移除，R3 多源清单不含 cloud；`/v1/chat/completions` 云代理下线（其存在理由——pi 子进程隔离云端 JWT——在 local-only 下不成立）。
+- 状态（2026-09-07）：已落地——`include_cloud` 参数已删除；云代理未留 404 壳，路由直接改走 `local_chat` 本地 OpenAI-compatible 网关（严于裁决原案）。
 
 ### 13.5 知识出场通道收敛（关闭开放问题 3）
 
@@ -258,5 +262,5 @@ v1 仅三种 P0 类型（见 R2）。本节约束其后续演进方向与节奏�
 - **`ocr_text_embeddings` 死表**：已于瘦身阶段 drop（create migration 删除 + drop migration 补入），Phase 3 无需处理。
 - **activity ledger 语义**：work unit 锚定尊重 `user_locked` 的用户手动归类；抽取作为新 producer 写独立 watermark。Phase 1 设计约束。
 - **内容类型枚举扩展**：`SearchContentType` 新增 Knowledge 按跨层扩展处理（DB、pipe 权限、PII 过滤、MCP 工具说明、TS wrapper、缓存 key 同一提交族完成）。Phase 3。
-- **gateway / team-memory / team-* MCP**：编译期 feature-gate 剔除，非运行时隐藏。
+- **gateway / team-memory / team-* MCP**：已随瘦身整体删除（crate 与工具不复存在，严于原定的编译期 feature-gate 方案）。
 - **数字克隆 `clone:*` 方向**：冻结新增，等待 §12.2 触发信号。
