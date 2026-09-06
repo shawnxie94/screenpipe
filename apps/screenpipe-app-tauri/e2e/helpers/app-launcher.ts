@@ -90,10 +90,8 @@ const persistAppLogs = process.env.SCREENPIPE_E2E_PERSIST_APP_LOGS === 'true';
 // real capture pipeline. Add `no-audio` when a lane only needs vision/OCR and
 // should not boot Whisper. Add `event-trigger-capture` for the Windows
 // key/clipboard/window-focus trigger lane; raw key and clipboard rows stay
-// disabled unless an explicit DB-capture seed opts them in. `cloud-audio-fallback` is an opt-in macOS seed that
-// leaves audio UI enabled, disables vision, and saves Screenpipe Cloud while
-// logged out so the fallback UX can be asserted. The same env var is read by
-// specs (e.g. timeline) to skip when recording is off.
+// disabled unless an explicit DB-capture seed opts them in. The same env var
+// is read by specs (e.g. timeline) to skip when recording is off.
 // `search-fixture` seeds a handful of known searchable frames (see
 // src-tauri/src/e2e/seeds.rs) so the search-bugs spec runs inside the normal
 // `test:e2e` job instead of needing a separate CI step. Harmless for other

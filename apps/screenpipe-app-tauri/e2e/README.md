@@ -26,48 +26,6 @@ bun run build:tauri:e2e
 bun run test:e2e
 ```
 
-**Run the macOS audio fallback spec**
-
-```bash
-bun run test:e2e:audio-fallback:macos
-```
-
-This uses `SCREENPIPE_E2E_SEED=onboarding,no-recording,cloud-audio-fallback`
-to keep vision capture off while leaving the audio settings visible with
-Screenpipe Cloud saved and no logged-in user. It asserts the Recording fallback
-alert and the persisted `/notifications` entry.
-
-**Run the local hosted-AI gateway spec**
-
-```bash
-bun run test:e2e:local-ai-gateway:macos
-```
-
-This opt-in lane bundles the production AI Worker under Miniflare, applies all
-checked-in migrations to an isolated in-memory D1 database, and launches the
-real E2E app with its hosted-AI URL pinned to that loopback Worker. OpenAI is a
-network-closed fake: the harness intercepts the exact chat endpoint and fails
-the run if the Worker attempts any other outbound request. No production
-gateway, customer data, provider credential, or paid model is used.
-
-**Run the first-run AI summary spec**
-
-```bash
-bun run test:e2e:first-run-ai-summary:macos
-```
-
-Same local Worker lane, pointed at the post-setup learning window. It proves the
-real app reaches the model through the real Pi command and the real Worker, that
-the forwarded provider request carries useful work evidence (not just app
-names), and that the model's text — never the deterministic fallback — is what
-lands in the seeded chat. Its matrix covers low-tier parsed-only evidence,
-accessibility fallback when parsed context is unavailable, and transient engine
-failures.
-
-`/activity-summary` is stubbed in the webview because a CI machine has no
-meaningful desktop activity. The real engine's answers and empty reasons are
-covered against a live engine in `first-run-learning-window.spec.ts`.
-
 **Run the macOS HD recording pipeline spec**
 
 ```bash
@@ -295,7 +253,6 @@ Saves to `e2e/videos/`.
 | `hd-recording-pipeline.spec.ts` | macOS opt-in. Starts an HD timer session via `/capture/hd/start`; asserts the controller goes active, a non-empty `hd_*.mp4` chunk is written, and OCR keeps indexing during HD (high-fps + indexing decouple, #3699/#3707) |
 | `capture-stall-recovery.spec.ts` | macOS opt-in. Bounds a wedged SCK frame worker and verifies the privacy-gated CoreGraphics escape hatch, reproduces a status-Running capture loop going silent through the real health and failure-pill surfaces, proves one watchdog restart resumes terminal capture progress in-process, and bounds a wedged id-based SCK lookup while preserving a fresh retry. |
 | `settings-sections.spec.ts` | Navigates General → Recording → AI Presets → AI Settings → Speakers; verifies moved controls, enabled/disabled analysis flows, content, and no crash |
-| `audio-fallback.spec.ts` | macOS opt-in spec for the Screenpipe Cloud → local Whisper fallback alert and `/notify` history |
 | `window-lifecycle.spec.ts` | Exercises `show_window` / `close_window` routing for Home, Search, and completed onboarding |
 | `permission-recovery.spec.ts` | macOS recovery window smoke for missing TCC permissions, route wiring, dedupe, and clean close |
 | `owned-browser.spec.ts` | Verifies the embedded agent browser queues navigation and hides safely |

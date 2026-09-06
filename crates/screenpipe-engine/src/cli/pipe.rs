@@ -158,52 +158,6 @@ pub fn api_base_url() -> String {
         .unwrap_or_else(|_| "https://screenpipe.com".to_string())
 }
 
-/// Parse YAML frontmatter from pipe.md content.
-fn parse_frontmatter(
-    content: &str,
-) -> (
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-) {
-    let trimmed = content.trim_start();
-    if !trimmed.starts_with("---") {
-        return (None, None, None, None);
-    }
-
-    // Find the closing ---
-    let after_first = &trimmed[3..];
-    let end = match after_first.find("---") {
-        Some(pos) => pos,
-        None => return (None, None, None, None),
-    };
-
-    let frontmatter = &after_first[..end];
-
-    let mut title = None;
-    let mut description = None;
-    let mut icon = None;
-    let mut category = None;
-
-    for line in frontmatter.lines() {
-        let line = line.trim();
-        if let Some((key, value)) = line.split_once(':') {
-            let key = key.trim();
-            let value = value.trim().trim_matches('"').trim_matches('\'');
-            match key {
-                "title" => title = Some(value.to_string()),
-                "description" => description = Some(value.to_string()),
-                "icon" => icon = Some(value.to_string()),
-                "category" => category = Some(value.to_string()),
-                _ => {}
-            }
-        }
-    }
-
-    (title, description, icon, category)
-}
-
 /// Search the pipe registry and display results.
 async fn handle_search_command(query: &str) -> anyhow::Result<()> {
     let base = api_base_url();

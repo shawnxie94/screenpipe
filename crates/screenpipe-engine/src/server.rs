@@ -199,8 +199,6 @@ pub struct AppState {
     /// Hot frame cache — in-memory cache for today's frames.
     /// Timeline WS reads from here instead of polling the DB.
     pub hot_frame_cache: Arc<HotFrameCache>,
-    /// Cloud archive state (initialized via /archive/init endpoint)
-    pub archive_state: crate::archive::ArchiveState,
     /// Local data retention state (auto-delete old data)
     pub retention_state: crate::retention::RetentionState,
     /// Vault lock manager — encrypts data at rest when locked
@@ -653,7 +651,6 @@ impl SCServer {
             // Pipes get 503 when all permits are taken; recording writes are unaffected.
             pipe_query_semaphore: Arc::new(tokio::sync::Semaphore::new(3)),
             hot_frame_cache,
-            archive_state: crate::archive::ArchiveState::new(),
             retention_state: crate::retention::RetentionState::new(),
             pipe_permissions: self.pipe_permissions.clone(),
             vault: screenpipe_vault::VaultManager::new(self.screenpipe_dir.clone()),

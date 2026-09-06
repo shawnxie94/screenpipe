@@ -440,7 +440,7 @@ pub(crate) async fn list_memory_tags_handler(
 /// back to a fresh UUID v4 it persists. So this function effectively
 /// always returns `Some`.
 pub(crate) fn enrich_source_context_with_device(ctx: Option<Value>) -> Option<Value> {
-    let machine_id = screenpipe_core::sync::get_or_create_machine_id();
+    let machine_id = screenpipe_core::device::get_or_create_machine_id();
     let enriched = match ctx {
         None | Some(Value::Null) => json!({"_device": machine_id}),
         Some(Value::Object(mut map)) => {
