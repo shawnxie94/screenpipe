@@ -1592,7 +1592,7 @@ impl Default for SettingsStore {
                             "forceDisabled": false,
                         },
                         "smartRecording": {
-                            "defaultEnabled": false,
+                            "defaultEnabled": screenpipe_config::default_experimental_meeting_piggyback(),
                             "forceDisabled": false,
                         },
                         "filterMusic": {
@@ -1861,6 +1861,10 @@ impl SettingsStore {
     /// (user_name has a fallback chain).
     pub fn to_recording_settings(&self) -> screenpipe_config::RecordingSettings {
         let mut settings = self.recording.clone();
+        // Automatic meeting capture also applies before the frontend mounts,
+        // including old stores with the former opt-in saved as false.
+        settings.experimental_meeting_piggyback =
+            screenpipe_config::default_experimental_meeting_piggyback();
         // userName setting wins; no cloud name/email fallback exists anymore.
         settings.user_name = settings
             .user_name
@@ -2441,4 +2445,21 @@ fn applescript_string(value: &str) -> String {
 /// Quote a string as a PowerShell single-quoted literal.
 fn powershell_string(value: &str) -> String {
     format!("'{}'", value.replace('\'', "''"))
+}
+
+#[cfg(test)]
+mod smart_recording_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn smart_recording_is_automatic_for_legacy_stores_before_frontend_startup() {
+        let mut store = SettingsStore::default();
+        store.recording.experimental_meeting_piggyback = false;
+        store.extra.insert(
+            "remoteControlPreferences".into(),
+            json!({"smartRecording": false}),
+        );
+        assert!(store.to_recording_settings().experimental_meeting_piggyback);
+    }
 }

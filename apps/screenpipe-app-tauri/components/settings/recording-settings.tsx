@@ -52,7 +52,6 @@ export const audioSearchIndex: SettingsField[] = [
   { label: "自动选择音频设备", keywords: ["devices", "bluetooth"], conditional: true },
   { label: "语言", keywords: ["transcript language", "language"], conditional: true },
   { label: "自定义词汇", keywords: ["vocabulary", "names", "jargon", "replacement"], conditional: true },
-  { label: "智能录制", keywords: ["smart recording", "beta", "meeting", "piggyback", "per-process", "meeting audio"], conditional: true },
   { label: "始终录制蓝牙麦克风", keywords: ["bluetooth", "airpods", "headset", "a2dp", "sco", "meeting"], conditional: true },
   { label: "你的名字", keywords: ["speaker", "voice training"], conditional: true },
 ];
@@ -2834,48 +2833,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
           onToggle={handleToggleIgnoredMeetingApp}
         />
 
-        {/* Smart recording — in the meetings section where it belongs */}
-        {!settings.disableAudio && (isMacOS || isWindows) && processTapAvailable && (
-        <Card className="border-border bg-card">
-          <CardContent className="px-3 py-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2.5">
-                <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div>
-                  <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                    智能录制
-                    <Badge variant="secondary" aria-label="测试版" className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide">
-                      测试版
-                    </Badge>
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    会议期间，录制会议音频以及你在会议应用中选择的那个麦克风 — 优先于其他音频设置。不可用时会自动回退到你配置的采集。
-                  </p>
-                  {settings.disableMeetingDetector && (
-                    <p className="text-xs text-amber-600 dark:text-amber-500">
-                      需要自动会议检测 — 请在上方重新开启。
-                    </p>
-                  )}
-                </div>
-              </div>
-              <Switch
-                id="experimentalMeetingPiggyback"
-                checked={Boolean(settings.experimentalMeetingPiggyback ?? false)}
-                disabled={Boolean(settings.disableMeetingDetector)}
-                onCheckedChange={(checked) =>
-                  handleSettingsChange(
-                    {
-                      experimentalMeetingPiggyback: checked,
-                    },
-                    true,
-                  )
-                }
-              />
-            </div>
-          </CardContent>
-        </Card>
-        )}
-
         {!settings.disableAudio && (
           <div className="flex items-center gap-2 px-1 pt-1.5">
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">设备与采集</span>
@@ -2892,7 +2849,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                 <Monitor className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground">自动选择音频设备</h3>
-                  <p className="text-xs text-muted-foreground">录制所有默认设备。关闭后可排除蓝牙耳机或选择特定设备。</p>
+                  <p className="text-xs text-muted-foreground">跟随系统默认。蓝牙耳机麦克风将在会议期间使用，除非开启持续录制。</p>
                 </div>
               </div>
               <Switch
@@ -2916,10 +2873,8 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
             const displayName = getAudioDeviceDisplayName(device.name);
             // Use per-device level if available, fall back to global speechRatio
             const deviceLevel = overlayData.deviceLevels[device.name] ?? overlayData.speechRatio;
-            // Backend-computed: exactly mirrors AudioManager::start_device's
-            // real gate (Bluetooth input + combo headset), so this hint
-            // never mismatches actual recording behavior.
-            const isBluetoothMicGated = device.isComboBluetoothMic && !settings.alwaysRecordBluetoothMic;
+            // Explicit selection permits continuous Bluetooth mic capture.
+            const isBluetoothMic = device.isComboBluetoothMic;
             return (
               <div
                 key={device.name}
@@ -2938,13 +2893,13 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                     {device.isDefault && (
                       <Badge variant="secondary" className="text-[9px] h-3.5 px-1 shrink-0">默认</Badge>
                     )}
-                    {isBluetoothMicGated && (
+                    {isBluetoothMic && (
                       <Badge
                         variant="outline"
                         className="text-[9px] h-3.5 px-1 shrink-0"
-                        title="仅在检测到会议时录制 — 打开“始终录制蓝牙麦克风”可更改"
+                        title="选择此麦克风将允许持续录制，可能降低蓝牙耳机的音频质量。"
                       >
-                        仅会议
+                        蓝牙
                       </Badge>
                     )}
                   </div>
