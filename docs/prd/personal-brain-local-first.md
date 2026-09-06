@@ -237,6 +237,7 @@ v1 仅三种 P0 类型（见 R2）。本节约束其后续演进方向与节奏�
 
 - 事实：`FREE_ACTIVITY_HISTORY_HOURS=24`、`settings_restrict_activity_history`、`HistoryAccessPolicy` 残留于 activity_summary / streaming 等路由，会把知识编译时间窗人为压到 24 小时并截断 preflight 证据。
 - 裁决：local-only 构建下策略短路为无限制；**不物理删除代码**，降低日后合并上游的冲突面。Phase 1 落地。
+- 状态（2026-09-07）：瘦身阶段已确认短路到位——`activity_history_is_restricted` 恒返回 `false`，钳制实际不生效；Phase 1 仅需决定是否删除残留机器。
 
 ### 13.3 memories 跨设备同步
 
@@ -254,7 +255,7 @@ v1 仅三种 P0 类型（见 R2）。本节约束其后续演进方向与节奏�
 ### 13.6 其他裁决
 
 - **调度**：POC 不上复杂队列，建带优先级的串行执行器（交互查询 > 实时抽取 > 批量编译），Phase 1 落地。
-- **`ocr_text_embeddings` 死表**：Phase 3 migration 中 drop，新向量表按新 schema 新建。
+- **`ocr_text_embeddings` 死表**：已于瘦身阶段 drop（create migration 删除 + drop migration 补入），Phase 3 无需处理。
 - **activity ledger 语义**：work unit 锚定尊重 `user_locked` 的用户手动归类；抽取作为新 producer 写独立 watermark。Phase 1 设计约束。
 - **内容类型枚举扩展**：`SearchContentType` 新增 Knowledge 按跨层扩展处理（DB、pipe 权限、PII 过滤、MCP 工具说明、TS wrapper、缓存 key 同一提交族完成）。Phase 3。
 - **gateway / team-memory / team-* MCP**：编译期 feature-gate 剔除，非运行时隐藏。
