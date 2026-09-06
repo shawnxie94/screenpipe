@@ -26,7 +26,6 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use tracing::error;
 
-use super::request_origin::ExplicitApiClient;
 use crate::history_access::HistoryAccessPolicy;
 use crate::server::AppState;
 use screenpipe_db::{DatabaseManager, Order, SemanticContextQuery};
@@ -312,7 +311,6 @@ pub struct ActivitySummaryResponse {
 pub async fn get_activity_summary(
     State(state): State<Arc<AppState>>,
     Query(mut query): Query<ActivitySummaryQuery>,
-    _api_client: ExplicitApiClient,
 ) -> Result<JsonResponse<ActivitySummaryResponse>, (StatusCode, JsonResponse<Value>)> {
     if query.start_time >= query.end_time {
         return Err((

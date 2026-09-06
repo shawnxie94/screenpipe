@@ -11,7 +11,6 @@ use axum::{
 use oasgen::{oasgen, OaSchema};
 use screenpipe_core::pipes::permissions::PipePermissions;
 
-use super::request_origin::ExplicitApiClient;
 use super::response_format::{
     is_passthrough, parse_fields, parse_format, render_list, rows_from, OutputFormat,
 };
@@ -181,9 +180,6 @@ pub(crate) struct SearchQuery {
     /// Filter audio transcriptions by speaker name (case-insensitive partial match)
     #[serde(default)]
     speaker_name: Option<String>,
-    /// Include cloud-synced data in search results (requires cloud sync to be enabled)
-    #[serde(default, deserialize_with = "deserialize_flexible_bool")]
-    include_cloud: bool,
     /// Truncate each result's text/transcription to this many characters using middle-truncation.
     /// When set, long content is replaced with first half + "...(truncated N chars)..." + last half.
     #[serde(default)]
@@ -843,7 +839,6 @@ pub(crate) fn compute_search_cache_key(query: &SearchQuery) -> u64 {
     query.on_screen.hash(&mut hasher);
     query.browser_url.hash(&mut hasher);
     query.speaker_name.hash(&mut hasher);
-    query.include_cloud.hash(&mut hasher);
     query.max_content_length.hash(&mut hasher);
     query.device_name.hash(&mut hasher);
     query.machine_id.hash(&mut hasher);
@@ -990,7 +985,6 @@ pub(crate) async fn search(
     Query(mut query): Query<SearchQuery>,
     State(state): State<Arc<AppState>>,
     OptionalPipePerms(pipe_perms): OptionalPipePerms,
-    _api_client: ExplicitApiClient,
 ) -> Result<Response<Body>, (StatusCode, JsonResponse<serde_json::Value>)> {
     // Presentation-only: parsed up front so a bad `format` 400s before any
     // DB work. Only the default JSON representation is cached; alternate
@@ -1656,7 +1650,6 @@ mod tests {
             on_screen: None,
             browser_url: None,
             speaker_name: None,
-            include_cloud: false,
             max_content_length: None,
             device_name: None,
             machine_id: None,
@@ -2209,7 +2202,6 @@ mod tests {
             on_screen: None,
             browser_url: None,
             speaker_name: None,
-            include_cloud: false,
             max_content_length: None,
             device_name: None,
             machine_id: None,
@@ -2244,7 +2236,6 @@ mod tests {
             on_screen: None,
             browser_url: None,
             speaker_name: None,
-            include_cloud: false,
             max_content_length: None,
             device_name: None,
             machine_id: None,
@@ -2287,7 +2278,6 @@ mod tests {
             on_screen: None,
             browser_url: None,
             speaker_name: None,
-            include_cloud: false,
             max_content_length: None,
             device_name: None,
             machine_id: None,
@@ -2322,7 +2312,6 @@ mod tests {
             on_screen: None,
             browser_url: None,
             speaker_name: None,
-            include_cloud: false,
             max_content_length: None,
             device_name: None,
             machine_id: None,
@@ -2372,7 +2361,6 @@ mod tests {
             on_screen,
             browser_url: None,
             speaker_name: None,
-            include_cloud: false,
             max_content_length: None,
             device_name: None,
             machine_id: None,
@@ -2418,7 +2406,6 @@ mod tests {
             on_screen: None,
             browser_url: None,
             speaker_name: None,
-            include_cloud: false,
             max_content_length: None,
             device_name: None,
             machine_id: None,
