@@ -66,8 +66,6 @@ pub struct ServerCore {
     /// `shutdown()` — before this they survived engine restarts, kept SQLite
     /// connections (and the shared -shm WAL-index) alive, and made every
     /// post-wedge respawn fail with SQLITE_IOERR 522 (2026-07-02 incident).
-    oauth_refresher:
-        Option<Arc<screenpipe_connect::oauth_refresh_scheduler::OAuthRefreshScheduler>>,
     external_memory_sync:
         Option<Arc<screenpipe_engine::external_memory_sync::ExternalMemorySyncScheduler>>,
     /// Tasks spawned by `start()` that would otherwise outlive the engine:
@@ -537,7 +535,6 @@ impl ServerCore {
 
         // Handles to the background schedulers created below, kept on Self so
         // `shutdown()` can stop them (they hold DB / secret-pool references).
-        let mut oauth_refresher_handle = None;
         let mut external_memory_sync_handle = None;
         let mut owned_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
 
@@ -571,36 +568,7 @@ impl ServerCore {
                         Err(e) => warn!("legacy secret migration failed: {}", e),
                     }
 
-                    // One-shot cleanup for users upgrading from pre-v2.4.53:
-                    // drop any `oauth:{id}` default-slot entry that's been
-                    // shadowed by a same-integration `oauth:{id}:{name}`
-                    // instance entry. Without this, read paths with
-                    // instance=None keep hitting the stale default and
-                    // reporting "not connected" even though a healthy
-                    // instanced entry sits right next to it.
-                    match screenpipe_connect::oauth::sweep_shadowed_default_slots(&store).await {
-                        Ok(n) if n > 0 => {
-                            info!("oauth: swept {} shadowed default-slot entry(ies)", n);
-                        }
-                        Ok(_) => {}
-                        Err(e) => warn!("oauth: sweep_shadowed_default_slots failed: {}", e),
-                    }
-
                     let store_arc = Arc::new(store);
-
-                    // Background OAuth refresh scheduler. Keeps refresh-token
-                    // sliding windows alive on providers like Zoom (15h
-                    // inactivity expiry) — without this, a token can rot
-                    // overnight and recovery requires manual reconnect.
-                    // Owner-held so the JoinHandle isn't dropped (which would
-                    // cancel the task) and so `/health` can surface metrics
-                    // later via `server.oauth_refresher.snapshot()`.
-                    let refresher = Arc::new(
-                        screenpipe_connect::oauth_refresh_scheduler::OAuthRefreshScheduler::new(),
-                    );
-                    refresher.start(store_arc.clone());
-                    oauth_refresher_handle = Some(refresher.clone());
-                    server.oauth_refresher = Some(refresher);
 
                     // Background sync of memories → Claude Code's CLAUDE.md
                     // and Codex's AGENTS.md. Runs every 5 minutes; no-ops
@@ -1294,7 +1262,6 @@ impl ServerCore {
             port: config.port,
             local_api_key: config.api_auth_key.clone(),
             redact_shutdown,
-            oauth_refresher: oauth_refresher_handle,
             external_memory_sync: external_memory_sync_handle,
             owned_tasks,
             http_shutdown,
@@ -1330,9 +1297,6 @@ impl ServerCore {
         // recoverable disk-I/O wedge into a permanent one: every respawn's DB
         // init fails with SQLITE_IOERR 522 until the whole process restarts
         // (2026-07-02 incident, hours of lost recording).
-        if let Some(refresher) = &self.oauth_refresher {
-            refresher.stop().await;
-        }
         if let Some(sync) = &self.external_memory_sync {
             sync.stop();
         }

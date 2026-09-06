@@ -194,7 +194,7 @@ export function PostInstallConnectionsModal({
           let configured = integration?.connected ?? false;
 
           // for non-OAuth named instances, check the specific instance status
-          if (integration && instanceName && !integration.is_oauth) {
+          if (integration && instanceName) {
             try {
               const instRes = await localFetch(
                 `/connections/${baseId}/instances`
@@ -249,30 +249,6 @@ export function PostInstallConnectionsModal({
       (c) => c !== connId && !statuses[c]?.configured
     );
     setExpanded(nextUnconfigured || null);
-  };
-
-  const handleOAuthConnect = async (connId: string, integrationId: string) => {
-    setStatuses((prev) => ({
-      ...prev,
-      [connId]: { ...prev[connId], loading: true },
-    }));
-
-    try {
-      const res = await commands.oauthConnect(integrationId, null, null);
-      if (res.status === "ok" && res.data.connected) {
-        handleSaved(connId);
-      } else {
-        setStatuses((prev) => ({
-          ...prev,
-          [connId]: { ...prev[connId], loading: false },
-        }));
-      }
-    } catch {
-      setStatuses((prev) => ({
-        ...prev,
-        [connId]: { ...prev[connId], loading: false },
-      }));
-    }
   };
 
   const handleComposioChanged = useCallback(
@@ -498,27 +474,7 @@ export function PostInstallConnectionsModal({
                     </div>
                   )}
 
-                  {isExpanded && integration && integration.is_oauth && (
-                    <div className="px-3 pb-3 border-t border-border pt-3">
-                      <Button
-                        size="sm"
-                        className="text-xs"
-                        disabled={status?.loading}
-                        onClick={() => handleOAuthConnect(connId, integration.id)}
-                      >
-                        {status?.loading ? (
-                          <>
-                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            connecting...
-                          </>
-                        ) : (
-                          <>connect with {integration.name}</>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-
-                  {isExpanded && integration && !integration.is_oauth && integration.fields.length === 0 && (
+                  {isExpanded && integration && integration.fields.length === 0 && (
                     <div className="px-3 pb-3 border-t border-border pt-3">
                       <p className="text-xs text-muted-foreground">
                         connect {integration.name} in{" "}

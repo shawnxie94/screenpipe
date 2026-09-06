@@ -268,17 +268,11 @@ pub struct SCServer {
     pub api_auth: bool,
     /// API key for remote auth validation
     pub api_auth_key: Option<String>,
-    /// Unified credential store for OAuth tokens, API keys, etc.
+    /// Unified credential store for API keys, etc.
     pub secret_store: Option<Arc<screenpipe_secrets::SecretStore>>,
-    /// Background OAuth refresh scheduler. Owned here so its JoinHandle
-    /// isn't dropped (which would cancel the task) and so future
-    /// observability endpoints can call `.snapshot()` to inspect metrics.
-    pub oauth_refresher:
-        Option<Arc<screenpipe_connect::oauth_refresh_scheduler::OAuthRefreshScheduler>>,
     /// Background scheduler that mirrors `memories` out to Claude Code's
-    /// CLAUDE.md and Codex's AGENTS.md every few minutes. Owned for the
-    /// same reasons as `oauth_refresher` — keeps the JoinHandle alive
-    /// and exposes `.snapshot()` for health reporting later.
+    /// CLAUDE.md and Codex's AGENTS.md every few minutes. Owned so the
+    /// JoinHandle isn't dropped and `.snapshot()` can report health later.
     pub external_memory_sync: Option<Arc<crate::external_memory_sync::ExternalMemorySyncScheduler>>,
     /// Shared high-FPS controller. Set before `start()` so AppState and
     /// the per-monitor capture loops point at the same instance.
@@ -331,8 +325,6 @@ fn is_api_auth_exempt_path(path: &str) -> bool {
         || path == "/ws/health"
         || path == "/audio/device/status"
         || path == "/vision/device/status"
-        || path == "/connections/oauth/callback"
-        || (path.starts_with("/mcp-servers/") && path.ends_with("/oauth/callback"))
         || path == "/connections/browser/pair/start"
         || path == "/connections/browser/pair/status"
         || path == "/notify"
@@ -386,7 +378,6 @@ impl SCServer {
             api_auth: false,
             api_auth_key: None,
             secret_store: None,
-            oauth_refresher: None,
             external_memory_sync: None,
             high_fps_controller: None,
             vision_manager: Arc::new(ArcSwap::from_pointee(None)),
@@ -1254,9 +1245,6 @@ impl SCServer {
                             // Allow specific endpoints without auth:
                             // - /health: device monitor, tray status, startup polling
                             //   (called before frontend loads API key via IPC)
-                            // - /connections/oauth/callback and
-                            //   /mcp-servers/:id/oauth/callback: browser redirect from
-                            //   OAuth providers (no bearer token in redirect)
                             // - /pipes/store/*: onboarding can fire pipe install before
                             //   the frontend's IPC key-fetch completes on cold start /
                             //   reinstall. Install/list/detail/update proxy the public
@@ -1631,8 +1619,6 @@ mod tests {
             "/health",
             "/ws/health",
             "/audio/device/status",
-            "/connections/oauth/callback",
-            "/mcp-servers/example/oauth/callback",
             "/connections/browser/pair/start",
             "/connections/browser/pair/status",
             "/notify",

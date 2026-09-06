@@ -178,9 +178,7 @@ function joinNames(names: string[]): string {
 
 async function fetchCalendarPreviewSuggestion(connection: ConnectedIntegration): Promise<Suggestion | null> {
   const lower = `${connection.id} ${connection.name}`.toLowerCase();
-  const endpoint = lower.includes("google")
-    ? "/connections/google-calendar/events?hours_back=0&hours_ahead=48"
-    : "/connections/calendar/events?hours_back=0&hours_ahead=48";
+  const endpoint = "/connections/calendar/events?hours_back=0&hours_ahead=48";
 
   try {
     const res = await localFetch(endpoint);

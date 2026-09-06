@@ -4,7 +4,6 @@
 
 use super::ConnectionCommand;
 use screenpipe_connect::connections::ConnectionManager;
-use screenpipe_connect::oauth;
 use serde_json::{json, Map, Value};
 use std::sync::Arc;
 
@@ -201,9 +200,7 @@ pub async fn handle_connection_command(command: &ConnectionCommand) -> anyhow::R
                 return Ok(());
             }
 
-            // Check credential store first, then fall back to OAuth token
             let has_creds = cm.get_credentials(id).await?;
-            let has_oauth = oauth::read_oauth_token(id).await;
 
             if let Some(creds) = has_creds {
                 let safe = cm
@@ -224,17 +221,6 @@ pub async fn handle_connection_command(command: &ConnectionCommand) -> anyhow::R
                             println!("  {}: {}", key, s);
                         }
                     }
-                }
-            } else if has_oauth.is_some() {
-                if *use_json {
-                    println!(
-                        "{}",
-                        serde_json::to_string_pretty(
-                            &json!({ "id": id, "connected": true, "auth": "oauth" })
-                        )?
-                    );
-                } else {
-                    println!("{}: connected (via OAuth)", id);
                 }
             } else if *use_json {
                 println!(
@@ -260,12 +246,9 @@ pub async fn handle_connection_command(command: &ConnectionCommand) -> anyhow::R
         }
 
         ConnectionCommand::Test { id } => {
-            // For OAuth integrations, test with empty creds — the test()
-            // implementation reads the token from the OAuth file itself.
             let creds = cm.get_credentials(id).await?.unwrap_or_default();
-            let has_oauth = oauth::read_oauth_token(id).await.is_some();
 
-            if creds.is_empty() && !has_oauth {
+            if creds.is_empty() {
                 eprintln!("{} has no saved credentials", id);
                 eprintln!("\nhint: screenpipe connection set {} key=value ...", id);
                 std::process::exit(1);

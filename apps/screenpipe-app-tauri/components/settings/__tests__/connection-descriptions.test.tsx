@@ -8,14 +8,10 @@ import { render, screen } from "@testing-library/react";
 import { ListRow, OAuthPanel } from "../connections-section";
 
 const mocks = vi.hoisted(() => ({
-  oauthListInstances: vi.fn(),
-  oauthStatus: vi.fn(),
 }));
 
 vi.mock("@/lib/utils/tauri", () => ({
   commands: {
-    oauthListInstances: mocks.oauthListInstances,
-    oauthStatus: mocks.oauthStatus,
   },
 }));
 vi.mock("posthog-js", () => ({ default: { capture: vi.fn() } }));
@@ -44,11 +40,6 @@ vi.mock("@/components/ui/use-toast", () => ({
 }));
 
 beforeEach(() => {
-  mocks.oauthListInstances.mockResolvedValue({ status: "ok", data: [] });
-  mocks.oauthStatus.mockResolvedValue({
-    status: "ok",
-    data: { connected: false, display_name: null },
-  });
 });
 
 describe("connection descriptions", () => {
@@ -74,37 +65,4 @@ describe("connection descriptions", () => {
     expect(screen.getByText(description)).toHaveAttribute("title", description);
   });
 
-  it("renders an integration description in the OAuth panel", () => {
-    const description = "Use the provider's complete connection description.";
-
-    render(
-      <OAuthPanel
-        integrationId="test-oauth"
-        integrationName="Test OAuth"
-        description={description}
-        supportsOAuthInstances={false}
-      />,
-    );
-
-    expect(screen.getByText(description)).toBeVisible();
-    expect(
-      screen.queryByText("Connect your Test OAuth account. AI can act on your behalf once connected."),
-    ).toBeNull();
-  });
-
-  it("falls back to OAuth-specific copy when no description is available", () => {
-    render(
-      <OAuthPanel
-        integrationId="slack"
-        integrationName="Slack"
-        supportsOAuthInstances
-      />,
-    );
-
-    expect(
-      screen.getByText(
-        "连接 Slack 工作区。添加每个 Screenpipe 应以你身份操作的工作区。",
-      ),
-    ).toBeVisible();
-  });
 });

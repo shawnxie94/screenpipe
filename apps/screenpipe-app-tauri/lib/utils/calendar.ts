@@ -5,7 +5,7 @@
 import { localFetch } from "@/lib/api";
 import { commands, type CalendarEventItem } from "@/lib/utils/tauri";
 
-export type CalendarSource = "native" | "google" | "ics";
+export type CalendarSource = "native" | "ics";
 
 export interface CalendarEvent {
   id?: string;
@@ -49,21 +49,6 @@ interface RawNativeEvent {
   calendar_name?: string;
   is_all_day?: boolean;
 }
-interface RawGoogleEvent {
-  id?: string;
-  title?: string;
-  start?: string;
-  end?: string;
-  attendees?: string[];
-  location?: string;
-  meeting_url?: string | null;
-  meetingUrl?: string | null;
-  hangoutLink?: string | null;
-  description?: string | null;
-  calendarName?: string;
-  isAllDay?: boolean;
-}
-
 interface ProviderCalendarResult {
   source: CalendarSource;
   connected: boolean;
@@ -90,25 +75,6 @@ function normalizeNative(e: RawNativeEvent): CalendarEvent | null {
     calendar_name: e.calendar_name,
     is_all_day: e.is_all_day ?? false,
     source: "native",
-  };
-}
-
-function normalizeGoogle(e: RawGoogleEvent): CalendarEvent | null {
-  if (!e.start || !e.end) return null;
-  return {
-    id: e.id,
-    title: e.title ?? "",
-    start: e.start,
-    end: e.end,
-    attendees: e.attendees ?? [],
-    location: e.location,
-    meeting_url:
-      normalizeMeetingUrl(e.meeting_url ?? e.meetingUrl ?? e.hangoutLink) ??
-      extractMeetingUrlFromText(e.location) ??
-      extractMeetingUrlFromText(e.description),
-    calendar_name: e.calendarName,
-    is_all_day: e.isAllDay ?? false,
-    source: "google",
   };
 }
 
@@ -222,27 +188,6 @@ async function fetchNativeCalendar(
   }
 }
 
-async function fetchGoogleCalendar(
-  hoursBack: number,
-  hoursAhead: number,
-  instance: string | null,
-): Promise<CalendarEvent[] | null> {
-  const query =
-    `hours_back=${hoursBack}&hours_ahead=${hoursAhead}` +
-    (instance ? `&instance=${encodeURIComponent(instance)}` : "");
-  try {
-    const res = await localFetch(`/connections/google-calendar/events?${query}`);
-    if (!res.ok) return null;
-    const body = (await res.json()) as RawGoogleEvent[] | { error?: string };
-    if (!Array.isArray(body)) return null;
-    return body
-      .map(normalizeGoogle)
-      .filter((e): e is CalendarEvent => e !== null);
-  } catch {
-    return null;
-  }
-}
-
 async function fetchNativeProvider(
   hoursBack: number,
   hoursAhead: number,
@@ -280,94 +225,6 @@ async function fetchNativeProvider(
     connected: statusConnected || events !== null,
     ok: events !== null,
     events: events ?? [],
-  };
-}
-
-// Fetch a single Google account. `instance` is the account identifier (email)
-// or null for the implicit default — used when only one account is connected
-// or when enumeration is unavailable.
-async function fetchGoogleInstance(
-  instance: string | null,
-  hoursBack: number,
-  hoursAhead: number,
-): Promise<ProviderCalendarResult> {
-  let statusKnown = false;
-  let statusConnected = false;
-  let needsAttention = false;
-  try {
-    const status = await commands.oauthStatus("google-calendar", instance);
-    if (status.status === "ok") {
-      statusKnown = true;
-      statusConnected = status.data.connected;
-      needsAttention = status.data.needs_attention === true;
-    }
-  } catch {
-    // Fall back to probing the events endpoint below.
-  }
-
-  // Once OAuth status is available, disconnected means there is no recoverable
-  // token. Avoid repeatedly probing an endpoint that can only fail until the
-  // user reconnects. Exception: needs_attention means a token row exists but
-  // the keychain key is unavailable (bundle ACL mismatch) — surface this as
-  // "connected but failing" so the meeting-notes UI shows the error state
-  // instead of pushing the user to a reconnect that won't actually help.
-  if (statusKnown && !statusConnected) {
-    return {
-      source: "google",
-      connected: needsAttention,
-      ok: !needsAttention,
-      events: [],
-    };
-  }
-
-  const events = await fetchGoogleCalendar(hoursBack, hoursAhead, instance);
-  return {
-    source: "google",
-    connected: statusConnected || events !== null,
-    ok: events !== null,
-    events: events ?? [],
-  };
-}
-
-async function fetchGoogleProvider(
-  hoursBack: number,
-  hoursAhead: number,
-): Promise<ProviderCalendarResult> {
-  // A user can connect more than one Google account (e.g. personal + work).
-  // The events endpoint refuses an ambiguous request once >1 account exists
-  // ("specify which one with `instance`"), so enumerate the accounts and query
-  // each explicitly, then merge. Falls back to a single implicit-default call
-  // when enumeration is unavailable or only one account is connected.
-  let instances: (string | null)[] | null = null;
-  try {
-    const list = await commands.oauthListInstances("google-calendar");
-    if (list.status === "ok") {
-      instances = list.data.map((entry) => entry.instance);
-    }
-  } catch {
-    // Enumeration unavailable — fall through to the single-account path.
-  }
-
-  if (instances === null || instances.length <= 1) {
-    return fetchGoogleInstance(instances?.[0] ?? null, hoursBack, hoursAhead);
-  }
-
-  const results = await Promise.all(
-    instances.map((instance) =>
-      fetchGoogleInstance(instance, hoursBack, hoursAhead),
-    ),
-  );
-
-  const connectedResults = results.filter((result) => result.connected);
-  return {
-    source: "google",
-    connected: connectedResults.length > 0,
-    // Only flag the source as failing when every connected account failed; one
-    // healthy account shouldn't surface a global "calendar needs attention".
-    ok:
-      connectedResults.length === 0 ||
-      connectedResults.some((result) => result.ok),
-    events: results.flatMap((result) => result.events),
   };
 }
 
@@ -427,7 +284,6 @@ export async function fetchUpcomingCalendarSnapshot(opts?: {
 
   const providers = await Promise.all([
     fetchNativeProvider(hoursBack, hoursAhead),
-    fetchGoogleProvider(hoursBack, hoursAhead),
     fetchIcsProvider(hoursBack, hoursAhead),
   ]);
   const sourceConnected = (provider: ProviderCalendarResult) =>

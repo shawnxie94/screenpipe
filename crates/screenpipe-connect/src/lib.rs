@@ -5,7 +5,6 @@
 //! Outbound integrations: OAuth connections to third-party services, MCP
 //! servers, calendars, and the sync schedulers that keep them fresh.
 //!
-//! - `oauth/`, `oauth_refresh_scheduler` — the connection flow and token refresh.
 //! - `connections` — provider definitions and their capabilities.
 //! - `mcp_servers` — MCP server registration and lifecycle.
 //! - `calendar`, `calendar_windows`, `ics_calendar` — calendar sources per platform.
@@ -25,8 +24,6 @@ pub mod connections;
 pub mod ics_calendar;
 pub mod mcp_servers;
 pub mod mdns;
-pub mod oauth;
-pub mod oauth_refresh_scheduler;
 pub mod remote_sync;
 pub mod sync_scheduler;
 pub mod unstructured_ocr;

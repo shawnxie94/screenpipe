@@ -15,7 +15,6 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use chrono::Utc;
 
-use crate::oauth_result_page::render_oauth_result_page;
 use screenpipe_connect::mcp_servers::{
     McpAuthMode, McpHeader, McpServerConfig, McpServerStore, McpTransport,
 };
@@ -437,7 +436,7 @@ async fn oauth_start(
     Path(id): Path<String>,
     Json(body): Json<OAuthStartBody>,
 ) -> Response {
-    let redirect_uri = match mcp_oauth_redirect_uri(&id, body.app_scheme.as_deref()) {
+    let redirect_uri = match mcp_oauth_redirect_uri(&id) {
         Ok(uri) => uri,
         Err(message) => return bad_request(message),
     };
@@ -680,23 +679,24 @@ fn not_found(id: &str) -> Response {
 }
 
 fn html_response(status: StatusCode, message: &str) -> Response {
-    let ok = status.is_success();
-    let title = if ok {
-        "MCP connected"
-    } else {
-        "Connection needs attention"
-    };
-    let detail = if ok {
-        "screenpipe can now use this MCP server."
-    } else {
-        "screenpipe could not finish the MCP OAuth flow."
-    };
+    let body = format!(
+        "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>screenpipe MCP OAuth</title>         </head><body style=\"font-family: sans-serif; max-width: 32rem; margin: 4rem auto;\">         <h1>{title}</h1><p>{message}</p></body></html>",
+        title = if status.is_success() { "MCP connected" } else { "Connection needs attention" },
+        message = html_escape(message),
+    );
     (
         status,
         [("content-type", "text/html; charset=utf-8")],
-        render_oauth_result_page("screenpipe MCP OAuth", title, detail, message, ok),
+        body,
     )
         .into_response()
+}
+
+fn html_escape(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 fn url_path_segment(value: &str) -> String {
@@ -712,20 +712,15 @@ fn url_path_segment(value: &str) -> String {
         .collect()
 }
 
-fn mcp_oauth_redirect_uri(
-    server_id: &str,
-    app_scheme: Option<&str>,
-) -> Result<String, &'static str> {
+/// The OAuth redirect always targets the local engine callback — no hosted
+/// relay. MCP servers are user-configured third-party endpoints, so their
+/// OAuth apps must whitelist `http://localhost:3030/...` (or the user pins a
+/// fixed port via SCREENPIPE_PORT and configures the server accordingly).
+fn mcp_oauth_redirect_uri(server_id: &str) -> Result<String, &'static str> {
     let server_id = url_path_segment(server_id);
-    match app_scheme {
-        None => Ok(format!(
-            "http://localhost:3030/mcp-servers/{server_id}/oauth/callback"
-        )),
-        Some(scheme @ ("screenpipe" | "screenpipe-enterprise")) => Ok(format!(
-            "https://screenpi.pe/api/oauth/mcp/{server_id}/callback?app_scheme={scheme}"
-        )),
-        Some(_) => Err("app_scheme must be screenpipe or screenpipe-enterprise"),
-    }
+    Ok(format!(
+        "http://localhost:3030/mcp-servers/{server_id}/oauth/callback"
+    ))
 }
 
 // ---------------------------------------------------------------------------
@@ -913,25 +908,12 @@ mod tests {
     #[test]
     fn oauth_redirect_defaults_to_encoded_local_callback() {
         assert_eq!(
-            mcp_oauth_redirect_uri("a/b c", None).unwrap(),
+            mcp_oauth_redirect_uri("a/b c").unwrap(),
             "http://localhost:3030/mcp-servers/a%2Fb%20c/oauth/callback"
         );
     }
 
     #[test]
-    fn oauth_redirect_allows_only_exact_app_schemes() {
-        assert_eq!(
-            mcp_oauth_redirect_uri("linear", Some("screenpipe")).unwrap(),
-            "https://screenpi.pe/api/oauth/mcp/linear/callback?app_scheme=screenpipe"
-        );
-        assert_eq!(
-            mcp_oauth_redirect_uri("linear", Some("screenpipe-enterprise")).unwrap(),
-            "https://screenpi.pe/api/oauth/mcp/linear/callback?app_scheme=screenpipe-enterprise"
-        );
-        assert!(mcp_oauth_redirect_uri("linear", Some("https")).is_err());
-        assert!(mcp_oauth_redirect_uri("linear", Some("screenpipe://evil")).is_err());
-    }
-
     #[test]
     fn oauth_start_body_rejects_caller_supplied_redirect_uri() {
         let body = serde_json::from_value::<OAuthStartBody>(json!({

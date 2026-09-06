@@ -14,8 +14,6 @@ pub mod bee;
 pub mod bitrix24;
 pub mod brex;
 pub mod browser;
-pub mod calcom;
-pub mod calendly;
 pub mod claude_code;
 pub mod clickup;
 pub mod codex;
@@ -24,60 +22,44 @@ pub mod discord;
 pub mod email;
 pub mod financialsense;
 pub mod fireflies;
-pub mod github_issues;
 pub mod glean;
-pub mod google_calendar;
-pub mod google_docs;
 pub mod granola;
 pub mod hermes;
-pub mod hubspot;
 pub mod imap;
 pub mod intercom;
-pub mod jira;
 pub mod lexi;
 pub mod limitless;
 pub mod linear;
 pub mod logseq;
 pub mod loops;
 pub mod make;
-pub mod microsoft365;
 pub mod mochi;
 pub mod monday;
 pub mod n8n;
-pub mod notion;
 pub mod ntfy;
 pub mod obsidian;
 pub mod obsidian_memories;
 pub mod odoo;
 pub mod openclaw;
 pub mod otter;
-pub mod outlook_email;
 pub mod perplexity;
 pub mod pipedrive;
 pub mod pocket;
 pub mod posthog;
 pub mod pushover;
-pub mod quickbooks;
 pub mod readwise;
 pub mod resend;
 pub mod salesforce;
 pub mod sentry;
-pub mod slack;
 pub mod stripe;
-pub mod supabase;
-pub mod teams;
 pub mod telegram;
 pub mod todoist;
 pub mod toggl;
 pub mod trello;
-pub mod vercel;
 pub mod whatsapp;
 pub mod workflowy;
 pub mod zapier;
-pub mod zendesk;
-pub mod zoom;
 
-use crate::oauth;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use screenpipe_core::connections::sync as core_connections_sync;
@@ -164,24 +146,6 @@ pub enum ProxyAuth {
     None,
 }
 
-/// How the background OAuth refresher should treat this integration.
-///
-/// Most providers issue long-lived refresh tokens (Google: ~6mo, Microsoft:
-/// 90d) — for those, leaning on natural access-token expiry is enough and
-/// [`RefreshPolicy::default`] returns `keep_alive: None`.
-///
-/// Providers that expire the *refresh* token on a sliding inactivity window
-/// need a `keep_alive` floor: the refresher will proactively call refresh
-/// whenever the last successful refresh is older than this duration, even
-/// if the access token is still valid. The value should leave headroom
-/// against the provider's published limit (e.g. Zoom's 15h ⇒ 12h floor).
-#[derive(Debug, Clone, Copy, Default)]
-pub struct RefreshPolicy {
-    /// Maximum gap between successful refreshes. `None` = no keep-alive
-    /// pressure beyond the access-token-expiry path.
-    pub keep_alive: Option<std::time::Duration>,
-}
-
 #[async_trait]
 pub trait Integration: Send + Sync {
     /// Static metadata for this integration.
@@ -194,32 +158,6 @@ pub trait Integration: Send + Sync {
         creds: &Map<String, Value>,
         secret_store: Option<&SecretStore>,
     ) -> Result<String>;
-
-    /// Return OAuth config if this integration uses OAuth instead of manual fields.
-    /// Default is `None` (manual credential entry).
-    fn oauth_config(&self) -> Option<&'static oauth::OAuthConfig> {
-        None
-    }
-
-    /// User-selectable access levels offered on the OAuth consent (e.g. Slack
-    /// send-only vs send+read). Default is empty — `extra_auth_params` is used
-    /// as-is and the UI shows no choice. The connect command resolves the
-    /// chosen variant's `params` by `id`; scope strings never come from the UI.
-    fn oauth_scope_variants(&self) -> &'static [oauth::ScopeVariant] {
-        &[]
-    }
-
-    /// Whether repeated OAuth connects can create distinct account/workspace
-    /// instances instead of overwriting the provider's default token slot.
-    fn supports_oauth_instances(&self) -> bool {
-        false
-    }
-
-    /// Background refresh policy. Defaults to "rely on access-token expiry".
-    /// Override when the provider expires the refresh token on inactivity.
-    fn refresh_policy(&self) -> RefreshPolicy {
-        RefreshPolicy::default()
-    }
 
     /// Return proxy config for credential-free API forwarding.
     /// When set, pipes can call `localhost:3030/connections/:id/proxy/*path`
@@ -373,13 +311,10 @@ fn build_client_with_timeouts(
 pub fn all_integrations() -> Vec<Box<dyn Integration>> {
     vec![
         Box::new(telegram::Telegram),
-        Box::new(slack::Slack),
         Box::new(discord::Discord),
         Box::new(email::Email),
         Box::new(imap::Imap),
         Box::new(todoist::Todoist),
-        Box::new(teams::Teams),
-        Box::new(notion::Notion),
         Box::new(linear::Linear),
         Box::new(perplexity::Perplexity),
         Box::new(obsidian::Obsidian),
@@ -387,10 +322,7 @@ pub fn all_integrations() -> Vec<Box<dyn Integration>> {
         Box::new(n8n::N8n),
         Box::new(make::Make),
         Box::new(zapier::Zapier),
-        Box::new(github_issues::GithubIssues),
-        Box::new(jira::Jira),
         Box::new(granola::Granola),
-        Box::new(hubspot::HubSpot),
         Box::new(bitrix24::Bitrix24),
         Box::new(limitless::Limitless),
         Box::new(bee::Bee),
@@ -405,34 +337,23 @@ pub fn all_integrations() -> Vec<Box<dyn Integration>> {
         Box::new(clickup::ClickUp),
         Box::new(confluence::Confluence),
         Box::new(salesforce::Salesforce),
-        Box::new(microsoft365::Microsoft365),
-        Box::new(outlook_email::OutlookEmail),
         Box::new(trello::Trello),
-        Box::new(zendesk::Zendesk),
         Box::new(stripe::Stripe),
         Box::new(financialsense::FinancialSense),
         Box::new(fireflies::Fireflies),
         Box::new(otter::Otter),
         Box::new(lexi::Lexi),
         Box::new(sentry::Sentry),
-        Box::new(vercel::Vercel),
         Box::new(pipedrive::Pipedrive),
         Box::new(odoo::Odoo),
         Box::new(intercom::Intercom),
         Box::new(monday::Monday),
         Box::new(asana::Asana),
-        Box::new(calcom::CalCom),
-        Box::new(calendly::Calendly),
         Box::new(glean::Glean),
-        Box::new(google_calendar::GoogleCalendar),
-        Box::new(google_docs::GoogleDocs),
-        Box::new(quickbooks::QuickBooks),
         Box::new(readwise::Readwise),
         Box::new(mochi::Mochi),
         Box::new(loops::Loops),
         Box::new(resend::Resend),
-        Box::new(supabase::Supabase),
-        Box::new(zoom::Zoom),
         Box::new(claude_code::ClaudeCode),
         Box::new(codex::Codex),
         Box::new(workflowy::Workflowy),
@@ -518,34 +439,16 @@ pub async fn load_connection(
 }
 
 /// Returns true when a connection id is configured and ready for pipes.
-/// OAuth integrations are checked via `oauth:<id>` tokens in SecretStore;
-/// credential-based integrations via `cred:<id>` / `connections.json`.
+/// Credential-based integrations are checked via `cred:<id>` / `connections.json`.
 pub async fn is_connection_configured(
     secret_store: Option<&SecretStore>,
     screenpipe_dir: &Path,
     conn_id: &str,
 ) -> bool {
-    let integration = all_integrations()
-        .into_iter()
-        .find(|i| i.def().id == conn_id);
-
-    let Some(integration) = integration else {
-        return false;
-    };
-
-    if integration.oauth_config().is_some() {
-        for inst in oauth::list_oauth_instances(secret_store, conn_id).await {
-            if oauth::is_oauth_instance_connected(secret_store, conn_id, inst.as_deref()).await {
-                return true;
-            }
-        }
-        false
-    } else {
-        load_connection(secret_store, screenpipe_dir, conn_id)
-            .await
-            .map(|c| c.enabled && !c.credentials.is_empty())
-            .unwrap_or(false)
-    }
+    load_connection(secret_store, screenpipe_dir, conn_id)
+        .await
+        .map(|c| c.enabled && !c.credentials.is_empty())
+        .unwrap_or(false)
 }
 
 /// Write a `SavedConnection` to SecretStore. Falls back to the legacy
@@ -612,48 +515,19 @@ impl ConnectionManager {
     }
 
     pub async fn list(&self) -> Vec<ConnectionInfo> {
-        let ss = self.secret_store.as_deref();
         let mut result = Vec::new();
         for i in &self.integrations {
             let def = i.def();
-            let is_oauth = i.oauth_config().is_some();
-            let creds_connected = || async {
-                self.get_all_instances(def.id)
-                    .await
-                    .map(|instances| {
-                        instances
-                            .into_iter()
-                            .any(|(_, c)| c.enabled && !c.credentials.is_empty())
-                    })
-                    .unwrap_or(false)
-            };
-            let connected = if is_oauth {
-                let instances = oauth::list_oauth_instances(ss, def.id).await;
-                let mut any_connected = false;
-                for inst in &instances {
-                    if oauth::is_oauth_instance_connected(ss, def.id, inst.as_deref()).await {
-                        any_connected = true;
-                        break;
-                    }
-                }
-                // OAuth integrations can also carry manual fallback credentials
-                // (HubSpot Private App token, Teams webhook URL). Users connected
-                // that way — including everyone who connected before the
-                // integration gained OAuth — must not see the tile flip to off;
-                // the proxy and test() still honor those credentials.
-                if !any_connected && !def.fields.is_empty() {
-                    any_connected = creds_connected().await;
-                }
-                any_connected
-            } else {
-                creds_connected().await
-            };
-            result.push(ConnectionInfo {
-                def,
-                connected,
-                is_oauth,
-                supports_oauth_instances: is_oauth && i.supports_oauth_instances(),
-            });
+            let connected = self
+                .get_all_instances(def.id)
+                .await
+                .map(|instances| {
+                    instances
+                        .into_iter()
+                        .any(|(_, c)| c.enabled && !c.credentials.is_empty())
+                })
+                .unwrap_or(false);
+            result.push(ConnectionInfo { def, connected });
         }
         result
     }
@@ -884,10 +758,6 @@ pub struct ConnectionInfo {
     #[serde(flatten)]
     pub def: &'static IntegrationDef,
     pub connected: bool,
-    /// True if this integration authenticates via OAuth (no manual fields).
-    pub is_oauth: bool,
-    /// True if OAuth reconnects can be stored as separate named instances.
-    pub supports_oauth_instances: bool,
 }
 
 type CredentialConnection<'a> = (&'a dyn Integration, &'static IntegrationDef, Option<String>);
@@ -914,20 +784,6 @@ pub async fn render_context(
         }
     }
 
-    // OAuth integrations with a stored token
-    let mut oauth_connected: Vec<(&dyn Integration, &'static IntegrationDef, Option<String>)> =
-        Vec::new();
-    for integration in integrations.iter().filter(|i| i.oauth_config().is_some()) {
-        let def = integration.def();
-        let mut instances = oauth::list_oauth_instances(secret_store, def.id).await;
-        instances.sort();
-        for instance in instances {
-            if oauth::is_oauth_instance_connected(secret_store, def.id, instance.as_deref()).await {
-                oauth_connected.push((integration.as_ref(), def, instance));
-            }
-        }
-    }
-
     let ics_settings =
         crate::ics_calendar::load_ics_calendar_settings_from_store(screenpipe_dir).ok();
     let ics_enabled: Vec<_> = ics_settings
@@ -941,7 +797,7 @@ pub async fn render_context(
         })
         .unwrap_or_default();
 
-    if cred_connected.is_empty() && oauth_connected.is_empty() && ics_enabled.is_empty() {
+    if cred_connected.is_empty() && ics_enabled.is_empty() {
         return String::new();
     }
 
@@ -986,36 +842,6 @@ pub async fn render_context(
                 "  config: {}/{}/config{}  (non-secret settings; credentials stay server-side)\n",
                 base, def.id, suffix
             ));
-        }
-    }
-
-    let manual_instances = cred_connected
-        .iter()
-        .map(|(_, def, instance)| (def.id, instance.clone()))
-        .collect::<HashSet<_>>();
-
-    for (integration, def, instance) in &oauth_connected {
-        let shares_manual_instance = manual_instances.contains(&(def.id, instance.clone()));
-        if !shares_manual_instance {
-            out.push_str(&connection_context_header(def, instance.as_deref()));
-            out.push_str(&format!("{}\n", def.description));
-        }
-
-        if integration.proxy_config().is_some() {
-            let suffix = instance_query(instance.as_deref());
-            out.push_str(&format!(
-                "  proxy: {}/{}/proxy/<api-path>{}  (append the API path, e.g. /v1/pages)\n",
-                base, def.id, suffix
-            ));
-            if !shares_manual_instance {
-                out.push_str(&format!(
-                    "  config: {}/{}/config{}  (non-secret settings)\n",
-                    base, def.id, suffix
-                ));
-            }
-        } else {
-            // OAuth without proxy — still don't expose the token
-            out.push_str("  (connected via OAuth — use the endpoints listed above; no raw token is exposed)\n");
         }
     }
 
@@ -1351,7 +1177,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
         ids.sort_unstable();
-        assert_eq!(ids, ["discord", "make", "n8n", "teams", "zapier"]);
+        assert_eq!(ids, ["discord", "make", "n8n", "zapier"]);
     }
 
     #[test]
@@ -1387,7 +1213,7 @@ mod tests {
             .mount(&server)
             .await;
         let client = build_client_for_with_timeouts(
-            &slack::Slack,
+            &discord::Discord,
             std::time::Duration::from_secs(1),
             std::time::Duration::from_millis(50),
         );
@@ -1494,7 +1320,7 @@ mod tests {
     async fn render_context_gives_every_webhook_provider_the_same_safe_boundary() {
         let dir = temp_screenpipe_dir();
         let mgr = ConnectionManager::new(dir.clone(), None);
-        let webhook_integrations = ["discord", "make", "n8n", "teams", "zapier"];
+        let webhook_integrations = ["discord", "make", "n8n", "zapier"];
 
         for id in webhook_integrations {
             mgr.connect(id, manual_webhook_creds()).await.unwrap();
@@ -1549,69 +1375,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn render_context_includes_teams_manual_and_oauth_boundaries_without_tokens() {
-        use sqlx::SqlitePool;
-
-        let pool = SqlitePool::connect(":memory:").await.unwrap();
-        let store = Arc::new(SecretStore::new(pool, None).await.unwrap());
-        let dir = temp_screenpipe_dir();
-        let mgr = ConnectionManager::new(dir.clone(), Some(store.clone()));
-        mgr.connect("teams", manual_webhook_creds()).await.unwrap();
-        store
-            .set_json(
-                "oauth:teams:work",
-                &serde_json::json!({"access_token": "secret-teams-oauth-token"}),
-            )
-            .await
-            .unwrap();
-
-        let context = render_context(&dir, 3030, Some(store.as_ref())).await;
-        assert!(context.contains("POST http://localhost:3030/connections/teams/proxy"));
-        assert!(context
-            .contains("http://localhost:3030/connections/teams/proxy/<api-path>?instance=work"));
-        assert!(!context.contains("https://example.com/webhook"));
-        assert!(!context.contains("secret-teams-oauth-token"));
-
-        let _ = std::fs::remove_dir_all(dir);
-    }
-
-    #[tokio::test]
-    async fn render_context_deduplicates_hybrid_named_instances() {
-        use sqlx::SqlitePool;
-
-        let pool = SqlitePool::connect(":memory:").await.unwrap();
-        let store = Arc::new(SecretStore::new(pool, None).await.unwrap());
-        let dir = temp_screenpipe_dir();
-        let mgr = ConnectionManager::new(dir.clone(), Some(store.clone()));
-        mgr.connect_instance("teams", Some("work"), manual_webhook_creds())
-            .await
-            .unwrap();
-        store
-            .set_json(
-                "oauth:teams:work",
-                &serde_json::json!({"access_token": "secret-teams-oauth-token"}),
-            )
-            .await
-            .unwrap();
-
-        let context = render_context(&dir, 3030, Some(store.as_ref())).await;
-        assert_eq!(
-            context
-                .matches("## Microsoft Teams (teams, instance: work)")
-                .count(),
-            1,
-            "hybrid manual/OAuth instances must render under one header: {context}"
-        );
-        assert!(
-            context.contains("POST http://localhost:3030/connections/teams/proxy?instance=work")
-        );
-        assert!(context
-            .contains("http://localhost:3030/connections/teams/proxy/<api-path>?instance=work"));
-
-        let _ = std::fs::remove_dir_all(dir);
-    }
-
-    #[tokio::test]
     async fn render_context_never_exposes_telegram_credentials() {
         let dir = temp_screenpipe_dir();
         let mgr = ConnectionManager::new(dir.clone(), None);
@@ -1634,23 +1397,4 @@ mod tests {
         let _ = std::fs::remove_dir_all(dir);
     }
 
-    #[tokio::test]
-    async fn oauth_integration_counts_as_configured() {
-        use screenpipe_secrets::SecretStore;
-        use serde_json::json;
-        use sqlx::SqlitePool;
-
-        let pool = SqlitePool::connect(":memory:").await.unwrap();
-        let store = SecretStore::new(pool, None).await.unwrap();
-        store
-            .set_json("oauth:github", &json!({"access_token": "gho_test"}))
-            .await
-            .unwrap();
-        let dir = temp_screenpipe_dir();
-
-        assert!(is_connection_configured(Some(&store), &dir, "github").await);
-        assert!(!is_connection_configured(Some(&store), &dir, "discord").await);
-
-        let _ = std::fs::remove_dir_all(dir);
-    }
 }

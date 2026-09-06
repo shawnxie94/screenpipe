@@ -18,7 +18,7 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use tauri::AppHandle;
+use tauri::{AppHandle, WebviewWindow};
 use tauri_plugin_opener::OpenerExt;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::{error, info, warn};
@@ -574,6 +574,59 @@ async fn wait_for_callback(listener: tokio::net::TcpListener) -> Result<String, 
 
 // ── Tauri commands ─────────────────────────────────────────────────────
 
+
+
+/// Frontend hook for browser OAuth flows that complete by polling (MCP and
+/// Composio). Best-effort activation after browser OAuth without changing
+/// window state.
+#[tauri::command]
+#[specta::specta]
+pub fn activate_app_after_oauth(app_handle: AppHandle, window: WebviewWindow) {
+    activate_app_after_oauth_impl(&app_handle, &window);
+}
+
+/// macOS can activate the application as a whole and let AppKit restore the
+/// user's last active Screenpipe window. Windows and Linux require a concrete
+/// top-level window, so they focus the window that initiated OAuth. We do not
+/// show, unminimize, navigate, or otherwise alter the window's saved state.
+/// Activation is best-effort because OAuth is already complete at this point.
+pub(crate) fn activate_app_after_oauth_impl(app_handle: &AppHandle, window: &WebviewWindow) {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = window;
+        // App activation can emit a Space-change notification. Suppress the
+        // overlay monitor briefly so it does not immediately hide the window
+        // that OAuth is returning to.
+        crate::space_monitor::suppress_space_monitor(750);
+        if let Err(e) = app_handle.run_on_main_thread(|| {
+            crate::window::with_autorelease_pool(|| {
+                use objc::{msg_send, sel, sel_impl};
+                use tauri_nspanel::cocoa::base::id;
+
+                unsafe {
+                    let ns_app: id = msg_send![objc::class!(NSApplication), sharedApplication];
+                    let _: () = msg_send![ns_app, activateIgnoringOtherApps: true];
+                }
+            });
+        }) {
+            warn!("OAuth connected but could not activate screenpipe: {e}");
+        } else {
+            info!("OAuth connected; activated screenpipe");
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = app_handle;
+        let label = window.label().to_string();
+        if let Err(e) = window.set_focus() {
+            warn!("OAuth connected but could not focus window '{label}': {e}");
+        } else {
+            info!("OAuth connected; focused initiating window '{label}'");
+        }
+    }
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn chatgpt_oauth_login(
@@ -695,7 +748,7 @@ pub async fn chatgpt_oauth_login(
 
     // Activate Screenpipe without forcing the legacy `main` window or changing
     // the user's saved window state.
-    crate::oauth::activate_app_after_oauth_impl(&app_handle, &window);
+    activate_app_after_oauth_impl(&app_handle, &window);
 
     Ok(true)
 }

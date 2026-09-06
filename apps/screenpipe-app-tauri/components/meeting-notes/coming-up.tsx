@@ -140,8 +140,6 @@ function sourceLabel(
   switch (source) {
     case "native":
       return platformNativeCalendarLabel(platform);
-    case "google":
-      return "Google Calendar";
     case "ics":
       return "ICS";
   }

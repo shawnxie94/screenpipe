@@ -25,7 +25,7 @@ import { commands, type IcsCalendarEntry } from "@/lib/utils/tauri";
 import { getStore, saveAndEncrypt } from "@/lib/hooks/use-settings";
 import { cn } from "@/lib/utils";
 
-export type CalendarProviderId = "native" | "google" | "ics";
+export type CalendarProviderId = "native" | "ics";
 
 export interface CalendarProviderOption {
   id: CalendarProviderId;
@@ -74,11 +74,6 @@ export function calendarProviderOptions(platform: {
           : "使用通过操作系统提供的日历。",
     },
     {
-      id: "google",
-      label: "Google Calendar",
-      description: "Connect directly with Google OAuth.",
-    },
-    {
       id: "ics",
       label: "ICS",
       description: "粘贴只读的 webcal 或 ICS 订阅 URL。",
@@ -95,16 +90,6 @@ export function CalendarProviderIcon({
   isMac: boolean;
   className?: string;
 }) {
-  if (provider === "google") {
-    return (
-      <img
-        src="/images/google-calendar.svg"
-        alt=""
-        className={cn("h-4 w-4", className)}
-      />
-    );
-  }
-
   if (provider === "ics") {
     return <Link2 className={cn("h-4 w-4", className)} />;
   }
@@ -180,12 +165,6 @@ export function CalendarConnectDialog({
           <NativeCalendarConnect
             label={option.label}
             platform={platform}
-            onConnected={onConnected}
-            onClose={() => onOpenChange(false)}
-          />
-        )}
-        {provider === "google" && (
-          <GoogleCalendarConnect
             onConnected={onConnected}
             onClose={() => onOpenChange(false)}
           />
@@ -297,63 +276,6 @@ function NativeCalendarConnect({
     </div>
   );
 }
-
-function GoogleCalendarConnect({
-  onConnected,
-  onClose,
-}: {
-  onConnected: () => void | Promise<void>;
-  onClose: () => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [statusText, setStatusText] = useState<string | null>(null);
-
-  const connect = async () => {
-    setBusy(true);
-    setStatusText(null);
-    try {
-      const result = await commands.oauthConnect("google-calendar", null, null);
-      if (result.status === "ok" && result.data.connected) {
-        await onConnected();
-        onClose();
-      } else if (result.status === "error") {
-        const msg = String(result.error ?? "");
-        setStatusText(msg || "Google Calendar was not connected.");
-      } else {
-        setStatusText("Google Calendar was not connected.");
-      }
-    } catch (err) {
-      setStatusText(String(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Connect your Google Calendar directly. ScreenPipe uses read-only access
-        for meeting detection and note metadata.
-      </p>
-      <Button onClick={connect} disabled={busy} className="w-full rounded-none">
-        {busy ? (
-          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <CalendarProviderIcon
-            provider="google"
-            isMac={false}
-            className="mr-2 h-3.5 w-3.5"
-          />
-        )}
-        connect google calendar
-      </Button>
-      {statusText && (
-        <p className="text-xs text-muted-foreground">{statusText}</p>
-      )}
-    </div>
-  );
-}
-
 function IcsCalendarConnect({
   onConnected,
   onClose,

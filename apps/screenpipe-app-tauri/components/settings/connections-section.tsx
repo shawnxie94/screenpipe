@@ -45,10 +45,8 @@ import { tauriFetchWithDeadline } from "@/lib/http/tauri-fetch";
 import { platform } from "@tauri-apps/plugin-os";
 import { join, homeDir, tempDir, dirname } from "@tauri-apps/api/path";
 import { AppleCalendarCard } from "./apple-calendar-card";
-import { GoogleCalendarCard } from "./google-calendar-card";
 import { ImapCard } from "./imap-card";
 import { ComposioCard, COMPOSIO_TOOLKITS, type ComposioStatusMap } from "./composio-card";
-import { GoogleDocsCard } from "./google-docs-card";
 import { IcsCalendarCard } from "./ics-calendar-card";
 import { RemoteAgentCard } from "./remote-agent-card";
 import { BrowserUrlCard } from "./browser-url-card";
@@ -2206,316 +2204,6 @@ function ChatGptPanel() {
 }
 
 // ---------------------------------------------------------------------------
-// Generic OAuth panel — used for any integration with is_oauth: true
-// ---------------------------------------------------------------------------
-
-interface OAuthAccount {
-  instance: string | null;
-  displayName: string | null;
-}
-
-// Integrations that let the user choose how much access to grant at connect
-// time. Only ids/labels live here — the actual OAuth scope strings stay
-// server-side (screenpipe-connect), so the UI can never request arbitrary
-// scopes. The selected `id` is passed to `oauthConnect` as the variant; the
-// backend resolves it against its whitelist. Keep ids in sync with each
-// integration's `oauth_scope_variants()`.
-const OAUTH_SCOPE_VARIANTS: Record<
-  string,
-  { id: string; label: string; description: string }[]
-> = {
-  slack: [
-    { id: "send", label: "仅发送", description: "以你的身份发送消息。Screenpipe 无法读取你的 Slack。" },
-    { id: "read_write", label: "Send + read", description: "还可以搜索和阅读你的消息、私信和频道。" },
-  ],
-};
-
-export function getOAuthPanelCopy(integrationId: string, integrationName: string) {
-  if (integrationId === "slack") {
-    return {
-      description: "连接 Slack 工作区。添加每个 Screenpipe 应以你身份操作的工作区。",
-      addAnotherLabel: "添加另一个工作区",
-    };
-  }
-
-  return {
-    description: `连接你的 ${integrationName} 账户。连接后，AI 可以代你操作。`,
-    addAnotherLabel: "添加另一个账户",
-  };
-}
-
-export function getOAuthFallbackMessage(
-  integrationId: string,
-  phase: "pending" | "failed",
-  error?: unknown
-): string | null {
-  if (integrationId !== "zendesk") return null;
-  if (phase === "pending") {
-    return "如果 Zendesk 显示 Invalid Authorization Request / No such client，请使用高级选项：改用令牌连接。";
-  }
-  const reason = error instanceof Error ? error.message : String(error ?? "");
-  if (
-    reason.includes("timed out") ||
-    reason.includes("channel closed") ||
-    reason.includes("No such client") ||
-    reason.includes("Invalid Authorization Request")
-  ) {
-    return "此子域尚不可用 Zendesk OAuth。请使用高级选项：改用令牌连接。";
-  }
-  return "Zendesk OAuth 失败。请使用高级选项：改用令牌连接。";
-}
-
-export function OAuthPanel({
-  integrationId,
-  integrationName,
-  description,
-  supportsOAuthInstances,
-  initialScopeVariant,
-  onConnected,
-  onDisconnected,
-}: {
-  integrationId: string;
-  integrationName: string;
-  description?: string;
-  supportsOAuthInstances: boolean;
-  initialScopeVariant?: string | null;
-  onConnected?: () => void;
-  onDisconnected?: () => void;
-}) {
-  const [status, setStatus] = useState<"idle" | "loading">("idle");
-  const [accounts, setAccounts] = useState<OAuthAccount[]>([]);
-  const [disconnecting, setDisconnecting] = useState<string | null>(null);
-  const [oauthMessage, setOauthMessage] = useState<string | null>(null);
-  // Ref guard so a cancelled or timed-out connect attempt doesn't update state after cancel.
-  const connectingRef = useRef(false);
-  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Zendesk (and any future per-account provider) authorizes against the
-  // customer's own subdomain, so collect it up front and pass it as the OAuth
-  // instance. The token is then stored under oauth:zendesk:{subdomain}.
-  const isSubdomainProvider = integrationId === "zendesk";
-  const [subdomain, setSubdomain] = useState("");
-  // Optional access-level choice (e.g. Slack send-only vs send+read). Defaults
-  // to the first (least-privileged) variant; null when the integration offers
-  // no choice, in which case the backend uses its default scopes.
-  const scopeVariants = OAUTH_SCOPE_VARIANTS[integrationId];
-  const defaultScopeVariant = scopeVariants?.some((v) => v.id === initialScopeVariant)
-    ? initialScopeVariant!
-    : scopeVariants?.[0]?.id ?? null;
-  const [scopeVariant, setScopeVariant] = useState(defaultScopeVariant);
-  const panelCopy = getOAuthPanelCopy(integrationId, integrationName);
-
-  const clearFallbackTimer = useCallback(() => {
-    if (fallbackTimerRef.current) {
-      clearTimeout(fallbackTimerRef.current);
-      fallbackTimerRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => () => clearFallbackTimer(), [clearFallbackTimer]);
-
-  useEffect(() => {
-    if (!scopeVariants?.some((v) => v.id === initialScopeVariant)) return;
-    setScopeVariant(initialScopeVariant!);
-  }, [initialScopeVariant, scopeVariants]);
-
-  const fetchStatus = useCallback(async () => {
-    try {
-      // Try list instances first for richer info
-      const listRes = await commands.oauthListInstances(integrationId);
-      if (listRes.status === "ok" && listRes.data.length > 0) {
-        setAccounts(
-          listRes.data.map((i) => ({
-            instance: i.instance ?? null,
-            displayName: i.display_name ?? null,
-          }))
-        );
-        return;
-      }
-    } catch { /* fallback below */ }
-    try {
-      const res = await commands.oauthStatus(integrationId, null);
-      if (res.status === "ok" && res.data.connected) {
-        setAccounts([{ instance: null, displayName: res.data.display_name ?? null }]);
-      } else {
-        setAccounts([]);
-      }
-    } catch {
-      setAccounts([]);
-    }
-  }, [integrationId]);
-
-  useEffect(() => { fetchStatus(); }, [fetchStatus]);
-
-  const handleConnect = async () => {
-    const instanceArg = isSubdomainProvider ? subdomain.trim() : null;
-    if (isSubdomainProvider && !instanceArg) return;
-    setStatus("loading");
-    setOauthMessage(null);
-    connectingRef.current = true;
-    clearFallbackTimer();
-    const pendingMessage = getOAuthFallbackMessage(integrationId, "pending");
-    if (pendingMessage) {
-      fallbackTimerRef.current = setTimeout(() => {
-        if (connectingRef.current) setOauthMessage(pendingMessage);
-      }, 8000);
-    }
-    try {
-      const res = await commands.oauthConnect(integrationId, instanceArg, scopeVariant);
-      if (!connectingRef.current) return; // cancelled — handleCancel owns the UI
-      if (res.status === "ok" && res.data.connected) {
-        clearFallbackTimer();
-        setOauthMessage(null);
-        await fetchStatus();
-        notifyConnectionsUpdated();
-        onConnected?.();
-      } else {
-        clearFallbackTimer();
-        setOauthMessage(
-          getOAuthFallbackMessage(integrationId, "failed", res.status === "error" ? res.error : null)
-        );
-        setStatus("idle");
-      }
-    } catch (error) {
-      clearFallbackTimer();
-      if (connectingRef.current) {
-        setOauthMessage(getOAuthFallbackMessage(integrationId, "failed", error));
-        setStatus("idle");
-      }
-    } finally {
-      connectingRef.current = false;
-      setStatus("idle");
-    }
-  };
-
-  const handleCancel = async () => {
-    connectingRef.current = false;
-    clearFallbackTimer();
-    // Stay in "loading" (cancel button visible, connect button hidden) until the
-    // backend has actually dropped the pending sender. Otherwise a quick
-    // cancel→connect sequence can race: a late-arriving oauth_cancel would
-    // retain-drop the new flow's entry by integration_id. Keeping the connect
-    // button hidden during the cancel IPC eliminates that window.
-    try { await commands.oauthCancel(integrationId); } catch { /* ignore */ }
-    setStatus("idle");
-  };
-
-  const handleDisconnect = async (instance: string | null) => {
-    const key = instance ?? "__default__";
-    setDisconnecting(key);
-    const remainingAccounts = accounts.filter(account => (account.instance ?? "__default__") !== key);
-    try {
-      await commands.oauthDisconnect(integrationId, instance ?? null);
-      setAccounts(remainingAccounts);
-      await fetchStatus();
-      notifyConnectionsUpdated();
-      if (remainingAccounts.length === 0) {
-        onDisconnected?.();
-      } else {
-        onConnected?.();
-      }
-    } finally {
-      setDisconnecting(null);
-    }
-  };
-
-  const connected = accounts.length > 0;
-  const connectDisabled = isSubdomainProvider && !subdomain.trim();
-
-  return (
-    <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
-        {description ?? panelCopy.description}
-      </p>
-      {connected && (
-        <div className="space-y-2">
-          {accounts.map((account) => {
-            const key = account.instance ?? "__default__";
-            const isDisconnecting = disconnecting === key;
-            return (
-              <div key={key} className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/40 px-2.5 py-2 text-xs">
-                <span className="text-muted-foreground truncate">
-                  {account.displayName || account.instance || "default account"}
-                </span>
-                <Button
-                  onClick={() => handleDisconnect(account.instance)}
-                  disabled={isDisconnecting}
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 shrink-0 text-muted-foreground hover:text-destructive"
-                >
-                  {isDisconnecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {isSubdomainProvider && (
-        <div className="space-y-1">
-          <label className="text-[11px] text-muted-foreground">Zendesk 子域名</label>
-          <div className="flex items-center gap-1">
-            <Input
-              value={subdomain}
-              onChange={(e) => setSubdomain(e.target.value.trim())}
-              placeholder="yourcompany"
-              className="h-8 text-xs"
-              onKeyDown={(e) => { if (e.key === "Enter" && subdomain.trim() && status !== "loading") handleConnect(); }}
-            />
-            <span className="text-[11px] text-muted-foreground whitespace-nowrap">.zendesk.com</span>
-          </div>
-        </div>
-      )}
-      {scopeVariants && status !== "loading" && (
-        <div className="space-y-1.5">
-          <p className="text-[11px] text-muted-foreground">访问级别</p>
-          {scopeVariants.map((v) => (
-            <label key={v.id} className="flex items-start gap-2 text-xs cursor-pointer">
-              <input
-                type="radio"
-                name={`${integrationId}-scope`}
-                checked={scopeVariant === v.id}
-                onChange={() => setScopeVariant(v.id)}
-                className="mt-0.5 accent-foreground"
-              />
-              <span>
-                <span className="font-medium">{v.label}</span>
-                <span className="block text-[11px] text-muted-foreground">{v.description}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-      )}
-      <div className="flex flex-wrap gap-2">
-        {status === "loading" ? (
-          <div className="flex gap-2 items-center">
-            <Button disabled size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal whitespace-nowrap">
-              <Loader2 className="h-3 w-3 animate-spin" />正在连接...
-            </Button>
-            <Button onClick={handleCancel} variant="outline" size="sm" className="h-7 text-xs normal-case font-sans tracking-normal">
-              cancel
-            </Button>
-          </div>
-        ) : (
-          <Button onClick={handleConnect} disabled={connectDisabled} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal whitespace-nowrap">
-            {connected && supportsOAuthInstances
-              ? (<><Plus className="h-3 w-3" />{panelCopy.addAnotherLabel}</>)
-              : connected
-                ? (<><LogIn className="h-3 w-3" />reconnect {integrationName}</>)
-              : (<><LogIn className="h-3 w-3" />connect with {integrationName}</>)}
-          </Button>
-        )}
-      </div>
-      {oauthMessage && (
-        <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-[11px] text-muted-foreground">
-          <AlertCircle className="mt-0.5 h-3 w-3 shrink-0 text-amber-600" />
-          <span>{oauthMessage}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // API integration panel (Telegram, Slack, etc.)
 // ---------------------------------------------------------------------------
 
@@ -2535,8 +2223,6 @@ export interface IntegrationInfo {
   description: string;
   fields: IntegrationField[];
   connected: boolean;
-  is_oauth: boolean;
-  supports_oauth_instances: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -3794,8 +3480,6 @@ export function ConnectionsSection({
   const [browserUrlDetected, setBrowserUrlDetected] = useState(false);
   const [browserUrlConnected, setBrowserUrlConnected] = useState(false);
   const [appleCalendarConnected, setAppleCalendarConnected] = useState(false);
-  const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
-  const [googleDocsConnected, setGoogleDocsConnected] = useState(false);
   const [customMcpConnected, setCustomMcpConnected] = useState(false);
   const [customMcpServerCount, setCustomMcpServerCount] = useState(0);
   const [customMcpEnabledCount, setCustomMcpEnabledCount] = useState(0);
@@ -3872,12 +3556,6 @@ export function ConnectionsSection({
     isGrokMcpInstalled().then(setGrokInstalled).catch(() => {});
     commands.chatgptOauthStatus().then(res => {
       setChatgptConnected(res.status === "ok" && res.data.logged_in);
-    }).catch(() => {});
-    commands.oauthStatus("google-calendar", null).then(res => {
-      setGoogleCalendarConnected(res.status === "ok" && res.data.connected);
-    }).catch(() => {});
-    commands.oauthStatus("google-docs", null).then(res => {
-      setGoogleDocsConnected(res.status === "ok" && res.data.connected);
     }).catch(() => {});
     localFetch("/mcp-servers").then(async r => {
       if (!r.ok) {
@@ -4005,8 +3683,6 @@ export function ConnectionsSection({
         { id: "voice-memos", name: "语音备忘录", icon: "voice-memos", connected: false },
       ] : []),
       ...(os === "macos" ? [{ id: "apple-calendar", name: "Apple Calendar", icon: "apple-calendar", connected: appleCalendarConnected }] : []),
-      { id: "google-calendar", name: "Google Calendar", icon: "google-calendar", connected: false },
-      { id: "google-docs", name: "Google Docs", icon: "google-docs", connected: false },
       { id: "gmail", name: "Gmail", icon: "gmail", connected: composioConnected.gmail },
       { id: "google-drive", name: "Google Drive", icon: "google-drive", connected: composioConnected.googledrive },
       { id: "google-sheets", name: "Google Sheets", icon: "google-sheets", connected: composioConnected.googlesheets },
@@ -4067,16 +3743,11 @@ export function ConnectionsSection({
         : false;
       h.connected = h.connected || apiConnected;
     }
-    // Google OAuth dots are driven by direct oauthStatus (not the cached API), so they stay
-    // in sync immediately after connect/disconnect without waiting for cache expiry.
-    const googleCalTile = hardcoded.find(h => h.id === "google-calendar");
-    if (googleCalTile) googleCalTile.connected = googleCalendarConnected;
+    // Docs/Zoom dots light for the Composio connection.
     const googleDocsTile = hardcoded.find(h => h.id === "google-docs");
-    // Docs lights for the Composio connection OR the legacy native OAuth one.
-    if (googleDocsTile) googleDocsTile.connected = googleDocsConnected || composioConnected.googledocs;
-    // Zoom's dot lights for the Composio connection OR a legacy Zoom OAuth connection.
     const zoomTile = apiTiles.find(t => t.id === "zoom");
     if (zoomTile) zoomTile.connected = zoomTile.connected || composioConnected.zoom;
+    if (googleDocsTile) googleDocsTile.connected = composioConnected.googledocs;
     // Custom MCP tile shows the dot when any user-registered MCP server is enabled.
     const customMcpTile = hardcoded.find(h => h.id === "custom-mcp");
     if (customMcpTile) {
@@ -4089,7 +3760,7 @@ export function ConnectionsSection({
       category: CONNECTION_CATEGORY_BY_ID[tile.id] ?? tile.category ?? "Other",
       description: tile.description ?? CONNECTION_HARDCODED_DESCRIPTIONS[tile.id],
     }));
-  }, [os, claudeInstalled, cursorInstalled, codexInstalled, grokInstalled, chatgptConnected, browserUrlConnected, browserUrlDetected, integrations, appleCalendarConnected, googleCalendarConnected, googleDocsConnected, customMcpConnected, customMcpServerCount, krispConnected, plaudConnected, mcpProviderConnected, excalidrawConnected, importedSkillsCount, detectedConnectionIds, composioConnected]);
+  }, [os, claudeInstalled, cursorInstalled, codexInstalled, grokInstalled, chatgptConnected, browserUrlConnected, browserUrlDetected, integrations, appleCalendarConnected, customMcpConnected, customMcpServerCount, krispConnected, plaudConnected, mcpProviderConnected, excalidrawConnected, importedSkillsCount, detectedConnectionIds, composioConnected]);
 
   const isDefaultView = !search.trim() && categoryFilter === ALL_CONNECTION_CATEGORIES;
 
@@ -4194,7 +3865,7 @@ export function ConnectionsSection({
       // untouched. Surface it under an "advanced" disclosure so they can still
       // see/rotate/remove it; otherwise the one-click OAuth is the primary path.
       const existing = selectedIntegration;
-      const hasManual = !!existing && (existing.is_oauth || existing.fields.length > 0);
+      const hasManual = !!existing && existing.fields.length > 0;
       return (
         <div className="space-y-3">
           <OAuthMcpPanel
@@ -4212,21 +3883,10 @@ export function ConnectionsSection({
                   : "connect with an API key instead"}
               </summary>
               <div className="pt-2">
-                {existing.is_oauth ? (
-                  <OAuthPanel
-                    integrationId={existing.id}
-                    integrationName={existing.name}
-                    supportsOAuthInstances={!!existing.supports_oauth_instances}
-                    initialScopeVariant={selectedScopeVariant}
-                    onConnected={() => refreshIntegrationConnection(existing.id, true)}
-                    onDisconnected={() => refreshIntegrationConnection(existing.id, false)}
-                  />
-                ) : (
-                  <ApiIntegrationPanel
-                    integration={existing}
-                    onRefresh={fetchIntegrations}
-                  />
-                )}
+                <ApiIntegrationPanel
+                  integration={existing}
+                  onRefresh={fetchIntegrations}
+                />
               </div>
             </details>
           )}
@@ -4257,57 +3917,12 @@ export function ConnectionsSection({
       case "browser-url": return <BrowserUrlCard onStatusChange={setBrowserUrlConnected} />;
       case "voice-memos": return <VoiceMemosCard />;
       case "apple-calendar": return <AppleCalendarCard onStatusChange={setAppleCalendarConnected} />;
-      case "google-calendar": return <GoogleCalendarCard
-        onConnected={() => setGoogleCalendarConnected(true)}
-        onDisconnected={() => { setGoogleCalendarConnected(false); notifyConnectionsUpdated(); fetchIntegrations(); }}
-      />;
       case "imap": return <ImapCard onChanged={fetchIntegrations} />;
-      case "google-docs": return (
-        <div className="space-y-3">
-          <ComposioCard toolkit="googledocs" initialConnected={composioConnected.googledocs} onChanged={setComposioConnected} />
-          {/* The native Docs connector (documents + drive.file scopes) still
-              works and keeps tokens local — keep it manageable for users who
-              connected before Composio became the primary path. */}
-          {googleDocsConnected && (
-            <details>
-              <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground">
-                advanced: manage the legacy google docs connection
-              </summary>
-              <div className="pt-2">
-                <GoogleDocsCard />
-              </div>
-            </details>
-          )}
-        </div>
-      );
+      case "google-docs": return <ComposioCard toolkit="googledocs" initialConnected={composioConnected.googledocs} onChanged={setComposioConnected} />;
       case "google-drive": return <ComposioCard toolkit="googledrive" initialConnected={composioConnected.googledrive} onChanged={setComposioConnected} />;
       case "google-sheets": return <ComposioCard toolkit="googlesheets" initialConnected={composioConnected.googlesheets} onChanged={setComposioConnected} />;
       case "gmail": return <ComposioCard toolkit="gmail" initialConnected={composioConnected.gmail} onChanged={setComposioConnected} />;
-      case "zoom": return (
-        <div className="space-y-3">
-          <ComposioCard toolkit="zoom" initialConnected={composioConnected.zoom} onChanged={setComposioConnected} />
-          {/* The legacy Zoom OAuth app was rejected in marketplace review, so its
-              authorize page is dead for new connections. Surface the old panel
-              only for users who still HAVE a legacy connection (to manage or
-              disconnect it) — never as a connect path. */}
-          {selectedIntegration?.is_oauth && selectedIntegration.connected && (
-            <details>
-              <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground">
-                advanced: manage the legacy zoom connection
-              </summary>
-              <div className="pt-2">
-                <OAuthPanel
-                  integrationId="zoom"
-                  integrationName="Zoom"
-                  supportsOAuthInstances={!!selectedIntegration.supports_oauth_instances}
-                  onConnected={() => refreshIntegrationConnection("zoom", true)}
-                  onDisconnected={() => refreshIntegrationConnection("zoom", false)}
-                />
-              </div>
-            </details>
-          )}
-        </div>
-      );
+      case "zoom": return <ComposioCard toolkit="zoom" initialConnected={composioConnected.zoom} onChanged={setComposioConnected} />;
       case "ics-calendar": return <IcsCalendarCard />;
       case "remote-agent": return <RemoteAgentCard />;
       case "whatsapp": return <WhatsAppPanel />;
@@ -4355,37 +3970,6 @@ export function ConnectionsSection({
       />;
       default:
         if (selectedIntegration) {
-          if (selectedIntegration.is_oauth) {
-            return (
-              <div className="space-y-3">
-                <OAuthPanel
-                  integrationId={selectedIntegration.id}
-                  integrationName={selectedIntegration.name}
-                  description={selectedIntegration.description}
-                  supportsOAuthInstances={!!selectedIntegration.supports_oauth_instances}
-                  initialScopeVariant={selectedScopeVariant}
-                  onConnected={() => refreshIntegrationConnection(selectedIntegration.id, true)}
-                  onDisconnected={() => refreshIntegrationConnection(selectedIntegration.id, false)}
-                />
-                {/* OAuth integrations with credential fields (HubSpot Private App
-                    token, Teams webhook URL) keep a manual fallback for users whose
-                    org bans OAuth apps — without this the fields are unreachable. */}
-                {selectedIntegration.fields.length > 0 && (
-                  <details>
-                    <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground">
-                      advanced: connect with a token instead
-                    </summary>
-                    <div className="pt-2">
-                      <ApiIntegrationPanel
-                        integration={selectedIntegration}
-                        onRefresh={fetchIntegrations}
-                      />
-                    </div>
-                  </details>
-                )}
-              </div>
-            );
-          }
           // Bee has no redirect OAuth, but supports one-click device pairing.
           // Show the pairing button, keeping the manual token field as an
           // advanced fallback (e.g. a token pasted from the bee CLI).

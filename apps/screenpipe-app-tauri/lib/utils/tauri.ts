@@ -10,7 +10,8 @@
 export const commands = {
 /**
  * Frontend hook for browser OAuth flows that complete by polling (MCP and
- * Composio). Generic integration OAuth calls the same mechanism directly.
+ * Composio). Best-effort activation after browser OAuth without changing
+ * window state.
  */
 async activateAppAfterOauth() : Promise<void> {
     await TAURI_INVOKE("activate_app_after_oauth");
@@ -1006,66 +1007,6 @@ async nativeTimelineNavigate(timestamp: string | null, frameId: string | null) :
  */
 async nativeTimelineShow(port: number, apiKey: string | null, embedded: boolean | null) : Promise<boolean> {
     return await TAURI_INVOKE("native_timeline_show", { port, apiKey, embedded });
-},
-/**
- * Cancel any in-flight OAuth flow(s) for the given integration.
- * Dropping the stored sender makes the awaiting `oauth_connect` call fail fast
- * with "OAuth channel closed before code was received" instead of hanging for
- * the full callback timeout.
- */
-async oauthCancel(integrationId: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("oauth_cancel", { integrationId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Start the OAuth flow for any integration that has `oauth_config()` set.
- * `integration_id` must match the integration's `def().id`.
- * `instance` is an optional name for multi-account support (e.g. email address).
- */
-async oauthConnect(integrationId: string, instance: string | null, variant: string | null) : Promise<Result<OAuthStatus, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("oauth_connect", { integrationId, instance, variant }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Remove the stored OAuth token for the given integration instance.
- */
-async oauthDisconnect(integrationId: string, instance: string | null) : Promise<Result<boolean, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("oauth_disconnect", { integrationId, instance }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * List all connected OAuth instances for a given integration.
- */
-async oauthListInstances(integrationId: string) : Promise<Result<OAuthInstanceInfo[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("oauth_list_instances", { integrationId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Check whether a valid (non-expired) OAuth token exists for the given integration.
- */
-async oauthStatus(integrationId: string, instance: string | null) : Promise<Result<OAuthStatus, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("oauth_status", { integrationId, instance }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
 },
 /**
  * Open Google Calendar OAuth inside an in-app WebView.
@@ -2859,15 +2800,6 @@ export type LowDiskGuardConfig = { thresholdBytes: number; checkIntervalSeconds:
 export type MeetingExportSummary = { job_id: string; output_path: string; frame_count: number; audio_chunk_count: number; duration_secs: number; file_size_bytes: number }
 export type MonitorDevice = { id: number; stableId: string; name: string; isDefault: boolean; width: number; height: number }
 export type NotificationActionEvent = { actionType: string | null; rawJson: string; payload: JsonValue }
-export type OAuthInstanceInfo = { instance: string | null; display_name: string | null }
-export type OAuthStatus = { connected: boolean; display_name: string | null;
-/**
- * True when a token row exists in the secret store but we can't read it
- * (keychain key unavailable — usually a dev↔prod bundle ACL split). The
- * UI should surface this as "needs attention" rather than "not connected"
- * since the user can't fix it by reconnecting in the broken bundle.
- */
-needs_attention?: boolean }
 export type OSPermission = "screenRecording" | "microphone" | "accessibility" | "automation" | "inputMonitoring" | "calendar"
 export type OSPermissionStatus = "notNeeded" | "empty" | "granted" | "restartRequired" | "denied"
 export type OSPermissionsCheck = { screenRecording: OSPermissionStatus; microphone: OSPermissionStatus; accessibility: OSPermissionStatus }

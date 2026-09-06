@@ -44,8 +44,7 @@ export type FirstRunNextStepsSnapshot = {
   digitalCloneState: PipeSetupState;
   speakerReconciliationState: PipeSetupState;
   gmailConnected: SetupCheck;
-  googleCalendarConnected: SetupCheck;
-};
+  };
 
 const INITIAL_SNAPSHOT: FirstRunNextStepsSnapshot = {
   checked: false,
@@ -53,7 +52,6 @@ const INITIAL_SNAPSHOT: FirstRunNextStepsSnapshot = {
   digitalCloneState: null,
   speakerReconciliationState: null,
   gmailConnected: null,
-  googleCalendarConnected: null,
 };
 
 async function checkPipeState(
@@ -132,12 +130,6 @@ async function installBundledPipe(slug: string): Promise<void> {
     pipeName: body?.name || slug,
     connections: [],
   });
-}
-
-async function checkGoogleCalendarConnected(): Promise<boolean> {
-  const result = await commands.oauthStatus("google-calendar", null);
-  if (result.status === "error") throw new Error(result.error);
-  return result.data.connected;
 }
 
 function settledValue<T>(result: PromiseSettledResult<T>): T | null {
@@ -258,22 +250,18 @@ export function FirstRunNextStepsPanel({
   const speakerDisabled = snapshot.speakerReconciliationState === "disabled";
   const speakerUnknown =
     snapshot.checked && snapshot.speakerReconciliationState === null;
-  const calendarReady = snapshot.googleCalendarConnected === true;
-  const calendarUnknown =
-    snapshot.checked && snapshot.googleCalendarConnected === null;
   const hasUnknown =
     gmailUnknown ||
     dailyUnknown ||
     cloneUnknown ||
-    speakerUnknown ||
-    calendarUnknown;
-  const allReady = dailyReady && cloneReady && speakerReady && calendarReady;
+    speakerUnknown;
+  const allReady = dailyReady && cloneReady && speakerReady;
   const setupBusy = Boolean(setupBusyLabel);
 
   const announcement = checking
     ? "checking your setup"
     : allReady
-      ? "全部就绪。Screenpipe 会记住你的工作、邮件发送每日总结、协助标注会议上的人名，并了解你日历上的安排。"
+      ? "全部就绪。Screenpipe 会记住你的工作、邮件发送每日总结、协助标注会议上的人名。"
       : "setup checked";
 
   return (
@@ -321,8 +309,7 @@ export function FirstRunNextStepsPanel({
               all set
             </p>
             <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-              Screenpipe 会记住你的工作、邮件发送每日总结、协助标注会议上的人名，
-              并了解你日历上的安排。
+              Screenpipe 会记住你的工作、邮件发送每日总结、协助标注会议上的人名。
             </p>
           </div>
         </div>
@@ -334,8 +321,7 @@ export function FirstRunNextStepsPanel({
                 one click sets up all of this
               </p>
               <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                Screenpipe will turn these on, then help you connect Gmail and
-                Google Calendar.
+                Screenpipe will turn these on, then help you connect Gmail.
               </p>
             </div>
             <Button
@@ -426,29 +412,6 @@ export function FirstRunNextStepsPanel({
             }
             complete={dailyReady}
           />
-
-          <SetupOutcomeRow
-            icon={
-              <img
-                src="/google-calendar-icon.svg"
-                alt=""
-                className="h-4 w-4"
-                data-testid="google-calendar-service-icon"
-              />
-            }
-            title="理解我的会议"
-            description="使用 Google 日历了解我的会议内容。Screenpipe 永不修改我的日历。"
-            status={
-              checking
-                ? "checking"
-                : calendarReady
-                  ? "connected"
-                  : calendarUnknown
-                    ? "couldn't check"
-                    : "connect calendar"
-            }
-            complete={calendarReady}
-          />
         </div>
       )}
 
@@ -500,7 +463,6 @@ export function FirstRunNextSteps({
       digitalClone,
       speakerReconciliation,
       gmail,
-      googleCalendar,
     ] = await Promise.allSettled([
       checkPipeState(DAILY_EMAIL_PIPE),
       checkPipeState(DIGITAL_CLONE_PIPE),
@@ -511,7 +473,6 @@ export function FirstRunNextSteps({
             return status.gmail?.connected === true;
           })
         : Promise.resolve(null),
-      checkGoogleCalendarConnected(),
     ]);
 
     if (refreshId !== refreshIdRef.current) return;
@@ -521,7 +482,6 @@ export function FirstRunNextSteps({
       digitalCloneState: settledValue(digitalClone),
       speakerReconciliationState: settledValue(speakerReconciliation),
       gmailConnected: settledValue(gmail),
-      googleCalendarConnected: settledValue(googleCalendar),
     });
     setRefreshing(false);
   }, [userToken]);
@@ -567,15 +527,6 @@ export function FirstRunNextSteps({
     notifyConnectionsUpdated();
   }, [userToken]);
 
-  const connectGoogleCalendar = useCallback(async () => {
-    const result = await commands.oauthConnect("google-calendar", null, null);
-    if (result.status === "error") throw new Error(result.error);
-    if (!result.data.connected) {
-      throw new Error("google calendar connection was not completed.");
-    }
-    notifyConnectionsUpdated();
-  }, []);
-
   const setupEverything = useCallback(async () => {
     if (setupBusyRef.current) return;
     setupBusyRef.current = true;
@@ -615,11 +566,6 @@ export function FirstRunNextSteps({
         await enablePipe(DAILY_EMAIL_PIPE);
       }
 
-      if (snapshot.googleCalendarConnected !== true) {
-        setSetupBusyLabel("connect calendar");
-        await connectGoogleCalendar();
-      }
-
       setSetupBusyLabel("almost done");
       await refresh();
     } catch (error) {
@@ -631,7 +577,7 @@ export function FirstRunNextSteps({
       setupBusyRef.current = false;
       setSetupBusyLabel(null);
     }
-  }, [connectGmail, connectGoogleCalendar, refresh, snapshot]);
+  }, [connectGmail, refresh, snapshot]);
 
   const retry = useCallback(() => {
     setActionError(null);

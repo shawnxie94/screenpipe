@@ -76,7 +76,6 @@ mod local_ui_visibility;
 mod meeting_export;
 mod meeting_live_notes;
 mod meeting_stall_notifications;
-mod oauth;
 mod overlay_health;
 mod owned_browser;
 mod owned_browser_transport;
@@ -333,7 +332,6 @@ macro_rules! define_specta_builder {
             .typ::<hardware::HardwareCapability>()
             .typ::<chatgpt_oauth::ChatGptOAuthStatus>()
             .typ::<provider_automations::ProviderAutomation>()
-            .typ::<oauth::OAuthStatus>()
             .typ::<events::JobEvent>()
             .typ::<events::ExportEvent>()
             .typ::<events::ExportRequestInfo>()

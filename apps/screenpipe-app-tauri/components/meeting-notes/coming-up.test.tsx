@@ -13,7 +13,7 @@ import { ComingUp, type ComingUpStatus } from "./coming-up";
 
 function renderEmptyState(
   status: ComingUpStatus,
-  connectedSources: Array<"native" | "google" | "ics"> = [],
+  connectedSources: Array<"native" | "ics"> = [],
 ) {
   render(
     <ComingUp
@@ -47,10 +47,10 @@ describe("ComingUp empty state", () => {
   });
 
   it("still confirms a connected calendar when the source is known", () => {
-    renderEmptyState("empty", ["google"]);
+    renderEmptyState("empty", ["ics"]);
 
     expect(
-      screen.getByText("已连接 Google Calendar。未来 8 小时没有会议。"),
+      screen.getByText("已连接 ICS。未来 8 小时没有会议。"),
     ).toBeInTheDocument();
   });
 });

@@ -368,7 +368,7 @@ function screenpipeTitle(path: string): string {
   if (path === "/raw_sql") return "Local database query";
   if (path === "/memories") return "Screenpipe memories";
   if (path.startsWith("/connections/perplexity/")) return "Perplexity search";
-  if (path.startsWith("/connections/google-calendar/") || path.startsWith("/connections/calendar/")) {
+  if (path.startsWith("/connections/calendar/")) {
     return "Google Calendar events";
   }
   if (path.startsWith("/connections/notion")) return "Notion connection";
@@ -409,7 +409,7 @@ function screenpipeSubtitle(path: string, query: string): string | undefined {
     return "external web context via Screenpipe connection";
   }
 
-  if (path.startsWith("/connections/google-calendar/") || path.startsWith("/connections/calendar/")) {
+  if (path.startsWith("/connections/calendar/")) {
     return timeRange(params.start_time ?? params.start, params.end_time ?? params.end) ?? limitSubtitle(params.limit);
   }
 

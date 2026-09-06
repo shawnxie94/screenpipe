@@ -42,12 +42,11 @@ const DIGITAL_CLONE_PIPE = "digital-clone";
 const SPEAKER_RECONCILIATION_PIPE = "speaker-reconciliation";
 
 type ConnectionState = boolean | null;
-type ConnectionId = "gmail" | "google-calendar";
+type ConnectionId = "gmail";
 type PipeSetupState = "missing" | "disabled" | "enabled" | null;
 
 const CONNECTION_ANALYTICS_ID: Record<ConnectionId, string> = {
   gmail: "composio-gmail",
-  "google-calendar": "google-calendar",
 };
 
 function connectionCtaProperties(id: ConnectionId) {
@@ -189,9 +188,7 @@ function ConnectionRow({
         ? "connected"
         : connected === null
           ? "retry"
-          : id === "gmail"
-            ? "connect gmail"
-            : "connect calendar";
+          : "connect gmail";
 
   return (
     <article
@@ -397,23 +394,16 @@ export default function FinalSetupStep({
   const refresh = useCallback(async () => {
     const refreshId = ++refreshIdRef.current;
     setChecking(true);
-    const [gmail, calendar] = await Promise.allSettled([
+    const gmail = await Promise.allSettled([
       userToken
         ? fetchComposioStatus(userToken).then((status) => {
             if (!status) throw new Error("gmail status unavailable");
             return status.gmail?.connected === true;
           })
         : Promise.resolve(false),
-      commands.oauthStatus("google-calendar", null).then((result) => {
-        if (result.status === "error") throw new Error(result.error);
-        return result.data.connected;
-      }),
     ]);
     if (refreshId !== refreshIdRef.current) return;
-    setGmailConnected(gmail.status === "fulfilled" ? gmail.value : null);
-    setCalendarConnected(
-      calendar.status === "fulfilled" ? calendar.value : null,
-    );
+    setGmailConnected(gmail[0].status === "fulfilled" ? (gmail[0] as PromiseFulfilledResult<boolean>).value : null);
     setChecking(false);
   }, [userToken]);
 
@@ -430,14 +420,13 @@ export default function FinalSetupStep({
     if (checking) return;
     const connections: Array<[ConnectionId, ConnectionState]> = [
       ["gmail", gmailConnected],
-      ["google-calendar", calendarConnected],
     ];
     connections.forEach(([id, connected]) => {
       if (connected === true || connectionImpressionsRef.current.has(id))
         return;
       connectionImpressionsRef.current.add(id);
     });
-  }, [calendarConnected, checking, gmailConnected]);
+  }, [checking, gmailConnected]);
 
   const refreshPipeStates = useCallback(async () => {
     const slugs = [
@@ -534,28 +523,6 @@ export default function FinalSetupStep({
     }
   }, [userToken]);
 
-  const connectCalendar = useCallback(async () => {
-    setBusyConnection("google-calendar");
-    setError(null);
-    try {
-      const result = await commands.oauthConnect("google-calendar", null, null);
-      if (result.status === "error") throw new Error(result.error);
-      if (!result.data.connected) {
-        throw new Error("Google Calendar connection was not completed.");
-      }
-      setCalendarConnected(true);
-      notifyConnectionsUpdated();
-    } catch (connectError) {
-      setError(
-        connectError instanceof Error
-          ? connectError.message
-          : "Screenpipe couldn't connect Google Calendar. try again.",
-      );
-    } finally {
-      setBusyConnection(null);
-    }
-  }, []);
-
   const actionBusy = busyConnection !== null || busyPipe !== null;
 
   return (
@@ -625,25 +592,6 @@ export default function FinalSetupStep({
           requiresGmail
           gmailConnected={gmailConnected}
           onSetup={() => void setupPipe(DAILY_EMAIL_PIPE, false)}
-        />
-        <ConnectionRow
-          id="google-calendar"
-          icon={
-            <img
-              src="/google-calendar-icon.svg"
-              alt=""
-              className="h-4 w-4"
-              data-testid="google-calendar-service-icon"
-            />
-          }
-          title="Google Calendar"
-          description="add meeting context without letting Screenpipe change your calendar."
-          connected={calendarConnected}
-          checking={checking}
-          busy={busyConnection === "google-calendar"}
-          anotherConnectionBusy={actionBusy}
-          onConnect={() => void connectCalendar()}
-          onRetry={() => void refresh()}
         />
       </div>
 

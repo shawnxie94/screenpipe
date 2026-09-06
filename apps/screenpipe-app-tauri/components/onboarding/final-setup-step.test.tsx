@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
   fetchComposioStatus: vi.fn(),
   authorizeComposioToolkit: vi.fn(),
   registerComposioMcpServer: vi.fn(),
-  oauthStatus: vi.fn(),
   oauthConnect: vi.fn(),
   spawnScreenpipe: vi.fn(),
   openUrl: vi.fn(),
@@ -42,7 +41,6 @@ vi.mock("@/lib/pipe-install-receipt", () => ({
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: mocks.openUrl }));
 vi.mock("@/lib/utils/tauri", () => ({
   commands: {
-    oauthStatus: mocks.oauthStatus,
     oauthConnect: mocks.oauthConnect,
     spawnScreenpipe: mocks.spawnScreenpipe,
   },
@@ -71,10 +69,6 @@ beforeEach(() => {
   mocks.registerComposioMcpServer.mockResolvedValue(undefined);
   mocks.foregroundAfterOAuth.mockResolvedValue(undefined);
   mocks.localFetch.mockRejectedValue(new Error("engine is starting"));
-  mocks.oauthStatus.mockImplementation(async () => ({
-    status: "ok",
-    data: { connected: calendarConnected },
-  }));
   mocks.oauthConnect.mockImplementation(async () => {
     calendarConnected = true;
     return { status: "ok", data: { connected: true } };
@@ -119,9 +113,7 @@ describe("final onboarding setup", () => {
     );
 
     const gmail = await screen.findByTestId("onboarding-gmail-action");
-    const calendar = screen.getByTestId("onboarding-google-calendar-action");
     await waitFor(() => expect(gmail).toHaveTextContent("connect gmail"));
-    expect(calendar).toHaveTextContent("connect calendar");
     expect(
       screen.getByTestId("onboarding-digital-clone-action"),
     ).toHaveTextContent("set up");
@@ -133,7 +125,6 @@ describe("final onboarding setup", () => {
     ).toHaveTextContent("needs gmail");
     expect(gmail).toHaveClass("col-start-3", "row-start-1", "min-w-24");
     expect(mocks.fetchComposioStatus).toHaveBeenCalledWith("signed-in-token");
-    expect(mocks.oauthStatus).toHaveBeenCalledWith("google-calendar", null);
     expect(mocks.registerComposioMcpServer).not.toHaveBeenCalled();
     await waitFor(() => {
     });
@@ -260,39 +251,6 @@ describe("final onboarding setup", () => {
     );
   });
 
-  it("connects Calendar and changes its CTA to completed", async () => {
-    render(
-      <FinalSetupStep userToken="signed-in-token" handleNextSlide={vi.fn()} />,
-    );
-
-    const calendar = await screen.findByTestId(
-      "onboarding-google-calendar-action",
-    );
-    await waitFor(() => expect(calendar).toHaveTextContent("connect calendar"));
-    fireEvent.click(calendar);
-
-    await waitFor(() => expect(calendar).toHaveTextContent("connected"));
-    expect(calendar).toBeDisabled();
-    expect(mocks.oauthConnect).toHaveBeenCalledWith(
-      "google-calendar",
-      null,
-      null,
-    );
-  });
-
-  it("keeps Calendar actionable when the Gmail status request fails", async () => {
-    mocks.fetchComposioStatus.mockResolvedValue(null);
-    render(
-      <FinalSetupStep userToken="signed-in-token" handleNextSlide={vi.fn()} />,
-    );
-
-    const gmail = await screen.findByTestId("onboarding-gmail-action");
-    const calendar = screen.getByTestId("onboarding-google-calendar-action");
-    await waitFor(() => expect(gmail).toHaveTextContent("retry"));
-    expect(calendar).toHaveTextContent("connect calendar");
-    expect(calendar).toBeEnabled();
-  });
-
   it("tracks Gmail connection failures without sending raw error text", async () => {
     mocks.authorizeComposioToolkit.mockRejectedValue(
       new Error("private provider response"),
@@ -311,24 +269,4 @@ describe("final onboarding setup", () => {
     expect(gmail).not.toHaveTextContent("connected");
   });
 
-  it("recovers Google Calendar connection failures in the UI", async () => {
-    mocks.oauthConnect.mockResolvedValue({
-      status: "error",
-      error: "calendar oauth failed",
-    });
-    render(
-      <FinalSetupStep userToken="signed-in-token" handleNextSlide={vi.fn()} />,
-    );
-
-    const calendar = await screen.findByTestId(
-      "onboarding-google-calendar-action",
-    );
-    await waitFor(() => expect(calendar).toHaveTextContent("connect calendar"));
-    fireEvent.click(calendar);
-
-    // The oauth failure never reaches the connected state.
-    await waitFor(() => expect(calendar).toBeEnabled());
-    expect(calendar).toHaveTextContent("connect calendar");
-    expect(calendar).not.toHaveTextContent("connected");
-  });
 });

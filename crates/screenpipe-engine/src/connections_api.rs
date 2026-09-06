@@ -10,7 +10,6 @@ use axum::response::Html;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use screenpipe_connect::connections::{bee, build_default_client, telegram, ConnectionManager};
-use screenpipe_connect::oauth::{self as oauth_store, OAuthCallbackResult, PENDING_OAUTH};
 use screenpipe_connect::whatsapp::WhatsAppGateway;
 use screenpipe_secrets::SecretStore;
 use serde::{Deserialize, Serialize};
@@ -22,7 +21,6 @@ use std::sync::{Arc, Mutex as StdMutex, OnceLock};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
-use crate::oauth_result_page::render_oauth_result_page;
 use crate::routes::browser::BrowserBridge;
 use crate::routes::websocket::WebSocketLifecycle;
 use screenpipe_connect::connections::browser::{BrowserRegistry, BrowserSummary, EvalError};
@@ -241,24 +239,6 @@ pub struct TestRequest {
 }
 
 #[derive(Deserialize)]
-pub struct SlackSendRequest {
-    #[serde(default)]
-    pub text: Option<String>,
-    #[serde(default)]
-    pub blocks: Option<Value>,
-    #[serde(default)]
-    pub attachments: Option<Value>,
-    /// Target channel/conversation id (or user id for a DM). Only used by the
-    /// user-token transport; defaults to the connecting user's own DM.
-    #[serde(default)]
-    pub channel: Option<String>,
-    #[serde(default)]
-    pub instance: Option<String>,
-    #[serde(flatten)]
-    pub extra: Map<String, Value>,
-}
-
-#[derive(Deserialize)]
 pub struct TelegramSendRequest {
     pub text: String,
     #[serde(default)]
@@ -266,117 +246,8 @@ pub struct TelegramSendRequest {
 }
 
 #[derive(Deserialize)]
-pub struct SlackSearchQuery {
-    /// Slack search query string (same syntax as the Slack search box).
-    pub q: String,
-    #[serde(default)]
-    pub count: Option<u32>,
-    #[serde(default)]
-    pub instance: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub struct SlackConversationsQuery {
-    /// Comma-separated conversation types. Defaults to all the user can see.
-    #[serde(default)]
-    pub types: Option<String>,
-    #[serde(default)]
-    pub limit: Option<u32>,
-    #[serde(default)]
-    pub instance: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub struct SlackHistoryQuery {
-    /// Conversation id (channel `C…`, DM `D…`, group `G…`).
-    pub channel: String,
-    #[serde(default)]
-    pub limit: Option<u32>,
-    #[serde(default)]
-    pub instance: Option<String>,
-}
-
-#[derive(Deserialize)]
 pub struct WhatsAppPairRequest {
     pub bun_path: String,
-}
-
-/// Canonical one-click MCP-OAuth providers (#4580). Maps a connector id to the
-/// provider's remote MCP URL. Keep in sync with `MCP_OAUTH_PROVIDERS` in
-/// `apps/screenpipe-app-tauri/components/settings/connections-section.tsx`.
-///
-/// When a user connects one of these via one-click MCP OAuth, the connection is
-/// persisted in the MCP server store (keyed by a *random* server id + this URL)
-/// — not the connector secret store — so the connector's own `connected` flag
-/// stays false and the in-app agent reports it "not connected". We match a
-/// live, oauth-connected MCP server back to its connector by URL.
-const MCP_OAUTH_PROVIDER_URLS: &[(&str, &str)] = &[
-    ("linear", "https://mcp.linear.app/mcp"),
-    ("stripe", "https://mcp.stripe.com"),
-    ("sentry", "https://mcp.sentry.dev/mcp"),
-    ("intercom", "https://mcp.intercom.com/mcp"),
-    ("asana", "https://mcp.asana.com/mcp"),
-    ("monday", "https://mcp.monday.com/mcp"),
-    ("clickup", "https://mcp.clickup.com/mcp"),
-    ("airtable", "https://mcp.airtable.com/mcp"),
-    ("confluence", "https://mcp.atlassian.com/v1/mcp"),
-    ("jira", "https://mcp.atlassian.com/v1/mcp"),
-    ("notion", "https://mcp.notion.com/mcp"),
-];
-
-fn normalize_mcp_url(url: &str) -> &str {
-    url.trim_end_matches('/')
-}
-
-/// Resolve an MCP server URL to the connector id it belongs to (trailing-slash
-/// insensitive, mirroring the frontend's matching). `None` if it isn't one of
-/// the known one-click providers.
-fn connector_id_for_mcp_url(url: &str) -> Option<&'static str> {
-    let normalized = normalize_mcp_url(url);
-    MCP_OAUTH_PROVIDER_URLS
-        .iter()
-        .find(|(_, provider_url)| normalize_mcp_url(provider_url) == normalized)
-        .map(|(id, _)| *id)
-}
-
-/// Connector ids currently connected via one-click MCP OAuth (#4580). Reads the
-/// MCP server store and matches each enabled, oauth-connected server back to its
-/// connector by URL. Best-effort: any read error yields an empty set so the
-/// connections list degrades to the pre-existing behavior.
-async fn mcp_oauth_connected_ids(
-    screenpipe_dir: &std::path::Path,
-    secret_store: Option<Arc<SecretStore>>,
-) -> std::collections::HashSet<String> {
-    use screenpipe_connect::mcp_servers::McpServerStore;
-    let mut connected = std::collections::HashSet::new();
-    let store = McpServerStore::new(screenpipe_dir.to_path_buf(), secret_store);
-    let servers = match store.list().await {
-        Ok(servers) => servers,
-        Err(err) => {
-            tracing::warn!("[connections] failed to read mcp servers for connection status: {err}");
-            return connected;
-        }
-    };
-    for server in servers {
-        if !server.enabled {
-            continue;
-        }
-        let Some(conn_id) = connector_id_for_mcp_url(&server.url) else {
-            continue;
-        };
-        if connected.contains(conn_id) {
-            continue;
-        }
-        let is_connected = store
-            .oauth_status(&server.id)
-            .await
-            .map(|status| status.connected)
-            .unwrap_or(false);
-        if is_connected {
-            connected.insert(conn_id.to_string());
-        }
-    }
-    connected
 }
 
 /// GET /connections — list all integrations with connection status.
@@ -411,34 +282,7 @@ async fn list_connections(State(state): State<ConnectionsState>) -> Json<Value> 
 
     let mut data = serde_json::to_value(&list).unwrap_or(json!([]));
 
-    // One-click MCP-OAuth connectors (#4580) persist their connection in the
-    // MCP server store (random id + provider URL), not the connector secret
-    // store — so the base entry above reports connected=false even after the
-    // user signs in, and the in-app agent that reads this list says "Linear is
-    // not connected". Reflect a live MCP-OAuth connection back onto its
-    // connector so both the list and the agent see the truth.
-    let mcp_connected_ids =
-        mcp_oauth_connected_ids(&state.screenpipe_dir, state.secret_store.clone()).await;
-
     if let Some(arr) = data.as_array_mut() {
-        if !mcp_connected_ids.is_empty() {
-            for entry in arr.iter_mut() {
-                let is_mcp_connected = entry
-                    .get("id")
-                    .and_then(Value::as_str)
-                    .map(|id| mcp_connected_ids.contains(id))
-                    .unwrap_or(false);
-                if is_mcp_connected {
-                    if let Some(obj) = entry.as_object_mut() {
-                        obj.insert("connected".to_string(), json!(true));
-                        // Mark *how* it's connected so the agent/frontend knows
-                        // to drive it over MCP, not the /connections/:id/proxy.
-                        obj.insert("mcp".to_string(), json!(true));
-                    }
-                }
-            }
-        }
-
         // Native calendar — macOS only (EventKit). Windows/Linux have no equivalent.
         #[cfg(target_os = "macos")]
         {
@@ -630,41 +474,8 @@ async fn list_instances(
     Path(id): Path<String>,
 ) -> (StatusCode, Json<Value>) {
     let mgr = state.cm.lock().await;
-    let is_oauth = screenpipe_connect::connections::all_integrations()
-        .iter()
-        .find(|i| i.def().id == id)
-        .and_then(|i| i.oauth_config())
-        .is_some();
 
     let mut items = Vec::new();
-    if is_oauth {
-        let instances =
-            oauth_store::list_connected_oauth_instances(state.secret_store.as_deref(), &id).await;
-        for inst in instances {
-            let token =
-                oauth_store::load_oauth_json(state.secret_store.as_deref(), &id, inst.as_deref())
-                    .await;
-            let display_name = token.as_ref().and_then(|v| {
-                v["email"]
-                    .as_str()
-                    .or_else(|| v["workspace_name"].as_str())
-                    .or_else(|| v["name"].as_str())
-                    .map(str::to_string)
-            });
-            let connected = oauth_store::is_oauth_instance_connected(
-                state.secret_store.as_deref(),
-                &id,
-                inst.as_deref(),
-            )
-            .await;
-            items.push(json!({
-                "instance": inst,
-                "connected": connected,
-                "display_name": display_name,
-            }));
-        }
-    }
-
     match mgr.get_all_instances(&id).await {
         Ok(instances) => {
             if let Some(def) = mgr.find_def(&id) {
@@ -675,30 +486,12 @@ async fn list_instances(
                     );
                     let connected = conn.enabled && !conn.credentials.is_empty();
                     let instance_value = json!(inst);
-                    if let Some(existing) = items
-                        .iter_mut()
-                        .find(|item| item.get("instance") == Some(&instance_value))
-                    {
-                        if let Some(object) = existing.as_object_mut() {
-                            let oauth_connected = object
-                                .get("connected")
-                                .and_then(Value::as_bool)
-                                .unwrap_or(false);
-                            object.insert(
-                                "connected".to_string(),
-                                json!(oauth_connected || connected),
-                            );
-                            object.insert("enabled".to_string(), json!(conn.enabled));
-                            object.insert("credentials".to_string(), json!(safe));
-                        }
-                    } else {
-                        items.push(json!({
-                            "instance": inst,
-                            "connected": connected,
-                            "enabled": conn.enabled,
-                            "credentials": safe,
-                        }));
-                    }
+                    items.push(json!({
+                        "instance": inst,
+                        "connected": connected,
+                        "enabled": conn.enabled,
+                        "credentials": safe,
+                    }));
                 }
             }
             (StatusCode::OK, Json(json!({ "instances": items })))
@@ -836,8 +629,6 @@ fn native_calendar_error_response(e: NativeCalendarError) -> (StatusCode, Json<V
                 "detail": msg,
             })),
         ),
-        // User-fixable: same 401 convention as the Google Calendar events
-        // route when OAuth is missing.
         NativeCalendarError::AuthRequired(msg) => (
             StatusCode::UNAUTHORIZED,
             Json(json!({
@@ -1063,399 +854,6 @@ async fn ics_calendar_events(
 }
 
 // ---------------------------------------------------------------------------
-// Google Calendar routes (local OAuth)
-// ---------------------------------------------------------------------------
-
-#[derive(Deserialize)]
-pub struct GoogleCalendarEventsQuery {
-    pub hours_back: Option<i64>,
-    pub hours_ahead: Option<i64>,
-    pub instance: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub struct GoogleCalendarInstanceQuery {
-    pub instance: Option<String>,
-}
-
-/// Typed "Google Calendar OAuth is missing/broken/ambiguous" failure, so the
-/// route handlers can map it to a structured 401 by downcast instead of
-/// string-matching the human-readable message (which silently broke whenever
-/// `describe_oauth_error` wording changed, collapsing an expected
-/// "not connected" state into a 500).
-#[derive(Debug)]
-struct GcalAuthError {
-    message: String,
-}
-
-impl std::fmt::Display for GcalAuthError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for GcalAuthError {}
-
-/// Map a Google Calendar events failure to an HTTP response. Auth failures
-/// (no token stored, broken token, ambiguous multi-account) become a 401 with
-/// a machine-readable body — `reason: "auth_required"` mirrors the native
-/// calendar route — so pollers can back off instead of retrying a state that
-/// can only change when the user reconnects. Everything else stays 500.
-fn gcal_events_error_response(e: &anyhow::Error) -> (StatusCode, Json<Value>) {
-    if let Some(auth) = e.downcast_ref::<GcalAuthError>() {
-        return (
-            StatusCode::UNAUTHORIZED,
-            Json(json!({
-                "error": auth.message,
-                "reason": "auth_required",
-                "connected": false,
-            })),
-        );
-    }
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        Json(json!({ "error": e.to_string() })),
-    )
-}
-
-/// Retrieve a valid Google Calendar OAuth token or return an error. The
-/// explicit auth error keeps "not connected" separate from upstream failures.
-async fn gcal_token(
-    client: &reqwest::Client,
-    instance: Option<&str>,
-    secret_store: &Option<Arc<SecretStore>>,
-) -> anyhow::Result<String> {
-    let store = secret_store.as_deref();
-    if let Some(token) =
-        oauth_store::get_valid_token_instance(store, client, "google-calendar", instance).await
-    {
-        return Ok(token);
-    }
-    Err(anyhow::Error::new(GcalAuthError {
-        message: oauth_store::describe_oauth_error(
-            store,
-            "google-calendar",
-            "Google Calendar",
-            instance,
-        )
-        .await,
-    }))
-}
-
-/// GET /connections/google-calendar/status — check connection + email.
-async fn gcal_status(
-    State(state): State<ConnectionsState>,
-    Query(q): Query<GoogleCalendarInstanceQuery>,
-) -> (StatusCode, Json<Value>) {
-    let client = build_default_client();
-    let instance = q.instance.as_deref();
-
-    // With several accounts connected, the default-slot lookup is ambiguous
-    // and reports false even though every account is healthy — mirror the
-    // events endpoint and count any connected account.
-    let connected = if instance.is_none() {
-        !oauth_store::list_connected_oauth_instances(
-            state.secret_store.as_deref(),
-            "google-calendar",
-        )
-        .await
-        .is_empty()
-    } else {
-        oauth_store::is_oauth_instance_connected(
-            state.secret_store.as_deref(),
-            "google-calendar",
-            instance,
-        )
-        .await
-    };
-    if !connected {
-        return (
-            StatusCode::OK,
-            Json(json!({ "connected": false, "email": null })),
-        );
-    }
-
-    let email = match gcal_token(&client, instance, &state.secret_store).await {
-        Ok(token) => {
-            match client
-                .get("https://www.googleapis.com/oauth2/v2/userinfo")
-                .bearer_auth(&token)
-                .send()
-                .await
-            {
-                Ok(r) => r
-                    .json::<Value>()
-                    .await
-                    .ok()
-                    .and_then(|v| v["email"].as_str().map(String::from)),
-                Err(_) => None,
-            }
-        }
-        Err(_) => None,
-    };
-
-    (
-        StatusCode::OK,
-        Json(json!({ "connected": connected, "email": email })),
-    )
-}
-
-/// GET /connections/google-calendar/events — fetch Google Calendar events.
-async fn gcal_events(
-    State(state): State<ConnectionsState>,
-    Query(params): Query<GoogleCalendarEventsQuery>,
-) -> (StatusCode, Json<Value>) {
-    let client = build_default_client();
-    match gcal_events_inner(&client, params, &state.secret_store).await {
-        Ok(events) => (StatusCode::OK, Json(json!(events))),
-        Err(e) => gcal_events_error_response(&e),
-    }
-}
-
-async fn gcal_events_inner(
-    client: &reqwest::Client,
-    params: GoogleCalendarEventsQuery,
-    secret_store: &Option<Arc<SecretStore>>,
-) -> anyhow::Result<Vec<Value>> {
-    let hours_back = params.hours_back.unwrap_or(1);
-    let hours_ahead = params.hours_ahead.unwrap_or(8);
-
-    // No explicit account while several are connected: merge every account's
-    // events instead of refusing. Callers that predate multi-account support
-    // (the app's 60s calendar poller, live meeting notes, pipes, chat tools)
-    // all pass no instance — refusing turned "user connected a 2nd Google
-    // account" into "calendar looks disconnected everywhere". A read-only
-    // merge matches what the meeting-notes UI already does client-side.
-    if params.instance.is_none() {
-        let connected =
-            oauth_store::list_connected_oauth_instances(secret_store.as_deref(), "google-calendar")
-                .await;
-        if connected.len() > 1 {
-            let mut lists = Vec::new();
-            let mut first_err: Option<anyhow::Error> = None;
-            for inst in &connected {
-                let label = inst.as_deref().unwrap_or("primary");
-                let events = match gcal_token(client, inst.as_deref(), secret_store).await {
-                    Ok(token) => {
-                        gcal_fetch_events(client, &token, label, hours_back, hours_ahead).await
-                    }
-                    Err(e) => Err(e),
-                };
-                match events {
-                    Ok(events) => lists.push(events),
-                    Err(e) => {
-                        // One broken account must not blank the calendar for
-                        // the healthy ones — keep going, report only if all fail.
-                        tracing::warn!("google-calendar: account '{label}' failed: {e:#}");
-                        if first_err.is_none() {
-                            first_err = Some(e);
-                        }
-                    }
-                }
-            }
-            if lists.is_empty() {
-                return Err(first_err.unwrap_or_else(|| {
-                    anyhow::anyhow!("no Google Calendar account could be queried")
-                }));
-            }
-            return Ok(merge_gcal_events(lists));
-        }
-    }
-
-    let token = gcal_token(client, params.instance.as_deref(), secret_store).await?;
-    let label = params.instance.as_deref().unwrap_or("primary");
-    gcal_fetch_events(client, &token, label, hours_back, hours_ahead).await
-}
-
-/// Fetch and normalize one account's events from the Google Calendar API.
-/// `calendar_label` lands in `calendarName` so multi-account callers can tell
-/// which account an event came from.
-async fn gcal_fetch_events(
-    client: &reqwest::Client,
-    token: &str,
-    calendar_label: &str,
-    hours_back: i64,
-    hours_ahead: i64,
-) -> anyhow::Result<Vec<Value>> {
-    let now = chrono::Utc::now();
-    let time_min = (now - chrono::Duration::hours(hours_back)).to_rfc3339();
-    let time_max = (now + chrono::Duration::hours(hours_ahead)).to_rfc3339();
-
-    let resp: Value = client
-        .get("https://www.googleapis.com/calendar/v3/calendars/primary/events")
-        .bearer_auth(token)
-        .query(&[
-            ("timeMin", time_min.as_str()),
-            ("timeMax", time_max.as_str()),
-            ("singleEvents", "true"),
-            ("orderBy", "startTime"),
-            ("maxResults", "50"),
-            ("conferenceDataVersion", "1"),
-        ])
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
-
-    let items = resp["items"].as_array().cloned().unwrap_or_default();
-    let events: Vec<Value> = items
-        .into_iter()
-        .map(|item| google_calendar_event_json(&item, calendar_label))
-        .collect();
-
-    Ok(events)
-}
-
-fn google_calendar_event_json(item: &Value, calendar_label: &str) -> Value {
-    let start = item["start"]["dateTime"]
-        .as_str()
-        .or_else(|| item["start"]["date"].as_str())
-        .unwrap_or("")
-        .to_string();
-    let end = item["end"]["dateTime"]
-        .as_str()
-        .or_else(|| item["end"]["date"].as_str())
-        .unwrap_or("")
-        .to_string();
-    let is_all_day = item["start"]["date"].is_string();
-
-    let attendees: Vec<String> = item["attendees"]
-        .as_array()
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|a| a["email"].as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default();
-    let meeting_url = google_calendar_meeting_url(item);
-
-    json!({
-        "id": item["id"].as_str().unwrap_or(""),
-        "title": item["summary"].as_str().unwrap_or(""),
-        "start": start,
-        "end": end,
-        "attendees": attendees,
-        "location": item["location"].as_str(),
-        "meetingUrl": meeting_url,
-        "calendarName": calendar_label,
-        "isAllDay": is_all_day,
-    })
-}
-
-/// Merge per-account Google Calendar event lists into one timeline. An invite
-/// visible in more than one connected account keeps its Google event id, so
-/// duplicates are dropped by id (first account wins). Sorted by start time;
-/// timestamps are compared as instants because each account's events carry
-/// that calendar's own UTC offset.
-fn merge_gcal_events(lists: Vec<Vec<Value>>) -> Vec<Value> {
-    let mut seen = std::collections::HashSet::new();
-    let mut merged: Vec<Value> = Vec::new();
-    for list in lists {
-        for event in list {
-            let id = event["id"].as_str().unwrap_or("");
-            if !id.is_empty() && !seen.insert(id.to_string()) {
-                continue;
-            }
-            merged.push(event);
-        }
-    }
-    merged.sort_by_key(gcal_event_start_epoch);
-    merged
-}
-
-/// Start time as a unix timestamp: RFC3339 for timed events, midnight UTC for
-/// all-day `YYYY-MM-DD` dates, `i64::MAX` for anything unparseable (sorts last).
-fn gcal_event_start_epoch(event: &Value) -> i64 {
-    let Some(start) = event["start"].as_str() else {
-        return i64::MAX;
-    };
-    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(start) {
-        return dt.timestamp();
-    }
-    if let Ok(date) = chrono::NaiveDate::parse_from_str(start, "%Y-%m-%d") {
-        if let Some(dt) = date.and_hms_opt(0, 0, 0) {
-            return dt.and_utc().timestamp();
-        }
-    }
-    i64::MAX
-}
-
-fn google_calendar_meeting_url(item: &Value) -> Option<String> {
-    item["hangoutLink"]
-        .as_str()
-        .and_then(|s| normalize_meeting_url(Some(s.to_string())))
-        .or_else(|| {
-            item["conferenceData"]["entryPoints"]
-                .as_array()
-                .and_then(|entry_points| {
-                    entry_points
-                        .iter()
-                        .find(|entry| entry["entryPointType"].as_str() == Some("video"))
-                        .or_else(|| entry_points.first())
-                        .and_then(|entry| entry["uri"].as_str())
-                        .and_then(|uri| normalize_meeting_url(Some(uri.to_string())))
-                })
-        })
-        .or_else(|| extract_meeting_url(item["location"].as_str()))
-        .or_else(|| extract_meeting_url(item["description"].as_str()))
-}
-
-fn normalize_meeting_url(raw: Option<String>) -> Option<String> {
-    let trimmed = raw?
-        .trim()
-        .trim_matches(|c| matches!(c, '<' | '>' | '"' | '\''))
-        .trim_end_matches([')', ']', ',', '.', ';'])
-        .to_string();
-    if trimmed.is_empty() {
-        return None;
-    }
-
-    let lower = trimmed.to_lowercase();
-    let is_known_meeting = lower.contains("meet.google.com/")
-        || lower.contains("zoom.us/")
-        || lower.contains("teams.microsoft.com/")
-        || lower.contains("teams.live.com/")
-        || lower.contains("webex.com/");
-
-    if !is_known_meeting {
-        return None;
-    }
-
-    if lower.starts_with("https://") || lower.starts_with("http://") {
-        Some(trimmed)
-    } else {
-        Some(format!("https://{}", trimmed.trim_start_matches('/')))
-    }
-}
-
-fn extract_meeting_url(text: Option<&str>) -> Option<String> {
-    let text = text?;
-    text.split(|c: char| c.is_whitespace() || matches!(c, '<' | '>' | '"' | '\''))
-        .find_map(|token| normalize_meeting_url(Some(token.to_string())))
-}
-
-/// DELETE /connections/google-calendar/disconnect — remove stored tokens.
-async fn gcal_disconnect(
-    State(state): State<ConnectionsState>,
-    Query(q): Query<GoogleCalendarInstanceQuery>,
-) -> (StatusCode, Json<Value>) {
-    match oauth_store::delete_oauth_token_instance(
-        state.secret_store.as_deref(),
-        "google-calendar",
-        q.instance.as_deref(),
-    )
-    .await
-    {
-        Ok(()) => (StatusCode::OK, Json(json!({ "success": true }))),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        ),
-    }
-}
-
-// ---------------------------------------------------------------------------
 // IMAP inbox routes — IMAP is not HTTP, so the generic credential proxy
 // can't serve it; these endpoints do the protocol work server-side and the
 // app password never leaves the process.
@@ -1561,158 +959,6 @@ async fn imap_mailboxes(State(state): State<ConnectionsState>) -> (StatusCode, J
 }
 
 // ---------------------------------------------------------------------------
-// OAuth callback route
-// ---------------------------------------------------------------------------
-
-#[derive(Deserialize)]
-pub struct OAuthCallbackQuery {
-    pub code: Option<String>,
-    pub state: Option<String>,
-    pub error: Option<String>,
-    // Optional human-readable error detail (RFC 6749 §4.1.2.1).
-    pub error_description: Option<String>,
-    // QuickBooks Online returns realmId (company ID) as a callback param alongside the code.
-    #[serde(rename = "realmId")]
-    pub realm_id: Option<String>,
-}
-
-/// GET /connections/oauth/callback — receives the provider redirect.
-///
-/// The `state` parameter is used to look up the waiting `oauth_connect` Tauri command
-/// via the `PENDING_OAUTH` channel map, then delivers the outcome — success with the
-/// authorization `code`, or the provider's error — as a typed `OAuthCallbackResult`.
-/// Logs never include codes, tokens, state values, or the callback query string.
-async fn oauth_callback(Query(params): Query<OAuthCallbackQuery>) -> (StatusCode, Html<String>) {
-    if let Some(err) = params.error {
-        // Provider rejection (e.g. access_denied on cancel). Resolve the waiting
-        // flow immediately instead of leaving it to hit the callback timeout.
-        let pending = params.state.as_ref().and_then(|state| {
-            let mut map = PENDING_OAUTH.lock().unwrap();
-            map.remove(state)
-        });
-        match pending {
-            Some(pending) => {
-                tracing::warn!(
-                    "oauth callback: provider returned error '{}' for {} — resolving pending flow",
-                    err,
-                    pending.integration_id
-                );
-                if pending
-                    .sender
-                    .send(OAuthCallbackResult::ProviderError {
-                        error: err.clone(),
-                        error_description: params.error_description,
-                    })
-                    .is_err()
-                {
-                    tracing::warn!(
-                        "oauth callback: {} provider error arrived after the app stopped waiting",
-                        pending.integration_id
-                    );
-                }
-            }
-            None => tracing::warn!(
-                "oauth callback: provider returned error '{}' with {} state — no pending flow to resolve",
-                err,
-                if params.state.is_some() {
-                    "an unknown or stale"
-                } else {
-                    "a missing"
-                }
-            ),
-        }
-        return oauth_callback_page(
-            StatusCode::BAD_REQUEST,
-            "Connection failed",
-            "screenpipe could not finish the OAuth flow.",
-            &err,
-        );
-    }
-
-    let (code, state) = match (params.code, params.state) {
-        (Some(c), Some(s)) => (c, s),
-        _ => {
-            tracing::warn!("oauth callback: missing code or state parameter");
-            return oauth_callback_page(
-                StatusCode::BAD_REQUEST,
-                "Invalid callback",
-                "screenpipe could not verify this authorization response.",
-                "Missing code or state parameter.",
-            );
-        }
-    };
-
-    let sender = {
-        let mut map = PENDING_OAUTH.lock().unwrap();
-        map.remove(&state)
-    };
-
-    match sender {
-        Some(pending) => {
-            let delivered = pending
-                .sender
-                .send(OAuthCallbackResult::Success {
-                    code,
-                    realm_id: params.realm_id,
-                })
-                .is_ok();
-            if delivered {
-                tracing::info!(
-                    "oauth callback: authorization received for {}",
-                    pending.integration_id
-                );
-                oauth_callback_page(
-                    StatusCode::OK,
-                    "Connected",
-                    "screenpipe can now use this connection.",
-                    "You can close this tab and return to screenpipe.",
-                )
-            } else {
-                // Receiver dropped: oauth_connect timed out (or was cancelled)
-                // before the user finished the browser steps.
-                tracing::warn!(
-                    "oauth callback: {} authorization arrived after the app stopped waiting",
-                    pending.integration_id
-                );
-                oauth_callback_page(
-                    StatusCode::BAD_REQUEST,
-                    "Sign-in expired",
-                    "This sign-in took a while, so screenpipe stopped waiting.",
-                    "Open screenpipe and click connect again — a fresh sign-in stays valid for 10 minutes.",
-                )
-            }
-        }
-        None => {
-            tracing::warn!("oauth callback: unknown or stale state — no pending flow");
-            oauth_callback_page(
-                StatusCode::BAD_REQUEST,
-                "Link already used",
-                "This authorization link was already used or has expired.",
-                "If screenpipe already shows the connection, you can close this tab. Otherwise click connect in the app to try again.",
-            )
-        }
-    }
-}
-
-fn oauth_callback_page(
-    status: StatusCode,
-    title: &str,
-    detail: &str,
-    message: &str,
-) -> (StatusCode, Html<String>) {
-    (
-        status,
-        Html(render_oauth_result_page(
-            "screenpipe OAuth",
-            title,
-            detail,
-            message,
-            status.is_success(),
-        )),
-    )
-}
-
-// ---------------------------------------------------------------------------
 // Credential proxy — forward requests to third-party APIs with auth injected
 // ---------------------------------------------------------------------------
 
@@ -1723,29 +969,12 @@ enum ResolvedAuth {
     None,
 }
 
-/// Fields in the OAuth token JSON that must never be allowed to fill a URL
-/// placeholder (tokens and lifecycle metadata). Everything else — `realmId`,
-/// `email`, `workspace_name`, etc. — is fair game.
-const OAUTH_URL_SKIP_FIELDS: &[&str] = &[
-    "access_token",
-    "refresh_token",
-    "id_token",
-    "token_type",
-    "expires_in",
-    "expires_at",
-    "scope",
-];
-
-/// Resolve base_url, replacing `{field}` placeholders with credential values
-/// and, as a fallback, non-secret fields from the OAuth token JSON (for
-/// providers like QuickBooks whose `{realmId}` comes from the callback, not
-/// from the credential store).
+/// Resolve base_url, replacing `{field}` placeholders with credential values.
 ///
 /// Returns an error if any placeholder remains unresolved.
 fn resolve_base_url(
     template: &str,
     creds: Option<&Map<String, Value>>,
-    oauth_extras: Option<&Value>,
 ) -> Result<String, String> {
     // Substitute placeholders of the form `{key}` or `{key|default}`. Empty
     // credential values are treated as missing so a blank "host" field falls
@@ -1753,25 +982,8 @@ fn resolve_base_url(
     fn lookup<'a>(
         name: &str,
         creds: Option<&'a Map<String, Value>>,
-        oauth_extras: Option<&'a Value>,
     ) -> Option<&'a str> {
-        if let Some(c) = creds {
-            if let Some(s) = c.get(name).and_then(|v| v.as_str()) {
-                if !s.is_empty() {
-                    return Some(s);
-                }
-            }
-        }
-        if !OAUTH_URL_SKIP_FIELDS.contains(&name) {
-            if let Some(obj) = oauth_extras.and_then(|v| v.as_object()) {
-                if let Some(s) = obj.get(name).and_then(|v| v.as_str()) {
-                    if !s.is_empty() {
-                        return Some(s);
-                    }
-                }
-            }
-        }
-        None
+        creds.and_then(|c| c.get(name)).and_then(|v| v.as_str()).filter(|s| !s.is_empty())
     }
 
     let mut out = String::with_capacity(template.len());
@@ -1787,7 +999,7 @@ fn resolve_base_url(
             Some((n, d)) => (n, Some(d)),
             None => (inner, None),
         };
-        let value = lookup(name, creds, oauth_extras).map(str::to_owned);
+        let value = lookup(name, creds).map(str::to_owned);
         match (value, default) {
             (Some(v), _) => out.push_str(&v),
             (None, Some(d)) => out.push_str(d),
@@ -1804,20 +1016,15 @@ fn resolve_base_url(
     Ok(out)
 }
 
-/// Resolve auth from proxy config + stored credentials/OAuth token.
+/// Resolve auth from proxy config + stored credentials.
 fn resolve_auth(
     proxy_auth: &screenpipe_connect::connections::ProxyAuth,
     creds: Option<&Map<String, Value>>,
-    oauth_token: Option<&str>,
-    oauth_extras: Option<&Value>,
 ) -> ResolvedAuth {
     use screenpipe_connect::connections::ProxyAuth;
     match proxy_auth {
         ProxyAuth::Bearer { credential_key } => {
-            // OAuth token takes precedence over stored credential
-            if let Some(token) = oauth_token {
-                ResolvedAuth::Header("Authorization".into(), format!("Bearer {}", token))
-            } else if let Some(c) = creds {
+            if let Some(c) = creds {
                 c.get(*credential_key)
                     .and_then(|v| v.as_str())
                     .map(|k| ResolvedAuth::Header("Authorization".into(), format!("Bearer {}", k)))
@@ -1827,10 +1034,8 @@ fn resolve_auth(
             }
         }
         ProxyAuth::Token { credential_key } => {
-            let from_creds = creds.and_then(|c| c.get(*credential_key).and_then(|v| v.as_str()));
-            let from_oauth = oauth_extras.and_then(|v| v[*credential_key].as_str());
-            from_creds
-                .or(from_oauth)
+            creds
+                .and_then(|c| c.get(*credential_key).and_then(|v| v.as_str()))
                 .map(|k| ResolvedAuth::Header("Authorization".into(), format!("Token {}", k)))
                 .unwrap_or(ResolvedAuth::None)
         }
@@ -1838,12 +1043,8 @@ fn resolve_auth(
             name,
             credential_key,
         } => {
-            // Header-based auth can come from either stored connection creds
-            // or OAuth metadata persisted alongside the token response.
-            let from_creds = creds.and_then(|c| c.get(*credential_key).and_then(|v| v.as_str()));
-            let from_oauth = oauth_extras.and_then(|v| v[*credential_key].as_str());
-            from_creds
-                .or(from_oauth)
+            creds
+                .and_then(|c| c.get(*credential_key).and_then(|v| v.as_str()))
                 .map(|k| ResolvedAuth::Header(name.to_string(), k.to_string()))
                 .unwrap_or(ResolvedAuth::None)
         }
@@ -1851,13 +1052,6 @@ fn resolve_auth(
             username_key,
             password_key,
         } => {
-            // An OAuth access token (Zendesk's multi-tenant flow) authenticates
-            // as Bearer and takes precedence over the manual email/token Basic
-            // credentials. Zendesk is currently the only integration pairing a
-            // BasicAuth proxy with OAuth, so this is inert for every other one.
-            if let Some(token) = oauth_token {
-                return ResolvedAuth::Header("Authorization".into(), format!("Bearer {}", token));
-            }
             if let Some(c) = creds {
                 let user = c
                     .get(*username_key)
@@ -2068,40 +1262,15 @@ async fn connection_proxy(
         }
     };
 
-    // Load credentials (from connections.json) and the raw OAuth token JSON in parallel.
-    // OAuth JSON is passed separately to resolve_base_url so callback-only fields like
-    // QuickBooks' {realmId} can fill URL placeholders without polluting the credentials map.
+    // Load credentials (from connections.json).
     let creds = mgr
         .get_credentials_instance(&id, instance_ref)
         .await
         .ok()
         .flatten();
-    let oauth_json = screenpipe_connect::oauth::load_oauth_json(
-        state.secret_store.as_deref(),
-        &id,
-        instance_ref,
-    )
-    .await;
-    // Use get_valid_token_instance (not read_oauth_token_instance) so expired
-    // access tokens are transparently refreshed via the stored refresh_token.
-    // Before this fix the proxy would surface "no credentials found" and 401
-    // for any connection with an expired token, even though the refresh was
-    // a single round-trip away.
-    let http_client = build_default_client();
-    let oauth_token = screenpipe_connect::oauth::get_valid_token_instance(
-        state.secret_store.as_deref(),
-        &http_client,
-        &id,
-        instance_ref,
-    );
 
     // Resolve auth
-    let auth = resolve_auth(
-        &proxy_cfg.auth,
-        creds.as_ref(),
-        oauth_token.await.as_deref(),
-        oauth_json.as_ref(),
-    );
+    let auth = resolve_auth(&proxy_cfg.auth, creds.as_ref());
 
     // Check that auth was actually resolved (don't send unauthenticated requests)
     if matches!(auth, ResolvedAuth::None)
@@ -2115,35 +1284,15 @@ async fn connection_proxy(
             id,
             instance_ref
         );
-        // For OAuth-style integrations (Google Docs, etc.) the
-        // generic "no stored credentials" message is wrong when the real
-        // problem is multi-account ambiguity — the user *is* connected,
-        // they just need to pick which account. `describe_oauth_error`
-        // produces the actionable string from the actual instance list.
-        let has_oauth_state =
-            !screenpipe_connect::oauth::list_oauth_instances(state.secret_store.as_deref(), &id)
-                .await
-                .is_empty();
-        let error = if has_oauth_state {
-            let display_name = mgr.find_def(&id).map(|d| d.name).unwrap_or(id.as_str());
-            screenpipe_connect::oauth::describe_oauth_error(
-                state.secret_store.as_deref(),
-                &id,
-                display_name,
-                instance_ref,
-            )
-            .await
-        } else {
-            format!(
-                "connection '{}' has no stored credentials — connect it first in Settings",
-                id
-            )
-        };
+        let error = format!(
+            "connection '{}' has no stored credentials — connect it first in Settings",
+            id
+        );
         return (StatusCode::UNAUTHORIZED, Json(json!({ "error": error }))).into_response();
     }
 
     // Resolve dynamic base_url
-    let base_url = match resolve_base_url(proxy_cfg.base_url, creds.as_ref(), oauth_json.as_ref()) {
+    let base_url = match resolve_base_url(proxy_cfg.base_url, creds.as_ref()) {
         Ok(url) => url,
         Err(e) => {
             tracing::warn!("proxy: failed to resolve base_url for '{}': {}", id, e);
@@ -2323,31 +1472,6 @@ async fn connection_config(
     axum::extract::RawQuery(raw_query): axum::extract::RawQuery,
 ) -> (StatusCode, Json<Value>) {
     let (instance, _) = split_instance_query(raw_query.as_deref());
-    if id == "slack" {
-        if let Some(oauth) =
-            oauth_store::load_oauth_json(state.secret_store.as_deref(), &id, instance.as_deref())
-                .await
-        {
-            let mut safe = Map::new();
-            for key in [
-                "workspace_name",
-                "team_id",
-                "slack_channel",
-                "slack_channel_id",
-            ] {
-                if let Some(value) = oauth.get(key) {
-                    safe.insert(key.to_string(), value.clone());
-                }
-            }
-            if let Some(url) = oauth["incoming_webhook"]["configuration_url"].as_str() {
-                safe.insert(
-                    "configuration_url".to_string(),
-                    Value::String(url.to_string()),
-                );
-            }
-            return (StatusCode::OK, Json(json!({ "config": safe })));
-        }
-    }
 
     let mgr = state.cm.lock().await;
     match mgr.get_credentials_instance(&id, instance.as_deref()).await {
@@ -2366,175 +1490,8 @@ async fn connection_config(
     }
 }
 
-/// POST /connections/slack/send — send a Slack message.
-///
-/// Preferred transport uses the connecting user's **user token** (`chat:write`)
-/// and posts via `chat.postMessage`, so the message appears as the person, with
-/// no bot installed. When no `channel` is supplied it defaults to the user's own
-/// DM. Connections made before the user-token switch fall back to the stored
-/// incoming-webhook URL so they keep working until the user reconnects. Neither
-/// the token nor the webhook URL ever leaves the server.
-async fn slack_send(
-    State(state): State<ConnectionsState>,
-    Json(body): Json<SlackSendRequest>,
-) -> (StatusCode, Json<Value>) {
-    let token_json = match oauth_store::load_oauth_json(
-        state.secret_store.as_deref(),
-        "slack",
-        body.instance.as_deref(),
-    )
-    .await
-    {
-        Some(value) => value,
-        None => {
-            let error = oauth_store::describe_oauth_error(
-                state.secret_store.as_deref(),
-                "slack",
-                "Slack",
-                body.instance.as_deref(),
-            )
-            .await;
-            return (StatusCode::UNAUTHORIZED, Json(json!({ "error": error })));
-        }
-    };
-
-    // Build the message payload once; both transports accept the same fields.
-    let mut payload = body.extra;
-    if let Some(text) = body.text {
-        payload.insert("text".to_string(), Value::String(text));
-    }
-    if let Some(blocks) = body.blocks {
-        payload.insert("blocks".to_string(), blocks);
-    }
-    if let Some(attachments) = body.attachments {
-        payload.insert("attachments".to_string(), attachments);
-    }
-    if payload.is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(
-                json!({ "error": "Slack message requires text, blocks, attachments, or another payload field." }),
-            ),
-        );
-    }
-
-    let team = token_json["workspace_name"]
-        .as_str()
-        .or_else(|| token_json["team"]["name"].as_str())
-        .map(String::from);
-
-    // Preferred: user token via chat.postMessage (posts as the person, no bot).
-    if let Some(user_token) = token_json["authed_user"]["access_token"].as_str() {
-        let channel = body
-            .channel
-            .as_deref()
-            .filter(|c| !c.is_empty())
-            .or_else(|| token_json["slack_channel_id"].as_str())
-            .or_else(|| token_json["authed_user"]["id"].as_str());
-        let channel = match channel {
-            Some(c) if !c.is_empty() => c.to_string(),
-            _ => {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    Json(
-                        json!({ "error": "No Slack channel to send to. Pass \"channel\" or reconnect Slack." }),
-                    ),
-                );
-            }
-        };
-        payload.insert("channel".to_string(), Value::String(channel.clone()));
-
-        return match build_default_client()
-            .post("https://slack.com/api/chat.postMessage")
-            .bearer_auth(user_token)
-            .json(&payload)
-            .send()
-            .await
-        {
-            Ok(resp) => {
-                let body_json: Value = resp.json().await.unwrap_or_else(|_| json!({}));
-                // chat.postMessage returns HTTP 200 even on logical failure;
-                // the real status is in the `ok` field.
-                if body_json["ok"].as_bool().unwrap_or(false) {
-                    (
-                        StatusCode::OK,
-                        Json(json!({
-                            "ok": true,
-                            "channel": body_json["channel"].as_str().unwrap_or(channel.as_str()),
-                            "ts": body_json["ts"].as_str(),
-                            "team": team,
-                        })),
-                    )
-                } else {
-                    (
-                        StatusCode::BAD_GATEWAY,
-                        Json(json!({
-                            "error": "Slack rejected the message",
-                            "details": body_json["error"].as_str().unwrap_or("unknown error"),
-                        })),
-                    )
-                }
-            }
-            Err(e) => (
-                StatusCode::BAD_GATEWAY,
-                Json(json!({ "error": format!("Slack request failed: {}", e) })),
-            ),
-        };
-    }
-
-    // Legacy fallback: incoming webhook (bot) connections.
-    let webhook_url = match token_json["incoming_webhook"]["url"].as_str() {
-        Some(url) if !url.is_empty() => url,
-        _ => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(
-                    json!({ "error": "Slack connection is missing credentials. Reconnect Slack." }),
-                ),
-            );
-        }
-    };
-
-    match build_default_client()
-        .post(webhook_url)
-        .json(&payload)
-        .send()
-        .await
-    {
-        Ok(resp) => {
-            let status = resp.status();
-            let text = resp.text().await.unwrap_or_default();
-            if status.is_success() {
-                (
-                    StatusCode::OK,
-                    Json(json!({
-                        "ok": true,
-                        "channel": token_json["slack_channel"]
-                            .as_str()
-                            .or_else(|| token_json["incoming_webhook"]["channel"].as_str()),
-                        "team": team,
-                    })),
-                )
-            } else {
-                (
-                    StatusCode::BAD_GATEWAY,
-                    Json(json!({
-                        "error": "Slack webhook request failed",
-                        "status": status.as_u16(),
-                        "details": text,
-                    })),
-                )
-            }
-        }
-        Err(e) => (
-            StatusCode::BAD_GATEWAY,
-            Json(json!({ "error": format!("Slack webhook request failed: {}", e) })),
-        ),
-    }
-}
-
-/// POST /connections/telegram/send — send through stored credentials without
-/// placing the bot token or target chat id in agent prompt context.
+/// POST /connections/telegram/send — send a Telegram message server-side so
+/// the bot token never reaches the model context.
 async fn telegram_send(
     State(state): State<ConnectionsState>,
     Json(body): Json<TelegramSendRequest>,
@@ -2605,137 +1562,6 @@ async fn telegram_send(
     }
 }
 
-/// Load the Slack **user token** for read calls, or return a ready HTTP error.
-/// Reading requires a connection made with the "Send + read" access level; a
-/// send-only or legacy webhook connection has no user token to read with.
-async fn slack_user_token(
-    state: &ConnectionsState,
-    instance: Option<&str>,
-) -> Result<String, (StatusCode, Json<Value>)> {
-    let token_json = match oauth_store::load_oauth_json(
-        state.secret_store.as_deref(),
-        "slack",
-        instance,
-    )
-    .await
-    {
-        Some(value) => value,
-        None => {
-            let error = oauth_store::describe_oauth_error(
-                state.secret_store.as_deref(),
-                "slack",
-                "Slack",
-                instance,
-            )
-            .await;
-            return Err((StatusCode::UNAUTHORIZED, Json(json!({ "error": error }))));
-        }
-    };
-    token_json["authed_user"]["access_token"]
-        .as_str()
-        .filter(|t| !t.is_empty())
-        .map(String::from)
-        .ok_or((
-            StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "This Slack connection has no read access. Reconnect Slack and choose \"Send + read\"." })),
-        ))
-}
-
-/// Normalize a Slack Web API response. Slack returns HTTP 200 even on logical
-/// failure, with the real outcome in the `ok` field; map a few common errors to
-/// actionable hints.
-async fn slack_api_json(
-    resp: Result<reqwest::Response, reqwest::Error>,
-) -> (StatusCode, Json<Value>) {
-    match resp {
-        Ok(r) => {
-            let body: Value = r.json().await.unwrap_or_else(|_| json!({}));
-            if body["ok"].as_bool().unwrap_or(false) {
-                (StatusCode::OK, Json(body))
-            } else {
-                let err = body["error"].as_str().unwrap_or("unknown error");
-                let hint = match err {
-                    "missing_scope" => " — reconnect Slack and choose \"Send + read\".",
-                    "not_in_channel" => " — you must be a member of that channel.",
-                    _ => "",
-                };
-                (
-                    StatusCode::BAD_GATEWAY,
-                    Json(json!({ "error": format!("Slack API error: {}{}", err, hint) })),
-                )
-            }
-        }
-        Err(e) => (
-            StatusCode::BAD_GATEWAY,
-            Json(json!({ "error": format!("Slack request failed: {}", e) })),
-        ),
-    }
-}
-
-/// GET /connections/slack/search — search the user's accessible messages
-/// (`search.messages`). User-token only; bots can't search.
-async fn slack_search(
-    State(state): State<ConnectionsState>,
-    Query(q): Query<SlackSearchQuery>,
-) -> (StatusCode, Json<Value>) {
-    let token = match slack_user_token(&state, q.instance.as_deref()).await {
-        Ok(t) => t,
-        Err(e) => return e,
-    };
-    let count = q.count.unwrap_or(20).to_string();
-    let resp = build_default_client()
-        .get("https://slack.com/api/search.messages")
-        .bearer_auth(&token)
-        .query(&[("query", q.q.as_str()), ("count", count.as_str())])
-        .send()
-        .await;
-    slack_api_json(resp).await
-}
-
-/// GET /connections/slack/conversations — list the channels, DMs and groups the
-/// user can see (`conversations.list`).
-async fn slack_conversations(
-    State(state): State<ConnectionsState>,
-    Query(q): Query<SlackConversationsQuery>,
-) -> (StatusCode, Json<Value>) {
-    let token = match slack_user_token(&state, q.instance.as_deref()).await {
-        Ok(t) => t,
-        Err(e) => return e,
-    };
-    let types = q
-        .types
-        .unwrap_or_else(|| "public_channel,private_channel,im,mpim".to_string());
-    let limit = q.limit.unwrap_or(200).to_string();
-    let resp = build_default_client()
-        .get("https://slack.com/api/conversations.list")
-        .bearer_auth(&token)
-        .query(&[("types", types.as_str()), ("limit", limit.as_str())])
-        .send()
-        .await;
-    slack_api_json(resp).await
-}
-
-/// GET /connections/slack/history — read recent messages in one conversation
-/// (`conversations.history`).
-async fn slack_history(
-    State(state): State<ConnectionsState>,
-    Query(q): Query<SlackHistoryQuery>,
-) -> (StatusCode, Json<Value>) {
-    let token = match slack_user_token(&state, q.instance.as_deref()).await {
-        Ok(t) => t,
-        Err(e) => return e,
-    };
-    let limit = q.limit.unwrap_or(50).to_string();
-    let resp = build_default_client()
-        .get("https://slack.com/api/conversations.history")
-        .bearer_auth(&token)
-        .query(&[("channel", q.channel.as_str()), ("limit", limit.as_str())])
-        .send()
-        .await;
-    slack_api_json(resp).await
-}
-
-// ---------------------------------------------------------------------------
 // Browser extension pairing — lets the extension receive the local API token
 // after an explicit approval in the desktop app, instead of making non-dev
 // users copy/paste secrets from Settings.
@@ -3459,30 +2285,16 @@ where
         .route("/browser/eval", post(browser_eval))
         .route("/browser/cookies", post(browser_cookies))
         .route("/browser/status", get(browser_status))
-        // OAuth callback (must be before /:id to avoid conflict)
-        .route("/oauth/callback", get(oauth_callback))
         // Calendar routes (must be before /:id to avoid conflict)
         .route("/calendar/events", get(calendar_events))
         .route("/calendar/status", get(calendar_status))
         // ICS Calendar routes (must be before /:id to avoid conflict)
         .route("/ics-calendar/events", get(ics_calendar_events))
         .route("/ics-calendar/status", get(ics_calendar_status))
-        // Google Calendar routes (must be before /:id to avoid conflict)
-        .route("/google-calendar/events", get(gcal_events))
-        .route("/google-calendar/status", get(gcal_status))
-        .route(
-            "/google-calendar/disconnect",
-            axum::routing::delete(gcal_disconnect),
-        )
         // IMAP inbox routes (must be before /:id to avoid conflict)
         .route("/imap/messages", get(imap_messages))
         .route("/imap/messages/:uid", get(imap_message))
         .route("/imap/mailboxes", get(imap_mailboxes))
-        // Slack-specific send route (must be before /:id to avoid conflict)
-        .route("/slack/send", post(slack_send))
-        .route("/slack/search", get(slack_search))
-        .route("/slack/conversations", get(slack_conversations))
-        .route("/slack/history", get(slack_history))
         // Telegram-specific send route keeps bot credentials server-side.
         .route("/telegram/send", post(telegram_send))
         // WhatsApp-specific routes (must be before /:id to avoid conflict)
@@ -3523,130 +2335,6 @@ where
 // Tests
 // ---------------------------------------------------------------------------
 
-#[cfg(test)]
-mod mcp_oauth_connector_tests {
-    use super::*;
-
-    #[test]
-    fn resolves_known_providers_trailing_slash_insensitive() {
-        assert_eq!(
-            connector_id_for_mcp_url("https://mcp.linear.app/mcp"),
-            Some("linear")
-        );
-        // trailing slash must still match (frontend stores either form)
-        assert_eq!(
-            connector_id_for_mcp_url("https://mcp.linear.app/mcp/"),
-            Some("linear")
-        );
-        assert_eq!(
-            connector_id_for_mcp_url("https://mcp.notion.com/mcp"),
-            Some("notion")
-        );
-        // stripe has no /mcp path suffix
-        assert_eq!(
-            connector_id_for_mcp_url("https://mcp.stripe.com"),
-            Some("stripe")
-        );
-    }
-
-    #[test]
-    fn unknown_url_resolves_to_none() {
-        assert_eq!(connector_id_for_mcp_url("https://example.com/mcp"), None);
-        assert_eq!(connector_id_for_mcp_url(""), None);
-    }
-
-    #[test]
-    fn enriches_only_matching_connector_entries() {
-        // Simulate the post-list enrichment with a known connected id.
-        let mut data = json!([
-            { "id": "linear", "name": "Linear", "connected": false, "is_oauth": false },
-            { "id": "notion", "name": "Notion", "connected": true, "is_oauth": true },
-        ]);
-        let mut mcp_connected = std::collections::HashSet::new();
-        mcp_connected.insert("linear".to_string());
-
-        if let Some(arr) = data.as_array_mut() {
-            for entry in arr.iter_mut() {
-                let hit = entry
-                    .get("id")
-                    .and_then(Value::as_str)
-                    .map(|id| mcp_connected.contains(id))
-                    .unwrap_or(false);
-                if hit {
-                    if let Some(obj) = entry.as_object_mut() {
-                        obj.insert("connected".to_string(), json!(true));
-                        obj.insert("mcp".to_string(), json!(true));
-                    }
-                }
-            }
-        }
-
-        // linear flips to connected + gains the mcp marker
-        assert_eq!(data[0]["connected"], json!(true));
-        assert_eq!(data[0]["mcp"], json!(true));
-        // notion (not in the MCP set) is untouched — no spurious mcp marker
-        assert_eq!(data[1]["connected"], json!(true));
-        assert!(data[1].get("mcp").is_none());
-    }
-}
-
-#[cfg(test)]
-mod gcal_merge_tests {
-    use super::*;
-    use serde_json::json;
-
-    fn ev(id: &str, start: &str) -> Value {
-        json!({ "id": id, "start": start, "title": id })
-    }
-
-    #[test]
-    fn dedupes_shared_invites_by_id_first_account_wins() {
-        let personal = vec![ev("shared", "2026-06-11T10:00:00-07:00")];
-        let work = vec![
-            ev("shared", "2026-06-11T10:00:00-07:00"),
-            ev("work-only", "2026-06-11T11:00:00-07:00"),
-        ];
-        let merged = merge_gcal_events(vec![personal, work]);
-        assert_eq!(merged.len(), 2);
-        assert_eq!(merged[0]["id"], "shared");
-        assert_eq!(merged[1]["id"], "work-only");
-    }
-
-    #[test]
-    fn sorts_as_instants_across_mixed_utc_offsets() {
-        // 10:00-07:00 is 17:00Z — a lexicographic sort would wrongly place it
-        // before 16:30Z.
-        let a = vec![ev("late", "2026-06-11T10:00:00-07:00")];
-        let b = vec![ev("early", "2026-06-11T16:30:00Z")];
-        let merged = merge_gcal_events(vec![a, b]);
-        assert_eq!(merged[0]["id"], "early");
-        assert_eq!(merged[1]["id"], "late");
-    }
-
-    #[test]
-    fn keeps_events_without_ids_and_sorts_all_day_by_date() {
-        let a = vec![ev("", "2026-06-12"), ev("", "2026-06-12")];
-        let b = vec![ev("timed", "2026-06-11T09:00:00Z")];
-        let merged = merge_gcal_events(vec![a, b]);
-        assert_eq!(
-            merged.len(),
-            3,
-            "empty ids must not dedupe against each other"
-        );
-        assert_eq!(merged[0]["id"], "timed");
-    }
-
-    #[test]
-    fn unparseable_start_sorts_last() {
-        let merged = merge_gcal_events(vec![vec![
-            ev("bad", "not-a-date"),
-            ev("good", "2026-06-11T09:00:00Z"),
-        ]]);
-        assert_eq!(merged[0]["id"], "good");
-        assert_eq!(merged[1]["id"], "bad");
-    }
-}
-
 /// The "calendar configured but not usable" states must never be 500s: the
 /// app polls both calendar event routes every 60 seconds, so a 500 here is
 /// two tower_http ERROR log lines per minute forever (observed in user log
@@ -3654,28 +2342,6 @@ mod gcal_merge_tests {
 #[cfg(test)]
 mod calendar_error_response_tests {
     use super::*;
-
-    #[test]
-    fn gcal_auth_failure_maps_to_structured_401() {
-        let err = anyhow::Error::new(GcalAuthError {
-            message: "Google Calendar not connected — use 'Connect Google Calendar' from the Connections page in the desktop app".to_string(),
-        });
-        let (status, Json(body)) = gcal_events_error_response(&err);
-        assert_eq!(status, StatusCode::UNAUTHORIZED);
-        assert_eq!(body["reason"], "auth_required");
-        assert_eq!(body["connected"], false);
-        assert!(body["error"].as_str().unwrap().contains("not connected"));
-    }
-
-    #[test]
-    fn gcal_non_auth_failure_stays_500() {
-        let err = anyhow::anyhow!("google api returned 503: backend unavailable");
-        let (status, Json(body)) = gcal_events_error_response(&err);
-        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
-        assert!(body["error"].as_str().unwrap().contains("503"));
-        assert!(body.get("reason").is_none());
-    }
-
     #[test]
     fn native_unsupported_platform_is_200_not_connected() {
         let (status, Json(body)) = native_calendar_error_response(NativeCalendarError::Unsupported);
@@ -3809,76 +2475,6 @@ mod tests {
         )
     }
 
-    async fn hybrid_connection_test_router(dir: &TempDir) -> Router<()> {
-        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
-        let store = Arc::new(SecretStore::new(pool, None).await.unwrap());
-        let screenpipe_dir = dir.path().to_path_buf();
-        let cm = Arc::new(Mutex::new(ConnectionManager::new(
-            screenpipe_dir.clone(),
-            Some(store.clone()),
-        )));
-        cm.lock()
-            .await
-            .connect_instance(
-                "teams",
-                Some("work"),
-                serde_json::from_value(json!({
-                    "webhook_url": "https://secret.example/teams/work"
-                }))
-                .unwrap(),
-            )
-            .await
-            .unwrap();
-        store
-            .set_json(
-                "oauth:teams:work",
-                &json!({"access_token": "oauth-secret-sentinel", "email": "work@example.com"}),
-            )
-            .await
-            .unwrap();
-        let wa = Arc::new(Mutex::new(WhatsAppGateway::new(screenpipe_dir.clone())));
-        router(
-            cm,
-            wa,
-            screenpipe_dir,
-            Some(store),
-            crate::routes::browser::BrowserBridge::new(),
-            BrowserRegistry::new(),
-            None,
-        )
-    }
-
-    #[tokio::test]
-    async fn connection_reads_deduplicate_hybrid_named_instances() {
-        let dir = TempDir::new().unwrap();
-        let app = hybrid_connection_test_router(&dir).await;
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/teams/instances")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let payload: Value = serde_json::from_slice(&body).unwrap();
-        let work = payload["instances"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .filter(|item| item["instance"] == "work")
-            .collect::<Vec<_>>();
-        assert_eq!(work.len(), 1, "hybrid instance was duplicated: {payload}");
-        assert_eq!(work[0]["connected"], true);
-        assert_eq!(work[0]["enabled"], true);
-        let serialized = payload.to_string();
-        assert!(!serialized.contains("secret.example"));
-        assert!(!serialized.contains("oauth-secret-sentinel"));
-    }
-
     async fn spawn_webhook_upstream(
         status: StatusCode,
         response_body: &'static str,
@@ -4005,8 +2601,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn webhook_proxy_supports_named_instances_and_teams_manual_mode() {
-        for (id, instance) in [("discord", Some("work")), ("teams", None)] {
+    async fn webhook_proxy_supports_named_instances() {
+        for (id, instance) in [("discord", Some("work"))] {
             let dir = TempDir::new().unwrap();
             let calls = Arc::new(AtomicUsize::new(0));
             let captured = Arc::new(Mutex::new(Vec::new()));
@@ -4204,59 +2800,11 @@ mod tests {
         assert_eq!(summaries[0]["enabled"], true);
     }
 
-    #[test]
-    fn google_calendar_meeting_url_prefers_conference_video() {
-        let item = json!({
-            "location": "Board room",
-            "conferenceData": {
-                "entryPoints": [
-                    { "entryPointType": "phone", "uri": "tel:+15551234567" },
-                    { "entryPointType": "video", "uri": "meet.google.com/abc-defg-hij" }
-                ]
-            }
-        });
-        assert_eq!(
-            google_calendar_meeting_url(&item).as_deref(),
-            Some("https://meet.google.com/abc-defg-hij")
-        );
-    }
-
-    #[test]
-    fn google_calendar_event_without_summary_has_empty_title() {
-        let item = json!({
-            "id": "untitled",
-            "start": { "dateTime": "2026-06-11T09:00:00Z" },
-            "end": { "dateTime": "2026-06-11T09:30:00Z" },
-            "conferenceData": {
-                "entryPoints": [
-                    { "entryPointType": "video", "uri": "meet.google.com/abc-defg-hij" }
-                ]
-            }
-        });
-
-        let event = google_calendar_event_json(&item, "primary");
-        assert_eq!(event["title"], "");
-        assert_eq!(event["meetingUrl"], "https://meet.google.com/abc-defg-hij");
-    }
-
-    #[test]
-    fn google_calendar_event_preserves_literal_no_title_summary() {
-        let item = json!({
-            "id": "literal-no-title",
-            "summary": "No Title",
-            "start": { "dateTime": "2026-06-11T09:00:00Z" },
-            "end": { "dateTime": "2026-06-11T09:30:00Z" }
-        });
-
-        let event = google_calendar_event_json(&item, "primary");
-        assert_eq!(event["title"], "No Title");
-    }
-
     // -- resolve_base_url ---------------------------------------------------
 
     #[test]
     fn test_resolve_base_url_static() {
-        let result = resolve_base_url("https://api.notion.com", None, None);
+        let result = resolve_base_url("https://api.notion.com", None);
         assert_eq!(result.unwrap(), "https://api.notion.com");
     }
 
@@ -4264,7 +2812,7 @@ mod tests {
     fn test_resolve_base_url_with_placeholder() {
         let mut creds = Map::new();
         creds.insert("domain".into(), json!("mycompany.atlassian.net"));
-        let result = resolve_base_url("https://{domain}/rest/api/3", Some(&creds), None);
+        let result = resolve_base_url("https://{domain}/rest/api/3", Some(&creds));
         assert_eq!(
             result.unwrap(),
             "https://mycompany.atlassian.net/rest/api/3"
@@ -4276,71 +2824,28 @@ mod tests {
         let mut creds = Map::new();
         creds.insert("subdomain".into(), json!("acme"));
         creds.insert("region".into(), json!("us1"));
-        let result = resolve_base_url("https://{subdomain}.{region}.api.com", Some(&creds), None);
+        let result = resolve_base_url("https://{subdomain}.{region}.api.com", Some(&creds));
         assert_eq!(result.unwrap(), "https://acme.us1.api.com");
     }
 
     #[test]
     fn test_resolve_base_url_unresolved_placeholder_fails() {
         let creds = Map::new(); // empty — no "domain" field
-        let result = resolve_base_url("https://{domain}.zendesk.com/api/v2", Some(&creds), None);
+        let result = resolve_base_url("https://{domain}.zendesk.com/api/v2", Some(&creds));
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("{domain}"));
     }
 
     #[test]
     fn test_resolve_base_url_no_creds_with_placeholder_fails() {
-        let result = resolve_base_url("https://{domain}.example.com", None, None);
+        let result = resolve_base_url("https://{domain}.example.com", None);
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_resolve_base_url_from_oauth_extras() {
-        // QuickBooks-style: {realmId} lives in the OAuth token JSON, not in creds.
-        let oauth = json!({
-            "access_token": "xxx",
-            "refresh_token": "yyy",
-            "realmId": "9341451956283849",
-        });
-        let result = resolve_base_url(
-            "https://quickbooks.api.intuit.com/v3/company/{realmId}",
-            None,
-            Some(&oauth),
-        );
-        assert_eq!(
-            result.unwrap(),
-            "https://quickbooks.api.intuit.com/v3/company/9341451956283849"
-        );
-    }
-
-    #[test]
-    fn test_resolve_base_url_creds_win_over_oauth_extras() {
-        // If both sources define the same key, creds wins (applied first).
-        let mut creds = Map::new();
-        creds.insert("region".into(), json!("eu"));
-        let oauth = json!({ "region": "us" });
-        let result = resolve_base_url(
-            "https://api.{region}.example.com",
-            Some(&creds),
-            Some(&oauth),
-        );
-        assert_eq!(result.unwrap(), "https://api.eu.example.com");
-    }
-
-    #[test]
-    fn test_resolve_base_url_rejects_token_fields_from_oauth() {
-        // Tokens must never be allowed to fill a URL placeholder even if a
-        // malicious/misconfigured integration tried to use {access_token}.
-        let oauth = json!({ "access_token": "secret-token-should-not-leak" });
-        let result = resolve_base_url("https://api.example.com/{access_token}", None, Some(&oauth));
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("{access_token}"));
     }
 
     #[test]
     fn test_resolve_base_url_default_used_when_field_missing() {
         let creds = Map::new();
-        let result = resolve_base_url("https://{host|us.posthog.com}", Some(&creds), None);
+        let result = resolve_base_url("https://{host|us.posthog.com}", Some(&creds));
         assert_eq!(result.unwrap(), "https://us.posthog.com");
     }
 
@@ -4348,7 +2853,7 @@ mod tests {
     fn test_resolve_base_url_default_used_when_field_empty() {
         let mut creds = Map::new();
         creds.insert("host".into(), json!(""));
-        let result = resolve_base_url("https://{host|us.posthog.com}", Some(&creds), None);
+        let result = resolve_base_url("https://{host|us.posthog.com}", Some(&creds));
         assert_eq!(result.unwrap(), "https://us.posthog.com");
     }
 
@@ -4356,7 +2861,7 @@ mod tests {
     fn test_resolve_base_url_default_overridden_by_value() {
         let mut creds = Map::new();
         creds.insert("host".into(), json!("eu.posthog.com"));
-        let result = resolve_base_url("https://{host|us.posthog.com}", Some(&creds), None);
+        let result = resolve_base_url("https://{host|us.posthog.com}", Some(&creds));
         assert_eq!(result.unwrap(), "https://eu.posthog.com");
     }
 
@@ -4369,7 +2874,7 @@ mod tests {
         };
         let mut creds = Map::new();
         creds.insert("api_key".into(), json!("sk-test-123"));
-        match resolve_auth(&auth_cfg, Some(&creds), None, None) {
+        match resolve_auth(&auth_cfg, Some(&creds)) {
             ResolvedAuth::Header(name, value) => {
                 assert_eq!(name, "Authorization");
                 assert_eq!(value, "Bearer sk-test-123");
@@ -4379,28 +2884,12 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_auth_bearer_oauth_takes_precedence() {
-        let auth_cfg = ProxyAuth::Bearer {
-            credential_key: "api_key",
-        };
-        let mut creds = Map::new();
-        creds.insert("api_key".into(), json!("should-not-use-this"));
-        match resolve_auth(&auth_cfg, Some(&creds), Some("oauth-token-xyz"), None) {
-            ResolvedAuth::Header(name, value) => {
-                assert_eq!(name, "Authorization");
-                assert_eq!(value, "Bearer oauth-token-xyz");
-            }
-            _ => panic!("expected Header auth from OAuth"),
-        }
-    }
-
-    #[test]
     fn test_resolve_auth_bearer_no_creds_returns_none() {
         let auth_cfg = ProxyAuth::Bearer {
             credential_key: "api_key",
         };
         assert!(matches!(
-            resolve_auth(&auth_cfg, None, None, None),
+            resolve_auth(&auth_cfg, None),
             ResolvedAuth::None
         ));
     }
@@ -4412,7 +2901,7 @@ mod tests {
         };
         let mut creds = Map::new();
         creds.insert("access_token".into(), json!("rw-token"));
-        match resolve_auth(&auth_cfg, Some(&creds), None, None) {
+        match resolve_auth(&auth_cfg, Some(&creds)) {
             ResolvedAuth::Header(name, value) => {
                 assert_eq!(name, "Authorization");
                 assert_eq!(value, "Token rw-token");
@@ -4429,7 +2918,7 @@ mod tests {
         };
         let mut creds = Map::new();
         creds.insert("api_key".into(), json!("my-key"));
-        match resolve_auth(&auth_cfg, Some(&creds), None, None) {
+        match resolve_auth(&auth_cfg, Some(&creds)) {
             ResolvedAuth::Header(name, value) => {
                 assert_eq!(name, "X-API-Key");
                 assert_eq!(value, "my-key");
@@ -4447,7 +2936,7 @@ mod tests {
         let mut creds = Map::new();
         creds.insert("email".into(), json!("user@example.com"));
         creds.insert("api_token".into(), json!("secret123"));
-        match resolve_auth(&auth_cfg, Some(&creds), None, None) {
+        match resolve_auth(&auth_cfg, Some(&creds)) {
             ResolvedAuth::Basic(user, pass) => {
                 assert_eq!(user, "user@example.com");
                 assert_eq!(pass, "secret123");
@@ -4464,7 +2953,7 @@ mod tests {
         };
         let creds = Map::new(); // no email or api_token
         assert!(matches!(
-            resolve_auth(&auth_cfg, Some(&creds), None, None),
+            resolve_auth(&auth_cfg, Some(&creds)),
             ResolvedAuth::None
         ));
     }
@@ -4481,7 +2970,7 @@ mod tests {
             Map::from_iter([("password".into(), json!("secret"))]),
         ] {
             assert!(matches!(
-                resolve_auth(&auth_cfg, Some(&creds), None, None),
+                resolve_auth(&auth_cfg, Some(&creds)),
                 ResolvedAuth::None
             ));
         }
@@ -4492,7 +2981,7 @@ mod tests {
         let config = Mochi.proxy_config().expect("Mochi should support proxying");
         let creds = Map::from_iter([("api_key".into(), json!("mochi-api-key"))]);
 
-        match resolve_auth(&config.auth, Some(&creds), None, None) {
+        match resolve_auth(&config.auth, Some(&creds)) {
             ResolvedAuth::Basic(user, pass) => {
                 assert_eq!(user, "mochi-api-key");
                 assert!(pass.is_empty());
@@ -4509,7 +2998,7 @@ mod tests {
             ("key_secret".into(), json!("key-secret")),
         ]);
 
-        match resolve_auth(&config.auth, Some(&creds), None, None) {
+        match resolve_auth(&config.auth, Some(&creds)) {
             ResolvedAuth::Basic(user, pass) => {
                 assert_eq!(user, "key-id");
                 assert_eq!(pass, "key-secret");
@@ -4535,7 +3024,7 @@ mod tests {
             ]),
         ] {
             assert!(matches!(
-                resolve_auth(&config.auth, Some(&creds), None, None),
+                resolve_auth(&config.auth, Some(&creds)),
                 ResolvedAuth::None
             ));
         }
@@ -4547,54 +3036,16 @@ mod tests {
         let creds = Map::from_iter([("api_key".into(), json!("legacy-secret"))]);
 
         assert!(matches!(
-            resolve_auth(&config.auth, Some(&creds), None, None),
+            resolve_auth(&config.auth, Some(&creds)),
             ResolvedAuth::None
         ));
-    }
-
-    #[test]
-    fn test_resolve_auth_basic_oauth_token_takes_precedence() {
-        // Zendesk: manual mode is email/token Basic, OAuth mode is Bearer. When
-        // an OAuth token is present it must win over any manual Basic creds so a
-        // single proxy config serves both modes.
-        let auth_cfg = ProxyAuth::BasicAuth {
-            username_key: "email",
-            password_key: "api_token",
-        };
-        let mut creds = Map::new();
-        creds.insert("email".into(), json!("user@example.com"));
-        creds.insert("api_token".into(), json!("secret123"));
-        match resolve_auth(&auth_cfg, Some(&creds), Some("oauth-access-token"), None) {
-            ResolvedAuth::Header(name, value) => {
-                assert_eq!(name, "Authorization");
-                assert_eq!(value, "Bearer oauth-access-token");
-            }
-            _ => panic!("expected Bearer header from OAuth token"),
-        }
-    }
-
-    #[test]
-    fn test_resolve_auth_basic_oauth_only_no_creds() {
-        // An OAuth-only Zendesk connection has no manual Basic creds — the OAuth
-        // token alone must still authenticate.
-        let auth_cfg = ProxyAuth::BasicAuth {
-            username_key: "email",
-            password_key: "api_token",
-        };
-        match resolve_auth(&auth_cfg, None, Some("oauth-access-token"), None) {
-            ResolvedAuth::Header(name, value) => {
-                assert_eq!(name, "Authorization");
-                assert_eq!(value, "Bearer oauth-access-token");
-            }
-            _ => panic!("expected Bearer header from OAuth token"),
-        }
     }
 
     #[test]
     fn test_resolve_auth_none() {
         let auth_cfg = ProxyAuth::None;
         assert!(matches!(
-            resolve_auth(&auth_cfg, None, None, None),
+            resolve_auth(&auth_cfg, None),
             ResolvedAuth::None
         ));
     }
@@ -5081,211 +3532,4 @@ mod tests {
         );
     }
 
-    // -----------------------------------------------------------------------
-    // OAuth callback — success and provider-error delivery (#5092)
-    // -----------------------------------------------------------------------
-
-    use screenpipe_connect::oauth::PendingOAuth;
-    use tokio::sync::oneshot;
-
-    /// Register a pending flow under `state` and return the receiving end.
-    /// `PENDING_OAUTH` is a process-global map, so every test uses a unique
-    /// state key to stay independent under parallel test execution.
-    fn register_pending(state: &str) -> oneshot::Receiver<OAuthCallbackResult> {
-        let (tx, rx) = oneshot::channel();
-        PENDING_OAUTH.lock().unwrap().insert(
-            state.to_string(),
-            PendingOAuth {
-                integration_id: "test-integration".to_string(),
-                sender: tx,
-                created_at: std::time::Instant::now(),
-            },
-        );
-        rx
-    }
-
-    fn pending_contains(state: &str) -> bool {
-        PENDING_OAUTH.lock().unwrap().contains_key(state)
-    }
-
-    fn callback_query(
-        code: Option<&str>,
-        state: Option<&str>,
-        error: Option<&str>,
-        error_description: Option<&str>,
-        realm_id: Option<&str>,
-    ) -> Query<OAuthCallbackQuery> {
-        Query(OAuthCallbackQuery {
-            code: code.map(String::from),
-            state: state.map(String::from),
-            error: error.map(String::from),
-            error_description: error_description.map(String::from),
-            realm_id: realm_id.map(String::from),
-        })
-    }
-
-    #[tokio::test]
-    async fn oauth_callback_success_delivers_code_and_removes_entry() {
-        let state = "test-cb-success-state";
-        let rx = register_pending(state);
-
-        let (status, _) = oauth_callback(callback_query(
-            Some("auth-code-1"),
-            Some(state),
-            None,
-            None,
-            None,
-        ))
-        .await;
-
-        assert_eq!(status, StatusCode::OK);
-        assert!(!pending_contains(state));
-        match rx.await.unwrap() {
-            OAuthCallbackResult::Success { code, realm_id } => {
-                assert_eq!(code, "auth-code-1");
-                assert_eq!(realm_id, None);
-            }
-            other => panic!("expected Success, got {:?}", other),
-        }
-    }
-
-    #[tokio::test]
-    async fn oauth_callback_success_carries_realm_id() {
-        let state = "test-cb-realmid-state";
-        let rx = register_pending(state);
-
-        let (status, _) = oauth_callback(callback_query(
-            Some("qb-code"),
-            Some(state),
-            None,
-            None,
-            Some("realm-42"),
-        ))
-        .await;
-
-        assert_eq!(status, StatusCode::OK);
-        match rx.await.unwrap() {
-            OAuthCallbackResult::Success { code, realm_id } => {
-                assert_eq!(code, "qb-code");
-                assert_eq!(realm_id.as_deref(), Some("realm-42"));
-            }
-            other => panic!("expected Success, got {:?}", other),
-        }
-    }
-
-    #[tokio::test]
-    async fn oauth_callback_provider_error_wakes_pending_flow() {
-        let state = "test-cb-error-state";
-        let rx = register_pending(state);
-
-        let (status, body) = oauth_callback(callback_query(
-            None,
-            Some(state),
-            Some("access_denied"),
-            Some("User denied access"),
-            None,
-        ))
-        .await;
-
-        assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(body.0.contains("access_denied"));
-        assert!(!pending_contains(state));
-        match rx.await.unwrap() {
-            OAuthCallbackResult::ProviderError {
-                error,
-                error_description,
-            } => {
-                assert_eq!(error, "access_denied");
-                assert_eq!(error_description.as_deref(), Some("User denied access"));
-            }
-            other => panic!("expected ProviderError, got {:?}", other),
-        }
-    }
-
-    #[tokio::test]
-    async fn oauth_callback_error_with_missing_state_leaves_pending_untouched() {
-        let state = "test-cb-error-nostate-state";
-        let mut rx = register_pending(state);
-
-        let (status, _) =
-            oauth_callback(callback_query(None, None, Some("server_error"), None, None)).await;
-
-        assert_eq!(status, StatusCode::BAD_REQUEST);
-        // Unrelated pending flow must survive an error callback without state.
-        assert!(pending_contains(state));
-        assert!(rx.try_recv().is_err());
-        PENDING_OAUTH.lock().unwrap().remove(state);
-    }
-
-    #[tokio::test]
-    async fn oauth_callback_error_with_unknown_state_returns_error_page() {
-        let (status, _) = oauth_callback(callback_query(
-            None,
-            Some("test-cb-unknown-state"),
-            Some("temporarily_unavailable"),
-            None,
-            None,
-        ))
-        .await;
-
-        assert_eq!(status, StatusCode::BAD_REQUEST);
-    }
-
-    #[tokio::test]
-    async fn oauth_callback_missing_code_and_state_is_invalid() {
-        let (status, body) = oauth_callback(callback_query(None, None, None, None, None)).await;
-
-        assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(body.0.contains("Missing code or state"));
-    }
-
-    #[tokio::test]
-    async fn oauth_callback_success_with_stale_state_reports_link_already_used() {
-        let (status, body) = oauth_callback(callback_query(
-            Some("auth-code-2"),
-            Some("test-cb-stale-state"),
-            None,
-            None,
-            None,
-        ))
-        .await;
-
-        assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(body.0.contains("already used or has expired"));
-    }
-
-    /// A callback arriving after oauth_connect stopped waiting (timeout or
-    /// cancel dropped the receiver) must get the actionable "Sign-in expired"
-    /// page — not a success page, and not the unknown-state one.
-    #[tokio::test]
-    async fn oauth_callback_after_timeout_reports_sign_in_expired() {
-        let state = "test-cb-timeout-state";
-        let rx = register_pending(state);
-        drop(rx); // simulate oauth_connect timing out / being cancelled
-
-        let (status, body) = oauth_callback(callback_query(
-            Some("auth-code-late"),
-            Some(state),
-            None,
-            None,
-            None,
-        ))
-        .await;
-
-        assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(body.0.contains("Sign-in expired"));
-        assert!(!pending_contains(state));
-
-        // A second hit with the same state is now an unknown-state callback.
-        let (status, body) = oauth_callback(callback_query(
-            Some("auth-code-late"),
-            Some(state),
-            None,
-            None,
-            None,
-        ))
-        .await;
-        assert_eq!(status, StatusCode::BAD_REQUEST);
-        assert!(body.0.contains("already used or has expired"));
-    }
 }

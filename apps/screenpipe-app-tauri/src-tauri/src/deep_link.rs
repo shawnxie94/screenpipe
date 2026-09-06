@@ -105,7 +105,6 @@ mod tests {
             "screenpipe://chat/new?v=1&prompt=hello",
             "screenpipe://pipe/example?v=1",
             "screenpipe-enterprise://settings/account",
-            "screenpipe://oauth/connections/callback?code=code&state=state",
         ] {
             assert_eq!(handoff_window(Some(url)), HandoffWindow::Home, "{url}");
         }

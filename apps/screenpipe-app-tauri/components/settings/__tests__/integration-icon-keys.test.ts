@@ -6,8 +6,6 @@ import { describe, it, expect } from "vitest";
 import {
   INTEGRATION_ICON_KEYS,
   TRY_IN_CHAT_PROMPTS,
-  getOAuthFallbackMessage,
-  getOAuthPanelCopy,
   isMcpOAuthProviderTileConnected,
 } from "../connections-section";
 import { connectionNameToId } from "../../../lib/utils/connection-chip";
@@ -47,34 +45,5 @@ describe("isMcpOAuthProviderTileConnected", () => {
 
   it("does not apply MCP provider state to unrelated connections", () => {
     expect(isMcpOAuthProviderTileConnected("github", false, { github: true })).toBe(false);
-  });
-});
-
-describe("getOAuthFallbackMessage", () => {
-  it("surfaces a Zendesk token fallback when the OAuth app is unavailable", () => {
-    expect(getOAuthFallbackMessage("zendesk", "failed", "No such client")).toContain(
-      "改用令牌连接"
-    );
-  });
-
-  it("shows the Zendesk pending-flow hint only for Zendesk", () => {
-    expect(getOAuthFallbackMessage("zendesk", "pending")).toContain("No such client");
-    expect(getOAuthFallbackMessage("slack", "pending")).toBeNull();
-  });
-});
-
-describe("getOAuthPanelCopy", () => {
-  it("frames Slack multi-connect as workspaces", () => {
-    expect(getOAuthPanelCopy("slack", "Slack")).toEqual({
-      description: "连接 Slack 工作区。添加每个 Screenpipe 应以你身份操作的工作区。",
-      addAnotherLabel: "添加另一个工作区",
-    });
-  });
-
-  it("keeps account language for other OAuth providers", () => {
-    expect(getOAuthPanelCopy("github", "GitHub")).toEqual({
-      description: "连接你的 GitHub 账户。连接后，AI 可以代你操作。",
-      addAnotherLabel: "添加另一个账户",
-    });
   });
 });
