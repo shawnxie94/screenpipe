@@ -79,7 +79,6 @@ describe("selectWorktreeRepository", () => {
         ],
         startingPath: "/Users/test/Documents/screenpipe/apps/desktop",
         providerConfig,
-        userToken: "token",
       }),
     ).resolves.toEqual(workspace);
 
@@ -102,7 +101,6 @@ describe("selectWorktreeRepository", () => {
         ],
         startingPath: "/Users/test/Documents/Codex/task",
         providerConfig,
-        userToken: "token",
       }),
     ).resolves.toEqual(workspace);
 
@@ -125,16 +123,14 @@ describe("selectWorktreeRepository", () => {
         ],
         startingPath: "/Users/test/Documents",
         providerConfig,
-        userToken: "token",
       }),
     ).resolves.toEqual(workspace);
 
     expect(mocks.startAndPrompt).toHaveBeenCalledTimes(1);
-    const [sessionId, projectDir, token, config, prompt] =
+    const [sessionId, projectDir, config, prompt] =
       mocks.startAndPrompt.mock.calls[0];
     expect(sessionId).toBe("__worktree-route:conversation-a:route-123");
     expect(projectDir).toContain("pi-worktree-router");
-    expect(token).toBe("token");
     expect(config).toEqual(
       expect.objectContaining({
         allowedTools: ["start_worktree"],
@@ -177,7 +173,6 @@ describe("selectWorktreeRepository", () => {
         candidates: [],
         startingPath: null,
         providerConfig,
-        userToken: null,
       }),
     ).rejects.toThrow("No nearby Git repository");
     expect(mocks.startAndPrompt).not.toHaveBeenCalled();

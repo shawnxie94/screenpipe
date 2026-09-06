@@ -73,7 +73,6 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
     const pending = summarizeFirstRunWithAi(activity, {
       elapsedMs: 3 * 60_000,
       preset,
-      userToken: "token",
     });
     await emit([
       { type: "text_delta", delta: GOOD.slice(0, 30) },
@@ -83,10 +82,9 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
     expect(await pending).toBe(GOOD);
 
     // Runs in its own throwaway session so it can never reach the sidebar.
-    const [sessionId, dir, token] = piStartAndPrompt.mock.calls[0] as unknown as string[];
+    const [sessionId, dir] = piStartAndPrompt.mock.calls[0] as unknown as string[];
     expect(sessionId.startsWith("__title:first-run-")).toBe(true);
     expect(dir).toContain("pi-first-run");
-    expect(token).toBe("token");
     expect(piStop).toHaveBeenCalledWith(sessionId);
   });
 
@@ -95,13 +93,12 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
     const pending = summarizeFirstRunWithAi(activity, {
       elapsedMs: 60_000,
       preset,
-      userToken: "token",
     });
     await emit([{ type: "text_delta", delta: GOOD }, { type: "agent_end" }]);
     await pending;
 
     const prompt = String(
-      (piStartAndPrompt.mock.calls[0] as unknown as string[])[4],
+      (piStartAndPrompt.mock.calls[0] as unknown as string[])[3],
     );
     expect(prompt).toContain("learning-window.ts");
     expect(prompt).toContain("screens_indexed: 31");
@@ -113,7 +110,6 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
     const pending = summarizeFirstRunWithAi(activity, {
       elapsedMs: 60_000,
       preset,
-      userToken: "token",
     });
     await emit([
       {
@@ -131,7 +127,6 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
     const pending = summarizeFirstRunWithAi(activity, {
       elapsedMs: 60_000,
       preset,
-      userToken: "token",
     });
     await emit([
       { type: "text_delta", delta: GOOD },
@@ -146,7 +141,6 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
     const pending = summarizeFirstRunWithAi(activity, {
       elapsedMs: 60_000,
       preset,
-      userToken: "token",
     });
     await emit([{ type: "error", message: "quota" }]);
     expect(await pending).toBeNull();
@@ -158,7 +152,6 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
     const pending = summarizeFirstRunWithAi(activity, {
       elapsedMs: 60_000,
       preset,
-      userToken: "token",
     });
     await emit([
       { type: "text_delta", delta: "I'm sorry, I cannot access your screen." },
@@ -187,7 +180,6 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
       await summarizeFirstRunWithAi(activity, {
         elapsedMs: 60_000,
         preset,
-        userToken: "token",
       }),
     ).toBeNull();
   });
@@ -212,7 +204,6 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
     const pending = summarizeFirstRunWithAi(activity, {
       elapsedMs: 60_000,
       preset,
-      userToken: "token",
     });
     await vi.waitFor(() => expect(handlers.length).toBeGreaterThan(0));
 
@@ -248,7 +239,7 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
     });
     await emit([{ type: "text_delta", delta: GOOD }, { type: "agent_end" }]);
     await expect(pending).resolves.toBe(GOOD);
-    expect(piStartAndPrompt.mock.calls[0]?.[3]).toMatchObject({
+    expect(piStartAndPrompt.mock.calls[0]?.[2]).toMatchObject({
       backend: "acp",
       acpAgent: { id: "codex-acp" },
       model: "codex-acp",
@@ -261,7 +252,6 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
     const pending = summarizeFirstRunWithAi(activity, {
       elapsedMs: 60_000,
       preset,
-      userToken: "token",
       onFallback: (reason) => reasons.push(reason),
     });
     await emit([

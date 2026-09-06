@@ -499,7 +499,6 @@ async function runGeneration(
     const started = await commands.piStart(
       sessionId,
       projectDir,
-      options.userToken,
       providerConfig(options.preset),
     );
     if (started.status !== "ok" || !started.data.running) {

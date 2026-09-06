@@ -18,7 +18,7 @@ fn handle_shortcut_overlay_hour_snooze(app: &tauri::AppHandle) {
     let app = app.clone();
     native_shortcut_reminder::hide();
     tauri::async_runtime::spawn(async move {
-        let persist_succeeded = crate::commands::snooze_shortcut_reminder_for_hour(app.clone())
+        let _persist_succeeded = crate::commands::snooze_shortcut_reminder_for_hour(app.clone())
             .await
             .is_ok();
     });
@@ -995,12 +995,7 @@ pub(crate) fn dispatch_notification_action(json: String) {
     // clicked — the click silently did nothing ("open in chat does nothing").
     if action_type == Some("chat") || action_type == Some("pipe") {
         if let Some(action) = parsed.as_ref() {
-            // Mirrors the `notification_action` capture the JS handler did
-            // when it (sometimes) received these events.
-            let track = |app: &tauri::AppHandle| {
-            };
             if let Some(prefill) = chat_prefill_payload_from_action(action) {
-                track(app);
                 open_chat_with_prefill(app.clone(), prefill);
                 return;
             }
@@ -1239,7 +1234,7 @@ fn native_shortcut_action_callback_inner(action_ptr: *const std::os::raw::c_char
         std::thread::spawn(move || {
             let app_for_show = app_clone.clone();
             if let Some(anchor) = parse_overlay_anchor(&action) {
-                let persisted = persist_shortcut_overlay_anchor(&app_clone, anchor);
+                let _persisted = persist_shortcut_overlay_anchor(&app_clone, anchor);
                 return;
             }
             if let Some(display) = parse_overlay_display(&action) {

@@ -213,20 +213,9 @@ async function runDailySummaryAttempt(
     const prompt =
       options.prompt ?? buildDailySummaryAgentPrompt(options.date, options.range);
     const accepted = options.recoverTransientRuntimeStart
-      ? commands.piStartAndPrompt(
-          sessionId,
-          projectDir,
-          options.userToken,
-          providerConfig,
-          prompt,
-        )
+      ? commands.piStartAndPrompt(sessionId, projectDir, providerConfig, prompt)
       : (async () => {
-          const started = await commands.piStart(
-            sessionId,
-            projectDir,
-            options.userToken,
-            providerConfig,
-          );
+          const started = await commands.piStart(sessionId, projectDir, providerConfig);
           if (started.status !== "ok" || !started.data.running) {
             return started.status === "error"
               ? started

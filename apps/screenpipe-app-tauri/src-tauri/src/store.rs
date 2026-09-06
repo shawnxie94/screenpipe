@@ -2040,31 +2040,14 @@ impl SettingsStore {
     /// Since RecordingSettings is now embedded via flatten, this is mostly a
     /// clone with overrides for fields that need special handling (e.g. user_id
     /// comes from the User auth object, user_name has a fallback chain).
-    fn resolved_cloud_auth_token(&self) -> Option<String> {
-        self.user
-            .token
-            .clone()
-            .filter(|token| !token.is_empty())
-    }
-
-    pub(crate) fn has_cloud_authentication(&self) -> bool {
-        self.resolved_cloud_auth_token().is_some()
-    }
-
     pub fn to_recording_settings(&self) -> screenpipe_config::RecordingSettings {
         let mut settings = self.recording.clone();
-        // Local-only build: the secret-store-backed cache no longer exists.
-        // user.token is the only place a cloud JWT could live and is empty
-        // by construction; the engine's cloud proxy will see an empty Bearer.
-        settings.user_id = self
-            .resolved_cloud_auth_token()
-            .unwrap_or_default();
-        // Fallback chain: userName setting → cloud name → cloud email
+        // Local-only build: there is no cloud account, so user_id stays empty.
+        settings.user_id = String::new();
+        // userName setting wins; no cloud name/email fallback exists anymore.
         settings.user_name = settings
             .user_name
-            .filter(|s| !s.trim().is_empty())
-            .or_else(|| self.user.name.clone().filter(|s| !s.trim().is_empty()))
-            .or_else(|| self.user.email.clone().filter(|s| !s.trim().is_empty()));
+            .filter(|s| !s.trim().is_empty());
         // Remote emergency stops are intentionally applied after the flattened
         // recording settings (including Enterprise-managed values). Remote
         // config can only turn these reviewed controls off; it cannot force
@@ -2164,8 +2147,7 @@ impl SettingsStore {
     }
 
     fn has_verified_free_plan(&self) -> bool {
-        if !self.has_account_identity()
-            || self.user.cloud_subscribed == Some(true)
+        if self.user.cloud_subscribed == Some(true)
             || !self
                 .user
                 .subscription_plan
@@ -2258,68 +2240,6 @@ impl SettingsStore {
         } else {
             LocalPlanPolicy::Unknown
         }
-    }
-
-    /// True for verified Free or missing/conflicting/unverified plan truth.
-    pub(crate) fn is_free_or_unattributed_user(&self) -> bool {
-        self.local_plan_policy() != LocalPlanPolicy::VerifiedPaid
-    }
-
-    pub(crate) fn restricts_paid_local_features(&self) -> bool {
-        self.is_free_or_unattributed_user()
-    }
-
-    pub(crate) fn has_account_identity(&self) -> bool {
-        [self.user.id.as_deref(), self.user.clerk_id.as_deref()]
-            .into_iter()
-            .flatten()
-            .any(|id| !id.trim().is_empty())
-    }
-
-    pub fn app_entitled_or_dev(&self) -> bool {
-        // Debug builds (`bun tauri dev`, e2e, signed dev builds) are never gated.
-        // Release builds must not be bypassable via a runtime env var.
-        if cfg!(debug_assertions) {
-            return true;
-        }
-
-        self.has_current_app_entitlement()
-    }
-
-    fn has_current_app_entitlement(&self) -> bool {
-        self.has_verified_paid_plan()
-    }
-
-    /// Consumer binaries must not record behind an org's mandatory-enterprise-
-    /// app screen. A separate consumer subscription remains a valid opt-out,
-    /// matching the frontend account-routing policy.
-    pub(crate) fn requires_enterprise_app_for_consumer(&self) -> bool {
-        let requires_enterprise_app = self
-            .user
-            .enterprise_account
-            .as_ref()
-            .and_then(|account| account.get("requires_enterprise_app"))
-            .and_then(serde_json::Value::as_bool)
-            .unwrap_or(false);
-        if !requires_enterprise_app {
-            return false;
-        }
-
-        let has_consumer_entitlement = self
-            .user
-            .entitlement
-            .as_ref()
-            .and_then(|entitlement| entitlement.get("source"))
-            .and_then(serde_json::Value::as_str)
-            .is_some_and(|source| {
-                matches!(
-                    source.to_ascii_lowercase().as_str(),
-                    "subscription" | "manual" | "lifetime"
-                )
-            })
-            && self.has_current_app_entitlement();
-
-        !has_consumer_entitlement
     }
 
     pub fn audio_engine_resolution(&self) -> AudioEngineResolution {
@@ -3610,51 +3530,7 @@ mod tests {
         assert_eq!(store.local_plan_policy(), LocalPlanPolicy::Unknown);
     }
 
-    #[test]
-    fn enterprise_app_requirement_is_available_to_native_recording_guard() {
-        let mut store = SettingsStore::default();
-        store.user.enterprise_account = Some(json!({ "requires_enterprise_app": true }));
-        assert!(store.requires_enterprise_app_for_consumer());
-
-        store.user.app_entitled = Some(true);
-        store.user.id = Some("consumer_paid".to_string());
-        store.user.subscription_plan = Some("standard".to_string());
-        store.user.entitlement = Some(json!({
-            "active": true,
-            "plan": "standard",
-            "source": "subscription",
-            "checked_at": chrono::Utc::now().to_rfc3339(),
-            "features": { "app": true }
-        }));
-        assert!(!store.requires_enterprise_app_for_consumer());
-    }
-
-    #[test]
-    fn business_capacity_plans_override_enterprise_app_requirement() {
-        for plan in ["pro_max", "pro_ultra"] {
-            let mut store = SettingsStore::default();
-            store.user.id = Some("consumer_capacity_paid".to_string());
-            store.user.app_entitled = Some(true);
-            store.user.cloud_subscribed = Some(true);
-            store.user.subscription_plan = Some(plan.to_string());
-            store.user.enterprise_account = Some(json!({ "requires_enterprise_app": true }));
-            store.user.entitlement = Some(json!({
-                "active": true,
-                "plan": plan,
-                "source": "manual",
-                "checked_at": chrono::Utc::now().to_rfc3339(),
-                "features": { "app": true, "cloud": true, "enterprise": false }
-            }));
-
-            assert_eq!(store.local_plan_policy(), LocalPlanPolicy::VerifiedPaid);
-            assert!(!store.restricts_paid_local_features());
-            assert!(!store.requires_enterprise_app_for_consumer());
-            let config = store.to_recording_config(std::path::PathBuf::from("/tmp/screenpipe"));
-            assert_eq!(config.max_non_template_pipes, None);
-        }
-    }
-
-    #[test]
+            #[test]
     fn deepgram_falls_back_without_api_key() {
         let mut store = SettingsStore::default();
         store.recording.audio_transcription_engine = "deepgram".to_string();

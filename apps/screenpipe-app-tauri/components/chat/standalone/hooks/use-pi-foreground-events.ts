@@ -1624,7 +1624,7 @@ export function usePiForegroundEvents({
             try {
               const providerConfig = buildProviderConfig();
               const dir = await piProjectDirForSession(piSessionIdRef.current);
-              const result = await commands.piStart(piSessionIdRef.current, dir, null, providerConfig);
+              const result = await commands.piStart(piSessionIdRef.current, dir, providerConfig);
               if (result.status === "ok") {
                 setPiInfo(result.data);
                 piSessionSyncedRef.current = false;

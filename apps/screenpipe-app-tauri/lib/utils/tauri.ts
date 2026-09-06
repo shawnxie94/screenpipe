@@ -1653,9 +1653,9 @@ async piSetThinkingLevel(sessionId: string | null, level: string) : Promise<Resu
 /**
  * Start the Pi sidecar in RPC mode (Tauri command wrapper)
  */
-async piStart(sessionId: string | null, projectDir: string, userToken: string | null, providerConfig: PiProviderConfig | null) : Promise<Result<PiInfo, string>> {
+async piStart(sessionId: string | null, projectDir: string, providerConfig: PiProviderConfig | null) : Promise<Result<PiInfo, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("pi_start", { sessionId, projectDir, userToken, providerConfig }) };
+    return { status: "ok", data: await TAURI_INVOKE("pi_start", { sessionId, projectDir, providerConfig }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1666,9 +1666,9 @@ async piStart(sessionId: string | null, projectDir: string, userToken: string | 
  * Foreground surfaces that only care about agent events should not have to
  * round-trip through WebView between process readiness and prompt acceptance.
  */
-async piStartAndPrompt(sessionId: string, projectDir: string, userToken: string | null, providerConfig: PiProviderConfig | null, message: string) : Promise<Result<string, string>> {
+async piStartAndPrompt(sessionId: string, projectDir: string, providerConfig: PiProviderConfig | null, message: string) : Promise<Result<string, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("pi_start_and_prompt", { sessionId, projectDir, userToken, providerConfig, message }) };
+    return { status: "ok", data: await TAURI_INVOKE("pi_start_and_prompt", { sessionId, projectDir, providerConfig, message }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1736,9 +1736,9 @@ async piStopIfIdle(sessionId: string | null) : Promise<Result<PiInfo, string>> {
  * Prefer `pi_set_model` when only provider+model changed — it preserves the
  * conversation state instead of killing the subprocess.
  */
-async piUpdateConfig(userToken: string | null, providerConfig: PiProviderConfig | null) : Promise<Result<null, string>> {
+async piUpdateConfig(providerConfig: PiProviderConfig | null) : Promise<Result<null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("pi_update_config", { userToken, providerConfig }) };
+    return { status: "ok", data: await TAURI_INVOKE("pi_update_config", { providerConfig }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

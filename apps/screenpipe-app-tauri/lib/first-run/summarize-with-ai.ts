@@ -206,7 +206,6 @@ export async function summarizeFirstRunWithAi(
   options: {
     elapsedMs: number;
     preset: AIPreset | null | undefined;
-    userToken?: string | null;
     /** Called with the decline reason when the model does not write the
      *  summary, so the caller can report it. A `console.warn` in a webview
      *  nobody has open is not an answer to "why is this not using AI?" — it
@@ -314,7 +313,6 @@ export async function summarizeFirstRunWithAi(
       const started = await commands.piStartAndPrompt(
         sessionId,
         dir,
-        options.userToken ?? null,
         buildProviderConfig(preset),
         buildSummaryPrompt(facts),
       );

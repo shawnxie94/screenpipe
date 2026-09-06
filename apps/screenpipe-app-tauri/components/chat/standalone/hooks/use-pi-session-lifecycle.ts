@@ -282,12 +282,7 @@ export function usePiSessionLifecycle({
 
     const dir = await piProjectDirForSession(piSessionIdRef.current);
     try {
-      const result = await commands.piStart(
-        piSessionIdRef.current,
-        dir,
-        userToken ?? null,
-        providerConfig,
-      );
+      const result = await commands.piStart(piSessionIdRef.current, dir, providerConfig);
       if (result.status !== "ok" || !result.data.running) {
         throw new Error(
           result.status === "error"

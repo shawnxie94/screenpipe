@@ -38,7 +38,7 @@ fn provider_name(provider: &AIProviderType) -> String {
 fn provider_config_for_chat(
     app: &tauri::AppHandle,
     conversation: &Value,
-) -> Result<(PiProviderConfig, Option<String>), String> {
+) -> Result<PiProviderConfig, String> {
     let settings = SettingsStore::get(app)?
         .ok_or_else(|| "screenpipe settings are unavailable".to_string())?;
     let preset_id = conversation.get("presetId").and_then(Value::as_str);
@@ -77,13 +77,7 @@ fn provider_config_for_chat(
     } else {
         None
     };
-    let token = settings
-        .user
-        .token
-        .clone()
-        .filter(|token| !token.is_empty());
-    Ok((
-        PiProviderConfig {
+    Ok(PiProviderConfig {
             backend: is_acp.then_some(PiBackend::Acp),
             acp_agent,
             provider: provider_name(&preset.provider),
@@ -110,9 +104,7 @@ fn provider_config_for_chat(
             // Chat is the attended surface: its approval cards are visible, so
             // the runtime must keep asking rather than deciding for the user.
             unattended: false,
-        },
-        token,
-    ))
+        })
 }
 
 #[async_trait]
@@ -182,7 +174,7 @@ impl ScreenpipeChatHost for DesktopChatHost {
             return Err("cannot steer a dormant screenpipe chat; use queue mode".to_string());
         }
 
-        let (provider_config, token) = provider_config_for_chat(&self.app, &chat.conversation)?;
+        let provider_config = provider_config_for_chat(&self.app, &chat.conversation)?;
         let project_dir = screenpipe_core::paths::default_screenpipe_data_dir()
             .join("pi-chat")
             .to_string_lossy()
@@ -193,7 +185,6 @@ impl ScreenpipeChatHost for DesktopChatHost {
             state.inner(),
             &request.id,
             project_dir,
-            token,
             Some(provider_config),
             coding_workspace,
         )

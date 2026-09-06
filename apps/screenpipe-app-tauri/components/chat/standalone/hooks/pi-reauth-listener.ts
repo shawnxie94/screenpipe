@@ -30,7 +30,7 @@ export function registerPiReauthListener({
     if (!isMounted()) return;
     try {
       const dir = await piProjectDirForSession(piSessionIdRef.current);
-      const result = await commands.piStart(piSessionIdRef.current, dir, event.payload.apiKey, buildProviderConfig());
+      const result = await commands.piStart(piSessionIdRef.current, dir, buildProviderConfig());
       if (result.status === "ok") {
         setPiInfo(result.data);
         piSessionSyncedRef.current = false;

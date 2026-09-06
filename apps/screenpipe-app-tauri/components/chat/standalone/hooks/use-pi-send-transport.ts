@@ -523,12 +523,7 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
             }
 
             try {
-              const result = await commands.piStart(
-                attemptSessionId,
-                dir,
-                null,
-                providerConfig,
-              );
+              const result = await commands.piStart(attemptSessionId, dir, providerConfig);
               if (result.status === "ok" && result.data.running) {
                 if (isAttemptForeground()) {
                   setPiInfo(result.data);
@@ -905,12 +900,7 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
         }
         const dir = await piProjectDirForSession(turnSessionId);
         const providerConfig = buildProviderConfig(attemptPreset);
-        const startRes = await commands.piStart(
-          turnSessionId,
-          dir,
-          null,
-          providerConfig,
-        );
+        const startRes = await commands.piStart(turnSessionId, dir, providerConfig);
         if (startRes.status !== "ok" || !startRes.data.running) {
           throw new Error(
             startRes.status === "error"

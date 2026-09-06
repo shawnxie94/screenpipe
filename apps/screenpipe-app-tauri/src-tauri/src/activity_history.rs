@@ -463,7 +463,7 @@ fn provider_config(
     settings: &SettingsStore,
     selected_preset_key: Option<&str>,
     task_system_prompt: &str,
-) -> Result<(PiProviderConfig, Option<String>), String> {
+) -> Result<PiProviderConfig, String> {
     let selected_id = selected_preset_key
         .and_then(|key| settings.extra.get(key))
         .and_then(Value::as_str);
@@ -509,13 +509,7 @@ fn provider_config(
     } else {
         preset.model.clone()
     };
-    let token = settings
-        .user
-        .token
-        .clone()
-        .filter(|token| !token.is_empty());
-    Ok((
-        PiProviderConfig {
+    Ok(PiProviderConfig {
             backend: is_acp.then_some(PiBackend::Acp),
             acp_agent,
             provider: serde_json::to_value(&preset.provider)
@@ -544,9 +538,7 @@ fn provider_config(
             // times out. Unattended answers those requests the way a scheduled
             // task does.
             unattended: is_acp,
-        },
-        token,
-    ))
+        })
 }
 
 fn final_assistant_text(event: &Value) -> Option<String> {
@@ -1068,7 +1060,7 @@ pub(crate) async fn run_background_pi(
     task_system_prompt: &str,
 ) -> Result<String, String> {
     let settings = SettingsStore::get(app)?.ok_or("Settings are not available")?;
-    let (config, token) = provider_config(&settings, selected_preset_key, task_system_prompt)?;
+    let config = provider_config(&settings, selected_preset_key, task_system_prompt)?;
     let is_agent = config.backend.is_some();
     let session_id = format!("__title:{session_prefix}-{}", uuid::Uuid::new_v4());
     let project_dir = screenpipe_core::paths::default_screenpipe_data_dir()
@@ -1082,7 +1074,6 @@ pub(crate) async fn run_background_pi(
         state.inner(),
         &session_id,
         project_dir,
-        token,
         Some(config),
         None,
     )

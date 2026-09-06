@@ -123,7 +123,6 @@ export async function selectWorktreeRepository({
   candidates,
   startingPath,
   providerConfig,
-  userToken,
 }: {
   routeSessionId: string;
   conversationId: string;
@@ -131,7 +130,6 @@ export async function selectWorktreeRepository({
   candidates: string[];
   startingPath: string | null;
   providerConfig: PiProviderConfig;
-  userToken: string | null;
 }): Promise<CodingWorkspace> {
   if (candidates.length === 0) {
     throw new Error("No nearby Git repository was found");
@@ -174,7 +172,6 @@ export async function selectWorktreeRepository({
     const started = await commands.piStartAndPrompt(
       routeSessionId,
       projectDir,
-      userToken,
       routerConfig(providerConfig),
       routerPrompt(task, candidates, startingPath),
     );

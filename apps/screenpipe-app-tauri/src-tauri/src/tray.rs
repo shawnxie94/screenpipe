@@ -1305,34 +1305,6 @@ fn create_dynamic_menu(
             .item(&MenuItemBuilder::with_id("fix_permissions", "⚠ Fix permissions").build(app)?);
     }
 
-    // --- Plan / usage info ---
-    // Local/self-hosted builds have no subscription plan and no "upgrade to
-    // Business" — skip the whole block (also hides the misleading "Free plan").
-    if !crate::should_skip_onboarding()
-        && !data.app_ui_hidden
-        && !is_tray_item_hidden("tray_plan")
-    {
-        let plan_label = plan_display_name(data.subscription_plan.as_deref());
-        let has_cloud = data.cloud_subscribed;
-        menu_builder = menu_builder.item(&PredefinedMenuItem::separator(app)?);
-        menu_builder = menu_builder.item(
-            &MenuItemBuilder::with_id("plan_info", format!("{} plan", plan_label))
-                .enabled(false)
-                .build(app)?,
-        );
-        // Anyone without cloud (Free, Basic, or Lifetime-only) can move up to
-        // Business to add cloud sync, cloud AI, and integrations. Plan truth is
-        // also checked: `cloud_subscribed` is a persisted flag that can lag
-        // behind the entitlement, and offering "Upgrade to Business" beside
-        // "Business Ultra plan" reads as a bug to the person paying for Ultra.
-        if !has_cloud && !plan_includes_business(data.subscription_plan.as_deref()) {
-            menu_builder = menu_builder
-                .item(
-                    &MenuItemBuilder::with_id("upgrade", "⚡ Upgrade to Business").build(app)?,
-                );
-        }
-    }
-
     // --- Update item (if available) ---
     if !data.app_ui_hidden {
         if let Some(update_item) = update_item {
@@ -1822,17 +1794,6 @@ fn handle_menu_event(app_handle: &AppHandle, event: tauri::menu::MenuEvent) {
             let _ = app_handle.run_on_main_thread(move || {
                 crate::headless::wake_from_tray(&app);
                 let _ = ShowRewindWindow::PermissionRecovery.show(&app);
-            });
-        }
-        "upgrade" => {
-            let app = app_handle.clone();
-            let _ = app_handle.run_on_main_thread(move || {
-                crate::headless::wake_from_tray(&app);
-                let _ = ShowRewindWindow::Home {
-                    page: Some("account".to_string()),
-                }
-                .show(&app);
-                let _ = app.emit("tray-upgrade", ());
             });
         }
         "releases" => {

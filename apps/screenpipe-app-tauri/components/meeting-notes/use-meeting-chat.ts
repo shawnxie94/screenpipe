@@ -285,7 +285,6 @@ export function useMeetingChat(options: {
         const started = await commands.piStart(
           sessionId,
           projectDir,
-          userToken,
           providerConfig(preset),
         );
         if (!turnStillActive()) {

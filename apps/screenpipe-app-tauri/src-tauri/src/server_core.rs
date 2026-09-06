@@ -709,7 +709,7 @@ impl ServerCore {
             let screenpipe_dir_for_cb = config.data_dir.clone();
             let pm_for_cb = shared_pipe_manager.clone();
             shared_pipe_manager.lock().await.set_on_run_complete(Arc::new(
-                move |pipe_name, execution_id, trigger_type, success, duration_secs, error_type| {
+                move |pipe_name, execution_id, _trigger_type, success, _duration_secs, _error_type| {
                     // Auto-register pipe artifacts to ~/.screenpipe/outputs/
                     if success {
                         let db = db_for_cb.clone();

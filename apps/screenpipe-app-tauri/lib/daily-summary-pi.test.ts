@@ -109,7 +109,6 @@ describe("runDailySummaryWithPi", () => {
         end: "2026-07-26T06:59:59.999Z",
       },
       preset: PRESET,
-      userToken: "user-token",
       recoverTransientRuntimeStart: true,
     });
 
@@ -117,7 +116,6 @@ describe("runDailySummaryWithPi", () => {
     expect(mocks.piStartAndPrompt).toHaveBeenCalledWith(
       expect.stringContaining("daily-summary"),
       "/Users/test/.screenpipe/pi-daily-summary",
-      "user-token",
       expect.objectContaining({
         provider: "screenpipe-cloud",
         model: "auto",
@@ -154,7 +152,6 @@ describe("runDailySummaryWithPi", () => {
       date: new Date(2026, 6, 25),
       range: { start: "start", end: "end" },
       preset: PRESET,
-      userToken: "user-token",
       sessionPrefix: "activity-review",
       systemPrompt: "private read-only activity-review agent",
       prompt: "review this exact range",
@@ -163,7 +160,6 @@ describe("runDailySummaryWithPi", () => {
     expect(mocks.piStart).toHaveBeenCalledWith(
       expect.stringContaining("activity-review"),
       expect.any(String),
-      "user-token",
       expect.objectContaining({
         systemPrompt: expect.stringContaining("activity-review agent"),
       }),
@@ -218,8 +214,7 @@ describe("runDailySummaryWithPi", () => {
         date: new Date(2026, 7, 18),
         range: { start: "start", end: "end" },
         preset: PRESET,
-        userToken: "user-token",
-        recoverTransientRuntimeStart: true,
+          recoverTransientRuntimeStart: true,
       }),
     ).resolves.toBe("Recovered summary");
 
@@ -252,8 +247,7 @@ describe("runDailySummaryWithPi", () => {
         date: new Date(2026, 7, 18),
         range: { start: "start", end: "end" },
         preset: PRESET,
-        userToken: "user-token",
-        recoverTransientRuntimeStart: true,
+          recoverTransientRuntimeStart: true,
       }),
     ).rejects.toThrow("AI returned an empty daily summary");
     expect(mocks.piPrompt).toHaveBeenCalledOnce();
@@ -287,8 +281,7 @@ describe("runDailySummaryWithPi", () => {
         date: new Date(2026, 7, 18),
         range: { start: "start", end: "end" },
         preset: PRESET,
-        userToken: "user-token",
-        recoverTransientRuntimeStart: true,
+          recoverTransientRuntimeStart: true,
       }),
     ).resolves.toBe("Recovered summary");
 
@@ -328,8 +321,7 @@ describe("runDailySummaryWithPi", () => {
         date: new Date(2026, 7, 18),
         range: { start: "start", end: "end" },
         preset: PRESET,
-        userToken: "user-token",
-        recoverTransientRuntimeStart: true,
+          recoverTransientRuntimeStart: true,
       }),
     ).rejects.toThrow("hosted_ai_allowance_exceeded");
     expect(mocks.piStartAndPrompt).toHaveBeenCalledOnce();
@@ -365,8 +357,7 @@ describe("runDailySummaryWithPi", () => {
         date: new Date(2026, 7, 18),
         range: { start: "start", end: "end" },
         preset: PRESET,
-        userToken: "user-token",
-        recoverTransientRuntimeStart: true,
+          recoverTransientRuntimeStart: true,
       }),
     ).rejects.toThrow("rate_limit_exceeded");
     expect(mocks.piStartAndPrompt).toHaveBeenCalledOnce();
@@ -383,7 +374,6 @@ describe("runDailySummaryWithPi", () => {
       date: new Date(2026, 6, 25),
       range: { start: "start", end: "end" },
       preset: PRESET,
-      userToken: "user-token",
       signal: controller.signal,
       recoverTransientRuntimeStart: true,
     });

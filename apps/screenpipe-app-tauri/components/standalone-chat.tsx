@@ -632,7 +632,7 @@ export function StandaloneChat({
     invalidatedAuthHandledRef.current = true;
 
     try {
-      const result = await commands.piUpdateConfig(null, null);
+      const result = await commands.piUpdateConfig(null);
       if (result.status === "error") {
         console.warn("failed to clear Pi auth config after token invalidation:", result.error);
       }

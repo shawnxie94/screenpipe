@@ -94,12 +94,7 @@ export function useAcpWarmup({
         const providerConfig = buildProviderConfig(preset);
         if (!providerConfig) return;
         const dir = await piProjectDirForSession(sessionId);
-        const result = await commands.piStart(
-          sessionId,
-          dir,
-          userToken ?? null,
-          providerConfig,
-        );
+        const result = await commands.piStart(sessionId, dir, providerConfig);
         if (cancelled) return;
         if (result.status === "ok" && result.data.running) {
           setPiInfo(result.data);

@@ -328,7 +328,7 @@ async fn tick(app: &AppHandle, state: &FirstRunSummaryState) -> Result<(), Strin
     }
     if onboarding.first_run_summary_phase == "ready" {
         ensure_notification(app, &onboarding).await?;
-        let updated = OnboardingStore::get(app)?.unwrap_or_default();
+        let _updated = OnboardingStore::get(app)?.unwrap_or_default();
         return Ok(());
     }
     // Never infer a new run from an old `completedAt`. Reopening onboarding
@@ -408,7 +408,7 @@ async fn tick(app: &AppHandle, state: &FirstRunSummaryState) -> Result<(), Strin
     let _ = app.emit("chat-conversation-saved", json!({ "id": chat_id }));
     let ready = OnboardingStore::get(app)?.unwrap_or_default();
     ensure_notification(app, &ready).await?;
-    let notified = OnboardingStore::get(app)?.unwrap_or_default();
+    let _notified = OnboardingStore::get(app)?.unwrap_or_default();
     Ok(())
 }
 

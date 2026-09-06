@@ -203,7 +203,7 @@ async function generateTitleViaPi(
 
   try {
     // Start dedicated Pi session
-    const startResult = await commands.piStart(sessionId, dir, userToken, providerConfig);
+    const startResult = await commands.piStart(sessionId, dir, providerConfig);
     if (startResult.status !== "ok" || !startResult.data?.running) {
       console.warn("[chat-title] pi start failed", startResult);
       return null;

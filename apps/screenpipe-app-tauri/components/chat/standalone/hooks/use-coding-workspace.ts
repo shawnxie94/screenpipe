@@ -249,7 +249,6 @@ export function useCodingWorkspace({
             candidates: result.data.candidates,
             startingPath: effectiveStartingPath,
             providerConfig: router.providerConfig,
-            userToken: router.userToken,
           });
           created = true;
         }

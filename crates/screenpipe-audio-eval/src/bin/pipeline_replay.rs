@@ -441,16 +441,10 @@ async fn run_deepgram_prediction(args: &Args, fixtures: &[Fixture]) -> Result<Pr
     };
     let total_samples = samples.len();
     let started = Instant::now();
-    let mut deepgram_config = std::env::var("CUSTOM_DEEPGRAM_API_TOKEN")
+    let mut deepgram_config = std::env::var("DEEPGRAM_API_KEY")
         .ok()
         .filter(|v| !v.trim().is_empty())
-        .map(DeepgramTranscriptionConfig::screenpipe_cloud)
-        .or_else(|| {
-            std::env::var("DEEPGRAM_API_KEY")
-                .ok()
-                .filter(|v| !v.trim().is_empty())
-                .map(DeepgramTranscriptionConfig::direct)
-        })
+        .map(DeepgramTranscriptionConfig::direct)
         .context("deepgram config missing after readiness check")?;
     if let Ok(endpoint) = std::env::var("DEEPGRAM_API_URL") {
         if !endpoint.trim().is_empty() {

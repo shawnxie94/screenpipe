@@ -2068,14 +2068,9 @@ fn context_window_tokens(max_context_chars: Option<i32>) -> Option<i32> {
         .map(|value| value.saturating_add(3) / 4)
 }
 
-fn pi_launch_fingerprint(
-    project_dir: &str,
-    user_token: Option<&str>,
-    provider_config: Option<&PiProviderConfig>,
-) -> u64 {
+fn pi_launch_fingerprint(project_dir: &str, provider_config: Option<&PiProviderConfig>) -> u64 {
     let mut hasher = DefaultHasher::new();
     project_dir.hash(&mut hasher);
-    user_token.hash(&mut hasher);
     if let Some(config) = provider_config {
         // buildSystemPrompt adds exact wall-clock lines. Home and standalone
         // Chat build those a few milliseconds apart, but that is not a real
@@ -2194,7 +2189,6 @@ fn anthropic_model_requires_adaptive_thinking(model: &str) -> bool {
 /// concurrent pipes overwrite each other's providers.
 #[cfg(test)]
 async fn build_models_json(
-    _user_token: Option<&str>,
     provider_config: Option<&PiProviderConfig>,
 ) -> serde_json::Value {
     build_models_json_with_provider(provider_config).await
@@ -2333,7 +2327,6 @@ async fn build_models_json_with_provider(
 
 /// Write pi's provider config (models.json + auth.json).
 async fn ensure_pi_config(
-    _user_token: Option<&str>,
     provider_config: Option<&PiProviderConfig>,
 ) -> Result<(), String> {
     if provider_config.is_some_and(|config| {
@@ -2519,7 +2512,6 @@ pub async fn pi_start(
     state: State<'_, PiState>,
     session_id: Option<String>,
     project_dir: String,
-    user_token: Option<String>,
     provider_config: Option<PiProviderConfig>,
 ) -> Result<PiInfo, String> {
     let sid = session_id.unwrap_or_else(|| "chat".to_string());
@@ -2529,7 +2521,6 @@ pub async fn pi_start(
         &state,
         &sid,
         project_dir,
-        user_token,
         provider_config,
         coding_workspace,
     )
@@ -2546,7 +2537,6 @@ pub async fn pi_start_and_prompt(
     state: State<'_, PiState>,
     session_id: String,
     project_dir: String,
-    user_token: Option<String>,
     provider_config: Option<PiProviderConfig>,
     message: String,
 ) -> Result<String, String> {
@@ -2560,7 +2550,6 @@ pub async fn pi_start_and_prompt(
         state.inner(),
         &session_id,
         project_dir,
-        user_token,
         provider_config,
         coding_workspace,
     )
@@ -2737,7 +2726,6 @@ pub async fn pi_start_inner(
     state: &PiState,
     session_id: &str,
     project_dir: String,
-    user_token: Option<String>,
     provider_config: Option<PiProviderConfig>,
     coding_workspace: Option<crate::coding_workspace::CodingWorkspaceLaunch>,
 ) -> Result<PiInfo, String> {
@@ -2751,11 +2739,8 @@ pub async fn pi_start_inner(
         .map(|workspace| workspace.path().to_path_buf())
         .unwrap_or_else(|| PathBuf::from(&project_dir));
     let launch_dir_key = screenpipe_core::agents::worktree::portable_path(&launch_dir);
-    let launch_fingerprint = pi_launch_fingerprint(
-        &launch_dir_key,
-        user_token.as_deref(),
-        provider_config.as_ref(),
-    );
+    let launch_fingerprint =
+        pi_launch_fingerprint(&launch_dir_key, provider_config.as_ref());
     let mut extension_safe_mode = pi_extension_safe_mode_enabled(&project_dir);
     let sid = session_id.to_string();
 
@@ -2834,7 +2819,7 @@ pub async fn pi_start_inner(
         ensure_shared_pi_extensions(&project_dir)?;
 
         // Ensure Pi is configured with the user's provider
-        ensure_pi_config(user_token.as_deref(), provider_config.as_ref()).await?;
+        ensure_pi_config(provider_config.as_ref()).await?;
         if !extension_safe_mode {
             if let Err(error) = ensure_required_pi_extension_package().await {
                 // The baseline subagent package improves capability, but a
@@ -2871,7 +2856,7 @@ pub async fn pi_start_inner(
         // repairs the physical install. Kept fatal (`?`) to match native pi's
         // guarantee — a fresh pi-acp user gets the baseline or fails loudly,
         // rather than silently degraded.
-        ensure_pi_config(user_token.as_deref(), provider_config.as_ref()).await?;
+        ensure_pi_config(provider_config.as_ref()).await?;
         if !extension_safe_mode {
             ensure_required_pi_extension_package().await?;
         }
@@ -3385,12 +3370,6 @@ pub async fn pi_start_inner(
     screenpipe_core::agents::pi::apply_pi_isolation_env(&mut |k, v| {
         cmd.env(k, v);
     });
-
-    if !use_acp {
-        if let Some(ref token) = user_token {
-            cmd.env("SCREENPIPE_API_KEY", token);
-        }
-    }
 
     // Pass local API config so the Pi agent can authenticate to the runtime local API.
     {
@@ -5568,7 +5547,6 @@ pub async fn pi_get_thinking_level() -> Result<String, String> {
 pub async fn pi_update_config(
     app: AppHandle,
     state: State<'_, PiState>,
-    user_token: Option<String>,
     provider_config: Option<PiProviderConfig>,
 ) -> Result<(), String> {
     info!(
@@ -5590,7 +5568,6 @@ pub async fn pi_update_config(
         &state,
         "chat",
         project_dir,
-        user_token,
         provider_config,
         coding_workspace,
     )
