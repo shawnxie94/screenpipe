@@ -6054,15 +6054,15 @@ mod tests {
             resume_session_id: None,
             unattended: false,
         };
-        let first = super::pi_launch_fingerprint("/tmp/pi-chat", Some("token"), Some(&config));
-        let duplicate = super::pi_launch_fingerprint("/tmp/pi-chat", Some("token"), Some(&config));
+        let first = super::pi_launch_fingerprint("/tmp/pi-chat", Some(&config));
+        let duplicate = super::pi_launch_fingerprint("/tmp/pi-chat", Some(&config));
         assert_eq!(first, duplicate);
 
         let mut changed = config.clone();
         changed.system_prompt = Some("new system context".to_string());
         assert_ne!(
             first,
-            super::pi_launch_fingerprint("/tmp/pi-chat", Some("token"), Some(&changed),)
+            super::pi_launch_fingerprint("/tmp/pi-chat", Some(&changed))
         );
 
         let mut first_time = config.clone();
@@ -6076,8 +6076,8 @@ mod tests {
                 .to_string(),
         );
         assert_eq!(
-            super::pi_launch_fingerprint("/tmp/pi-chat", Some("token"), Some(&first_time),),
-            super::pi_launch_fingerprint("/tmp/pi-chat", Some("token"), Some(&second_time),)
+            super::pi_launch_fingerprint("/tmp/pi-chat", Some(&first_time)),
+            super::pi_launch_fingerprint("/tmp/pi-chat", Some(&second_time))
         );
     }
 
@@ -7475,7 +7475,7 @@ error: InstallFailed extracting tarball"#;
 
     #[tokio::test]
     async fn test_build_models_json_default_has_no_hosted_provider() {
-        let config = build_models_json(None, None).await;
+        let config = build_models_json(None).await;
         let providers = config["providers"].as_object().unwrap();
         assert!(providers.is_empty());
     }
@@ -7520,21 +7520,21 @@ error: InstallFailed extracting tarball"#;
 
     #[tokio::test]
     async fn test_build_models_json_ignores_obsolete_user_token() {
-        let config = build_models_json(Some("tok_abc123"), None).await;
+        let config = build_models_json(None).await;
         assert!(config["providers"].as_object().unwrap().is_empty());
     }
 
     #[tokio::test]
     async fn test_build_models_json_omits_removed_pi_provider() {
         let pc = make_provider_config("pi", "auto");
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         assert!(config["providers"].as_object().unwrap().is_empty());
     }
 
     #[tokio::test]
     async fn test_build_models_json_openai_adds_second_provider() {
         let pc = make_provider_config("openai", "gpt-4o");
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let providers = config["providers"].as_object().unwrap();
         assert_eq!(providers.len(), 1);
         assert!(providers.contains_key("openai-byok"));
@@ -7556,7 +7556,7 @@ error: InstallFailed extracting tarball"#;
         pc.url = "http://localhost:8080/v1".to_string();
         pc.max_context_chars = Some(32_768);
 
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         assert_eq!(
             config["providers"]["custom"]["models"][0]["contextWindow"],
             8_192
@@ -7703,7 +7703,7 @@ error: InstallFailed extracting tarball"#;
             if provider == "custom" {
                 pc.url = "https://example.com/v1".to_string();
             }
-            let config = build_models_json(None, Some(&pc)).await;
+            let config = build_models_json(Some(&pc)).await;
             assert_eq!(
                 config["providers"][provider_key]["apiKey"], expected,
                 "provider {provider} must reference its key as {expected}"
@@ -7714,7 +7714,7 @@ error: InstallFailed extracting tarball"#;
     #[tokio::test]
     async fn test_build_models_json_chatgpt_gpt55_supports_reasoning() {
         let pc = make_provider_config("openai-chatgpt", "gpt-5.5");
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let model = &config["providers"]["openai-chatgpt"]["models"][0];
         assert_eq!(model["id"], "gpt-5.5");
         assert_eq!(model["reasoning"], true);
@@ -7724,7 +7724,7 @@ error: InstallFailed extracting tarball"#;
     async fn test_build_models_json_openai_reasoning_models_support_reasoning() {
         for model_id in ["gpt-5.5-codex", "gpt-5", "o3-mini", "o4-mini"] {
             let pc = make_provider_config("openai", model_id);
-            let config = build_models_json(None, Some(&pc)).await;
+            let config = build_models_json(Some(&pc)).await;
             let model = &config["providers"]["openai-byok"]["models"][0];
             assert_eq!(model["reasoning"], true, "{model_id}");
         }
@@ -7733,7 +7733,7 @@ error: InstallFailed extracting tarball"#;
     #[tokio::test]
     async fn test_build_models_json_chatgpt_rewrites_unsupported_codex_model() {
         let pc = make_provider_config("openai-chatgpt", "gpt-5.5-codex");
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let model = &config["providers"]["openai-chatgpt"]["models"][0];
         assert_eq!(model["id"], "gpt-5.5");
         assert_eq!(model["name"], "gpt-5.5");
@@ -7743,7 +7743,7 @@ error: InstallFailed extracting tarball"#;
     #[tokio::test]
     async fn test_build_models_json_ollama_provider() {
         let pc = make_provider_config("native-ollama", "llama3");
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let providers = config["providers"].as_object().unwrap();
         assert!(providers.contains_key("ollama"));
         assert_eq!(providers["ollama"]["baseUrl"], "http://localhost:11434/v1");
@@ -7752,7 +7752,7 @@ error: InstallFailed extracting tarball"#;
     #[tokio::test]
     async fn test_build_models_json_anthropic_provider() {
         let pc = make_provider_config("anthropic", "claude-sonnet-4-5");
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let providers = config["providers"].as_object().unwrap();
         assert!(providers.contains_key("anthropic-byok"));
         assert_eq!(
@@ -7766,7 +7766,7 @@ error: InstallFailed extracting tarball"#;
     async fn test_build_models_json_current_claude_uses_adaptive_thinking() {
         for model_id in ["claude-opus-5", "claude-fable-5", "claude-sonnet-5"] {
             let pc = make_provider_config("anthropic", model_id);
-            let config = build_models_json(None, Some(&pc)).await;
+            let config = build_models_json(Some(&pc)).await;
             let model = &config["providers"]["anthropic-byok"]["models"][0];
 
             assert_eq!(model["reasoning"], true, "{model_id}");
@@ -7777,7 +7777,7 @@ error: InstallFailed extracting tarball"#;
     #[tokio::test]
     async fn test_build_models_json_legacy_claude_keeps_budget_thinking() {
         let pc = make_provider_config("anthropic", "claude-sonnet-4-5");
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let model = &config["providers"]["anthropic-byok"]["models"][0];
 
         assert_eq!(model["reasoning"], true);
@@ -7788,7 +7788,7 @@ error: InstallFailed extracting tarball"#;
     async fn test_build_models_json_custom_with_empty_url_skipped() {
         // custom provider with empty URL should be skipped (would invalidate schema)
         let pc = make_provider_config("custom", "my-model");
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let providers = config["providers"].as_object().unwrap();
         assert!(providers.is_empty());
         assert!(!providers.contains_key("custom"));
@@ -7798,7 +7798,7 @@ error: InstallFailed extracting tarball"#;
     async fn test_build_models_json_custom_with_url() {
         let mut pc = make_provider_config("custom", "my-model");
         pc.url = "http://my-server:8080/v1".to_string();
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let providers = config["providers"].as_object().unwrap();
         assert_eq!(providers.len(), 1);
         assert!(providers.contains_key("custom"));
@@ -7810,7 +7810,7 @@ error: InstallFailed extracting tarball"#;
     async fn test_build_models_json_gemini_disables_store() {
         let mut pc = make_provider_config("custom", "gemini-3.6-flash");
         pc.url = "https://generativelanguage.googleapis.com/v1beta/openai/".to_string();
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let custom = &config["providers"]["custom"];
         let model = &custom["models"][0];
 
@@ -7823,7 +7823,7 @@ error: InstallFailed extracting tarball"#;
         for base_url in ["https://ai.ai-genesis.app", "https://api.ai-genesis.app/"] {
             let mut pc = make_provider_config("custom", "glm-5.2");
             pc.url = base_url.to_string();
-            let config = build_models_json(None, Some(&pc)).await;
+            let config = build_models_json(Some(&pc)).await;
             let custom = &config["providers"]["custom"];
 
             assert_eq!(
@@ -7841,7 +7841,7 @@ error: InstallFailed extracting tarball"#;
         // defaults to max_completion_tokens which works for most of these.
         let mut pc = make_provider_config("custom", "my-model");
         pc.url = "http://localhost:8080/v1".to_string();
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let model = &config["providers"]["custom"]["models"][0];
         assert!(
             model.get("compat").is_none(),
@@ -7853,7 +7853,7 @@ error: InstallFailed extracting tarball"#;
     async fn test_build_models_json_azure_openai_forces_max_completion_tokens() {
         let mut pc = make_provider_config("custom", "gpt-4o");
         pc.url = "https://myresource.openai.azure.com/openai/deployments/gpt-4o".to_string();
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let model = &config["providers"]["custom"]["models"][0];
         assert_eq!(
             model["compat"]["maxTokensField"], "max_completion_tokens",
@@ -7865,7 +7865,7 @@ error: InstallFailed extracting tarball"#;
     async fn test_build_models_json_azure_foundry_forces_max_completion_tokens() {
         let mut pc = make_provider_config("custom", "gpt-5-mini");
         pc.url = "https://myresource.services.ai.azure.com/api/projects/proj".to_string();
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let model = &config["providers"]["custom"]["models"][0];
         assert_eq!(model["compat"]["maxTokensField"], "max_completion_tokens");
     }
@@ -7874,7 +7874,7 @@ error: InstallFailed extracting tarball"#;
     async fn test_build_models_json_azure_cognitive_services_forces_max_completion_tokens() {
         let mut pc = make_provider_config("custom", "my-deployment");
         pc.url = "https://myresource.cognitiveservices.azure.com/".to_string();
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let model = &config["providers"]["custom"]["models"][0];
         assert_eq!(model["compat"]["maxTokensField"], "max_completion_tokens");
     }
@@ -7885,7 +7885,7 @@ error: InstallFailed extracting tarball"#;
         // max_completion_tokens. Detect by model ID.
         let mut pc = make_provider_config("custom", "gpt-5");
         pc.url = "https://my-proxy.example.com/v1".to_string();
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let model = &config["providers"]["custom"]["models"][0];
         assert_eq!(model["compat"]["maxTokensField"], "max_completion_tokens");
     }
@@ -7895,7 +7895,7 @@ error: InstallFailed extracting tarball"#;
         for provider in ["openai", "custom"] {
             let mut pc = make_provider_config(provider, "gpt-5.5");
             pc.url = "https://api.openai.com/v1".to_string();
-            let config = build_models_json(None, Some(&pc)).await;
+            let config = build_models_json(Some(&pc)).await;
             let provider_name = if provider == "openai" {
                 "openai-byok"
             } else {
@@ -7921,7 +7921,7 @@ error: InstallFailed extracting tarball"#;
     async fn test_build_models_json_does_not_override_reasoning_for_other_custom_endpoints() {
         let mut pc = make_provider_config("custom", "gpt-5.5");
         pc.url = "https://example.com/v1".to_string();
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let model = &config["providers"]["custom"]["models"][0];
 
         assert!(model.get("thinkingLevelMap").is_none());
@@ -7932,7 +7932,7 @@ error: InstallFailed extracting tarball"#;
     async fn test_build_models_json_o3_model_forces_max_completion_tokens() {
         let mut pc = make_provider_config("custom", "o3-mini");
         pc.url = "https://my-proxy.example.com/v1".to_string();
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let model = &config["providers"]["custom"]["models"][0];
         assert_eq!(model["compat"]["maxTokensField"], "max_completion_tokens");
     }
@@ -7943,7 +7943,7 @@ error: InstallFailed extracting tarball"#;
         // and Pi's default is already max_completion_tokens for non-chutes URLs.
         let mut pc = make_provider_config("custom", "gpt-4o");
         pc.url = "https://my-proxy.example.com/v1".to_string();
-        let config = build_models_json(None, Some(&pc)).await;
+        let config = build_models_json(Some(&pc)).await;
         let model = &config["providers"]["custom"]["models"][0];
         assert!(model.get("compat").is_none());
     }
@@ -7954,7 +7954,7 @@ error: InstallFailed extracting tarball"#;
         // provider, build_models_json always produces a clean config with only
         // the providers we explicitly add. This is a pure function so there is
         // no file to corrupt — the test verifies the output shape is always valid.
-        let config = build_models_json(Some("tok"), None).await;
+        let config = build_models_json(None).await;
         let providers = config["providers"].as_object().unwrap();
 
         // No provider is synthesized without an explicit user configuration.

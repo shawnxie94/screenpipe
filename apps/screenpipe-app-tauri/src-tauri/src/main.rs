@@ -58,7 +58,6 @@ mod db_relaunch;
 mod db_self_heal;
 mod deep_link;
 mod dev_isolation;
-mod diagnostic_logs;
 mod disk_usage;
 mod disk_pressure_notifications;
 #[cfg(feature = "e2e")]

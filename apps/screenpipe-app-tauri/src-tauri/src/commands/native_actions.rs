@@ -1003,7 +1003,6 @@ pub(crate) fn dispatch_notification_action(json: String) {
                 && action.get("open_in_chat").and_then(|v| v.as_bool()) != Some(true)
             {
                 if let Some(pipe) = action.get("pipe").and_then(|v| v.as_str()) {
-                    track(app);
                     run_pipe_from_notification(
                         app.clone(),
                         pipe.to_string(),

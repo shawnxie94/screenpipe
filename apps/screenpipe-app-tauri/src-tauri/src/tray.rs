@@ -154,39 +154,9 @@ fn prefetch_tray_menu_data(app: &AppHandle) -> TrayMenuData {
 }
 
 /// Map a legacy account plan id to a display name.
-fn plan_display_name(plan: Option<&str>) -> &'static str {
-    match plan.unwrap_or("none").to_ascii_lowercase().as_str() {
-        "standard" | "basic" => "Basic",
-        "pro" | "business" => "Business",
-        // Business Max/Ultra were added to the web and TS plan maps but never
-        // here, so they fell through to `_ => "Free"`: a paying $100/mo Max or
-        // $200/mo Ultra account was labelled "Free plan" in the tray and shown
-        // an "Upgrade to Business" item for a plan it already exceeds.
-        "pro_max" | "business_max" => "Business Max",
-        "pro_ultra" | "business_ultra" => "Business Ultra",
-        "team" | "enterprise" => "Business",
-        "lifetime" => "Lifetime",
-        _ => "Free",
-    }
-}
-
 /// True when the plan already includes Business or better, so the tray must not
 /// offer an upgrade to it. Lifetime maps to Basic and is deliberately excluded:
 /// a Lifetime holder can still add Business for cloud sync and cloud AI.
-fn plan_includes_business(plan: Option<&str>) -> bool {
-    matches!(
-        plan.unwrap_or("none").to_ascii_lowercase().as_str(),
-        "pro"
-            | "business"
-            | "pro_max"
-            | "business_max"
-            | "pro_ultra"
-            | "business_ultra"
-            | "team"
-            | "enterprise"
-    )
-}
-
 /// Global storage for the update menu item so we can recreate the tray
 /// without needing to pass the update_item through every call chain.
 static UPDATE_MENU_ITEM: Lazy<Mutex<Option<MenuItem<Wry>>>> = Lazy::new(|| Mutex::new(None));
@@ -2218,49 +2188,4 @@ mod tests {
         );
     }
 
-    /// Business Max and Ultra were absent from `plan_display_name`, so a
-    /// paying account fell through to the `_` arm and the tray told them they
-    /// were on "Free plan".
-    #[test]
-    fn plan_display_name_covers_every_paid_tier() {
-        assert_eq!(plan_display_name(Some("standard")), "Basic");
-        assert_eq!(plan_display_name(Some("pro")), "Business");
-        assert_eq!(plan_display_name(Some("pro_max")), "Business Max");
-        assert_eq!(plan_display_name(Some("pro_ultra")), "Business Ultra");
-        assert_eq!(plan_display_name(Some("business_max")), "Business Max");
-        assert_eq!(plan_display_name(Some("business_ultra")), "Business Ultra");
-        assert_eq!(plan_display_name(Some("PRO_MAX")), "Business Max");
-        assert_eq!(plan_display_name(Some("lifetime")), "Lifetime");
-        assert_eq!(plan_display_name(None), "Free");
-        assert_eq!(plan_display_name(Some("something_new")), "Free");
-    }
-
-    /// `cloud_subscribed` is a persisted flag that can lag the entitlement, so
-    /// the upgrade item must also consult plan truth. Offering "Upgrade to
-    /// Business" beside "Business Ultra plan" reads as a bug to the person
-    /// paying for Ultra.
-    #[test]
-    fn business_and_above_are_never_offered_an_upgrade_to_business() {
-        for plan in [
-            "pro",
-            "business",
-            "pro_max",
-            "business_max",
-            "pro_ultra",
-            "business_ultra",
-            "team",
-            "enterprise",
-        ] {
-            assert!(
-                plan_includes_business(Some(plan)),
-                "{plan} should not upsell"
-            );
-        }
-
-        // Free, Basic and Lifetime can all still add Business for cloud sync.
-        for plan in ["standard", "basic", "lifetime", "none", "something_new"] {
-            assert!(!plan_includes_business(Some(plan)), "{plan} may upsell");
-        }
-        assert!(!plan_includes_business(None));
-    }
 }

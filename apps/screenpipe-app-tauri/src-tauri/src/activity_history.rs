@@ -640,6 +640,7 @@ fn classify_activity_run_event(event: &Value, empty_completion_retries: u8) -> A
     }
 }
 
+#[cfg(test)]
 fn generation_prompt(start: DateTime<Utc>, end: DateTime<Utc>, minimum_entries: usize) -> String {
     generation_prompt_with_context(start, end, minimum_entries, None)
 }
@@ -2199,7 +2200,7 @@ mod tests {
     fn a_coding_agent_preset_generates_activities_through_its_adapter() {
         let settings = settings_with_presets("cursor", vec![agent_preset("cursor", "cursor", "")]);
 
-        let (config, _) = provider_config(&settings, Some("activitiesAiPresetId"), SYSTEM_PROMPT)
+        let config = provider_config(&settings, Some("activitiesAiPresetId"), SYSTEM_PROMPT)
             .expect("agent preset is usable");
 
         assert!(matches!(config.backend, Some(PiBackend::Acp)));
@@ -2224,7 +2225,7 @@ mod tests {
             }],
         );
 
-        let (config, _) = provider_config(&settings, Some("activitiesAiPresetId"), SYSTEM_PROMPT)
+        let config = provider_config(&settings, Some("activitiesAiPresetId"), SYSTEM_PROMPT)
             .expect("model preset is usable");
 
         assert!(config.backend.is_none());
@@ -2250,7 +2251,7 @@ mod tests {
             ],
         );
 
-        let (config, _) = provider_config(&settings, Some("activitiesAiPresetId"), SYSTEM_PROMPT)
+        let config = provider_config(&settings, Some("activitiesAiPresetId"), SYSTEM_PROMPT)
             .expect("agent preset is usable");
 
         assert!(matches!(config.backend, Some(PiBackend::Acp)));
