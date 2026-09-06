@@ -27,7 +27,6 @@ pub mod mdns;
 pub mod remote_sync;
 pub mod sync_scheduler;
 pub mod unstructured_ocr;
-pub mod whatsapp;
 
 use std::path::Path;
 

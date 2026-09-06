@@ -8,57 +8,19 @@
 //! Pi receives credential-safe proxy or local endpoint instructions. Stored
 //! credentials are never rendered into model context.
 
-pub mod airtable;
-pub mod asana;
-pub mod bee;
-pub mod bitrix24;
-pub mod brex;
 pub mod browser;
 pub mod claude_code;
-pub mod clickup;
 pub mod codex;
-pub mod confluence;
-pub mod discord;
 pub mod email;
-pub mod financialsense;
-pub mod fireflies;
-pub mod glean;
-pub mod granola;
 pub mod hermes;
 pub mod imap;
-pub mod intercom;
-pub mod lexi;
-pub mod limitless;
-pub mod linear;
 pub mod logseq;
-pub mod loops;
-pub mod make;
-pub mod mochi;
-pub mod monday;
-pub mod n8n;
 pub mod ntfy;
 pub mod obsidian;
 pub mod obsidian_memories;
-pub mod odoo;
 pub mod openclaw;
-pub mod otter;
 pub mod perplexity;
-pub mod pipedrive;
-pub mod pocket;
-pub mod posthog;
 pub mod pushover;
-pub mod readwise;
-pub mod resend;
-pub mod salesforce;
-pub mod sentry;
-pub mod stripe;
-pub mod telegram;
-pub mod todoist;
-pub mod toggl;
-pub mod trello;
-pub mod whatsapp;
-pub mod workflowy;
-pub mod zapier;
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
@@ -310,53 +272,16 @@ fn build_client_with_timeouts(
 
 pub fn all_integrations() -> Vec<Box<dyn Integration>> {
     vec![
-        Box::new(telegram::Telegram),
-        Box::new(discord::Discord),
         Box::new(email::Email),
         Box::new(imap::Imap),
-        Box::new(todoist::Todoist),
-        Box::new(linear::Linear),
         Box::new(perplexity::Perplexity),
         Box::new(obsidian::Obsidian),
         Box::new(obsidian_memories::ObsidianMemories),
-        Box::new(n8n::N8n),
-        Box::new(make::Make),
-        Box::new(zapier::Zapier),
-        Box::new(granola::Granola),
-        Box::new(bitrix24::Bitrix24),
-        Box::new(limitless::Limitless),
-        Box::new(bee::Bee),
-        Box::new(pocket::Pocket),
-        Box::new(airtable::Airtable),
         Box::new(logseq::Logseq),
         Box::new(pushover::Pushover),
         Box::new(ntfy::Ntfy),
-        Box::new(toggl::Toggl),
-        Box::new(brex::Brex),
-        Box::new(posthog::PostHog),
-        Box::new(clickup::ClickUp),
-        Box::new(confluence::Confluence),
-        Box::new(salesforce::Salesforce),
-        Box::new(trello::Trello),
-        Box::new(stripe::Stripe),
-        Box::new(financialsense::FinancialSense),
-        Box::new(fireflies::Fireflies),
-        Box::new(otter::Otter),
-        Box::new(lexi::Lexi),
-        Box::new(sentry::Sentry),
-        Box::new(pipedrive::Pipedrive),
-        Box::new(odoo::Odoo),
-        Box::new(intercom::Intercom),
-        Box::new(monday::Monday),
-        Box::new(asana::Asana),
-        Box::new(glean::Glean),
-        Box::new(readwise::Readwise),
-        Box::new(mochi::Mochi),
-        Box::new(loops::Loops),
-        Box::new(resend::Resend),
         Box::new(claude_code::ClaudeCode),
         Box::new(codex::Codex),
-        Box::new(workflowy::Workflowy),
         Box::new(openclaw::OpenClaw),
         Box::new(hermes::Hermes),
     ]
@@ -1066,11 +991,11 @@ mod tests {
         dir
     }
 
-    fn manual_webhook_creds() -> Map<String, Value> {
+    fn manual_perplexity_creds() -> Map<String, Value> {
         let mut creds = Map::new();
         creds.insert(
-            "webhook_url".to_string(),
-            Value::String("https://example.com/webhook".to_string()),
+            "api_key".to_string(),
+            Value::String("pplx-manual-instance-key".to_string()),
         );
         creds
     }
@@ -1155,32 +1080,6 @@ mod tests {
     }
 
     #[test]
-    fn webhook_proxy_capability_is_inherited_by_every_secret_webhook_provider() {
-        let mut ids = all_integrations()
-            .into_iter()
-            .filter(|integration| {
-                integration
-                    .def()
-                    .fields
-                    .iter()
-                    .any(|field| field.key == "webhook_url" && field.secret)
-            })
-            .map(|integration| {
-                assert_eq!(
-                    integration
-                        .webhook_proxy_config()
-                        .expect("secret webhook_url must inherit the safe proxy")
-                        .credential_key,
-                    "webhook_url"
-                );
-                integration.def().id
-            })
-            .collect::<Vec<_>>();
-        ids.sort_unstable();
-        assert_eq!(ids, ["discord", "make", "n8n", "zapier"]);
-    }
-
-    #[test]
     fn safe_connection_config_is_default_deny() {
         let integration = all_integrations()
             .into_iter()
@@ -1213,7 +1112,7 @@ mod tests {
             .mount(&server)
             .await;
         let client = build_client_for_with_timeouts(
-            &discord::Discord,
+            &perplexity::Perplexity,
             std::time::Duration::from_secs(1),
             std::time::Duration::from_millis(50),
         );
@@ -1232,17 +1131,17 @@ mod tests {
         let dir = temp_screenpipe_dir();
         let mgr = ConnectionManager::new(dir.clone(), None);
 
-        mgr.connect_instance("discord", Some("work"), manual_webhook_creds())
+        mgr.connect_instance("perplexity", Some("work"), manual_perplexity_creds())
             .await
             .unwrap();
 
-        let discord = mgr
+        let perplexity = mgr
             .list()
             .await
             .into_iter()
-            .find(|connection| connection.def.id == "discord")
+            .find(|connection| connection.def.id == "perplexity")
             .unwrap();
-        assert!(discord.connected);
+        assert!(perplexity.connected);
 
         let _ = std::fs::remove_dir_all(dir);
     }
@@ -1252,90 +1151,18 @@ mod tests {
         let dir = temp_screenpipe_dir();
         let mgr = ConnectionManager::new(dir.clone(), None);
 
-        mgr.connect_instance("discord", Some("work"), manual_webhook_creds())
+        mgr.connect_instance("perplexity", Some("work"), manual_perplexity_creds())
             .await
             .unwrap();
 
         let context = render_context(&dir, 3030, None).await;
-        assert!(context.contains("## Discord (discord, instance: work)"));
+        assert!(context.contains("## Perplexity (perplexity, instance: work)"));
         assert!(
-            context.contains("POST http://localhost:3030/connections/discord/proxy?instance=work")
+            context.contains(
+                "proxy: http://localhost:3030/connections/perplexity/proxy/<api-path>?instance=work"
+            )
         );
-        assert!(!context.contains("webhook_url"));
-        assert!(!context.contains("https://example.com/webhook"));
-
-        let _ = std::fs::remove_dir_all(dir);
-    }
-
-    #[tokio::test]
-    async fn render_context_never_exposes_manual_webhook_urls() {
-        let dir = temp_screenpipe_dir();
-        let mgr = ConnectionManager::new(dir.clone(), None);
-        let webhook_integrations = ["n8n", "zapier", "make", "discord"];
-
-        for id in webhook_integrations {
-            let mut credentials = Map::new();
-            credentials.insert(
-                "webhook_url".to_string(),
-                Value::String(format!("https://secret.example/{id}/credential")),
-            );
-            mgr.connect(id, credentials).await.unwrap();
-        }
-
-        let context = render_context(&dir, 3030, None).await;
-        for id in webhook_integrations {
-            let secret = format!("https://secret.example/{id}/credential");
-            assert!(
-                !context.contains(&secret),
-                "model context exposed the {id} webhook URL: {context}"
-            );
-        }
-
-        let _ = std::fs::remove_dir_all(dir);
-    }
-
-    #[tokio::test]
-    async fn render_context_never_exposes_secret_store_webhook_url() {
-        use sqlx::SqlitePool;
-
-        let pool = SqlitePool::connect(":memory:").await.unwrap();
-        let store = Arc::new(SecretStore::new(pool, None).await.unwrap());
-        let dir = temp_screenpipe_dir();
-        let mgr = ConnectionManager::new(dir.clone(), Some(store.clone()));
-        let secret = "https://secret.example/n8n/from-secret-store";
-        let mut credentials = Map::new();
-        credentials.insert("webhook_url".to_string(), Value::String(secret.to_string()));
-        mgr.connect("n8n", credentials).await.unwrap();
-
-        let context = render_context(&dir, 3030, Some(store.as_ref())).await;
-        assert!(
-            !context.contains(secret),
-            "model context exposed a SecretStore webhook URL: {context}"
-        );
-
-        let _ = std::fs::remove_dir_all(dir);
-    }
-
-    #[tokio::test]
-    async fn render_context_gives_every_webhook_provider_the_same_safe_boundary() {
-        let dir = temp_screenpipe_dir();
-        let mgr = ConnectionManager::new(dir.clone(), None);
-        let webhook_integrations = ["discord", "make", "n8n", "zapier"];
-
-        for id in webhook_integrations {
-            mgr.connect(id, manual_webhook_creds()).await.unwrap();
-        }
-
-        let context = render_context(&dir, 3030, None).await;
-        for id in webhook_integrations {
-            assert!(
-                context.contains(&format!(
-                    "POST http://localhost:3030/connections/{id}/proxy"
-                )),
-                "missing safe webhook proxy for {id}: {context}"
-            );
-        }
-        assert!(!context.contains("https://example.com/webhook"));
+        assert!(!context.contains("pplx-manual-instance-key"));
 
         let _ = std::fs::remove_dir_all(dir);
     }
@@ -1370,29 +1197,6 @@ mod tests {
                 "model context exposed declared secret value {sentinel}: {context}"
             );
         }
-
-        let _ = std::fs::remove_dir_all(dir);
-    }
-
-    #[tokio::test]
-    async fn render_context_never_exposes_telegram_credentials() {
-        let dir = temp_screenpipe_dir();
-        let mgr = ConnectionManager::new(dir.clone(), None);
-        let mut credentials = Map::new();
-        credentials.insert(
-            "bot_token".to_string(),
-            Value::String("secret-telegram-token".to_string()),
-        );
-        credentials.insert(
-            "chat_id".to_string(),
-            Value::String("private-chat-id".to_string()),
-        );
-        mgr.connect("telegram", credentials).await.unwrap();
-
-        let context = render_context(&dir, 3030, None).await;
-        assert!(context.contains("POST /connections/telegram/send"));
-        assert!(!context.contains("secret-telegram-token"));
-        assert!(!context.contains("private-chat-id"));
 
         let _ = std::fs::remove_dir_all(dir);
     }

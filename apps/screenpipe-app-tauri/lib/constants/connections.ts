@@ -29,7 +29,6 @@ export const CONNECTION_CATEGORY_BY_ID: Record<string, string> = {
 
   // AI — assistants, local model runtimes & AI search
   perplexity: "AI",
-  glean: "AI",
   anythingllm: "AI",
   ollama: "AI",
   lmstudio: "AI",
@@ -42,18 +41,11 @@ export const CONNECTION_CATEGORY_BY_ID: Record<string, string> = {
   "pi-extensions": "Agent",
 
   // Automation — workflow automation platforms
-  zapier: "Automation",
-  make: "Automation",
-  n8n: "Automation",
 
   // Meetings — meeting & voice note-takers
   zoom: "Meetings",
-  granola: "Meetings",
-  fireflies: "Meetings",
-  otter: "Meetings",
   krisp: "Meetings",
   plaud: "Meetings",
-  lexi: "Meetings",
 
   // Calendar — all scheduling tools together
   "google-calendar": "Calendar",
@@ -70,67 +62,37 @@ export const CONNECTION_CATEGORY_BY_ID: Record<string, string> = {
   email: "Communication",
   microsoft365: "Communication",
   slack: "Communication",
-  discord: "Communication",
-  telegram: "Communication",
-  whatsapp: "Communication",
   teams: "Communication",
-  loops: "Communication",
-  resend: "Communication",
 
   // Notes — notes, knowledge bases & read-later
   notion: "Notes",
   obsidian: "Notes",
   logseq: "Notes",
-  readwise: "Notes",
-  pocket: "Notes",
-  mochi: "Notes",
-  workflowy: "Notes",
 
   // Documents — docs, spreadsheets, wikis & whiteboards
   "google-docs": "Documents",
   "google-drive": "Documents",
   "google-sheets": "Documents",
-  confluence: "Documents",
   excalidraw: "Documents",
 
   // Project Management — issues, tasks & time tracking
-  linear: "项目管理",
   jira: "项目管理",
-  asana: "项目管理",
-  monday: "项目管理",
-  trello: "项目管理",
-  clickup: "项目管理",
-  airtable: "项目管理",
-  todoist: "项目管理",
-  toggl: "项目管理",
 
   // CRM — CRM, sales & business suites
-  salesforce: "CRM",
   hubspot: "CRM",
-  pipedrive: "CRM",
-  odoo: "CRM",
-  bitrix24: "CRM",
 
   // Support — customer support platforms
-  intercom: "Support",
   zendesk: "Support",
 
   // Finance — payments, accounting & expenses
-  stripe: "Finance",
-  brex: "Finance",
   quickbooks: "Finance",
-  financialsense: "Finance",
 
   // Developer — code, observability, infra & product analytics
   github: "Developer",
-  sentry: "Developer",
   vercel: "Developer",
   supabase: "Developer",
-  posthog: "Developer",
 
   // Wearables — AI wearables & lifelog devices
-  bee: "Wearables",
-  limitless: "Wearables",
 
   // Notifications — push alert services
   ntfy: "Notifications",
@@ -191,14 +153,12 @@ export const CONNECTION_HARDCODED_DESCRIPTIONS: Record<string, string> = {
   "outlook-email": "读取和发送你的 Outlook 邮件",
   "ics-calendar": "使用订阅链接添加日历",
   "remote-agent": "在另一台电脑上保持 AI 代理运行",
-  "whatsapp": "搜索你的 WhatsApp 对话",
   "anythingllm": "让 AnythingLLM 搜索你的屏幕历史",
   "ollama": "在 screenpipe 中使用你的 Ollama 模型",
   "lmstudio": "在 screenpipe 中使用你的 LM Studio 模型",
   "msty": "在 screenpipe 中使用你的 Msty 模型",
   "obsidian": "将屏幕记忆同步到你的 Obsidian 保险库",
   "notion": "用屏幕上下文搜索 Notion 页面",
-  "linear": "从屏幕上下文搜索 Linear 问题",
   "perplexity": "用 Perplexity AI 搜索网页",
   "krisp": "搜索 Krisp 会议记录和笔记",
   "plaud": "搜索 Plaud 录音和文字记录",
@@ -227,7 +187,6 @@ export const FEATURED_CONNECTION_IDS = [
   "notion",
   "github",
   "claude",
-  "linear",
 ];
 
 export const DEVICE_CONNECTION_ORDER = [
@@ -245,11 +204,8 @@ export const DEVICE_CONNECTION_ORDER = [
   "obsidian",
   "notion",
   "github",
-  "linear",
   "google-docs",
   "browser-url",
-  "whatsapp",
-  "granola",
   // Desktop AI clients & local runtimes.
   "claude",
   "codex",

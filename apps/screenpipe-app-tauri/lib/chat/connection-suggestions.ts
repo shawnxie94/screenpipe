@@ -251,25 +251,19 @@ function suggestionForConnection(connection: ConnectedIntegration): Suggestion |
   if (lower.includes("docs") || lower.includes("sheets") || lower.includes("notion") || lower.includes("obsidian") || lower.includes("logseq")) {
     return { ...base, text: `Turn recent ${name} files into a prep sheet` };
   }
-  if (lower.includes("linear") || lower.includes("github") || lower.includes("jira") || lower.includes("trello") || lower.includes("asana") || lower.includes("clickup") || lower.includes("monday")) {
+  if (lower.includes("github") || lower.includes("jira")) {
     return { ...base, text: `Find open tasks tied to this work in ${name}` };
   }
-  if (lower.includes("sentry")) {
-    return { ...base, text: `Find the issue driving recent ${name} events` };
-  }
-  if (lower.includes("posthog")) {
-    return { ...base, text: `Find the trend behind recent ${name} activity` };
-  }
-  if (lower.includes("hubspot") || lower.includes("salesforce") || lower.includes("intercom") || lower.includes("zendesk") || lower.includes("pipedrive")) {
+  if (lower.includes("hubspot") || lower.includes("zendesk")) {
     return { ...base, text: `Prep customer call briefs from ${name}` };
   }
-  if (lower.includes("zoom") || lower.includes("granola") || lower.includes("fireflies") || lower.includes("otter") || lower.includes("bee") || lower.includes("limitless")) {
+  if (lower.includes("zoom")) {
     return { ...base, text: `Pull recent meeting briefs from ${name}` };
   }
   if (connection.category?.toLowerCase() === "browser" || lower.includes("browser")) {
     return { ...base, text: `Read the current page with ${name}` };
   }
-  if (lower.includes("stripe") || lower.includes("quickbooks") || lower.includes("brex")) {
+  if (lower.includes("quickbooks")) {
     return { ...base, text: `Summarize recent ${name} data for this work` };
   }
 

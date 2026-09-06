@@ -8,15 +8,14 @@ use axum::extract::{ConnectInfo, Extension, Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use screenpipe_connect::connections::{bee, build_default_client, telegram, ConnectionManager};
-use screenpipe_connect::whatsapp::WhatsAppGateway;
+use screenpipe_connect::connections::{build_default_client, ConnectionManager};
 use screenpipe_secrets::SecretStore;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex as StdMutex, OnceLock};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
@@ -25,12 +24,10 @@ use crate::routes::websocket::WebSocketLifecycle;
 use screenpipe_connect::connections::browser::{BrowserRegistry, BrowserSummary, EvalError};
 
 pub type SharedConnectionManager = Arc<Mutex<ConnectionManager>>;
-pub type SharedWhatsAppGateway = Arc<Mutex<WhatsAppGateway>>;
 
 #[derive(Clone)]
 pub struct ConnectionsState {
     pub cm: SharedConnectionManager,
-    pub wa: SharedWhatsAppGateway,
     pub screenpipe_dir: PathBuf,
     pub secret_store: Option<Arc<SecretStore>>,
     pub browser_bridge: Arc<BrowserBridge>,
@@ -237,47 +234,10 @@ pub struct TestRequest {
     pub credentials: Map<String, Value>,
 }
 
-#[derive(Deserialize)]
-pub struct TelegramSendRequest {
-    pub text: String,
-    #[serde(default)]
-    pub instance: Option<String>,
-}
-
-#[derive(Deserialize)]
-pub struct WhatsAppPairRequest {
-    pub bun_path: String,
-}
-
 /// GET /connections — list all integrations with connection status.
 async fn list_connections(State(state): State<ConnectionsState>) -> Json<Value> {
     let mgr = state.cm.lock().await;
     let list = mgr.list().await;
-
-    // Add WhatsApp to the list
-    let wa = state.wa.lock().await;
-    let wa_status = wa.status().await;
-    let has_session = wa.has_session();
-    let wa_port = wa.http_port().await;
-    drop(wa);
-    let wa_connected = matches!(
-        wa_status,
-        screenpipe_connect::whatsapp::WhatsAppStatus::Connected { .. }
-    );
-    let wa_desc = if let Some(port) = wa_port {
-        format!(
-            "WhatsApp messaging gateway on port {}. Endpoints: \
-            GET /contacts — list saved contacts (may be empty, ask user for phone number if needed). \
-            GET /chats — list recent chats with last message. \
-            GET /messages?phone=+PHONE&limit=50 — read recent messages from a chat. \
-            POST /send {{\"to\":\"+PHONE\",\"text\":\"MSG\"}} — send a message. \
-            GET /status — connection info. \
-            All endpoints are at http://localhost:{}.",
-            port, port
-        )
-    } else {
-        "Connect your personal WhatsApp via QR code pairing from the Connections page in the desktop app.".to_string()
-    };
 
     let mut data = serde_json::to_value(&list).unwrap_or(json!([]));
 
@@ -332,17 +292,6 @@ async fn list_connections(State(state): State<ConnectionsState>) -> Json<Value> 
             "feed_count": ics_feed_count,
             "enabled_feed_count": ics_enabled_count,
             "error": ics_error,
-        }));
-
-        arr.push(json!({
-            "id": "whatsapp",
-            "name": "WhatsApp",
-            "icon": "whatsapp",
-            "category": "notification",
-            "description": wa_desc,
-            "fields": [],
-            "connected": wa_connected,
-            "has_session": has_session,
         }));
 
         // Browsers — every kind of browser the agent can drive (user's
@@ -533,39 +482,6 @@ async fn disconnect_instance_route(
             Json(json!({ "error": e.to_string() })),
         ),
     }
-}
-
-// ---------------------------------------------------------------------------
-// WhatsApp-specific routes
-// ---------------------------------------------------------------------------
-
-/// POST /connections/whatsapp/pair — start QR pairing.
-async fn whatsapp_pair(
-    State(state): State<ConnectionsState>,
-    Json(body): Json<WhatsAppPairRequest>,
-) -> (StatusCode, Json<Value>) {
-    let wa = state.wa.lock().await;
-    match wa.start_pairing(&body.bun_path).await {
-        Ok(()) => (StatusCode::OK, Json(json!({ "success": true }))),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": e.to_string() })),
-        ),
-    }
-}
-
-/// GET /connections/whatsapp/status — get current pairing/connection status.
-async fn whatsapp_status(State(state): State<ConnectionsState>) -> Json<Value> {
-    let wa = state.wa.lock().await;
-    let status = wa.status().await;
-    Json(json!({ "status": status }))
-}
-
-/// POST /connections/whatsapp/disconnect — stop gateway and wipe session.
-async fn whatsapp_disconnect(State(state): State<ConnectionsState>) -> Json<Value> {
-    let wa = state.wa.lock().await;
-    wa.logout().await;
-    Json(json!({ "success": true }))
 }
 
 // ---------------------------------------------------------------------------
@@ -1488,78 +1404,6 @@ async fn connection_config(
     }
 }
 
-/// POST /connections/telegram/send — send a Telegram message server-side so
-/// the bot token never reaches the model context.
-async fn telegram_send(
-    State(state): State<ConnectionsState>,
-    Json(body): Json<TelegramSendRequest>,
-) -> (StatusCode, Json<Value>) {
-    if body.text.trim().is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "Telegram message text cannot be empty." })),
-        );
-    }
-
-    let mgr = state.cm.lock().await;
-    let credentials = match mgr
-        .get_credentials_instance("telegram", body.instance.as_deref())
-        .await
-    {
-        Ok(Some(credentials)) => credentials,
-        Ok(None) => {
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(json!({ "error": "Telegram is not connected. Connect it from Settings." })),
-            );
-        }
-        Err(error) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": error.to_string() })),
-            );
-        }
-    };
-    let bot_token = credentials
-        .get("bot_token")
-        .and_then(Value::as_str)
-        .map(str::to_string);
-    let chat_id = credentials
-        .get("chat_id")
-        .and_then(Value::as_str)
-        .map(str::to_string);
-    drop(mgr);
-
-    let (Some(bot_token), Some(chat_id)) = (bot_token, chat_id) else {
-        return (
-            StatusCode::UNAUTHORIZED,
-            Json(json!({ "error": "Telegram connection is missing its bot token or chat id." })),
-        );
-    };
-
-    match telegram::send_message(
-        &build_default_client(),
-        "https://api.telegram.org",
-        &bot_token,
-        &chat_id,
-        &body.text,
-    )
-    .await
-    {
-        Ok(payload) => (
-            StatusCode::OK,
-            Json(json!({
-                "ok": true,
-                "message_id": payload["result"]["message_id"]
-            })),
-        ),
-        Err(error) => (
-            StatusCode::BAD_GATEWAY,
-            Json(json!({ "error": error.to_string() })),
-        ),
-    }
-}
-
 // Browser extension pairing — lets the extension receive the local API token
 // after an explicit approval in the desktop app, instead of making non-dev
 // users copy/paste secrets from Settings.
@@ -2093,155 +1937,8 @@ async fn browser_run_eval(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Bee one-click device-pairing
-// (protocol lives in screenpipe_connect::connections::bee)
-// ---------------------------------------------------------------------------
-
-/// Server-side state for an in-flight Bee pairing. The ephemeral secret key
-/// never leaves the engine — it's held here keyed by `request_id` until the
-/// poll route decrypts the sealed token or the session expires.
-struct BeePairingSession {
-    secret_key: [u8; 32],
-    public_key_b64: String,
-    created_at: Instant,
-}
-
-fn bee_pairing_sessions() -> &'static StdMutex<HashMap<String, BeePairingSession>> {
-    static SESSIONS: OnceLock<StdMutex<HashMap<String, BeePairingSession>>> = OnceLock::new();
-    SESSIONS.get_or_init(|| StdMutex::new(HashMap::new()))
-}
-
-const BEE_PAIRING_SESSION_TTL: Duration = Duration::from_secs(10 * 60);
-
-#[derive(Deserialize)]
-struct BeePairPollBody {
-    request_id: String,
-}
-
-/// POST /connections/bee/pair/start — begin a one-click Bee pairing.
-///
-/// Generates an ephemeral keypair, asks Bee for a pairing request, stashes the
-/// secret key keyed by `request_id`, and returns the URL the user opens to
-/// approve. The UI then polls `pair/poll` until completion.
-async fn bee_pair_start() -> (StatusCode, Json<Value>) {
-    let (secret_key, public_key_b64) = match bee::generate_pairing_keypair() {
-        Ok(kp) => kp,
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": e.to_string() })),
-            )
-        }
-    };
-    let client = build_default_client();
-    match bee::request_pairing(&client, &public_key_b64).await {
-        Ok(bee::PairingOutcome::Pending {
-            request_id,
-            expires_at,
-        }) => {
-            let pairing_url = bee::pairing_connect_url(&request_id);
-            {
-                let mut sessions = bee_pairing_sessions().lock().unwrap();
-                let now = Instant::now();
-                sessions.retain(|_, s| now.duration_since(s.created_at) < BEE_PAIRING_SESSION_TTL);
-                sessions.insert(
-                    request_id.clone(),
-                    BeePairingSession {
-                        secret_key,
-                        public_key_b64,
-                        created_at: now,
-                    },
-                );
-            }
-            (
-                StatusCode::OK,
-                Json(json!({
-                    "request_id": request_id,
-                    "pairing_url": pairing_url,
-                    "expires_at": expires_at,
-                })),
-            )
-        }
-        Ok(_) => (
-            StatusCode::BAD_GATEWAY,
-            Json(json!({ "error": "unexpected pairing state from Bee" })),
-        ),
-        Err(e) => (
-            StatusCode::BAD_GATEWAY,
-            Json(json!({ "error": e.to_string() })),
-        ),
-    }
-}
-
-/// POST /connections/bee/pair/poll {request_id} — poll a pending pairing.
-///
-/// Returns `{status: pending|completed|expired|unknown}`. On `completed` it
-/// decrypts the sealed token and stores it as the Bee `api_key` credential —
-/// the same slot the manual "Developer Token" field uses — so the proxy and
-/// `test()` paths need no changes.
-async fn bee_pair_poll(
-    State(state): State<ConnectionsState>,
-    Json(body): Json<BeePairPollBody>,
-) -> (StatusCode, Json<Value>) {
-    let (secret_key, public_key_b64) = {
-        let sessions = bee_pairing_sessions().lock().unwrap();
-        match sessions.get(&body.request_id) {
-            Some(s) => (s.secret_key, s.public_key_b64.clone()),
-            None => return (StatusCode::NOT_FOUND, Json(json!({ "status": "unknown" }))),
-        }
-    };
-
-    let client = build_default_client();
-    match bee::request_pairing(&client, &public_key_b64).await {
-        Ok(bee::PairingOutcome::Pending { .. }) => {
-            (StatusCode::OK, Json(json!({ "status": "pending" })))
-        }
-        Ok(bee::PairingOutcome::Completed { encrypted_token }) => {
-            let token = match bee::decrypt_pairing_token(&encrypted_token, &secret_key) {
-                Ok(t) => t,
-                Err(e) => {
-                    return (
-                        StatusCode::BAD_GATEWAY,
-                        Json(json!({ "error": e.to_string() })),
-                    )
-                }
-            };
-            let mut creds = Map::new();
-            creds.insert("api_key".to_string(), Value::String(token));
-            let result = {
-                let mgr = state.cm.lock().await;
-                mgr.connect("bee", creds).await
-            };
-            bee_pairing_sessions()
-                .lock()
-                .unwrap()
-                .remove(&body.request_id);
-            match result {
-                Ok(()) => (StatusCode::OK, Json(json!({ "status": "completed" }))),
-                Err(e) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({ "error": e.to_string() })),
-                ),
-            }
-        }
-        Ok(bee::PairingOutcome::Expired) => {
-            bee_pairing_sessions()
-                .lock()
-                .unwrap()
-                .remove(&body.request_id);
-            (StatusCode::OK, Json(json!({ "status": "expired" })))
-        }
-        Err(e) => (
-            StatusCode::BAD_GATEWAY,
-            Json(json!({ "error": e.to_string() })),
-        ),
-    }
-}
-
 pub fn router<S>(
     cm: SharedConnectionManager,
-    wa: SharedWhatsAppGateway,
     screenpipe_dir: PathBuf,
     secret_store: Option<Arc<SecretStore>>,
     browser_bridge: Arc<BrowserBridge>,
@@ -2253,7 +1950,6 @@ where
 {
     let state = ConnectionsState {
         cm,
-        wa,
         screenpipe_dir,
         secret_store,
         browser_bridge,
@@ -2293,15 +1989,6 @@ where
         .route("/imap/messages", get(imap_messages))
         .route("/imap/messages/:uid", get(imap_message))
         .route("/imap/mailboxes", get(imap_mailboxes))
-        // Telegram-specific send route keeps bot credentials server-side.
-        .route("/telegram/send", post(telegram_send))
-        // WhatsApp-specific routes (must be before /:id to avoid conflict)
-        .route("/whatsapp/pair", post(whatsapp_pair))
-        .route("/whatsapp/status", get(whatsapp_status))
-        .route("/whatsapp/disconnect", post(whatsapp_disconnect))
-        // Bee one-click device-pairing (must be before /:id to avoid conflict)
-        .route("/bee/pair/start", post(bee_pair_start))
-        .route("/bee/pair/poll", post(bee_pair_poll))
         // Exact send-only webhook boundary must coexist with the wildcard API proxy.
         .route("/:id/proxy", post(webhook_proxy))
         // Credential proxy — pipes call this instead of external APIs directly
@@ -2382,15 +2069,13 @@ mod calendar_error_response_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use screenpipe_connect::connections::{lexi::Lexi, mochi::Mochi, Integration, ProxyAuth};
+    use screenpipe_connect::connections::ProxyAuth;
     use serde_json::json;
 
     use axum::body::{to_bytes, Body};
     use axum::http::{header, Request};
     use screenpipe_connect::connections::ConnectionManager;
-    use screenpipe_connect::whatsapp::WhatsAppGateway;
     use std::io::{self, Write};
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex as StdMutex};
     use tempfile::TempDir;
     use tokio::sync::Mutex;
@@ -2429,203 +2114,14 @@ mod tests {
             screenpipe_dir.clone(),
             None,
         )));
-        let wa = Arc::new(Mutex::new(WhatsAppGateway::new(screenpipe_dir.clone())));
         router(
             cm,
-            wa,
             screenpipe_dir,
             None,
             crate::routes::browser::BrowserBridge::new(),
             BrowserRegistry::new(),
             None,
         )
-    }
-
-    async fn webhook_test_router(
-        dir: &TempDir,
-        id: &str,
-        instance: Option<&str>,
-        url: String,
-    ) -> Router<()> {
-        let screenpipe_dir = dir.path().to_path_buf();
-        let cm = Arc::new(Mutex::new(ConnectionManager::new(
-            screenpipe_dir.clone(),
-            None,
-        )));
-        cm.lock()
-            .await
-            .connect_instance(
-                id,
-                instance,
-                serde_json::from_value(json!({"webhook_url": url})).unwrap(),
-            )
-            .await
-            .unwrap();
-        let wa = Arc::new(Mutex::new(WhatsAppGateway::new(screenpipe_dir.clone())));
-        router(
-            cm,
-            wa,
-            screenpipe_dir,
-            None,
-            crate::routes::browser::BrowserBridge::new(),
-            BrowserRegistry::new(),
-            None,
-        )
-    }
-
-    async fn spawn_webhook_upstream(
-        status: StatusCode,
-        response_body: &'static str,
-        calls: Arc<AtomicUsize>,
-        captured: Arc<Mutex<Vec<Vec<u8>>>>,
-    ) -> (String, tokio::task::JoinHandle<()>) {
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        let app = Router::new().route(
-            "/hook/credential-sentinel",
-            post(move |body: axum::body::Bytes| {
-                let calls = calls.clone();
-                let captured = captured.clone();
-                async move {
-                    calls.fetch_add(1, Ordering::SeqCst);
-                    captured.lock().await.push(body.to_vec());
-                    (status, response_body)
-                }
-            }),
-        );
-        let server = tokio::spawn(async move {
-            axum::serve(listener, app).await.unwrap();
-        });
-        (format!("http://{addr}/hook/credential-sentinel"), server)
-    }
-
-    #[tokio::test]
-    async fn webhook_proxy_forwards_json_without_returning_target() {
-        let dir = TempDir::new().unwrap();
-        let calls = Arc::new(AtomicUsize::new(0));
-        let captured = Arc::new(Mutex::new(Vec::new()));
-        let (url, server) =
-            spawn_webhook_upstream(StatusCode::NO_CONTENT, "", calls.clone(), captured.clone())
-                .await;
-        let app = webhook_test_router(&dir, "n8n", None, url.clone()).await;
-        let response = app
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/n8n/proxy")
-                    .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(r#"{"event":"hello"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let payload: Value = serde_json::from_slice(&body).unwrap();
-        assert_eq!(payload, json!({"success": true, "upstream_status": 204}));
-        assert!(!String::from_utf8_lossy(&body).contains(&url));
-        assert_eq!(calls.load(Ordering::SeqCst), 1);
-        assert_eq!(
-            captured.lock().await.as_slice(),
-            &[br#"{"event":"hello"}"#.to_vec()]
-        );
-
-        for uri in ["/n8n", "/n8n/instances", "/n8n/config"] {
-            let response = app
-                .clone()
-                .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
-                .await
-                .unwrap();
-            assert_eq!(response.status(), StatusCode::OK);
-            let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-            let text = String::from_utf8_lossy(&body);
-            assert!(!text.contains(&url), "{uri} exposed webhook target: {text}");
-            assert!(!text.contains("credential-sentinel"));
-        }
-        server.abort();
-    }
-
-    #[tokio::test]
-    async fn webhook_proxy_never_returns_error_body_or_retries() {
-        let dir = TempDir::new().unwrap();
-        let logs = Arc::new(StdMutex::new(Vec::new()));
-        let subscriber = tracing_subscriber::fmt()
-            .without_time()
-            .with_ansi(false)
-            .with_writer({
-                let logs = logs.clone();
-                move || CapturedLogs(logs.clone())
-            })
-            .finish();
-        let _guard = tracing::subscriber::set_default(subscriber);
-        let calls = Arc::new(AtomicUsize::new(0));
-        let captured = Arc::new(Mutex::new(Vec::new()));
-        let secret_echo = "Bearer credential-sentinel secret_field=credential-sentinel";
-        let (url, server) = spawn_webhook_upstream(
-            StatusCode::SERVICE_UNAVAILABLE,
-            secret_echo,
-            calls.clone(),
-            captured,
-        )
-        .await;
-        let app = webhook_test_router(&dir, "zapier", None, url.clone()).await;
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/zapier/proxy")
-                    .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from("{}"))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::BAD_GATEWAY);
-        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let text = String::from_utf8_lossy(&body);
-        assert!(!text.contains(secret_echo));
-        assert!(!text.contains(&url));
-        assert_eq!(calls.load(Ordering::SeqCst), 1);
-        let logs = String::from_utf8(logs.lock().unwrap().clone()).unwrap();
-        assert!(logs.contains("connection=zapier"));
-        assert!(logs.contains("upstream_status=503"));
-        assert!(!logs.contains(secret_echo));
-        assert!(!logs.contains(&url));
-        assert!(!logs.contains("credential-sentinel"));
-        server.abort();
-    }
-
-    #[tokio::test]
-    async fn webhook_proxy_supports_named_instances() {
-        for (id, instance) in [("discord", Some("work"))] {
-            let dir = TempDir::new().unwrap();
-            let calls = Arc::new(AtomicUsize::new(0));
-            let captured = Arc::new(Mutex::new(Vec::new()));
-            let (url, server) =
-                spawn_webhook_upstream(StatusCode::OK, "ignored", calls.clone(), captured).await;
-            let app = webhook_test_router(&dir, id, instance, url).await;
-            let suffix = instance
-                .map(|value| format!("?instance={value}"))
-                .unwrap_or_default();
-            let response = app
-                .oneshot(
-                    Request::builder()
-                        .method("POST")
-                        .uri(format!("/{id}/proxy{suffix}"))
-                        .header(header::CONTENT_TYPE, "application/json")
-                        .body(Body::from("{}"))
-                        .unwrap(),
-                )
-                .await
-                .unwrap();
-
-            assert_eq!(response.status(), StatusCode::OK);
-            assert_eq!(calls.load(Ordering::SeqCst), 1);
-            server.abort();
-        }
     }
 
     async fn spawn_ics_feed(body: String) -> (String, tokio::task::JoinHandle<()>) {
@@ -2697,31 +2193,6 @@ mod tests {
         let serialized = body.to_vec();
         let body_text = String::from_utf8_lossy(&serialized);
         assert!(!body_text.contains("secret.ics"));
-    }
-
-    #[tokio::test]
-    async fn telegram_send_route_requires_a_server_side_connection() {
-        let dir = TempDir::new().unwrap();
-        let app = ics_test_router(&dir);
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/telegram/send")
-                    .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(r#"{"text":"hello"}"#))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let payload: Value = serde_json::from_slice(&body).unwrap();
-        assert_eq!(
-            payload["error"],
-            "Telegram is not connected. Connect it from Settings."
-        );
     }
 
     #[tokio::test]
@@ -2972,71 +2443,6 @@ mod tests {
                 ResolvedAuth::None
             ));
         }
-    }
-
-    #[test]
-    fn mochi_proxy_resolves_api_key_with_empty_password() {
-        let config = Mochi.proxy_config().expect("Mochi should support proxying");
-        let creds = Map::from_iter([("api_key".into(), json!("mochi-api-key"))]);
-
-        match resolve_auth(&config.auth, Some(&creds)) {
-            ResolvedAuth::Basic(user, pass) => {
-                assert_eq!(user, "mochi-api-key");
-                assert!(pass.is_empty());
-            }
-            _ => panic!("expected Mochi API key to resolve with an empty Basic password"),
-        }
-    }
-
-    #[test]
-    fn leexi_proxy_resolves_complete_credentials_as_basic() {
-        let config = Lexi.proxy_config().expect("Leexi should support proxying");
-        let creds = Map::from_iter([
-            ("api_key_id".into(), json!("key-id")),
-            ("key_secret".into(), json!("key-secret")),
-        ]);
-
-        match resolve_auth(&config.auth, Some(&creds)) {
-            ResolvedAuth::Basic(user, pass) => {
-                assert_eq!(user, "key-id");
-                assert_eq!(pass, "key-secret");
-            }
-            _ => panic!("expected complete Leexi credentials to resolve as Basic auth"),
-        }
-    }
-
-    #[test]
-    fn leexi_proxy_rejects_partial_or_empty_credentials() {
-        let config = Lexi.proxy_config().expect("Leexi should support proxying");
-
-        for creds in [
-            Map::from_iter([("api_key_id".into(), json!("key-id"))]),
-            Map::from_iter([("key_secret".into(), json!("key-secret"))]),
-            Map::from_iter([
-                ("api_key_id".into(), json!("")),
-                ("key_secret".into(), json!("key-secret")),
-            ]),
-            Map::from_iter([
-                ("api_key_id".into(), json!("key-id")),
-                ("key_secret".into(), json!("")),
-            ]),
-        ] {
-            assert!(matches!(
-                resolve_auth(&config.auth, Some(&creds)),
-                ResolvedAuth::None
-            ));
-        }
-    }
-
-    #[test]
-    fn leexi_proxy_does_not_reinterpret_legacy_api_key() {
-        let config = Lexi.proxy_config().expect("Leexi should support proxying");
-        let creds = Map::from_iter([("api_key".into(), json!("legacy-secret"))]);
-
-        assert!(matches!(
-            resolve_auth(&config.auth, Some(&creds)),
-            ResolvedAuth::None
-        ));
     }
 
     #[test]
@@ -3497,10 +2903,8 @@ mod tests {
             screenpipe_dir.clone(),
             None,
         )));
-        let wa = Arc::new(Mutex::new(WhatsAppGateway::new(screenpipe_dir.clone())));
         let app = router(
             cm,
-            wa,
             screenpipe_dir,
             None,
             crate::routes::browser::BrowserBridge::new(),

@@ -2970,15 +2970,6 @@ export const MCP_OAUTH_PROVIDERS: {
   url: string;
   description: React.ReactNode;
 }[] = [
-  { id: "linear", name: "Linear", url: "https://mcp.linear.app/mcp", description: <>连接 Linear，让 AI 搜索和管理你的问题、项目和周期。使用 Linear 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
-  { id: "stripe", name: "Stripe", url: "https://mcp.stripe.com", description: <>连接 Stripe，让 AI 查询你的客户、付款、发票和订阅。使用 Stripe 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
-  { id: "sentry", name: "Sentry", url: "https://mcp.sentry.dev/mcp", description: <>连接 Sentry，让 AI 搜索你的问题、事件和发布。使用 Sentry 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
-  { id: "intercom", name: "Intercom", url: "https://mcp.intercom.com/mcp", description: <>连接 Intercom，让 AI 搜索你的对话、联系人和帮助内容。使用 Intercom 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
-  { id: "asana", name: "Asana", url: "https://mcp.asana.com/mcp", description: <>连接 Asana，让 AI 搜索和管理你的任务、项目和组合。使用 Asana 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
-  { id: "monday", name: "monday.com", url: "https://mcp.monday.com/mcp", description: <>连接 monday.com，让 AI 处理你的看板、条目和更新。使用 monday 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
-  { id: "clickup", name: "ClickUp", url: "https://mcp.clickup.com/mcp", description: <>连接 ClickUp，让 AI 搜索和管理你的任务、文档和空间。使用 ClickUp 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
-  { id: "airtable", name: "Airtable", url: "https://mcp.airtable.com/mcp", description: <>连接 Airtable，让 AI 读取和更新你的数据库、表格和记录。使用 Airtable 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
-  { id: "confluence", name: "Confluence", url: "https://mcp.atlassian.com/v1/mcp", description: <>连接 Atlassian，让 AI 搜索和编辑你的 Confluence 页面（以及 Jira 问题）。使用 Atlassian 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
   { id: "jira", name: "Jira", url: "https://mcp.atlassian.com/v1/mcp", description: <>连接 Atlassian，让 AI 搜索和管理你的 Jira 问题（以及 Confluence 页面）。使用 Atlassian 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
   { id: "notion", name: "Notion", url: "https://mcp.notion.com/mcp", description: <>连接 Notion，让 AI 搜索、读取和写入你的页面和数据库。使用 Notion 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
 ];

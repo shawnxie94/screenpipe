@@ -263,42 +263,6 @@ export const RECOMMENDED_SERVERS: RegistryServer[] = [
     remotes: [{ type: "streamable-http", url: "https://mcp.notion.com/mcp" }],
   },
   {
-    name: "com.atlassian/atlassian-mcp-server",
-    title: "Atlassian",
-    description: "Jira issues and Confluence pages across your Atlassian site. OAuth sign-in.",
-    repository: { url: "https://www.atlassian.com/platform/remote-mcp-server" },
-    remotes: [{ type: "streamable-http", url: "https://mcp.atlassian.com/v1/mcp" }],
-  },
-  {
-    name: "app.linear/linear",
-    title: "Linear",
-    description: "Create and manage Linear issues, projects and cycles. OAuth sign-in — no API key.",
-    repository: { url: "https://linear.app/docs/mcp" },
-    // Streamable-HTTP endpoint (/mcp), NOT the legacy /sse transport — the
-    // engine's MCP client only drives streamable HTTP. OAuth here uses
-    // Dynamic Client Registration, so there's no client_id/secret to create.
-    remotes: [{ type: "streamable-http", url: "https://mcp.linear.app/mcp" }],
-  },
-  {
-    name: "com.monday/monday.com",
-    title: "Monday.com",
-    description: "Boards, items and updates in monday.com work management. OAuth sign-in.",
-    remotes: [{ type: "streamable-http", url: "https://mcp.monday.com/mcp" }],
-  },
-  {
-    name: "com.airtable/mcp",
-    title: "Airtable",
-    description: "Read and update Airtable bases, tables and records. OAuth sign-in.",
-    remotes: [{ type: "streamable-http", url: "https://mcp.airtable.com/mcp" }],
-  },
-  {
-    name: "com.stripe/mcp",
-    title: "Stripe",
-    description: "Query and manage Stripe — customers, payments, invoices, subscriptions.",
-    repository: { url: "https://docs.stripe.com/mcp" },
-    remotes: [{ type: "streamable-http", url: "https://mcp.stripe.com" }],
-  },
-  {
     name: "com.figma.mcp/mcp",
     title: "Figma",
     description: "Read Figma files, frames and design context for your designs.",
