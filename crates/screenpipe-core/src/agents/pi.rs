@@ -1261,30 +1261,6 @@ impl PiExecutor {
         requested.to_string()
     }
 
-    /// Resolve a screenpipe-cloud model AND validate it against the tier's
-    /// allowed model list returned by the gateway (`/v1/models`).
-    ///
-    /// Why this exists: a pipe's preset can resolve to a model the user's
-    /// current plan/tier does not allow (e.g. `claude-opus-4` on a tier whose
-    /// `allowed_models` are haiku/gemini only). Previously we passed the
-    /// requested model straight through to pi, which then sent it to the
-    /// gateway and got rejected — the pipe failed with an opaque error even
-    /// though the user had valid credits and a valid plan. Validating here
-    /// turns that hard failure into a graceful fallback to an allowed model.
-    ///
-    /// For non-screenpipe providers (ollama / openai-byok / anthropic-byok /
-    /// custom) we don't have an allow-list and must not touch the model — the
-    /// user owns that provider. We only strip the `@date` suffix via
-    /// [`resolve_model`].
-    /// Resolve the effective model name. The hosted Screenpipe catalog is
-    /// gone in the local-only build, so this is a pure passthrough.
-    async fn resolve_screenpipe_model(
-        requested: &str,
-        provider: &str,
-    ) -> (String, Option<String>) {
-        (Self::resolve_model(requested, provider), None)
-    }
-
     /// Spawn the pi subprocess and wait for its output.
     #[allow(clippy::too_many_arguments)]
     async fn spawn_pi(
@@ -1699,8 +1675,7 @@ impl AgentExecutor for PiExecutor {
             ));
         }
 
-        let (resolved_model, _fell_back_from) =
-            Self::resolve_screenpipe_model(model, &resolved_provider).await;
+        let resolved_model = Self::resolve_model(model, &resolved_provider);
 
         Self::ensure_pi_config(provider, Some(&resolved_model), provider_url)
         .await?;

@@ -67,10 +67,6 @@ mod tests {
             "screenpipe-enterprise://auth?api_key=enterprise-token",
             "screenpipe"
         ));
-        assert!(url_for_scheme(
-            "screenpipe-enterprise://auth?api_key=enterprise-token",
-            "screenpipe-enterprise"
-        ));
         assert!(!url_for_scheme(
             "https://screenpipe.com/login",
             "screenpipe"

@@ -1492,23 +1492,18 @@ impl Default for AIPreset {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum AudioEngineFallbackReason {
-    DeprecatedCloudEngine,
     MissingDeepgramKey,
 }
 
 impl AudioEngineFallbackReason {
     pub fn notification_title(&self) -> &'static str {
         match self {
-            Self::DeprecatedCloudEngine => "Local transcription selected",
             Self::MissingDeepgramKey => "Deepgram unavailable",
         }
     }
 
     pub fn notification_body(&self) -> &'static str {
         match self {
-            Self::DeprecatedCloudEngine => {
-                "The retired cloud transcription engine is no longer available, so audio is being transcribed locally."
-            }
             Self::MissingDeepgramKey => {
                 "Deepgram has no API key configured, so audio is being transcribed locally with Whisper Turbo (fast)."
             }
@@ -2008,13 +2003,6 @@ impl SettingsStore {
         };
 
         match engine.as_str() {
-            // The hosted engine is retained only as a one-time migration value
-            // for old settings files. It is never a valid runtime engine.
-            "screenpipe-cloud" => {
-                tracing::warn!("retired cloud transcription engine selected; falling back to local transcription");
-                resolution.active = fallback;
-                resolution.fallback_reason = Some(AudioEngineFallbackReason::DeprecatedCloudEngine);
-            }
             "deepgram" if !has_deepgram_key => {
                 tracing::warn!("deepgram selected but no API key configured, falling back to whisper-large-v3-turbo-quantized");
                 resolution.active = fallback;

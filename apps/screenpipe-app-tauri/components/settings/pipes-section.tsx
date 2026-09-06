@@ -1239,9 +1239,6 @@ export function PipesSection() {
 
   const apiBase = selectedDevice ? `http://${selectedDevice}` : getApiBaseUrl();
   const isRemote = !!selectedDevice;
-  // Composio status was fetched with the screenpipe.com account token, which
-  // the local-only build no longer has — treat it as unavailable.
-  const composioToken: string | undefined = undefined;
   currentApiBase.current = apiBase;
   const displayedPipes = pipesForApi(pipes, pipesApiBase, apiBase);
   const displayedLogs = pipesForApi(logs, logsApiBase, apiBase);
@@ -1389,12 +1386,11 @@ export function PipesSection() {
     try {
       const next = await fetchAvailablePipeConnections(
         apiBase,
-        availableConnections,
-        composioToken
+        availableConnections
       );
       setAvailableConnections(next);
     } catch { /* server may not be running */ }
-  }, [apiBase, availableConnections, composioToken]);
+  }, [apiBase, availableConnections]);
 
   const checkForUpdates = useCallback(async () => {
     try {
@@ -2926,8 +2922,7 @@ export function PipesSection() {
                           refreshConnections={async () => {
                             const next = await fetchAvailablePipeConnections(
                               apiBase,
-                              availableConnections,
-                              composioToken
+                              availableConnections
                             );
                             setAvailableConnections(next);
                             return next;
@@ -3717,8 +3712,7 @@ export function PipesSection() {
               try {
                 latestConnections = await fetchAvailablePipeConnections(
                   apiBase,
-                  availableConnections,
-                  composioToken
+                  availableConnections
                 );
               } catch {
                 // Fall back to current in-memory state if fetch fails.

@@ -4,15 +4,11 @@
 
 import { getIdentifier } from "@tauri-apps/api/app";
 
-export type AppDeepLinkScheme = "screenpipe" | "screenpipe-enterprise";
+export type AppDeepLinkScheme = "screenpipe";
 
-// Enterprise builds register the screenpipe-enterprise:// deep-link scheme
-// (bundle identifier screenpi.pe.enterprise); every other build uses
-// screenpipe://. Falls back to the consumer scheme if the identifier can't be
-// read.
+// The local-only build registers the screenpipe:// deep-link scheme. The
+// enterprise variant (screenpipe-enterprise://, bundle screenpi.pe.enterprise)
+// was removed with the enterprise build.
 export async function appDeepLinkScheme(): Promise<AppDeepLinkScheme> {
-  const identifier = await getIdentifier().catch(() => null);
-  return identifier?.endsWith(".enterprise")
-    ? "screenpipe-enterprise"
-    : "screenpipe";
+  return "screenpipe";
 }

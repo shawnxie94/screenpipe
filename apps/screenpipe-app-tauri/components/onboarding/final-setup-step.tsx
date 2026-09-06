@@ -11,29 +11,20 @@ import {
   useRef,
   useState,
 } from "react";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   AudioLines,
   BrainCircuit,
   Check,
   Loader2,
+  Mail,
   RefreshCw,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { localFetch } from "@/lib/api";
-import {
-  authorizeComposioToolkit,
-  fetchComposioStatus,
-  registerComposioMcpServer,
-} from "@/lib/composio";
-import { notifyConnectionsUpdated } from "@/lib/connections-events";
-import { foregroundAfterOAuth } from "@/lib/connections/foreground-oauth";
 import { publishPipeInstalledReceipt } from "@/lib/pipe-install-receipt";
 import { commands } from "@/lib/utils/tauri";
 
-const GMAIL_POLL_INTERVAL_MS = 2_000;
-const GMAIL_POLL_ATTEMPTS = 60;
 const PIPE_READY_POLL_INTERVAL_MS = 500;
 const PIPE_READY_POLL_ATTEMPTS = 60;
 const ENGINE_HEALTH_TIMEOUT_MS = 3_000;
@@ -41,20 +32,7 @@ const DAILY_EMAIL_PIPE = "daily-email-summary";
 const DIGITAL_CLONE_PIPE = "digital-clone";
 const SPEAKER_RECONCILIATION_PIPE = "speaker-reconciliation";
 
-type ConnectionState = boolean | null;
-type ConnectionId = "gmail";
 type PipeSetupState = "missing" | "disabled" | "enabled" | null;
-
-const CONNECTION_ANALYTICS_ID: Record<ConnectionId, string> = {
-  gmail: "composio-gmail",
-};
-
-function connectionCtaProperties(id: ConnectionId) {
-  return {
-    integration: CONNECTION_ANALYTICS_ID[id],
-    source: "onboarding_final_setup",
-  };
-}
 
 async function checkPipeState(
   slug: string,
@@ -143,110 +121,6 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
-async function waitForGmailConnection(
-  token: string,
-  signal: AbortSignal,
-): Promise<boolean> {
-  for (let attempt = 0; attempt < GMAIL_POLL_ATTEMPTS; attempt += 1) {
-    if (signal.aborted) return false;
-    const status = await fetchComposioStatus(token);
-    if (status?.gmail?.connected === true) return true;
-    await wait(GMAIL_POLL_INTERVAL_MS, signal);
-  }
-  return false;
-}
-
-function ConnectionRow({
-  id,
-  icon,
-  title,
-  description,
-  connected,
-  checking,
-  busy,
-  anotherConnectionBusy,
-  onConnect,
-  onRetry,
-}: {
-  id: ConnectionId;
-  icon: ReactNode;
-  title: string;
-  description: string;
-  connected: ConnectionState;
-  checking: boolean;
-  busy: boolean;
-  anotherConnectionBusy: boolean;
-  onConnect: () => void;
-  onRetry: () => void;
-}) {
-  const titleId = `onboarding-${id}-title`;
-  const actionLabel = checking
-    ? "checking"
-    : busy
-      ? "connecting"
-      : connected
-        ? "connected"
-        : connected === null
-          ? "retry"
-          : "connect gmail";
-
-  return (
-    <article
-      aria-labelledby={titleId}
-      className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-3 py-2.5"
-    >
-      <span className="flex h-8 w-8 items-center justify-center border border-border bg-background">
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <h3
-            id={titleId}
-            className="font-mono text-xs font-semibold lowercase text-foreground"
-          >
-            {title}
-          </h3>
-          <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
-            {checking
-              ? "checking"
-              : connected === null
-                ? "couldn't check"
-                : connected
-                  ? "connected"
-                  : "not connected"}
-          </span>
-        </div>
-        <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-          {description}
-        </p>
-      </div>
-      <Button
-        type="button"
-        size="sm"
-        variant={connected ? "ghost" : "outline"}
-        data-testid={`onboarding-${id}-action`}
-        className="col-start-3 row-start-1 h-8 min-w-24 justify-between gap-2 px-2.5 text-[10px]"
-        disabled={
-          checking || busy || anotherConnectionBusy || connected === true
-        }
-        aria-busy={checking || busy}
-        onClick={connected === null ? onRetry : onConnect}
-      >
-        <span>{actionLabel}</span>
-        {checking || busy ? (
-          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-        ) : connected ? (
-          <Check className="h-3 w-3" aria-hidden="true" />
-        ) : connected === null ? (
-          <RefreshCw className="h-3 w-3" aria-hidden="true" />
-        ) : (
-          <span aria-hidden="true">→</span>
-        )}
-      </Button>
-    </article>
-  );
-}
-
 function PipeRow({
   slug,
   icon,
@@ -255,8 +129,6 @@ function PipeRow({
   state,
   busy,
   disabled,
-  requiresGmail = false,
-  gmailConnected,
   onSetup,
 }: {
   slug: string;
@@ -266,28 +138,21 @@ function PipeRow({
   state: PipeSetupState;
   busy: boolean;
   disabled: boolean;
-  requiresGmail?: boolean;
-  gmailConnected: ConnectionState;
   onSetup: () => void;
 }) {
   const complete = state === "enabled";
-  const waitingForGmail = requiresGmail && gmailConnected !== true;
   const status = complete
     ? "on"
-    : waitingForGmail
-      ? "connect gmail first"
-      : state === "disabled"
-        ? "off"
-        : "ready to set up";
+    : state === "disabled"
+      ? "off"
+      : "ready to set up";
   const actionLabel = busy
     ? "setting up"
     : complete
       ? "on"
-      : waitingForGmail
-        ? "needs gmail"
-        : state === "disabled"
-          ? "turn on"
-          : "set up";
+      : state === "disabled"
+        ? "turn on"
+        : "set up";
 
   return (
     <article
@@ -319,7 +184,7 @@ function PipeRow({
         variant={complete ? "ghost" : "outline"}
         data-testid={`onboarding-${slug}-action`}
         className="col-start-3 row-start-1 h-8 min-w-24 justify-between gap-2 px-2.5 text-[10px]"
-        disabled={disabled || busy || complete || waitingForGmail}
+        disabled={disabled || busy || complete}
         aria-busy={busy}
         onClick={onSetup}
       >
@@ -337,19 +202,10 @@ function PipeRow({
 }
 
 export default function FinalSetupStep({
-  userToken,
   handleNextSlide,
 }: {
-  userToken?: string | null;
   handleNextSlide: () => void | Promise<void>;
 }) {
-  const [gmailConnected, setGmailConnected] = useState<ConnectionState>(null);
-  const [calendarConnected, setCalendarConnected] =
-    useState<ConnectionState>(null);
-  const [checking, setChecking] = useState(true);
-  const [busyConnection, setBusyConnection] = useState<ConnectionId | null>(
-    null,
-  );
   const [pipeStates, setPipeStates] = useState<Record<string, PipeSetupState>>({
     [DAILY_EMAIL_PIPE]: null,
     [DIGITAL_CLONE_PIPE]: null,
@@ -358,10 +214,8 @@ export default function FinalSetupStep({
   const [busyPipe, setBusyPipe] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const refreshIdRef = useRef(0);
-  const gmailAbortRef = useRef<AbortController | null>(null);
   const pipeSetupAbortRef = useRef<AbortController | null>(null);
   const engineResumeStartedRef = useRef(false);
-  const connectionImpressionsRef = useRef(new Set<ConnectionId>());
 
   const resumeEngineIfNeeded = useCallback(() => {
     if (engineResumeStartedRef.current) return;
@@ -377,7 +231,7 @@ export default function FinalSetupStep({
         // Onboarding restores its persisted slide after an app restart. When
         // that slide is recommended setup, the earlier engine-start screen is
         // intentionally skipped, so revive the engine here without making
-        // Gmail or Calendar wait for it. spawnScreenpipe may remain pending
+        // spawnScreenpipe may remain pending
         // when an engine is already coming up, hence this is fire-and-forget.
         void commands
           .spawnScreenpipe(null)
@@ -391,42 +245,12 @@ export default function FinalSetupStep({
       });
   }, []);
 
-  const refresh = useCallback(async () => {
-    const refreshId = ++refreshIdRef.current;
-    setChecking(true);
-    const gmail = await Promise.allSettled([
-      userToken
-        ? fetchComposioStatus(userToken).then((status) => {
-            if (!status) throw new Error("gmail status unavailable");
-            return status.gmail?.connected === true;
-          })
-        : Promise.resolve(false),
-    ]);
-    if (refreshId !== refreshIdRef.current) return;
-    setGmailConnected(gmail[0].status === "fulfilled" ? (gmail[0] as PromiseFulfilledResult<boolean>).value : null);
-    setChecking(false);
-  }, [userToken]);
-
   useEffect(() => {
     resumeEngineIfNeeded();
-    void refresh();
     return () => {
-      gmailAbortRef.current?.abort();
       pipeSetupAbortRef.current?.abort();
     };
-  }, [refresh, resumeEngineIfNeeded]);
-
-  useEffect(() => {
-    if (checking) return;
-    const connections: Array<[ConnectionId, ConnectionState]> = [
-      ["gmail", gmailConnected],
-    ];
-    connections.forEach(([id, connected]) => {
-      if (connected === true || connectionImpressionsRef.current.has(id))
-        return;
-      connectionImpressionsRef.current.add(id);
-    });
-  }, [checking, gmailConnected]);
+  }, [resumeEngineIfNeeded]);
 
   const refreshPipeStates = useCallback(async () => {
     const slugs = [
@@ -479,51 +303,7 @@ export default function FinalSetupStep({
     }
   }, []);
 
-  const connectGmail = useCallback(async () => {
-    if (!userToken) {
-      setError("sign in to connect Gmail, then try again.");
-      return;
-    }
-    setBusyConnection("gmail");
-    setError(null);
-    gmailAbortRef.current?.abort();
-    const controller = new AbortController();
-    gmailAbortRef.current = controller;
-    let failureStage = "authorization";
-    try {
-      const redirectUrl = await authorizeComposioToolkit(userToken, "gmail");
-      failureStage = "open_oauth";
-      await openUrl(redirectUrl);
-      failureStage = "completion";
-      const connected = await waitForGmailConnection(
-        userToken,
-        controller.signal,
-      );
-      if (!connected) throw new Error("Gmail 连接未完成。");
-      setGmailConnected(true);
-      notifyConnectionsUpdated();
-
-      // Registration helps the local engine use Gmail, but it must not make
-      // the connection screen depend on engine startup.
-      void registerComposioMcpServer(userToken).catch(() => undefined);
-      void foregroundAfterOAuth();
-    } catch (connectError) {
-      if (!(
-        connectError instanceof DOMException &&
-        connectError.name === "AbortError"
-      )) {
-        setError(
-          connectError instanceof Error
-            ? connectError.message
-            : "Screenpipe couldn't connect Gmail. try again.",
-        );
-      }
-    } finally {
-      setBusyConnection(null);
-    }
-  }, [userToken]);
-
-  const actionBusy = busyConnection !== null || busyPipe !== null;
+  const actionBusy = busyPipe !== null;
 
   return (
     <div className="mx-auto w-full" data-testid="onboarding-final-setup">
@@ -548,7 +328,6 @@ export default function FinalSetupStep({
           state={pipeStates[DIGITAL_CLONE_PIPE]}
           busy={busyPipe === DIGITAL_CLONE_PIPE}
           disabled={actionBusy}
-          gmailConnected={gmailConnected}
           onSetup={() => void setupPipe(DIGITAL_CLONE_PIPE, false)}
         />
         <PipeRow
@@ -559,38 +338,16 @@ export default function FinalSetupStep({
           state={pipeStates[SPEAKER_RECONCILIATION_PIPE]}
           busy={busyPipe === SPEAKER_RECONCILIATION_PIPE}
           disabled={actionBusy}
-          gmailConnected={gmailConnected}
           onSetup={() => void setupPipe(SPEAKER_RECONCILIATION_PIPE, true)}
-        />
-        <ConnectionRow
-          id="gmail"
-          icon={
-            <img
-              src="/images/gmail.svg"
-              alt=""
-              className="h-4 w-4"
-              data-testid="gmail-service-icon"
-            />
-          }
-          title="Gmail"
-          description="用 Gmail 处理邮件流程与每日总结。"
-          connected={gmailConnected}
-          checking={checking}
-          busy={busyConnection === "gmail"}
-          anotherConnectionBusy={actionBusy}
-          onConnect={() => void connectGmail()}
-          onRetry={() => void refresh()}
         />
         <PipeRow
           slug={DAILY_EMAIL_PIPE}
-          icon={<img src="/images/gmail.svg" alt="" className="h-4 w-4" />}
+          icon={<Mail className="h-4 w-4" />}
           title="发送我的每日总结"
           description="每晚通过邮件发送一天的简短回顾。"
           state={pipeStates[DAILY_EMAIL_PIPE]}
           busy={busyPipe === DAILY_EMAIL_PIPE}
           disabled={actionBusy}
-          requiresGmail
-          gmailConnected={gmailConnected}
           onSetup={() => void setupPipe(DAILY_EMAIL_PIPE, false)}
         />
       </div>

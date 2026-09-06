@@ -1882,7 +1882,6 @@ fn resolve_preset(pipes_dir: &Path, preset_id: &str) -> Option<ResolvedPreset> {
 
     // Normalize legacy preset IDs to current names
     let normalized_id = match preset_id {
-        "pi-agent" => "screenpipe-cloud",
         "auto" => "default",
         other => other,
     };
@@ -1956,7 +1955,6 @@ fn resolve_preset(pipes_dir: &Path, preset_id: &str) -> Option<ResolvedPreset> {
         .get("provider")
         .and_then(|v| v.as_str())
         .and_then(|p| match p {
-            "screenpipe-cloud" | "pi" => Some("screenpipe"),
             "native-ollama" => Some("ollama"),
             "openai" => Some("openai"),
             "openai-chatgpt" => Some("openai-chatgpt"),
@@ -9362,10 +9360,7 @@ mod tests {
             config.config.get("template"),
             Some(&serde_json::json!(true))
         );
-        assert_eq!(
-            config.preset,
-            vec!["screenpipe-cloud".to_string(), "*".to_string()]
-        );
+        assert_eq!(config.preset, vec!["*".to_string()]);
         assert!(event_runs_are_read_only(&config));
         assert!(config
             .trigger
@@ -10146,9 +10141,10 @@ mod tests {
                             "defaultPreset": true
                         },
                         {
-                            "id": "raw-pi",
-                            "provider": "screenpipe-cloud",
-                            "model": "auto",
+                            "id": "raw-ollama",
+                            "provider": "native-ollama",
+                            "model": "qwen3",
+                            "url": "http://localhost:11434",
                             "defaultPreset": false
                         }
                     ]
@@ -10158,19 +10154,19 @@ mod tests {
         )
         .unwrap();
 
-        let default = resolve_preset(&pipes_dir, "default").expect("raw Pi default fallback");
-        assert_eq!(default.provider.as_deref(), Some("screenpipe"));
-        assert_eq!(default.model, "auto");
+        let default = resolve_preset(&pipes_dir, "default").expect("raw default fallback");
+        assert_eq!(default.provider.as_deref(), Some("ollama"));
+        assert_eq!(default.model, "qwen3");
         let acp = resolve_preset(&pipes_dir, "coding-agent").expect("explicit ACP preset");
         assert_eq!(acp.provider.as_deref(), Some("acp"));
         assert_eq!(acp.executor.as_deref(), Some("acp"));
         assert_eq!(acp.model, "gpt-5.6-codex");
         assert_eq!(acp.executor_config.as_ref().unwrap()["id"], "codex-acp");
-        let raw = resolve_preset(&pipes_dir, "raw-pi").expect("raw Pi preset");
-        assert_eq!(raw.provider.as_deref(), Some("screenpipe"));
+        let raw = resolve_preset(&pipes_dir, "raw-ollama").expect("raw ollama preset");
+        assert_eq!(raw.provider.as_deref(), Some("ollama"));
         assert_eq!(
             list_available_preset_ids(&pipes_dir),
-            vec!["coding-agent", "raw-pi"]
+            vec!["coding-agent", "raw-ollama"]
         );
     }
 
@@ -10325,8 +10321,9 @@ mod tests {
                     "aiPresets": [
                         {
                             "id": "hosted-primary",
-                            "provider": "screenpipe-cloud",
+                            "provider": "native-ollama",
                             "model": "hosted-auto",
+                            "url": "http://localhost:11434",
                             "defaultPreset": true
                         },
                         {
@@ -10421,14 +10418,14 @@ Do resilient work.
         assert_eq!(
             executor.attempts.lock().unwrap().as_slice(),
             [
-                ("hosted-auto".to_string(), Some("screenpipe".to_string())),
+                ("hosted-auto".to_string(), Some("ollama".to_string())),
                 ("codex-acp".to_string(), Some("acp".to_string())),
             ]
         );
     }
 
     #[tokio::test]
-    async fn scheduled_run_skips_stale_preset_and_falls_back_after_hosted_quota() {
+    async fn scheduled_run_skips_stale_preset_and_falls_back_after_provider_failure() {
         let temp = tempfile::tempdir().unwrap();
         let pipes_dir = temp.path().join("pipes");
         let pipe_dir = pipes_dir.join("fallback-e2e");
@@ -10440,8 +10437,9 @@ Do resilient work.
                     "aiPresets": [
                         {
                             "id": "hosted-primary",
-                            "provider": "screenpipe-cloud",
-                            "model": "hosted-auto"
+                            "provider": "native-ollama",
+                            "model": "hosted-auto",
+                            "url": "http://localhost:11434"
                         },
                         {
                             "id": "byok-fallback",
@@ -10513,7 +10511,7 @@ Run the scheduled task.
         assert_eq!(
             attempts,
             vec![
-                ("hosted-auto".to_string(), Some("screenpipe".to_string())),
+                ("hosted-auto".to_string(), Some("ollama".to_string())),
                 ("fallback-model".to_string(), Some("openai".to_string())),
             ]
         );

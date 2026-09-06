@@ -42,7 +42,7 @@ impl std::str::FromStr for AudioTranscriptionEngine {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "deepgram" | "screenpipe-cloud" => Ok(Self::Deepgram),
+            "deepgram" => Ok(Self::Deepgram),
             "whisper-tiny" => Ok(Self::WhisperTiny),
             "whisper-tiny-quantized" => Ok(Self::WhisperTinyQuantized),
             "whisper-large" => Ok(Self::WhisperLargeV3),
@@ -90,12 +90,6 @@ mod tests {
     fn from_str_deepgram() {
         assert_eq!(
             "deepgram".parse::<AudioTranscriptionEngine>().unwrap(),
-            AudioTranscriptionEngine::Deepgram
-        );
-        assert_eq!(
-            "screenpipe-cloud"
-                .parse::<AudioTranscriptionEngine>()
-                .unwrap(),
             AudioTranscriptionEngine::Deepgram
         );
     }

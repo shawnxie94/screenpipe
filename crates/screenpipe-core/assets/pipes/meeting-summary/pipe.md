@@ -2,7 +2,6 @@
 schedule: manual
 enabled: true
 preset:
-  - screenpipe-cloud
   - "*"
 timeout: 600
 trigger:

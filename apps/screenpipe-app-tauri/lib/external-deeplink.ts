@@ -26,7 +26,7 @@ export type ExternalDeepLinkAction =
 
 function isScreenpipeScheme(url: URL): boolean {
   return (
-    url.protocol === "screenpipe:" || url.protocol === "screenpipe-enterprise:"
+    url.protocol === "screenpipe:"
   );
 }
 

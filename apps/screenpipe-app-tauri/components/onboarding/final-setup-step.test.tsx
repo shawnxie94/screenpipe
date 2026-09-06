@@ -10,9 +10,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import FinalSetupStep from "./final-setup-step";
 
 const mocks = vi.hoisted(() => ({
-  fetchComposioStatus: vi.fn(),
-  authorizeComposioToolkit: vi.fn(),
-  registerComposioMcpServer: vi.fn(),
   oauthConnect: vi.fn(),
   spawnScreenpipe: vi.fn(),
   openUrl: vi.fn(),
@@ -23,11 +20,6 @@ const mocks = vi.hoisted(() => ({
   capture: vi.fn(),
 }));
 
-vi.mock("@/lib/composio", () => ({
-  fetchComposioStatus: mocks.fetchComposioStatus,
-  authorizeComposioToolkit: mocks.authorizeComposioToolkit,
-  registerComposioMcpServer: mocks.registerComposioMcpServer,
-}));
 vi.mock("@/lib/connections-events", () => ({
   notifyConnectionsUpdated: mocks.notifyConnectionsUpdated,
 }));
@@ -47,26 +39,11 @@ vi.mock("@/lib/utils/tauri", () => ({
 }));
 vi.mock("posthog-js", () => ({ default: { capture: mocks.capture } }));
 
-let gmailConnected: boolean;
 let calendarConnected: boolean;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  gmailConnected = false;
   calendarConnected = false;
-  mocks.fetchComposioStatus.mockImplementation(async () => ({
-    gmail: {
-      connected: gmailConnected,
-      status: gmailConnected ? "ACTIVE" : null,
-    },
-  }));
-  mocks.authorizeComposioToolkit.mockResolvedValue(
-    "https://auth.example.test/gmail",
-  );
-  mocks.openUrl.mockImplementation(async () => {
-    gmailConnected = true;
-  });
-  mocks.registerComposioMcpServer.mockResolvedValue(undefined);
   mocks.foregroundAfterOAuth.mockResolvedValue(undefined);
   mocks.localFetch.mockRejectedValue(new Error("engine is starting"));
   mocks.oauthConnect.mockImplementation(async () => {
@@ -106,28 +83,18 @@ describe("final onboarding setup", () => {
   it("shows every pipe option even when the engine is unavailable", async () => {
     const handleNextSlide = vi.fn();
     render(
-      <FinalSetupStep
-        userToken="signed-in-token"
-        handleNextSlide={handleNextSlide}
-      />,
+      <FinalSetupStep handleNextSlide={handleNextSlide} />,
     );
 
-    const gmail = await screen.findByTestId("onboarding-gmail-action");
-    await waitFor(() => expect(gmail).toHaveTextContent("connect gmail"));
     expect(
-      screen.getByTestId("onboarding-digital-clone-action"),
+      await screen.findByTestId("onboarding-digital-clone-action"),
     ).toHaveTextContent("set up");
     expect(
       screen.getByTestId("onboarding-speaker-reconciliation-action"),
     ).toHaveTextContent("set up");
     expect(
       screen.getByTestId("onboarding-daily-email-summary-action"),
-    ).toHaveTextContent("needs gmail");
-    expect(gmail).toHaveClass("col-start-3", "row-start-1", "min-w-24");
-    expect(mocks.fetchComposioStatus).toHaveBeenCalledWith("signed-in-token");
-    expect(mocks.registerComposioMcpServer).not.toHaveBeenCalled();
-    await waitFor(() => {
-    });
+    ).toHaveTextContent("set up");
 
     fireEvent.click(screen.getByRole("button", { name: "continue" }));
     expect(handleNextSlide).toHaveBeenCalledTimes(1);
@@ -224,49 +191,6 @@ describe("final onboarding setup", () => {
       "/pipes/store/install",
       expect.objectContaining({ method: "POST" }),
     );
-  });
-
-  it("connects Gmail and changes its CTA to completed", async () => {
-    render(
-      <FinalSetupStep userToken="signed-in-token" handleNextSlide={vi.fn()} />,
-    );
-
-    const gmail = await screen.findByTestId("onboarding-gmail-action");
-    await waitFor(() => expect(gmail).toHaveTextContent("connect gmail"));
-    fireEvent.click(gmail);
-
-    await waitFor(() => expect(gmail).toHaveTextContent("connected"));
-    expect(gmail).toBeDisabled();
-    expect(mocks.authorizeComposioToolkit).toHaveBeenCalledWith(
-      "signed-in-token",
-      "gmail",
-    );
-    expect(mocks.openUrl).toHaveBeenCalledWith(
-      "https://auth.example.test/gmail",
-    );
-    await waitFor(() =>
-      expect(mocks.registerComposioMcpServer).toHaveBeenCalledWith(
-        "signed-in-token",
-      ),
-    );
-  });
-
-  it("tracks Gmail connection failures without sending raw error text", async () => {
-    mocks.authorizeComposioToolkit.mockRejectedValue(
-      new Error("private provider response"),
-    );
-    render(
-      <FinalSetupStep userToken="signed-in-token" handleNextSlide={vi.fn()} />,
-    );
-
-    const gmail = await screen.findByTestId("onboarding-gmail-action");
-    await waitFor(() => expect(gmail).toHaveTextContent("connect gmail"));
-    fireEvent.click(gmail);
-
-    // The connection simply fails: no connected state, CTA usable again.
-    await waitFor(() => expect(gmail).toBeEnabled());
-    expect(gmail).toHaveTextContent("connect gmail");
-    expect(gmail).not.toHaveTextContent("connected");
   });
 
 });

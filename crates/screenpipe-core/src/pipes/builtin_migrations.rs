@@ -783,7 +783,7 @@ mod tests {
         let fixed = migrate_builtin_pipe_text("meeting-summary", &stale)
             .expect("old meeting-summary frontmatter should gain the wildcard");
         let (config, _) = parse_frontmatter(&fixed).expect("migrated Pipe should parse");
-        assert_eq!(config.preset, ["screenpipe-cloud", "*"]);
+        assert_eq!(config.preset, ["*"]);
         assert!(migrate_builtin_pipe_text("meeting-summary", &fixed).is_none());
     }
 
@@ -1161,7 +1161,7 @@ mod tests {
         assert!(migrate_builtin_pipe_text("meeting-summary", bundled).is_none());
         let (config, body) = parse_frontmatter(bundled).expect("bundled prompt should parse");
         assert_eq!(config.timeout, Some(600));
-        assert_eq!(config.preset, ["screenpipe-cloud", "*"]);
+        assert_eq!(config.preset, ["*"]);
         assert!(!body.contains("buildMeetingSummarizeInstructions"));
         assert!(body.contains("必须使用 screenpipe API 检索"));
         assert!(body.contains("绝不要对用户主目录或 `~/.screenpipe` 运行递归的 `find` 或 `grep`"));

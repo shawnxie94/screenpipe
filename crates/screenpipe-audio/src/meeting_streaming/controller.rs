@@ -1288,7 +1288,7 @@ mod tests {
         let transcription_engine = Arc::new(RwLock::new(None));
         let mut active = None;
         let config =
-            MeetingStreamingConfig::from_settings(true, "screenpipe-cloud", None, None, None);
+            MeetingStreamingConfig::from_settings(true, "deepgram", None, None, None);
 
         start_streaming_session(
             &config,

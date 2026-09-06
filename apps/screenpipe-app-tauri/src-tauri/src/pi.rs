@@ -2646,36 +2646,6 @@ fn pi_registry_provider(provider: &str, url: &str) -> Result<&'static str, Strin
     })
 }
 
-/// Normalize a configured provider model name before handing it to Pi.
-fn resolve_screenpipe_model(requested: &str, provider: &str) -> String {
-    // Only touch screenpipe provider — other providers use their own model names
-    if provider != "screenpipe" {
-        return requested.to_string();
-    }
-
-    // Strip date suffix (@20251001 or -20251001) for cleaner model IDs
-    let base = requested.split('@').next().unwrap_or(requested);
-    let base = if base.len() > 9 && base.as_bytes()[base.len() - 9] == b'-' {
-        let suffix = &base[base.len() - 8..];
-        if suffix.chars().all(|c| c.is_ascii_digit()) {
-            &base[..base.len() - 9]
-        } else {
-            base
-        }
-    } else {
-        base
-    };
-
-    if base != requested {
-        info!(
-            "resolved model '{}' -> '{}' (stripped date suffix)",
-            requested, base
-        );
-    }
-
-    base.to_string()
-}
-
 fn resolve_chatgpt_model(requested: &str) -> String {
     let model = requested.trim();
     if model.to_ascii_lowercase().ends_with("-codex") {
@@ -2692,7 +2662,6 @@ fn resolve_chatgpt_model(requested: &str) -> String {
 
 fn resolve_pi_model(requested: &str, provider: &str) -> String {
     match provider {
-        "screenpipe" => resolve_screenpipe_model(requested, provider),
         "openai-chatgpt" => resolve_chatgpt_model(requested),
         _ => requested.to_string(),
     }

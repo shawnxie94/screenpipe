@@ -21,15 +21,7 @@ import {
   IntegrationIcon,
   IntegrationInfo,
 } from "@/components/settings/connections-section";
-import { ComposioCard } from "@/components/settings/composio-card";
 import { localFetch } from "@/lib/api";
-import {
-  COMPOSIO_CONNECTIONS,
-  composioStatusToMap,
-  fetchComposioStatus,
-  type ComposioStatusMap,
-  type ComposioToolkit,
-} from "@/lib/composio";
 import { useSettings } from "@/lib/hooks/use-settings";
 import {
   isMcpConnectionKey,
@@ -50,11 +42,10 @@ interface ConnectionStatus {
   integration: IntegrationInfo | null;
   configured: boolean;
   loading: boolean;
-  kind: "connection" | "mcp" | "composio";
+  kind: "connection" | "mcp";
   displayName: string;
   instanceName: string | null;
   icon?: string;
-  composioToolkit?: ComposioToolkit;
   serverId?: string;
   missingReason?: "deleted_mcp" | "disabled_mcp" | "unknown_mcp";
 }
@@ -65,34 +56,6 @@ interface McpServerSummary {
   enabled: boolean;
 }
 
-function PostInstallComposioConnection({
-  connId,
-  toolkit,
-  configured,
-  onChanged,
-}: {
-  connId: string;
-  toolkit: ComposioToolkit;
-  configured: boolean;
-  onChanged: (
-    connId: string,
-    toolkit: ComposioToolkit,
-    status: ComposioStatusMap
-  ) => void;
-}) {
-  const handleChanged = useCallback(
-    (status: ComposioStatusMap) => onChanged(connId, toolkit, status),
-    [connId, onChanged, toolkit]
-  );
-
-  return (
-    <ComposioCard
-      toolkit={toolkit}
-      initialConnected={configured}
-      onChanged={handleChanged}
-    />
-  );
-}
 
 export function PostInstallConnectionsModal({
   open,
@@ -102,7 +65,6 @@ export function PostInstallConnectionsModal({
   onConnectionRemoved,
 }: PostInstallConnectionsModalProps) {
   const { settings } = useSettings();
-  const composioToken: string | null = null;
   const [statuses, setStatuses] = useState<Record<string, ConnectionStatus>>({});
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,18 +77,9 @@ export function PostInstallConnectionsModal({
       setLoading(true);
       try {
         // Fetch all available integrations
-        const needsComposio = connections.some((connId) => {
-          const baseId = pipeConnectionLookupKey(connId);
-          return COMPOSIO_CONNECTIONS.some(
-            (connection) => connection.id === baseId
-          );
-        });
-        const [res, mcpRes, composioStatus] = await Promise.all([
+        const [res, mcpRes] = await Promise.all([
           localFetch("/connections"),
           localFetch("/mcp-servers").catch(() => null),
-          needsComposio && composioToken
-            ? fetchComposioStatus(composioToken)
-            : Promise.resolve(null),
         ]);
         const data = await res.json();
         const integrations: IntegrationInfo[] = data.data || [];
@@ -136,35 +89,12 @@ export function PostInstallConnectionsModal({
             : { data: [] };
         const mcpStatusUnavailable = !mcpRes || !mcpRes.ok;
         const mcpServers: McpServerSummary[] = mcpData.data || [];
-        const composioStatusMap = composioStatus
-          ? composioStatusToMap(composioStatus)
-          : null;
-
         const newStatuses: Record<string, ConnectionStatus> = {};
 
         for (const connId of connections) {
           // support instance keys like "notion:crm" — match on base id
           const baseId = pipeConnectionLookupKey(connId);
           const instanceName = pipeConnectionInstanceName(connId);
-          const composioConnection = COMPOSIO_CONNECTIONS.find(
-            (connection) => connection.id === baseId
-          );
-
-          if (composioConnection) {
-            newStatuses[connId] = {
-              integration: null,
-              configured:
-                composioStatusMap?.[composioConnection.toolkit] ?? false,
-              loading: false,
-              kind: "composio",
-              displayName: composioConnection.name,
-              icon: composioConnection.icon,
-              composioToolkit: composioConnection.toolkit,
-              instanceName: null,
-            };
-            continue;
-          }
-
           if (isMcpConnectionKey(connId)) {
             const serverId = mcpServerIdFromConnection(connId) || undefined;
             const server = serverId
@@ -237,7 +167,7 @@ export function PostInstallConnectionsModal({
     };
 
     init();
-  }, [open, connections, composioToken]);
+  }, [open, connections]);
 
   const handleSaved = (connId: string) => {
     setStatuses((prev) => ({
@@ -251,23 +181,6 @@ export function PostInstallConnectionsModal({
     setExpanded(nextUnconfigured || null);
   };
 
-  const handleComposioChanged = useCallback(
-    (
-      connId: string,
-      toolkit: ComposioToolkit,
-      status: ComposioStatusMap
-    ) => {
-      setStatuses((prev) => ({
-        ...prev,
-        [connId]: {
-          ...prev[connId],
-          configured: status[toolkit],
-          loading: false,
-        },
-      }));
-    },
-    []
-  );
 
   const openCustomMcpSettings = () => {
     window.dispatchEvent(new CustomEvent("open-settings", {
@@ -332,8 +245,6 @@ export function PostInstallConnectionsModal({
               const isExpanded = expanded === connId;
               const integration = status?.integration;
               const isMcp = status?.kind === "mcp";
-              const isComposio = status?.kind === "composio";
-              const composioToolkit = status?.composioToolkit;
               const statusLabel = status?.configured
                 ? "configured"
                 : status?.missingReason === "deleted_mcp"
@@ -463,17 +374,6 @@ export function PostInstallConnectionsModal({
                     </div>
                   )}
 
-                  {isExpanded && isComposio && composioToolkit && (
-                    <div className="px-3 pb-3 border-t border-border pt-3">
-                      <PostInstallComposioConnection
-                        connId={connId}
-                        toolkit={composioToolkit}
-                        configured={status.configured}
-                        onChanged={handleComposioChanged}
-                      />
-                    </div>
-                  )}
-
                   {isExpanded && integration && integration.fields.length === 0 && (
                     <div className="px-3 pb-3 border-t border-border pt-3">
                       <p className="text-xs text-muted-foreground">
@@ -483,7 +383,7 @@ export function PostInstallConnectionsModal({
                     </div>
                   )}
 
-                  {isExpanded && !integration && !isMcp && !isComposio && (
+                  {isExpanded && !integration && !isMcp && (
                     <div className="px-3 pb-3 border-t border-border pt-3">
                       <p className="text-xs text-muted-foreground">
                         connection &quot;{connId}&quot; is not available. it

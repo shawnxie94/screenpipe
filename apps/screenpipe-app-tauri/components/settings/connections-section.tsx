@@ -46,7 +46,6 @@ import { platform } from "@tauri-apps/plugin-os";
 import { join, homeDir, tempDir, dirname } from "@tauri-apps/api/path";
 import { AppleCalendarCard } from "./apple-calendar-card";
 import { ImapCard } from "./imap-card";
-import { ComposioCard, COMPOSIO_TOOLKITS, type ComposioStatusMap } from "./composio-card";
 import { IcsCalendarCard } from "./ics-calendar-card";
 import { RemoteAgentCard } from "./remote-agent-card";
 import { BrowserUrlCard } from "./browser-url-card";
@@ -2225,6 +2224,23 @@ export interface IntegrationInfo {
   connected: boolean;
 }
 
+// Cloud-managed service connections (Gmail, Google Drive/Docs/Sheets, Zoom)
+// were removed with the local-only conversion: their auth was brokered by the
+// screenpipe.com account, which no longer exists. The tiles stay discoverable
+// so old deep links do not 404, but the panel only explains the retirement.
+function CloudServiceRetiredCard({ name }: { name: string }) {
+  return (
+    <div className="space-y-2 px-1 py-2">
+      <p className="text-sm font-medium">{name} 连接已移除</p>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        此服务的登录此前由 Screenpipe 云账号代理。本地版本不再包含云账号，
+        因此该连接不可用。如需类似的本地能力，请在「连接」页查看 IMAP、
+        日历（Apple / ICS）或 MCP 服务器选项。
+      </p>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Reusable credential form for a single connection instance
 // ---------------------------------------------------------------------------
@@ -3489,32 +3505,6 @@ export function ConnectionsSection({
   const [mcpProviderConnected, setMcpProviderConnected] = useState<Record<string, boolean>>({});
   const [excalidrawConnected, setExcalidrawConnected] = useState(false);
   const [importedSkillsCount, setImportedSkillsCount] = useState(0);
-  // Composio-backed connections (managed auth through screenpipe.com; see
-  // composio-card.tsx): gmail, zoom, google drive/docs/sheets.
-  const [composioConnected, setComposioConnected] = useState<ComposioStatusMap>(
-    () =>
-      Object.fromEntries(COMPOSIO_TOOLKITS.map((t) => [t, false])) as ComposioStatusMap
-  );
-  // Composio status was fetched with the screenpipe.com account token, which
-  // the local-only build no longer has — treat it as unavailable.
-  const composioToken: string | null = null;
-  useEffect(() => {
-    if (!composioToken) return;
-    fetch(screenpipeWebUrl("/api/composio/status", "https://screenpipe.com"), {
-      headers: { Authorization: `Bearer ${composioToken}` },
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((s) => {
-        if (!s) return;
-        setComposioConnected(
-          Object.fromEntries(
-            COMPOSIO_TOOLKITS.map((t) => [t, !!s[t]?.connected])
-          ) as ComposioStatusMap
-        );
-      })
-      .catch(() => {});
-  }, [composioToken]);
-
   const loadSkillsCount = useCallback(() => {
     commands
       .listImportedSkills()
@@ -3683,9 +3673,6 @@ export function ConnectionsSection({
         { id: "voice-memos", name: "语音备忘录", icon: "voice-memos", connected: false },
       ] : []),
       ...(os === "macos" ? [{ id: "apple-calendar", name: "Apple Calendar", icon: "apple-calendar", connected: appleCalendarConnected }] : []),
-      { id: "gmail", name: "Gmail", icon: "gmail", connected: composioConnected.gmail },
-      { id: "google-drive", name: "Google Drive", icon: "google-drive", connected: composioConnected.googledrive },
-      { id: "google-sheets", name: "Google Sheets", icon: "google-sheets", connected: composioConnected.googlesheets },
       { id: "ics-calendar", name: "其他日历", icon: "ics-calendar", connected: false },
       { id: "remote-agent", name: "常驻 AI", icon: "remote-agent", connected: false },
       { id: "whatsapp", name: "WhatsApp", icon: "whatsapp", connected: false, detected: detectedConnectionIds.has("whatsapp") },
@@ -3743,11 +3730,6 @@ export function ConnectionsSection({
         : false;
       h.connected = h.connected || apiConnected;
     }
-    // Docs/Zoom dots light for the Composio connection.
-    const googleDocsTile = hardcoded.find(h => h.id === "google-docs");
-    const zoomTile = apiTiles.find(t => t.id === "zoom");
-    if (zoomTile) zoomTile.connected = zoomTile.connected || composioConnected.zoom;
-    if (googleDocsTile) googleDocsTile.connected = composioConnected.googledocs;
     // Custom MCP tile shows the dot when any user-registered MCP server is enabled.
     const customMcpTile = hardcoded.find(h => h.id === "custom-mcp");
     if (customMcpTile) {
@@ -3760,7 +3742,7 @@ export function ConnectionsSection({
       category: CONNECTION_CATEGORY_BY_ID[tile.id] ?? tile.category ?? "Other",
       description: tile.description ?? CONNECTION_HARDCODED_DESCRIPTIONS[tile.id],
     }));
-  }, [os, claudeInstalled, cursorInstalled, codexInstalled, grokInstalled, chatgptConnected, browserUrlConnected, browserUrlDetected, integrations, appleCalendarConnected, customMcpConnected, customMcpServerCount, krispConnected, plaudConnected, mcpProviderConnected, excalidrawConnected, importedSkillsCount, detectedConnectionIds, composioConnected]);
+  }, [os, claudeInstalled, cursorInstalled, codexInstalled, grokInstalled, chatgptConnected, browserUrlConnected, browserUrlDetected, integrations, appleCalendarConnected, customMcpConnected, customMcpServerCount, krispConnected, plaudConnected, mcpProviderConnected, excalidrawConnected, importedSkillsCount, detectedConnectionIds ]);
 
   const isDefaultView = !search.trim() && categoryFilter === ALL_CONNECTION_CATEGORIES;
 
@@ -3918,11 +3900,11 @@ export function ConnectionsSection({
       case "voice-memos": return <VoiceMemosCard />;
       case "apple-calendar": return <AppleCalendarCard onStatusChange={setAppleCalendarConnected} />;
       case "imap": return <ImapCard onChanged={fetchIntegrations} />;
-      case "google-docs": return <ComposioCard toolkit="googledocs" initialConnected={composioConnected.googledocs} onChanged={setComposioConnected} />;
-      case "google-drive": return <ComposioCard toolkit="googledrive" initialConnected={composioConnected.googledrive} onChanged={setComposioConnected} />;
-      case "google-sheets": return <ComposioCard toolkit="googlesheets" initialConnected={composioConnected.googlesheets} onChanged={setComposioConnected} />;
-      case "gmail": return <ComposioCard toolkit="gmail" initialConnected={composioConnected.gmail} onChanged={setComposioConnected} />;
-      case "zoom": return <ComposioCard toolkit="zoom" initialConnected={composioConnected.zoom} onChanged={setComposioConnected} />;
+      case "google-docs":
+      case "google-drive":
+      case "google-sheets":
+      case "gmail":
+      case "zoom": return <CloudServiceRetiredCard name={selectedIntegration?.name ?? selected} />;
       case "ics-calendar": return <IcsCalendarCard />;
       case "remote-agent": return <RemoteAgentCard />;
       case "whatsapp": return <WhatsAppPanel />;
