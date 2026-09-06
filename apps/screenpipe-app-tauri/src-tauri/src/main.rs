@@ -35,7 +35,6 @@ use tracing_subscriber::EnvFilter;
 
 #[cfg(target_os = "macos")]
 use tracing_oslog::OsLogger;
-use updates::start_update_check;
 use window::ShowRewindWindow;
 
 mod activity_history;
@@ -103,10 +102,7 @@ mod server_core;
 mod space_monitor;
 mod store;
 mod tray;
-#[cfg(target_os = "macos")]
-mod staged_update;
 mod stale_tier;
-mod updates;
 mod voice_training;
 mod window;
 mod windows_ca_bundle;
@@ -353,10 +349,6 @@ async fn main() {
     {
         std::process::exit(exit_code);
     }
-
-    // The packaged updater E2E latches whether the replacement process began
-    // before macOS finished releasing the previous app's SCK/TCC state.
-    process_exit::latch_e2e_sck_relaunch_race();
 
     // Point debug builds at their own data dir and ports so `bun tauri dev`
     // can't hand off to (or kill) an installed production app. Must run before
@@ -812,7 +804,6 @@ async fn main() {
             _ => {}
         })
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
@@ -943,12 +934,6 @@ async fn main() {
                 let mut app_submenu_builder = SubmenuBuilder::new(app, "screenpipe")
                     .item(&PredefinedMenuItem::about(app, Some("About screenpipe"), None)?)
                     .separator();
-                if crate::config::screenpipe_hosted_services_enabled() {
-                    app_submenu_builder = app_submenu_builder
-                        .item(&MenuItemBuilder::with_id("check_for_updates", "Check for Updates...")
-                            .build(app)?)
-                        .separator();
-                }
                 if !app_ui_hidden {
                     app_submenu_builder = app_submenu_builder
                         .item(&MenuItemBuilder::with_id("settings", "Settings...")
@@ -1004,15 +989,6 @@ async fn main() {
                             let app_for_closure = app_handle.clone();
                             let _ = app_handle.run_on_main_thread(move || {
                                 let _ = ShowRewindWindow::Home { page: Some("general".to_string()) }.show(&app_for_closure);
-                            });
-                        }
-                        "check_for_updates" => {
-                            let app = app_handle.clone();
-                            tauri::async_runtime::spawn(async move {
-                                let state = app.state::<std::sync::Arc<crate::updates::UpdatesManager>>();
-                                if let Err(e) = state.check_for_updates(true, true).await {
-                                    tracing::error!("menu: check for updates failed: {}", e);
-                                }
                             });
                         }
                         "quit_app" => {
@@ -1814,23 +1790,9 @@ async fn main() {
                 }
             }
 
-            // Self-hosted builds must not contact Screenpipe's update service.
-            // The tray still refreshes recording state without an update item.
-            let update_manager = if crate::config::screenpipe_hosted_services_enabled() {
-                Some(start_update_check(&app_handle, 5)?)
-            } else {
-                None
-            };
-            if let Some(update_manager) = &update_manager {
-                app_handle.manage(update_manager.clone());
-            }
-
             // Setup tray
             if let Some(_) = app_handle.tray_by_id("screenpipe_main") {
-                if let Err(e) = tray::setup_tray(
-                    &app_handle,
-                    update_manager.as_ref().and_then(|manager| manager.update_now_menu_item_ref()),
-                ) {
+                if let Err(e) = tray::setup_tray(&app_handle) {
                     error!("Failed to setup tray: {}", e);
                 }
             }
@@ -2059,12 +2021,6 @@ async fn main() {
 
 
                     process_exit::run_blocking_pre_exit_teardown(app_handle.app_handle().clone());
-
-                    // Plain-quit path: apply a staged update so the next manual
-                    // launch runs the new version. Restart paths install in
-                    // force_app_relaunch; this call is idempotent with that.
-                    #[cfg(target_os = "macos")]
-                    staged_update::install_staged_if_any(app_handle.app_handle());
 
                     if process_exit::PENDING_RESTART.load(std::sync::atomic::Ordering::SeqCst) {
                         info!("Restart pending — spawning replacement and force-exiting");

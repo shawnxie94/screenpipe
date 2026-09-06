@@ -2746,26 +2746,6 @@
       "notes": "Invokes open_search_window and verifies focused floating Search."
     },
     {
-      "spec": "updater-banner.spec.ts",
-      "platforms": [
-        "windows",
-        "macos",
-        "linux"
-      ],
-      "layers": [
-        "real-ui-e2e",
-        "settings"
-      ],
-      "features": [
-        "update-surfacing",
-        "settings-persistence"
-      ],
-      "criticality": "high",
-      "confidence": "partial",
-      "ux": "mixed",
-      "notes": "Synthetic update-available event surfaces the restart-to-update banner. A real Auto-update toggle plus delayed store save verifies restart waits for preference persistence and survives settings-store re-hydration; an E2E-only handoff suppresses the destructive relaunch. Real check/download/install + rollback stay manual via e2e/mock-updates because the debug E2E build disables updater checks."
-    },
-    {
       "spec": "viewer-deeplink.spec.ts",
       "platforms": [
         "windows",

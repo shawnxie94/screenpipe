@@ -3237,36 +3237,6 @@ pub(crate) fn register_window_shortcuts_if_main_visible(app: tauri::AppHandle) {
     }
 }
 
-/// Install a specific older version from R2. Downloads and installs via Tauri updater,
-/// then restarts the app.
-#[tauri::command]
-#[specta::specta]
-pub async fn rollback_to_version(
-    app_handle: tauri::AppHandle,
-    version: String,
-) -> Result<(), String> {
-    use crate::RecordingState;
-    info!("rollback_to_version: installing v{}", version);
-
-    // Stop recording first
-    if let Err(e) =
-        crate::stop_screenpipe(app_handle.state::<RecordingState>(), app_handle.clone()).await
-    {
-        error!("rollback: failed to stop recording: {}", e);
-    }
-
-    // Download and install the target version
-    crate::updates::install_specific_version(&app_handle, &version).await?;
-
-    info!("rollback: v{} installed, restarting", version);
-    crate::process_exit::request_app_relaunch(
-        app_handle,
-        "rollback restart",
-        std::time::Duration::from_millis(250),
-    );
-    Ok(())
-}
-
 /// Perform OCR on a base64-encoded PNG image crop, using the user's configured OCR engine.
 #[tauri::command]
 #[specta::specta]

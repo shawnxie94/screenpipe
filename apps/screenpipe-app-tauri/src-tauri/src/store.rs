@@ -1269,14 +1269,6 @@ pub struct SettingsStore {
     /// Unique device ID for AI usage tracking (generated on first launch)
     #[serde(rename = "deviceId", default = "generate_device_id")]
     pub device_id: String,
-    /// Auto-install updates and restart when a new version is available.
-    /// When disabled, users must click "update now" in the tray menu.
-    #[serde(rename = "autoUpdate", default = "default_true")]
-    pub auto_update: bool,
-    /// Consumer updater channel selected on this device. Older stores omit it
-    /// and therefore remain on the stable channel.
-    #[serde(rename = "updateChannel", default = "default_update_channel")]
-    pub update_channel: String,
     /// Auto-update store-installed pipes that haven't been locally modified.
     #[serde(rename = "autoUpdatePipes", default = "default_true")]
     pub auto_update_pipes: bool,
@@ -1364,10 +1356,6 @@ fn generate_device_id() -> String {
 
 fn default_true() -> bool {
     true
-}
-
-fn default_update_channel() -> String {
-    "stable".to_string()
 }
 
 fn default_overlay_size() -> String {
@@ -1638,9 +1626,6 @@ impl Default for SettingsStore {
                         "defaultValue": "off",
                         "forceDisabled": false,
                     },
-                    "autoUpdate": {
-                        "forceEnabled": false,
-                    },
                 }),
             ),
         ]);
@@ -1710,8 +1695,6 @@ impl Default for SettingsStore {
             shortcut_overlay_snoozed_until: None,
             allow_hiding_shortcut_overlay: false,
             device_id: uuid::Uuid::new_v4().to_string(),
-            auto_update: true,
-            update_channel: default_update_channel(),
             auto_update_pipes: true,
             remote_log_collection_enabled: false,
             #[cfg(target_os = "macos")]

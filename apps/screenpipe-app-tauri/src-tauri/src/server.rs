@@ -343,19 +343,6 @@ pub async fn run_server(app_handle: tauri::AppHandle, port: u16) {
         .route("/window-size", axum::routing::post(set_window_size))
         .route("/focus", axum::routing::post(handle_focus));
 
-    // E2E driver for the packaged updater test (e2e/mock-updates). Native
-    // tray menus can't be driven by WebDriver, so the packaged test reads the
-    // menu-item state and fires the exact production click path over
-    // localhost instead. Compiled out of every shipped build.
-    #[cfg(feature = "e2e")]
-    let app = app
-        .route("/e2e/updates/state", axum::routing::get(e2e_updates_state))
-        .route("/e2e/updates/click", axum::routing::post(e2e_updates_click))
-        .route(
-            "/e2e/updates/start-capture",
-            axum::routing::post(e2e_updates_start_capture),
-        );
-
     let app = with_control_server_boundary(app)
         .layer(
             TraceLayer::new_for_http()
@@ -572,83 +559,6 @@ async fn list_installed_apps_handler(State(_): State<ServerState>) -> impl IntoR
     Json(apps)
 }
 
-/// Content-free updater state for the packaged e2e test: what the tray menu
-/// item says, whether a staged update exists, and where boot stands. No
-/// versions of anything private, no paths, no tokens.
-#[cfg(feature = "e2e")]
-async fn e2e_updates_state(State(state): State<ServerState>) -> impl IntoResponse {
-    use tauri::Manager;
-
-    let manager = state
-        .app_handle
-        .try_state::<std::sync::Arc<crate::updates::UpdatesManager>>();
-    let (menu_text, menu_enabled, update_installed) = match manager.as_ref() {
-        Some(m) => {
-            let (text, enabled) = m.menu_item_snapshot().unwrap_or_default();
-            (text, enabled, m.has_update_installed().await)
-        }
-        None => (String::new(), false, false),
-    };
-    // `staged_update` is macOS-only (install is deferred to app exit there to
-    // avoid TCC orphaning). Windows and Linux install in place, so there is
-    // never a staged snapshot to report — but the response shape stays the
-    // same so the spec can assert against one contract on every platform.
-    #[cfg(target_os = "macos")]
-    let staged = crate::staged_update::staged_snapshot();
-    #[cfg(not(target_os = "macos"))]
-    let staged: Option<(String, bool)> = None;
-    Json(serde_json::json!({
-        "menu_text": menu_text,
-        "menu_enabled": menu_enabled,
-        "update_installed": update_installed,
-        "boot_phase": crate::health::get_boot_phase_snapshot().phase,
-        "restart_started": crate::updates::update_restart_started(),
-        "staged_version": staged.as_ref().map(|(v, _)| v.clone()),
-        "staged_pre_extracted": staged.as_ref().map(|(_, e)| *e).unwrap_or(false),
-        "app_version": state.app_handle.package_info().version.to_string(),
-    }))
-}
-
-/// Fire the exact production tray-click path ("Restart to update" /
-/// "Check for updates"). Returns immediately; on the install path the
-/// process exits a few seconds later, exactly like a real click.
-#[cfg(feature = "e2e")]
-async fn e2e_updates_click(State(state): State<ServerState>) -> impl IntoResponse {
-    let app = state.app_handle.clone();
-    tauri::async_runtime::spawn(crate::updates::trigger_update_now(app));
-    Json(serde_json::json!({ "accepted": true }))
-}
-
-/// Start the real engine and capture pipeline after a packaged updater
-/// relaunch. This is intentionally separate from the signed-out boot scenario:
-/// the same E2E first proves the idle restart gate, then proves that the updated
-/// process can acquire ScreenCaptureKit and produce a frame.
-#[cfg(feature = "e2e")]
-async fn e2e_updates_start_capture(State(state): State<ServerState>) -> impl IntoResponse {
-    use tauri::Manager;
-
-    let mut settings = match crate::store::SettingsStore::get(&state.app_handle) {
-        Ok(Some(settings)) => settings,
-        Ok(None) => crate::store::SettingsStore::default(),
-        Err(error) => {
-            return Json(serde_json::json!({
-                "started": false,
-                "error": format!("failed to load E2E settings: {error}"),
-            }));
-        }
-    };
-    let result = crate::recording::spawn_screenpipe(
-        state.app_handle.state(),
-        state.app_handle.clone(),
-        None,
-    )
-    .await;
-    match result {
-        Ok(()) => Json(serde_json::json!({ "started": true, "error": null })),
-        Err(error) => Json(serde_json::json!({ "started": false, "error": error })),
-    }
-}
-
 async fn set_window_size(
     State(state): State<ServerState>,
     Json(payload): Json<WindowSizePayload>,
@@ -708,22 +618,6 @@ curl -X POST http://localhost:11435/notify \
 curl -X POST http://localhost:11435/notify \
   -H "Content-Type: application/json" \
   -d '{"title": "Saved", "body": "Note saved to Obsidian", "timeout": 5000}'
-
-# Announcement push (modal / banner / card) instead of a notification panel.
-# Triggered by adding a `surface` field — the on-demand counterpart to the
-# PostHog `app-announcement` flag. kind = news|tip|reminder; position =
-# top|bottom (banner) or {top,bottom}-{left,right} (card).
-curl -X POST http://localhost:11435/notify \
-  -H "Content-Type: application/json" \
-  -d '{
-        "surface": "card",
-        "position": "bottom-right",
-        "kind": "tip",
-        "id": "tip-pipes-2026-06",
-        "title": "pipes run on a schedule",
-        "body": "create a pipe once and it keeps working.",
-        "cta": {"label": "create a pipe", "route": "/home?section=pipes"}
-      }'
 
 */
 

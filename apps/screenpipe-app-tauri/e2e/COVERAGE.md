@@ -85,8 +85,6 @@ pass/fail/skip counts.
 | Native tray recording pause and resume | os-integration, capture-ocr | gap | covered (strong; tray-recording-toggle) | gap |
 | Storage retention safety UX | storage-privacy | covered (strong; settings-sections, windows-user-journey) | covered (strong; settings-sections) | covered (strong; settings-sections) |
 | Screenpipe data stays out of macOS Spotlight | storage-privacy, os-integration | - | covered (strong; spotlight-exclusion) | - |
-| Updater install and rollback safety | os-integration | gap | gap | gap |
-| Update-available banner surfacing | real-ui-e2e | covered (partial; updater-banner) | covered (partial; updater-banner) | covered (partial; updater-banner) |
 | Speaker rename scope and reference integrity | local-api | covered (strong; speaker-rename-scope) | covered (strong; speaker-rename-scope) | covered (strong; speaker-rename-scope) |
 
 ## Critical Gaps
@@ -224,7 +222,6 @@ pass/fail/skip counts.
 | tray-recording-status.spec.ts | windows | os-integration, tauri-command | tray-recording-status | high | strong | command | 1 | Drives Starting to Recording and reads back the status item from the successfully installed native tray menu. |
 | tray-recording-toggle.spec.ts | macos | os-integration, tauri-command, capture-ocr | tray-recording-toggle | high | strong | command | 1 | Runs the tray's shared native action and proves a real CaptureSession pauses and resumes without the frontend shortcut-event path. |
 | tray-search.spec.ts | windows, macos, linux | window-lifecycle, tauri-command, real-ui-e2e | tray-search, home-search, window-lifecycle | high | partial | command | 2 | Invokes open_search_window and verifies focused floating Search. |
-| updater-banner.spec.ts | windows, macos, linux | real-ui-e2e, settings | update-surfacing, settings-persistence | high | partial | mixed | 2 | Synthetic update-available event surfaces the restart-to-update banner. A real Auto-update toggle plus delayed store save verifies restart waits for preference persistence and survives settings-store re-hydration; an E2E-only handoff suppresses the destructive relaunch. Real check/download/install + rollback stay manual via e2e/mock-updates because the debug E2E build disables updater checks. |
 | viewer-deeplink.spec.ts | windows, macos, linux | window-lifecycle, tauri-command | viewer-deeplink, window-lifecycle | medium | partial | command | 3 | Viewer window creation and per-path dedupe. |
 | window-activation.spec.ts | macos | window-lifecycle, tauri-command, real-ui-e2e | window-lifecycle, chat | medium | conditional | real-user-flow | 2 | macOS-only show_window_activated focus coverage. |
 | window-lifecycle.spec.ts | windows, macos, linux | window-lifecycle, tauri-command, real-ui-e2e | window-lifecycle, onboarding, tray-search | high | strong | mixed | 3 | Home, Search, and onboarding window routing. |

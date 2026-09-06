@@ -17,16 +17,6 @@ async activateAppAfterOauth() : Promise<void> {
     await TAURI_INVOKE("activate_app_after_oauth");
 },
 /**
- * Frontend-callable gate. The banner awaits this before calling
- * `downloadAndInstall` (Windows: triggers process::exit internally) or
- * `relaunch`. Returns `"proceed"` when a restart may go ahead — including
- * on an errored boot, where the relaunch IS the recovery (#4726) — or
- * `"pending"` while a boot is still in progress (frontend toasts).
- */
-async awaitSafeRestart(timeoutSecs: number | null) : Promise<string> {
-    return await TAURI_INVOKE("await_safe_restart", { timeoutSecs });
-},
-/**
  * Locate the bundled bun binary so the frontend can write absolute-path
  * MCP configs (e.g. `{ command: <bun>, args: ["x", "screenpipe-mcp@latest"] }`)
  * instead of `npx -y screenpipe-mcp`. npx requires a global Node install
@@ -632,21 +622,6 @@ async getMonitors() : Promise<Result<MonitorDevice[], string>> {
 async getOnboardingStatus() : Promise<Result<OnboardingStore, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_onboarding_status") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Hydrate the frontend banner state on mount. The `update-available` event
- * is broadcast once when the download completes — if the React app isn't
- * mounted yet (boot race) or the listener lives on a route the user hasn't
- * visited yet, that event is lost. The banner calls this command on mount
- * to pick up state it may have missed.
- */
-async getPendingUpdate() : Promise<Result<PendingUpdateSnapshot | null, null>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_pending_update") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1983,19 +1958,6 @@ async restartDatabaseVerification() : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-/**
- * Banner-click restart. Mirror the auto-update path: gate, stop server, then
- * spawn the replacement app and `_exit` the old process so C/C++ atexit
- * handlers cannot abort during restart. See 2026-06-10 and 2026-07-02 reports.
- */
-async restartForUpdate(timeoutSecs: number | null) : Promise<Result<string, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("restart_for_update", { timeoutSecs }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async resumeGlobalShortcuts() : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("resume_global_shortcuts") };
@@ -2010,18 +1972,6 @@ async resumeGlobalShortcuts() : Promise<Result<null, string>> {
 async revealInDefaultBrowser(path: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("reveal_in_default_browser", { path }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Install a specific older version from R2. Downloads and installs via Tauri updater,
- * then restarts the app.
- */
-async rollbackToVersion(version: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("rollback_to_version", { version }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2433,20 +2383,6 @@ async trainVoice(name: string, startTime: string, endTime: string) : Promise<Res
 }
 },
 /**
- * User-initiated update check from Settings → General. Returns:
- * - `Ok(true)`  when an update was found (banner will appear after download).
- * - `Ok(false)` when already up to date or the build can't auto-update.
- * - `Err(String)` when the check itself failed (network, server, etc.).
- */
-async triggerUpdateCheck() : Promise<Result<boolean, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("trigger_update_check") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Unregister window-specific shortcuts when main window is hidden.
  * Only unregisters Escape and arrow keys. Global shortcuts (search, show, chat)
  * are NOT touched here — they must persist across window show/hide cycles.
@@ -2815,20 +2751,6 @@ currentStep?: string | null; firstRunSummaryPhase?: string; firstRunSummaryStart
  * clears it, so onboarding replay can never enter the experiment.
  */
 trialActivationFreshInstall?: boolean }
-/**
- * Snapshot of a pending update, exposed to the frontend via
- * `get_pending_update`. The banner queries this on mount so it can hydrate
- * state even when the `update-available` event fires before React mounts.
- */
-export type PendingUpdateSnapshot = { version: string; body: string;
-/**
- * True once the bundle is downloaded and the app is ready to restart.
- */
-downloaded: boolean;
-/**
- * True when download failed with 401/403 — user must sign in.
- */
-auth_required: boolean }
 export type PersistedActivityHistory = { entries: ActivityHistoryEntry[]; coverage: ActivityHistoryCoverage[] }
 export type PiBackend = "acp"
 export type PiCheckResult = { available: boolean; path: string | null }
@@ -3639,16 +3561,6 @@ shortcutOverlayDisplay?: string;
  * Unique device ID for AI usage tracking (generated on first launch)
  */
 deviceId?: string;
-/**
- * Auto-install updates and restart when a new version is available.
- * When disabled, users must click "update now" in the tray menu.
- */
-autoUpdate?: boolean;
-/**
- * Consumer updater channel selected on this device. Older stores omit it
- * and therefore remain on the stable channel.
- */
-updateChannel?: string;
 /**
  * Auto-update store-installed pipes that haven't been locally modified.
  */

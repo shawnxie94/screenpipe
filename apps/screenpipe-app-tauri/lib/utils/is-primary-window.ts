@@ -6,7 +6,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 /**
  * True only in the app's primary content window — where app-wide chrome
- * (announcements, etc.) should render. Other webviews (the `chat` window, the
+ * should render. Other webviews (the `chat` window, the
  * always-present hidden `notification-panel`) share the same root layout, so
  * without this guard global UI would render once per window and analytics
  * would multi-count.

@@ -8,13 +8,6 @@ use screenpipe_core::paths::{
 use std::{fs, path::PathBuf};
 use tracing::warn;
 
-/// Screenpipe-operated services are no longer available in desktop builds.
-/// User-configured third-party and local providers are intentionally outside
-/// this boundary.
-pub const fn screenpipe_hosted_services_enabled() -> bool {
-    false
-}
-
 /// True when built with the `e2e` Cargo feature. When true, overlay/windows
 /// use NSWindowSharingReadOnly so OBS/screen recorders can capture the app.
 pub fn is_e2e_mode() -> bool {
@@ -166,10 +159,5 @@ mod tests {
             assert!(screenpipe_core::paths::is_spotlight_excluded(&tmp).unwrap());
             screenpipe_core::paths::set_spotlight_excluded(&tmp, false).unwrap();
         }
-    }
-
-    #[test]
-    fn screenpipe_hosted_services_are_disabled() {
-        assert!(!screenpipe_hosted_services_enabled());
     }
 }

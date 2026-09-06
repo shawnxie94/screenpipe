@@ -102,8 +102,6 @@ export type AIPreset = {
 	  }
 );
 
-export type UpdateChannel = "stable" | "pre-release";
-
 // Chat history types
 export interface ChatMessage {
 	id: string;
@@ -268,7 +266,6 @@ export type Settings = SettingsStore & {
 	userGoalCategory?: UserGoalCategory;
 	/** Stable local identifier used for device-scoped behavior. */
 	deviceId?: string;
-	updateChannel?: UpdateChannel;
 	chatHistory?: ChatHistoryStore;
 	/**
 	 * Entries the capture-category switches created, so turning a category off
@@ -583,8 +580,6 @@ let DEFAULT_SETTINGS: Settings = {
 				model: "ministral-3:latest",
 				port: 11434,
 			},
-		updateChannel: "stable",
-			autoUpdate: true,
 			autoUpdatePipes: true,
 			autoStartEnabled: true,
 			platform: "unknown",

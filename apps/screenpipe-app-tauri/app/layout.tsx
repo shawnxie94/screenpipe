@@ -17,7 +17,6 @@ import { BrowserPairingDialog } from "@/components/browser-pairing-dialog";
 import { CloseTabOrWindowShortcut } from "@/components/close-tab-or-window-shortcut";
 import { RecentChatSwitcherController } from "@/components/chat/recent-chat-switcher-controller";
 import { FeedbackDialog } from "@/components/feedback-dialog";
-import { AnnouncementHost } from "@/components/announcement-host";
 import { AdvisoryOverlay } from "@/components/advisory-overlay";
 import { PipeAdvisoryWatcher } from "@/components/pipe-advisory-watcher";
 // TODO: vault lock UI disabled for now — vault is CLI-only until app UX is polished
@@ -347,7 +346,6 @@ export default function RootLayout({
           {!isOverlay && <AdvisoryOverlay />}
           {!isOverlay && <PipeAdvisoryWatcher />}
           {!isOverlay && <FeedbackDialog />}
-          {!isOverlay && <AnnouncementHost />}
         </Providers>
       </body>
     </html>

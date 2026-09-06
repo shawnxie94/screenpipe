@@ -10,8 +10,7 @@ type ExtendedSettingsKeys =
   | keyof SettingsStore
   | "ignoredUrls"
   | "includedUrls"
-  | "deviceId"
-  | "updateChannel";
+  | "deviceId";
 
 // Zod schemas for validation
 export const embeddedLLMSchema = z.object({

@@ -139,34 +139,8 @@ pub async fn send_notification(
         .clone()
         .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
-    // Announcement mode: when the payload names an announcement `surface`,
-    // push it to the app UI (modal / banner / card) instead of the
-    // notification panel, then return. Lets pipes, agents, or a plain curl
-    // trigger a one-off announcement on demand — the same surfaces the
-    // PostHog `app-announcement` flag drives. First-party product comms, so
-    // it is not gated behind the pipe-notifications toggle.
-    if let Some(announcement) = announcement_from_payload(&payload, &panel_id) {
-        return match state.app_handle.emit("announcement", &announcement) {
-            Ok(()) => {
-                info!(
-                    "notify: announcement pushed (surface={:?})",
-                    payload.surface
-                );
-                Ok(Json(ApiResponse {
-                    success: true,
-                    message: "announcement sent".to_string(),
-                }))
-            }
-            Err(e) => {
-                error!("notify: failed to emit announcement: {}", e);
-                Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("failed to emit announcement: {}", e),
-                ))
-            }
-        };
-    }
-
+    // Announcement mode was removed with the frontend announcement host; a
+    // `/notify` call now always lands in the notification panel.
     let dismiss_ms = payload.auto_dismiss_ms.or(payload.timeout).unwrap_or(20000);
     let resolved_type = payload
         .notification_type
@@ -606,65 +580,8 @@ pub struct NotifyPayload {
     pub source_message_id: Option<String>,
     #[serde(default, alias = "sourceUrl")]
     pub source_url: Option<String>,
-
-    // ── announcement mode ────────────────────────────────────────────
-    // When `surface` names an announcement surface, `/notify` pushes an
-    // in-app announcement instead of a notification panel — the on-demand
-    // counterpart to the PostHog `app-announcement` flag. These fields mirror
-    // the announcement payload; validation / normalization happens in the
-    // frontend (lib/announcements.ts).
-    #[serde(default)]
-    pub surface: Option<String>,
-    #[serde(default)]
-    pub kind: Option<String>,
-    #[serde(default)]
-    pub position: Option<String>,
-    /// Stable `data-announcement-anchor` value. Required by `bubble`, ignored
-    /// by every other surface. A bubble without one is dropped in
-    /// `parseAnnouncement`, so it must survive the hand-off.
-    #[serde(default)]
-    pub anchor: Option<String>,
-    #[serde(default)]
-    pub cta: Option<serde_json::Value>,
-    /// Bounded single/multiple-choice survey. Mirrors the flag payload so a
-    /// locally triggered prompt can ask the same question a remote one can.
-    #[serde(default)]
-    pub survey: Option<serde_json::Value>,
-    #[serde(default)]
-    pub dismissible: Option<bool>,
-    #[serde(default, alias = "expiresAt")]
-    pub expires_at: Option<String>,
 }
 
-/// Surfaces that turn a `/notify` call into an announcement push. Kept in step
-/// with `SURFACES` in `lib/announcements.ts` — a surface the frontend renders
-/// but this list omits is unreachable for locally triggered announcements.
-const ANNOUNCEMENT_SURFACES: [&str; 5] = ["modal", "banner", "card", "bubble", "sidebar"];
-
-/// When the `/notify` payload carries an announcement `surface`, build the
-/// announcement object to hand to the frontend. Returns `None` for ordinary
-/// notifications. The shape mirrors the PostHog flag payload so both sources
-/// flow through the same `parseAnnouncement` validation client-side.
-fn announcement_from_payload(payload: &NotifyPayload, id: &str) -> Option<serde_json::Value> {
-    let surface = payload.surface.as_deref()?;
-    if !ANNOUNCEMENT_SURFACES.contains(&surface) {
-        return None;
-    }
-    Some(serde_json::json!({
-        "id": id,
-        "kind": payload.kind,
-        "surface": surface,
-        "position": payload.position,
-        "anchor": payload.anchor,
-        "title": payload.title,
-        "body": payload.body,
-        "cta": payload.cta,
-        "survey": payload.survey,
-        "dismissible": payload.dismissible,
-        "autoDismissMs": payload.auto_dismiss_ms,
-        "expiresAt": payload.expires_at,
-    }))
-}
 
 #[cfg(test)]
 mod tests {
@@ -811,113 +728,6 @@ mod tests {
         ));
     }
 
-    fn notify_payload(surface: Option<&str>) -> NotifyPayload {
-        NotifyPayload {
-            title: "cloud sync is here".to_string(),
-            body: "your timeline now syncs.".to_string(),
-            id: None,
-            pipe_name: None,
-            notification_type: None,
-            priority: None,
-            transient: None,
-            auto_dismiss_ms: None,
-            timeout: None,
-            actions: vec![],
-            source_session_id: None,
-            source_message_id: None,
-            source_url: None,
-            surface: surface.map(ToOwned::to_owned),
-            kind: Some("news".to_string()),
-            position: Some("bottom-right".to_string()),
-            anchor: None,
-            cta: Some(json!({ "label": "open settings", "route": "/settings" })),
-            survey: None,
-            dismissible: Some(true),
-            expires_at: None,
-        }
-    }
-
-    #[test]
-    fn builds_announcement_when_surface_is_valid() {
-        let ann = announcement_from_payload(&notify_payload(Some("card")), "ann-1")
-            .expect("card surface should produce an announcement");
-        assert_eq!(ann["id"], "ann-1");
-        assert_eq!(ann["surface"], "card");
-        assert_eq!(ann["kind"], "news");
-        assert_eq!(ann["position"], "bottom-right");
-        assert_eq!(ann["title"], "cloud sync is here");
-        assert_eq!(ann["cta"]["route"], "/settings");
-    }
-
-    #[test]
-    fn no_announcement_for_plain_notify() {
-        assert!(announcement_from_payload(&notify_payload(None), "x").is_none());
-    }
-
-    #[test]
-    fn no_announcement_for_unknown_surface() {
-        assert!(announcement_from_payload(&notify_payload(Some("toast")), "x").is_none());
-    }
-
-    #[test]
-    fn every_frontend_surface_can_be_pushed_locally() {
-        // Kept in step with `SURFACES` in lib/announcements.ts. A surface the
-        // renderer supports but this list omits is unreachable for a locally
-        // triggered announcement, which is the bug this guards.
-        for surface in ["modal", "banner", "card", "bubble", "sidebar"] {
-            let ann = announcement_from_payload(&notify_payload(Some(surface)), "ann-1")
-                .unwrap_or_else(|| panic!("{surface} should produce an announcement"));
-            assert_eq!(ann["surface"], surface);
-        }
-    }
-
-    #[test]
-    fn anchor_survives_the_handoff_for_bubbles() {
-        // parseAnnouncement drops a bubble with no anchor, so losing it here
-        // would make every locally pushed bubble silently disappear.
-        let mut payload = notify_payload(Some("bubble"));
-        payload.anchor = Some("pipes-nav".to_string());
-        let ann = announcement_from_payload(&payload, "ann-1").expect("bubble announcement");
-        assert_eq!(ann["anchor"], "pipes-nav");
-    }
-
-    #[test]
-    fn survey_survives_the_handoff() {
-        let mut payload = notify_payload(Some("card"));
-        payload.survey = Some(json!({
-            "questions": [{
-                "id": "q1",
-                "type": "single-choice",
-                "prompt": "did this help?",
-                "options": [{ "id": "yes", "label": "yes" }],
-            }],
-        }));
-        let ann = announcement_from_payload(&payload, "ann-1").expect("card announcement");
-        assert_eq!(ann["survey"]["questions"][0]["id"], "q1");
-    }
-
-    #[test]
-    fn cta_is_forwarded_verbatim_for_the_frontend_to_narrow() {
-        // This layer does not decide which destinations are legal. It hands the
-        // cta over unchanged and `parseAnnouncement` applies the per-channel
-        // contract — notably it drops `pipe` for a locally pushed announcement,
-        // because this endpoint is reachable by any same-user process and the
-        // result is indistinguishable from a first-party announcement.
-        let mut payload = notify_payload(Some("card"));
-        payload.cta = Some(json!({
-            "label": "install it",
-            "pipe": "daily-email-summary",
-        }));
-        let ann = announcement_from_payload(&payload, "ann-1").expect("card announcement");
-        assert_eq!(ann["cta"]["pipe"], "daily-email-summary");
-    }
-
-    #[test]
-    fn announcement_accepts_modal_and_banner() {
-        assert!(announcement_from_payload(&notify_payload(Some("modal")), "x").is_some());
-        assert!(announcement_from_payload(&notify_payload(Some("banner")), "x").is_some());
-    }
-
     #[test]
     fn parses_pipe_name_from_session_id_with_colons() {
         assert_eq!(
@@ -949,14 +759,6 @@ mod tests {
             source_session_id: None,
             source_message_id: None,
             source_url: None,
-            surface: None,
-            kind: None,
-            position: None,
-            anchor: None,
-            cta: None,
-            survey: None,
-            dismissible: None,
-            expires_at: None,
         };
 
         let source = resolve_notification_source_metadata(&payload, &headers, "abc123");

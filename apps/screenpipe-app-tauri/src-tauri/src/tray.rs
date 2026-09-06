@@ -12,7 +12,6 @@ use crate::health::{
 use crate::process_exit;
 use crate::recording::{local_api_context_from_app, RecordingState};
 use crate::store::{OnboardingStore, SettingsStore};
-use crate::updates::is_source_build;
 use crate::window::ShowRewindWindow;
 use anyhow::Result;
 use once_cell::sync::Lazy;
@@ -150,10 +149,6 @@ fn prefetch_tray_menu_data(app: &AppHandle) -> TrayMenuData {
 /// True when the plan already includes Business or better, so the tray must not
 /// offer an upgrade to it. Lifetime maps to Basic and is deliberately excluded:
 /// a Lifetime holder can still add Business for cloud sync and cloud AI.
-/// Global storage for the update menu item so we can recreate the tray
-/// without needing to pass the update_item through every call chain.
-static UPDATE_MENU_ITEM: Lazy<Mutex<Option<MenuItem<Wry>>>> = Lazy::new(|| Mutex::new(None));
-
 /// The active HD stop item is updated in place for countdown changes. Rebuilding
 /// the entire native menu every five seconds is wasteful and previously caused
 /// multi-gigabyte heap growth during long meetings.
@@ -363,10 +358,6 @@ pub(crate) async fn toggle_recording_from_harness(app: AppHandle) -> Result<(), 
 
 /// Immediately rebuild the tray menu (called from main thread after optimistic status set).
 pub(crate) fn force_tray_rebuild(app: &AppHandle) -> Result<()> {
-    let update_item = UPDATE_MENU_ITEM
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clone();
     let state = {
         let mut last = LAST_MENU_STATE.lock().unwrap_or_else(|e| e.into_inner());
         // Reset to force rebuild
@@ -380,7 +371,7 @@ pub(crate) fn force_tray_rebuild(app: &AppHandle) -> Result<()> {
     new_state.recording_status = Some(effective);
 
     let data = prefetch_tray_menu_data(app);
-    let menu = create_dynamic_menu(app, &new_state, update_item.as_ref(), &data)?;
+    let menu = create_dynamic_menu(app, &new_state, &data)?;
     if let Some(tray) = app.tray_by_id("screenpipe_main") {
         install_tray_menu(&tray, menu)?;
         clear_pending_tray_menu();
@@ -706,11 +697,7 @@ fn apply_pending_tray_menu(app: &AppHandle) -> Result<()> {
         return Ok(());
     };
 
-    let update_item = UPDATE_MENU_ITEM
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clone();
-    let menu = create_dynamic_menu(app, &state, update_item.as_ref(), &data)?;
+    let menu = create_dynamic_menu(app, &state, &data)?;
     if let Some(tray) = app.tray_by_id("screenpipe_main") {
         install_tray_menu(&tray, menu)?;
     }
@@ -886,16 +873,11 @@ struct MenuState {
     all_capture_disabled: bool,
 }
 
-pub fn setup_tray(app: &AppHandle, update_item: Option<&tauri::menu::MenuItem<Wry>>) -> Result<()> {
-    // Store update_item globally so recreate_tray can use it (None for enterprise)
-    if let Ok(mut guard) = UPDATE_MENU_ITEM.lock() {
-        *guard = update_item.cloned();
-    }
-
+pub fn setup_tray(app: &AppHandle) -> Result<()> {
     if let Some(main_tray) = app.tray_by_id("screenpipe_main") {
         // Initial menu setup with empty state
         let data = prefetch_tray_menu_data(app);
-        let menu = create_dynamic_menu(app, &MenuState::default(), update_item, &data)?;
+        let menu = create_dynamic_menu(app, &MenuState::default(), &data)?;
         install_tray_menu(&main_tray, menu)?;
         clear_pending_tray_menu();
 
@@ -913,10 +895,9 @@ pub fn setup_tray(app: &AppHandle, update_item: Option<&tauri::menu::MenuItem<Wr
         // Set autosaveName so macOS remembers position after user Cmd+drags it
         set_autosave_name(&main_tray);
 
-        // Recording/device state must refresh in every build. Enterprise builds
-        // intentionally omit the self-update menu item, but they still need the
-        // poller or the startup "Starting…" menu is never rebuilt.
-        setup_tray_menu_updater(app.clone(), update_item);
+        // Recording/device state must refresh in every build; the poller or
+        // the startup "Starting…" menu is never rebuilt.
+        setup_tray_menu_updater(app.clone());
     }
     Ok(())
 }
@@ -960,13 +941,6 @@ pub fn recreate_tray(app: &AppHandle) {
         if let Err(e) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             crate::window::with_autorelease_pool(|| {
                 let app = app_for_thread;
-                let update_item = match UPDATE_MENU_ITEM.lock() {
-                    Ok(guard) => guard.clone(),
-                    Err(_) => {
-                        error!("failed to lock UPDATE_MENU_ITEM for tray recreation");
-                        return;
-                    }
-                };
 
                 // Remove the old tray icon (must be on main thread for NSStatusBar)
                 debug!("recreate_tray: removing old tray icon");
@@ -1010,12 +984,7 @@ pub fn recreate_tray(app: &AppHandle) {
                         debug!("recreate_tray: build succeeded, setting menu");
                         // Setup menu
                         let data = prefetch_tray_menu_data(&app);
-                        if let Ok(menu) = create_dynamic_menu(
-                            &app,
-                            &MenuState::default(),
-                            update_item.as_ref(),
-                            &data,
-                        ) {
+                        if let Ok(menu) = create_dynamic_menu(&app, &MenuState::default(), &data) {
                             let _ = install_tray_menu(&new_tray, menu);
                             clear_pending_tray_menu();
                         }
@@ -1090,7 +1059,6 @@ fn recording_status_text(
 fn create_dynamic_menu(
     app: &AppHandle,
     _state: &MenuState,
-    update_item: Option<&tauri::menu::MenuItem<Wry>>,
     data: &TrayMenuData,
 ) -> Result<tauri::menu::Menu<Wry>> {
     let mut menu_builder = MenuBuilder::new(app);
@@ -1262,16 +1230,7 @@ fn create_dynamic_menu(
             .item(&MenuItemBuilder::with_id("fix_permissions", "⚠ Fix permissions").build(app)?);
     }
 
-    // --- Update item (if available) ---
-    if !data.app_ui_hidden {
-        if let Some(update_item) = update_item {
-            menu_builder = menu_builder
-                .item(&PredefinedMenuItem::separator(app)?)
-                .item(update_item);
-        }
-    }
-
-    // --- Version (below update item) ---
+    // --- Version ---
     let version_text = if app.config().identifier.contains("beta") {
         format!("screenpipe v{} (Beta)", app.package_info().version)
     } else {
@@ -1761,47 +1720,6 @@ fn handle_menu_event(app_handle: &AppHandle, event: tauri::menu::MenuEvent) {
                     .open_url("https://screenpipe.com/changelog", None::<&str>);
             });
         }
-        "update_now" => {
-            let app = app_handle.clone();
-            let _ = app_handle.run_on_main_thread(move || {
-                // For source builds, show info dialog about updates
-                if is_source_build(&app) {
-                    tauri::async_runtime::spawn(async move {
-                        let dialog = app
-                            .dialog()
-                            .message(
-                                "auto-updates are only available in the pre-built version.\n\n\
-                                source builds require manual updates from github.",
-                            )
-                            .title("source build detected")
-                            .buttons(MessageDialogButtons::OkCancelCustom(
-                                "download pre-built".to_string(),
-                                "view on github".to_string(),
-                            ));
-
-                        dialog.show(move |clicked_download| {
-                            if clicked_download {
-                                let _ = app
-                                    .opener()
-                                    .open_url("https://screenpipe.com/download", None::<&str>);
-                            } else {
-                                let _ = app.opener().open_url(
-                                    "https://github.com/screenpipe/screenpipe/releases",
-                                    None::<&str>,
-                                );
-                            }
-                        });
-                    });
-                } else {
-                    // For production builds, run the authenticated update flow.
-                    // The whole flow — including surfacing deferred/failed
-                    // outcomes, which the old inline handler silently
-                    // discarded — lives in updates::trigger_update_now so the
-                    // packaged e2e driver exercises the identical path.
-                    tauri::async_runtime::spawn(crate::updates::trigger_update_now(app));
-                }
-            });
-        }
         "open_app" => {
             let app = app_handle.clone();
             let _ = app_handle.run_on_main_thread(move || {
@@ -1868,13 +1786,7 @@ fn menu_state_needs_update(last_state: &MenuState, new_state: &MenuState) -> boo
     last_state != new_state
 }
 
-async fn update_menu_if_needed(
-    app: &AppHandle,
-    update_item: Option<&tauri::menu::MenuItem<Wry>>,
-) -> Result<()> {
-    #[cfg(target_os = "macos")]
-    let _ = update_item;
-
+async fn update_menu_if_needed(app: &AppHandle) -> Result<()> {
     // Pre-fetch all data on the tokio thread (off main thread) so the
     // main-thread closure only does lightweight menu-item construction.
     let data = prefetch_tray_menu_data(app);
@@ -1947,7 +1859,6 @@ async fn update_menu_if_needed(
             // the old one from the manager), NSStatusBar _removeStatusItem fires on the wrong
             // thread and crashes.
             let app_for_thread = app.clone();
-            let update_item = update_item.cloned();
             if let Err(e) = app.run_on_main_thread(move || {
                 if let Err(e) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     let Some(tray) = app_for_thread.tray_by_id("screenpipe_main") else {
@@ -1955,12 +1866,7 @@ async fn update_menu_if_needed(
                         return;
                     };
                     debug!("tray_menu_update: setting menu");
-                    let menu = match create_dynamic_menu(
-                        &app_for_thread,
-                        &new_state,
-                        update_item.as_ref(),
-                        &data,
-                    ) {
+                    let menu = match create_dynamic_menu(&app_for_thread, &new_state, &data) {
                         Ok(menu) => menu,
                         Err(e) => {
                             error!("tray_menu_update: menu build failed; will retry: {}", e);
@@ -2002,11 +1908,7 @@ async fn update_menu_if_needed(
 
 #[cfg(feature = "e2e")]
 pub(crate) async fn refresh_tray_menu_now(app: &AppHandle) -> Result<()> {
-    let update_item = UPDATE_MENU_ITEM
-        .lock()
-        .unwrap_or_else(|e| e.into_inner())
-        .clone();
-    update_menu_if_needed(app, update_item.as_ref()).await
+    update_menu_if_needed(app).await
 }
 
 #[cfg(feature = "e2e")]
@@ -2019,8 +1921,7 @@ pub(crate) async fn set_recording_status_from_harness(
     refresh_tray_menu_now(app).await
 }
 
-pub fn setup_tray_menu_updater(app: AppHandle, update_item: Option<&tauri::menu::MenuItem<Wry>>) {
-    let update_item = update_item.cloned();
+pub fn setup_tray_menu_updater(app: AppHandle) {
     tauri::async_runtime::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
         loop {
@@ -2029,7 +1930,7 @@ pub fn setup_tray_menu_updater(app: AppHandle, update_item: Option<&tauri::menu:
                 info!("Tray menu updater received quit request, shutting down.");
                 break;
             }
-            if let Err(e) = update_menu_if_needed(&app, update_item.as_ref()).await {
+            if let Err(e) = update_menu_if_needed(&app).await {
                 let msg = format!("{:#}", e);
                 error!("Failed to update tray menu: {}", msg);
                 // Tauri resource table can go stale after in-place updates on
@@ -2095,11 +1996,7 @@ mod tests {
     }
 
     #[test]
-    fn enterprise_tray_refreshes_recording_status_without_an_update_item() {
-        // Compile-time contract: enterprise builds can start the tray state
-        // updater even though they intentionally omit the self-update item.
-        let _updater: fn(AppHandle, Option<&tauri::menu::MenuItem<Wry>>) = setup_tray_menu_updater;
-
+    fn tray_state_transition_is_committed_only_on_change() {
         let mut previous = MenuState {
             recording_status: Some(RecordingStatus::Starting),
             ..MenuState::default()

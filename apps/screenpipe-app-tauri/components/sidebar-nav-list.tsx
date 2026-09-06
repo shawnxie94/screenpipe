@@ -234,7 +234,6 @@ function SortableRow({
         >
           <button
             data-testid={`nav-${item.id}`}
-            data-announcement-anchor={`sidebar-${item.id}`}
             onClick={() => onSelect(item.id)}
             onMouseEnter={() => !item.disabled && onIntent?.(item.id)}
             onFocus={() => !item.disabled && onIntent?.(item.id)}
@@ -346,7 +345,6 @@ export function SidebarCustomizationMenu({
           aria-label="侧边栏选项"
           title="侧边栏选项"
           data-testid="sidebar-options"
-          data-announcement-anchor="top-sidebar-options"
           className={cn(
             "rounded-md p-1 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-signal",
             isTranslucent

@@ -355,7 +355,6 @@
     "shell:allow-spawn",
     "permission-flow:default",
     "dialog:default",
-    "updater:default",
     "os:default",
     "os:allow-arch",
     "os:allow-hostname",

@@ -1264,7 +1264,6 @@ function HomeContent() {
                 <button
                   onClick={toggleSidebar}
                   aria-label={sidebarCollapsed ? "expand sidebar" : "collapse sidebar"}
-                  data-announcement-anchor="top-sidebar-toggle"
                   className={cn(
                     "p-1 rounded-md transition-colors",
                     sidebarCollapsed && activeSection === "timeline"
@@ -1295,7 +1294,6 @@ function HomeContent() {
                       void commands.showWindow({ Search: { query: null } });
                     }}
                     aria-label="搜索"
-                    data-announcement-anchor="top-search"
                     className={cn(
                       "p-1 rounded-md transition-colors",
                       isTranslucent ? "vibrant-nav-item" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -1348,7 +1346,6 @@ function HomeContent() {
                     aria-label={meetingState.active ? "meetings — recording" : "meetings"}
                     aria-current={activeSection === "meetings" ? "page" : undefined}
                     data-testid="nav-meetings"
-                    data-announcement-anchor="top-meetings"
                     className={cn(
                       "relative p-1 rounded-md transition-colors",
                       activeSection === "meetings"
@@ -1459,18 +1456,11 @@ function HomeContent() {
                 />
               </div>
 
-              <div>
-                {/* Remote surveys use this quiet, non-blocking slot when their
-                    signed payload selects surface=sidebar. */}
-                <div id="announcement-sidebar-slot" />
-              </div>
-
               {/* Bottom items */}
               <div className={cn("flex items-center gap-1 border-t pt-2", isTranslucent ? "vibrant-sidebar-border" : "border-border")}>
                 {/* Settings — always visible; individual sections are enterprise-filtered inside /settings */}
                 <button
                   data-testid="nav-settings"
-                  data-announcement-anchor="sidebar-settings"
                   onClick={() => openSettings()}
                   className={cn(
                     "flex min-w-0 flex-1 items-center space-x-2.5 rounded-lg px-2.5 py-1.5 text-left transition-all duration-150 group",
@@ -1497,7 +1487,6 @@ function HomeContent() {
                         <button
                           type="button"
                           data-testid="nav-help"
-                          data-announcement-anchor="sidebar-help"
                           aria-label="帮助"
                           onClick={() => {
                             setActiveSection("help");

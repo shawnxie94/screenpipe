@@ -9,8 +9,8 @@ import { listen, type EventCallback } from "@tauri-apps/api/event";
  * Subscribe to a Tauri backend event for the lifetime of the component.
  *
  * Wraps the `listen()` → async-setup → `unlisten()` dance that otherwise gets
- * copy-pasted at every call site (see the hand-rolled versions in
- * `components/update-banner.tsx` and `lib/hooks/use-settings.tsx`). Two
+ * copy-pasted at every call site (see the hand-rolled version in
+ * `lib/hooks/use-settings.tsx`). Two
  * subtleties this hook handles once, correctly, so callers don't have to:
  *
  *  1. **Unmount-before-`await`-resolves race.** `listen()` returns a promise;
@@ -24,7 +24,7 @@ import { listen, type EventCallback } from "@tauri-apps/api/event";
  *     The subscription is re-created only when `event` or an explicit dep in
  *     `deps` changes.
  *
- * @param event   backend event name (e.g. "update-available")
+ * @param event   backend event name (e.g. "menu-close-window")
  * @param handler invoked with the event payload; latest closure always used
  * @param deps    optional extra deps that should force a re-subscribe
  */
