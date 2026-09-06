@@ -913,8 +913,7 @@ mod tests {
         );
     }
 
-    #[test]
-    #[test]
+        #[test]
     fn oauth_start_body_rejects_caller_supplied_redirect_uri() {
         let body = serde_json::from_value::<OAuthStartBody>(json!({
             "redirect_uri": "https://attacker.example/callback"

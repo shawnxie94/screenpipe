@@ -9,14 +9,13 @@
 
 use super::{install_spawned_pid, AgentExecutor, AgentOutput, ExecutionHandle};
 use anyhow::{anyhow, Result};
-use arc_swap::ArcSwap;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::ffi::{OsStr, OsString};
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use tracing::{debug, error, info, warn};
 
 static USER_SKILL_SYNC_LOCK: Mutex<()> = Mutex::new(());
@@ -63,7 +62,6 @@ fn user_skill_fingerprint(root: &Path) -> std::io::Result<String> {
 pub const PI_PACKAGE: &str = "@earendil-works/pi-coding-agent@0.84.1";
 pub const PI_AI_PACKAGE: &str = "@earendil-works/pi-ai@0.84.1";
 pub const PI_NAMESPACE_DIR: &str = "@earendil-works";
-pub const SCREENPIPE_API_URL: &str = "https://api.screenpipe.com/v1";
 const PI_INSTALL_ARGS: [&str; 5] = [
     "add",
     "--ignore-scripts",
@@ -576,16 +574,6 @@ pub(crate) fn pi_event_protocol_error(event: &serde_json::Value) -> Option<&'sta
 
 /// Pi agent executor.
 pub struct PiExecutor {
-    /// Screenpipe cloud token (for LLM calls via screenpipe proxy).
-    ///
-    /// Wrapped in `ArcSwap` so the desktop app can refresh it at
-    /// runtime via the `set_cloud_token` Tauri command — without this the
-    /// Screenpipe-hosted model credential. The local-only build has no
-    /// Screenpipe login, so this is always `None` and the hosted-model
-    /// branches in this file stay dormant.
-    pub user_token: Arc<ArcSwap<Option<String>>>,
-    /// Screenpipe API base URL (default: `https://api.screenpipe.com/v1`).
-    pub api_url: String,
     /// Bearer token for the *local* screenpipe-server API (localhost:3030).
     /// Exposed to the Pi subprocess as `SCREENPIPE_LOCAL_API_KEY` so bash/TS
     /// pipe code can authenticate against the local server. `SCREENPIPE_API_AUTH_KEY`
@@ -597,30 +585,14 @@ pub struct PiExecutor {
 impl PiExecutor {
     pub fn new() -> Self {
         Self {
-            user_token: Arc::new(ArcSwap::new(Arc::new(None))),
-            api_url: SCREENPIPE_API_URL.to_string(),
             api_auth_key: None,
         }
-    }
-
-    /// Read the current hosted-model credential. Always `None` in the
-    /// local-only build; kept so the dormant hosted branches compile.
-    pub fn current_user_token(&self) -> Option<String> {
-        let token = self.user_token.load();
-        (**token).clone().filter(|s| !s.is_empty())
     }
 
     /// Attach the local server's api_auth_key so Pi's bash tool can include
     /// `Authorization: Bearer ...` on localhost:3030 calls.
     pub fn with_api_auth_key(mut self, key: Option<String>) -> Self {
         self.api_auth_key = key.filter(|k| !k.is_empty());
-        self
-    }
-
-    /// Override the hosted-AI base URL supplied by the app. Production callers
-    /// use the default; the desktop app exposes a loopback-only E2E resolver.
-    pub fn with_api_url(mut self, api_url: String) -> Self {
-        self.api_url = api_url;
         self
     }
 
@@ -1293,11 +1265,6 @@ impl PiExecutor {
         }
         cmd.arg("-p").arg(prompt);
 
-        let cloud_token = self.current_user_token();
-        if let Some(ref token) = cloud_token {
-            cmd.env("SCREENPIPE_API_KEY", token);
-        }
-
         // Pi resolves apiKey values in models.json as env var names.
         // Set the actual key so the subprocess can find it.
         if let Some(key) = provider_api_key {
@@ -1317,10 +1284,6 @@ impl PiExecutor {
                     }
                     "google" => {
                         cmd.env("GOOGLE_API_KEY", key);
-                    }
-                    // Ensure screenpipe API key is set as env var fallback
-                    "screenpipe" if cloud_token.is_none() => {
-                        cmd.env("SCREENPIPE_API_KEY", key);
                     }
                     _ => {}
                 }
@@ -1452,11 +1415,6 @@ impl PiExecutor {
         }
         cmd.arg("-p").arg(prompt);
 
-        let cloud_token = self.current_user_token();
-        if let Some(ref token) = cloud_token {
-            cmd.env("SCREENPIPE_API_KEY", token);
-        }
-
         if let Some(key) = provider_api_key {
             if !key.is_empty() {
                 match resolved_provider {
@@ -1474,10 +1432,6 @@ impl PiExecutor {
                     }
                     "google" => {
                         cmd.env("GOOGLE_API_KEY", key);
-                    }
-                    // Ensure screenpipe API key is set as env var fallback
-                    "screenpipe" if cloud_token.is_none() => {
-                        cmd.env("SCREENPIPE_API_KEY", key);
                     }
                     _ => {}
                 }
@@ -1978,9 +1932,6 @@ impl AgentExecutor for PiExecutor {
         "pi"
     }
 
-    fn user_token(&self) -> Option<String> {
-        self.current_user_token()
-    }
 }
 
 /// Screenpipe's private pi agent dir (models.json, auth.json, sessions, …).

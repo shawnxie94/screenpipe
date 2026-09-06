@@ -297,7 +297,6 @@ impl ServerCore {
         crate::health::set_boot_phase("starting", Some("starting server"));
         // Agent executors only receive a loopback base URL. Provider-specific
         // third-party URLs come from the user's saved preset at spawn time.
-        let ai_gateway_url = format!("http://127.0.0.1:{}/v1", config.port);
 
         // --- Environment setup ---
         std::env::set_var("SCREENPIPE_FD_LIMIT", "8192");
@@ -598,7 +597,6 @@ impl ServerCore {
         // providers (BYOK / ACP); no Screenpipe-hosted credential exists.
         let pi_executor = Arc::new(
             screenpipe_core::agents::pi::PiExecutor::new()
-                .with_api_url(ai_gateway_url)
                 .with_api_auth_key(config.api_auth_key.clone()),
         );
         let mut agent_executors: std::collections::HashMap<

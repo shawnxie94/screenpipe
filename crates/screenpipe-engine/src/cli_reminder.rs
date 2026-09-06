@@ -15,7 +15,6 @@ use std::time::Duration;
 
 const REMINDER_INTERVAL: Duration = Duration::from_secs(5 * 60);
 const DESKTOP_APP_URL: &str = "https://screenpipe.com";
-const SURVEY_URL: &str = "https://screenpipe.com/survey/cli";
 const NPM_LATEST_URL: &str = "https://registry.npmjs.org/screenpipe/latest";
 
 /// Spawn the background reminder loop. Safe to call once at CLI startup.
@@ -40,13 +39,12 @@ pub fn spawn() {
 async fn run_tip(idx: usize) {
     // Silent slots (update check when up-to-date) still consume a rotation
     // slot — that's intentional, keeps the cadence predictable.
-    match idx % 6 {
+    match idx % 5 {
         0 => print_desktop_app_tip(),
         1 => print_mcp_tip(),
         2 => print_install_bundle_tip(),
-        3 => print_login_tip(),
-        4 => print_survey_tip(),
-        5 => check_for_updates().await,
+        3 => print_install_bundle_tip(),
+        4 => check_for_updates().await,
         _ => unreachable!(),
     }
 }
@@ -136,26 +134,5 @@ fn print_install_bundle_tip() {
             .green()
             .bold(),
     );
-    eprintln!();
-}
-
-fn print_login_tip() {
-    eprintln!();
-    eprintln!(
-        "  {} sign in for higher AI quotas + cloud sync:",
-        "tip:".cyan().bold(),
-    );
-    eprintln!("       {}", "npx screenpipe login".green().bold());
-    eprintln!();
-}
-
-fn print_survey_tip() {
-    eprintln!();
-    eprintln!(
-        "  {} help shape the screenpipe CLI. what do you use it for? (60s)",
-        "survey:".cyan().bold(),
-    );
-    eprintln!("       {}", "npx screenpipe survey".green().bold());
-    eprintln!("       {}", SURVEY_URL.green().underline());
     eprintln!();
 }

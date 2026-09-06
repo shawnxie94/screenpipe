@@ -219,15 +219,4 @@ pub trait AgentExecutor: Send + Sync {
     /// Human-readable agent name, e.g. `"pi"`, `"claude-code"`.
     fn name(&self) -> &str;
 
-    /// Optional cloud auth token for screenpipe provider proxy.
-    /// Defaults to `None`; override in agents that support cloud auth.
-    ///
-    /// Returns an owned `Option<String>` (not `Option<&str>`) so
-    /// implementations can read from interior-mutable storage (e.g. an
-    /// `Arc<RwLock>`) without holding a lock across the caller's borrow.
-    /// This lets the desktop app refresh the token at runtime without
-    /// restarting the engine.
-    fn user_token(&self) -> Option<String> {
-        None
-    }
 }

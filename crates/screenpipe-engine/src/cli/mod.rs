@@ -25,7 +25,7 @@ pub mod vision;
 
 use clap::parser::ValueSource;
 use clap::{ArgAction, ArgMatches, ValueEnum};
-use clap::{Args, Parser, Subcommand, ValueHint};
+use clap::{Parser, Subcommand, ValueHint};
 use screenpipe_audio::{
     audio_manager::builder::TranscriptionMode,
     core::engine::AudioTranscriptionEngine as CoreAudioTranscriptionEngine,

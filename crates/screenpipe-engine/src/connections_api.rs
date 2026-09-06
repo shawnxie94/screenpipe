@@ -6,7 +6,6 @@
 
 use axum::extract::{ConnectInfo, Extension, Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
-use axum::response::Html;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use screenpipe_connect::connections::{bee, build_default_client, telegram, ConnectionManager};
@@ -485,7 +484,6 @@ async fn list_instances(
                         &conn.credentials,
                     );
                     let connected = conn.enabled && !conn.credentials.is_empty();
-                    let instance_value = json!(inst);
                     items.push(json!({
                         "instance": inst,
                         "connected": connected,
