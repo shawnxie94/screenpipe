@@ -178,12 +178,8 @@ pub struct AppState {
     pub pipe_query_semaphore: Arc<tokio::sync::Semaphore>,
     /// Enable PII removal from text content
     pub use_pii_removal: bool,
-    /// Cloud search client for hybrid local + cloud queries
-    /// Cloud sync service handle (if enabled via CLI)
-    /// Runtime sync state (initialized via /sync/init endpoint)
     /// Video quality preset for frame extraction (JPEG quality).
     pub video_quality: String,
-    /// API request counter for usage analytics
     /// Pipe manager for scheduled agent execution
     pub pipe_manager: Option<crate::pipes_api::SharedPipeManager>,
     /// Vision pipeline metrics (shared across all monitors)

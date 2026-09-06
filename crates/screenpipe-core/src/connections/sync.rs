@@ -70,7 +70,7 @@ pub struct SyncedConnection {
     pub oauth_rev: u64,
 }
 
-/// Full manifest exchanged with cloud sync.
+/// Tombstone manifest shared by connection store writers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectionSyncManifest {
     pub schema_version: u32,
