@@ -413,6 +413,16 @@ pub fn auto_restore_if_wiped(store_path: &Path) -> bool {
     if store_json_has_presets(&cur) {
         return false; // current state is healthy, nothing to do
     }
+    if read_healthy_snapshot(store_path).is_none() {
+        // A valid legacy document can predate aiPresets. SettingsStore's serde
+        // defaults recover it below and init_store persists the non-empty
+        // invariant; absence of a snapshot is not itself a recovery failure.
+        tracing::warn!(
+            "settings recovery: store.bin has no aiPresets and no healthy snapshot; \
+             the settings migration will persist the default preset"
+        );
+        return false;
+    }
     restore_snapshot_over(
         store_path,
         "store.bin is degraded (parses but has no aiPresets)",
@@ -484,7 +494,7 @@ fn decrypt_store_file(path: &Path) -> DecryptOutcome {
             // report Locked so the caller restores from store.bin.last-good.
             let backup = path.with_extension("bin.encrypted.bak");
             let _ = std::fs::copy(path, &backup);
-            tracing::error!(
+            tracing::warn!(
                 "store.bin is encrypted but keychain key not found — \
                  ciphertext preserved at {}. Restore from store.bin.last-good \
                  or grant keychain access and restart.",
