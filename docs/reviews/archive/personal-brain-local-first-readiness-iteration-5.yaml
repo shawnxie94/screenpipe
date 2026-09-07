@@ -1,0 +1,107 @@
+# delivery-readiness gate report
+# feature: personal-brain-local-first
+# stage: prd_to_trd
+# mode: gate (read-only, no repair authorized)
+# generated_at: 2026-09-05
+
+status: ready
+stage: prd_to_trd
+iteration: 5
+waiting_on: null
+
+source_artifacts:
+  - name: prd-personal-brain-local-first
+    uri: docs/prd/personal-brain-local-first.md
+    sha256: 72a3aa33ee34a9b3de30f39f8097a7319e57836105040f968a2bd7983a87263e
+  - name: company-brain-poc-trd (上游输入，仅取本地子集)
+    uri: /Users/shawn/Documents/inspiration/startup/research/company-brain-poc-trd.md
+    sha256: f6a946ba9a8283aabf452c621afd8758e2f7a5ad6789ad44594c136ce0e0e4fc
+
+gate_matrix:
+  product_goal: closed          # PRD §1/§2
+  scope_and_nonscope: closed    # PRD §2/§3，含"模型接入保留现有 AI Preset 形态"的用户确认决策
+  user_scenarios: closed        # PRD §4，含失败处理与降级路径
+  observable_acceptance: closed # PRD §5 各 R 附验收标准 + §8 最小验收集
+  nfrs: closed                  # PRD §6（热路径、SLA、中文、平台、可观测）
+  edge_failure_behavior: closed # PRD §4 失败场景 + R1/R3/R4 各自降级与重试语义
+  permissions: closed           # PRD R6：数据外发边界两类；个人维度无 ACL 为显式非目标
+  dependencies: closed          # PRD §7（上游 TRD、AGENTS/VISION 约束、现有组件、分支上下文）
+  product_decisions: closed_with_recorded_defaults  # 4 项基线决策 + §13 存量冲突裁决（2026-09-05 用户确认）；开放问题 3/5 已裁决关闭
+
+traceability:
+  requirements_total: 6         # R1-R6
+  mapped_to_trd: 6              # 全部为后续 TRD 的输入，无悬空需求
+  missing_destinations: 0
+
+findings:
+  - id: DR-PRD-001
+    severity: info
+    status: accepted_risk
+    title: 文本嵌入方案未最终选定
+    evidence: "PRD 开放问题 1；§11 设计输入倾向 preset /embeddings 起步"
+    next_action: "TRD 阶段定稿；若 preset 端点不可用，回退评估本地 ONNX embedder（仓库已有 ort）"
+
+  - id: DR-PRD-002
+    severity: info
+    status: accepted_risk
+    title: 审核台 UI 位置未定
+    evidence: "PRD 开放问题 2；默认建议设置页新增「知识」区"
+    next_action: "设计阶段决定；不阻塞 TRD"
+
+  - id: DR-PRD-003
+    severity: warning
+    status: resolved
+    title: /answer 是否暴露为 MCP 工具
+    evidence: "已裁决（PRD §13.5，2026-09-05）：是，Phase 3 实现；知识出场通道收敛为 MCP 一条"
+    next_action: "无需行动"
+
+  - id: DR-PRD-004
+    severity: info
+    status: resolved
+    title: 显式工作会话是否进第一版
+    evidence: "PRD R1 已记录默认：v1 以 activity ledger 区间自动锚定，显式会话为后续增强"
+    next_action: "无需行动；与上游 TRD 的偏差已在报告中注明（本地无上传，自动锚定可接受）"
+
+  - id: DR-PRD-005
+    severity: warning
+    status: resolved
+    title: 数字克隆 clone:* tags 与新知识对象的归并
+    evidence: "已裁决冻结新增，等待 §12.2 触发信号（PRD §13.6，2026-09-05）"
+    next_action: "触发信号出现时重新评估"
+
+  - id: DR-PRD-006
+    severity: info
+    status: resolved
+    title: activity history 迁 SQLite 的迁移与回退策略
+    evidence: "PRD §10 风险表与 §11 设计输入已标记为 TRD 必答项（独立提交、迁移快照对比、回退读取）"
+    next_action: "TRD 必须给出具体迁移与回退方案"
+
+  - id: DR-PRD-007
+    severity: info
+    status: resolved
+    title: 知识类型演进路径已补充
+    evidence: "iteration 2 新增 PRD §12（内部注册表约束 / 静态配置化 / AI 起草向导 / 对话式修订 / 触发信号）及开放问题 7；v1 范围不变"
+    next_action: "TRD 遵守 §12.1 注册表约束；§12.2-12.4 不进入本期范围"
+
+  - id: DR-PRD-008
+    severity: info
+    status: resolved
+    title: 存量功能冲突裁决已记录
+    evidence: "iteration 3 新增 PRD §13：保留策略混合豁免（13.1）、档位钳制短路（13.2）、跨设备同步 gate（13.3，用户确认不依赖）、云腿/云代理剔除（13.4）、知识出场通道收敛（13.5）、调度/死表/user_locked 等（13.6）；开放问题 3/5 关闭"
+    next_action: "Phase 0 裁剪清单与 evidence schema 落实 §13.1/13.3/13.4；Phase 1 落实 §13.2/13.6；Phase 3 落实 §13.5 与 13.4 的搜索侧"
+
+  - id: DR-PRD-009
+    severity: info
+    status: resolved
+    title: 瘦身阶段完成 §13 部分裁决的提前落地
+    evidence: "iteration 4-5：自动更新器整套移除（updates.rs/staged_update.rs/插件/菜单/dock/e2e 道/TS 绑定）、远程公告系统移除（含 /notify surface 分支）、MCP synced 工具移除、include_cloud 死参数移除、ocr_text_embeddings 死表 drop、ExplicitApiClient 遥测遗留移除；§13.2 钳制确认已短路；§13.3/13.4/13.6 裁剪项全部物理删除落地（严于裁决原案），云代理直接改走 local_chat 而非 404 壳；PRD §13 已加执行状态总览并按删除现实改写 R3/R4/R6/§13.3/§13.4/§13.6 措辞"
+    next_action: "§13 剩余项按 Phase 归属落地（13.1 → Phase 0，13.5 → Phase 3）；瘦身收尾，无清单外动作"
+
+deviations_from_source_trd:
+  - "云端 Team Brain → 本地单机：上传队列/ACL/团队审核/多用户全部裁剪（用户确认）"
+  - "团队知识 → 个人知识自审：保留版本/废止/evidence 链接，审核人由专家变为本人"
+  - "显式工作会话（TRD §4.1）→ v1 自动区间锚定（本地无上传场景下隐私前提不同）"
+  - "Qwen3.8/DGX Spark 模型自部署 → 沿用现有 AI Preset 接入形态（用户确认，2026-09-05）"
+
+next_action: proceed   # 可随时进入 $write-trd；开放问题无需先关闭，但 TRD 必须对 DR-PRD-001/006 给出方案
+report: docs/reviews/personal-brain-local-first-readiness.yaml

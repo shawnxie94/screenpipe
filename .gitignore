@@ -101,3 +101,6 @@ sqlite:/
 
 # Local code-graph tool cache (binary DB + logs), never commit.
 .codegraph/
+
+# agent-brain local (personal harness — do not commit)
+.agent/

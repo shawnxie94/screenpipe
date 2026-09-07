@@ -1,0 +1,422 @@
+# Local Brain PRD 交接评审；ready仅允许技术设计，技术交接使用独立TRD报告。
+feature: personal-brain-local-first
+status: ready
+stage: prd_to_trd
+mode: gate
+iteration: 10
+assessed_at: '2026-09-07'
+waiting_on: null
+repair_authorized: true
+authorization: 用户授权按建议推进 TRD 预研与撰写，并启动开发版验证。本轮只更新 PRD 交接的来源指纹与下游导航，产品需求未变；运行证据和技术阻塞由独立 TRD 报告负责。
+scope: 复核不变 PRD R1-R9 的产品设计交接与 R10 后置；更新 roadmap 导航和预研状态。本 ready 只允许 TRD 工作，不允许跳过独立 trd_to_plan 的 blocked 结论。
+source_artifacts:
+- name: prd-personal-brain-local-first
+  uri: docs/prd/personal-brain-local-first.md
+  sha256: dc99cee3f08a69cc82204002d4310c5c14f78b609c9d1bec77e621e1bdcaf998
+- name: vision
+  uri: VISION.md
+  sha256: bf2b38ef85a3642fb293d0bfc7b9960ced3e67ead8c7a9cad62986d30a42dac0
+- name: repo-instructions
+  uri: AGENTS.md
+  sha256: 5e285bd461f88c7ad9e469f36addd9a9d33129b5b04f04cc1e91fd9e95f28542
+- name: roadmap
+  uri: docs/roadmap.md
+  sha256: 124cc42393be0cf0e3e60e647d7d663943bbaecc227eb630f0e6a0bc12a599c2
+historical_inputs:
+- uri: /Users/shawn/Documents/inspiration/startup/research/company-brain-poc-trd.md
+  use: 保留原 PRD 溯源，本轮未读取、不使用其旧哈希作为本轮有效证据。
+assessment_history:
+- iteration: 5
+  status: ready
+  source_prd_sha256: 72a3aa33ee34a9b3de30f39f8097a7319e57836105040f968a2bd7983a87263e
+  report_archive: docs/reviews/archive/personal-brain-local-first-readiness-iteration-5.yaml
+  report_archive_sha256: 979077f0df09435b34123db14e24c6564a09002203015501db04940492140220
+  valid_for_current_source: false
+  note: 旧报告原样归档；其源哈希不匹配本轮修订前文件，旧结论不可沿用。
+- iteration: 6
+  status: blocked
+  source_prd_sha256: 6da82ac2cc1da51b284756bfcfc8a09082b13efcb03e765ccd9b9db6a51ad925
+  record: 本任务 2026-09-07 首轮只读评审；七项问题以当前 findings 的稳定 ID 保留。
+  open_blockers:
+  - DR-PRD-010
+  - DR-PRD-011
+  - DR-PRD-012
+  - DR-PRD-013
+  - DR-PRD-014
+  - DR-PRD-015
+  - DR-PRD-016
+- iteration: 7
+  status: ready
+  source_prd_sha256: 217560b5062eaf462a2dde22a52bf7059eca30b2f5c1bd5123c564378ceac130
+  record: 用户授权修订后完整复查 PRD R1-R8、§6-§13 与各项验收。
+  report_archive: docs/reviews/archive/personal-brain-local-first-readiness-iteration-7.yaml
+  report_archive_sha256: 425300bd6a0ec09be22a66347edc99931fa05e9d73d6e86b5663350bcbc6ac93
+  valid_for_current_source: false
+- iteration: 8
+  status: ready
+  source_prd_sha256: 56e2665870e3ba4a67895034bf30139e875f45fc4a379004ef216ab1d915ebd0
+  record: 新增 R9/R10 与 Runtime/MCP 出口，复查 R1-R10、验收、分期和旧约束无冲突；具名兼容目标为 TRD 收口前输入。
+  report_archive: docs/reviews/archive/personal-brain-local-first-readiness-iteration-8.yaml
+  report_archive_sha256: 901bfb2f739179949085c50a3433f5e8713e930f7ca7767857f6af2920d5422d
+  valid_for_current_source: false
+- iteration: 9
+  status: ready
+  source_prd_sha256: dc99cee3f08a69cc82204002d4310c5c14f78b609c9d1bec77e621e1bdcaf998
+  record: 按用户五项答复修订后，完整复核产品目标、R1-R9、R10 后置、失败/生命周期、分期与验收；保留旧问题 ID 和 iteration 8 原样归档。
+  report_archive: docs/reviews/archive/personal-brain-local-first-readiness-iteration-9.yaml
+  report_archive_sha256: 459188c44a8417c5347243aa8662792e09b011f9daaf4e1f93e123eb3a5ada30
+  valid_for_current_source: false
+  note: 原报告归档；PRD 未改，roadmap 与下游 TRD 状态已更新。
+- iteration: 10
+  status: ready
+  source_prd_sha256: dc99cee3f08a69cc82204002d4310c5c14f78b609c9d1bec77e621e1bdcaf998
+  record: PRD 内容及33项首版验收未变；重新核对范围、验收、来源hash与下游导航；TRD已写草案，独立技术交接尚有两项阻塞。
+gate_matrix:
+  product_goal: closed：开发相关需求分析、调研与业务沟通；真实重复流程形成可核验、修订、删除失效的 SOP/规则/异常手册。
+  scope_and_nonscope: closed：首版 FTS、本地记忆、飞书/WPS/腾讯会议、通用 MCP；国内 Runtime 具名消费/ACP 执行评估整体后置，办公 API/双向操作后置。
+  user_scenarios: closed：后台/问答/删除/纠错/恢复与跨工具开发流程；新增优先，已有历史保全迁移、单独启动近 7 天回填。
+  observable_acceptance: closed：34 个唯一已定义 AC 全量映射，其中 AC-R4-02 为后续，其余 33 个属首版；R10 的 4 个历史编号另列后置，不纳入本轮分母；三款办公工具分别评测。
+  nfrs: closed：固定指定模型、资源与含排队 SLA、约 5 分钟集中审核；首轮无费用/每日调用硬上限，仍有单次上下文/超时/取消/有限重试。
+  edge_failure_behavior: closed：更新/删除/恢复、部分失败/全失败、引用失效与拒答
+  permissions: closed：单人自审；既有 Pi/模型、文件、通用 MCP 与未来 Provider/Runtime 的出口、受管清理和第三方历史边界明确。
+  dependencies: closed_for_design：客户端版本与全局模型合成调用已核对，具体采集链路及应用内模型profile仍为技术预研项，见独立TRD报告。
+  product_decisions: closed：五项用户答复落入 §9/§13.8；品牌、模型与费用选择无需重问，余下技术/交互与语料输入在 TRD 收口。
+traceability:
+  requirements_total: 9
+  mapped_to_design_inputs: 9
+  missing_destinations: 0
+  trd_status: draft_written_preflight_blocked
+  implementation_status: not_started_by_this_task
+  requirements:
+  - requirement: R1
+    acceptance_ids:
+    - AC-R1-01
+    - AC-R1-02
+    - AC-R1-03
+    - AC-R1-04
+    design_destination: docs/trd/personal-brain-local-first.md §4/§9；完整技术交接见独立trd_to_plan报告
+    phases:
+    - 0
+    - 1
+    scope_note: 全量合法条目/coverage 保全迁移与 AI 历史重算分离；增量默认不截掉已有历史。
+  - requirement: R2
+    acceptance_ids:
+    - AC-R2-01
+    - AC-R2-02
+    - AC-R2-03
+    design_destination: docs/trd/personal-brain-local-first.md §4/§5；完整技术交接见独立trd_to_plan报告
+    phases:
+    - 2
+    scope_note: 候选集中展示、约 5 分钟每日审核；逐版本自审与 30 天复核保留。
+  - requirement: R3
+    acceptance_ids:
+    - AC-R3-01
+    - AC-R3-02
+    - AC-R3-03
+    design_destination: docs/trd/personal-brain-local-first.md §6；完整技术交接见独立trd_to_plan报告
+    phases:
+    - 2
+    - 4
+    scope_note: 首版规则已明确，后续增强继续遵守。
+  - requirement: R4
+    acceptance_ids:
+    - AC-R4-01
+    - AC-R4-02
+    design_destination: docs/trd/personal-brain-local-first.md §6/§8；完整技术交接见独立trd_to_plan报告
+    phases:
+    - 2
+    - 4
+    scope_note: AC-R4-02 仅为后续 Phase 4，其余为首版要求。
+  - requirement: R5
+    acceptance_ids:
+    - AC-R5-01
+    - AC-R5-02
+    - AC-R5-03
+    design_destination: docs/trd/personal-brain-local-first.md §6/§7；完整技术交接见独立trd_to_plan报告
+    phases:
+    - 2
+    scope_note: 首版规则已明确，后续增强继续遵守。
+  - requirement: R6
+    acceptance_ids:
+    - AC-R6-01
+    - AC-R6-02
+    - AC-R6-03
+    - AC-R6-04
+    design_destination: docs/trd/personal-brain-local-first.md §8/§9；完整技术交接见独立trd_to_plan报告
+    phases:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+    scope_note: 首版规则已明确，后续增强继续遵守。
+  - requirement: R7
+    acceptance_ids:
+    - AC-R7-01
+    - AC-R7-02
+    design_destination: docs/trd/personal-brain-local-first.md §5；完整技术交接见独立trd_to_plan报告
+    phases:
+    - 2
+    scope_note: 首版规则已明确，后续增强继续遵守。
+  - requirement: R8
+    acceptance_ids:
+    - AC-R8-01
+    - AC-R8-02
+    - AC-R8-03
+    design_destination: docs/trd/personal-brain-local-first.md §3/§7/§9；完整技术交接见独立trd_to_plan报告
+    phases:
+    - 1
+    - 2
+    scope_note: 指定 Pi/model；首轮无费用/每日调用硬上限，保留资源限制；新增边界与显式 7 天历史回填可暂停/取消/恢复。
+  - requirement: R9
+    acceptance_ids:
+    - AC-R9-01
+    - AC-R9-02
+    - AC-R9-03
+    design_destination: docs/trd/personal-brain-local-first.md §10；完整技术交接见独立trd_to_plan报告
+    phases:
+    - 0
+    - 1
+    - 3
+    scope_note: 飞书、WPS、腾讯会议三款分别评测；腾讯会议必须测音频/转写；平台 API 连接器后置。
+  evaluation_acceptance_ids:
+  - AC-EVAL-01
+  - AC-EVAL-02
+  - AC-EVAL-03
+  - AC-EVAL-04
+  - AC-EVAL-05
+  - AC-EVAL-06
+  - AC-EVAL-07
+  defined_acceptance_total: 34
+  first_release_acceptance_total: 33
+  deferred_requirements:
+  - requirement: R10
+    status: deferred_by_user
+    historical_acceptance_ids:
+    - AC-R10-01
+    - AC-R10-02
+    - AC-R10-03
+    - AC-R10-04
+    design_destination: PRD R10、§11 Phase 4、§13.8；后续独立立项，不进入本期 TRD 实现范围与验收分母。
+findings:
+- id: DR-PRD-001
+  severity: info
+  status: resolved
+  title: 文本嵌入后置，首版无选型依赖
+  evidence: PRD R3/R4、§9.1、§11.1：首版 FTS，Phase 4 按实测决定 embeddings/provider。
+  next_action: 后续增强的 TRD 冻结模型、维度、索引版本与出口，再实现。
+  previous_evidence: PRD 开放问题 1；§11 设计输入倾向 preset /embeddings 起步
+  owner: TRD 作者
+- id: DR-PRD-002
+  severity: info
+  status: accepted_risk
+  title: 审核台入口交由界面设计定稿
+  evidence: PRD R2/R7 与 §9.2 已固定用户操作和状态；仅入口位置未定。
+  next_action: 界面设计者在 Phase 2 实现前确定入口，并验证完整自审/纠错路径。
+  previous_evidence: PRD 开放问题 2；默认建议设置页新增「知识」区
+  owner: 界面设计者
+  risk_acceptance:
+    owner: 产品负责人（用户）
+    basis: 沿用上一轮接受的设计阶段决定；本轮用户授权按建议优化。
+    reason: 入口位置不改变首版能力、权限或验收，交由界面设计定稿。
+    scope: 仅审核台入口布局
+    revisit_before: Phase 2 界面实现
+- id: DR-PRD-003
+  severity: warning
+  status: resolved
+  title: REST /answer 与 MCP 同属首版
+  evidence: PRD R5、§11.1、§13.5：Phase 2 同时提供，共用生命周期和声明校验。
+  next_action: TRD 定义 REST/MCP 共同契约。
+  previous_evidence: 已裁决（PRD §13.5，2026-09-05）：是，Phase 3 实现；知识出场通道收敛为 MCP 一条
+  owner: TRD 作者
+- id: DR-PRD-004
+  severity: info
+  status: resolved
+  title: 首版自动 final 区间与评测会话边界明确
+  evidence: PRD R1、§9.4、AC-EVAL-01：自动 final 区间；评测会话由人工标注，显式会话功能后置。
+  next_action: TRD 定义输入就绪和逻辑任务身份。
+  previous_evidence: PRD R1 已记录默认：v1 以 activity ledger 区间自动锚定，显式会话为后续增强
+  owner: TRD 作者
+- id: DR-PRD-005
+  severity: warning
+  status: resolved
+  title: 数字克隆冻结与类型演进边界保留
+  evidence: PRD §9.5、§12.5、§13.6：冻结新增，按真实类型需求触发后续演进。
+  next_action: 出现触发信号后单独评估，不进入本期。
+  previous_evidence: 已裁决冻结新增，等待 §12.2 触发信号（PRD §13.6，2026-09-05）
+  owner: TRD 作者
+- id: DR-PRD-006
+  severity: info
+  status: resolved
+  title: 迁库产品约束已补齐，技术步骤待 TRD
+  evidence: PRD R1/R6、AC-R1-04、§9/§11.2：保全条目与 coverage、迁移与 AI 重算分开、可重入恢复与回退不得复活已删内容。
+  next_action: TRD 作者给出迁移/加密/回退方案和故障验证，不能视为迁移已完成。
+  previous_evidence: PRD §10 风险表与 §11 设计输入已标记为 TRD 必答项（独立提交、迁移快照对比、回退读取）
+  owner: TRD 作者
+- id: DR-PRD-007
+  severity: info
+  status: resolved
+  title: 类型版本与抽取版本分离
+  evidence: PRD §11.2、§12：内部注册表保留；知识类型版本进入编译身份，抽取 schema 进入 Work Unit 身份。
+  next_action: TRD 按边界设计，后续配置化不纳入首版。
+  previous_evidence: iteration 2 新增 PRD §12（内部注册表约束 / 静态配置化 / AI 起草向导 / 对话式修订 / 触发信号）及开放问题 7；v1 范围不变
+  owner: TRD 作者
+- id: DR-PRD-008
+  severity: info
+  status: resolved
+  title: 存量裁决与新版分期对齐
+  evidence: PRD R6、§11、§13：生命周期矩阵为真源，/answer 前移 Phase 2；删除随每个派生层实现。
+  next_action: 按新分期设计，旧裁决日期与新默认值分开记录。
+  previous_evidence: iteration 3 新增 PRD §13：保留策略混合豁免（13.1）、档位钳制短路（13.2）、跨设备同步 gate（13.3，用户确认不依赖）、云腿/云代理剔除（13.4）、知识出场通道收敛（13.5）、调度/死表/user_locked
+    等（13.6）；开放问题 3/5 关闭
+  owner: TRD 作者
+- id: DR-PRD-009
+  severity: info
+  status: resolved
+  title: 历史瘦身记录保留且标明未在本轮重验
+  evidence: PRD §13 执行状态沿用旧记录；本轮为文档修订，不声称重新完成运行验证。
+  next_action: TRD 接手时核对依赖源码；本项历史结论不是当前构建/验收证据。
+  previous_evidence: iteration 4-5：自动更新器整套移除（updates.rs/staged_update.rs/插件/菜单/dock/e2e 道/TS 绑定）、远程公告系统移除（含 /notify surface
+    分支）、MCP synced 工具移除、include_cloud 死参数移除、ocr_text_embeddings 死表 drop、ExplicitApiClient 遥测遗留移除；§13.2 钳制确认已短路；§13.3/13.4/13.6
+    裁剪项全部物理删除落地（严于裁决原案），云代理直接改走 local_chat 而非 404 壳；PRD §13 已加执行状态总览并按删除现实改写 R3/R4/R6/§13.3/§13.4/§13.6 措辞
+  owner: TRD 作者
+- id: DR-PRD-010
+  severity: blocker
+  status: resolved
+  title: 删除与保留规则冲突
+  evidence: PRD R6 生命周期矩阵、AC-R6-01..04、§11.1/§13.1：主动删除优先，三类采集来源与 memory、受管副本、历史、缓存和在途结果纳入传播；删除与各期实现同步。
+  next_action: TRD 定义依赖传播、不可读边界、清理进度与恢复记录，实施时验证竞态。
+  owner: TRD 作者
+  resolution_scope: 产品规则与验收已闭合；不表示对应实现或运行测试完成。
+- id: DR-PRD-011
+  severity: blocker
+  status: resolved
+  title: Work Unit 来源身份与增量更新不足
+  evidence: PRD R1、AC-R1-01..03、§11.2：稳定身份、输入修订、final 就绪、ledger 重建与迟到数据、提交前有效性检查。
+  next_action: TRD 定义稳定 ID、输入指纹、重算与恢复的唯一约束。
+  owner: TRD 作者
+  resolution_scope: 产品规则与验收已闭合；不表示对应实现或运行测试完成。
+- id: DR-PRD-012
+  severity: blocker
+  status: resolved
+  title: 知识自审状态与反馈闭环不完整
+  evidence: PRD R2/R7、AC-R2-01..03、AC-R7-01..02：驳回抑制、当前版本原子替换、到期暂停、逐版本纠错，首版交付。
+  next_action: TRD/UI 定义状态转移、反馈存储与来源失效联动。
+  owner: TRD 作者
+  resolution_scope: 产品规则与验收已闭合；不表示对应实现或运行测试完成。
+- id: DR-PRD-013
+  severity: blocker
+  status: resolved
+  title: 引用存在不等于事实正确
+  evidence: PRD R1/R2/R5、§8：字段与声明级证据、未知留空、未核验记忆标注、单次观察不泛化；冻结验收集同时约束无依据结论和可回答率。
+  next_action: 建立独立调试/保留语料，实施后跑自动检查与人工核验，不用本报告代替实测。
+  owner: TRD 作者
+  resolution_scope: 产品规则与验收已闭合；不表示对应实现或运行测试完成。
+- id: DR-PRD-014
+  severity: blocker
+  status: resolved
+  title: 旧搜索默认契约可能被混合召回破坏
+  evidence: PRD R3、AC-R3-01..03：保留默认排序/分页/total；answer 独立本地 top-k；过滤按支持来源、诊断区分失败与零命中。
+  next_action: TRD 定义内部接口与缓存身份；未来公开混合模式另行显式启用。
+  owner: TRD 作者
+  resolution_scope: 产品规则与验收已闭合；不表示对应实现或运行测试完成。
+- id: DR-PRD-015
+  severity: blocker
+  status: resolved
+  title: Provider 读写归属及删除责任未明确
+  evidence: PRD R4/R6：本地写入真源，首版不依赖外部服务；后续只读、能力声明与稳定身份、Keychain、关闭清理和本地召回抑制，不承诺远端撤回。
+  next_action: 后续增强分别冻结 Provider 和 embedding 契约再实现。
+  owner: TRD 作者
+  resolution_scope: 产品规则与验收已闭合；不表示对应实现或运行测试完成。
+- id: DR-PRD-016
+  severity: blocker
+  status: resolved
+  title: 无人值守运行与串行调度边界不足
+  evidence: PRD R8/§6/§9：桌面生命周期、持久任务、有界步骤、10 秒排队、重试上限、可选预算与取消；首轮不设费用/日调用硬上限，仍限制资源和单次上下文。
+  next_action: TRD 定稿运行所有权、指定 Pi/Preset/model 映射和超时/批次/上下文限制，验证增量边界、回填及采集/交互影响。
+  owner: TRD 作者
+  resolution_scope: 产品规则与验收已闭合；不表示对应实现或运行测试完成。
+- id: DR-PRD-017
+  severity: warning
+  status: resolved
+  title: 办公产品已选定，三款分别验收
+  evidence: PRD R9、AC-R9-01..03、AC-EVAL-07、§9/§13.8：用户选定飞书/WPS/腾讯会议；每款关键证据指标独立计算，会议音频/转写必测；API 同步/操作后置。
+  next_action: TRD 预研核对实际形态、版本与场景，采集样本并冻结对应适配范围；无需再选择品牌。
+  owner: TRD 作者
+  resolution_scope: 产品范围已明确；本机元数据不代表采集、解析或兼容验证通过。
+- id: DR-PRD-018
+  severity: warning
+  status: resolved
+  title: 国内 Runtime 按用户决定整体后置，通用 MCP 保留
+  evidence: PRD R10、§9/§11/§13.8：用户明确先不兼容国内 Runtime；原四项 AC 后置。R5/R6 与 AC-EVAL-04/06/07 继续验证通用 MCP 的引用/版本/删除与出口。
+  next_action: 本期设计现有 Pi 模型路径与通用 MCP；国内 Runtime 兼容需要后续独立立项。
+  owner: TRD 作者
+  resolution_scope: 本项由用户主动缩减首版范围关闭，不代表原 Runtime 联调或执行能力评估通过。
+- id: DR-PRD-019
+  severity: info
+  status: resolved
+  title: 首次启用与历史回填语义已明确
+  evidence: 用户接受建议；PRD R1/R8、AC-R1-04/AC-R8-03：历史保全迁移、AI 新增优先、回填单独启动近 7 天试跑，边界/迟到证据/暂停恢复可核验。
+  next_action: TRD 定义增量边界、跨界区间与迟到来源归属，并冻结幂等和恢复验证。
+  owner: TRD 作者
+- id: DR-PRD-020
+  severity: info
+  status: resolved
+  title: 首轮模型和费用边界已由用户指定
+  evidence: PRD R8/§9：Pi 的 shawnhub-copy / deepseek-v4-flash-0731，首轮不设费用/每日调用硬上限；本机离线模型列表已确认条目，尚未调用模型。
+  next_action: TRD 核对应用内 Pi/Preset 映射，以该模型做小样本验证；保留 R6 与单次上下文/超时/取消/有限重试。
+  owner: TRD 作者
+- id: DR-PRD-021
+  severity: info
+  status: resolved
+  title: 真实开发场景与审核负担目标已确认
+  evidence: PRD §4、R2、AC-EVAL-01/05、§9：需求分析/调研/业务沟通，真实重复流程≥3会话，每日约5分钟集中审核；不得靠零候选或自动发布降低负担。
+  next_action: 冻结具体流程样本、保留查询、审核观察期间和积压口径；界面设计定稿集中审核入口。
+  owner: TRD 作者与界面设计者
+open_blockers: []
+accepted_risks:
+- DR-PRD-002
+design_handoff:
+  owner: TRD 作者
+  allowed: 继续完善当前TRD与剩余技术预研；PRD范围不变。独立trd_to_plan为blocked，不得据本产品级ready直接开始正式执行计划。
+  not_allowed_by_this_gate: 不代表客户端兼容、指定模型联通、产品质量/性能或 plan_to_build/verify_to_release 已通过。
+  next_gate: TRD 完成后另做 trd_to_plan 评审。
+validation:
+  method: 本轮核对不变PRD及其验收映射、源码/预研导航与4个产品级源hash；产品文档未改，旧报告原样归档。
+  runtime_tests: PRD门禁不使用运行结果证明产品验收。当前开发启动、认证API、全局Pi合成调用和SQLite投影probe见预研记录；首版产品验收未运行。
+  checks:
+  - check: 文档YAML/frontmatter、源/归档hash、33项首版验收映射与roadmap改动范围
+    result: passed；详细本轮检查记录见TRD评审validation
+  - check: 产品范围与PRD字节一致性
+    result: passed；PRD SHA-256保持dc99cee3f08a69cc82204002d4310c5c14f78b609c9d1bec77e621e1bdcaf998
+  read_only_environment_checks:
+  - check: pi --version
+    result: 0.85.0
+  - check: pi --offline --no-extensions --no-skills --no-prompt-templates --no-context-files --no-approve --list-models deepseek-v4-flash-0731
+    result: shawnhub-copy / deepseek-v4-flash-0731 exists；仅配置可见性
+  - check: macOS 与应用 Info.plist 元数据
+    result: macOS 15.0 / arm64；WPS 12.1.26046 (26046)；腾讯会议 3.45.3 (405)；飞书实际入口/产品版本待核对
+next_action: continue_trd_preflight
+report: docs/reviews/personal-brain-local-first-readiness.yaml
+pending_design_inputs:
+- id: DI-COMPAT-001
+  status: versions_checked_capture_partial
+  owner: TRD 作者
+  input: 飞书v7.75.18、WPS12.1.26046、腾讯会议3.45.3已核对；开发版认证检索有WPS首页OCR，三款正文/中文检索/来源及真实会议音频尚待闭环。
+  source: PRD §9 第 8 项与办公清单
+  required_before: 对应适配范围冻结及 trd_to_plan；升级后刷新版本。
+  does_not_block: 按已选产品开展 TRD 与采集预研，无需重新请求品牌选择。
+- id: DI-MODEL-001
+  status: global_probe_passed_app_binding_pending
+  owner: TRD 作者
+  input: 全局Pi0.85.0指定模型合成调用6.12s合法JSON；应用Pi固定0.84.1，需验证Custom Preset/Keychain引用、无工具临时profile、总超时/取消与会话清理。
+  source: PRD R8、§9 第 9 项
+  required_before: 冻结模型执行实现契约及首轮模型实测参数。
+  does_not_block: 既有模型路径的 TRD 调研与方案；用户已授权使用指定模型，不需费用审批。
+- id: DI-EVAL-001
+  status: scenario_selected_samples_pending
+  owner: TRD 作者与用户
+  input: 从开发相关需求分析/调研/业务沟通中冻结具体重复流程、≥10 会话及独立保留查询；先固定审核观察时段和积压统计口径。
+  source: PRD §4/§8/§9 第 10 项
+  required_before: 对应质量评测及调参前冻结保留集。
+  does_not_block: TRD 的抽取/编译、评测与审核界面设计。
