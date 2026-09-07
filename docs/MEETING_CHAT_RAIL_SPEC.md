@@ -85,7 +85,9 @@ Each is `case → decided behavior`. Numbers are stable; tests reference them.
 3. Summary `queued` but scheduler has not dispatched (90s grace) → same as 1, askable. The grace window is scheduler latency, not transcript instability.
 4. Summary transitions `running → completed` while the thread is open → composer re-enables, thread is preserved, no scroll jump, no toast.
 5. Summary transitions `running → failed` → composer re-enables. The chip becomes `why did this fail?`.
-6. Summary `failed` with a quota error → chip is suppressed entirely; the existing upgrade link owns that moment. Asking the model about a quota failure would itself consume quota.
+6. Summary `failed` because the configured model is unavailable or rate-limited
+   → chip is suppressed entirely. Asking the model about the failure would only
+   create another failed request.
 7. Meeting is `idle` with no summary → chip is `summarize this`, and choosing it calls the existing `handleSummarize`, not the chat. The chip is a shortcut into an existing path, not a new one.
 8. Meeting is `completed` → chip is `what did i commit to?`.
 9. Retranscription refresh in flight (`retranscriptionSummaryRefreshWorking`) → working, disabled, placeholder `refreshing…`. The transcript is being replaced under the thread.
@@ -93,7 +95,7 @@ Each is `case → decided behavior`. Numbers are stable; tests reference them.
 11. Meeting has zero transcript turns → composer disabled, placeholder `nothing recorded yet`. Matches Granola's `Transcribe a meeting to start asking questions`.
 12. Meeting has a transcript but no note and no summary → fully askable. Transcript alone is enough.
 13. Meeting is deleted while the rail is open → the whole view unmounts; the in-flight Pi session is stopped in cleanup.
-14. Two lifecycle states race (save completes as summary starts) → precedence is fixed and total. For *what blocks the composer*: refreshing > no-transcript > no-preset > quota; nothing else blocks. Only retranscription blocks on transcript grounds, because it is the only state that *replaces* evidence rather than adding to it. For *what the status row reports*: live > stopping > finalizing > running/queued > failed > saving > rest. The two orders are deliberately different — the status row narrates everything happening, the composer only stops for things that make an answer wrong.
+14. Two lifecycle states race (save completes as summary starts) → precedence is fixed and total. For *what blocks the composer*: refreshing > no-transcript > no-preset > model-unavailable; nothing else blocks. Only retranscription blocks on transcript grounds, because it is the only state that *replaces* evidence rather than adding to it. For *what the status row reports*: live > stopping > finalizing > running/queued > failed > saving > rest. The two orders are deliberately different — the status row narrates everything happening, the composer only stops for things that make an answer wrong.
 
 ## B · Live meeting (15–24)
 
@@ -190,7 +192,9 @@ Each is `case → decided behavior`. Numbers are stable; tests reference them.
 68. Turn exceeds 90s → aborted with a timeout, matching `GENERATION_TIMEOUT_MS`.
 69. The session is evicted by the bus → the thread marks the turn failed and does not silently hang.
 70. Two meetings are open in two windows and both chat → each mints its own private session id; they must not collide. Session id embeds the meeting id.
-71. Hosted AI quota is exhausted → composer disabled, placeholder `ai limit reached`, upgrade action if eligible. Same predicate as `LiveViewAiComposer`.
+71. The configured model provider is unavailable or rate-limited → composer
+    disabled with a local retry/error state. No upgrade or billing action is
+    shown.
 72. No AI preset is configured → composer disabled with `set up ai in settings`; the compact model control remains available to choose or create one. Do not send to nothing.
 73. The selected preset is a local model that is not running → the transport error surfaces verbatim.
 74. The user closes the meeting while a turn streams → cleanup runs `piStop`; no orphan process.

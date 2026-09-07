@@ -24,8 +24,8 @@
 //!   and `screenpipe-config` is below core, which is why CPU feature detection
 //!   lives in its own leaf crate.
 //!
-//! Execution semantics: `docs/PIPE_EXECUTION_SPEC.md` (see its freshness
-//! header before trusting details).
+//! Pipe execution is local and serialized to protect the recorder and its
+//! SQLite-backed evidence store.
 
 pub mod agents;
 pub mod connections;

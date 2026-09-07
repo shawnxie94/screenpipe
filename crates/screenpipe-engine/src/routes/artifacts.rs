@@ -322,8 +322,7 @@ pub fn spawn_artifact_search_backfill(db: Arc<screenpipe_db::DatabaseManager>) {
 // ---------------------------------------------------------------------------
 // SAF (Screenpipe Artifact Format) detection
 //
-// A registered file can optionally carry the SAF v1 envelope the cloud
-// artifact store uses (see docs/ORG_DATA_UNIFICATION_SPEC.md P1). When a
+// A registered file can optionally carry the local SAF v1 envelope. When a
 // file ends with `.saf.json` — or parses as a JSON object containing the
 // key "saf_version" — we validate the envelope and, on success, mark the
 // row kind="saf" and fill saf_kind / artifact_id / saf_version. Validation

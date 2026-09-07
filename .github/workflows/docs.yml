@@ -10,12 +10,12 @@ on:
     paths:
       - 'docs/**'
       - '.github/workflows/docs.yml'
-      - 'crates/screenpipe-connect/src/connections/**'
+      - 'scripts/check-doc-freshness.ts'
   pull_request:
     paths:
       - 'docs/**'
       - '.github/workflows/docs.yml'
-      - 'crates/screenpipe-connect/src/connections/**'
+      - 'scripts/check-doc-freshness.ts'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
@@ -30,14 +30,9 @@ jobs:
           # check-doc-freshness walks git history to measure how far each spec
           # has drifted from the code it covers.
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Validate Mintlify docs
-        run: node docs/mintlify/validate-docs.mjs
       - name: Check spec freshness
         # --check only enforces that every spec declares what it covers.
         # Drift is reported loudly but does not fail the build yet; switch to

@@ -159,8 +159,8 @@ function main() {
 
   if (missing.length || failures.length || dependencyFailures.length) {
     console.error(
-      `\nREFUSING screenpipe-mcp@${version}: this tarball is not self-contained and gateway-capable. ` +
-        `Run \`npm run build\` and re-check; see packages/screenpipe-mcp/RELEASE.md.`,
+      `\nREFUSING screenpipe-mcp@${version}: this tarball is not self-contained. ` +
+        `Run \`npm run build\` and re-check the package contents.`,
     );
     process.exit(1);
   }

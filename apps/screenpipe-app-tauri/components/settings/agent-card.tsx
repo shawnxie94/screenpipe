@@ -50,7 +50,8 @@ export {
 // Second-brain prompt — paste-once automation that turns the agent into a
 // digital clone of the user's working context: it segments workflows,
 // summarizes processes, and maintains a durable memory in the background.
-// Kept in sync with docs.screenpi.pe/second-brain (docs/.../second-brain.mdx).
+// This prompt is the local starting point for building a personal knowledge
+// base from screenpipe context.
 // ---------------------------------------------------------------------------
 
 export const SECOND_BRAIN_PROMPT = `you have access to screenpipe, a local tool that records everything i see, say, and

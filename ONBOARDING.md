@@ -22,7 +22,7 @@ The common newcomer mistake: open the repo, point an AI at an issue, say "fix th
 
 Two things first:
 
-1. **Run the real app.** Install the [prebuilt build](https://docs.screenpi.pe) and use it for a day. Let it record. Search your own history. You can't build well for a tool you've never felt.
+1. **Run the real app.** Start the local desktop app from `apps/screenpipe-app-tauri` and use it for a day. Let it record. Search your own history. You can't build well for a tool you've never felt.
 2. **Read `VISION.md` and `DESIGN.md`.** screenpipe captures what you've seen, said, and heard, and indexes it locally. The values are stability over features, activation over new capabilities. They don't want feature creep. The upshot: a maintainer rewards changes that harden what exists over clever additions.
 
 ---

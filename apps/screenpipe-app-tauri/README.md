@@ -10,8 +10,9 @@ Use the source-build instructions in [`CONTRIBUTING.md`](../../CONTRIBUTING.md):
 - [macOS app and DMG](../../CONTRIBUTING.md#macos)
 - [Linux desktop bundles](../../CONTRIBUTING.md#linux)
 
-Run the Tauri commands from this directory, not the repository root. Product
-usage documentation is available at [docs.screenpi.pe](https://docs.screenpi.pe/getting-started).
+Run the Tauri commands from this directory, not the repository root. The
+repository-level product and local-data overview is in
+[`../../README.md`](../../README.md).
 
 ## fast browser UI development
 
@@ -38,8 +39,8 @@ Edits such as changing the time range or layout mode are preserved for the
 current browser session, so Live View UI work does not need the Rust backend.
 It also seeds a synthetic `daily-recap` scheduled task. Open
 <http://127.0.0.1:1420/home?section=pipes&tab=my-pipes>, select the task, and
-use its Config tab to review the Codex Cloud, Claude Code Cloud, Cursor Cloud
-Agent, and bounded-memory flows without starting the native app.
+use its Config tab to review local agent configuration and bounded-memory
+flows without starting the native app.
 
 To use the real engine while still skipping the Tauri/Rust build, first start
 or keep Screenpipe running, then run:

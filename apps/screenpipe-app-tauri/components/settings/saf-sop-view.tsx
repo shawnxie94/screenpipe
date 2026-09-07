@@ -14,9 +14,8 @@ import {
   type SafArtifact,
 } from "@/lib/saf";
 
-// Typed renderer for SAF artifacts in the local artifacts view — the same
-// envelope the cloud dashboard renders, so a device-authored SOP and a
-// runner-authored SOP share one shape (docs/ORG_DATA_UNIFICATION_SPEC.md P1).
+// Typed renderer for SAF artifacts in the local artifacts view. The envelope
+// keeps generated SOPs structured and traceable to their local evidence.
 
 /**
  * Frame thumbnail fetched through localFetch (auth header required — a bare

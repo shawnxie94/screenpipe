@@ -3,24 +3,13 @@
 This page keeps framework-specific embed details out of the root README while
 leaving the important paths easy to find.
 
-## Support Telemetry Context
+## Local data boundary
 
-The SDK itself does not send first-party Screenpipe telemetry. If your app
-launches the Screenpipe CLI or engine and you want Screenpipe support to
-recognize the deployment in Sentry/PostHog, set opaque support IDs before
-starting Screenpipe:
-
-```bash
-export SCREENPIPE_SUPPORT_ID="spcust_acme_123"
-export SCREENPIPE_CUSTOMER_ID="acme"
-export SCREENPIPE_DEPLOYMENT_ID="prod-laptop-fleet-01"
-export SCREENPIPE_EMBEDDER="acme-agent"
-export SCREENPIPE_EMBEDDER_VERSION="2026.6.4"
-```
-
-Use IDs instead of emails. See
-[`docs/telemetry-support-context.md`](../../docs/telemetry-support-context.md)
-for the full env contract and aliases.
+The SDK embeds the local capture and query capability; it does not turn the
+personal knowledge base into a hosted service. Keep capture data, generated
+artifacts, and credentials in the user's local data directory. If an
+application configures an external model or provider, document that boundary
+explicitly and send only the context required for that operation.
 
 ## Electron
 

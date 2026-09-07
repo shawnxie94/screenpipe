@@ -8,37 +8,53 @@
 
 ## What screenpipe is
 
-Context infrastructure for AI agents. The ambient layer between humans and their digital work.
+The local evidence and knowledge layer for one person's work. Screenpipe
+captures screen, audio, accessibility, and OCR context on the user's machine,
+then makes that record searchable and available to explicitly configured AI
+tools.
 
-Screen is the universal interface — 10M bits/second, the highest-fidelity signal of human intent. During work, the screen contains all the millions of software that ate the world and are being eaten by AI right now. Screenpipe captures that context locally and makes it available to AI.
-
-Not a memory tool. Not an assistant you prompt. An ambient automation layer that works in the background with zero prompting.
+It is a personal knowledge base first: capture the evidence, explain the work,
+review the generated knowledge, and keep a visible path back to the source.
+Automation is a means of maintaining that knowledge, not the product's
+independent goal.
 
 ## Why we exist
 
-Every AI interaction today requires stopping work, translating intent into a prompt, and waiting. That's a tax on every interaction. Your screen already shows exactly what you're doing — the context is right there.
+Important work is scattered across screens, conversations, documents, and
+decisions. Once the moment passes, the reasons and exceptions are difficult to
+recover. The local record should make that history available without handing
+ownership of it to a hosted service.
 
-We build the layer that gives AI full context of human work so it can act autonomously. Recording + AI = ability to clone human digital work at high fidelity.
+We build the smallest reliable loop from work evidence to personal knowledge:
+record, retrieve, explain, review, and preserve the source.
 
 ## Where this goes
 
-1. **Now: Memory.** Make desktop memory work so well people can't live without it. Record, Rewind, Ask — three verbs, nothing else.
-2. **Next: Context layer for AI agents.** Open API so any AI agent can query your screen history. Every AI agent needs to know what the user is doing, act on that context, and trigger without prompts.
-3. **Later: Everything.** We are going to record everything you do, 24/7, safely, encrypted locally and connected to AI.
+1. **Now: Reliable local history.** Capture, index, and retrieve screen and
+   audio evidence with clear health and data-lifecycle boundaries.
+2. **Next: Personal knowledge.** Compile activity into Work Units and reviewed
+   SOPs, decision rules, and exception playbooks with citations.
+3. **Later: Extensible memory.** Allow explicitly configured local files or
+   memory providers to participate in retrieval without turning the core data
+   store into a team or cloud product.
 
 ## Product principles
 
 - **Stability over features.** Users who stay are obsessed. Users who leave hit bugs. Fix what's broken before building what's new.
-- **No feature creep.** Every feature must serve Record, Rewind, or Ask. If it doesn't, it doesn't ship.
+- **No feature creep.** Every feature must serve capture, retrieval, knowledge
+  review, or evidence lifecycle. If it does not, it does not ship.
 - **Respect the user's machine.** CPU, memory, disk — screenpipe runs 24/7 in the background. Performance is not optional. Target: <20% CPU, <3GB RAM on release builds.
 
 ## Engineering principles
 
 - **Ship daily.** Small, focused changes. Every commit should be deployable.
 - **Simple yet powerful abstractions.** Use your own brain to write the spec, then use AI to execute.
-- **Local-first always.** Data never leaves the device unless the user explicitly opts in (cloud sync, cloud archive). Encryption is zero-knowledge.
+- **Local-first always.** Raw capture and the personal knowledge base stay on
+  the device. Only the context required by a user-configured model or memory
+  provider may leave it; that boundary must be visible and auditable.
 - **Cross-platform.** If it doesn't work on macOS, Windows, and Linux, it's not done.
-- **Open source by default.** Trust is earned through transparency.
+- **Auditable by default.** Trust is earned through readable source, local
+  data ownership, and transparent boundaries. See `LICENSE.md` for usage terms.
 
 ## Design voice
 

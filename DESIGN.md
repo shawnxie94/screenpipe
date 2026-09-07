@@ -27,7 +27,7 @@ the core identity.
 
 | Value | Description |
 |-------|-------------|
-| **Privacy First** | Local-first execution and data by default, cloud optional |
+| **Privacy First** | Local-first execution and data; external model/provider calls are explicit |
 | **Human Agency** | Preserve ownership, control, and a visible path back to source material |
 | **Open Source** | Inspect, modify, own, clean abstractions and readable codebase |
 | **Simplicity** | Clean, minimal interface, powerful abstractions |

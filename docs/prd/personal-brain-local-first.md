@@ -1,5 +1,4 @@
-<!-- screenpipe — AI that knows everything you've seen, said, or heard -->
-<!-- https://screenpipe.com -->
+<!-- screenpipe — 本地优先的个人知识库 -->
 
 ---
 id: prd-personal-brain-local-first

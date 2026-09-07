@@ -7,7 +7,7 @@ btw, we prefer that you don't contribute if you are not using or will use the pr
 ## getting started
 
 before you begin:
-- try to run the [pre-built app](https://docs.screenpi.pe) to get familiar with the project
+- run the local desktop app or CLI to get familiar with the project
 - familiarize yourself with the repository structure and architecture.
 - new to contributing? the [beginner's onboarding guide](ONBOARDING.md) walks you from zero to a merged pr step by step (this file is the reference; that one is the walkthrough).
 
@@ -511,130 +511,14 @@ cp ~/.screenpipe/db.sqlite ~/.screenpipe/db.sqlite.backup
 sqlite3 ~/.screenpipe/db.sqlite "DROP TABLE _sqlx_migrations;"
 ```
 
-### set up azure ubuntu vm with display & audio
+## 本地 API
 
-```bash
-# Set variables
-RG_NAME="my-avd-rgg"
-LOCATION="westus2" 
-VM_NAME="ubuntu-avd"
-IMAGE="Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:latest"
-VM_SIZE="Standard_D2s_v3"  
+启动本地引擎后，可以从 `http://127.0.0.1:3030/openapi.yaml` 查看当前 API 描述，也可以直接访问 [README.md](README.md) 中列出的健康检查和搜索接口。API 文档以代码为准，不再维护独立的远端文档副本。
 
-# Create resource group
-az group create --name $RG_NAME --location $LOCATION
-
-# Create VM
-az vm create \
-  --resource-group $RG_NAME \
-  --name $VM_NAME \
-  --image $IMAGE \
-  --admin-username azureuser \
-  --generate-ssh-keys \
-  --size $VM_SIZE
-
-# Enable RDP
-az vm open-port --port 3389 --resource-group $RG_NAME --name $VM_NAME
-
-# Install xrdp, audio, and desktop environment
-az vm run-command invoke \
-  --resource-group $RG_NAME \
-  --name $VM_NAME \
-  --command-id RunShellScript \
-  --scripts "
-    sudo apt update && sudo apt install -y xrdp ubuntu-desktop pulseaudio
-    sudo systemctl enable xrdp
-    sudo adduser xrdp ssl-cert
-    echo 'startxfce4' | sudo tee /etc/xrdp/startwm.sh
-    sudo systemctl restart xrdp
-    sudo ufw allow 3389/tcp
-  "
-
-# Enable audio redirection
-az vm run-command invoke \
-  --resource-group $RG_NAME \
-  --name $VM_NAME \
-  --command-id RunShellScript \
-  --scripts "
-    echo 'load-module module-native-protocol-tcp auth-anonymous=1' | sudo tee -a /etc/pulse/default.pa
-    sudo systemctl restart pulseaudio
-  "
-
-# Get IP address
-IP=$(az vm list-ip-addresses --resource-group $RG_NAME --name $VM_NAME --output table | grep -oE "\b([0-9]{1,3}\.){3}[0-9]{1,3}\b" | head -1)
-
-# Now you can open Microsoft Remote Desktop and use the IP in new PC to connect to it
-
-# RDP into the VM
-ssh azureuser@$IP
-
-# Forwarding port to local 
-ssh -L 13389:localhost:3389 azureuser@$IP
-
-# Changing password
-az vm user update \
-  --resource-group $RG_NAME \
-  --name $VM_NAME \
-  --username azureuser \
-  --password <new-password>
-```
-
-now you can either dev screenpipe on linux or run screenpipe in the cloud that record your local macos. make sure to configure microsoft remote desktop to forward audio
-
-## generating openapi.yaml
-
-run screenpipe first and then go to http://localhost:3030/openapi.yaml
-
-```bash
-open http://localhost:3030/openapi.yaml
-```
-
-we use this for our docs through mintlify, usually the output is broken and i use cursor agent to fix it using ths prompt:
-
-```
-please run this command:
-npx @mintlify/scraping@latest openapi-file docs/mintlify/openapi.yaml -o /tmp
-and fix the openapi.yaml file and rerun the command until it works
-```
-
-i also run this prompt in agent mode ...
-
-```
-how can i improve this openapi?
-mainly want to showcase most useful endpoint in priority and stuff like getting context ...
-get rid of semantic search bcs not prod rdy also
- @index.ts 
-```
-
-make sure to run 
-
-`npx @mintlify/scraping@latest openapi-file docs/mintlify/openapi.yaml -o /tmp`
-
-to validate the openapi.yaml file is valid btw before pushing 
-
-## join the community
-
-say 👋 in our [public discord channel](https://discord.gg/screenpipe). we discuss how to bring this lib to production, help each other with contributions, personal projects or just hang out ☕.
-
-thank you for contributing to screen pipe! 🎉
+感谢你为 screenpipe 的本地个人知识库方向贡献代码、测试和文档。
 
 ## testing
 
 testing is one of the toughtest challenge, we love any help improving the testing pipeline before going into production
 
 see [TESTING.md](TESTING.md) for more details on the testing process.
-
-### testing paid-plan code paths locally
-
-if you want to exercise paid-plan features (search filters, cloud sync, etc.) without a subscription, you can use the following environment variables during local development:
-
-| to test... | set this environment variable |
-| :--- | :--- |
-| **all paid features unlocked** (treats user as entitled) | `NEXT_PUBLIC_SCREENPIPE_DEV_BILLING_BYPASS=true` |
-| **the paywall/lock screen** (forces entitlement check) | `NEXT_PUBLIC_SCREENPIPE_FORCE_BILLING_GATE=true` |
-| **e2e test bypass** | `NEXT_PUBLIC_SCREENPIPE_E2E=true` |
-| **dev-build bypass** | `TAURI_ENV_DEBUG=true` |
-| **skip interactive onboarding** | `SCREENPIPE_SKIP_ONBOARDING=1` (or `true` / `yes`) |
-| **seed e2e tests (e.g. onboarding)** | `SCREENPIPE_E2E_SEED=onboarding` |
-
-You can also force the billing gate in a bypassed dev environment by setting the `screenpipe_e2e_force_billing_gate` key in `localStorage` to `"1"`.
