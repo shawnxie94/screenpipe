@@ -30,6 +30,7 @@ const WAIT_UPDATE_MS = 10_000;
 
 type BuildMode =
   | "build"
+  | "bundle"
   | "e2e"
   | "signed"
   | "test"
@@ -255,6 +256,7 @@ function removeOwner(requestId: string): void {
 function modeLabel(mode: BuildMode): string {
   switch (mode) {
     case "build": return "one-shot debug-dev build";
+    case "bundle": return "unsigned debug-dev app bundle build";
     case "e2e": return "debug-dev E2E build";
     case "signed": return "signed debug-dev app build";
     case "test": return "queued native app tests";
@@ -275,6 +277,12 @@ async function perform(mode: BuildMode, args: string[]): Promise<number> {
       env.NEXT_PUBLIC_SCREENPIPE_LOCAL_ONLY = "true";
       return run([
         "bun", "tauri", "build", "--no-bundle", "--",
+        "--profile", "debug-dev", "--features", "local-only",
+      ], env);
+    case "bundle":
+      env.NEXT_PUBLIC_SCREENPIPE_LOCAL_ONLY = "true";
+      return run([
+        "bun", "tauri", "build", "--bundles", "app", "--no-sign", "--",
         "--profile", "debug-dev", "--features", "local-only",
       ], env);
     case "e2e":
@@ -408,6 +416,7 @@ async function main(): Promise<number> {
   }
   if ([
     "build",
+    "bundle",
     "e2e",
     "signed",
     "test",
@@ -417,7 +426,7 @@ async function main(): Promise<number> {
   }
 
   console.error(
-    "usage: bun scripts/native-build-queue.ts <dev|build|e2e|signed|test|status>",
+    "usage: bun scripts/native-build-queue.ts <dev|build|bundle|e2e|signed|test|status>",
   );
   return 2;
 }

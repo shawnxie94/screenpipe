@@ -60,6 +60,7 @@
     "prebuild": "bun scripts/gen-skill-content.js && bun scripts/pre_build.js",
     "tauri": "tauri",
     "build:tauri:dev": "bun scripts/native-build-queue.ts build",
+    "build:tauri:bundle": "bun scripts/native-build-queue.ts bundle",
     "build:tauri:e2e": "bun scripts/native-build-queue.ts e2e",
     "build:tauri:status": "bun scripts/native-build-queue.ts status",
     "test:tauri": "bun scripts/native-build-queue.ts test",

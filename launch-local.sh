@@ -1,16 +1,79 @@
 #!/bin/bash
 # screenpipe 本地自部署启动脚本（个人/非商用）
-# 启动自构建的桌面 app，数据 100% 本地、不登录账号、不出现付费墙。
+# 启动最新的已打包桌面 bundle，数据 100% 本地、不登录账号、不出现付费墙。
+# bundle 缺失或源码发生变化时，会先自动重新打包。
 # 用法: ./launch-local.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-APP="$ROOT/apps/screenpipe-app-tauri/src-tauri/target/debug-dev/bundle/macos/screenpipe - Development.app"
+APP_ROOT="$ROOT/apps/screenpipe-app-tauri"
+BUNDLE_ROOT="$APP_ROOT/src-tauri/target/debug-dev/bundle/macos"
+SOURCE_KEY_FILE="$APP_ROOT/src-tauri/target/debug-dev/.screenpipe-bundle-source-key"
 
-if [ ! -d "$APP" ]; then
-  echo "错误：找不到自构建的 app：$APP" >&2
-  echo "请先运行构建（见 README 或 build-local.sh）。" >&2
+die() {
+  echo "错误：$*" >&2
   exit 1
+}
+
+latest_bundle() {
+  local bundle
+  find "$BUNDLE_ROOT" -maxdepth 1 -type d -name 'screenpipe*.app' -print 2>/dev/null \
+    | while IFS= read -r bundle; do
+        stat -f '%m %N' "$bundle"
+      done \
+    | sort -nr \
+    | sed -n '1s/^[0-9]* //p'
+}
+
+source_key() {
+  # Include tracked and non-ignored working-tree files that can affect the
+  # frontend or native build. The key lives outside the app bundle so it does
+  # not invalidate the bundle's code signature.
+  (
+    cd "$ROOT"
+    files="$(git ls-files -co --exclude-standard -- \
+      apps/screenpipe-app-tauri crates Cargo.toml Cargo.lock package.json bun.lock \
+      | LC_ALL=C sort)"
+    {
+      printf '%s\n' "$files"
+      printf '%s\n' "$files" | git hash-object --stdin-paths
+    } | LC_ALL=C shasum -a 256 | LC_ALL=C awk '{print $1}'
+  )
+}
+
+mkdir -p "$BUNDLE_ROOT"
+
+SOURCE_KEY="$(source_key)"
+BUILT_SOURCE_KEY=""
+if [ -f "$SOURCE_KEY_FILE" ]; then
+  BUILT_SOURCE_KEY="$(<"$SOURCE_KEY_FILE")"
+fi
+
+APP="$(latest_bundle || true)"
+if [ -z "$APP" ] || [ "$SOURCE_KEY" != "$BUILT_SOURCE_KEY" ]; then
+  command -v bun >/dev/null 2>&1 \
+    || die "找不到 bun，无法构建最新 bundle。请先安装 Bun。"
+
+  if [ -z "$APP" ]; then
+    echo "未找到已打包 bundle，开始构建..."
+  else
+    echo "已打包 bundle 不是当前源码版本，开始重新构建..."
+  fi
+
+  # build:tauri:bundle uses the repository-wide native build queue and produces
+  # an unsigned local app bundle. A local bundle does not need a signing
+  # identity; use the dedicated signed build path when stable TCC identity is
+  # required.
+  (
+    cd "$APP_ROOT"
+    bun run build:tauri:bundle
+  )
+
+  APP="$(latest_bundle || true)"
+  [ -n "$APP" ] || die "bundle 构建完成，但没有找到 macOS .app。"
+  printf '%s\n' "$SOURCE_KEY" > "$SOURCE_KEY_FILE"
+else
+  echo "使用最新已打包 bundle：$APP"
 fi
 
 # 隔离的数据目录：与正式版 (~/.screenpipe) 分开，避免读到已登录账号
@@ -26,11 +89,7 @@ fi
 echo "启动 screenpipe（本地模式，未登录账号，无付费墙）..."
 echo "  App:     $APP"
 echo "  数据:    ~/.screenpipe-dev"
-echo "  停止:    Ctrl+C（或杀掉 screenpipe-app 进程）"
+echo "  停止:    Ctrl+C"
 echo "  API 端口: 3130"
 echo ""
-"$APP/Contents/MacOS/screenpipe-app" &
-APP_PID=$!
-echo "PID: $APP_PID"
-trap 'echo "停止中..."; kill $APP_PID 2>/dev/null || true' INT TERM EXIT
-wait $APP_PID
+exec "$APP/Contents/MacOS/screenpipe-app"

@@ -70,6 +70,15 @@ bun install
 bun run dev:tauri
 ```
 
+如果需要启动已打包的本地 bundle，可从仓库根目录运行：
+
+```bash
+./launch-local.sh
+```
+
+脚本会比较源码指纹；bundle 缺失或不是当前源码构建时自动重新打包，
+然后使用隔离的 `~/.screenpipe-dev` 数据目录和 `3130` API 端口启动。
+
 只需要验证普通 React 布局时，可以使用不构建 Rust 的浏览器模拟环境：
 
 ```bash
