@@ -59,15 +59,15 @@ describe("buildMeetingChatPrompt", () => {
       "check my screenpipe data for ten related demos",
       [],
     );
-    expect(prompt).toContain("broader screenpipe history");
+    expect(prompt).toContain("更广泛的 screenpipe 历史");
     // Deliberately not a tool id: the same tool is named `search-content`,
     // `mcp__screenpipe__search-content`, or `keyword_search` depending on the
     // backend, and naming one spelling told ACP agents to call a tool that does
     // not exist for them.
-    expect(prompt).toContain("read-only screenpipe search and meeting tools");
+    expect(prompt).toContain("只读 screenpipe 搜索和会议工具");
     expect(prompt).not.toContain("search-content");
-    expect(prompt).toContain("smallest relevant time range");
-    expect(prompt).toContain("Never imply broader evidence was part of this meeting");
+    expect(prompt).toContain("最小相关时间范围");
+    expect(prompt).toContain("绝不要暗示更广泛的证据属于本次会议");
   });
 
   it("cases 2/16/20: discloses a transcript that is still arriving", () => {
@@ -76,9 +76,9 @@ describe("buildMeetingChatPrompt", () => {
       "what did i commit to?",
       [],
     );
-    expect(settling).toContain("last moments may not be in the transcript yet");
+    expect(settling).toContain("最后时刻可能还没有进入转录");
     expect(buildMeetingChatPrompt(context, "q", [])).not.toContain(
-      "last moments may not be",
+      "最后时刻可能还没有",
     );
   });
 
@@ -88,9 +88,9 @@ describe("buildMeetingChatPrompt", () => {
       "q",
       [],
     );
-    expect(truncated).toContain("partial window");
+    expect(truncated).toContain("只是部分时间窗口");
     expect(buildMeetingChatPrompt(context, "q", [])).not.toContain(
-      "partial window",
+      "只是部分时间窗口",
     );
   });
 
@@ -117,7 +117,7 @@ describe("buildMeetingChatPrompt", () => {
       turn("assistant", "   "),
       turn("user", "real"),
     ]);
-    expect(prompt).toContain("User: real");
+    expect(prompt).toContain("用户：real");
     expect(prompt).not.toMatch(/You:\s*\n/);
   });
 
@@ -127,7 +127,7 @@ describe("buildMeetingChatPrompt", () => {
       "what did i miss?",
       [],
     );
-    expect(prompt).toContain("still recording");
+    expect(prompt).toContain("仍在录制");
   });
 
   it("case 11: names the absence rather than sending an empty block", () => {
@@ -136,7 +136,7 @@ describe("buildMeetingChatPrompt", () => {
       "q",
       [],
     );
-    expect(prompt).toContain("(no transcript available)");
+    expect(prompt).toContain("（没有可用转录）");
   });
 
   it("falls back to a title placeholder", () => {
@@ -147,7 +147,7 @@ describe("buildMeetingChatPrompt", () => {
 
   it("forbids invention explicitly", () => {
     const prompt = buildMeetingChatPrompt(context, "q", []);
-    expect(prompt).toContain("Never invent");
-    expect(prompt).toContain("say so plainly");
+    expect(prompt).toContain("绝不要编造");
+    expect(prompt).toContain("用一句话直说");
   });
 });

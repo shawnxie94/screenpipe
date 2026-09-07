@@ -45,14 +45,14 @@ export type SendChartPrompt = (
   displayLabel: string,
 ) => void | Promise<void>;
 
-const LIVE_VIEW_DISPLAY_LABEL = "Add chart to a Live View";
+const LIVE_VIEW_DISPLAY_LABEL = "将图表加入 Live View";
 
 export function buildChartLiveViewPrompt(spec: ChartSpec): string {
-  return `Add the chart below to a Live View as a new, refreshable block.
+  return `将下面的图表作为新的可刷新区块加入 Live View。
 
-List my Live Views first. If there is one, use it. If there is more than one, ask me which one. If there are none, create one for this chart. Map the chart to the closest supported Live View component, preserve its question, evidence scope, title, labels, values, and units where the Live View schema supports them, and do not change or remove unrelated blocks. If no scheduled source can refresh this block, tell me before saving an empty block.
+先列出我的 Live View。如果只有一个，就使用它；如果有多个，询问我应该使用哪一个；如果没有，就为这个图表创建一个。将图表映射到最接近的受支持 Live View 组件；在 Live View schema 支持的范围内保留它的问题、证据范围、标题、标签、数值和单位，不要修改或删除无关区块。如果没有可按计划刷新这个区块的来源，在保存空区块前先告诉我。
 
-Chart spec from this answer:
+这次回答中的图表规格：
 
 \`\`\`json
 ${JSON.stringify(spec, null, 2)}

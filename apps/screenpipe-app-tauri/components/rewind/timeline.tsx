@@ -622,8 +622,8 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 			if (Number.isNaN(parsed) || parsed < 1) {
 				setPendingNavigation(null);
 				toast({
-					title: "invalid frame ID",
-					description: `"${raw}" is not a valid frame ID. expected a positive integer.`,
+					title: "画面 ID 无效",
+					description: `“${raw}”不是有效的画面 ID，应为正整数。`,
 					variant: "destructive",
 				});
 				return;
@@ -635,20 +635,20 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 				if (data?.timestamp) {
 					setPendingNavigation(null);
 					await navigateToTimestamp(data.timestamp);
-					toast({ title: "jumped to frame", description: `opened frame ${frameId}` });
+					toast({ title: "已跳转到画面", description: `已打开画面 ${frameId}` });
 					return;
 				}
 				setPendingNavigation(null);
 				toast({
-					title: "frame not found",
-					description: `could not navigate to frame ${frameId} — it may not exist or server is not ready`,
+					title: "未找到画面",
+					description: `无法跳转到画面 ${frameId}——它可能不存在或服务尚未就绪。`,
 					variant: "destructive",
 				});
 			} catch (error) {
 				console.error("Failed to navigate to frame:", error);
 				setPendingNavigation(null);
 				toast({
-					title: "navigation failed",
+					title: "跳转失败",
 					description: error instanceof Error ? error.message : "无法将画面解析为时间戳",
 					variant: "destructive",
 				});
@@ -852,7 +852,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 			});
 		});
 		if (ocrSamples.length > 0) {
-			contextParts.push(`Screen text samples:\n${ocrSamples.join("\n---\n")}`);
+			contextParts.push(`屏幕文字片段：\n${ocrSamples.join("\n---\n")}`);
 		}
 
 		// Add audio transcriptions if any
@@ -867,7 +867,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 			});
 		});
 		if (audioSamples.length > 0) {
-			contextParts.push(`Audio transcriptions:\n${audioSamples.join("\n---\n")}`);
+			contextParts.push(`音频转录：\n${audioSamples.join("\n---\n")}`);
 		}
 
 		const context = contextParts.join("\n\n");
@@ -876,7 +876,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 		if (pipe) {
 			await showChatWithPrefill({ context, prompt: pipe.prompt, autoSend: true });
 		} else {
-			await showChatWithPrefill({ context, prompt: `Based on my activity from ${startTime} to ${endTime}, `, source: "timeline" });
+			await showChatWithPrefill({ context, prompt: `根据我从 ${startTime} 到 ${endTime} 的活动，`, source: "timeline" });
 		}
 
 
@@ -1272,10 +1272,10 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 									</div>
 
 									<h3 className="text-xl font-semibold text-foreground mb-3">
-										Screen recording is off
+										屏幕录制已关闭
 									</h3>
 									<p className="text-muted-foreground mb-6 leading-relaxed">
-										Enable screen recording in settings to start capturing your timeline.
+										请在设置中启用屏幕录制，以开始采集时间线。
 									</p>
 
 									<button
@@ -1283,7 +1283,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 										className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
 									>
 										<Settings className="w-4 h-4" />
-										Open settings
+										打开设置
 									</button>
 								</div>
 							) : screenshotsDisabledCta(health) ? (
@@ -1306,7 +1306,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 										className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-primary/90 transition-colors"
 									>
 										<Settings className="w-4 h-4" />
-										Open settings
+										打开设置
 									</button>
 								</div>
 							) : (
@@ -1326,10 +1326,10 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 									</div>
 
 									<h3 className="text-xl font-semibold text-foreground mb-3">
-										Building Your Memory
+										正在构建你的记忆
 									</h3>
 									<p className="text-muted-foreground mb-6 leading-relaxed">
-										Screenpipe is recording your screen activity. Your timeline will appear here as frames are captured.
+										Screenpipe 正在记录屏幕活动。采集到画面后，你的时间线会显示在这里。
 									</p>
 
 									{/* Friendly suggestion */}
@@ -1338,11 +1338,11 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 											<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
 											<span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
 										</span>
-										Recording in progress
+										正在录制
 									</div>
 
 									<p className="text-xs text-muted-foreground mt-6">
-										Check back in a few minutes
+										请几分钟后回来查看
 									</p>
 								</div>
 							)}
@@ -1499,7 +1499,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 								<span>重新加载时间线</span>
 							</button>
 							<p className="text-xs text-muted-foreground">
-								Press Esc or click X to close
+								按 Esc 或点击 X 关闭
 							</p>
 						</div>
 					</div>
@@ -1677,7 +1677,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 									// screen recording is off — two contradictory answers on one screen.
 									<div className="text-center text-muted-foreground flex items-center justify-center gap-2">
 										<MonitorOff className="w-3.5 h-3.5" />
-										Screen recording is off — no timeline to show
+										屏幕录制已关闭——暂无时间线可显示
 									</div>
 								) : (
 									<div className="text-center text-muted-foreground flex items-center justify-center gap-2">
@@ -1685,7 +1685,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 											<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
 											<span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
 										</span>
-										Recording... timeline will appear soon
+										正在录制……时间线很快会显示
 									</div>
 								)}
 							</div>

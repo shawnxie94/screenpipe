@@ -188,7 +188,7 @@ export function ScheduledTasksRefreshButton({
       disabled={refreshing}
       aria-busy={refreshing}
       aria-label={
-        refreshing ? "refreshing scheduled tasks" : "refresh scheduled tasks"
+        refreshing ? "正在刷新定时任务" : "刷新定时任务"
       }
     >
       {refreshing ? (
@@ -375,7 +375,7 @@ function buildCreatePipeDisplayLabel(prompt: string): string {
   const normalized = prompt.replace(/\s+/g, " ").trim();
   if (!normalized) return "创建计划任务";
   const compact = normalized.length > 60 ? `${normalized.slice(0, 57).trimEnd()}...` : normalized;
-  return `Create scheduled task: ${compact}`;
+  return `创建定时任务：${compact}`;
 }
 
 // Starter prompts shown next to the create-pipe box. A concrete, named example
@@ -384,19 +384,19 @@ function buildCreatePipeDisplayLabel(prompt: string): string {
 // Each `prompt` is sent straight into the create flow (autoSend).
 const PIPE_EXAMPLES: { label: string; prompt: string }[] = [
   {
-    label: "📋 daily recap",
+    label: "📋 每日回顾",
     prompt:
-      "every day at 6pm, summarize what i worked on today and send me a notification",
+      "每天晚上 6 点总结我今天做过的工作，并发送通知",
   },
   {
-    label: "🧠 track people i meet",
+    label: "🧠 记录遇到的人",
     prompt:
-      "keep a running note of the people i talk to and what we discussed, updated every hour",
+      "持续记录我交谈过的人以及讨论内容，每小时更新一次",
   },
   {
-    label: "⏱ where my time goes",
+    label: "⏱ 我的时间花在哪儿",
     prompt:
-      "every evening, break down how i spent my time across apps and projects today",
+      "每天晚上拆分统计我今天在各个应用和项目上花费的时间",
   },
 ];
 
@@ -404,35 +404,35 @@ function buildOptimizePrompt(pipeName: string): string {
   // Screenpipe's isolated pi agent dir (legacy sessions before the isolation
   // lived in ~/.pi/agent/sessions/ and were copied over on first run).
   const sessionDir = `~/.screenpipe/pi-config/sessions/`;
-  return `i need help optimizing my screenpipe pipe "${pipeName}".
+  return `我需要帮助优化 screenpipe 管道“${pipeName}”。
 
-## your task
+## 你的任务
 
-1. first, ask me: what do i expect this pipe to produce? what's the ideal output?
-2. then read the pipe prompt: ~/.screenpipe/pipes/${pipeName}/pipe.md
-3. check the last few execution logs by querying the screenpipe API: GET http://localhost:3030/pipes/${pipeName}/executions?limit=5
-4. look at the pi agent session files in ${sessionDir} for the full conversation history (tool calls, reasoning, errors)
-5. based on all of this, suggest specific improvements to the pipe.md prompt
+1. 先问我：我希望这个管道产出什么？理想结果是什么？
+2. 然后读取管道提示词：~/.screenpipe/pipes/${pipeName}/pipe.md
+3. 查询 screenpipe API 检查最近几次执行日志：GET http://localhost:3030/pipes/${pipeName}/executions?limit=5
+4. 查看 ${sessionDir} 中的 Pi agent 会话文件，了解完整对话历史（工具调用、推理和错误）
+5. 综合这些信息，为 pipe.md 提出具体改进建议
 
-## optimization guidelines
+## 优化指南
 
-follow these prompt engineering best practices (from anthropic's guide):
-- be specific and explicit about expected output format
-- give the agent clear step-by-step instructions
-- include examples of good output
-- add error handling: "if the API returns empty results, try content_type=accessibility instead of ocr"
-- add validation: "before writing the file, verify you have at least 3 activity entries"
-- avoid ambiguity: specify exact file paths, exact API parameters, exact output structure
+遵循以下提示词工程最佳实践（来自 Anthropic 指南）：
+- 明确、具体地说明预期输出格式
+- 为 agent 提供清晰的分步指令
+- 包含优质输出示例
+- 增加错误处理：“如果 API 返回空结果，尝试使用 content_type=accessibility，而不是 ocr”
+- 增加校验：“写入文件前，确认至少有 3 条活动记录”
+- 避免歧义：指定确切文件路径、API 参数和输出结构
 
-## common issues to check for
+## 常见问题检查清单
 
-- pipe queries content_type=ocr but user have mostly accessibility (try accessibility instead)
-- pipe doesn't specify output file path explicitly (agent guesses wrong location)
-- pipe prompt is too vague for small/local models (needs more explicit steps)
-- schedule is too frequent (burning credits on empty time ranges)
-- no error handling for empty API responses (agent exits successfully with no output)
+- 管道查询 content_type=ocr，但用户的数据主要是无障碍内容（改用 accessibility）
+- 管道没有明确指定输出文件路径（agent 可能猜错位置）
+- 管道提示词对小型或本地模型过于含糊（需要更明确的步骤）
+- 调度过于频繁（在空时间范围上浪费额度）
+- 没有处理空 API 响应的错误逻辑（agent 可能无输出却成功退出）
 
-after analyzing, show me the improved pipe.md and explain what you changed and why.`;
+分析后，展示改进后的 pipe.md，并解释你修改了什么以及原因。`;
 }
 
 function buildOptimizeDisplayLabel(pipeName: string): string {
@@ -443,13 +443,13 @@ function buildOptimizeDisplayLabel(pipeName: string): string {
 // original — the agent reads it and creates a NEW customized pipe. Framing
 // authoring as "customize a working thing" turns installers into creators.
 function buildForkPrompt(pipeName: string): string {
-  return `i want to fork my existing pipe "${pipeName}" into a new one.
+  return `我想把现有管道“${pipeName}”复制成一个新管道。
 
-## your task
-1. read the original pipe: ~/.screenpipe/pipes/${pipeName}/pipe.md
-2. ask me what i want to change or do differently
-3. create a NEW pipe (a new name + folder) with those changes — do NOT modify or overwrite "${pipeName}"
-4. install and enable the new pipe, then tell me what it does.`;
+## 你的任务
+1. 读取原始管道：~/.screenpipe/pipes/${pipeName}/pipe.md
+2. 询问我想修改什么，或想以什么不同方式运行
+3. 根据这些变更创建一个新管道（新名称和新目录）——不要修改或覆盖“${pipeName}”
+4. 安装并启用新管道，然后告诉我它的作用。`;
 }
 
 // parsePipeError moved to @/lib/pipe-errors (shared with the global pipe-advisory
@@ -503,7 +503,7 @@ function pipeConnectionDisplayName(
 ): string {
   if (instanceName) return `${connection?.name || pipeConnectionLookupKey(connectionId)} (${instanceName})`;
   if (connection) return connection.name;
-  if (isMcpConnectionKey(connectionId)) return "deleted MCP server";
+  if (isMcpConnectionKey(connectionId)) return "已删除的 MCP 服务器";
   return connectionId;
 }
 
@@ -512,9 +512,9 @@ function pipeConnectionSetupLabel(
   connection: AvailableConnection | undefined
 ): string {
   if (isMcpConnectionKey(connectionId) && connection && !connection.connected) {
-    return "disabled";
+    return "已停用";
   }
-  return "setup";
+  return "需配置";
 }
 
 function buildPipeConnectionOptions(
@@ -594,10 +594,10 @@ function PipeConnectionPicker({
 
   const emptyLabel =
     availableConnections.length === 0
-      ? "no connections available"
+      ? "暂无可用连接"
       : options.length === 0
-        ? "all connections added"
-        : "no matches";
+        ? "已添加全部连接"
+        : "没有匹配项";
 
   const handleAdd = (connectionKey: string) => {
     onAdd(connectionKey);
@@ -622,7 +622,7 @@ function PipeConnectionPicker({
           data-testid="pipe-connection-add"
         >
           <Plus className="h-3 w-3" />
-          add
+          添加
           <ChevronDown className="h-3 w-3 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
@@ -664,10 +664,10 @@ function PipeConnectionPicker({
                   </span>
                   <span className="block truncate text-[11px] text-muted-foreground">
                     {option.kind === "mcp"
-                      ? "mcp server"
+                      ? "MCP 服务器"
                       : option.instanceName
                         ? option.connectionName
-                        : "connection"}
+                        : "连接"}
                   </span>
                 </span>
                 <span className="ml-2 flex shrink-0 items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -677,7 +677,7 @@ function PipeConnectionPicker({
                       option.connected ? "bg-foreground" : "bg-muted-foreground/30"
                     )}
                   />
-                  {option.connected ? "ready" : "setup"}
+                  {option.connected ? "就绪" : "需配置"}
                 </span>
               </button>
             ))
@@ -695,7 +695,7 @@ function PipeConnectionPicker({
             className="flex w-full items-center gap-2 px-2 py-2 text-left text-xs text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            manage connections
+            管理连接
           </button>
         </div>
       </PopoverContent>
@@ -756,13 +756,13 @@ interface PipeExecution {
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const secs = Math.floor(diff / 1000);
-  if (secs < 60) return "just now";
+  if (secs < 60) return "刚刚";
   const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return `${mins} 分钟前`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return `${hrs} 小时前`;
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return `${days} 天前`;
 }
 
 function formatDuration(ms: number): string {
@@ -827,7 +827,7 @@ export function cleanPipeStdout(raw: string): string {
           // tool call — show a brief indicator so the user sees what the agent did
           if (ae.type === "toolcall_start" && ae.toolName) {
             flushText();
-            parts.push(`> *running \`${ae.toolName}\`...*`);
+            parts.push(`> *正在运行 \`${ae.toolName}\`…*`);
           }
           continue;
         }
@@ -909,7 +909,7 @@ export function cleanPipeStdout(raw: string): string {
   const text = parts.join("\n\n").trim();
   if (!text && errorMessage) {
     const parsed = parsePipeError(errorMessage);
-    return parsed.type === "unknown" ? `error: ${errorMessage}` : parsed.message;
+    return parsed.type === "unknown" ? `错误：${errorMessage}` : parsed.message;
   }
   return text;
 }
@@ -1291,7 +1291,7 @@ export function PipesSection() {
   const starredEmptyTitle = React.useMemo(() => {
     if (!pipeFavorites.showOnly) return null;
 
-    return "no starred scheduled tasks";
+    return "暂无已收藏的定时任务";
   }, [pipeFavorites.showOnly]);
 
   const fetchPipes = useCallback(() => {
@@ -1320,7 +1320,7 @@ export function PipesSection() {
         : "/pipes?include_executions=true&execution_limit=1&include_execution_counts=true";
       const res = await localFetch(pipesEndpoint, { signal: controller.signal }).finally(() => clearTimeout(timeout));
       if (!res.ok) {
-        throw new Error(`scheduled tasks API returned ${res.status}`);
+        throw new Error(`定时任务 API 返回 ${res.status}`);
       }
       const data = await res.json();
       const rawItems: Array<PipeStatus & { recent_executions?: PipeExecution[] }> = data.data || [];
@@ -1367,10 +1367,10 @@ export function PipesSection() {
     } catch (e) {
       console.error("failed to fetch pipes:", e);
       const message = (e as any)?.name === "AbortError"
-        ? `timed out connecting to ${apiBase}`
+        ? `连接 ${apiBase} 超时`
         : e instanceof Error
           ? e.message
-          : "failed to fetch scheduled tasks";
+          : "获取定时任务失败";
       if (isCurrentRequest()) setLoadError(message);
       return false;
     } finally {
@@ -1477,7 +1477,7 @@ export function PipesSection() {
         // Older engines can return an empty success body.
       }
       if (!response.ok || data?.error || data?.success === false) {
-        throw new Error(data?.error || `scheduled tasks API returned ${response.status}`);
+        throw new Error(data?.error || `定时任务 API 返回 ${response.status}`);
       }
     })();
     pendingConfigSaves.current[pipeName] = savePromise;
@@ -1495,7 +1495,7 @@ export function PipesSection() {
         });
       }, 2_000);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "could not save this setting";
+      const message = error instanceof Error ? error.message : "无法保存此设置";
       setPipes((previous) =>
         previous.map((candidate) =>
           candidate.config.name === pipeName
@@ -1528,7 +1528,7 @@ export function PipesSection() {
       }
       if (piInfo.data.busy) {
         throw new Error(
-          "a reply is still running in this chat. wait for it to finish or stop it, then try again.",
+          "此聊天中仍有回复正在运行。请等待其完成或停止后重试。",
         );
       }
       if (piInfo.data.running) {
@@ -1537,7 +1537,7 @@ export function PipesSection() {
           throw new Error(stopped.error);
         }
         if (stopped.data.running) {
-          throw new Error("the chat is still active. close it and try again.");
+          throw new Error("聊天仍处于活动状态。请关闭后重试。");
         }
       }
 
@@ -1552,7 +1552,7 @@ export function PipesSection() {
         // A non-JSON response is handled by the status check below.
       }
       if (!response.ok || data?.error || data?.success === false) {
-        throw new Error(data?.error || `scheduled tasks API returned ${response.status}`);
+        throw new Error(data?.error || `定时任务 API 返回 ${response.status}`);
       }
 
       const existingConversation = await loadConversationFile(conversationId);
@@ -1560,7 +1560,7 @@ export function PipesSection() {
       await deleteConversationFile(conversationId);
       if (await loadConversationFile(conversationId)) {
         throw new Error(
-          "AI context was cleared, but the chat transcript could not be reset. try again.",
+          "AI 上下文已清除，但无法重置聊天记录。请重试。",
         );
       }
 
@@ -1822,7 +1822,7 @@ export function PipesSection() {
       if (!res.ok || data?.error || data?.success === false) {
         throw new Error(
           data?.error ||
-          `failed to ${enabled ? "enable" : "disable"} scheduled task "${name}"`
+          `${enabled ? "启用" : "停用"}定时任务“${name}”失败`
         );
       }
     } catch {
@@ -1836,7 +1836,7 @@ export function PipesSection() {
       );
       toast({
         title: "切换定时任务失败",
-        description: `could not ${enabled ? "enable" : "disable"} "${name}"`,
+        description: `${enabled ? "无法启用" : "无法停用"}“${name}”`,
         variant: "destructive",
       });
     }
@@ -1898,7 +1898,7 @@ export function PipesSection() {
       toast({
         title: "停止定时任务失败",
         description:
-          error instanceof Error ? error.message : `could not stop "${name}"`,
+          error instanceof Error ? error.message : `无法停止“${name}”`,
         variant: "destructive",
       });
     } finally {
@@ -1954,7 +1954,7 @@ export function PipesSection() {
       if (failed > 0) {
         toast({
           title: "部分定时任务删除失败",
-          description: `${failed} of ${selectedPipes.size} scheduled tasks could not be deleted`,
+          description: `${selectedPipes.size} 个定时任务中有 ${failed} 个无法删除`,
           variant: "destructive",
         });
       }
@@ -2032,13 +2032,13 @@ export function PipesSection() {
       });
       const data = await res.json();
       // Server returns 200 even on error — check body for error field
-      if (!res.ok || data.error) throw new Error(data.error || "save failed");
+      if (!res.ok || data.error) throw new Error(data.error || "保存失败");
       setSaveStatus((prev) => ({ ...prev, [name]: "saved" }));
       // Don't clear draft or refetch — the 10s poll will sync.
       setTimeout(() => setSaveStatus((prev) => { const next = { ...prev }; delete next[name]; return next; }), 2000);
     } catch (e: any) {
       console.error("pipe save failed:", e);
-      setSaveErrors((prev) => ({ ...prev, [name]: e?.message || "unknown error" }));
+      setSaveErrors((prev) => ({ ...prev, [name]: e?.message || "未知错误" }));
       setSaveStatus((prev) => ({ ...prev, [name]: "error" }));
     }
   }, [pipes]);
@@ -2126,12 +2126,12 @@ export function PipesSection() {
           if (evt.type === "text_delta" && evt.delta) {
             text = evt.delta;
           } else if (evt.type === "thinking" && evt.thinking) {
-            text = `[thinking] ${evt.thinking}`;
+            text = `[思考中] ${evt.thinking}`;
           } else if (evt.type === "toolcall_start" && evt.toolName) {
-            text = `\n> running ${evt.toolName}...\n`;
+            text = `\n> 正在运行 ${evt.toolName}…\n`;
           }
         } else if (pipeEvent.type === "tool_use") {
-          text = `\n> running ${(pipeEvent as any).name || "unknown"}...\n`;
+          text = `\n> 正在运行 ${(pipeEvent as any).name || "未知定时任务"}…\n`;
         }
         // Silently skip all other event types (turn_start, turn_end,
         // message_start, message_end, tool_execution_start/end/update,
@@ -2159,10 +2159,10 @@ export function PipesSection() {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
         <Monitor className="h-8 w-8 opacity-40" />
-        <p className="text-sm font-medium">{selectedDeviceInfo.label} is offline</p>
+        <p className="text-sm font-medium">{selectedDeviceInfo.label} 已离线</p>
         <p className="text-xs opacity-70">检查远程设备上 screenpipe 是否在运行</p>
         <Button variant="outline" size="sm" onClick={() => setSelectedDevice(null)}>
-          back to this device
+          返回本机
         </Button>
       </div>
     );
@@ -2183,7 +2183,7 @@ export function PipesSection() {
             }}
           />
           <span className="text-sm text-muted-foreground">
-            {selectedPipes.size} selected
+            已选择 {selectedPipes.size} 个
           </span>
           <div className="flex-1" />
           <Button
@@ -2194,7 +2194,7 @@ export function PipesSection() {
             onClick={() => setBulkDeleteConfirm(true)}
           >
             {bulkDeleting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Trash2 className="h-3 w-3 mr-1" />}
-            delete
+            删除
           </Button>
           <Button
             variant="ghost"
@@ -2223,7 +2223,7 @@ export function PipesSection() {
             size="icon"
             className="h-8 w-8"
             onClick={() => pipeFavorites.setShowOnly(!pipeFavorites.showOnly)}
-            title={pipeFavorites.showOnly ? "show all scheduled tasks" : "show only starred scheduled tasks"}
+            title={pipeFavorites.showOnly ? "显示全部定时任务" : "仅显示已收藏的定时任务"}
           >
             <Star
               className={cn(
@@ -2255,7 +2255,7 @@ export function PipesSection() {
               data-testid="pipe-create-open"
             >
               <Plus className="h-3.5 w-3.5" />
-              NEW
+              新建
             </Button>
           )}
         </div>
@@ -2272,7 +2272,7 @@ export function PipesSection() {
         <div className="flex items-baseline gap-2 px-1 pt-1">
           <h3 className="text-sm font-medium">定时任务</h3>
           <span className="text-xs tabular-nums text-muted-foreground">
-            {filteredPipes.length} total
+            共 {filteredPipes.length} 个
           </span>
         </div>
       )}
@@ -2321,7 +2321,7 @@ export function PipesSection() {
                 <p className="text-xs mt-2 font-mono text-muted-foreground/80">{loadError}</p>
               </div>
               <Button variant="outline" size="sm" onClick={() => void fetchPipes()}>
-                retry
+                重试
               </Button>
             </div>
           </CardContent>
@@ -2339,8 +2339,8 @@ export function PipesSection() {
                   </p>
                   <p className="text-sm mt-1">
                     {pipeFavorites.favorites.size === 0
-                      ? "star any scheduled task to keep your favorites here"
-                      : "none of your starred scheduled tasks match this filter right now"}
+                      ? "收藏任意定时任务，它就会显示在这里"
+                      : "当前筛选条件下没有匹配的已收藏定时任务"}
                   </p>
                 </div>
                 <div>
@@ -2349,7 +2349,7 @@ export function PipesSection() {
                     size="sm"
                     onClick={() => pipeFavorites.setShowOnly(false)}
                   >
-                    show all scheduled tasks
+                    显示全部定时任务
                   </Button>
                 </div>
               </div>
@@ -2358,12 +2358,12 @@ export function PipesSection() {
                 <div>
                   <p className="text-foreground font-medium text-base">还没有定时任务</p>
                   <p className="text-sm mt-1">
-                    scheduled tasks run locally over your screen data — they can summarize your day, track your time, sync your notes, and more.
+                    定时任务会在本地处理你的屏幕数据——可以总结一天的工作、追踪时间、同步笔记，以及完成更多事情。
                   </p>
                 </div>
                 <div className="space-y-2 max-w-md mx-auto text-left">
                   <p className="text-xs text-muted-foreground">
-                    create one in seconds — pick an example to build it, or describe your own below.
+                    几秒钟就能创建一个——选择示例开始，或在下方描述你自己的需求。
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {PIPE_EXAMPLES.map((ex) => (
@@ -2385,7 +2385,7 @@ export function PipesSection() {
                   }}
                   className="inline-flex items-center gap-2 px-4 py-2 border border-border text-sm font-medium hover:bg-muted transition-colors"
                 >
-                  or browse the Store →
+                  或浏览任务商店 →
                 </button>
               </div>
             )}
@@ -2412,8 +2412,8 @@ export function PipesSection() {
               const runningLabel = runningExec?.started_at
                 ? formatPipeElapsed(runningExec.started_at)
                 : runningPipe === pipe.config.name
-                  ? "starting"
-                  : "now";
+                    ? "启动中"
+                  : "现在";
               const hasMissingConnections = (pipe.config.connections ?? []).some((id) => {
                 // support instance keys like "notion:crm" — match on base id
                 const baseId = pipeConnectionLookupKey(id);
@@ -2435,12 +2435,12 @@ export function PipesSection() {
                 (pipe.config.trigger?.custom?.length || 0);
               const scheduleSummary =
                 triggerCount > 0
-                  ? `${triggerCount} trigger${triggerCount > 1 ? "s" : ""}${
+                  ? `${triggerCount} 个触发器${
                       pipeHasSchedule(pipe.config) ? ` + ${pipeScheduleLabel(pipe.config)}` : ""
                     }`
                   : pipeHasSchedule(pipe.config)
                     ? pipeScheduleLabel(pipe.config)
-                    : "manual";
+                    : "手动";
               // What actually happened last, spelled out rather than left to
               // colour alone. The detail pane shows this as-is — it has an
               // explicit auto-run control right below, so it doesn't need the
@@ -2448,11 +2448,11 @@ export function PipesSection() {
               const lastRunFact =
                 lastStatus === "error"
                   ? lastExec?.started_at
-                    ? `failed ${relativeTime(lastExec.started_at)}`
-                    : "failed"
+                    ? `失败于 ${relativeTime(lastExec.started_at)}`
+                    : "失败"
                   : lastExec?.started_at
-                    ? `ran ${relativeTime(lastExec.started_at)}`
-                    : "never run";
+                    ? `${relativeTime(lastExec.started_at)}运行`
+                    : "从未运行";
               // Forward-looking, and only while auto-run is on — a countdown
               // beside a paused task would promise a run that isn't coming.
               const nextRunLabel = pipe.config.enabled
@@ -2468,13 +2468,13 @@ export function PipesSection() {
               // are the thing users actually get burned by. Healthy pipes get
               // the forward-looking answer to "when does this run again?".
               const lastRunSummary = isRunning
-                ? `running ${runningLabel ?? "now"}`
+                ? `运行中 ${runningLabel ?? "现在"}`
                 : !pipe.config.enabled
-                  ? "paused"
+                  ? "已暂停"
                   : lastStatus === "error"
                     ? lastRunFact
                     : nextRunLabel
-                      ? `next run ${nextRunLabel}`
+                      ? `下次运行 ${nextRunLabel}`
                       : lastRunFact;
               const description =
                 typeof pipe.config.description === "string" &&
@@ -2583,7 +2583,7 @@ export function PipesSection() {
                         ? "text-foreground"
                         : "text-muted-foreground/50 opacity-0 hover:text-muted-foreground focus:opacity-100 group-hover:opacity-100",
                     )}
-                    title={isFavorite ? "unstar" : "star this scheduled task"}
+                    title={isFavorite ? "取消收藏" : "收藏此定时任务"}
                     aria-pressed={isFavorite}
                   >
                     <Star className={cn("h-3.5 w-3.5", isFavorite && "fill-foreground")} />
@@ -2614,15 +2614,15 @@ export function PipesSection() {
                         <PipeActivityIndicator
                           kind="running"
                           label={runningLabel}
-                          ariaLabel={`running ${runningLabel ?? "now"}`}
+                          ariaLabel={`运行中 ${runningLabel ?? "现在"}`}
                         />
                       ) : lastStatus === "error" ? (
                         <PipeActivityIndicator
                           kind="error"
                           label={
-                            lastExec?.started_at ? relativeTime(lastExec.started_at) : "failed"
+                            lastExec?.started_at ? relativeTime(lastExec.started_at) : "失败"
                           }
-                          ariaLabel="last run failed"
+                          ariaLabel="上次运行失败"
                         />
                       ) : (
                         <span className="font-mono text-xs text-muted-foreground">
@@ -2634,7 +2634,7 @@ export function PipesSection() {
                           of replacing it as it does in the row. */}
                       {!isRunning && nextRunLabel && (
                         <span className="font-mono text-xs text-muted-foreground">
-                          · next run {nextRunLabel}
+                          · 下次运行 {nextRunLabel}
                         </span>
                       )}
                       {pipe.config.history && (
@@ -2643,7 +2643,7 @@ export function PipesSection() {
                           className="h-5 shrink-0 rounded-none text-[10px] text-muted-foreground"
                           title="后续运行会记住之前的上下文并更新同一个聊天"
                         >
-                          one chat
+                          单一聊天
                         </Badge>
                       )}
 
@@ -2715,7 +2715,7 @@ export function PipesSection() {
                             ) : (
                               <Square className="h-4 w-4" />
                             )}
-                            stop
+                            停止
                           </Button>
                         ) : (
                           <Button
@@ -2763,7 +2763,7 @@ export function PipesSection() {
                         title="用 AI 优化这个定时任务——读取最近运行并改进提示词"
                       >
                         <Sparkles className="h-3.5 w-3.5" />
-                        optimize
+                        优化
                       </Button>
                     </>
 
@@ -2792,7 +2792,7 @@ export function PipesSection() {
                             }}
                           >
                             <GitFork className="h-3.5 w-3.5 mr-2" />
-                            fork into a new task
+                            复制为新任务
                           </DropdownMenuItem>
 
                           {(pipe.source_slug || (pipe.config as any).config?.source_slug) && (
@@ -2803,14 +2803,14 @@ export function PipesSection() {
                               }}
                             >
                               <RefreshCw className="h-3.5 w-3.5 mr-2" />
-                              check for updates
+                              检查更新
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
                             onClick={() => setPublishPipeName(pipe.config.name)}
                           >
                             <Upload className="h-3.5 w-3.5 mr-2" />
-                            publish to store
+                            发布到任务商店
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -2828,14 +2828,14 @@ export function PipesSection() {
                             }}
                           >
                             <CheckSquare className="h-3.5 w-3.5 mr-2" />
-                            {selectedPipes.has(pipe.config.name) ? "deselect" : "select"}
+                            {selectedPipes.has(pipe.config.name) ? "取消选择" : "选择"}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => deletePipe(pipe.config.name)}
                           >
                             <Trash2 className="h-3.5 w-3.5 mr-2" />
-                            delete
+                            删除
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -2848,16 +2848,16 @@ export function PipesSection() {
                       className="ml-auto flex items-center gap-2"
                       title={
                         hasMissingConnections && !pipe.config.enabled
-                          ? "configure required connections before enabling auto-run"
+                          ? "请先配置所需连接，再开启自动运行"
                           : pipe.config.enabled
-                            ? "auto-running on schedule — click to disable"
-                            : "auto-run disabled — you can still run this task manually"
+                            ? "按计划自动运行——点击关闭"
+                            : "自动运行已关闭——仍可手动运行此任务"
                       }
                     >
                       {/* A naked switch doesn't say what it controls. Name the
                           state so it reads without hovering. */}
                       <span className="font-mono text-xs text-muted-foreground">
-                        {pipe.config.enabled ? "auto-run on" : "auto-run off"}
+                        {pipe.config.enabled ? "自动运行已开启" : "自动运行已关闭"}
                       </span>
                       <Switch
                         checked={pipe.config.enabled}
@@ -2886,10 +2886,10 @@ export function PipesSection() {
                     <Tabs defaultValue="config" className="w-full">
                       <TabsList className="mb-2 h-9 w-full items-stretch justify-start gap-4 rounded-none border-b bg-transparent p-0">
                         <TabsTrigger value="config" className="-mb-px rounded-none border-b-2 border-transparent px-3 text-xs uppercase tracking-wider data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none">
-                          config
+                          配置
                         </TabsTrigger>
                         <TabsTrigger value="runs" className="-mb-px rounded-none border-b-2 border-transparent px-3 text-xs uppercase tracking-wider data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none">
-                          runs{(pipe.execution_count ?? executions.length) > 0
+                          运行记录{(pipe.execution_count ?? executions.length) > 0
                             ? ` (${pipe.execution_count ?? executions.length})`
                             : ""}
                         </TabsTrigger>
@@ -2898,7 +2898,7 @@ export function PipesSection() {
                           data-testid={`pipe-advanced-tab-${pipe.config.name}`}
                           className="-mb-px rounded-none border-b-2 border-transparent px-3 text-xs uppercase tracking-wider data-[state=active]:border-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none"
                         >
-                          advanced
+                          高级
                         </TabsTrigger>
                       </TabsList>
 
@@ -3067,7 +3067,7 @@ export function PipesSection() {
                             </div>
                           ) : executions.length === 0 && displayedLogs.length === 0 ? (
                             <p className="text-xs text-muted-foreground py-4 text-center">
-                              no runs yet — click ▶ to run manually
+                              暂无运行记录——点击 ▶ 手动运行
                             </p>
                           ) : executions.length > 0 ? (
                             <>
@@ -3082,7 +3082,7 @@ export function PipesSection() {
                               <div key={exec.id} className="border p-2 space-y-1" style={{ contain: "layout paint" }}>
                                 <div className="flex items-center gap-2 text-xs font-mono flex-wrap">
                                   <span className="text-muted-foreground">
-                                    {exec.started_at ? new Date(exec.started_at).toLocaleString() : "queued"}
+                                    {exec.started_at ? new Date(exec.started_at).toLocaleString() : "排队中"}
                                   </span>
                                   <Badge variant={statusBadgeVariant(pipeExecutionRawStatus(exec))} className="text-[10px] h-5">{pipeExecutionDisplayStatus(exec)}</Badge>
                                   {!pipeExecutionCompletedBeforeContinueError(exec) && errorTypeBadge(exec.error_type)}
@@ -3156,7 +3156,7 @@ export function PipesSection() {
                                   ) : (
                                     <ChevronDown className="h-3.5 w-3.5 mr-2" />
                                   )}
-                                  load older runs
+                                  加载更早的运行记录
                                 </Button>
                               )}
                             </>
@@ -3204,17 +3204,17 @@ export function PipesSection() {
                       <>
                       <section className="divide-y divide-border border border-border">
                       <div className="px-4 py-3">
-                        <p className="text-sm font-medium">runtime</p>
+                <p className="text-sm font-medium">运行环境</p>
                         <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          control reasoning, external notifications, and execution limits.
+                          控制推理力度、外部通知和执行限制。
                         </p>
                       </div>
                       {/* Notification API permission */}
                       <div className="flex items-center justify-between gap-3 px-4 py-3">
                         <div className="min-w-0">
-                          <span className="text-xs font-medium cursor-help" title="allows this scheduled task to call POST /notify">允许通知 API</span>
+                          <span className="text-xs font-medium cursor-help" title="允许此定时任务调用 POST /notify">允许通知 API</span>
                           <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            Blocks hardcoded POST /notify calls when turned off.
+                            关闭后会阻止硬编码的 POST /notify 调用。
                           </p>
                         </div>
                         <Switch
@@ -3228,7 +3228,7 @@ export function PipesSection() {
                         <div>
                           <Label className="text-xs font-medium">推理力度</Label>
                           <p className="mt-0.5 text-[11px] text-muted-foreground">
-                            low uses fewer reasoning tokens. raise it only for tasks that need deeper analysis; unsupported models may ignore it.
+                            低力度使用更少的推理令牌。仅在任务需要深入分析时提高；不支持的模型可能会忽略此设置。
                           </p>
                         </div>
                         <Select
@@ -3265,7 +3265,7 @@ export function PipesSection() {
                           <SelectContent>
                             <SelectItem value="low">低（推荐）</SelectItem>
                             <SelectItem value="medium">中</SelectItem>
-                            <SelectItem value="high">high</SelectItem>
+                          <SelectItem value="high">高</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -3308,12 +3308,12 @@ export function PipesSection() {
                           </SelectTrigger>
                           <SelectContent>
                             {[
-                              { value: "120", label: "2 minutes" },
-                              { value: "300", label: "5 minutes" },
-                              { value: "600", label: "10 minutes" },
-                              { value: "900", label: "15 minutes" },
-                              { value: "1800", label: "30 minutes" },
-                              { value: "3600", label: "1 hour" },
+                              { value: "120", label: "2 分钟" },
+                              { value: "300", label: "5 分钟" },
+                              { value: "600", label: "10 分钟" },
+                              { value: "900", label: "15 分钟" },
+                              { value: "1800", label: "30 分钟" },
+                              { value: "3600", label: "1 小时" },
                             ].map((opt) => (
                               <SelectItem key={opt.value} value={opt.value}>
                                 {opt.label}
@@ -3330,24 +3330,24 @@ export function PipesSection() {
                             htmlFor={`pipe-history-switch-${pipe.config.name}`}
                             className="text-xs font-medium"
                           >
-                            continue in one chat
+                            在同一聊天中继续
                           </Label>
                           <div
                             id={`pipe-history-description-${pipe.config.name}`}
                             className="text-[11px] text-muted-foreground"
                           >
                             {pipe.config.history
-                              ? "new runs and your replies share this chat. turning this off pauses memory; it does not delete saved context."
-                              : "runs start in separate chats. any previous one-chat context stays saved and resumes if you turn this on."}
+                              ? "新的运行记录和你的回复会共用此聊天。关闭后会暂停记忆，但不会删除已保存的上下文。"
+                              : "每次运行都会开启独立聊天。之前的单聊天上下文会继续保存，重新开启后即可恢复。"}
                           </div>
                           {historySaveStatus[pipe.config.name] === "saving" && (
                             <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground" role="status">
-                              <Loader2 className="h-3 w-3 animate-spin" /> saving
+                              <Loader2 className="h-3 w-3 animate-spin" /> 保存中
                             </div>
                           )}
                           {historySaveStatus[pipe.config.name] === "saved" && (
                             <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground" role="status">
-                              <Check className="h-3 w-3" /> saved
+                              <Check className="h-3 w-3" /> 已保存
                             </div>
                           )}
                           {historySaveStatus[pipe.config.name] === "error" && (
@@ -3356,7 +3356,7 @@ export function PipesSection() {
                               role="alert"
                               data-testid={`pipe-history-error-${pipe.config.name}`}
                             >
-                              save failed — previous setting restored
+                              保存失败——已恢复之前的设置
                               {historySaveErrors[pipe.config.name]
                                 ? `: ${historySaveErrors[pipe.config.name]}`
                                 : ""}
@@ -3379,13 +3379,13 @@ export function PipesSection() {
                                   onClick={() => setHistoryResetPipe(pipe)}
                                 >
                                   {pipe.config.history
-                                    ? "start next run fresh"
-                                    : "clear saved one-chat context"}
+                                    ? "下次运行时重新开始"
+                                    : "清除已保存的单聊上下文"}
                                 </Button>
                               )}
                               {isRunning && (
                                 <span className="text-[11px] text-muted-foreground">
-                                  available after this run
+                                  本次运行结束后可用
                                 </span>
                               )}
                               {historyResetStatus[pipe.config.name] === "cleared" && (
@@ -3393,7 +3393,7 @@ export function PipesSection() {
                                   className="text-[11px] text-muted-foreground"
                                   role="status"
                                 >
-                                  context cleared
+                                  上下文已清除
                                 </span>
                               )}
                               {historyResetStatus[pipe.config.name] === "error" && (
@@ -3401,7 +3401,7 @@ export function PipesSection() {
                                   className="text-[11px] text-destructive"
                                   role="alert"
                                 >
-                                  context was not cleared
+                                  上下文未清除
                                 </span>
                               )}
                             </div>
@@ -3413,7 +3413,7 @@ export function PipesSection() {
                           disabled={
                             historySaveStatus[pipe.config.name] === "saving"
                           }
-                          aria-label={`continue ${pipe.config.name} in one chat`}
+                          aria-label={`在一个聊天中继续运行 ${pipe.config.name}`}
                           aria-describedby={`pipe-history-description-${pipe.config.name}`}
                           data-testid={`pipe-history-switch-${pipe.config.name}`}
                           onCheckedChange={(checked) => {
@@ -3425,22 +3425,22 @@ export function PipesSection() {
 
                       <section className="border border-border">
                       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-                        <Label className="text-sm font-medium">任务定义</Label>
+                            <Label className="text-sm font-medium">任务定义</Label>
                         <span className="text-[11px] text-muted-foreground">任务配置</span>
                         <div className="ml-auto flex items-center gap-2">
                         {saveStatus[pipe.config.name] === "saving" && (
                           <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                            <Loader2 className="h-3 w-3 animate-spin" /> saving...
+                            <Loader2 className="h-3 w-3 animate-spin" /> 正在保存…
                           </span>
                         )}
                         {saveStatus[pipe.config.name] === "saved" && (
                           <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                            <Check className="h-3 w-3" /> saved
+                          <Check className="h-3 w-3" /> 已保存
                           </span>
                         )}
                         {saveStatus[pipe.config.name] === "error" && (
                           <span className="text-[11px] text-destructive" title={saveErrors[pipe.config.name]}>
-                            save failed: {saveErrors[pipe.config.name] || "unknown error"}
+                            保存失败：{saveErrors[pipe.config.name] || "未知错误"}
                           </span>
                         )}
                         {promptDrafts[pipe.config.name] !== undefined && !saveStatus[pipe.config.name] && (
@@ -3468,7 +3468,7 @@ export function PipesSection() {
                       <div className="mt-1 space-y-2 max-h-64 overflow-y-auto">
                         {executions.length === 0 && displayedLogs.length === 0 ? (
                           <p className="text-xs text-muted-foreground">
-                            no runs yet
+                            尚无运行记录
                           </p>
                         ) : executions.length > 0 ? (
                           executions.map((exec) => (
@@ -3620,8 +3620,7 @@ export function PipesSection() {
                         <div className="min-w-0 flex-1">
                           <h3 className="text-base font-medium">新定时任务</h3>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            describe what you want in plain english — screenpipe builds,
-                            installs, and schedules it for you.
+                            用自然语言描述你的需求——screenpipe 会为你创建、安装并安排计划。
                           </p>
                         </div>
                         <Button
@@ -3687,7 +3686,7 @@ export function PipesSection() {
                         <div className="max-w-xs space-y-1">
                           <p className="text-sm text-foreground">选择定时任务</p>
                           <p className="text-xs text-muted-foreground">
-                            its schedule, prompt, runs and logs open here.
+                            计划、提示词、运行记录和日志会显示在这里。
                           </p>
                         </div>
                       </div>
@@ -3777,14 +3776,13 @@ export function PipesSection() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              clear saved context for {historyResetPipe?.config.name}?
+              清除 {historyResetPipe?.config.name} 的已保存上下文？
             </DialogTitle>
             <DialogDescription>
-              clears the remembered ai context and removes the shared chat from your
-              sidebar. completed execution records stay in Runs. this cannot be undone.
+              这会清除记忆中的 AI 上下文，并从侧边栏移除共享聊天。已完成的运行记录仍会保留在“运行记录”中。此操作无法撤销。
               {historyResetPipe?.config.history
-                ? " the next run starts a new shared chat."
-                : " future runs stay separate unless you turn one-chat memory back on."}
+                ? "下次运行会开始新的共享聊天。"
+                : "之后的运行会保持独立，除非你重新开启单聊天记忆。"}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
@@ -3796,7 +3794,7 @@ export function PipesSection() {
               }
               onClick={() => setHistoryResetPipe(null)}
             >
-              cancel
+              取消
             </Button>
             <Button
               variant="destructive"
@@ -3814,7 +3812,7 @@ export function PipesSection() {
               historyResetStatus[historyResetPipe.config.name] === "clearing" ? (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               ) : null}
-              clear saved context
+              清除已保存的上下文
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -3823,7 +3821,7 @@ export function PipesSection() {
       <Dialog open={!!updateDialog} onOpenChange={(open) => !open && setUpdateDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>update {updateDialog?.pipeName}?</DialogTitle>
+            <DialogTitle>更新 {updateDialog?.pipeName}？</DialogTitle>
             <DialogDescription>
               <span className="inline-flex items-center gap-2 mt-2">
                 <Badge variant="outline">v{updateDialog?.installedVersion}</Badge>
@@ -3835,14 +3833,14 @@ export function PipesSection() {
           <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20">
             <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
             <p className="text-sm text-muted-foreground">
-              you have local edits to this scheduled task. updating will overwrite your prompt changes.
-              a local backup will be saved before updating.
-              your schedule, model, and enabled state will be preserved.
+              你对这个定时任务有本地修改。更新会覆盖提示词改动。
+              更新前会保存本地备份。
+              任务的计划、模型和启用状态会保留。
             </p>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="ghost" onClick={() => setUpdateDialog(null)}>
-              skip
+              跳过
             </Button>
             <Button
               variant="destructive"
@@ -3853,7 +3851,7 @@ export function PipesSection() {
                 }
               }}
             >
-              update & discard my edits
+              更新并丢弃我的修改
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -3862,14 +3860,14 @@ export function PipesSection() {
       <Dialog open={bulkDeleteConfirm} onOpenChange={(open) => { if (!open && !bulkDeleting) setBulkDeleteConfirm(false); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>delete {selectedPipes.size} scheduled task{selectedPipes.size !== 1 ? "s" : ""}?</DialogTitle>
+            <DialogTitle>删除 {selectedPipes.size} 个定时任务？</DialogTitle>
             <DialogDescription>
-              this will permanently remove the selected scheduled tasks and their configurations. this action cannot be undone.
+              这会永久删除选中的定时任务及其配置，且无法撤销。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="ghost" disabled={bulkDeleting} onClick={() => setBulkDeleteConfirm(false)}>
-              cancel
+              取消
             </Button>
             <Button
               variant="destructive"
@@ -3880,7 +3878,7 @@ export function PipesSection() {
               }}
             >
               {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}
-              delete
+              删除
             </Button>
           </DialogFooter>
         </DialogContent>

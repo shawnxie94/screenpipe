@@ -131,12 +131,12 @@ export function CustomSummaryBuilder({
   );
 
   const buildPrompt = () => {
-    const timeContext = `Analyze my screen and audio recordings from ${selectedTime}.`;
+    const timeContext = `分析我在${selectedTime}的屏幕和音频记录。`;
     const userInstructions = instructions.trim()
-      ? `\n\nUser instructions: ${instructions.trim()}`
-      : "\n\nProvide a comprehensive summary with key activities, accomplishments, and notable moments.";
+      ? `\n\n用户要求：${instructions.trim()}`
+      : "\n\n提供一份完整总结，包含关键活动、已完成事项和重要时刻。";
 
-    return `${timeContext}${userInstructions}\n\nOnly report activities you can verify from the recordings. If uncertain, say so. Format with clear headings and bullet points.`;
+    return `${timeContext}${userInstructions}\n\n只报告能从录音和记录中验证的活动。如果不确定，请明确说明。使用清晰的标题和项目符号格式。`;
   };
 
   const handleGenerate = () => {

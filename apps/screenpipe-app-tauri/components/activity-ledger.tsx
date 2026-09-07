@@ -123,7 +123,7 @@ function noActivityMessage(dataStatus: string): string {
     case "no_capture_in_range":
       return "此范围内未找到录制的活动。请选择其他范围重试。";
     case "empty_but_recording":
-      return "Recording is active, but this range does not have enough activity yet. Keep working for a moment, then try again.";
+      return "正在录制，但此范围内的活动还不够。请继续工作片刻后重试。";
     default:
       return "此范围内的录制活动不足以生成历史记录。";
   }
@@ -265,8 +265,8 @@ export function isActivityCalendarDateDisabled(
 
 function customRangeLabel(range: DateRange | undefined): string {
   if (!range?.from) return "选择日期";
-  if (!range.to) return `${format(range.from, "MMM d, yyyy")} – …`;
-  return `${format(range.from, "MMM d, yyyy")} – ${format(range.to, "MMM d, yyyy")}`;
+  if (!range.to) return `${format(range.from, "yyyy年M月d日")} – …`;
+  return `${format(range.from, "yyyy年M月d日")} – ${format(range.to, "yyyy年M月d日")}`;
 }
 
 export function rangeForPreset(
@@ -834,12 +834,12 @@ async function fetchFramePreviewSamples(
 function formatPreviewDuration(preview: ActivityArtifactPreview): string {
   const durationMs =
     new Date(preview.end_at).getTime() - new Date(preview.start_at).getTime();
-  if (durationMs < 60_000) return "<1 min";
+  if (durationMs < 60_000) return "不到 1 分钟";
   const minutes = Math.max(1, Math.round(durationMs / 60_000));
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return `${minutes} 分钟`;
   const hours = Math.floor(minutes / 60);
   const remainder = minutes % 60;
-  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+  return remainder ? `${hours} 小时 ${remainder} 分钟` : `${hours} 小时`;
 }
 
 function formatPreviewRange(preview: ActivityArtifactPreview): string {
@@ -1115,13 +1115,13 @@ function ArtifactPreviewTooltip({
             />
           ) : status === "unavailable" ? (
             <div className="flex h-full items-center justify-center font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              preview unavailable
+              预览不可用
             </div>
           ) : (
             <div className="relative h-full w-full">
               <Skeleton className="h-full w-full rounded-none" />
               <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                loading preview
+            正在加载预览
               </span>
             </div>
           )}
@@ -1271,8 +1271,8 @@ function formatDay(value: string): string {
   const date = new Date(value);
   const today = startOfLocalDay(new Date()).getTime();
   const day = startOfLocalDay(date).getTime();
-  if (day === today) return "Today";
-  if (day === today - 86_400_000) return "Yesterday";
+  if (day === today) return "今天";
+  if (day === today - 86_400_000) return "昨天";
   return new Intl.DateTimeFormat(undefined, {
     weekday: "long",
     month: "short",
@@ -1586,12 +1586,12 @@ export function ActivityLedger({
         if (!responses) return null;
         if (!responses.summaryResponse.ok) {
           throw new Error(
-            `Activity request failed (${responses.summaryResponse.status}).`,
+            `获取活动摘要失败（${responses.summaryResponse.status}）。`,
           );
         }
         if (!responses.meetingsResponse.ok) {
           throw new Error(
-            `Meeting request failed (${responses.meetingsResponse.status}).`,
+            `获取会议记录失败（${responses.meetingsResponse.status}）。`,
           );
         }
         const [nextSummary, meetingRecords] = await Promise.all([
@@ -1831,9 +1831,9 @@ export function ActivityLedger({
     void showChatWithPrefill({
       context: compactEntryContext(entry),
       displayLabel: `从 “${entry.title}” 创建技能`,
-      prompt: `Turn the workflow I performed during this exact interval into a reusable skill.
+      prompt: `将我在这个确切时间段内执行的工作流整理成可复用的技能。
 
-Re-query Screenpipe only inside the cited time range and use the cited frames and audio moments as anchors. Reconstruct the actual sequence of repeatable actions from accessibility, parsed, interaction, and audio evidence. Separate the durable procedure from customer-specific, project-specific, or one-off content; remove secrets and private values. Draft a focused SKILL.md with clear triggers, inputs, steps, and verification for my review. Do not install it yet.`,
+只在引用的时间范围内重新查询 Screenpipe，并以引用的画面和音频时刻作为锚点。根据无障碍、解析、交互和音频证据还原可重复操作的实际顺序。将持久流程与客户专属、项目专属或一次性内容分开；删除密钥和私密值。起草一份聚焦的 SKILL.md，写清触发条件、输入、步骤和验证方式，供我审核。暂时不要安装。`,
       source: "activity-history-skill",
     });
   };
@@ -2045,13 +2045,12 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
               role="status"
               className="mb-6 border-b border-border pb-4 text-sm text-muted-foreground"
             >
-              You can leave this page. We’ll notify you when your activities are
-              ready.
+              你可以离开此页面。活动记录准备好后，我们会通知你。
             </p>
           ) : null}
           {invalidRange ? (
             <p className="text-sm text-muted-foreground">
-              Start time must be before end time.
+              开始时间必须早于结束时间。
             </p>
           ) : !activitiesEnabled ? (
             loading && !summary ? (
@@ -2136,18 +2135,18 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
                             type="button"
                             onClick={() => makeSkill(entry)}
                             className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
-                            aria-label={`Make skill from ${entry.title}`}
+                            aria-label={`根据 ${entry.title} 创建技能`}
                           >
-                            Make skill
+                            创建技能
                           </button>
                           <span aria-hidden="true">·</span>
                           <button
                             type="button"
                             onClick={() => askAboutActivity(entry)}
                             className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
-                            aria-label={`Chat about ${entry.title}`}
+                            aria-label={`围绕 ${entry.title} 聊天`}
                           >
-                            Chat
+                            聊天
                           </button>
                         </div>
                       </div>
@@ -2168,7 +2167,7 @@ Re-query Screenpipe only inside the cited time range and use the cited frames an
             <div className="flex min-h-[320px] items-center justify-center py-12 text-center">
               <div className="max-w-sm">
                 <h2 className="font-sans text-xl font-medium tracking-tight">
-                  Generate activities
+                  生成活动
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   <span role={historyError ? "alert" : undefined}>

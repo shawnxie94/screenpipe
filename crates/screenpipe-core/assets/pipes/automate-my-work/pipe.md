@@ -43,7 +43,7 @@ featured: true
 
 ### 3. 验证重复性（最多 3 次定向只读 API 调用）
 
-用 content_type=all、start_time、end_time、limit <= 10 和一个窄到足以检验候选工作流的应用/窗口/查询过滤条件调用 GET /search。屏幕文本主要是无障碍数据，所以不要把发现局限于 OCR。如果 /search 返回 503，遵循 `Retry-After` 重试该请求一次（honor `Retry-After` and retry that request once）。如果仍是 503，停止发现并报告真实的临时本地容量失败响应；不要循环，也不要把问题推断成 API 密钥/提供商问题。
+用 content_type=all、start_time、end_time、limit <= 10 和一个窄到足以检验候选工作流的应用/窗口/查询过滤条件调用 GET /search。屏幕文本主要是无障碍数据，所以不要把发现局限于 OCR。如果 /search 返回 503，遵循 `Retry-After` 重试该请求一次。如果仍是 503，停止发现并报告真实的临时本地容量失败响应；不要循环，也不要把问题推断成 API 密钥/提供商问题。
 
 只有当证据显示某个工作流至少在 2 个不同日期出现、或至少 3 次独立出现时，才算符合条件。记录来源时间戳和应用，当结果提供时附上 screenpipe 帧或时间线链接。区分「重复的工作序列」和「仅仅是开着应用」。不要暴露无关的私人内容。
 
@@ -93,13 +93,13 @@ featured: true
 
 这个内建模板以一次性管道运行，所以绝不要在本轮运行内执行创建步骤，也不要假设用户能回复它的 stdout。对于合格推荐，还要通过 POST http://localhost:11435/notify 发一条本地通知，包含：
 
-- title：`Automation ready for review`
+- title：`自动化方案待审核`
 - 一段简短 body，指明工作流和拟议产物
 - priority：`high`，因为拟议的动作需要明确的人工决策
-- 一个主 `chat` 动作，标签为 `Create and test`
+- 一个主 `chat` 动作，标签为 `创建并测试`
 - 一段自包含的动作提示词，说明点击即明确批准，把完整结构化推荐嵌入 `<approved_recommendation>` 数据标签内，并复制下方每条 Stage 2 规则
 
-在调用 /notify 之前构建完整的后续提示词，两条路径用完全相同的文本。只有当响应消息恰好是 `Notification sent successfully` 时才认为投递成功；Treat notification delivery as successful only when the response message is exactly `Notification sent successfully`.如果没有合格推荐，就不要发送该动作。如果投递被抑制或失败，什么都不要创建；把完整的后续提示词打印在一个可复制的围栏代码块里，让新的聊天拥有推荐和它需要的一切规则。
+在调用 /notify 之前构建完整的后续提示词，两条路径用完全相同的文本。只有当响应消息恰好是 `Notification sent successfully` 时才认为投递成功。如果没有合格推荐，就不要发送该动作。如果投递被抑制或失败，什么都不要创建；把完整的后续提示词打印在一个可复制的围栏代码块里，让新的聊天拥有推荐和它需要的一切规则。
 
 ## 已批准后续聊天的阶段 2 规则
 
@@ -112,11 +112,11 @@ featured: true
 schedule: manual
 enabled: true
 permissions: reader
-title: <Short Title>
-description: <one line>
+title: <简短标题>
+description: <一行描述>
 artifacts:
   - path: output/result.md
-    title: <Result title>
+    title: <结果标题>
     kind: markdown
 ---
 ```
@@ -127,4 +127,4 @@ artifacts:
 
 唯一允许的文件写入是被批准的 pipe.md 及其在该管道目录内声明的输出。
 
-需要时安装新管道。首次运行测试不要用 screenpipe CLI 或 `bun x screenpipe ... pipe run`。用 `Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY` 发出 POST `http://localhost:3030/pipes/<slug>/run`，并要求同时满足 `success: true` 和一个数字型 `execution_id`（numeric `execution_id`）；这只能证明被跟踪的运行已开始。每 5 秒轮询 GET `http://localhost:3030/pipes/<slug>/executions/<execution_id>`，最多 2 分钟，直到那一次执行（that exact execution）变为 `completed`、`failed` 或 `cancelled`。只有 `completed` 算成功。失败时报告实际状态加上返回的 `error_message` 或简明 stderr；除非那条保留的执行错误确实这么说，否则不要推断缺少提供商或 API 密钥。`completed` 之后，验证声明的产物存在、非空且符合成功测试，然后给用户展示真实结果的简明摘录。如果 API 在其一次允许的 `Retry-After` 重试后仍处于容量上限，就报告那次临时失败，不要循环。如果 CREATE 测试失败，保持手动并解释失败。如果 REPAIR 测试失败，恢复原始 `pipe.md` 并解释失败。只有在 CREATE 测试成功后，才询问是否启用与证据匹配的事件或节奏；绝不默认按小时。
+需要时安装新管道。首次运行测试不要用 screenpipe CLI 或 `bun x screenpipe ... pipe run`。用 `Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY` 发出 POST `http://localhost:3030/pipes/<slug>/run`，并要求同时满足 `success: true` 和数字型 `execution_id`；这只能证明被跟踪的运行已开始。每 5 秒轮询 GET `http://localhost:3030/pipes/<slug>/executions/<execution_id>`，最多 2 分钟，直到那一次执行变为 `completed`、`failed` 或 `cancelled`。只有 `completed` 算成功。失败时报告实际状态加上返回的 `error_message` 或简明 stderr；除非那条保留的执行错误确实这么说，否则不要推断缺少提供商或 API 密钥。`completed` 之后，验证声明的产物存在、非空且符合成功测试，然后给用户展示真实结果的简明摘录。如果 API 在其一次允许的 `Retry-After` 重试后仍处于容量上限，就报告那次临时失败，不要循环。如果 CREATE 测试失败，保持手动并解释失败。如果 REPAIR 测试失败，恢复原始 `pipe.md` 并解释失败。只有在 CREATE 测试成功后，才询问是否启用与证据匹配的事件或节奏；绝不默认按小时。

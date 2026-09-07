@@ -38,7 +38,7 @@ import { pickPipePreset } from "@/lib/utils/pick-pipe-preset";
 import { cn } from "@/lib/utils";
 import { commands, type AIPreset } from "@/lib/utils/tauri";
 
-const SUMMARY_CACHE_PREFIX = "screenpipe:timeline-daily-summary:pi-v2:";
+const SUMMARY_CACHE_PREFIX = "screenpipe:timeline-daily-summary:pi-v3:";
 export const TIMELINE_DISMISS_TOP_OVERLAY_EVENT =
 	"timeline-dismiss-top-overlay";
 
@@ -139,7 +139,7 @@ export function TimelineDailySummary({
 	const dateLabel = useMemo(
 		() =>
 			isSameDay(currentDate, new Date())
-				? "Today"
+				? "今天"
 				: format(currentDate, "EEEE, MMMM d"),
 		[currentDate],
 	);
@@ -371,12 +371,12 @@ export function TimelineDailySummary({
 								<div>
 									<div className="flex items-center gap-2">
 										<h2 className="font-mono text-sm font-semibold uppercase tracking-wide">
-											Daily summary
+											每日摘要
 										</h2>
 										{isGenerating && (
 											<span className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.18em] text-foreground">
 												<span className="h-1.5 w-1.5 animate-pulse bg-foreground" />
-												live
+														进行中
 											</span>
 										)}
 									</div>
@@ -391,8 +391,8 @@ export function TimelineDailySummary({
 								className="p-1.5 text-muted-foreground transition-colors hover:bg-foreground hover:text-background"
 								aria-label={
 									isGenerating
-										? "Stop and close daily summary"
-										: "Close daily summary"
+										? "停止并关闭每日摘要"
+										: "关闭每日摘要"
 								}
 							>
 								<X className="h-4 w-4" />
@@ -424,7 +424,7 @@ export function TimelineDailySummary({
 								>
 									<div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
 										<Loader2 className="h-3.5 w-3.5 animate-spin" />
-										Reading this day’s timeline…
+										正在读取当天的时间线…
 									</div>
 									<div className="space-y-2">
 										<div className="h-2 w-full animate-pulse bg-muted" />
@@ -446,8 +446,8 @@ export function TimelineDailySummary({
 								<div className="border border-border bg-muted/40 p-4">
 									<p className="font-mono text-xs font-medium uppercase tracking-wide">
 										{error.startsWith("No recorded")
-											? "No activity found"
-											: "Couldn’t create summary"}
+											? "未找到活动记录"
+											: "无法创建摘要"}
 									</p>
 									<p className="mt-2 text-sm text-muted-foreground">{error}</p>
 									<div className="mt-4 flex items-center gap-2">
@@ -457,7 +457,7 @@ export function TimelineDailySummary({
 											onClick={retryGeneration}
 										>
 											<RefreshCw className="mr-2 h-3.5 w-3.5" />
-											Try again
+											重试
 										</Button>
 									</div>
 								</div>
@@ -467,7 +467,7 @@ export function TimelineDailySummary({
 						{status === "complete" && summary && (
 							<footer className="flex shrink-0 items-center justify-between gap-3 border-t border-border px-4 py-3">
 								<p className="text-[10px] leading-tight text-muted-foreground">
-									Generated on demand. Saved on this device.
+									按需生成，已保存到此设备。
 								</p>
 								<div className="flex items-center gap-1">
 									<button

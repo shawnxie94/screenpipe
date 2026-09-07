@@ -453,7 +453,7 @@ export function AudioTranscript({
 			const { speakerName } = getSpeakerInfo(item.audio);
 			const time = item.audio.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 			const name = speakerName || (item.audio.is_input ? "me" : "speaker");
-			return `[${time}] ${name}: ${item.audio.transcription || "(no transcription)"}`;
+			return `[${time}] ${name}: ${item.audio.transcription || "（无转写）"}`;
 		});
 
 		commands.copyTextToClipboard(lines.join("\n")).then(() => {
@@ -467,13 +467,13 @@ export function AudioTranscript({
 		const data = activeMeeting ? meetingConversationData : conversationData;
 		if (!data.items.length) return;
 
-		const timeRange = data.timeRange
-			? `from ${data.timeRange.start.toISOString()} to ${data.timeRange.end.toISOString()}`
+			const timeRange = data.timeRange
+				? `从 ${data.timeRange.start.toISOString()} 到 ${data.timeRange.end.toISOString()}`
 			: "";
 
 		await showChatWithPrefill({
 			context: "",
-			prompt: `can you retranscribe the audio ${timeRange}?`,
+			prompt: `可以重新转录这段音频吗，时间范围为${timeRange}？`,
 			autoSend: true,
 			source: "retranscribe-button",
 		});
@@ -490,7 +490,7 @@ export function AudioTranscript({
 			const { speakerName } = getSpeakerInfo(item.audio);
 			const time = item.audio.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 			const name = speakerName || (item.audio.is_input ? "me" : "speaker");
-			return `[${time}] ${name}: ${item.audio.transcription || "(no transcription)"}`;
+			return `[${time}] ${name}: ${item.audio.transcription || "（无转写）"}`;
 		});
 
 		const timeRange = data.timeRange
@@ -525,13 +525,13 @@ export function AudioTranscript({
 
 		let tooltip = "summarize";
 		if (!canSummarize) {
-			tooltip = "no transcription to summarize";
+			tooltip = "没有可总结的转写内容";
 		} else if (hasMeeting && isOngoing) {
-			tooltip = "summarize meeting so far";
+			tooltip = "总结目前的会议内容";
 		} else if (hasMeeting) {
-			tooltip = "summarize meeting";
+			tooltip = "总结会议";
 		} else {
-			tooltip = "summarize nearby audio";
+			tooltip = "总结附近的音频";
 		}
 
 		return { canSummarize, hasMeeting, isOngoing, tooltip, data, meaningfulCount: meaningfulItems.length };
@@ -553,7 +553,7 @@ export function AudioTranscript({
 			.map((p) => p.name || `speaker-${p.id}`)
 			.join(", ");
 
-		const label = hasMeeting ? "meeting" : "audio";
+		const label = hasMeeting ? "会议" : "音频";
 		const ongoingNote = isOngoing ? " (still in progress)" : "";
 
 		const context = [
@@ -664,8 +664,8 @@ export function AudioTranscript({
 						<GripHorizontal className="w-4 h-4 shrink-0" />
 						<span className="truncate">
 							{activeMeeting
-								? `meeting · ${activeMeeting.audioEntries.length} seg`
-								: "audio"}
+								? `会议 · ${activeMeeting.audioEntries.length} 段`
+								: "音频"}
 						</span>
 					</div>
 
@@ -699,7 +699,7 @@ export function AudioTranscript({
 									{copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
 								</Button>
 							</TooltipTrigger>
-							<TooltipContent side="bottom"><p>{copied ? "copied!" : "copy"}</p></TooltipContent>
+							<TooltipContent side="bottom"><p>{copied ? "已复制！" : "复制"}</p></TooltipContent>
 						</Tooltip>
 						<DropdownMenu>
 							<Tooltip>
@@ -710,7 +710,7 @@ export function AudioTranscript({
 										</Button>
 									</DropdownMenuTrigger>
 								</TooltipTrigger>
-								<TooltipContent side="bottom"><p>more</p></TooltipContent>
+								<TooltipContent side="bottom"><p>更多</p></TooltipContent>
 							</Tooltip>
 							<DropdownMenuContent align="end" className="w-44">
 								<DropdownMenuItem
@@ -783,7 +783,7 @@ export function AudioTranscript({
 					<div className="p-3 pb-14 space-y-0">
 						{meetingConversationData.items.length === 0 ? (
 							<div className="text-center text-sm text-muted-foreground py-8">
-								No transcriptions in this meeting
+								本次会议没有转写内容
 							</div>
 						) : (
 							<>
@@ -873,7 +873,7 @@ export function AudioTranscript({
 					<div className="p-3 pb-14 space-y-0">
 						{conversationData.items.length === 0 ? (
 							<div className="text-center text-sm text-muted-foreground py-8">
-								No audio in this time window
+								此时间范围内没有音频
 							</div>
 						) : (
 							conversationData.items.map((item, index) => {

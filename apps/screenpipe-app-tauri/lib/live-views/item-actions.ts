@@ -83,7 +83,7 @@ export function buildLiveViewItemHandoff({
   slotTitle: string;
   item: LiveViewListItem;
 }) {
-  const title = typeof item.title === "string" ? item.title : "this item";
+  const title = typeof item.title === "string" ? item.title : "此项目";
   const details = [item.subtitle, item.dueAt, item.source]
     .filter(
       (value): value is string =>
@@ -92,8 +92,8 @@ export function buildLiveViewItemHandoff({
     .join(" · ");
 
   return {
-    context: `Live View “${viewTitle}” · ${slotTitle}`,
-    prompt: `Help me send this item to one of my connected apps. First show the available relevant destinations and a concise preview. Ask me to confirm the exact destination before sending anything.\n\nItem: ${title}${details ? `\nContext: ${details}` : ""}`,
-    displayLabel: `send ${title}`,
+    context: `实时视图“${viewTitle}” · ${slotTitle}`,
+    prompt: `帮我把这项内容发送到一个已连接的应用。先展示相关的可用目标和简短预览，发送前请让我确认确切目标。\n\n项目：${title}${details ? `\n上下文：${details}` : ""}`,
+    displayLabel: `发送 ${title}`,
   };
 }

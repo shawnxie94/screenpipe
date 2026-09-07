@@ -250,9 +250,9 @@ export function NotificationInboxPanel({
     const d = new Date(ts);
     const now = new Date();
     const diff = now.getTime() - d.getTime();
-    if (diff < 60000) return "just now";
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    if (diff < 60000) return "刚刚";
+    if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
     return d.toLocaleDateString();
   };
 
@@ -520,7 +520,7 @@ export function NotificationInboxPanel({
                         className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                       >
                         {copiedId === entry.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                        {copiedId === entry.id ? "copied" : "copy"}
+                        {copiedId === entry.id ? "已复制" : "复制"}
                       </button>
                       {entry.source_url && (
                         <button
@@ -533,7 +533,7 @@ export function NotificationInboxPanel({
                           className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                         >
                           <ExternalLink className="w-3 h-3" />
-                          source
+                          来源
                         </button>
                       )}
                       <button
@@ -542,8 +542,8 @@ export function NotificationInboxPanel({
                           e.stopPropagation();
                           onRequestClose?.();
                           showChatWithPrefill({
-                            context: `notification from ${entry.pipe_name || "screenpipe"}:\n\n**${entry.title}**\n${entry.body}`,
-                            prompt: `tell me more about this: "${entry.title}"`,
+                            context: `来自 ${entry.pipe_name || "screenpipe"} 的通知：\n\n**${entry.title}**\n${entry.body}`,
+                            prompt: `详细说说这条通知：“${entry.title}”`,
                             displayLabel: buildNotificationDisplayLabel(entry.title),
                             autoSend: true,
                             source: `notification-bell-${entry.id}`,
@@ -576,7 +576,7 @@ export function NotificationInboxPanel({
             }}
             className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
           >
-            ⚙ manage notification settings
+            ⚙ 管理通知设置
           </button>
         </div>
       )}

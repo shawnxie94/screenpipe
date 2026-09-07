@@ -48,128 +48,128 @@ type FallbackShape = {
  */
 const FALLBACK_SHAPES: Record<OnboardingGoalCategory, FallbackShape> = {
   work_memory: {
-    title: "Work memory",
+    title: "工作记忆",
     timeRange: "today",
     blocks: [
       {
-        title: "What I was working on",
+        title: "我正在做什么",
         intent:
-          "List the most recent source-backed work threads so I can resume them, newest first. Each item names the app or document and what was happening.",
+          "按最新优先列出最近有来源依据的工作线索，帮助我恢复工作。每项写明应用或文档，以及当时正在进行的事情。",
         component: "list.v1",
         width: 12,
       },
       {
-        title: "Loose ends",
+        title: "未完事项",
         intent:
-          "List things I started but did not finish today, with the source behind each one. Omit anything without evidence.",
+          "列出我今天开始但尚未完成的事项，并为每项提供来源依据。没有证据的事项不要列出。",
         component: "list.v1",
         width: 6,
       },
       {
-        title: "Recap",
+        title: "回顾",
         intent:
-          "Write a short source-backed recap of what happened today. State plainly when there is not enough captured activity yet.",
+          "写一段简短、有来源依据的今日回顾。如果当前捕获到的活动还不足，请明确说明。",
         component: "markdown.v1",
         width: 6,
       },
     ],
   },
   meeting_follow_through: {
-    title: "Meeting follow-through",
+    title: "会议跟进",
     timeRange: "today",
     blocks: [
       {
-        title: "Decisions",
+        title: "决策",
         intent:
-          "List decisions made in recent meetings, each with the meeting and moment it came from.",
+          "列出近期会议中做出的决定，并注明每项决定来自哪场会议以及哪个时刻。",
         component: "list.v1",
         width: 6,
       },
       {
-        title: "Action items",
+        title: "行动项",
         intent:
-          "List action items from recent meetings with an owner where one was actually stated. Never invent an owner.",
+          "列出近期会议中的行动项；只有实际明确说出负责人时才填写负责人。绝不要编造负责人。",
         component: "list.v1",
         width: 6,
       },
       {
-        title: "Open questions",
+        title: "未解决问题",
         intent:
-          "List questions raised in recent meetings that were not resolved, with the source for each.",
+          "列出近期会议中提出但尚未解决的问题，并为每项提供来源依据。",
         component: "list.v1",
         width: 12,
       },
     ],
   },
   work_patterns: {
-    title: "Work patterns",
+    title: "工作模式",
     timeRange: "7d",
     blocks: [
       {
-        title: "Where time went",
+        title: "时间花在哪里",
         intent:
-          "Break down measured active time across applications and projects for the selected period.",
+          "按应用和项目拆分所选时间段内测得的活跃时间。",
         component: "bar-chart.v1",
         width: 12,
       },
       {
-        title: "Meetings and calls",
+        title: "会议和通话",
         intent:
-          "List meetings and calls in the selected period with their measured duration.",
+          "列出所选时间段内的会议和通话，并注明测得的持续时间。",
         component: "list.v1",
         width: 6,
       },
       {
-        title: "Tasks I touched",
+        title: "我处理过的任务",
         intent:
-          "List source-backed tasks and tickets worked on during the selected period.",
+          "列出所选时间段内处理过的、有来源依据的任务和工单。",
         component: "list.v1",
         width: 6,
       },
     ],
   },
   process_automation: {
-    title: "Process discovery",
+    title: "流程发现",
     timeRange: "7d",
     blocks: [
       {
-        title: "Repeated steps",
+        title: "重复步骤",
         intent:
-          "List sequences of steps repeated across the period, each with the applications involved and how often it recurred.",
+          "列出该时间段内反复出现的步骤序列，并注明涉及的应用和重复次数。",
         component: "list.v1",
         width: 12,
       },
       {
-        title: "Time spent repeating",
+        title: "重复工作耗时",
         intent:
-          "Report the measured time spent on the repeated work above. Report nothing when the evidence is too thin to measure.",
+          "报告上述重复工作测得的耗时。如果证据太少、无法测量，就不要报告。",
         component: "metric.v1",
         width: 6,
       },
       {
-        title: "One automation candidate",
+        title: "一个自动化候选项",
         intent:
-          "Describe a single repeated workflow worth automating, the exact steps observed, and what a human would still need to approve.",
+          "描述一个值得自动化的重复工作流、观测到的确切步骤，以及仍需人工批准的部分。",
         component: "markdown.v1",
         width: 6,
       },
     ],
   },
   custom: {
-    title: "My first Live View",
+    title: "我的第一个实时视图",
     timeRange: "today",
     blocks: [
       {
-        title: "What I found",
+        title: "我找到的内容",
         intent:
-          "List source-backed results for the goal this dashboard was created for, newest first.",
+          "按最新优先列出这个面板所服务目标的、有来源依据的结果。",
         component: "list.v1",
         width: 12,
       },
       {
-        title: "Summary",
+        title: "摘要",
         intent:
-          "Write a short source-backed summary for the goal this dashboard was created for. State plainly when there is not enough captured activity yet.",
+          "为这个面板所服务的目标写一段简短、有来源依据的总结。如果当前捕获到的活动还不足，请明确说明。",
         component: "markdown.v1",
         width: 12,
       },
@@ -243,6 +243,6 @@ export function buildFallbackLiveViewPlan(options: {
     title: shape.title,
     timeRange: shape.timeRange,
     blocks,
-    note: "Built from your goal without the AI planner.",
+    note: "根据你的目标创建，未使用 AI 规划器。",
   };
 }

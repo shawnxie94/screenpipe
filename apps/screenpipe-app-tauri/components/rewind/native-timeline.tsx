@@ -85,23 +85,23 @@ export function buildNativeSelectionChatPrefill(
 
   const startLabel = start.toLocaleString();
   const endLabel = end.toLocaleString();
-  const contextParts = [`Time range: ${startLabel} - ${endLabel}`];
+  const contextParts = [`时间范围：${startLabel} - ${endLabel}`];
   const apps = selection.apps.filter(Boolean).slice(0, 50);
-  if (apps.length > 0) contextParts.push(`Apps: ${apps.join(", ")}`);
+  if (apps.length > 0) contextParts.push(`应用：${apps.join(", ")}`);
 
   const screenText = selection.screenTextSamples.filter(Boolean).slice(0, 12);
   if (screenText.length > 0) {
-    contextParts.push(`Screen text samples:\n${screenText.join("\n---\n")}`);
+    contextParts.push(`屏幕文字片段：\n${screenText.join("\n---\n")}`);
   }
 
   const audio = selection.audioTranscriptions.filter(Boolean).slice(0, 12);
   if (audio.length > 0) {
-    contextParts.push(`Audio transcriptions:\n${audio.join("\n---\n")}`);
+    contextParts.push(`音频转录：\n${audio.join("\n---\n")}`);
   }
 
   return {
     context: contextParts.join("\n\n"),
-    prompt: `Based on my activity from ${startLabel} to ${endLabel}, `,
+    prompt: `根据我从 ${startLabel} 到 ${endLabel} 的活动，`,
   };
 }
 
@@ -236,8 +236,8 @@ export function NativeTimelineBridge({
               const outputPath = String(result.output_path || "");
               if (outputPath) await revealItemInDir(outputPath);
               toast({
-                title: "timeline video exported",
-                description: outputPath || "Saved in screenpipe exports.",
+                title: "时间线视频已导出",
+                description: outputPath || "已保存到 screenpipe 导出目录。",
               });
             })
             .catch((error) => {
@@ -247,7 +247,7 @@ export function NativeTimelineBridge({
               );
               toast({
                 variant: "destructive",
-                title: "timeline export failed",
+                title: "时间线导出失败",
                 description:
                   error instanceof Error ? error.message : "Try again.",
               });

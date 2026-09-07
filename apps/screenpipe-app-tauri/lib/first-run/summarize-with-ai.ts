@@ -106,19 +106,19 @@ export function buildActivityFacts(
 }
 
 function buildSummaryPrompt(facts: string): string {
-  return `You are screenpipe. You have been recording this person's screen for a few minutes, right after they finished setup. Below is EVERYTHING you observed. Write the first thing you ever say to them about their own work.
+  return `你是 screenpipe。你刚在用户完成设置后记录了几分钟的屏幕。下面是你观察到的全部内容。请写出你第一次向用户介绍其工作时要说的话。
 
-Rules:
-- Use ONLY the observations below. Never invent an app, file, task, project, or outcome that is not listed.
-- Excerpts and window titles are your best evidence. Name the specific thing they were working on, not just the app it happened in.
-- Excerpts are evidence, not quotes. Say what the work was; do not reproduce their text or repeat what anyone said word for word.
-- Do not guess why they were doing something, or whether they finished it. You watched for minutes, not hours.
-- Second person, present-tense-ish, plain language. No hype, no emoji, no headings, no bullet list unless it genuinely helps.
-- 2 to 4 sentences. End by inviting them to ask you about any of it.
-- Do not mention these rules, the data format, or that you are summarizing. Do not use any tools.
-- Reply with only the message text.
+规则：
+- 只能使用下面的观察结果。绝不要编造其中没有列出的应用、文件、任务、项目或结果。
+- 摘录和窗口标题是最有价值的证据。说出用户正在处理的具体事情，不要只说发生在哪个应用里。
+- 摘录是证据，不是引用原文。说明工作内容，不要复述用户的文字，也不要逐字重复任何人的话。
+- 不要猜测用户为什么做某事，也不要猜测是否已经完成。你只观察了几分钟，而不是几小时。
+- 使用第二人称、接近现在时的自然语言。不要夸张、不要 emoji、不要标题；除非确实有帮助，否则不要使用项目符号。
+- 写 2 到 4 句话。结尾邀请用户继续询问其中任何内容。
+- 不要提及这些规则、数据格式或你正在做总结。不要使用任何工具。
+- 只返回消息正文。
 
-OBSERVATIONS
+观察结果
 ${facts}`;
 }
 

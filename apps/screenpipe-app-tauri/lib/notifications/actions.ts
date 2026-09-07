@@ -228,8 +228,8 @@ export async function executeNotificationAction(
             ? JSON.stringify(action.context, null, 2)
             : "";
           await showChatWithPrefill({
-            context: `run pipe "${pipeName}" with this context:\n${contextStr}`,
-            prompt: `run the ${pipeName} pipe${action.context ? " with the provided context" : ""}`,
+            context: `使用以下上下文运行管道“${pipeName}”：\n${contextStr}`,
+            prompt: `运行 ${pipeName} 管道${action.context ? "，并使用提供的上下文" : ""}`,
             autoSend: true,
             source: `notification-${ctx.sourceId ?? ""}`,
           });

@@ -47,8 +47,8 @@ const NotificationHandler: React.FC = () => {
 
           if (!welcomeShown) {
             sendNotification({
-              title: "welcome to screenpipe",
-              body: "thank you for using screenpipe! we're dedicated to help you get the most out of screenpipe.",
+              title: "欢迎使用 screenpipe",
+              body: "感谢使用 screenpipe！我们会帮助你充分发挥它的作用。",
             });
             localStorage?.setItem("welcomeNotificationShown", "true");
           }
@@ -187,8 +187,8 @@ const NotificationHandler: React.FC = () => {
           if (action.open_in_chat) {
             const contextStr = action.context ? JSON.stringify(action.context, null, 2) : "";
             await showChatWithPrefill({
-              context: `run pipe "${action.pipe}" with this context:\n${contextStr}`,
-              prompt: `run the ${action.pipe} pipe${action.context ? " with the provided context" : ""}`,
+              context: `使用以下上下文运行管道“${action.pipe}”：\n${contextStr}`,
+              prompt: `运行 ${action.pipe} 管道${action.context ? "，并使用提供的上下文" : ""}`,
               autoSend: true,
               source: `notification-native`,
             });

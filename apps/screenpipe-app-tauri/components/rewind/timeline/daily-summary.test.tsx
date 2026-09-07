@@ -27,17 +27,17 @@ const PIPE_PRESET = {
 
 const GENERATED_SUMMARY = `The captured evidence shows a focused implementation session.
 
-### Accomplishments
+### 已完成事项
 - Implemented the Timeline daily-summary agent path.
 
-### Key moments
+### 关键时刻
 - 10:30 AM: Updated the Timeline integration.
 - 11:42 AM: Completed the focused verification run.
 
-### Unfinished
+### 未完成
 - The pull request still needs review.
 
-**Next:** Review the pull request.`;
+**下一步：** Review the pull request.`;
 
 const mocks = vi.hoisted(() => ({
 	settings: {
@@ -84,7 +84,7 @@ vi.mock("@/components/markdown", () => ({
 describe("daily summary helpers", () => {
 	it("versions cached summaries with the parsed-first prompt", () => {
 		expect(dailySummaryCacheKey(new Date(2026, 6, 25))).toBe(
-			"screenpipe:timeline-daily-summary:pi-v2:2026-07-25",
+			"screenpipe:timeline-daily-summary:pi-v3:2026-07-25",
 		);
 	});
 
@@ -110,7 +110,7 @@ describe("daily summary helpers", () => {
 			),
 		);
 		expect(presented.kind).toBe("daily");
-		expect(presented.message.toLowerCase()).toContain("usage limit");
+		expect(presented.message).toContain("AI 使用上限");
 		expect(presented.upgrade?.requiredPlan).toBe("business");
 	});
 
@@ -119,7 +119,7 @@ describe("daily summary helpers", () => {
 			new Error("rate limit exceeded. Please wait 9 seconds."),
 		);
 		expect(presented.kind).toBe("rate");
-		expect(presented.message).toContain("9 seconds");
+		expect(presented.message).toContain("9 秒");
 		expect(presented.upgrade).toBeNull();
 	});
 
@@ -306,7 +306,7 @@ describe("TimelineDailySummary", () => {
 		fireEvent.click(screen.getByTestId("timeline-daily-summary-trigger"));
 		fireEvent.click(
 			await screen.findByRole("button", {
-				name: "Stop and close daily summary",
+				name: "停止并关闭每日摘要",
 			}),
 		);
 
@@ -315,7 +315,7 @@ describe("TimelineDailySummary", () => {
 				screen.queryByTestId("timeline-daily-summary-panel"),
 			).not.toBeInTheDocument();
 		});
-		expect(screen.queryByText("Couldn’t create summary")).toBeNull();
+		expect(screen.queryByText("无法创建摘要")).toBeNull();
 	});
 
 	it("shows friendly quota copy and a retry when the usage limit is hit", async () => {
@@ -330,14 +330,14 @@ describe("TimelineDailySummary", () => {
 
 		fireEvent.click(screen.getByTestId("timeline-daily-summary-trigger"));
 
-	expect(await screen.findByText(/usage limit/i)).toBeInTheDocument();
+		expect(await screen.findByText(/AI 使用上限/)).toBeInTheDocument();
 	// The copy points at the local escape hatch instead of a billing page.
-	expect(screen.getByText(/local model/i)).toBeInTheDocument();
+		expect(screen.getByText(/本地模型/)).toBeInTheDocument();
 		// Raw gateway JSON must never surface.
 		expect(
 			screen.queryByText(/daily_cost_limit_exceeded/),
 		).not.toBeInTheDocument();
 		// A local provider's quota is the user's to retry, not a paywall.
-		expect(screen.getByText("Try again")).toBeTruthy();
+		expect(screen.getByText("重试")).toBeTruthy();
 	});
 });

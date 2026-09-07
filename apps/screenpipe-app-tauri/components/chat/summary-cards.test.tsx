@@ -307,7 +307,7 @@ describe("SummaryCards", () => {
     fireEvent.click(screen.getByTestId("summary-card-automate-my-work"));
 
     expect(onSendMessage).toHaveBeenCalledWith(
-      expect.stringContaining("Focus Pulse (focus-pulse; enabled; every 1h)"),
+      expect.stringContaining("Focus Pulse (focus-pulse; 已启用; every 1h)"),
       "⚡ 自动化我的工作",
       "home_card",
       "automate_my_work",
@@ -358,7 +358,7 @@ describe("SummaryCards", () => {
 
     expect(onStartWithAgent).toHaveBeenCalledWith(
       "codex-acp",
-      expect.stringContaining("Focus Pulse (focus-pulse; enabled; every 1h)"),
+      expect.stringContaining("Focus Pulse (focus-pulse; 已启用; every 1h)"),
       "⚡ 自动化我的工作",
       "automate_my_work",
     );

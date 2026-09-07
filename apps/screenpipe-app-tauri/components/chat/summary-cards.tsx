@@ -124,7 +124,7 @@ function customTemplateAgentTask(template: CustomTemplate): HomeCardAgentTask {
   return {
     name: `custom-${template.id}`,
     title: template.title,
-    previewPrompt: `Run my saved ${template.title} summary for ${template.timeRange}. ${instructions}`,
+    previewPrompt: `运行我保存的“${template.title}”总结，时间范围为${template.timeRange}。${instructions}`,
   };
 }
 
@@ -158,7 +158,7 @@ function previewPromptForPipe(pipe: TemplatePipe): string {
 }
 
 function quickSummaryPrompt(task: HomeCardAgentTask): string {
-  return `Analyze my screen and audio recordings from today.\n\nUser instructions: ${task.previewPrompt}\n\nOnly report activities you can verify from the recordings. If uncertain, say so. Format with clear headings and bullet points.`;
+  return `分析我今天的屏幕和音频记录。\n\n用户要求：${task.previewPrompt}\n\n只报告能从记录中验证的活动。如果不确定，请明确说明。使用清晰的标题和项目符号格式。`;
 }
 
 function promptPreviewHandlers(

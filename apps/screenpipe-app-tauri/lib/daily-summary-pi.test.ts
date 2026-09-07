@@ -120,7 +120,7 @@ describe("runDailySummaryWithPi", () => {
         provider: "screenpipe-cloud",
         model: "auto",
         systemPrompt: expect.stringContaining(
-          "private Timeline daily-summary agent",
+				"私有时间线每日总结助手",
         ),
       }),
       expect.stringContaining("start_time: 2026-07-25T07:00:00.000Z"),
@@ -249,7 +249,7 @@ describe("runDailySummaryWithPi", () => {
         preset: PRESET,
           recoverTransientRuntimeStart: true,
       }),
-    ).rejects.toThrow("AI returned an empty daily summary");
+    ).rejects.toThrow("AI 返回了空的每日摘要");
     expect(mocks.piPrompt).toHaveBeenCalledOnce();
   });
 

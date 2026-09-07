@@ -3270,12 +3270,12 @@ pub async fn pi_start_inner(
     // screenpipe-api skill file — they often skip reading skills on their own.
     let is_local_model = !use_acp && matches!(pi_provider.as_str(), "ollama" | "custom");
     if is_local_model {
-        let api_hint = "IMPORTANT: You MUST read the screenpipe-api skill file BEFORE making any API calls. It contains authentication instructions, endpoint docs, and examples. Without reading it first, your API calls will fail with 403 unauthorized.";
+        let api_hint = "重要：在进行任何 API 调用之前，必须先读取 screenpipe-api skill 文件。它包含认证说明、端点文档和示例。不先读取它，API 调用可能会因 403 未授权而失败。";
         cmd.args(["--append-system-prompt", api_hint]);
     }
 
     if coding_workspace.is_some() {
-        let workspace_hint = "You are running inside a conversation-owned Git worktree. Make code changes only in the current worktree, keep its existing branch, and do not modify, move, or remove the source checkout or worktree metadata.";
+        let workspace_hint = "你正在一个由对话拥有的 Git worktree 中运行。只能在当前 worktree 中修改代码，保留现有分支，不要修改、移动或删除源 checkout 或 worktree 元数据。";
         cmd.args(["--append-system-prompt", workspace_hint]);
     }
 

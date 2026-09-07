@@ -127,15 +127,15 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 		try {
 			await tagFrames(frameIds, tag.trim());
 			toast({
-				title: "tagged",
-				description: `applied "${tag.trim()}" to ${frameIds.length} frames`,
+				title: "已添加标签",
+				description: `已将“${tag.trim()}”添加到 ${frameIds.length} 个画面`,
 			});
 			setCustomTag("");
 			setSelectionRange(null);
 		} catch {
 			toast({
-				title: "tagging failed",
-				description: "some frames could not be tagged",
+				title: "添加标签失败",
+				description: "部分画面无法添加标签",
 				variant: "destructive",
 			});
 		} finally {
@@ -151,8 +151,8 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 			await removeTagFromFrames(frameIds, tag);
 		} catch {
 			toast({
-				title: "remove failed",
-				description: `could not remove "${tag}"`,
+				title: "移除失败",
+				description: `无法移除“${tag}”`,
 				variant: "destructive",
 			});
 		} finally {
@@ -182,7 +182,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 			const data = await resp.json();
 			toast({
 				title: "已删除",
-				description: `removed ${data.frames_deleted} frames, ${data.audio_transcriptions_deleted} audio segments`,
+				description: `已删除 ${data.frames_deleted} 个画面和 ${data.audio_transcriptions_deleted} 段音频转写`,
 			});
 			setSelectionRange(null);
 			setShowDeleteConfirm(false);
@@ -206,7 +206,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 		try {
 			await showChatWithPrefill({
 				context: "",
-				prompt: `please read your screenpipe-api skill first, then retranscribe the audio from ${start} to ${end}. after retranscribing, ask me if i want to assign speaker names to the different speakers in the transcription.`,
+				prompt: `请先读取 screenpipe-api skill，然后重新转录 ${start} 到 ${end} 的音频。重新转录后，询问我是否要为转录中的不同说话人分配姓名。`,
 				autoSend: true,
 				source: "retranscribe-button",
 			});
@@ -298,12 +298,12 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 								<button
 									onClick={onAskAI}
 									className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md bg-foreground text-background hover:bg-foreground/90 transition-colors font-medium flex-shrink-0 cursor-pointer"
-									title="ask ai"
+									title="询问 AI"
 								>
 									<span className="pointer-events-none">
 										<PipeAIIcon size={14} animated={radialOpen} />
 									</span>
-									ask ai
+									询问 AI
 								</button>
 								<AnimatePresence>
 									{radialOpen && templatePipes && templatePipes.length > 0 && (() => {
@@ -390,7 +390,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 													>
 														<button
 															className="w-full h-full rounded-full bg-muted border border-border shadow-md flex items-center justify-center text-[10px] font-medium text-muted-foreground cursor-pointer hover:scale-110 transition-all"
-														title={`${overflow} more scheduled tasks`}
+									title={`还有 ${overflow} 个定时任务`}
 															onMouseEnter={() => setHoveredPipeIndex(maxVisible)}
 															onMouseLeave={() => setHoveredPipeIndex(null)}
 															onClick={(e) => {
@@ -416,7 +416,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 														>
 															{hoveredPipeIndex < visible.length
 																? visible[hoveredPipeIndex].title
-																: `${overflow} more scheduled tasks`}
+										: `还有 ${overflow} 个定时任务`}
 														</motion.div>
 													)}
 												</AnimatePresence>
@@ -430,14 +430,14 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 							onClick={handleRetranscribe}
 							disabled={isRetranscribing}
 							className="flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border hover:bg-muted transition-colors flex-shrink-0"
-							title="re-transcribe audio in this range via AI"
+									title="使用 AI 重新转写此范围内的音频"
 						>
 							{isRetranscribing ? (
 								<Loader2 className="w-3 h-3 animate-spin" />
 							) : (
 								<RefreshCw className="w-3 h-3" />
 							)}
-							re-transcribe
+							重新转写
 						</button>
 					</div>
 				</div>
@@ -447,8 +447,8 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 					   instead of a disconnected centered modal */
 					<div className="flex flex-col gap-2">
 						<p className="text-xs text-muted-foreground leading-relaxed">
-							permanently delete all screen recordings, audio, and transcriptions from{" "}
-							<span className="font-medium text-foreground">{startTime} → {endTime}</span> ({durationStr})? this cannot be undone.
+							永久删除从{" "}
+							<span className="font-medium text-foreground">{startTime} → {endTime}</span> ({durationStr}) 内的所有屏幕录制、音频和转写内容？此操作无法撤销。
 						</p>
 						<div className="flex items-center justify-end gap-2">
 							<button
@@ -456,7 +456,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 								disabled={isDeleting}
 								className="text-xs px-2.5 py-1 rounded-md border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 							>
-								cancel
+								取消
 							</button>
 							<button
 								onClick={handleDeleteRange}
@@ -466,12 +466,12 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 								{isDeleting ? (
 									<>
 										<Loader2 className="w-3 h-3 animate-spin" />
-										deleting…
+										正在删除…
 									</>
 								) : (
 									<>
 										<Trash2 className="w-3 h-3" />
-										delete permanently
+										永久删除
 									</>
 								)}
 							</button>

@@ -22,26 +22,26 @@ export type OnboardingGoalSuggestion = {
 export const ONBOARDING_GOALS: OnboardingGoalSuggestion[] = [
   {
     category: "work_memory",
-    title: "ask about my work",
-    description: "find anything I saw, heard, or did",
+    title: "询问我的工作",
+    description: "查找我看过、听过或做过的任何事情",
     prompt:
-      "Build a personal work memory dashboard that helps me resume what I was doing, recover loose ends, and find the source-backed context behind recent work.",
+      "创建一个个人工作记忆面板，帮助我恢复正在进行的工作、找回未完事项，并找到近期工作的来源依据和上下文。",
     preferredStorePipeSlugs: ["digital-clone"],
   },
   {
     category: "meeting_follow_through",
-    title: "follow through after meetings",
-    description: "keep decisions, owners, and next steps from getting lost",
+    title: "跟进会议事项",
+    description: "避免决策、负责人和后续步骤被遗漏",
     prompt:
-      "Build a meeting follow-through dashboard with recent meeting context, explicit decisions, owned action items, unresolved questions, and source-backed next steps.",
+      "创建一个会议跟进面板，展示近期会议上下文、明确决定、已分配的行动项、未解决的问题以及有来源依据的下一步。",
     preferredStorePipeSlugs: ["meeting-intel"],
   },
   {
     category: "work_patterns",
-    title: "review my day",
-    description: "tasks, meetings, and where my time went",
+    title: "回顾我的一天",
+    description: "查看任务、会议以及时间都花在了哪里",
     prompt:
-      "Build a daily review dashboard with source-backed tasks, meeting follow-through, and how I spent time across applications and projects.",
+      "创建一个每日回顾面板，展示有来源依据的任务、会议跟进事项，以及我在各个应用和项目上花费的时间。",
     preferredStorePipeSlugs: [
       "chronos-time-tracker",
       "daily-productivity-audit",
@@ -49,10 +49,10 @@ export const ONBOARDING_GOALS: OnboardingGoalSuggestion[] = [
   },
   {
     category: "process_automation",
-    title: "automate repeated work",
-    description: "turn real steps into a workflow or SOP",
+    title: "自动化重复工作",
+    description: "将真实步骤整理成工作流或标准作业流程",
     prompt:
-      "Build a process discovery dashboard from repeated captured work. Show a source-backed workflow map, concrete steps and exceptions, likely time cost, and one small human-reviewed automation opportunity.",
+      "根据反复捕获到的工作创建一个流程发现面板。展示有来源依据的工作流地图、具体步骤和例外情况、可能的时间成本，以及一个由人工审核的小型自动化机会。",
     preferredStorePipeSlugs: [
       "workflow-discovery",
       "workflow-automation-scout",

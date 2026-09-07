@@ -90,13 +90,13 @@ describe("onboarding Live View follow-up", () => {
     const notification = JSON.parse(notificationFetch.mock.calls[0][1].body);
     expect(notification).toMatchObject({
       priority: "high",
-      title: "Launch focus has new context",
-      body: "For “pick up my product launch work without losing context”: open this Live View to see the latest activity and choose your next step.",
+      title: "Launch focus 有新的上下文",
+      body: "关于“pick up my product launch work without losing context”：打开此实时视图，查看最新活动并选择下一步。",
     });
     expect(notification.actions[0]).toMatchObject({
       type: "deeplink",
       url: "screenpipe://live-view/first-dashboard",
-      label: "open Launch focus",
+      label: "打开 Launch focus",
     });
     expect(
       getOnboardingLiveViewActivation("first-dashboard")?.followUp,

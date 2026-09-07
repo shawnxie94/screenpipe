@@ -95,15 +95,15 @@ function compact(value: string, maxLength: number): string {
 function goalFallback(activation: OnboardingLiveViewActivation): string {
   switch (activation.goalCategory) {
     case "work_memory":
-      return "Open it to pick up where you left off.";
+      return "打开它，从上次停下的地方继续。";
     case "meeting_follow_through":
-      return "Open it to turn recent conversations into clear follow-through.";
+      return "打开它，将最近的对话转化为明确的后续事项。";
     case "work_patterns":
-      return "Open it to see where your time and attention went.";
+      return "打开它，查看你的时间和注意力都花在了哪里。";
     case "process_automation":
-      return "Open it to find the next repeatable step worth automating.";
+      return "打开它，找到值得自动化的下一个重复步骤。";
     case "custom":
-      return "Open it to see the latest context for your goal.";
+      return "打开它，查看与你目标相关的最新上下文。";
   }
 }
 
@@ -119,14 +119,14 @@ function followUpNotification(
     id: `onboarding-live-view-follow-up:${view.id}`,
     type: "system",
     priority: "high",
-    title: `${viewTitle} has new context`,
+    title: `${viewTitle} 有新的上下文`,
     body: goal
-      ? `For “${goal}”: open this Live View to see the latest activity and choose your next step.`
+      ? `关于“${goal}”：打开此实时视图，查看最新活动并选择下一步。`
       : goalFallback(activation),
     source_url: deepLink,
     actions: [
       {
-        label: `open ${compact(view.title, 30)}`,
+        label: `打开 ${compact(view.title, 30)}`,
         action: "open_live_view",
         type: "deeplink",
         url: deepLink,
@@ -168,7 +168,7 @@ async function startDashboardPipes(
                 time_range: buildLiveViewTimeContext(view.timeRange),
                 target_ids: targetIds,
                 instruction:
-                  "Refresh this Live View with the latest source-backed Screenpipe data. Call structured_output get_targets first and submit every listed target that has enough evidence. Never invent a positive result when evidence is missing.",
+                  "使用最新的、有来源依据的 Screenpipe 数据刷新这个 Live View。先调用 structured_output get_targets，然后提交每个证据充分的目标。证据缺失时绝不要编造正面结果。",
               },
             }),
           },

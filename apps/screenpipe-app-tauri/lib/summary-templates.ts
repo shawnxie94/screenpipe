@@ -42,7 +42,7 @@ function formatPipeValue(value: string, fallback: string) {
 }
 
 function formatExistingPipes(existingPipes: AutomationPipeInventory[]) {
-  if (existingPipes.length === 0) return "(No non-template pipes are installed yet.)";
+  if (existingPipes.length === 0) return "（尚未安装非模板管道。）";
 
   const entries = existingPipes
     .slice()
@@ -50,17 +50,17 @@ function formatExistingPipes(existingPipes: AutomationPipeInventory[]) {
     .slice(0, 120)
     .map((pipe) => {
       const title = formatPipeValue(pipe.title, pipe.name);
-      const description = formatPipeValue(pipe.description || "", "No description");
-      const state = pipe.enabled === false ? "disabled" : "enabled";
-      const name = formatPipeValue(pipe.name, "unnamed-pipe");
-      const schedule = formatPipeValue(pipe.schedule || "", "unknown schedule");
+      const description = formatPipeValue(pipe.description || "", "无描述");
+      const state = pipe.enabled === false ? "已禁用" : "已启用";
+      const name = formatPipeValue(pipe.name, "未命名管道");
+      const schedule = formatPipeValue(pipe.schedule || "", "未知调度");
       return `- ${title} (${name}; ${state}; ${schedule}) — ${description}`;
     });
 
   const omitted = existingPipes.length - entries.length;
   return [
     ...entries,
-    ...(omitted > 0 ? [`- (${omitted} additional pipes omitted from this snapshot; use GET /pipes for the complete inventory.)`] : []),
+    ...(omitted > 0 ? [`- （此快照省略了 ${omitted} 个管道；使用 GET /pipes 获取完整清单。）`] : []),
   ].join("\n");
 }
 
@@ -158,11 +158,11 @@ ${formatExistingPipes(existingPipes)}
 schedule: manual
 enabled: true
 permissions: reader
-title: <Short Title>
-description: <one line>
+title: <简短标题>
+description: <一行描述>
 artifacts:
   - path: output/result.md
-    title: <Result title>
+    title: <结果标题>
     kind: markdown
 ---
 ~~~
@@ -173,7 +173,7 @@ artifacts:
 
 唯一允许的文件写入是被批准的 pipe.md 及其在该管道目录内声明的输出。
 
-需要时安装新管道。首次运行测试不要用 screenpipe CLI 或 \`bun x screenpipe ... pipe run\`。用 \`Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY\` 向 POST http://localhost:3030/pipes/<slug>/run 发出请求，并要求同时满足 \`success: true\` 和一个 numeric \`execution_id\`；这只能证明被跟踪的运行已开始（this proves only that the tracked run started）。每 5 秒轮询 GET http://localhost:3030/pipes/<slug>/executions/<execution_id>，最多 2 分钟，直到那一次执行（that exact execution）变为 completed、failed 或 cancelled。只有 completed 算成功。失败时报告实际状态加上返回的 error_message 或简明 stderr；除非那条保留的执行错误确实这么说，否则不要推断缺少提供商或 API 密钥。completed 之后，验证声明的产物存在、非空且符合成功测试，然后给用户展示真实结果的简明摘录。如果 API 在其一次允许的 Retry-After 重试后仍处于容量上限，就报告那次临时失败，不要循环。如果 CREATE 测试失败，保持手动并解释失败。如果 REPAIR 测试失败，恢复原始 pipe.md 并解释失败。只有在 CREATE 测试成功后，才询问是否启用与证据匹配的事件或节奏；绝不默认按小时。`;
+需要时安装新管道。首次运行测试不要用 screenpipe CLI 或 \`bun x screenpipe ... pipe run\`。用 \`Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY\` 向 POST http://localhost:3030/pipes/<slug>/run 发出请求，并要求同时满足 \`success: true\` 和数字型 \`execution_id\`；这只能证明被跟踪的运行已开始。每 5 秒轮询 GET http://localhost:3030/pipes/<slug>/executions/<execution_id>，最多 2 分钟，直到那一次执行变为 completed、failed 或 cancelled。只有 completed 算成功。失败时报告实际状态加上返回的 error_message 或简明 stderr；除非那条保留的执行错误确实这么说，否则不要推断缺少提供商或 API 密钥。completed 之后，验证声明的产物存在、非空且符合成功测试，然后给用户展示真实结果的简明摘录。如果 API 在其一次允许的 Retry-After 重试后仍处于容量上限，就报告那次临时失败，不要循环。如果 CREATE 测试失败，保持手动并解释失败。如果 REPAIR 测试失败，恢复原始 pipe.md 并解释失败。只有在 CREATE 测试成功后，才询问是否启用与证据匹配的事件或节奏；绝不默认按小时。`;
 }
 
 /**

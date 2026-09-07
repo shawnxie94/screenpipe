@@ -95,7 +95,7 @@ describe("parseGeneratedLiveView", () => {
         [],
         "dashboard",
       ),
-    ).toThrow("did not create any usable sections");
+    ).toThrow("AI 未创建任何可用区块");
   });
 
   it("refuses an out-of-palette width instead of defaulting to half", () => {
@@ -115,7 +115,7 @@ describe("parseGeneratedLiveView", () => {
         [],
         "dashboard",
       ),
-    ).toThrow("width outside 3, 6, or 12");
+    ).toThrow("AI 返回了超出 3、6 或 12 的区块宽度");
   });
 
   it("refuses an unsupported time range instead of silently using today", () => {
@@ -136,7 +136,7 @@ describe("parseGeneratedLiveView", () => {
         [],
         "dashboard",
       ),
-    ).toThrow("unsupported time range");
+    ).toThrow("AI 返回了不支持的时间范围");
   });
 
   it("refuses invented Pipe bindings", () => {
@@ -325,7 +325,7 @@ describe("parseGeneratedLiveView", () => {
         },
         "focus",
       ),
-    ).toThrow("outside the requested target focus");
+    ).toThrow("AI 尝试修改请求目标 focus 之外的区块");
   });
 
   it("rejects whole-dashboard output for an existing Live View", () => {
@@ -345,7 +345,7 @@ describe("parseGeneratedLiveView", () => {
         "dashboard",
         { title: "Existing", timeRange: "today", blocks: [] },
       ),
-    ).toThrow("targeted Live View changes");
+    ).toThrow("AI 未返回针对性的实时视图修改");
   });
 
   it("accepts a complete Block list for an explicit replacement", () => {
@@ -408,9 +408,7 @@ describe("buildLiveViewGenerationPrompt", () => {
     expect(prompt).toContain('"id":"daily","revision":7');
     expect(prompt).toContain("action=values");
     expect(prompt).toContain("screenpipe_live_view_propose");
-    expect(prompt).toContain(
-      "Do not restate, remove, or update unrelated Blocks",
-    );
+    expect(prompt).toContain("不要重述、删除或更新无关区块");
     expect(prompt).not.toContain("Current Live View:\n{");
     // The reference is an id and revision, never the view's Block list.
     expect(prompt).not.toContain('"blocks":[');
@@ -427,8 +425,8 @@ describe("buildLiveViewGenerationPrompt", () => {
       replaceExisting: true,
     });
 
-    expect(prompt).toContain("complete replacement Live View");
-    expect(prompt).toContain("complete new Block list in blocks, not operations");
+    expect(prompt).toContain("完整替代 Live View");
+    expect(prompt).toContain("在 blocks 中提交完整的新区块列表，不要提交 operations");
     expect(prompt).not.toContain("Do not restate, remove, or update unrelated Blocks");
     expect(prompt).not.toContain("action=values");
   });
@@ -462,7 +460,7 @@ describe("buildLiveViewGenerationPrompt", () => {
     });
 
     expect(prompt).toContain("daily-summary");
-    expect(prompt).toContain("at most 2 distinct");
+    expect(prompt).toContain("最多使用 2 个不同任务");
     expect(prompt).not.toContain("action=pipes");
   });
 });

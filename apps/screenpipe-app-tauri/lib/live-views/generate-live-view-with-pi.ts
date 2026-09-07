@@ -102,7 +102,7 @@ function componentValue(value: unknown): BrainViewComponent | null {
 
 function widthValue(value: unknown): 3 | 6 | 12 {
   if (value === 3 || value === 6 || value === 12) return value;
-  throw new Error("AI returned a Block width outside 3, 6, or 12");
+  throw new Error("AI 返回了超出 3、6 或 12 的区块宽度");
 }
 
 function timeRangeValue(value: unknown): BrainViewTimeRange {
@@ -112,7 +112,7 @@ function timeRangeValue(value: unknown): BrainViewTimeRange {
   ) {
     return value as BrainViewTimeRange;
   }
-  throw new Error("AI returned an unsupported time range");
+  throw new Error("AI 返回了不支持的时间范围");
 }
 
 function periodPolicyValue(
@@ -143,7 +143,7 @@ export function parseGeneratedLiveView(
   replaceExisting = false,
 ): GeneratedLiveView {
   const parsed = asRecord(proposal);
-  if (!parsed) throw new Error("AI returned an invalid Live View proposal");
+  if (!parsed) throw new Error("AI 返回了无效的实时视图方案");
   const rawBlocks = Array.isArray(parsed.blocks) ? parsed.blocks : [];
   const allowedPipes = new Set(allowedPipeNames);
   const parseBlocks = (
@@ -184,16 +184,16 @@ export function parseGeneratedLiveView(
   let operationCount = 0;
   if (currentView && !replaceExisting) {
     if (!Array.isArray(parsed.operations)) {
-      throw new Error("AI did not return targeted Live View changes");
+      throw new Error("AI 未返回针对性的实时视图修改");
     }
     if (parsed.operations.length > 12) {
-      throw new Error("AI proposed too many Live View changes");
+      throw new Error("AI 提出的实时视图修改过多");
     }
     blocks = currentView.blocks.map((block) => ({ ...block }));
     for (const value of parsed.operations) {
       const operation = asRecord(value);
       if (!operation || typeof operation.op !== "string") {
-        throw new Error("AI returned an invalid Live View operation");
+        throw new Error("AI 返回了无效的实时视图操作");
       }
       const op = operation.op.trim().toLowerCase();
       const blockId =
@@ -205,27 +205,27 @@ export function parseGeneratedLiveView(
       if (scope === "block" && targetBlockId) {
         if (op !== "update" || blockId !== targetBlockId) {
           throw new Error(
-            `AI tried to change a Block outside the requested target ${targetBlockId}`,
+            `AI 尝试修改请求目标 ${targetBlockId} 之外的区块`,
           );
         }
       }
       if (op === "remove") {
         const index = blocks.findIndex((block) => block.id === blockId);
         if (index < 0)
-          throw new Error(`AI tried to remove unknown Block ${blockId}`);
+          throw new Error(`AI 尝试移除未知区块 ${blockId}`);
         blocks.splice(index, 1);
         operationCount += 1;
         continue;
       }
       const rawBlock = asRecord(operation.block ?? operation.changes);
       if (!rawBlock) {
-        throw new Error(`AI returned an invalid ${op} operation`);
+        throw new Error(`AI 返回了无效的 ${op} 操作`);
       }
       if (op === "add") {
         const [added] = parseBlocks([rawBlock], 1);
-        if (!added) throw new Error("AI returned an invalid Block to add");
+        if (!added) throw new Error("AI 返回了无效的待添加区块");
         if (added.id && blocks.some((block) => block.id === added.id)) {
-          throw new Error(`AI tried to add existing Block ${added.id}`);
+          throw new Error(`AI 尝试添加已存在的区块 ${added.id}`);
         }
         blocks.push(added);
         operationCount += 1;
@@ -234,22 +234,22 @@ export function parseGeneratedLiveView(
       if (op === "update") {
         const index = blocks.findIndex((block) => block.id === blockId);
         if (index < 0)
-          throw new Error(`AI tried to update unknown Block ${blockId}`);
+          throw new Error(`AI 尝试更新未知区块 ${blockId}`);
         const previous = blocks[index];
         const [updated] = parseBlocks(
           [{ ...previous, ...rawBlock, id: blockId }],
           1,
         );
         if (!updated)
-          throw new Error(`AI returned an invalid update for ${blockId}`);
+          throw new Error(`AI 返回了针对 ${blockId} 的无效更新`);
         blocks[index] = updated;
         operationCount += 1;
         continue;
       }
-      throw new Error(`AI returned unsupported Live View operation ${op}`);
+      throw new Error(`AI 返回了不支持的实时视图操作：${op}`);
     }
     if (operationCount === 0) {
-      throw new Error("AI did not propose any targeted Live View changes");
+      throw new Error("AI 未提出任何针对性的实时视图修改");
     }
   } else {
     const maxBlocks = scope === "block" ? 1 : 8;
@@ -257,7 +257,7 @@ export function parseGeneratedLiveView(
   }
 
   if (blocks.length === 0) {
-    throw new Error("AI did not create any usable sections");
+    throw new Error("AI 未创建任何可用区块");
   }
 
   const title =
@@ -267,13 +267,13 @@ export function parseGeneratedLiveView(
         ? currentView.title
         : scope === "block"
           ? blocks[0].title
-          : "My Live View";
+          : "我的实时视图";
   const note =
     typeof parsed.note === "string" && parsed.note.trim()
       ? parsed.note.trim().slice(0, 240)
       : scope === "block"
-        ? `Created ${blocks[0].title}.`
-        : `Created ${blocks.length} sections.`;
+        ? `已创建“${blocks[0].title}”。`
+        : `已创建 ${blocks.length} 个区块。`;
 
   const hasTimeRange = typeof parsed.timeRange === "string";
   const timeRange = hasTimeRange
@@ -294,13 +294,13 @@ export function parseGeneratedLiveView(
 // Two canonical examples instead of an exhaustive rule list. The first is the
 // case the old prompt silently failed: a detail request answered by changing
 // what the Block renders, not by rewriting its intent text.
-const EDIT_EXAMPLES = `Example. The user says "show more detail" about a Block whose values action returns
+const EDIT_EXAMPLES = `示例：用户要求一个区块“展示更多细节”，而该区块的 values action 返回
 {"id":"focus-time","component":"metric.v1","pipeName":"time-breakdown","renders":"{\\"value\\":214,\\"unit\\":\\"minutes\\"}"}
-A single number cannot show more detail, so change what it renders:
-screenpipe_live_view_propose({"operations":[{"op":"update","blockId":"focus-time","block":{"component":"table.v1","width":12,"intent":"Rows of app or project with focused minutes for the selected period, largest first, omitting apps with no recorded time."}}],"note":"Focus time becomes a per-app table instead of one total."})
+单个数字无法展示更多细节，因此应修改它的渲染方式：
+screenpipe_live_view_propose({"operations":[{"op":"update","blockId":"focus-time","block":{"component":"table.v1","width":12,"intent":"按所选时间段列出各应用或项目的专注分钟数，按从高到低排序，省略没有记录时间的应用。"}}],"note":"将专注时间从总计改为按应用展示的表格。"})
 
-Example. The user asks to add a missing outcome:
-screenpipe_live_view_propose({"operations":[{"op":"add","block":{"id":"meeting-followups","title":"Meeting follow-ups","intent":"Open commitments captured in meetings during the selected period, with who owes what, or an empty state when no meeting was recorded.","component":"list.v1","width":6,"pipeName":"meeting-summary"}}],"note":"Adds an open follow-ups list from meeting-summary."})`;
+示例：用户要求添加一个缺失的结果：
+screenpipe_live_view_propose({"operations":[{"op":"add","block":{"id":"meeting-followups","title":"会议跟进事项","intent":"列出所选时间段内会议中捕获的未完成承诺，注明每项由谁负责；如果没有记录会议则显示空状态。","component":"list.v1","width":6,"pipeName":"meeting-summary"}}],"note":"从 meeting-summary 添加未完成跟进事项列表。"})`;
 
 export function buildLiveViewGenerationPrompt(
   options: GenerateLiveViewOptions,
@@ -310,13 +310,13 @@ export function buildLiveViewGenerationPrompt(
   const scopeInstruction =
     options.scope === "block"
       ? options.currentViewRef
-        ? `Propose exactly one update operation for Block id ${JSON.stringify(options.targetBlockId)}. Do not add, remove, or change any other Block.`
-        : "Create exactly one new section to add to the existing Live View."
+        ? `只为区块 id ${JSON.stringify(options.targetBlockId)} 提出一个 update 操作。不要添加、删除或修改任何其他区块。`
+        : "创建一个要添加到现有 Live View 的新区块。"
       : replacing
-        ? "Create a complete replacement Live View with 4 to 7 useful, visually varied sections. Submit the complete new Block list in blocks, not operations; the app will show the replacement as reversible changes for review."
+        ? "创建一个包含 4 到 7 个有用且视觉上有差异区块的完整替代 Live View。在 blocks 中提交完整的新区块列表，不要提交 operations；应用会将替代方案作为可撤销的变更供审核。"
       : options.currentViewRef
-        ? "Edit the referenced Live View with the smallest explicit operation set. Do not restate, remove, or update unrelated Blocks."
-        : "Create a complete Live View with 4 to 7 useful, visually varied sections.";
+        ? "使用最少且明确的操作集编辑引用的 Live View。不要重述、删除或更新无关区块。"
+        : "创建一个包含 4 到 7 个有用且视觉上有差异区块的完整 Live View。";
 
   // Store candidates are a curated, bounded set the caller already chose and
   // will install, so they travel with the turn. Installed tasks are looked up
@@ -324,7 +324,7 @@ export function buildLiveViewGenerationPrompt(
   const storeCandidates =
     options.pipeAvailability === "store"
       ? `
-Installable scheduled tasks (bind every section to one of these, at most ${options.maxSelectedPipes ?? 2} distinct, preferring ones that work from local capture alone):
+可安装的计划任务（每个区块都要绑定到以下任务之一，最多使用 ${options.maxSelectedPipes ?? 2} 个不同任务，优先选择仅依赖本地捕获即可工作的任务）：
 ${JSON.stringify(
   options.pipes.map((pipe) => ({
     name: pipe.name,
@@ -332,30 +332,30 @@ ${JSON.stringify(
   })),
 )}`
       : `
-Find scheduled tasks with screenpipe_live_view action=pipes and a short query. Bind pipeName only to a name that search returned; use null when nothing fits.`;
+使用 screenpipe_live_view action=pipes 和简短查询查找计划任务。pipeName 只能绑定搜索返回的名称；没有合适任务时使用 null。`;
 
-  return `Design a Screenpipe Live View change for the user to review, then submit it with screenpipe_live_view_propose. The app applies nothing until the user accepts, so never call action=save.
+  return `设计一个供用户审核的 Screenpipe Live View 变更，然后使用 screenpipe_live_view_propose 提交。用户接受前应用不会执行任何变更，因此绝不要调用 action=save。
 
 ${scopeInstruction}
 
-Work in this order:
-1. ${editing && !replacing ? `Call screenpipe_live_view action=values for ${JSON.stringify(options.currentViewRef?.id ?? "")} to see what the Blocks currently render. A Block shows its bound task's last payload, so an intent-only edit changes nothing the user can see.` : "Decide the outcomes the user wants to see."}
-2. ${options.pipeAvailability === "store" ? "Choose from the installable tasks listed below." : "Look up scheduled tasks only if a section needs one."}
-3. Call screenpipe_live_view_propose once with the finished change. Fix and retry if it reports problems.
+按以下顺序执行：
+1. ${editing && !replacing ? `调用 screenpipe_live_view action=values 获取 ${JSON.stringify(options.currentViewRef?.id ?? "")}，查看区块当前如何渲染。区块显示其绑定任务的最后一次 payload，因此只修改 intent 不会改变用户看见的内容。` : "确定用户希望看到的结果。"}
+2. ${options.pipeAvailability === "store" ? "从下面列出的可安装任务中选择。" : "只有在某个区块需要时才查找计划任务。"}
+3. 使用完成的变更调用一次 screenpipe_live_view_propose。如果它报告问题，修正后重试。
 
-Each Block needs a precise, source-backed intent covering the selected period and how missing evidence is handled. Avoid duplicate Blocks. Reuse the id of every Block you edit.
+每个区块都需要一个精确、有来源依据的 intent，覆盖所选时间段以及缺失证据的处理方式。避免重复区块。编辑区块时沿用其 id。
 ${storeCandidates}
 
 ${editing && !replacing ? EDIT_EXAMPLES : ""}
 
-User request:
+用户请求：
 ${options.prompt.trim()}
 
-Current Live View reference:
+当前 Live View 引用：
 ${options.currentViewRef ? JSON.stringify(options.currentViewRef) : "null"}
 
-Focused section context:
-${options.targetBlockId ? JSON.stringify({ blockId: options.targetBlockId }) : "null"}`;
+当前聚焦区块上下文：
+  ${options.targetBlockId ? JSON.stringify({ blockId: options.targetBlockId }) : "null"}`;
 }
 
 function providerConfig(preset: AIPreset): PiProviderConfig {
@@ -461,12 +461,12 @@ async function runGeneration(
         return;
       }
       if (event.toolName !== "screenpipe_live_view") {
-        fail("Live View editor tried to use an unrelated tool");
+        fail("实时视图编辑器尝试使用无关工具");
         void commands.piStop(sessionId);
         return;
       }
       if (!READ_ACTIONS.has(String(event.args?.action))) {
-        fail("Live View editor tried to change data before review");
+        fail("实时视图编辑器尝试在审核前修改数据");
         void commands.piStop(sessionId);
         return;
       }
@@ -482,13 +482,13 @@ async function runGeneration(
     }
     if (event.type === "agent_end") {
       if (!proposal) {
-        fail("AI finished without proposing a usable Live View change");
+        fail("AI 未能提出可用的实时视图修改");
         return;
       }
       settle(proposal);
     } else if (event.type === "error") {
       // Keep the provider error intact for quota/rate-limit classification.
-      fail(agentEventErrorText(event, "AI failed to generate the Live View"));
+      fail(agentEventErrorText(event, "AI 生成实时视图失败"));
     }
   };
 
@@ -503,7 +503,7 @@ async function runGeneration(
     );
     if (started.status !== "ok" || !started.data.running) {
       throw new Error(
-        started.status === "error" ? started.error : "AI did not start",
+        started.status === "error" ? started.error : "AI 未能启动",
       );
     }
     if (options.signal?.aborted) throw abortError();
@@ -519,7 +519,7 @@ async function runGeneration(
     );
     if (prompted.status === "error") throw new Error(prompted.error);
     timeoutId = setTimeout(
-      () => fail("AI generation timed out"),
+      () => fail("AI 生成超时"),
       GENERATION_TIMEOUT_MS,
     );
     return await response;
@@ -532,7 +532,7 @@ async function runGeneration(
 }
 
 function abortError(): Error {
-  const error = new Error("Live View update stopped");
+  const error = new Error("实时视图更新已停止");
   error.name = "AbortError";
   return error;
 }
@@ -540,15 +540,15 @@ function abortError(): Error {
 export async function generateLiveViewWithPi(
   options: GenerateLiveViewOptions,
 ): Promise<GeneratedLiveView> {
-  if (!options.prompt.trim()) throw new Error("Describe what you want to see");
+  if (!options.prompt.trim()) throw new Error("请描述你想看到的内容");
   if (options.preset.provider !== "acp" && !options.preset.model?.trim()) {
-    throw new Error("Select an AI model");
+    throw new Error("请选择 AI 模型");
   }
   if (
     options.preset.provider === "acp" &&
     !options.preset.acpAgent?.id?.trim()
   ) {
-    throw new Error("Select an ACP agent");
+    throw new Error("请选择 ACP 代理");
   }
   const proposal = await runGeneration(options);
   const generated = parseGeneratedLiveView(
@@ -568,14 +568,14 @@ export async function generateLiveViewWithPi(
     options.requirePipeBinding &&
     generated.blocks.some((block) => !block.pipeName)
   ) {
-    throw new Error("AI created a section without a usable scheduled task");
+    throw new Error("AI 创建的区块没有可用的定时任务");
   }
   if (
     options.maxSelectedPipes &&
     selectedPipes.size > options.maxSelectedPipes
   ) {
     throw new Error(
-      `AI selected ${selectedPipes.size} Pipes; expected at most ${options.maxSelectedPipes}`,
+      `AI 选择了 ${selectedPipes.size} 个定时任务，最多应为 ${options.maxSelectedPipes} 个`,
     );
   }
   return generated;

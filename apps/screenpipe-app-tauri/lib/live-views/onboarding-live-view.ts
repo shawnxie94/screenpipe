@@ -82,14 +82,14 @@ const GOAL_SHELLS: Record<
   OnboardingGoalCategory,
   { title: string; timeRange: BrainViewDefinition["timeRange"] }
 > = {
-  work_memory: { title: "Work memory", timeRange: "today" },
+  work_memory: { title: "工作记忆", timeRange: "today" },
   meeting_follow_through: {
-    title: "Meeting follow-through",
+    title: "会议跟进",
     timeRange: "today",
   },
-  work_patterns: { title: "Work patterns", timeRange: "7d" },
-  process_automation: { title: "Process discovery", timeRange: "7d" },
-  custom: { title: "My first Live View", timeRange: "today" },
+  work_patterns: { title: "工作模式", timeRange: "7d" },
+  process_automation: { title: "流程发现", timeRange: "7d" },
+  custom: { title: "我的第一个实时视图", timeRange: "today" },
 };
 
 export type OnboardingLiveViewResult = {
@@ -219,7 +219,7 @@ export function rankOnboardingPipeCandidates(
           slug,
           name: slug,
           title,
-          description: `${title}. ${description || "Screenpipe scheduled task"}`,
+          description: `${title}。${description || "screenpipe 定时任务"}`,
           category,
           featured: pipe.featured === true,
           installCount,
@@ -302,7 +302,7 @@ async function waitForServer(maxWaitMs = 20_000): Promise<void> {
   throw new OnboardingLiveViewSetupError(
     "server_not_ready",
     "planning",
-    "Screenpipe is still starting. Try again in a moment.",
+    "screenpipe 仍在启动，请稍后重试。",
   );
 }
 
@@ -366,7 +366,7 @@ async function loadStoreCandidates(
       throw new OnboardingLiveViewSetupError(
         "store_unavailable",
         "planning",
-        "The Store is unavailable. Check your connection and try again.",
+        "商店暂不可用，请检查连接后重试。",
       );
     }
   }
@@ -374,7 +374,7 @@ async function loadStoreCandidates(
     throw new OnboardingLiveViewSetupError(
       "no_store_candidates",
       "planning",
-      "No ready-to-run scheduled tasks matched this setup yet.",
+      "当前设置尚未匹配到可直接运行的定时任务。",
     );
   }
   return candidates;
@@ -526,7 +526,7 @@ export async function prepareOnboardingLiveViewShell(options: {
     throw new OnboardingLiveViewSetupError(
       "dashboard_save_failed",
       "planning",
-      "Could not prepare your first Live View.",
+      "无法准备你的第一个实时视图。",
     );
   }
 
@@ -563,7 +563,7 @@ export async function prepareOnboardingLiveViewShell(options: {
       throw new OnboardingLiveViewSetupError(
         "dashboard_save_failed",
         "planning",
-        "Could not prepare your first Live View.",
+        "无法准备你的第一个实时视图。",
       );
     }
     view = saved.data;
@@ -588,7 +588,7 @@ async function saveFirstDashboard(
     throw new OnboardingLiveViewSetupError(
       "dashboard_save_failed",
       "saving",
-      "Could not check existing dashboards.",
+      "无法检查现有仪表盘。",
     );
   }
   const existing =
@@ -598,7 +598,7 @@ async function saveFirstDashboard(
     throw new OnboardingLiveViewSetupError(
       "dashboard_save_failed",
       "saving",
-      `You already have ${MAX_DASHBOARDS} dashboards. Delete one, then try setup again.`,
+      `你已经有 ${MAX_DASHBOARDS} 个仪表盘。请删除一个后再重试。`,
     );
   }
   const usedTitles = new Set(
@@ -625,7 +625,7 @@ async function saveFirstDashboard(
     throw new OnboardingLiveViewSetupError(
       "dashboard_save_failed",
       "saving",
-      "Could not save your first dashboard.",
+      "无法保存你的第一个仪表盘。",
     );
   }
   return saved.data;
@@ -659,7 +659,7 @@ async function refreshDashboard(view: BrainViewDefinition): Promise<number> {
                 time_range: buildLiveViewTimeContext(view.timeRange),
                 target_ids: targetIds,
                 instruction:
-                  "Build this first dashboard from source-backed Screenpipe data. Call structured_output get_targets first and submit every listed target that has enough evidence. Never invent a positive result when evidence is missing.",
+                  "根据有来源依据的 Screenpipe 数据构建这个首个面板。先调用 structured_output get_targets，然后提交每个证据充分的目标。证据缺失时绝不要编造正面结果。",
               },
             }),
           },
@@ -720,7 +720,7 @@ export async function createOnboardingLiveView(options: {
     let generated: GeneratedLiveView | null = null;
     let planSource: OnboardingPlanSource = "ai";
     let planFallbackReason: OnboardingPlanFallbackReason | null = null;
-    let planFailureDetail = "AI could not design the dashboard.";
+    let planFailureDetail = "AI 无法设计此仪表盘。";
 
     try {
       const aiPlan = await generateLiveViewWithPi({
@@ -737,7 +737,7 @@ export async function createOnboardingLiveView(options: {
       const aiPipeSlugs = boundPipeSlugs(aiPlan);
       if (aiPipeSlugs.length === 0 || aiPipeSlugs.length > MAX_SELECTED_PIPES) {
         planFallbackReason = "ai_plan_invalid";
-        planFailureDetail = "AI did not choose a valid scheduled task set.";
+        planFailureDetail = "AI 未选择有效的定时任务集合。";
       } else {
         generated = aiPlan;
       }
@@ -824,7 +824,7 @@ export async function createOnboardingLiveView(options: {
       throw new OnboardingLiveViewSetupError(
         "refresh_failed",
         "refreshing",
-        "The dashboard is ready, but its scheduled tasks did not start. Try again.",
+        "仪表盘已准备好，但其中的定时任务未能启动。请重试。",
       );
     }
 

@@ -19,13 +19,13 @@ import { CHART_LIMITS, CHART_TYPES } from "./chart-spec";
 
 const prompt = buildSystemPrompt();
 const section = prompt.slice(
-  prompt.indexOf("## Charts"),
-  prompt.indexOf("Current time:"),
+  prompt.indexOf("## 图表"),
+  prompt.indexOf("当前时间："),
 );
 
 describe("chart system prompt contract", () => {
   it("documents the chart section at all", () => {
-    expect(section).toContain("## Charts");
+    expect(section).toContain("## 图表");
     expect(section).toContain("```chart");
   });
 
@@ -73,31 +73,31 @@ describe("chart system prompt contract", () => {
         .find((line) => line.startsWith(`| ${type} |`));
       expect(row, `no prompt row for "${type}"`).toBeDefined();
       expect(row, `"${type}" row should state its cap of ${cap}`).toContain(
-        `(${cap})`,
+        `（${cap}）`,
       );
     }
 
     const groupedRow = section
       .split("\n")
       .find((line) => line.startsWith("| grouped_bar |"));
-    expect(groupedRow).toContain(`(${CHART_LIMITS.stackedCategories})`);
-    expect(groupedRow).toContain(`(${CHART_LIMITS.stackedSeries})`);
+    expect(groupedRow).toContain(`（${CHART_LIMITS.stackedCategories}）`);
+    expect(groupedRow).toContain(`（${CHART_LIMITS.stackedSeries}）`);
 
     const heatmapRow = section
       .split("\n")
       .find((line) => line.startsWith("| heatmap |"));
-    expect(heatmapRow).toContain(`(${CHART_LIMITS.heatmapColumns})`);
-    expect(heatmapRow).toContain(`(${CHART_LIMITS.heatmapRows})`);
+    expect(heatmapRow).toContain(`（${CHART_LIMITS.heatmapColumns}）`);
+    expect(heatmapRow).toContain(`（${CHART_LIMITS.heatmapRows}）`);
   });
 
   it("tells the model the app owns colour", () => {
-    expect(section.toLowerCase()).toContain("never send colors");
+    expect(section).toContain("绝不要发送颜色");
   });
 
   it("documents renderer safety constraints", () => {
-    expect(section).toContain("Funnel/stacked values: non-negative");
+    expect(section).toContain("funnel/stacked 的数值必须非负");
     expect(section).toContain(
-      `calendar: unique dates within ${CHART_LIMITS.calendarItems} days`,
+      `calendar 在 ${CHART_LIMITS.calendarItems} 天内日期唯一`,
     );
   });
 

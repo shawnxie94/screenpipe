@@ -141,7 +141,7 @@ function formatBytes(n: number): string {
 }
 
 function artifactKindLabel(kind: string | null | undefined): string {
-  if (!kind) return "file";
+  if (!kind) return "文件";
   return kind.replace(/[-_]+/g, " ");
 }
 
@@ -267,14 +267,14 @@ export function resetBrainViewStateForTests() {
 
 function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
-  if (!Number.isFinite(ms) || ms < 0) return "just now";
+  if (!Number.isFinite(ms) || ms < 0) return "刚刚";
   const mins = Math.floor(ms / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return "刚刚";
+  if (mins < 60) return `${mins} 分钟前`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours} 小时前`;
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${days} 天前`;
 }
 
 function isDateFilterTag(tag: string): boolean {
@@ -295,7 +295,7 @@ function titleizeTagPart(value: string): string {
 function filterTagLabel(tag: string): string {
   if (tag.startsWith("date:")) return tag.slice(5);
   if (tag.startsWith("person:")) return titleizeTagPart(tag.slice(7));
-  if (tag.startsWith("meeting:")) return `Meeting ${tag.slice(8)}`;
+  if (tag.startsWith("meeting:")) return `会议 ${tag.slice(8)}`;
   if (tag.startsWith("clone:")) return titleizeTagPart(tag.slice(6));
   return tag;
 }
@@ -376,15 +376,15 @@ function emptyStateMessage(
   const query = searchQuery.trim();
   if (query) {
     return typeFilter === "artifacts"
-      ? `no artifacts matching "${query}" in title or content`
-      : `no memories matching "${query}"`;
+      ? `标题或内容中没有匹配“${query}”的产物`
+      : `没有匹配“${query}”的记忆`;
   }
   if (hasActiveFilters) {
     return typeFilter === "artifacts"
-      ? "no artifacts match the selected filters"
-      : "no memories match the selected filters";
+      ? "没有符合所选筛选条件的产物"
+      : "没有符合所选筛选条件的记忆";
   }
-  return typeFilter === "memories" ? "no memories yet" : "no artifacts yet";
+  return typeFilter === "memories" ? "还没有记忆" : "还没有产物";
 }
 
 type SortField = "created_at" | "importance";
@@ -538,7 +538,7 @@ export function BrainSection() {
   const askAboutArtifact = useCallback(async (artifact: UnifiedArtifact) => {
     await showChatWithPrefill({
       context: "",
-      prompt: `help me understand the Screenpipe artifact at ${artifact.path}`,
+      prompt: `帮我理解位于 ${artifact.path} 的 Screenpipe 产物`,
       autoSend: false,
       source: "brain-artifact",
       useHomeChat: true,
@@ -845,7 +845,7 @@ export function BrainSection() {
       } catch (err) {
         if (offset === 0) {
           toast({
-            title: "failed to load memories",
+            title: "加载记忆失败",
             description: String(err),
             variant: "destructive",
           });
@@ -907,7 +907,7 @@ export function BrainSection() {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      toast({ title: "memory deleted" });
+      toast({ title: "记忆已删除" });
       setMemories((prev) => prev.filter((m) => m.id !== id));
       setSelectedItem((prev) =>
         prev?.kind === "memory" && prev.key === `mem:${id}` ? null : prev,
@@ -915,7 +915,7 @@ export function BrainSection() {
       setTotal((prev) => prev - 1);
     } catch (err) {
       toast({
-        title: "failed to delete memory",
+        title: "删除记忆失败",
         description: String(err),
         variant: "destructive",
       });
@@ -970,10 +970,10 @@ export function BrainSection() {
             : m,
         ),
       );
-      toast({ title: "memory updated" });
+      toast({ title: "记忆已更新" });
     } catch (err) {
       toast({
-        title: "failed to update memory",
+        title: "更新记忆失败",
         description: String(err),
         variant: "destructive",
       });
@@ -1030,12 +1030,12 @@ export function BrainSection() {
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      toast({ title: "memory created" });
+      toast({ title: "记忆已创建" });
       closeAddMemoryDialog();
       fetchPage(0, false);
     } catch (err) {
       toast({
-        title: "failed to create memory",
+        title: "创建记忆失败",
         description: String(err),
         variant: "destructive",
       });
@@ -1393,7 +1393,7 @@ export function BrainSection() {
       setSelectedItem((prev) =>
         prev?.kind === "artifact" && prev.key === key ? null : prev,
       );
-      toast({ title: "artifact deleted" });
+      toast({ title: "产物已删除" });
     },
     [deleteRegistered, toast],
   );
@@ -1459,11 +1459,11 @@ export function BrainSection() {
       }
 
       const deletedCount = memIds.length + artKeys.filter((k) => k.startsWith("output:")).length;
-      toast({ title: `deleted ${deletedCount} items` });
+      toast({ title: `已删除 ${deletedCount} 项` });
       setSelectedIds(new Set());
     } catch (err) {
       toast({
-        title: "failed to delete some items",
+        title: "部分项目删除失败",
         description: String(err),
         variant: "destructive",
       });
@@ -1482,19 +1482,19 @@ export function BrainSection() {
   const brainViewOptions = [
     {
       value: "overview" as const,
-      label: "Live Views",
+      label: "实时视图",
       count: liveViewsTabCount,
       Icon: LayoutDashboard,
     },
     {
       value: "memories" as const,
-      label: "Memories",
+      label: "记忆",
       count: memoriesTabCount,
       Icon: Eye,
     },
     {
       value: "artifacts" as const,
-      label: "Artifacts",
+      label: "产物",
       count: artifactsTabCount,
       Icon: FolderOpen,
     },
@@ -1510,8 +1510,8 @@ export function BrainSection() {
           type="button"
           data-testid="brain-view-switcher"
           className="inline-flex h-9 w-9 shrink-0 items-center justify-center border border-border bg-background transition-colors hover:bg-foreground hover:text-background"
-          aria-label={`switch Brain view, current: ${activeBrainView.label}`}
-          title={`switch Brain view, current: ${activeBrainView.label}`}
+          aria-label={`切换知识库视图，当前：${activeBrainView.label}`}
+          title={`切换知识库视图，当前：${activeBrainView.label}`}
         >
           <ActiveBrainViewIcon className="h-3.5 w-3.5" />
         </button>
@@ -1561,14 +1561,12 @@ export function BrainSection() {
         <div className="flex items-start gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/5 px-3 py-2 text-xs text-yellow-600 dark:text-yellow-400">
           <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
           <span>
-            memories haven&apos;t updated in {staleDays} day{staleDays !== 1 ? "s" : ""}.
-            check that a memory-writing scheduled task is installed and enabled
-            &mdash;{" "}
+            记忆已有 {staleDays} 天未更新。请确认记忆写入定时任务已安装并启用 —{" "}
             <a
               href="?section=pipes&tab=discover&q=memory"
               className="underline hover:opacity-80 transition-opacity"
             >
-              browse scheduled tasks
+              浏览定时任务
             </a>
             .
           </span>
@@ -1601,7 +1599,7 @@ export function BrainSection() {
                 }`}
               >
                 <Tag className="h-3.5 w-3.5" />
-                Filter by
+                筛选：
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
             </PopoverTrigger>
@@ -1618,8 +1616,8 @@ export function BrainSection() {
                     onChange={(e) => setFilterSearch(e.target.value)}
                     placeholder={
                       typeFilter === "memories"
-                        ? "find filters..."
-                        : "find filters..."
+                        ? "查找筛选项…"
+                        : "查找筛选项…"
                     }
                     className="h-8 pl-7 text-xs"
                     autoFocus
@@ -1632,18 +1630,18 @@ export function BrainSection() {
               >
                 {memoryFilterLoading && typeFilter === "memories" && (
                   <div className="px-2 py-3 text-xs text-muted-foreground">
-                    loading filters...
+                    正在加载筛选项…
                   </div>
                 )}
                 {!memoryFilterLoading && filterTags.length === 0 && (
                   <div className="px-2 py-3 text-xs text-muted-foreground">
-                    no filters found
+                    未找到筛选项
                   </div>
                 )}
                 {labelFilterTags.length > 0 && (
                   <div className="space-y-1">
                     <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">
-                      {typeFilter === "memories" ? "Labels" : "Sources"}
+                      {typeFilter === "memories" ? "标签" : "来源"}
                     </div>
                     {labelFilterTags.map(renderFilterMenuItem)}
                   </div>
@@ -1651,7 +1649,7 @@ export function BrainSection() {
                 {personFilterTags.length > 0 && (
                   <div className="mt-2 space-y-1 border-t border-border pt-2">
                     <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">
-                      People
+                      人员
                     </div>
                     {personFilterTags.map(renderFilterMenuItem)}
                   </div>
@@ -1659,7 +1657,7 @@ export function BrainSection() {
                 {dateFilterTags.length > 0 && (
                   <div className="mt-2 space-y-1 border-t border-border pt-2">
                     <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">
-                      Dates
+                      日期
                     </div>
                     {dateFilterTags.map(renderFilterMenuItem)}
                   </div>
@@ -1667,7 +1665,7 @@ export function BrainSection() {
                 {sourceFilterTags.length > 0 && (
                   <div className="mt-2 space-y-1 border-t border-border pt-2">
                     <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70">
-                      Sources
+                      来源
                     </div>
                     {sourceFilterTags.map(renderFilterMenuItem)}
                   </div>
@@ -1694,8 +1692,8 @@ export function BrainSection() {
             data-testid="brain-search-input"
             placeholder={
               typeFilter === "memories"
-                ? "search memory content..."
-                : "search artifact content..."
+                ? "搜索记忆内容…"
+                : "搜索产物内容…"
             }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -1715,7 +1713,7 @@ export function BrainSection() {
             }}
           >
             <Plus className="h-3.5 w-3.5" />
-            add
+            添加
           </Button>
         )}
       </div>
@@ -1744,7 +1742,7 @@ export function BrainSection() {
               ref={newContentRef}
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
-              placeholder="what should the AI remember?"
+                          placeholder="你希望 AI 记住什么？"
               className="min-h-[140px] resize-y text-sm"
               rows={6}
               onKeyDown={(e) => {
@@ -2008,12 +2006,12 @@ export function BrainSection() {
                 ) : (
                   <Trash2 className="h-3 w-3" />
                 )}
-                delete
+                删除
               </Button>
             }
-            title={`delete ${selectedIds.size} item${selectedIds.size !== 1 ? "s" : ""}?`}
-            description="the selected items will be permanently deleted. this cannot be undone."
-            confirmLabel={`delete ${selectedIds.size}`}
+            title={`确定删除 ${selectedIds.size} 个项目？`}
+            description="选中的项目将被永久删除，且无法撤销。"
+            confirmLabel={`删除 ${selectedIds.size} 个`}
             onConfirm={() => { setConfirmBatchDelete(false); batchDelete(); }}
           />
         </div>
@@ -2050,8 +2048,7 @@ export function BrainSection() {
           {!debouncedQuery && activeTags.length === 0 && typeFilter === "memories" && (
             <>
               <p className="text-xs">
-                memories are automatically created by scheduled tasks that learn from your
-                screen & audio activity.
+                记忆会由定时任务根据你的屏幕和音频活动自动创建。
               </p>
               <p className="text-xs mt-3">
                 install scheduled tasks from the{" "}
@@ -2059,9 +2056,9 @@ export function BrainSection() {
                   href="?section=pipes&tab=discover"
                   className="underline text-foreground hover:text-foreground/80 transition-colors"
                 >
-                  Store
+                  商店
                 </a>{" "}
-                to start building memories.
+                以开始构建记忆。
               </p>
             </>
           )}
@@ -2141,7 +2138,7 @@ export function BrainSection() {
                         }
                       >
                         <MessageSquare className="mr-2 h-3.5 w-3.5" />
-                        {target.mode === "pipe-run" ? "go to task run" : "go to chat"}
+                        {target.mode === "pipe-run" ? "前往任务运行记录" : "前往聊天"}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
@@ -2149,19 +2146,19 @@ export function BrainSection() {
                       onClick={() => openArtifactViewer(artItem, "card_action")}
                     >
                       <Eye className="mr-2 h-3.5 w-3.5" />
-                      new window
+                      新窗口
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => void invoke("reveal_in_default_browser", { path: artPath })}
                     >
                       <FolderOpen className="mr-2 h-3.5 w-3.5" />
-                      reveal in finder
+                      在访达中显示
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => commands.copyTextToClipboard(artPath)}
                     >
                       <Copy className="mr-2 h-3.5 w-3.5" />
-                      copy path
+                      复制路径
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => toggleSelected(artKey)}>
                       <Check className="mr-2 h-3.5 w-3.5" />
@@ -2174,7 +2171,7 @@ export function BrainSection() {
                         onClick={() => void handleDeleteArtifact(artItem)}
                       >
                         <Trash2 className="mr-2 h-3.5 w-3.5" />
-                        delete
+                删除
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -2291,7 +2288,7 @@ export function BrainSection() {
                           aria-hidden
                         />
                       ) : (
-                        <p className="px-4 py-3 text-[13px] text-muted-foreground">loading…</p>
+                        <p className="px-4 py-3 text-[13px] text-muted-foreground">正在加载…</p>
                       )}
                     </div>
                   ) : (
@@ -2554,7 +2551,7 @@ export function BrainSection() {
                       </Button>
                     }
                     title="删除记忆"
-                    description="this memory will be permanently deleted. this cannot be undone."
+                    description="此记忆将被永久删除，且无法撤销。"
                     onConfirm={() => deleteMemory(memory.id)}
                   />
                 </div>
@@ -2584,17 +2581,17 @@ export function BrainSection() {
                 <div className="space-y-2">
                   <h2 className="text-base font-semibold">
                     {artifactRequestState.status === "locating"
-                      ? "opening result"
+                      ? "正在打开结果"
                       : artifactRequestState.status === "missing"
-                        ? "result unavailable"
-                        : "couldn't load result"}
+                        ? "结果不可用"
+                        : "无法加载结果"}
                   </h2>
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     {artifactRequestState.status === "locating"
-                      ? "finding the saved artifact and its run context"
+                      ? "正在查找已保存的结果及其运行上下文"
                       : artifactRequestState.status === "missing"
-                        ? "Screenpipe couldn't find this saved result. It may have been moved or deleted."
-                        : "Screenpipe couldn't reach the local artifact index. Your result has not been changed."}
+                        ? "Screenpipe 找不到此已保存的结果。它可能已被移动或删除。"
+                        : "Screenpipe 无法连接本地结果索引。你的结果未被修改。"}
                   </p>
                 </div>
                 {artifactRequestState.status !== "locating" && (
@@ -2611,7 +2608,7 @@ export function BrainSection() {
                           )
                         }
                       >
-                        retry
+                        重试
                       </Button>
                     )}
                     {artifactRequestState.request.path && (
@@ -2626,7 +2623,7 @@ export function BrainSection() {
                           )
                         }
                       >
-                        new window
+                        新窗口
                       </Button>
                     )}
                     <Button
@@ -2640,7 +2637,7 @@ export function BrainSection() {
                         setArtifactRequestState(null);
                       }}
                     >
-                      back to artifacts
+                      返回结果
                     </Button>
                   </div>
                 )}
@@ -2794,15 +2791,15 @@ export function BrainSection() {
                               >
                                 <MessageSquare className="mr-2 h-3.5 w-3.5" />
                                 {target.mode === "pipe-run"
-                                  ? "go to task run"
-                                  : "go to chat"}
+                                  ? "前往任务运行记录"
+                                  : "前往聊天"}
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem
                               onClick={() => openArtifactViewer(artifact, "detail")}
                             >
                               <Eye className="mr-2 h-3.5 w-3.5" />
-                              new window
+                              新窗口
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() =>
@@ -2812,7 +2809,7 @@ export function BrainSection() {
                               }
                             >
                               <FolderOpen className="mr-2 h-3.5 w-3.5" />
-                              reveal in finder
+                              在访达中显示
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() =>
@@ -2820,14 +2817,14 @@ export function BrainSection() {
                               }
                             >
                               <Copy className="mr-2 h-3.5 w-3.5" />
-                              copy content
+                              复制内容
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               data-testid="brain-detail-close"
                               onClick={() => setSelectedItem(null)}
                             >
                               <X className="mr-2 h-3.5 w-3.5" />
-                              close
+                              关闭
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

@@ -85,10 +85,10 @@ function formatTimeAgo(timestamp: number): string {
   if (!timestamp) return "";
   const now = Date.now() / 1000;
   const diff = now - timestamp;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 60) return "刚刚";
+  if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} 天前`;
   return new Date(timestamp * 1000).toLocaleDateString();
 }
 
@@ -99,7 +99,7 @@ function getLatestSampleTime(speaker: Speaker): number {
 }
 
 function buildOrganizeSpeakersDisplayLabel(): string {
-  return "Organize speakers";
+  return "整理说话人";
 }
 
 function AudioClip({
@@ -322,7 +322,7 @@ function QuickNameInput({
         variant="ghost"
         size="icon"
         className="h-7 w-7 shrink-0 text-muted-foreground"
-        title="not a real speaker (noise)"
+        title="不是真实说话人（噪声）"
         onClick={() => onHallucination(speakerIds)}
       >
         <UserX className="h-3 w-3" />
@@ -664,11 +664,11 @@ function SpeakerDetail({
       {/* Audio samples */}
       <div className="space-y-1.5">
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          voice samples ({samples.length})
+          语音样本（{samples.length}）
         </h4>
         {samples.length === 0 && (
           <p className="text-xs text-muted-foreground">
-            no audio samples stored
+            尚未保存语音样本
           </p>
         )}
         {samples.map((s, i) => (
@@ -696,14 +696,14 @@ function SpeakerDetail({
       {/* Similar speakers */}
       <div className="space-y-1.5">
         <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          sounds similar — same person?
+          听起来相似——是同一个人吗？
         </h4>
         {loadingSimilar && (
-          <p className="text-xs text-muted-foreground">searching...</p>
+          <p className="text-xs text-muted-foreground">正在搜索…</p>
         )}
         {!loadingSimilar && similar.length === 0 && (
           <p className="text-xs text-muted-foreground">
-            no similar speakers found
+            没有找到相似的说话人
           </p>
         )}
         {similar.map((s) => {
@@ -732,7 +732,7 @@ function SpeakerDetail({
                 variant="outline"
                 size="icon"
                 className="h-6 w-6 border-green-300 text-green-600 hover:bg-green-100 hover:text-green-700"
-                title={`yes, merge into ${speaker.name || "this speaker"}`}
+                title={`是的，合并到${speaker.name || "此说话人"}`}
                 onClick={() => onMerge(speaker.id, s.id)}
               >
                 <ThumbsUp className="h-3 w-3" />
@@ -741,7 +741,7 @@ function SpeakerDetail({
                 variant="outline"
                 size="icon"
                 className="h-6 w-6 border-red-300 text-red-500 hover:bg-red-100 hover:text-red-600"
-                title="no, different person"
+                title="不是，是不同的人"
               >
                 <ThumbsDown className="h-3 w-3" />
               </Button>
@@ -893,7 +893,7 @@ function MergeBanner({
           ) : (
             <ThumbsUp className="h-3.5 w-3.5" />
           )}
-          yes, merge
+          是的，合并
         </Button>
         <Button
           variant="outline"
@@ -902,7 +902,7 @@ function MergeBanner({
           onClick={handleDismiss}
         >
           <ThumbsDown className="h-3.5 w-3.5" />
-          different people
+          不同的人
         </Button>
       </div>
     </div>
@@ -1258,9 +1258,9 @@ export function SpeakersSection() {
               .join("\n");
 
             await showChatWithPrefill({
-              context: `here are my current speakers:\n${speakerSummary}\n\nYou have access to the screenpipe API to manage speakers:\n- POST /speakers/update {id, name} to rename\n- POST /speakers/merge {speaker_to_keep_id, speaker_to_merge_id} to merge duplicates\n- POST /speakers/delete {speaker_id} to delete\n- POST /speakers/hallucination {speaker_id} to mark false detections`,
+              context: `这是我当前的说话人：\n${speakerSummary}\n\n你可以使用 screenpipe API 管理说话人：\n- POST /speakers/update {id, name}：重命名\n- POST /speakers/merge {speaker_to_keep_id, speaker_to_merge_id}：合并重复项\n- POST /speakers/delete {speaker_id}：删除\n- POST /speakers/hallucination {speaker_id}：标记误检测`,
               prompt:
-                "look at my speakers and help me organize them. find likely duplicates to merge, suggest better names for vague ones, and flag any that look like false detections. make the changes directly via the API.",
+                "查看我的说话人并帮我整理。找出可能需要合并的重复项，为含糊的说话人建议更好的名称，并标记看起来像误检测的对象。直接通过 API 执行这些变更。",
               displayLabel: buildOrganizeSpeakersDisplayLabel(),
               autoSend: true,
               source: "speakers-organize",
@@ -1269,7 +1269,7 @@ export function SpeakersSection() {
           }}
         >
           <Sparkles className="h-3 w-3" />
-          organize with ai
+          使用 AI 整理
         </Button>
       </div>
 
@@ -1278,9 +1278,7 @@ export function SpeakersSection() {
         <div className="space-y-2">
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
             <Users className="h-3 w-3" />
-            pending identification ({unnamed.length} speaker
-            {unnamed.length !== 1 ? "s" : ""} in {filteredClusters.length} group
-            {filteredClusters.length !== 1 ? "s" : ""})
+            待识别（{unnamed.length} 位说话人，分布在 {filteredClusters.length} 个分组中）
           </h3>
           {clusterLoading ? (
             <div className="space-y-2">
@@ -1332,8 +1330,8 @@ export function SpeakersSection() {
       {filteredSpeakers.length === 0 && filteredClusters.length === 0 && (
         <p className="text-sm text-muted-foreground py-8 text-center">
           {searchQuery
-            ? "no speakers match your search"
-            : "no speakers detected yet"}
+            ? "没有匹配搜索条件的说话人"
+            : "暂未检测到说话人"}
         </p>
       )}
     </div>

@@ -14,12 +14,12 @@ icon: "🤝"
 featured: false
 ---
 
-## 🧠 Continuous improvement (memory)
+## 🧠 持续改进（记忆）
 `./memory.md`（本管道目录下的文件）沉淀了之前运行的经验——应用它们，让你开局就是「预热」而非「冷启动」。第 1 步已经把它并入那一条批量命令里读取，所以这里不要再单独花一轮去处理它。如果文件不存在，在运行结束时创建它，先写 `# memory` 标题，再写 `## Lessons` 小节。
 
 运行结束后，在 `## Lessons` 下追加最多 1–3 条新的一行式经验，每条以今天的日期开头——只有当这次运行确实学到了持久、可复用的东西时才追加（某个管用的模式、要避免的错误、用户的纠正、或关于用户环境的稳定事实）。如果没学到新东西，就什么都别写。
 
-Keep memory healthy so it never drifts:
+保持记忆健康，避免逐渐偏离：
 - 只追加：绝不删除或重写之前的经验或用户添加的内容。唯一例外是撤回一条你现在能证明是错的经验——新增一行注明日期，说明是哪条、为什么。
 - 文件上限约 150 行 / 8KB。超出时先合并重复项，优先丢弃最旧、价值最低的经验；绝不丢弃用户写的笔记。
 - 保存观察和规则，而不是新任务——也不要改动你的核心职责。永远不要编辑这个 `pipe.md` 提示词。
@@ -34,7 +34,7 @@ Keep memory healthy so it never drifts:
 
 以下就是精确的响应结构。不要去探测它们：
 
-- `GET /meetings/<id>` → a bare object: `{"id", "title", "note", "meeting_start", "meeting_end", "meeting_app", "attendees"}`
+- `GET /meetings/<id>` → 一个裸对象：`{"id", "title", "note", "meeting_start", "meeting_end", "meeting_app", "attendees"}`
 - `GET /search?...` → `{"data": [{"type": "Audio"|"UI"|"Parsed"|"OCR", "content": {…}}], "pagination": {…}}`
   - audio `content`：`chunk_id`、`transcription`、`device_type`（`Input` 或 `Output`）、`speaker`、`speaker_label`、`speaker_provisional`、`timestamp`（`text` 与 `transcription` 相同）
   - accessibility 查询返回 `type: "UI"`，含 `text`、`app_name`、`window_name` 和 `timestamp`
@@ -130,7 +130,7 @@ Keep memory healthy so it never drifts:
     -H "Content-Type: application/json" \
     --data @/tmp/summary.json
 
-`-f` 很重要：如果这个调用失败，在收尾消息里说明，而不是报告成功。关于标题：如果当前标题缺失、是泛化的（「untitled」「meeting」或只是应用名）或没能反映实际发生的事，就传一个 5-8 词的纯英文标题（不带引号、不用「meeting about…」前缀）——否则传空字符串，让用户设置的标题保持原样。如果没什么值得总结的（转录为空、音频无关），就明说并跳过保存——不要写占位符。
+`-f` 很重要：如果这个调用失败，在收尾消息里说明，而不是报告成功。关于标题：如果当前标题缺失、是泛化的（「untitled」「meeting」或只是应用名）或没能反映实际发生的事，就传一个 5–8 个词的简短中文标题（不带引号、不用「会议关于……」前缀）——否则传空字符串，让用户设置的标题保持原样。如果没什么值得总结的（转录为空、音频无关），就明说并跳过保存——不要写占位符。
 
 第 4 步——提议把摘要推送到用户已连接的某个应用（先问，绝不自己推）。列出实际已连接的应用，然后让他们一键选择：
 
@@ -140,9 +140,9 @@ Keep memory healthy so it never drifts:
 
   curl -s -X POST "http://localhost:11435/notify" \
     -H "Content-Type: application/json" \
-    -d '{"title": "<TITLE> summarized", "body": "<one-line recap> — push it somewhere?", "priority": "high", "actions": [
+    -d '{"title": "<TITLE> 已总结", "body": "<一句话回顾>——要推送到某个地方吗？", "priority": "high", "actions": [
           {"label": "推送到 Notion", "type": "api", "method": "POST", "url": "http://localhost:3030/connections/notion/proxy/v1/pages", "body": { /* 由摘要构建的页面负载 */ }},
-          {"label": "在聊天中查看", "type": "chat", "prompt": "Review the existing summary for meeting <ID>. Do not rerun meeting-summary.", "context": {"meeting_id": <ID>}},
+          {"label": "在聊天中查看", "type": "chat", "prompt": "查看会议 <ID> 的现有摘要。不要重新运行 meeting-summary。", "context": {"meeting_id": <ID>}},
           {"label": "忽略", "type": "dismiss"}
         ]}'
 

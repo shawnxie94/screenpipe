@@ -247,24 +247,24 @@ function getPipeInstallDescription(pipe: { permissions?: PipePermissions; author
 function getAllowedAccessLabels(perms?: PipePermissions): string[] {
   if (isUnrestricted(perms)) {
     return [
-      "screen text",
-      "audio",
-      "keyboard input",
-      "screenshots",
-      "accessibility",
+      "屏幕文字",
+      "音频",
+      "键盘输入",
+      "屏幕截图",
+      "无障碍",
       "原始查询",
       "connections",
     ];
   }
 
   const labelsByKey: Record<string, string> = {
-    ocr: "screen text",
-    audio: "audio",
-    input: "keyboard input",
+    ocr: "屏幕文字",
+    audio: "音频",
+    input: "键盘输入",
     raw_sql: "原始查询",
-    frames: "screenshots",
-    connections: "connections",
-    accessibility: "accessibility",
+    frames: "屏幕截图",
+    connections: "连接",
+    accessibility: "无障碍",
   };
 
   return PERMISSION_LABELS.flatMap((perm) => {
@@ -314,16 +314,16 @@ function formatCount(n: number): string {
 }
 
 function relativeDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "unknown";
+  if (!dateStr) return "未知时间";
   const time = new Date(dateStr).getTime();
-  if (isNaN(time)) return "unknown";
+  if (isNaN(time)) return "未知时间";
   const diff = Date.now() - time;
   const days = Math.floor(diff / 86400000);
-  if (days < 1) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 30) return `${days}d ago`;
-  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
-  return `${Math.floor(days / 365)}y ago`;
+  if (days < 1) return "今天";
+  if (days === 1) return "昨天";
+  if (days < 30) return `${days} 天前`;
+  if (days < 365) return `${Math.floor(days / 30)} 个月前`;
+  return `${Math.floor(days / 365)} 年前`;
 }
 
 /**
@@ -360,19 +360,19 @@ function normalizePipe(raw: any): any {
 function getPipeStoreList(data: unknown): any[] {
   if (Array.isArray(data)) return data;
   if (!data || typeof data !== "object") {
-    throw new Error("invalid pipe store response");
+    throw new Error("计划任务商店响应无效");
   }
 
   const payload = data as { data?: unknown; pipes?: unknown; error?: unknown };
   if (payload.error) {
     throw new Error(
-      typeof payload.error === "string" ? payload.error : "pipe store request failed"
+      typeof payload.error === "string" ? payload.error : "计划任务商店请求失败"
     );
   }
 
   const list = payload.data ?? payload.pipes;
   if (!Array.isArray(list)) {
-    throw new Error("invalid pipe store response");
+    throw new Error("计划任务商店响应无效");
   }
   return list;
 }
@@ -427,7 +427,7 @@ export function PipeStoreView() {
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         {activeTab === "discover"
-          ? "browse, install, and review community automations"
+          ? "浏览、安装和评价社区定时任务"
           : "按计划、会议后或在事件发生时运行任务。"}
       </p>
 
@@ -784,8 +784,8 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
       }
 
       toast({
-        title: `"${pipeName}" installed`,
-        description: "open My tasks to configure and run it",
+        title: `已安装“${pipeName}”`,
+        description: "打开“我的定时任务”即可配置并运行",
       });
       // Invalidate cache and update installed names
       apiCache.invalidate("pipes/installed");
@@ -807,7 +807,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
             <button
               type="button"
               className="underline underline-offset-2 text-inherit opacity-80 hover:opacity-100"
-              onClick={() => openFeedback(`Scheduled task install failed (${slug}): ${err.message}`)}
+              onClick={() => openFeedback(`定时任务安装失败（${slug}）：${err.message}`)}
             >
               报告问题
             </button>
@@ -863,7 +863,7 @@ function DiscoverView({ onInstalled }: { onInstalled?: () => void }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-      toast({ title: `"${slug}" unpublished from store` });
+      toast({ title: `已从商店取消发布“${slug}”` });
       setShowDetail(false);
       setSelectedPipe(null);
       apiCache.invalidatePrefix("pipes/store");
@@ -1393,7 +1393,7 @@ function PipeDetailPanel({
                   {formatCount(pipe.install_count ?? 0)} installs
                 </span>
                 <span className="text-xs">
-                  updated {relativeDate(pipe.updated_at)}
+                      更新于 {relativeDate(pipe.updated_at)}
                 </span>
               </div>
             </div>
@@ -1407,20 +1407,20 @@ function PipeDetailPanel({
                 onClick={() => {
                   const pipeSource = pipe.source || "";
                   navigateHomeAndPrefill({
-                    context: `the user wants to fork/customize an existing pipe from the store.
+                    context: `用户想要从商店复制并定制一个现有管道。
 
-here is the original pipe content (pipe.md):
+下面是原始管道内容（pipe.md）：
 
 \`\`\`
 ${pipeSource}
 \`\`\`
 
-IMPORTANT: first read the screenpipe skill file to understand how pipes work, then ask the user how they want to customize/improve this pipe for their specific needs. do NOT auto-send or auto-create — have a conversation first to understand what they want to change.
+重要：先读取 screenpipe skill 文件，了解管道的工作方式，然后询问用户希望如何根据自己的需求定制或改进这个管道。不要自动发送或自动创建——先通过对话了解用户想要修改的内容。
 
-if the original or customized pipe creates a user-facing output file, make sure the forked pipe.md includes an \`artifacts:\` block in frontmatter declaring the output path under \`./output/\`, and instruct the prompt to write results to that exact path. if the pipe doesn't create files, omit \`artifacts:\`.
+如果原始管道或定制后的管道会创建面向用户的输出文件，请确保复制后的 pipe.md 在 frontmatter 中包含 \`artifacts:\` 区块，声明位于 \`./output/\` 下的输出路径，并要求提示词将结果写入该确切路径。如果管道不创建文件，则省略 \`artifacts:\`。
 
-if the pipe's final user-facing file lives outside the pipe's own \`./output/\` directory (e.g. it writes to a shared location, the user's Documents folder, or an Obsidian vault), the pipe prompt should call the \`register_artifact\` tool with the file's absolute path and a human-readable title after writing the file. this registers it in the Artifacts library without requiring it to be under \`./output/\`. do NOT use \`register_artifact\` for internal scratch files, caches, or intermediate state — only for finished deliverables.`,
-                    prompt: `i want to fork the "${pipe.title}" pipe and adapt it to my needs. here is the original pipe.md:\n\n${pipeSource}`,
+如果管道最终面向用户的文件位于管道自身 \`./output/\` 目录之外（例如共享目录、用户的 Documents 文件夹或 Obsidian vault），管道提示词应在写入文件后调用 \`register_artifact\` 工具，并传入文件的绝对路径和人类可读的标题。这样无需文件位于 \`./output/\` 下，也能将其登记到产物库中。不要对内部临时文件、缓存或中间状态使用 \`register_artifact\`——只登记已完成的交付物。`,
+                    prompt: `我想复制“${pipe.title}”管道并根据我的需求进行调整。下面是原始 pipe.md：\n\n${pipeSource}`,
                     displayLabel: buildForkPipeDisplayLabel(pipe.title),
                     autoSend: true,
                   });
