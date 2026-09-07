@@ -316,7 +316,7 @@ function setupDescriptionForConnection(connection: ConnectionListItem): string {
   if (lower.includes("email")) return "Bring email into chat";
   if (lower.includes("slack")) return "Search team threads";
   if (lower.includes("github")) return "Use repos and issues";
-  if (lower.includes("linear") || lower.includes("jira")) return "Track project work";
+  if (lower.includes("github") || lower.includes("jira")) return "Track project work";
   if (lower.includes("calendar")) return "Prep from events";
   if (lower.includes("notion") || lower.includes("docs") || lower.includes("obsidian")) return "Search your docs";
   if (lower.includes("browser")) return "Read current pages";
@@ -337,7 +337,6 @@ export function buildConnectionSetupSuggestions(
     "notion",
     "github",
     "github-issues",
-    "linear",
     "google-docs",
     "jira",
   ];

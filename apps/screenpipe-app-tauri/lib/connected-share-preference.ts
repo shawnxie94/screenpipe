@@ -117,8 +117,6 @@ export function writeRememberedShare(
  */
 const DESTINATION_APP: Record<string, string> = {
   slack: "Slack",
-  linear: "Linear",
-  "chat-linear": "Linear",
   "chat-notion": "Notion",
   "chat-obsidian": "Obsidian",
 };
@@ -146,21 +144,18 @@ export function rememberedSendLabel(
  * whole risk. So this returns nothing unless the exact target was recorded,
  * which in practice means the send happened after `targetLabel` shipped.
  *
- * Only the two direct destinations qualify. `chat-*` hands off to the agent for
- * review, so "one tap" there would be one tap to open a conversation, which the
- * dialog already does and does not need a second control for.
+ * Only the direct Slack destination qualifies. `chat-*` hands off to the agent
+ * for review, so "one tap" there would be one tap to open a conversation, which
+ * the dialog already does and does not need a second control for.
  *
  * Availability is the caller's job: a remembered channel whose connection has
  * since been revoked must not be offered, and only the caller knows that.
  */
 export function rememberedOneTapSend(
   remembered: RememberedShare | null,
-): { destination: "slack" | "linear"; target: string; label: string } | null {
+): { destination: "slack"; target: string; label: string } | null {
   if (!remembered?.target || !remembered.targetLabel) return null;
-  if (
-    remembered.destination !== "slack" &&
-    remembered.destination !== "linear"
-  ) {
+  if (remembered.destination !== "slack") {
     return null;
   }
   return {

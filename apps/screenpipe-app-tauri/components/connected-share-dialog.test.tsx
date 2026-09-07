@@ -157,87 +157,11 @@ describe("ConnectedShareDialog", () => {
     await waitFor(() => expect(screen.findByText("sent to Slack")).toBeTruthy());
   });
 
-  it("creates a Linear issue in the named team only after confirmation", async () => {
-    mocks.localFetch.mockImplementation(
-      async (path: string, init?: RequestInit) => {
-        if (path === "/connections") {
-          return jsonResponse({
-            data: [
-              { id: "slack", connected: false },
-              { id: "linear", connected: true },
-            ],
-          });
-        }
-        if (path === "/connections/linear/proxy/graphql") {
-          const request = JSON.parse(init?.body as string);
-          if (request.query.startsWith("{ teams")) {
-            return jsonResponse({
-              data: {
-                teams: {
-                  nodes: [{ id: "T1", name: "Engineering", key: "ENG" }],
-                },
-              },
-            });
-          }
-          return jsonResponse({
-            data: {
-              issueCreate: {
-                success: true,
-                issue: {
-                  id: "I1",
-                  identifier: "ENG-42",
-                  url: "https://linear.app/acme/issue/ENG-42",
-                  title: "Roadmap",
-                },
-              },
-            },
-          });
-        }
-        throw new Error(`unexpected request: ${path}`);
-      },
-    );
-
-    render(
-      <ConnectedShareDialog open onOpenChange={vi.fn()} artifact={artifact} />,
-    );
-
-    await openDestinations();
-    fireEvent.click(
-      await screen.findByTestId("connected-share-destination-linear"),
-    );
-    const create = await screen.findByRole("button", {
-      name: "create Linear issue",
-    });
-    const proxyCallsBeforeConfirmation = mocks.localFetch.mock.calls.filter(
-      ([path, init]) =>
-        path === "/connections/linear/proxy/graphql" &&
-        JSON.parse(init?.body as string).query.startsWith("mutation"),
-    );
-    expect(proxyCallsBeforeConfirmation).toHaveLength(0);
-
-    fireEvent.click(create);
-
-    await screen.findByText("created ENG-42");
-    const mutationCall = mocks.localFetch.mock.calls.find(
-      ([path, init]) =>
-        path === "/connections/linear/proxy/graphql" &&
-        JSON.parse(init?.body as string).query.startsWith("mutation"),
-    );
-    expect(JSON.parse(mutationCall?.[1]?.body as string).variables).toEqual({
-      input: {
-        teamId: "T1",
-        title: "Roadmap",
-        description: expect.stringContaining("Decision: ship it."),
-      },
-    });
-  });
-
   it("explains the safety boundary and opens the exact disconnected app", async () => {
     mocks.localFetch.mockResolvedValue(
       jsonResponse({
         data: [
           { id: "slack", connected: false },
-          { id: "linear", connected: false },
           { id: "notion", connected: false },
         ],
       }),
@@ -264,9 +188,6 @@ describe("ConnectedShareDialog", () => {
     expect(
       await screen.findByTestId("connected-share-connect-slack"),
     ).toHaveTextContent("connect Slack");
-    expect(
-      screen.getByTestId("connected-share-connect-linear"),
-    ).toHaveTextContent("connect Linear");
 
     fireEvent.click(screen.getByTestId("connected-share-connect-notion"));
 
@@ -864,74 +785,6 @@ describe("ConnectedShareDialog", () => {
 
       await screen.findByText("sent to Slack");
       expect(sendBody()).not.toHaveProperty("channel");
-    });
-
-    it("does not aim a recalled channel at a destination the user re-picked", async () => {
-      // Slack is remembered but no longer connected, so the destination falls
-      // back to a question. The stale channel must not survive that.
-      seedStorage({ destination: "slack", target: "C1" });
-      mocks.localFetch.mockImplementation(
-        async (path: string, init?: RequestInit) => {
-          if (path === "/connections") {
-            return jsonResponse({
-              data: [
-                { id: "slack", connected: false },
-                { id: "linear", connected: true },
-              ],
-            });
-          }
-          if (path === "/connections/linear/proxy/graphql") {
-            const body = JSON.parse((init as RequestInit)?.body as string);
-            if (body?.variables?.input) {
-              return jsonResponse({
-                data: {
-                  issueCreate: {
-                    success: true,
-                    issue: { id: "i1", identifier: "COR-1", title: "Roadmap" },
-                  },
-                },
-              });
-            }
-            return jsonResponse({
-              data: {
-                teams: { nodes: [{ id: "T1", name: "Core", key: "COR" }] },
-              },
-            });
-          }
-          throw new Error(`unexpected request: ${path}`);
-        },
-      );
-
-      render(
-        <ConnectedShareDialog
-          open
-          onOpenChange={vi.fn()}
-          artifact={artifact}
-        />,
-      );
-
-      await openDestinations();
-      fireEvent.click(
-        await screen.findByTestId("connected-share-destination-linear"),
-      );
-      await waitFor(() =>
-        expect(
-          mocks.localFetch.mock.calls.some(
-            ([path]) => path === "/connections/linear/proxy/graphql",
-          ),
-        ).toBe(true),
-      );
-      fireEvent.click(await screen.findByTestId("connected-share-confirm"));
-
-      // The team list chose its own first team; the Slack channel id never
-      // leaked across into the issue.
-      await waitFor(() => {
-        const create = mocks.localFetch.mock.calls
-          .filter(([path]) => path === "/connections/linear/proxy/graphql")
-          .map(([, init]) => JSON.parse((init as RequestInit)?.body as string))
-          .find((body) => body?.variables?.input);
-        expect(create?.variables.input.teamId).toBe("T1");
-      });
     });
   });
 });

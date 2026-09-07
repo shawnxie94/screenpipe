@@ -7,7 +7,6 @@ import {
   buildConnectedShareChatPrompt,
   createLiveViewShareArtifact,
   createMeetingShareArtifact,
-  directShareConnections,
   rankedShareSuggestions,
   renderConnectedShareArtifact,
   shareConnectionAvailability,
@@ -84,26 +83,16 @@ describe("connected share artifacts", () => {
     expect(markdown).not.toContain("## Empty");
   });
 
-  it("does not advertise MCP-only Linear as a direct-send target", () => {
-    expect(
-      directShareConnections([
-        { id: "slack", connected: true },
-        { id: "linear", connected: true, mcp: true },
-      ]),
-    ).toEqual({ slack: true, linear: false });
-  });
-
   it("separates deterministic sends from AI-assisted MCP connections", () => {
     expect(
       shareConnectionAvailability([
         { id: "slack", connected: true },
-        { id: "linear", connected: true, mcp: true },
         { id: "notion", connected: true, mcp: true },
         { id: "obsidian", connected: true },
       ]),
     ).toEqual({
-      direct: { slack: true, linear: false },
-      chat: { linear: true, notion: true, obsidian: true },
+      direct: { slack: true },
+      chat: { notion: true, obsidian: true },
     });
   });
 
@@ -111,7 +100,6 @@ describe("connected share artifacts", () => {
     const suggestions = rankedShareSuggestions(
       [
         { id: "slack", connected: true },
-        { id: "linear", connected: true, mcp: true },
         { id: "notion", connected: true, mcp: true },
         { id: "obsidian", connected: true },
       ],
@@ -122,13 +110,11 @@ describe("connected share artifacts", () => {
       "notion",
       "obsidian",
       "slack",
-      "linear",
     ]);
     expect(suggestions.map(({ destination }) => destination)).toEqual([
       "chat-notion",
       "chat-obsidian",
       "slack",
-      "chat-linear",
     ]);
     expect(JSON.stringify(suggestions)).not.toContain("product notes");
   });

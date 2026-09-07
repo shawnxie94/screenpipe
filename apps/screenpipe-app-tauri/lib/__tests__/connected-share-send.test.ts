@@ -4,7 +4,6 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  createLinearIssue,
   responseError,
   sendSlackSnapshot,
   SELF_SLACK_TARGET,
@@ -21,9 +20,9 @@ const bodyOf = (index = 0) =>
 
 /**
  * These provider contracts are now shared by the dialog and the one-tap send on
- * the meeting rule. The failure cases are the reason they are shared: both
- * providers can report failure at HTTP 200, and two copies of that rule is how
- * one send path starts believing a failed send worked.
+ * the meeting rule. The failure case is the reason they are shared: Slack can
+ * report failure at HTTP 200, and two copies of that rule is how one send path
+ * starts believing a failed send worked.
  */
 describe("connected share send", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -52,40 +51,6 @@ describe("connected share send", () => {
     await expect(
       sendSlackSnapshot({ text: "hi", target: "C-gone" }),
     ).rejects.toThrow("channel_not_found");
-  });
-
-  it("treats a Linear 200 with success:false as a failure", async () => {
-    mocks.localFetch.mockResolvedValue(
-      jsonResponse({ data: { issueCreate: { success: false } } }),
-    );
-    await expect(
-      createLinearIssue({ teamId: "T1", title: "t", description: "d" }),
-    ).rejects.toThrow("Linear couldn't create this issue.");
-  });
-
-  it("treats GraphQL errors at 200 as a failure", async () => {
-    mocks.localFetch.mockResolvedValue(
-      jsonResponse({ errors: [{ message: "no access" }] }),
-    );
-    await expect(
-      createLinearIssue({ teamId: "T1", title: "t", description: "d" }),
-    ).rejects.toThrow("no access");
-  });
-
-  it("returns the created issue for the receipt", async () => {
-    mocks.localFetch.mockResolvedValue(
-      jsonResponse({
-        data: {
-          issueCreate: {
-            success: true,
-            issue: { identifier: "ENG-1", url: "https://x", title: "t" },
-          },
-        },
-      }),
-    );
-    await expect(
-      createLinearIssue({ teamId: "T1", title: "t", description: "d" }),
-    ).resolves.toMatchObject({ identifier: "ENG-1", url: "https://x" });
   });
 
   it("falls back rather than surfacing an unreadable provider body", () => {

@@ -13,7 +13,7 @@ export function ConnectedShareAppIcon({
   app: ConnectedShareApp;
   className?: string;
 }) {
-  if (app === "linear" || app === "notion") {
+  if (app === "notion") {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img

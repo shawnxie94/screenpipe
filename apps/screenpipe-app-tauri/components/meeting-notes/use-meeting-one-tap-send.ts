@@ -17,7 +17,6 @@ import {
   readRememberedShare,
 } from "@/lib/connected-share-preference";
 import {
-  createLinearIssue,
   sendSlackSnapshot,
 } from "@/lib/connected-share-send";
 
@@ -118,12 +117,6 @@ export function useMeetingOneTapSend(
           text: renderSlackMessage(body),
           target: remembered.target,
           instance: readRememberedShare("meeting")?.instance,
-        });
-      } else {
-        await createLinearIssue({
-          teamId: remembered.target,
-          title: artifact.title,
-          description: body,
         });
       }
 

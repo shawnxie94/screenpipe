@@ -72,7 +72,6 @@ import {
 } from "@/lib/connected-share-preference";
 import { showChatWithPrefill } from "@/lib/chat-utils";
 import {
-  createLinearIssue,
   responseError,
   sendSlackSnapshot,
   DEFAULT_SLACK_INSTANCE,
@@ -110,12 +109,6 @@ type SlackChannel = {
   is_private?: boolean;
 };
 
-type LinearTeam = {
-  id: string;
-  name: string;
-  key: string;
-};
-
 type Receipt = {
   title: string;
   detail: string;
@@ -123,8 +116,8 @@ type Receipt = {
 };
 
 const EMPTY_AVAILABILITY: ShareConnectionAvailability = {
-  direct: { slack: false, linear: false },
-  chat: { linear: false, notion: false, obsidian: false },
+  direct: { slack: false },
+  chat: { notion: false, obsidian: false },
 };
 
 function slackChannelErrorMessage(error: string): string {
@@ -136,7 +129,6 @@ function slackChannelErrorMessage(error: string): string {
 
 const CONNECTION_NAME: Record<ConnectedShareApp, string> = {
   slack: "Slack",
-  linear: "Linear",
   notion: "Notion",
   obsidian: "Obsidian",
 };
@@ -243,23 +235,16 @@ export function ConnectedShareDialog({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [slackRefresh, setSlackRefresh] = useState(0);
   const [slackTarget, setSlackTarget] = useState(SELF_SLACK_TARGET);
-  const [linearTeams, setLinearTeams] = useState<LinearTeam[]>([]);
-  const [linearTeamsLoading, setLinearTeamsLoading] = useState(false);
-  const [linearTeamsError, setLinearTeamsError] = useState<string | null>(null);
-  const [linearRefresh, setLinearRefresh] = useState(0);
-  const [linearTeamId, setLinearTeamId] = useState("");
-  const [linearTitle, setLinearTitle] = useState(artifact.title);
 
   /**
    * The remembered destination, held until the list that owns it has loaded.
    *
-   * Recall has to survive the two fetches that follow it. Both the Slack
-   * channel list and the Linear team list reset their own selection when they
-   * resolve — correctly, because switching workspace must not keep a channel
-   * from the previous one — and that reset used to land *after* the remembered
-   * target was restored, throwing it away before the user ever saw it. Only the
-   * destination app survived, so the weekly standup still had to re-pick its
-   * channel every time.
+   * Recall has to survive the fetch that follows it. The Slack channel list
+   * resets its own selection when it resolves — correctly, because switching
+   * workspace must not keep a channel from the previous one — and that reset
+   * used to land *after* the remembered target was restored, throwing it away
+   * before the user ever saw it. Only the destination app survived, so the
+   * weekly standup still had to re-pick its channel every time.
    *
    * Parking it in a ref lets each list claim its own value exactly once, after
    * it can check the value still exists. A later switch by the user finds the
@@ -292,10 +277,10 @@ export function ConnectedShareDialog({
   /**
    * Claim the remembered target for a destination, once.
    *
-   * Gated on the destination matching because `target` holds a Slack channel or
-   * a Linear team depending on where the last send went; a channel id must not
-   * be offered to the team list. Consumed even when it turns out to be stale so
-   * a failed match is not retried on the next reload.
+   * Gated on the destination matching because `target` holds a Slack channel
+   * id, which must not leak into another destination's target slot. Consumed
+   * even when it turns out to be stale so a failed match is not retried on the
+   * next reload.
    */
   const claimRecalledTarget = useCallback(
     (forDestination: ConnectedShareDestination): string | null => {
@@ -337,7 +322,6 @@ export function ConnectedShareDialog({
     pendingRecallRef.current = null;
     modeDestinationRef.current = { unchanged: null, chat: null };
     resetPreview(allSectionIds);
-    setLinearTitle(artifact.title);
     // Stays null until the connection check says what is actually reachable.
     // There is no longer a local destination to fall back to.
     setDestination(null);
@@ -350,9 +334,6 @@ export function ConnectedShareDialog({
     setSlackChannels([]);
     setSlackChannelsError(null);
     setSlackTarget(SELF_SLACK_TARGET);
-    setLinearTeams([]);
-    setLinearTeamsError(null);
-    setLinearTeamId("");
   }, [
     allSectionIds,
     artifact.sections.length,
@@ -395,8 +376,6 @@ export function ConnectedShareDialog({
         const remembered = readRememberedShare(artifact.surface);
         const connected: string[] = [
           ...(ready.direct.slack ? ["slack"] : []),
-          ...(ready.direct.linear ? ["linear"] : []),
-          ...(ready.chat.linear ? ["chat-linear"] : []),
           ...(ready.chat.notion ? ["chat-notion"] : []),
           ...(ready.chat.obsidian ? ["chat-obsidian"] : []),
         ];
@@ -419,9 +398,9 @@ export function ConnectedShareDialog({
         setShareMode(
           nextDestination
             ? shareModeForDestination(nextDestination)
-            : ready.direct.slack || ready.direct.linear
+            : ready.direct.slack
               ? "unchanged"
-              : ready.chat.linear || ready.chat.notion || ready.chat.obsidian
+              : ready.chat.notion || ready.chat.obsidian
                 ? "chat"
                 : null,
         );
@@ -589,60 +568,6 @@ export function ConnectedShareDialog({
     slackRefresh,
   ]);
 
-  useEffect(() => {
-    if (!open || !availability.direct.linear || destination !== "linear")
-      return;
-    let cancelled = false;
-    setLinearTeamsLoading(true);
-    setLinearTeamsError(null);
-    void localFetch("/connections/linear/proxy/graphql", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: "{ teams { nodes { id name key } } }" }),
-    })
-      .then(async (response) => {
-        const body = await response.json();
-        if (!response.ok || body?.errors) {
-          throw new Error(responseError(body, "Couldn't load Linear teams."));
-        }
-        return (
-          Array.isArray(body?.data?.teams?.nodes) ? body.data.teams.nodes : []
-        ) as LinearTeam[];
-      })
-      .then((teams) => {
-        if (cancelled) return;
-        setLinearTeams(teams);
-        // Same rule as the Slack channel: the remembered team is used only if
-        // it is still in the list this account can see.
-        const recalled = claimRecalledTarget("linear");
-        const stillVisible =
-          recalled !== null && teams.some((team) => team.id === recalled);
-        setLinearTeamId(stillVisible ? recalled : (teams[0]?.id ?? ""));
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setLinearTeams([]);
-        setLinearTeamId("");
-        setLinearTeamsError(
-          error instanceof Error
-            ? error.message
-            : "Couldn't load Linear teams.",
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setLinearTeamsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    availability.direct.linear,
-    claimRecalledTarget,
-    destination,
-    linearRefresh,
-    open,
-  ]);
-
   const setSectionChecked = (id: string, checked: boolean) => {
     const next = checked
       ? Array.from(new Set([...selectedSectionIds, id]))
@@ -655,11 +580,6 @@ export function ConnectedShareDialog({
       const channel = slackChannels.find((item) => item.id === slackTarget);
       return channel ? `send to #${channel.name}` : "send to my Slack messages";
     }
-    if (value === "linear") {
-      const team = linearTeams.find((item) => item.id === linearTeamId);
-      return team ? `create issue in ${team.key}` : "choose a Linear team";
-    }
-    if (value === "chat-linear") return "prepare Linear in Chat";
     if (value === "chat-notion") return "prepare Notion in Chat";
     if (value === "chat-obsidian") return "prepare Obsidian in Chat";
     return "copy snapshot";
@@ -677,9 +597,6 @@ export function ConnectedShareDialog({
     if (value === "slack") {
       const channel = slackChannels.find((item) => item.id === slackTarget);
       return channel ? `#${channel.name}` : "my Slack messages";
-    }
-    if (value === "linear") {
-      return linearTeams.find((item) => item.id === linearTeamId)?.key;
     }
     return undefined;
   };
@@ -720,24 +637,7 @@ export function ConnectedShareDialog({
     });
   };
 
-  const sendToLinear = async () => {
-    const team = linearTeams.find((item) => item.id === linearTeamId);
-    if (!team) throw new Error("Choose a Linear team first.");
-    const issue = await createLinearIssue({
-      teamId: team.id,
-      title: linearTitle.trim(),
-      description: message,
-    });
-    setReceipt({
-      title: `created ${issue.identifier || "Linear issue"}`,
-      detail: `${team.name} · ${issue.title || linearTitle}`,
-      url: issue.url,
-    });
-  };
-
-  const prepareInChat = async (
-    provider: "linear" | "notion" | "obsidian",
-  ) => {
+  const prepareInChat = async (provider: "notion" | "obsidian") => {
     const providerName = CONNECTION_NAME[provider];
     await showChatWithPrefill({
       context: JSON.stringify({
@@ -762,27 +662,21 @@ export function ConnectedShareDialog({
     setActionError(null);
     try {
       if (destination === "slack") await sendToSlack();
-      if (destination === "linear") await sendToLinear();
-      if (destination === "chat-linear") await prepareInChat("linear");
       if (destination === "chat-notion") await prepareInChat("notion");
       if (destination === "chat-obsidian") await prepareInChat("obsidian");
       // Remember only what landed. A failed send must not train the dialog to
       // reopen on a destination that does not work.
       writeRememberedShare(artifact.surface, {
         destination,
-        target:
-          destination === "slack" ? slackTarget : linearTeamId || undefined,
+        target: destination === "slack" ? slackTarget : undefined,
         // Recorded here because this is the only place that has both the id and
         // the name. A control offering to send here again can then say exactly
         // where without a lookup.
         targetLabel: rememberedTargetLabel(destination),
         instance: destination === "slack" ? slackInstance : undefined,
       });
-      if (destination === "slack" || destination === "linear") {
-        toast({
-          title:
-            destination === "slack" ? "sent to Slack" : "Linear issue created",
-        });
+      if (destination === "slack") {
+        toast({ title: "sent to Slack" });
       }
     } catch (error) {
       const message =
@@ -803,16 +697,14 @@ export function ConnectedShareDialog({
     outgoingMessage.trim().length > 0 &&
     outgoingMessage.length <= 39_000 &&
     selectedSectionIds.length > 0 &&
-    !receipt &&
-    (destination !== "linear" || Boolean(linearTeamId && linearTitle.trim()));
+    !receipt;
 
   const missingConnectionIds = [
     !availability.direct.slack ? "slack" : null,
-    !availability.direct.linear && !availability.chat.linear ? "linear" : null,
     !availability.chat.notion ? "notion" : null,
     !availability.chat.obsidian ? "obsidian" : null,
   ].filter((id): id is ConnectedShareApp => id !== null);
-  const noConnectedShareApps = missingConnectionIds.length === 4;
+  const noConnectedShareApps = missingConnectionIds.length === 3;
 
   /**
    * Destinations, grouped by the only distinction that changes what happens.
@@ -836,30 +728,12 @@ export function ConnectedShareDialog({
           },
         ]
       : []),
-    ...(availability.direct.linear
-      ? [
-          {
-            value: "linear" as const,
-            name: "Linear",
-            icon: <ConnectedShareAppIcon app="linear" />,
-          },
-        ]
-      : []),
   ];
   const chatOptions: Array<{
     value: ConnectedShareDestination;
     name: string;
     icon: React.ReactNode;
   }> = [
-    ...(availability.chat.linear
-      ? [
-          {
-            value: "chat-linear" as const,
-            name: "Linear",
-            icon: <ConnectedShareAppIcon app="linear" />,
-          },
-        ]
-      : []),
     ...(availability.chat.notion
       ? [
           {
@@ -890,8 +764,7 @@ export function ConnectedShareDialog({
     const nextOptions = nextMode === "chat" ? chatOptions : directOptions;
     // Hold the connection this mode is leaving, so coming back is a switch and
     // not a re-pick. Every app belongs to exactly one mode — Slack only sends
-    // unchanged, Obsidian and Notion only prepare in Chat, and Linear is one
-    // or the other depending on whether it arrived over MCP — so the toggle
+    // unchanged, Obsidian and Notion only prepare in Chat — so the toggle
     // cannot carry an app across. What it can do is stop destroying the choice
     // on the side it left.
     rememberModeDestination(destination);
@@ -923,10 +796,7 @@ export function ConnectedShareDialog({
       ? slackChannels.find((item) => item.id === slackTarget)?.name
         ? `#${slackChannels.find((item) => item.id === slackTarget)?.name}`
         : "my messages"
-      : destination === "linear"
-        ? (linearTeams.find((item) => item.id === linearTeamId)?.name ??
-          "choose a team")
-        : currentIsChat && destination
+      : currentIsChat && destination
           ? "prepare a prompt in Chat"
           : hasAnyDestination
             ? "choose where this goes"
@@ -937,17 +807,13 @@ export function ConnectedShareDialog({
   const submitLabel =
     destination === "slack"
       ? "send to Slack"
-      : destination === "linear"
-        ? "create Linear issue"
-        : destination === "chat-linear"
-          ? "prepare Linear in Chat"
-          : destination === "chat-notion"
-            ? "prepare Notion in Chat"
-            : destination === "chat-obsidian"
-              ? "prepare Obsidian in Chat"
-              : hasAnyDestination
-                ? "choose a destination"
-                : "connect an app to send";
+      : destination === "chat-notion"
+        ? "prepare Notion in Chat"
+        : destination === "chat-obsidian"
+          ? "prepare Obsidian in Chat"
+          : hasAnyDestination
+            ? "choose a destination"
+            : "connect an app to send";
 
   const contentsSummary = `${
     selectedSectionIds.length === artifact.sections.length
@@ -1265,68 +1131,6 @@ export function ConnectedShareDialog({
                   </button>
                 </p>
               )}
-            </div>
-          </div>
-        )}
-
-        {destination === "linear" && (
-          <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">团队</label>
-              <Select
-                value={linearTeamId}
-                onValueChange={(value) => {
-                  setLinearTeamId(value);
-                  setReceipt(null);
-                  setActionError(null);
-                }}
-              >
-                <SelectTrigger className="h-9 rounded-none text-xs">
-                  <SelectValue
-                    placeholder={
-                      linearTeamsLoading ? "loading teams" : "choose team"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {linearTeams.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>
-                      {team.key} · {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {linearTeamsError && (
-                <div
-                  className="flex items-start justify-between gap-2 text-[10px] text-destructive"
-                  role="alert"
-                  data-testid="connected-share-linear-teams-error"
-                >
-                  <span>{linearTeamsError}</span>
-                  <button
-                    type="button"
-                    className="shrink-0 underline"
-                    onClick={() => setLinearRefresh((value) => value + 1)}
-                  >
-                    retry
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">
-                issue title
-              </label>
-              <Input
-                value={linearTitle}
-                maxLength={250}
-                onChange={(event) => {
-                  setLinearTitle(event.target.value);
-                  setReceipt(null);
-                  setActionError(null);
-                }}
-                className="h-9 rounded-none text-xs"
-              />
             </div>
           </div>
         )}
