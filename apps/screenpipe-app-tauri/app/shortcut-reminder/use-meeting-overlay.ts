@@ -284,7 +284,7 @@ export function useMeetingOverlay(): MeetingOverlayState & {
                 ? {
                     ...refreshed,
                     stopping: false,
-                    stopError: "still active — try stop again",
+                    stopError: "仍在运行，请再次尝试停止",
                   }
                 : refreshed;
             });
@@ -292,7 +292,7 @@ export function useMeetingOverlay(): MeetingOverlayState & {
             setState((value) => ({
               ...value,
               stopping: false,
-              stopError: "could not confirm meeting stopped",
+              stopError: "无法确认会议已停止",
             }));
           }
         })();
@@ -302,7 +302,7 @@ export function useMeetingOverlay(): MeetingOverlayState & {
         ...value,
         stopping: false,
         stopError:
-          error instanceof Error ? error.message : "meeting did not stop",
+          error instanceof Error ? error.message : "会议未能停止",
       }));
     }
   }, []);

@@ -136,7 +136,7 @@ export function summarizeLiveViewFreshness(
       oldestMs,
       dataThroughMs,
       dataOutsideRange,
-      label: `Waiting for first data from ${bound} block${bound === 1 ? "" : "s"}`,
+      label: `等待 ${bound} 个模块产生首批数据`,
     };
   }
 

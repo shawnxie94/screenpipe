@@ -42,7 +42,7 @@ describe("ChatSplitPane", () => {
     expect(screen.getByText("question")).toBeInTheDocument();
     expect(screen.getByText("live answer")).toBeInTheDocument();
     expect(screen.getByLabelText("处理中")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Work in live secondary" }));
+    fireEvent.click(screen.getByRole("button", { name: "在“live secondary”中工作" }));
     expect(onPromote).toHaveBeenCalledWith("split-chat");
   });
 
@@ -51,7 +51,7 @@ describe("ChatSplitPane", () => {
     const onClose = vi.fn();
     render(<ChatSplitPane sessionId="split-chat" onPromote={vi.fn()} onClose={onClose} />);
 
-    expect(screen.getByText(/ready/)).toBeInTheDocument();
+    expect(screen.getByText(/此聊天已准备就绪/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "关闭分屏" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });

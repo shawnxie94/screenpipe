@@ -220,8 +220,8 @@ describe("deterministic summary", () => {
     const summary = buildLearningSummary(ok());
     expect(summary).toContain("Arc");
     expect(summary).toContain("Cursor");
-    expect(summary).toContain("31 screens");
-    expect(summary).toContain("4 minutes");
+    expect(summary).toContain("31 个画面");
+    expect(summary).toContain("4 分钟");
   });
 
   it("names what was actually on screen, not just the container app", () => {
@@ -271,7 +271,7 @@ describe("deterministic summary", () => {
     expect(paragraphs.some((p) => /^\d+ screens? indexed$/.test(p.trim()))).toBe(
       false,
     );
-    expect(summary).toContain("31 screens");
+    expect(summary).toContain("31 个画面");
   });
 
   it("reports elapsed wall time, not the engine's gap-allocated active time", () => {
@@ -281,12 +281,12 @@ describe("deterministic summary", () => {
     const summary = buildLearningSummary(ok({ total_active_minutes: 0.2 }), {
       elapsedMs: 3 * 60_000,
     });
-    expect(summary).toContain("3 minutes");
-    expect(summary).not.toContain("under a minute");
+    expect(summary).toContain("3 分钟");
+    expect(summary).not.toContain("不到 1 分钟");
   });
 
   it("falls back to active minutes when elapsed time is not supplied", () => {
-    expect(buildLearningSummary(ok())).toContain("4 minutes");
+    expect(buildLearningSummary(ok())).toContain("4 分钟");
   });
 
   it("lists one title once even when two apps report it", () => {
@@ -323,8 +323,8 @@ describe("deterministic summary", () => {
         audio_summary: { segment_count: 3, speakers: [{}, {}] },
       }),
     );
-    expect(rich).toContain("files open: server.rs");
-    expect(rich).toContain("3 audio transcripts");
+    expect(rich).toContain("打开的文件：server.rs");
+    expect(rich).toContain("3 条音频转录");
   });
 
   it("never claims an accomplishment, only an observation", () => {
@@ -347,8 +347,8 @@ describe("deterministic summary", () => {
     const summary = buildLearningSummary(
       ok({ apps: [], total_frames: 0, total_active_minutes: 0 }),
     );
-    expect(summary).toContain("under a minute");
-    expect(summary).toContain("0 screens");
+    expect(summary).toContain("不到 1 分钟");
+    expect(summary).toContain("0 个画面");
   });
 });
 

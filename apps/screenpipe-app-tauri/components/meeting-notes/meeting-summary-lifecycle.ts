@@ -209,8 +209,8 @@ export function meetingSummaryFailure(
   if (normalizedErrorType === "nothing_to_summarize") {
     return {
       kind: "nothing_to_summarize",
-      title: "Nothing to summarize",
-      copy: "No speech was captured for this meeting, so there's no summary. Anything recorded stays saved on this note.",
+      title: "没有可总结的内容",
+      copy: "本次会议没有捕获到语音，因此无法生成摘要。已记录的内容仍会保存在这份笔记中。",
       upgrade: null,
       retryable: false,
       changeModelRecommended: false,
@@ -219,8 +219,8 @@ export function meetingSummaryFailure(
   if (normalizedErrorType === "summary_not_saved") {
     return {
       kind: "summary_not_saved",
-      title: "Summary didn't save",
-      copy: "The summary run finished but nothing landed on this meeting. Your transcript is safe — retry to summarize again.",
+      title: "摘要未保存",
+      copy: "摘要任务已完成，但没有写入本次会议。你的转写内容是安全的，可以重试生成摘要。",
       upgrade: null,
       retryable: true,
       changeModelRecommended: false,
@@ -229,8 +229,8 @@ export function meetingSummaryFailure(
   if (authFailed) {
     return {
       kind: "auth_failed",
-      title: "AI provider needs attention",
-      copy: "The configured summary model couldn't authenticate with its AI provider. Choose another model or check its API key. Your meeting and transcript are safe.",
+      title: "AI 服务需要处理",
+      copy: "配置的摘要模型无法通过 AI 服务认证。请选择其他模型或检查 API 密钥。你的会议和转写内容是安全的。",
       upgrade: null,
       retryable: false,
       changeModelRecommended: true,
@@ -245,8 +245,8 @@ export function meetingSummaryFailure(
     case "rate_limit":
       return {
         kind,
-        title: "AI is temporarily rate-limited",
-        copy: "AI is temporarily rate-limited. Retry in a moment — your meeting and transcript are safe.",
+        title: "AI 暂时受到频率限制",
+        copy: "AI 暂时受到频率限制。请稍后重试，你的会议和转写内容是安全的。",
         upgrade: null,
         retryable: true,
         changeModelRecommended: true,
@@ -256,8 +256,8 @@ export function meetingSummaryFailure(
     case "quota_exhausted":
       return {
         kind,
-        title: "AI usage limit reached",
-        copy: "The configured summary model hit your AI usage limit. Upgrade for a higher limit, or choose a local model or one with your own provider key. Your meeting and transcript are safe.",
+        title: "已达到 AI 使用上限",
+        copy: "配置的摘要模型已达到 AI 使用上限。你可以升级以获得更高额度，或选择本地模型/使用自有服务密钥的模型。你的会议和转写内容是安全的。",
         upgrade,
         retryable: false,
         changeModelRecommended: true,
@@ -265,8 +265,8 @@ export function meetingSummaryFailure(
     case "model_not_allowed":
       return {
         kind,
-        title: "Summary model not included",
-        copy: "Your plan doesn't include the configured summary model. Choose an included model or upgrade. Your meeting and transcript are safe.",
+        title: "当前方案不包含摘要模型",
+        copy: "你的方案不包含配置的摘要模型。请选择方案内的模型或升级。你的会议和转写内容是安全的。",
         upgrade,
         retryable: false,
         changeModelRecommended: true,
@@ -274,8 +274,8 @@ export function meetingSummaryFailure(
     default:
       return {
         kind,
-        title: "Summary could not be generated",
-        copy: "Your meeting and transcript are safe. Retry when you're ready.",
+        title: "无法生成摘要",
+        copy: "你的会议和转写内容是安全的。准备好后可以重试。",
         upgrade: null,
         retryable: true,
         changeModelRecommended: false,

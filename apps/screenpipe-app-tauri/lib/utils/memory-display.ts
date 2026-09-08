@@ -64,7 +64,7 @@ function clipText(text: string, limit = PREVIEW_LIMIT): string {
 
   const boundary = compact.lastIndexOf(" ", limit);
   const end = boundary > 120 ? boundary : limit;
-  return `${compact.slice(0, end).trim()}...`;
+  return `${compact.slice(0, end).trim()}…`;
 }
 
 function nodeText(node: MarkdownNode): string {
@@ -235,33 +235,33 @@ export function getMemoryCardDisplay(memory: MemoryRecordForDisplay): MemoryCard
     const date = dateFromMemory(memory);
     const apps = tableValues(memory.content, "Apps");
     const people = listSectionPreview(memory.content, "Conversations", 3);
-    title = date ? `Daily Log · ${date}` : title;
-    subtitle = people ? `People: ${people}` : "Daily memory log";
+    title = date ? `每日记录 · ${date}` : title;
+    subtitle = people ? `相关人员：${people}` : "每日记忆记录";
     summary =
       firstMatch(memory.content, [
         /##\s*(?:🎯\s*)?Headline\s*\n+([^\n#]+)/i,
         /\*\*Focus:\*\*\s*([^\n]+)/i,
       ]) || base.preview;
-    if (date) properties.push({ label: "date", value: date });
-    if (apps) properties.push({ label: "top apps", value: apps });
-    if (people) properties.push({ label: "people", value: people });
+    if (date) properties.push({ label: "日期", value: date });
+    if (apps) properties.push({ label: "常用应用", value: apps });
+    if (people) properties.push({ label: "相关人员", value: people });
   } else if (kind === "person") {
     const personTag = memory.tags.find((tag) => tag.startsWith("person:"));
     const relationship = firstMatch(memory.content, [/\*\*Relationship:\*\*\s*([^\n]+)/i]);
     const lastSeen = firstMatch(memory.content, [/\*\*Last seen:\*\*\s*([^\n]+)/i]);
     const openLoops = listSectionPreview(memory.content, "Open loops", 2);
     title = headingTitle(memory.content) || (personTag ? titleize(personTag.slice(7)) : title);
-    subtitle = relationship || "Person memory";
+    subtitle = relationship || "人物记忆";
     summary = openLoops || base.preview;
-    if (lastSeen) properties.push({ label: "last seen", value: lastSeen });
-    if (openLoops) properties.push({ label: "open loops", value: openLoops });
+    if (lastSeen) properties.push({ label: "最近出现", value: lastSeen });
+    if (openLoops) properties.push({ label: "未完事项", value: openLoops });
   } else if (kind === "crm") {
     const lastInteraction = listSectionPreview(memory.content, "Recent interactions", 2);
     const followUp = listSectionPreview(memory.content, "Follow-ups", 2);
-    subtitle = "Personal CRM";
+    subtitle = "个人关系管理";
     summary = lastInteraction || followUp || base.preview;
-    if (lastInteraction) properties.push({ label: "last interaction", value: lastInteraction });
-    if (followUp) properties.push({ label: "follow-up", value: followUp });
+    if (lastInteraction) properties.push({ label: "最近互动", value: lastInteraction });
+    if (followUp) properties.push({ label: "后续跟进", value: followUp });
   } else if (kind === "meeting") {
     const meetingTag = memory.tags.find((tag) => tag.startsWith("meeting:"));
     const attendees = firstMatch(memory.content, [
@@ -269,12 +269,12 @@ export function getMemoryCardDisplay(memory: MemoryRecordForDisplay): MemoryCard
       /Attendees:\s*([^\n]+)/i,
     ]);
     const actions = listSectionPreview(memory.content, "Action items", 2);
-    subtitle = meetingTag ? `Meeting ${meetingTag.slice(8)}` : "Meeting memory";
+    subtitle = meetingTag ? `会议 ${meetingTag.slice(8)}` : "会议记忆";
     summary = actions || base.preview;
-    if (attendees) properties.push({ label: "attendees", value: attendees });
-    if (actions) properties.push({ label: "actions", value: actions });
+    if (attendees) properties.push({ label: "参与人", value: attendees });
+    if (actions) properties.push({ label: "行动项", value: actions });
   } else if (kind === "fact") {
-    subtitle = "Saved fact";
+    subtitle = "已保存事实";
     summary = "";
   }
 
@@ -282,7 +282,7 @@ export function getMemoryCardDisplay(memory: MemoryRecordForDisplay): MemoryCard
 
   return {
     kind,
-    title: title || "Untitled memory",
+    title: title || "未命名记忆",
     subtitle,
     summary,
     properties,

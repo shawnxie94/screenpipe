@@ -56,9 +56,9 @@ function pipePromptLabel(pipeName: string, text: string): string {
     const start = new Date(match[1]);
     const end = new Date(match[2]);
     const fmt = (d: Date) => d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-    return `scheduled task executed: ${pipeName} (${fmt(start)} – ${fmt(end)})`;
+    return `已执行计划任务：${pipeName}（${fmt(start)} – ${fmt(end)}）`;
   }
-  return `scheduled task executed: ${pipeName}`;
+  return `已执行计划任务：${pipeName}`;
 }
 
 export function parsePipeNdjsonToMessages(raw: string, pipeName?: string): ChatMessage[] {

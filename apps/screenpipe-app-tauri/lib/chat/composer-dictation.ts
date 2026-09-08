@@ -70,8 +70,8 @@ function responseError(status: number, payload: unknown): ComposerDictationError
   }
   return new ComposerDictationError(
     status >= 500
-      ? "Cloud dictation is unavailable right now. Try again."
-      : gatewayMessage || "Couldn't transcribe that recording. Try again.",
+      ? "云端听写暂时不可用，请重试。"
+      : gatewayMessage || "无法转写这段录音，请重试。",
     "unavailable",
   );
 }
@@ -83,7 +83,7 @@ export async function transcribeComposerAudio(
   _signal?: AbortSignal,
 ): Promise<string> {
   throw new ComposerDictationError(
-    "Cloud dictation is no longer available. Configure a local transcription engine in Settings.",
+    "云端听写已不可用，请在设置中配置本地转写引擎。",
     "unavailable",
   );
 }

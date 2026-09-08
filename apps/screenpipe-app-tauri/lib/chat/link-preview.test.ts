@@ -30,7 +30,7 @@ describe("parseLinkPreview", () => {
         id: "github",
         label: "GitHub",
         category: "code",
-        objectLabel: "pull request #6450",
+        objectLabel: "拉取请求 #6450",
       },
       github: {
         owner: "screenpipe",
@@ -56,7 +56,7 @@ describe("parseLinkPreview", () => {
         id: "generic",
         label: "example.com",
         category: "web",
-        objectLabel: "web link",
+        objectLabel: "链接",
       },
     });
   });
@@ -66,67 +66,67 @@ describe("parseLinkPreview", () => {
       "https://mail.google.com/mail/u/0/#inbox/private-thread-id",
       "gmail",
       "Gmail",
-      "email",
+      "邮件",
     ],
     [
       "https://outlook.office.com/mail/inbox/id/private-message-id",
       "outlook",
       "Outlook",
-      "email",
+      "邮件",
     ],
     [
       "https://calendar.google.com/calendar/u/0/r/eventedit/private-event-id",
       "google-calendar",
       "Google Calendar",
-      "event",
+      "事件",
     ],
     [
       "https://meet.google.com/abc-defg-hij",
       "google-meet",
       "Google Meet",
-      "meeting",
+      "会议",
     ],
     [
       "https://screenpipe.zoom.us/j/123456789?pwd=private",
       "zoom",
       "Zoom",
-      "meeting",
+      "会议",
     ],
     [
       "https://app.slack.com/client/T000/C000/thread-id",
       "slack",
       "Slack",
-      "message",
+      "消息",
     ],
     [
       "https://teams.microsoft.com/l/message/private-thread-id",
       "teams",
       "Microsoft Teams",
-      "message",
+      "消息",
     ],
     [
       "https://docs.google.com/document/d/private-document-id/edit",
       "google-docs",
       "Google Docs",
-      "document",
+      "文档",
     ],
     [
       "https://docs.google.com/spreadsheets/d/private-sheet-id/edit",
       "google-docs",
       "Google Sheets",
-      "spreadsheet",
+      "电子表格",
     ],
     [
       "https://drive.google.com/file/d/private-file-id/view",
       "google-drive",
       "Google Drive",
-      "file",
+      "文件",
     ],
     [
       "https://screenpipe.atlassian.net/browse/SCR-123",
       "jira",
       "Jira",
-      "issue SCR-123",
+      "问题 SCR-123",
     ],
   ])(
     "recognizes private provider %s without creating a remote request",
@@ -146,7 +146,7 @@ describe("parseLinkPreview", () => {
       id: "linear",
       label: "Linear",
       category: "issue",
-      objectLabel: "issue SCR-123",
+      objectLabel: "问题 SCR-123",
       title: "Fix Chat Link Previews",
     });
     expect(
@@ -155,7 +155,7 @@ describe("parseLinkPreview", () => {
       )?.provider,
     ).toMatchObject({
       id: "figma",
-      objectLabel: "file",
+      objectLabel: "文件",
       title: "Chat Link Preview",
     });
     expect(
@@ -164,7 +164,7 @@ describe("parseLinkPreview", () => {
       )?.provider,
     ).toMatchObject({
       id: "notion",
-      objectLabel: "page",
+      objectLabel: "页面",
       title: "Product Roadmap",
     });
   });
@@ -178,7 +178,7 @@ describe("parseLinkPreview", () => {
         id: "youtube",
         label: "YouTube",
         category: "video",
-        objectLabel: "video",
+        objectLabel: "视频",
       },
       remote: {
         source: "youtube",

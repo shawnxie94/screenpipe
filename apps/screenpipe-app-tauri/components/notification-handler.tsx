@@ -47,8 +47,8 @@ const NotificationHandler: React.FC = () => {
 
           if (!welcomeShown) {
             sendNotification({
-              title: "欢迎使用 screenpipe",
-              body: "感谢使用 screenpipe！我们会帮助你充分发挥它的作用。",
+              title: "欢迎使用知迹",
+              body: "感谢使用知迹！我们会帮助你充分发挥它的作用。",
             });
             localStorage?.setItem("welcomeNotificationShown", "true");
           }

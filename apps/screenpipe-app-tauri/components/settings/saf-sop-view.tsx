@@ -192,7 +192,7 @@ export function SafArtifactBody({
   if (!expanded) {
     body = hideTitle ? null : <p className="text-sm font-medium">{title}</p>;
   } else if (content == null) {
-    body = <p className="text-xs text-muted-foreground">loading artifact…</p>;
+    body = <p className="text-xs text-muted-foreground">正在加载产物…</p>;
   } else {
     let raw: unknown;
     let parsedOk = false;

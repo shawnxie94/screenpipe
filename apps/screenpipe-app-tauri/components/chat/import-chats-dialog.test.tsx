@@ -71,9 +71,9 @@ describe("ImportChatsDialog", () => {
 
     expect(await screen.findByText("Claude Code")).toBeInTheDocument();
     expect(screen.getByText("Codex")).toBeInTheDocument();
-    expect(screen.getByText("showing the 2 most recent from the past 7 days")).toBeInTheDocument();
+  expect(screen.getByText("显示过去 7 天中最近的 2 条")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "import 3" }));
+  fireEvent.click(screen.getByRole("button", { name: "导入 3 条" }));
 
     await waitFor(() => expect(mocks.importExternalChatHistory).toHaveBeenCalledTimes(1));
     expect(mocks.importExternalChatHistory.mock.calls[0][0]).toHaveLength(3);
@@ -86,7 +86,7 @@ describe("ImportChatsDialog", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({
       title: "聊天导入完成",
-      description: "2 new · 1 updated",
+      description: "新增 2 · 更新 1",
     }));
   });
 });

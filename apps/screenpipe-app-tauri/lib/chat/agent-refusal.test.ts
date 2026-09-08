@@ -34,9 +34,9 @@ describe("agent refusal", () => {
     expect(refusal?.retryable).toBe(false);
     expect(refusal?.message).toContain("GitHub Copilot");
     // Must not send them round the sign-in loop.
-    expect(refusal?.message).toContain("Signing in again won't change that");
+    expect(refusal?.message).toContain("重新登录不会改变结果");
     // Says whose limit it is, and gives a way forward.
-    expect(refusal?.message).toContain("not a local Screenpipe error");
+    expect(refusal?.message).toContain("不是本地 screenpipe 错误");
   });
 
   it("treats an expired credential as a sign-in problem", () => {
@@ -46,9 +46,9 @@ describe("agent refusal", () => {
     );
 
     expect(refusal?.message).toContain("Claude Code");
-    expect(refusal?.message).toContain("re-authenticate");
+    expect(refusal?.message).toContain("重新认证");
     // The opposite advice from the policy case: here signing in is the fix.
-    expect(refusal?.message).not.toContain("Signing in again won't change that");
+    expect(refusal?.message).not.toContain("重新登录不会改变结果");
   });
 
   it("names the agent rather than saying 'the agent'", () => {
@@ -57,7 +57,7 @@ describe("agent refusal", () => {
 
     // Falls back to something readable when the name is unknown.
     const unnamed = buildAgentRefusalMessage(COPILOT_POLICY, null);
-    expect(unnamed?.message.startsWith("This agent")).toBe(true);
+    expect(unnamed?.message.startsWith("此代理")).toBe(true);
   });
 
   it("leaves unrelated failures to the generic provider handling", () => {

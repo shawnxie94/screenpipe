@@ -58,14 +58,14 @@ describe("pending agent-action detection", () => {
 
 describe("message rendering helpers", () => {
   it("formats work duration labels", () => {
-    expect(formatWorkDuration(0)).toBe("Worked");
-    expect(formatWorkDuration(1_000)).toBe("Worked for 1s");
-    expect(formatWorkDuration(18_000)).toBe("Worked for 18s");
-    expect(formatWorkDuration(61_000)).toBe("Worked for 1 min 1 sec");
-    expect(formatWorkDuration(100_000)).toBe("Worked for 1 min 40 sec");
-    expect(formatDurationParts(60_000)).toBe("1 min");
-    expect(formatStoppedWorkDuration()).toBe("You stopped");
-    expect(formatStoppedWorkDuration(68_000)).toBe("You stopped after 1 min 8 sec");
+    expect(formatWorkDuration(0)).toBe("已处理");
+    expect(formatWorkDuration(1_000)).toBe("处理耗时 1 秒");
+    expect(formatWorkDuration(18_000)).toBe("处理耗时 18 秒");
+    expect(formatWorkDuration(61_000)).toBe("处理耗时 1 分钟 1 秒");
+    expect(formatWorkDuration(100_000)).toBe("处理耗时 1 分钟 40 秒");
+    expect(formatDurationParts(60_000)).toBe("1 分钟");
+    expect(formatStoppedWorkDuration()).toBe("你已停止");
+    expect(formatStoppedWorkDuration(68_000)).toBe("你已停止，处理耗时 1 分钟 8 秒");
   });
 
   it("detects placeholder titles and steered assistant messages", () => {
@@ -75,7 +75,7 @@ describe("message rendering helpers", () => {
 
     const steered = message({ id: "a1", role: "assistant", intent: "steer" });
     expect(isSteeredAssistantMessage(steered)).toBe(true);
-    expect(getMessageIntentLabel(steered)).toBe("Steered conversation");
+    expect(getMessageIntentLabel(steered)).toBe("已引导对话");
   });
 
   it("treats assistant content blocks as renderable body", () => {
@@ -269,7 +269,7 @@ describe("message rendering helpers", () => {
       { canCollapseSteerWork: true }
     ).filter((renderItem) => renderItem.type === "collapsed-steer-work");
 
-    expect(collapsedSteerWorkDuration(item)).toBe("Worked for 1 min 15 sec");
+    expect(collapsedSteerWorkDuration(item)).toBe("处理耗时 1 分钟 15 秒");
   });
 
   it("sets hideToolSummary and collapseToolsWithSteerWork on all assistants in a steered segment", () => {
@@ -347,7 +347,7 @@ describe("message rendering helpers", () => {
     ).filter((renderItem) => renderItem.type === "collapsed-steer-work");
 
     // Parent was stopped internally by steering — steered assistant is fine
-    expect(collapsedSteerWorkDuration(item)).toBe("Worked for 30s");
+    expect(collapsedSteerWorkDuration(item)).toBe("处理耗时 30 秒");
   });
 
   it("shows 'You stopped' when the last steered assistant was stopped by user", () => {
@@ -362,7 +362,7 @@ describe("message rendering helpers", () => {
     ).filter((renderItem) => renderItem.type === "collapsed-steer-work");
 
     // Last steered assistant stopped — user explicitly stopped the workflow
-    expect(collapsedSteerWorkDuration(item)).toBe("You stopped after 30s");
+    expect(collapsedSteerWorkDuration(item)).toBe("你已停止，处理耗时 30 秒");
   });
 
   it("counts failed tool calls across segment messages", () => {

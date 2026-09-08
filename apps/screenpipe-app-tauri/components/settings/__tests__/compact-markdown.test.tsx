@@ -58,7 +58,7 @@ describe("CompactMarkdown", () => {
       );
 
       const preview = screen.getByTestId("preview");
-      expect(preview.textContent).toContain("Checked last hour (5:11 PM-6:11 PM)");
+      expect(preview.textContent).toContain("已检查最近一小时（5:11 PM-6:11 PM）");
       expect(preview.textContent).not.toContain("Window checked");
       expect(preview.textContent).not.toContain("2026-06-20");
       expect(preview.textContent).not.toContain("UTC");

@@ -120,7 +120,7 @@ export function formatMeetingChatTimeRange(
   const time = (date: Date) =>
     date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
-  return `${day} · ${time(start)}–${end ? time(end) : "now"}`;
+  return `${day} · ${time(start)}–${end ? time(end) : "现在"}`;
 }
 
 export function MeetingChatPanel({
@@ -160,12 +160,12 @@ export function MeetingChatPanel({
   const isAcp = activePreset?.provider === "acp";
   const contextSource =
     conditions.transcriptTurnCount > 0 && conditions.hasWrittenContext
-      ? "transcript + notes"
+      ? "转写 + 笔记"
       : conditions.transcriptTurnCount > 0
-        ? "transcript"
+        ? "转写"
         : conditions.hasWrittenContext
-          ? "notes"
-          : "meeting context";
+          ? "笔记"
+          : "会议上下文";
   const contextTime = formatMeetingChatTimeRange(meetingStart, meetingEnd);
 
   // Case 30: opening the panel puts the cursor where the user is going.
@@ -293,7 +293,7 @@ export function MeetingChatPanel({
       <div className="flex shrink-0 items-start justify-between gap-2 border-b border-border px-3 py-2">
         <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-            ask this meeting
+            询问此会议
           </p>
           <p
             className="mt-0.5 truncate text-xs font-medium text-foreground"
@@ -384,7 +384,7 @@ export function MeetingChatPanel({
                         onClick={onRetry}
                         className="border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors hover:bg-muted"
                       >
-                        retry
+                        重试
                       </button>
                     </span>
                   )}
@@ -430,7 +430,7 @@ export function MeetingChatPanel({
               compact
               showModelOnly
               providerIconOnly={isAcp}
-              triggerAriaLabel="model for this meeting chat"
+              triggerAriaLabel="此会议聊天使用的模型"
               controlledPresetId={activePreset?.id ?? null}
               onControlledSelect={(preset) => {
                 if (preset) onPresetSelect(preset);

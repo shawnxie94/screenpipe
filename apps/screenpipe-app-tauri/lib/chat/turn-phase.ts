@@ -156,10 +156,10 @@ export function resolveTurnStart(
 export function formatTurnElapsed(ms: number): string | null {
   if (!Number.isFinite(ms) || ms < 1000) return null;
   const totalSeconds = Math.floor(ms / 1000);
-  if (totalSeconds < 60) return `${totalSeconds}s`;
+  if (totalSeconds < 60) return `${totalSeconds} 秒`;
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
+  return seconds === 0 ? `${minutes} 分钟` : `${minutes} 分钟 ${seconds} 秒`;
 }
 
 /**
@@ -179,46 +179,46 @@ export function turnPhaseLabel(
   if (isLivePhase(phase)) {
     const liveness = signals.liveness;
     if (liveness?.state === "offline") {
-      return "offline · message saved; retrying when online";
+      return "离线 · 消息已保存，联网后重试";
     }
     if (liveness?.state === "retrying") {
-      const attempt = `attempt ${liveness.attempt}/${liveness.maxAttempts}`;
+      const attempt = `第 ${liveness.attempt}/${liveness.maxAttempts} 次尝试`;
       const retrySeconds =
         liveness.retryInMs == null
           ? null
           : Math.max(0, Math.ceil(liveness.retryInMs / 1_000));
       return retrySeconds && retrySeconds > 0
-        ? `retrying · ${attempt} · in ${retrySeconds}s`
-        : `retrying · ${attempt}`;
+        ? `正在重试 · ${attempt} · ${retrySeconds} 秒后`
+        : `正在重试 · ${attempt}`;
     }
     if (liveness?.state === "stalled") {
-      const quiet = formatTurnElapsed(liveness.silentForMs) ?? "30s";
-      return `still working · no update for ${quiet}`;
+      const quiet = formatTurnElapsed(liveness.silentForMs) ?? "30 秒";
+      return `仍在处理 · 已有 ${quiet} 没有更新`;
     }
   }
 
   switch (phase) {
     case "starting":
-      return withElapsed(signals.bootLabel?.trim() || "starting the AI");
+      return withElapsed(signals.bootLabel?.trim() || "正在启动 AI");
     case "analyzing":
-      return withElapsed("analyzing");
+      return withElapsed("正在分析");
     case "tool": {
-      const base = signals.toolLabel?.trim() || "running a tool";
+      const base = signals.toolLabel?.trim() || "正在运行工具";
       const total = signals.toolsTotal ?? 0;
       const progress =
         total > 1 ? `${base} · ${signals.toolsDone ?? 0}/${total}` : base;
       return withElapsed(progress);
     }
     case "writing":
-      return withElapsed("writing");
+      return withElapsed("正在生成");
     case "done":
-      return elapsed ? `done in ${elapsed}` : "done";
+      return elapsed ? `已完成，用时 ${elapsed}` : "已完成";
     case "stopped":
-      return elapsed ? `stopped · ${elapsed}` : "stopped";
+      return elapsed ? `已停止 · ${elapsed}` : "已停止";
     case "interrupted":
-      return "interrupted";
+      return "已中断";
     case "failed":
-      return "failed";
+      return "失败";
     default:
       return "";
   }

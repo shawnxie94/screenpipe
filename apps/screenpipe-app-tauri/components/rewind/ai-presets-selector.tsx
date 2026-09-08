@@ -104,7 +104,7 @@ import { compactModelLabel } from "@/lib/utils/model-label";
 const formatPresetName = (name: string): string => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (uuidRegex.test(name)) {
-    return `Preset ${name.slice(0, 8)}...`;
+    return `预设 ${name.slice(0, 8)}…`;
   }
   return name;
 };
@@ -160,12 +160,23 @@ interface OpenAIModel {
   max_tokens?: number;
 }
 
-export const DEFAULT_PROMPT = `Rules:
-- Media: use standard markdown with angle-bracket local paths, like ![description](</path/to/file.mp4>) for videos and ![description](</path/to/image.jpg>) for images
-- Use the exact absolute file_path from search results inside the angle brackets, do not modify it
-- Always wrap local file paths in angle brackets because screenpipe paths often contain spaces or parentheses
-- Always answer my question/intent, do not make up things
+export const DEFAULT_PROMPT = `规则：
+- 媒体：使用带尖括号本地路径的标准 Markdown，例如视频使用 ![描述](</path/to/file.mp4>)，图片使用 ![描述](</path/to/image.jpg>)
+- 尖括号内使用搜索结果中的完整绝对 file_path，不要修改它
+- 本地文件路径始终放在尖括号中，因为 screenpipe 路径经常包含空格或括号
+- 始终回答我的问题或意图，不要编造内容
 `;
+
+function localizedPresetPrompt(prompt?: string): string {
+  if (
+    !prompt ||
+    (prompt.startsWith("Rules:\n- Media: use standard markdown") &&
+      prompt.includes("Always wrap local file paths in angle brackets"))
+  ) {
+    return DEFAULT_PROMPT;
+  }
+  return prompt;
+}
 
 function ChatGptSignInButton() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -209,7 +220,7 @@ function ChatGptSignInButton() {
       ) : (
         <LogIn className="h-3 w-3 mr-1" />
       )}
-      {loggedIn ? "signed in — sign out" : "sign in with chatgpt"}
+      {loggedIn ? "已登录——退出登录" : "使用 ChatGPT 登录"}
     </Button>
   );
 }
@@ -240,7 +251,7 @@ export function AIProviderConfig({
     acpAgent: defaultPreset?.acpAgent,
     maxContextChars: defaultPreset?.maxContextChars || 512000,
     maxTokens: defaultPreset?.maxTokens ?? 4096,
-    prompt: defaultPreset?.prompt || DEFAULT_PROMPT,
+    prompt: localizedPresetPrompt(defaultPreset?.prompt),
     id: defaultPreset?.id || "",
     defaultPreset: defaultPreset?.defaultPreset || false,
   });
@@ -280,16 +291,16 @@ export function AIProviderConfig({
     setLastTestedConnectionFingerprint(testedFingerprint);
     setLastValidatedConnectionFingerprint(null);
     setConnectionTestStatus("testing");
-    setConnectionTestMessage("checking endpoint, credentials, and model...");
+    setConnectionTestMessage("正在检查端点、凭据和模型…");
     try {
       const result = await testAiPresetConnection(formData);
       setLastValidatedConnectionFingerprint(testedFingerprint);
       setConnectionTestStatus("pass");
-      setConnectionTestMessage(`connected in ${result.latencyMs}ms`);
+      setConnectionTestMessage(`已连接，用时 ${result.latencyMs} 毫秒`);
     } catch (error) {
       setConnectionTestStatus("fail");
       setConnectionTestMessage(
-        error instanceof Error ? error.message : "connection test failed",
+        error instanceof Error ? error.message : "连接测试失败",
       );
     }
   };
@@ -375,7 +386,7 @@ export function AIProviderConfig({
 
     // Check if ID ends with 'copy' (case insensitive)
     if (id.trim().toLowerCase().endsWith("copy")) {
-      setIdError("name cannot end with 'copy'");
+      setIdError("名称不能以“copy”结尾");
       return false;
     }
 
@@ -387,7 +398,7 @@ export function AIProviderConfig({
     );
 
     if (isDuplicate) {
-      setIdError("name already exists");
+      setIdError("名称已存在");
       return false;
     }
 
@@ -422,7 +433,7 @@ export function AIProviderConfig({
       setOpenAIModels([]);
       setModelDiscoveryStatus("error");
       setModelDiscoveryError(
-        "couldn't discover models — type a model name manually",
+        "无法发现模型——请手动输入模型名称",
       );
     }
   };
@@ -449,7 +460,7 @@ export function AIProviderConfig({
       setOpenAIModels([]);
       setModelDiscoveryStatus("error");
       setModelDiscoveryError(
-        "couldn't reach Ollama — type a model name manually",
+        "无法连接 Ollama — 请手动输入模型名称",
       );
     }
   };
@@ -538,7 +549,7 @@ export function AIProviderConfig({
         ]);
         setModelDiscoveryStatus("error");
         setModelDiscoveryError(
-          "couldn't load live ChatGPT models — showing known models",
+          "无法加载实时 ChatGPT 模型——显示已知模型",
         );
       })();
     }
@@ -646,7 +657,7 @@ export function AIProviderConfig({
     <div className="w-full space-y-3 rounded-lg bg-card p-4">
       <div>
         <h2 className="text-base font-semibold">
-          {defaultPreset?.id ? "edit ai" : "choose your ai"}
+          {defaultPreset?.id ? "编辑 AI 配置" : "选择 AI"}
         </h2>
       </div>
 
@@ -695,7 +706,7 @@ export function AIProviderConfig({
 
         {!selectedProvider && (
           <p className="text-xs text-muted-foreground">
-            choose one to continue
+            选择一个以继续
           </p>
         )}
 
@@ -715,7 +726,7 @@ export function AIProviderConfig({
           <div className="space-y-1">
             <div className="space-y-1">
               <Label htmlFor="apiKey" className="text-xs">
-                api key{apiKeyRequired && <span className="text-destructive"> *</span>}
+                API 密钥{apiKeyRequired && <span className="text-destructive"> *</span>}
               </Label>
               <div className="relative">
                 <Input
@@ -752,8 +763,8 @@ export function AIProviderConfig({
                 onValueChange={(model) => setFormData({ ...formData, model })}
                 status={modelDiscoveryStatus}
                 errorMessage={modelDiscoveryError}
-                idleMessage="enter an API key to discover models"
-                emptyMessage="no models available for this API key"
+                idleMessage="输入 API 密钥以发现模型"
+                emptyMessage="此 API 密钥没有可用模型"
                 disabled={!formData.apiKey}
               />
             </div>
@@ -784,12 +795,12 @@ export function AIProviderConfig({
                 onValueChange={(model) => setFormData({ ...formData, model })}
                 status={modelDiscoveryStatus}
                 errorMessage={modelDiscoveryError}
-                placeholder="e.g. qwen3.5:9b"
-                emptyMessage="no Ollama models installed — type a model name manually"
+                  placeholder="例如：qwen3.5:9b"
+                emptyMessage="未安装 Ollama 模型——请手动输入模型名称"
                 allowManualEntry
               />
               <p className="text-[10px] text-muted-foreground">
-                recommended: qwen3.5:9b, glm-4.7:9b, qwen3.5:4b (tool calling). GPU required.
+                推荐：qwen3.5:9b、glm-4.7:9b、qwen3.5:4b（支持工具调用）。需要 GPU。
               </p>
             </div>
           </div>
@@ -847,9 +858,9 @@ export function AIProviderConfig({
                 onValueChange={(model) => setFormData({ ...formData, model })}
                 status={modelDiscoveryStatus}
                 errorMessage={modelDiscoveryError}
-                idleMessage="enter a valid base URL to discover models"
+                idleMessage="输入有效的基础 URL 以发现模型"
                 placeholder="输入或选择模型"
-                emptyMessage="no models discovered — type a model name manually"
+                emptyMessage="未发现模型——请手动输入模型名称"
                 allowManualEntry
               />
             </div>
@@ -872,7 +883,7 @@ export function AIProviderConfig({
                 status={modelDiscoveryStatus}
                 errorMessage={modelDiscoveryError}
                 placeholder="gpt-5.6-terra"
-                emptyMessage="no ChatGPT models discovered — type a model name manually"
+                emptyMessage="未发现 ChatGPT 模型——请手动输入模型名称"
                 allowManualEntry
               />
             </div>
@@ -946,8 +957,8 @@ export function AIProviderConfig({
                       : connectionTestStatus === "fail" && connectionTestResultIsCurrent
                       ? connectionTestMessage
                       : connectionTestRequired
-                      ? "required before saving"
-                      : "optional for unchanged settings")}
+                      ? "保存前必须填写"
+                      : "设置未更改时可选")}
                 </p>
               </div>
               <Button
@@ -964,7 +975,7 @@ export function AIProviderConfig({
                 {connectionTestStatus === "testing" && (
                   <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                 )}
-                {connectionTestPassed ? "retest" : "test connection"}
+                {connectionTestPassed ? "重新测试" : "测试连接"}
               </Button>
             </div>
           </div>
@@ -973,7 +984,7 @@ export function AIProviderConfig({
         {selectedProvider && (
           <div className="space-y-1">
             <Label htmlFor="name" className="flex items-center gap-2 text-xs">
-              name
+              名称
               {idError && (
                 <span className="text-xs text-destructive font-normal">
                   {idError}
@@ -1032,7 +1043,7 @@ export function AIProviderConfig({
                   }}
                 >
                   <Icons.openai className="h-3.5 w-3.5" />
-                  <span>chatgpt</span>
+                  <span>ChatGPT</span>
                 </Button>
                 <Button
                   type="button"
@@ -1050,7 +1061,7 @@ export function AIProviderConfig({
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/images/claude-ai.svg" alt="" className="h-3.5 w-3.5 rounded-sm" />
-                  <span>claude API</span>
+                  <span>Claude API</span>
                 </Button>
                 <Button
                   type="button"
@@ -1071,7 +1082,7 @@ export function AIProviderConfig({
                     alt=""
                     className="h-3.5 w-3.5 object-contain dark:invert"
                   />
-                  <span>ollama</span>
+                  <span>Ollama</span>
                 </Button>
                 <Button
                   type="button"
@@ -1134,7 +1145,7 @@ export function AIProviderConfig({
               <>
             {resolvedModelLimits && (
               <p className="text-[10px] text-muted-foreground">
-                known model limits are configured automatically
+                已自动配置已知的模型限制
               </p>
             )}
             {selectedProvider !== "acp" &&
@@ -1155,7 +1166,7 @@ export function AIProviderConfig({
                   className="h-6 text-[10px]"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  use this only when the endpoint does not publish a context window; Screenpipe agents need at least 32,768
+                  仅当端点未提供上下文窗口时使用；Screenpipe 代理至少需要 32,768
                 </p>
               </div>
             )}
@@ -1178,10 +1189,10 @@ export function AIProviderConfig({
               </div>
             )}
             <div className="space-y-1">
-              <Label htmlFor="prompt" className="text-xs">prompt</Label>
+              <Label htmlFor="prompt" className="text-xs">提示词</Label>
               <Textarea
                 id="prompt"
-                value={formData.prompt || DEFAULT_PROMPT}
+                value={localizedPresetPrompt(formData.prompt)}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                   setFormData({ ...formData, prompt: e.target.value })
                 }
@@ -1214,7 +1225,7 @@ export function AIProviderConfig({
           {isLoading ? (
             <Icons.spinner className="mr-2 h-3 w-3 animate-spin" />
           ) : null}
-          {defaultPreset ? "save changes" : "continue"}
+          {defaultPreset ? "保存更改" : "继续"}
         </Button>
       </form>
     </div>
@@ -1347,7 +1358,7 @@ export const AIPresetsSelector = ({
   controlledPresetId,
   onControlledSelect,
   allowNone = false,
-  noneLabel = "none (use scheduled task defaults)",
+  noneLabel = "不使用（采用定时任务默认设置）",
   compact = false,
   containerClassName,
   triggerClassName,
@@ -1428,8 +1439,8 @@ export const AIPresetsSelector = ({
           onPresetSaved?.(nextPreset);
         }
 
-        toast.success("Preset changed", {
-          description: `Switched to ${nextPreset.id} (${nextPreset.model})`,
+        toast.success("预设已切换", {
+          description: `已切换到 ${nextPreset.id}（${nextPreset.model}）`,
         });
       }
     };
@@ -1447,8 +1458,8 @@ export const AIPresetsSelector = ({
     }
 
     if (!settings?.aiPresets) {
-      toast.error("Error", {
-        description: "Settings not initialized",
+      toast.error("错误", {
+        description: "设置尚未初始化",
       });
       return;
     }
@@ -1469,7 +1480,7 @@ export const AIPresetsSelector = ({
 
         if (existingPreset) {
           toast.error("名称已存在", {
-            description: "Please choose a different name",
+            description: "请选择其他名称",
           });
           return;
         }
@@ -1485,7 +1496,7 @@ export const AIPresetsSelector = ({
           ],
         });
 
-        toast.success("Preset copied", {
+        toast.success("预设已复制", {
           description: "已从副本创建新预设",
         });
       } else {
@@ -1508,8 +1519,8 @@ export const AIPresetsSelector = ({
           });
         }
 
-        toast.success("Preset updated", {
-          description: "Your changes have been saved",
+        toast.success("预设已更新", {
+          description: "你的改动已保存",
         });
       }
     } else {
@@ -1520,7 +1531,7 @@ export const AIPresetsSelector = ({
 
       if (existingPreset) {
         toast.error("名称已存在", {
-          description: "Please choose a different name",
+          description: "请选择其他名称",
         });
         return;
       }
@@ -1550,7 +1561,7 @@ export const AIPresetsSelector = ({
         });
       }
 
-      toast.success("Preset created", {
+      toast.success("预设已创建", {
         description: "新预设已添加",
       });
     }
@@ -1620,7 +1631,7 @@ export const AIPresetsSelector = ({
     }
 
     toast.success("默认预设已更新", {
-      description: `${preset.id} is now the default preset`,
+      description: `${preset.id} 已设为默认预设`,
     });
   };
 
@@ -1644,8 +1655,8 @@ export const AIPresetsSelector = ({
       aiPresets: updatedPresets,
     });
 
-    toast.success("Preset removed", {
-      description: `${preset.id} has been removed`,
+    toast.success("预设已删除", {
+      description: `${preset.id} 已删除`,
     });
   };
 
@@ -1670,7 +1681,7 @@ export const AIPresetsSelector = ({
                   aria-label={
                     triggerAriaLabel ??
                     (providerIconOnly
-                      ? `AI provider: ${selectedProviderName}. Change provider`
+                      ? `AI 提供商：${selectedProviderName}。更改提供商`
                       : undefined)
                   }
                   aria-expanded={open}
@@ -1750,7 +1761,7 @@ export const AIPresetsSelector = ({
                   ) : allowNone && isControlled ? (
                     <span className="text-muted-foreground">{noneLabel}</span>
                   ) : (
-                    "select ai preset..."
+                    "选择 AI 预设..."
                   )}
                   {!providerIconOnly && (
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -1805,7 +1816,7 @@ export const AIPresetsSelector = ({
                   </CommandGroup>
                 )}
                 {recommendedPresets && recommendedPresets.length > 0 && (
-                  <CommandGroup heading="Recommended Presets">
+                  <CommandGroup heading="推荐预设">
                     {recommendedPresets.map((preset) => (
                       <CommandItem
                         key={`${preset.id}-recommended`}
@@ -1826,7 +1837,7 @@ export const AIPresetsSelector = ({
                               {preset.id}
                             </span>
                             <span className="rounded bg-primary/10 text-primary px-1.5 py-0.5 text-xs font-medium shrink-0">
-                              recommended
+                              推荐
                             </span>
                           </div>
                           <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground shrink-0">
@@ -1893,8 +1904,8 @@ export const AIPresetsSelector = ({
 
                           onPresetSaved?.(preset);
 
-                          toast.success("Preset selected", {
-                            description: `${preset.id} is now active`,
+                          toast.success("预设已选择", {
+                            description: `${preset.id} 已启用`,
                           });
                         }
                         handleOpenChange(false);
@@ -1936,7 +1947,7 @@ export const AIPresetsSelector = ({
                           </span>
                           {preset.defaultPreset && (
                             <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium shrink-0">
-                              default
+                              默认
                             </span>
                           )}
                         </div>
@@ -1993,7 +2004,7 @@ export const AIPresetsSelector = ({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                aria-label={`Delete ${preset.id}`}
+                                aria-label={`删除 ${preset.id}`}
                                 className="h-6 w-6 shrink-0"
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -2019,7 +2030,7 @@ export const AIPresetsSelector = ({
                     }}
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    create new preset
+                    创建新预设
                   </CommandItem>
                 </CommandGroup>
               </CommandList>

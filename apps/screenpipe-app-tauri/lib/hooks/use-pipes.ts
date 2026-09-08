@@ -74,7 +74,7 @@ export function usePipes() {
         .map(toTemplatePipe);
       setPromptPipes(withPrompt);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "failed to fetch scheduled tasks");
+      setError(e instanceof Error ? e.message : "获取定时任务失败");
     } finally {
       setLoading(false);
     }

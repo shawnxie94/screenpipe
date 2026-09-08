@@ -19,6 +19,30 @@ type ActiveChatFilters = {
   tagNames: string[];
 };
 
+const FILTER_COPY: Record<string, string> = {
+  "today's activity": "今天的活动",
+  today: "今天",
+  yesterday: "昨天",
+  "past 7 days": "过去 7 天",
+  "last week": "上周",
+  "past hour": "过去 1 小时",
+  "last hour": "过去 1 小时",
+  "this morning": "今天上午",
+  "rolling past 7 days": "滚动查看过去 7 天",
+  "previous Monday–Sunday": "上周一至周日",
+  "previous calendar month": "上个自然月",
+  "most recent April": "最近一个 4 月",
+  "one day (DD/MM/YYYY)": "单日（DD/MM/YYYY）",
+  "inclusive range (DD/MM/YYYY)": "包含首尾日期的范围（DD/MM/YYYY）",
+  selected: "已选择",
+  tags: "标签",
+  speakers: "说话人",
+};
+
+function localizeFilterCopy(value: string): string {
+  return FILTER_COPY[value] ?? value;
+}
+
 interface ComposerUtilityMenuProps {
   canChat: boolean;
   activeFilterCount: number;
@@ -123,7 +147,7 @@ export function ComposerUtilityMenu({
       >
         <span className="truncate">{suggestion.tag}</span>
         <span className="text-[10px] text-muted-foreground truncate shrink-0 max-w-[9rem]">
-          {isActive ? "selected" : suggestion.description}
+          {isActive ? "已选择" : localizeFilterCopy(suggestion.description)}
         </span>
       </button>
     );
@@ -209,13 +233,13 @@ export function ComposerUtilityMenu({
           </div>
           {filterSearchResults.length === 0 && !isLoadingFilterSearch ? (
             <div className="px-3 py-2 text-[10px] text-muted-foreground">
-              no matching tags or speakers
+              没有匹配的标签或说话人
             </div>
           ) : (
             filterSearchGroups.map((group) => (
               <React.Fragment key={group.label}>
                 <div className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80 bg-muted/20 border-b border-border/40">
-                  {group.label}
+                  {localizeFilterCopy(group.label)}
                 </div>
                 {group.suggestions.map((suggestion) =>
                   renderFilterSearchButton(suggestion, filterSearchResultIndex++),
@@ -229,7 +253,7 @@ export function ComposerUtilityMenu({
       {!filterQuery && (
         <>
           <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border/50">
-            time
+            时间
           </div>
           {staticMentionSuggestions
             .filter((s) => s.category === "time")
@@ -249,14 +273,14 @@ export function ComposerUtilityMenu({
                 >
                   <span>{s.tag}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    {s.description}
+                    {localizeFilterCopy(s.description)}
                   </span>
                 </button>
               );
             })}
 
           <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border/50 border-t">
-            content type
+           内容类型
           </div>
           {staticMentionSuggestions
             .filter((s) => s.category === "content")
@@ -282,18 +306,18 @@ export function ComposerUtilityMenu({
                 >
                   <span>{s.tag}</span>
                   <span className="text-[10px] text-muted-foreground">
-                    {s.description}
+                    {localizeFilterCopy(s.description)}
                   </span>
                 </button>
               );
             })}
 
           <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border/50 border-t">
-            apps
+            应用
           </div>
           {appMentionSuggestions.length === 0 ? (
             <div className="px-3 py-2 text-[10px] text-muted-foreground">
-              {appsLoading ? "loading apps..." : "no apps detected yet"}
+              {appsLoading ? "正在加载应用..." : "尚未检测到应用"}
             </div>
           ) : (
             appMentionSuggestions.map((suggestion) => {
@@ -310,7 +334,7 @@ export function ComposerUtilityMenu({
                 >
                   <span>{suggestion.tag}</span>
                   <span className="text-[10px] text-muted-foreground truncate">
-                    {suggestion.description}
+                    {localizeFilterCopy(suggestion.description)}
                   </span>
                 </button>
               );
@@ -318,17 +342,17 @@ export function ComposerUtilityMenu({
           )}
 
           <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border/50 border-t">
-            tags
+            标签
           </div>
           {allTagMentionSuggestions.length === 0 ? (
             <div className="px-3 py-2 text-[10px] text-muted-foreground">
-              {tagsLoading ? "loading tags..." : "no tags yet"}
+              {tagsLoading ? "正在加载标签..." : "暂无标签"}
             </div>
           ) : (
             tagMentionSections.map((section) => (
               <React.Fragment key={section.label}>
                 <div className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80 bg-muted/20 border-b border-border/40">
-                  {section.label}
+                  {localizeFilterCopy(section.label)}
                 </div>
                 {section.suggestions.map((suggestion) => {
                   const tagName = suggestion.tag.slice(1);
@@ -345,7 +369,7 @@ export function ComposerUtilityMenu({
                     >
                       <span>{suggestion.tag}</span>
                       <span className="text-[10px] text-muted-foreground truncate">
-                        {suggestion.description}
+                        {localizeFilterCopy(suggestion.description)}
                       </span>
                     </button>
                   );
@@ -357,7 +381,7 @@ export function ComposerUtilityMenu({
           {connections.length > 0 && (
             <>
               <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border/50 border-t">
-                connections
+                连接
               </div>
               {connections.map((connection) => {
                 const tag = connectionMentionTag(connection, isWindows);
@@ -386,7 +410,7 @@ export function ComposerUtilityMenu({
           {recentSpeakers.length > 0 && (
             <>
               <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border/50 border-t">
-                speakers
+                说话人
               </div>
               {recentSpeakers.map((s) => {
                 const speakerName = s.tag.startsWith("@\"")
@@ -405,7 +429,7 @@ export function ComposerUtilityMenu({
                   >
                     <span>{s.tag}</span>
                     <span className="text-[10px] text-muted-foreground">
-                      speaker
+                      说话人
                     </span>
                   </button>
                 );

@@ -270,7 +270,7 @@ function RedactionWherePreview({
             <span>
               <span className="font-medium text-foreground">{opt.label}</span>
               {opt.recommended && (
-                <span className="text-muted-foreground"> (recommended)</span>
+                <span className="text-muted-foreground">（推荐）</span>
               )}
               <span className="text-muted-foreground"> — {opt.desc}</span>
             </span>
@@ -307,7 +307,7 @@ function RedactionWherePreview({
           </div>
 
           <div>
-            <div className="mb-0.5 text-[10px] text-muted-foreground">email</div>
+                  <div className="mb-0.5 text-[10px] text-muted-foreground">邮箱</div>
             <div className="rounded border border-border px-1.5 py-1">
               {region("element_properties", "jordan@example.com")}
             </div>
@@ -736,7 +736,7 @@ export function PrivacySection() {
 
       if (permissionPlan.kind === "arc-only") {
         toast({
-          title: "basic detection is enough",
+          title: "基础检测已足够",
           description: "Arc 隐私窗口无需额外权限即可被检测到",
         });
         return;
@@ -744,8 +744,8 @@ export function PrivacySection() {
 
       if (permissionPlan.kind === "open-browser") {
         toast({
-          title: "open a supported browser first",
-          description: "open Chrome, Edge, Brave, or another Chromium browser, then try again",
+          title: "请先打开受支持的浏览器",
+          description: "请先打开 Chrome、Edge、Brave 或其他 Chromium 浏览器，然后重试",
         });
         return;
       }
@@ -756,8 +756,8 @@ export function PrivacySection() {
       ) {
         await commands.openPermissionSettings("automation");
         toast({
-          title: "browser access needed",
-          description: "allow screenpipe to control your browser in macOS Automation settings",
+          title: "需要浏览器访问权限",
+          description: "请在 macOS“自动化”设置中允许 screenpipe 控制浏览器",
           variant: "destructive",
         });
         return;
@@ -765,14 +765,14 @@ export function PrivacySection() {
 
       handleSettingsChange({ enhancedIncognitoDetection: true }, true);
       toast({
-        title: "enhanced detection ready",
-        description: "apply changes to use browser-native incognito detection",
+        title: "增强检测已就绪",
+        description: "应用更改后即可使用浏览器原生的隐私窗口检测",
       });
     } catch (error) {
       console.error("启用增强的隐身检测失败：", error);
       toast({
-        title: "couldn't enable enhanced detection",
-        description: "check macOS Automation settings and try again",
+        title: "无法启用增强检测",
+        description: "请检查 macOS“自动化”设置后重试",
         variant: "destructive",
       });
     } finally {

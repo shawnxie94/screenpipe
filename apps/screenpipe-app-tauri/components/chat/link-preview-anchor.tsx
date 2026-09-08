@@ -104,19 +104,19 @@ function PreviewBody({
       ) : null}
       {state.status === "ready" && state.preview.author ? (
         <p className="mt-2 font-mono text-[10px] text-muted-foreground">
-          by {link.provider.id === "github" ? "@" : ""}
+          由 {link.provider.id === "github" ? "@" : ""}
           {state.preview.author}
         </p>
       ) : null}
       {link.remote && state.status === "loading" ? (
         <p className="mt-2 flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground">
           <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-          loading public details
+          正在加载公开详情
         </p>
       ) : null}
       {link.remote && state.status === "unavailable" ? (
         <p className="mt-2 font-mono text-[10px] text-muted-foreground">
-          public details unavailable
+          公开详情不可用
         </p>
       ) : null}
     </div>
@@ -125,12 +125,22 @@ function PreviewBody({
 
 function StateLabel({ state }: { state: PreviewState }) {
   if (state.status !== "ready" || !state.preview.state) return null;
+  const stateValue = state.preview.state.toLowerCase();
+  const stateLabel =
+    {
+      open: "开放",
+      opened: "已打开",
+      closed: "已关闭",
+      merged: "已合并",
+      draft: "草稿",
+      pending: "待处理",
+    }[stateValue] ?? "状态";
   return (
     <span
       data-preview-state={state.preview.state}
       className="border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-muted-foreground"
     >
-      {state.preview.state}
+      {stateLabel}
     </span>
   );
 }
@@ -163,7 +173,7 @@ function LinkPreviewCard({
       <div className="flex items-center justify-between border-t border-border px-3 py-2 font-mono text-[10px] text-muted-foreground">
         <span className="max-w-[14rem] truncate">{link.host}</span>
         <span className="flex shrink-0 items-center gap-1">
-          open link
+          打开链接
           <ExternalLink className="size-3" aria-hidden="true" />
         </span>
       </div>

@@ -98,7 +98,7 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
         body: JSON.stringify({ credentials }),
       });
       const saveData = await saveRes.json();
-      if (!saveRes.ok || saveData.error) throw new Error(saveData.error || "save failed");
+      if (!saveRes.ok || saveData.error) throw new Error(saveData.error || "保存失败");
       setStatus("idle");
       setPassword("");
       setWatching(false);
@@ -106,7 +106,7 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
       notifyConnectionsUpdated();
       onChanged?.();
     } catch (e: any) {
-      setError(e?.message || "unknown error");
+      setError(e?.message || "未知错误");
       setStatus("error");
       setWatching(false);
     }
@@ -140,7 +140,7 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
   const disconnect = async () => {
     try {
       const res = await localFetch("/connections/imap", { method: "DELETE" });
-      if (!res.ok && res.status !== 404) throw new Error("disconnect failed");
+      if (!res.ok && res.status !== 404) throw new Error("断开连接失败");
       setSavedUsername(null);
       setEmail("");
       setPassword("");
@@ -149,12 +149,12 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
       notifyConnectionsUpdated();
       onChanged?.();
     } catch (e: any) {
-      setError(e?.message || "disconnect failed");
+      setError(e?.message || "断开连接失败");
     }
   };
 
   if (!loaded) {
-    return <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />loading…</div>;
+    return <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />正在加载…</div>;
   }
 
   if (savedUsername) {
@@ -163,7 +163,7 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
         <div className="flex items-center gap-2 text-xs">
           <Inbox className="h-4 w-4 text-muted-foreground" />
           <span className="font-medium">{savedUsername}</span>
-          <span className="text-muted-foreground">— inbox connected (read-only)</span>
+          <span className="text-muted-foreground">— 收件箱已连接（只读）</span>
         </div>
         <p className="text-[11px] text-muted-foreground">
           Your AI can now read recent emails from this inbox. The app password is stored encrypted on this device and never leaves it.
@@ -233,7 +233,7 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
         </div>
       )}
       <div className="space-y-1">
-        <Label className="text-xs">{gmail ? "or paste the app password" : "Password / App Password"}</Label>
+        <Label className="text-xs">{gmail ? "或粘贴应用专用密码" : "密码 / 应用专用密码"}</Label>
         <div className="relative">
           <Input
             type={showPassword ? "text" : "password"}
@@ -259,9 +259,9 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
         size="sm"
         className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal"
       >
-        {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />connecting…</>)
+        {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在连接…</>)
           : status === "error" ? (<>重试</>)
-          : (<><Check className="h-3 w-3" />connect</>)}
+          : (<><Check className="h-3 w-3" />连接</>)}
       </Button>
     </div>
   );

@@ -137,7 +137,7 @@ function parseGitHub(parsed: ParsedLinkPreview, url: URL): ParsedLinkPreview {
     !GITHUB_SEGMENT.test(owner) ||
     !GITHUB_SEGMENT.test(repository)
   ) {
-    parsed.provider = provider("github", "GitHub", "code", "link");
+    parsed.provider = provider("github", "GitHub", "code", "链接");
     return parsed;
   }
 
@@ -152,7 +152,7 @@ function parseGitHub(parsed: ParsedLinkPreview, url: URL): ParsedLinkPreview {
       "github",
       "GitHub",
       "code",
-      `${kind === "pull" ? "pull request" : "issue"} #${number}`,
+      `${kind === "pull" ? "拉取请求" : "问题"} #${number}`,
     );
     parsed.github = { owner, repository, kind, number };
     parsed.remote = {
@@ -166,7 +166,7 @@ function parseGitHub(parsed: ParsedLinkPreview, url: URL): ParsedLinkPreview {
     "github",
     "GitHub",
     "code",
-    "repository",
+    "代码仓库",
     `${owner}/${repository}`,
   );
   parsed.github = { owner, repository, kind: "repository" };
@@ -188,7 +188,7 @@ function recognizeProvider(
     host === "m.youtube.com"
   ) {
     const videoId = youtubeVideoId(url, host);
-    parsed.provider = provider("youtube", "YouTube", "video", "video");
+    parsed.provider = provider("youtube", "YouTube", "video", "视频");
     if (videoId) {
       const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
       parsed.remote = {
@@ -203,7 +203,7 @@ function recognizeProvider(
     const videoId = ["share", "embed"].includes(segments[0] ?? "")
       ? segments[1]
       : null;
-    parsed.provider = provider("loom", "Loom", "video", "video");
+    parsed.provider = provider("loom", "Loom", "video", "视频");
     if (videoId && LOOM_VIDEO_ID.test(videoId)) {
       const canonicalUrl = `https://www.loom.com/share/${videoId}`;
       parsed.remote = {
@@ -215,7 +215,7 @@ function recognizeProvider(
   }
 
   if (host === "mail.google.com") {
-    parsed.provider = provider("gmail", "Gmail", "email", "email");
+    parsed.provider = provider("gmail", "Gmail", "email", "邮件");
     return parsed;
   }
   if (
@@ -223,7 +223,7 @@ function recognizeProvider(
     host === "outlook.office.com" ||
     host === "outlook.office365.com"
   ) {
-    parsed.provider = provider("outlook", "Outlook", "email", "email");
+    parsed.provider = provider("outlook", "Outlook", "email", "邮件");
     return parsed;
   }
   if (host === "calendar.google.com") {
@@ -231,7 +231,7 @@ function recognizeProvider(
       "google-calendar",
       "Google Calendar",
       "calendar",
-      "event",
+      "事件",
     );
     return parsed;
   }
@@ -240,12 +240,12 @@ function recognizeProvider(
       "google-meet",
       "Google Meet",
       "calendar",
-      "meeting",
+      "会议",
     );
     return parsed;
   }
   if (isHost(host, "zoom.us")) {
-    parsed.provider = provider("zoom", "Zoom", "calendar", "meeting");
+    parsed.provider = provider("zoom", "Zoom", "calendar", "会议");
     return parsed;
   }
 
@@ -259,7 +259,7 @@ function recognizeProvider(
       "linear",
       "Linear",
       "issue",
-      issueKey && ISSUE_KEY.test(issueKey) ? `issue ${issueKey}` : "issue",
+      issueKey && ISSUE_KEY.test(issueKey) ? `问题 ${issueKey}` : "问题",
       issueTitle,
     );
     return parsed;
@@ -271,7 +271,7 @@ function recognizeProvider(
       "jira",
       "Jira",
       "issue",
-      issueKey && ISSUE_KEY.test(issueKey) ? `issue ${issueKey}` : "issue",
+      issueKey && ISSUE_KEY.test(issueKey) ? `问题 ${issueKey}` : "问题",
       issueKey && ISSUE_KEY.test(issueKey) ? issueKey : undefined,
     );
     return parsed;
@@ -281,12 +281,12 @@ function recognizeProvider(
     const documentType = segments[0];
     const [label, objectLabel] =
       documentType === "spreadsheets"
-        ? ["Google Sheets", "spreadsheet"]
+        ? ["Google Sheets", "电子表格"]
         : documentType === "presentation"
-          ? ["Google Slides", "presentation"]
+          ? ["Google Slides", "演示文稿"]
           : documentType === "forms"
-            ? ["Google Forms", "form"]
-            : ["Google Docs", "document"];
+            ? ["Google Forms", "表单"]
+            : ["Google Docs", "文档"];
     parsed.provider = provider("google-docs", label, "document", objectLabel);
     return parsed;
   }
@@ -295,7 +295,7 @@ function recognizeProvider(
       "google-drive",
       "Google Drive",
       "document",
-      "file",
+      "文件",
     );
     return parsed;
   }
@@ -306,7 +306,7 @@ function recognizeProvider(
       "notion",
       "Notion",
       "document",
-      "page",
+      "页面",
       pageTitle,
     );
     return parsed;
@@ -321,7 +321,7 @@ function recognizeProvider(
       "figma",
       "Figma",
       "document",
-      objectType === "board" ? "board" : "file",
+      objectType === "board" ? "白板" : "文件",
       titleFromSlug(segments[2]),
     );
     return parsed;
@@ -334,7 +334,7 @@ function recognizeProvider(
       "slack",
       "Slack",
       "chat",
-      isMessage ? "message" : "workspace",
+      isMessage ? "消息" : "工作区",
     );
     return parsed;
   }
@@ -344,8 +344,8 @@ function recognizeProvider(
       "Microsoft Teams",
       "chat",
       segments.includes("l") || segments.includes("message")
-        ? "message"
-        : "workspace",
+        ? "消息"
+        : "工作区",
     );
     return parsed;
   }
@@ -368,7 +368,7 @@ export function parseLinkPreview(href: string): ParsedLinkPreview | null {
     href: url.toString(),
     host,
     path: cleanPathname(url.pathname),
-    provider: provider("generic", host, "web", "web link"),
+    provider: provider("generic", host, "web", "链接"),
   };
 
   return recognizeProvider(parsed, url);

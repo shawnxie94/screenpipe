@@ -156,10 +156,10 @@ export function useAgentHandoff(
     if (result.prefilled) {
       setHint(target.hint);
     } else if (result.copied) {
-      setHint(`Question copied. Open ${target.label} and paste it.`);
+      setHint(`问题已复制。请打开 ${target.label} 并粘贴。`);
     } else {
       setHint(
-        `Could not open ${target.label} or copy the question. Open the summary instead.`,
+        `无法打开 ${target.label} 或复制问题。请改为打开摘要。`,
       );
       return;
     }

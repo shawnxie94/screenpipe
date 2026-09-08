@@ -237,7 +237,7 @@ const TRANSCRIPTION_ENGINE_LABELS: Record<string, string> = {
   "whisper-large-v3-turbo-quantized": "Whisper Turbo (fast)",
   "whisper-tiny": "Whisper Tiny",
   "whisper-tiny-quantized": "Whisper Tiny (fast)",
-  "openai-compatible": "OpenAI Compatible",
+  "openai-compatible": "OpenAI 兼容",
   "qwen3-asr": "Qwen3-ASR",
   parakeet: "Parakeet",
   "parakeet-mlx": "Parakeet MLX",
@@ -318,17 +318,17 @@ type AudioPipelineSnapshot = {
 };
 
 const formatBacklogAge = (timestamp?: string | null) => {
-  if (!timestamp) return "n/a";
+  if (!timestamp) return "无";
   const ms = new Date(timestamp).getTime();
-  if (!Number.isFinite(ms)) return "n/a";
+  if (!Number.isFinite(ms)) return "无";
   const seconds = Math.max(0, Math.floor((Date.now() - ms) / 1000));
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) return `${seconds} 秒`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60) return `${minutes} 分钟`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+  if (hours < 24) return `${hours} 小时 ${minutes % 60} 分钟`;
   const days = Math.floor(hours / 24);
-  return `${days}d ${hours % 24}h`;
+  return `${days} 天 ${hours % 24} 小时`;
 };
 
 type AudioReconciliationBacklogItem = {
@@ -347,15 +347,15 @@ type AudioReconciliationBacklogResponse = {
 };
 
 const formatBacklogSeconds = (seconds?: number | null) => {
-  if (seconds == null || !Number.isFinite(seconds)) return "n/a";
+  if (seconds == null || !Number.isFinite(seconds)) return "无";
   const safeSeconds = Math.max(0, Math.floor(seconds));
-  if (safeSeconds < 60) return `${safeSeconds}s`;
+  if (safeSeconds < 60) return `${safeSeconds} 秒`;
   const minutes = Math.floor(safeSeconds / 60);
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60) return `${minutes} 分钟`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+  if (hours < 24) return `${hours} 小时 ${minutes % 60} 分钟`;
   const days = Math.floor(hours / 24);
-  return `${days}d ${hours % 24}h`;
+  return `${days} 天 ${hours % 24} 小时`;
 };
 
 const getAudioFileName = (filePath: string) => {
@@ -364,7 +364,7 @@ const getAudioFileName = (filePath: string) => {
 };
 
 const formatBacklogFileSize = (bytes?: number | null) => {
-  if (bytes == null || !Number.isFinite(bytes)) return "n/a";
+  if (bytes == null || !Number.isFinite(bytes)) return "无";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -401,7 +401,7 @@ const formatAudioPreviewTime = (seconds: number) => {
 
 const formatBacklogCapturedAt = (timestamp: string) => {
   const date = new Date(timestamp);
-  if (!Number.isFinite(date.getTime())) return "n/a";
+  if (!Number.isFinite(date.getTime())) return "无";
 
   const time = date.toLocaleTimeString([], {
     hour: "numeric",
@@ -422,7 +422,7 @@ const getFetchErrorMessage = async (response: Response) => {
   } catch {
     // Fall through to the status text.
   }
-  return response.statusText || `request failed (${response.status})`;
+  return response.statusText || `请求失败（${response.status}）`;
 };
 
 function BackgroundTranscriptionDialog({
@@ -574,7 +574,7 @@ function BackgroundTranscriptionDialog({
     return activeItems.filter((item) => {
       const haystack = [
         item.audio_chunk_id.toString(),
-        item.likely_empty ? "quiet likely empty" : "needs transcription",
+        item.likely_empty ? "可能为空白片段" : "待转写",
         item.status,
         item.file_path,
         getAudioFileName(item.file_path),
@@ -1475,7 +1475,7 @@ function TranscriptionDictionary({
               const toAdd = newTerms.slice(0, available);
               if (toAdd.length > 0) {
                 onChange([...vocabularyWords, ...toAdd.map((w) => ({ word: w }))]);
-                toast({ title: `added ${toAdd.length} terms` });
+                toast({ title: `已添加 ${toAdd.length} 个词条` });
               }
               wordInput.value = "";
               replacementInput.value = "";
@@ -1519,10 +1519,10 @@ function fmtRemaining(secs: number): string {
   if (secs >= 3600) {
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
-    return m === 0 ? `${h}h` : `${h}h ${m}m`;
+    return m === 0 ? `${h} 小时` : `${h} 小时 ${m} 分钟`;
   }
-  if (secs >= 60) return `${Math.ceil(secs / 60)}m`;
-  return `${Math.max(secs, 1)}s`;
+  if (secs >= 60) return `${Math.ceil(secs / 60)} 分钟`;
+  return `${Math.max(secs, 1)} 秒`;
 }
 
 function HighFpsCard({
@@ -1750,7 +1750,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
   const sectionRootRef = React.useRef<HTMLDivElement | null>(null);
   const activeSearchIndex = section === "audio" ? audioSearchIndex : screenSearchIndex;
   useSettingsIndexDriftCheck(
-    section === "audio" ? "Audio & meetings" : "Screen",
+    section === "audio" ? "音频与会议" : "屏幕",
     activeSearchIndex,
     sectionRootRef,
   );
@@ -1812,7 +1812,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     } catch (e) {
       console.error("read_audio_exclusions failed", e);
       toast({
-        title: "Couldn't load audio exclusions",
+        title: "无法加载音频排除项",
         description: String(e),
         variant: "destructive",
       });
@@ -1864,7 +1864,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
       addAudioExclusion(meta);
     } catch (e) {
       toast({
-        title: "Couldn't read application",
+        title: "无法读取应用信息",
         description: String(e),
         variant: "destructive",
       });
@@ -2163,9 +2163,9 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
   // Listen for data-dir-fallback event (custom dir unavailable, fell back to default)
   useTauriEvent("data-dir-fallback", () => {
     toast({
-      title: "custom data directory unavailable",
+      title: "自定义数据目录不可用",
       description:
-        "the configured data directory could not be accessed. recordings are using the default directory (~/.screenpipe).",
+        "无法访问配置的数据目录，录制内容将使用默认目录（~/.screenpipe）。",
       variant: "destructive",
       duration: 10000,
     });
@@ -2177,7 +2177,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
         // Fetch monitors using Tauri command
         const monitorResult = await commands.getMonitors();
         if (monitorResult.status === "error") {
-          throw new Error(`Failed to fetch monitors: ${monitorResult.error}`);
+          throw new Error(`获取显示器失败：${monitorResult.error}`);
         }
         const monitors = monitorResult.data;
         console.log("monitors", monitors);
@@ -2186,7 +2186,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
         // Fetch audio devices using Tauri command
         const audioResult = await commands.getAudioDevices();
         if (audioResult.status === "error") {
-          throw new Error(`Failed to fetch audio devices: ${audioResult.error}`);
+          throw new Error(`获取音频设备失败：${audioResult.error}`);
         }
         const audioDevices = audioResult.data;
         setAvailableAudioDevices(audioDevices);
@@ -2316,7 +2316,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
           setAudioExclusions(pendingAudioExclusions);
           setPendingAudioExclusions(null);
         } catch (e) {
-          throw new Error(`Failed to save audio exclusions: ${e}`);
+          throw new Error(`保存音频排除项失败：${e}`);
         }
       }
 
@@ -2758,7 +2758,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                       <SelectItem value="parakeet">Parakeet{isMacOS ? " (experimental)" : ""}</SelectItem>
                     </SelectGroup>
                     <SelectGroup>
-                      <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">other</SelectLabel>
+                      <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">其他</SelectLabel>
                       <SelectItem value="openai-compatible">OpenAI 兼容</SelectItem>
                       <SelectItem value="disabled">已禁用（仅采集）</SelectItem>
                     </SelectGroup>
@@ -2805,7 +2805,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                         )
                       }
                     >
-                      Use Whisper setting
+                      使用 Whisper 设置
                     </Button>
                   </div>
                 </AlertDescription>
@@ -3217,7 +3217,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                   <button
                     type="button"
                     className="inline-flex rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                    aria-label={`Remove ${app.name ?? app.bundleId} from audio exclusions`}
+                        aria-label={`从音频排除列表移除 ${app.name ?? app.bundleId}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       removeAudioExclusion(app.bundleId);
@@ -3250,7 +3250,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
 
         {!settings.disableAudio && (
           <div className="flex items-center gap-2 px-1 pt-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">meetings</span>
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">会议</span>
             <div className="h-px flex-1 bg-border/60" />
           </div>
         )}

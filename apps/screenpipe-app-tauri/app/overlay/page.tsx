@@ -52,13 +52,13 @@ function TimelineErrorFallback({
         <div className="flex gap-2 justify-center">
           <Button onClick={onRetry} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
-            retry
+            重试
           </Button>
           <Button
             variant="outline"
-            onClick={() => openFeedback(`Timeline crashed: ${error?.message || "unknown error"}`)}
+            onClick={() => openFeedback(`时间线崩溃：${error?.message || "未知错误"}`)}
           >
-            report crash
+            报告崩溃
           </Button>
         </div>
       </div>
@@ -210,7 +210,7 @@ export default function OverlayPage() {
     setIsRestarting(true);
     try {
       toast({
-        title: "restarting server",
+        title: "正在重启服务",
         description: "正在停止 screenpipe 服务...",
         duration: 3000,
       });
@@ -222,8 +222,8 @@ export default function OverlayPage() {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       toast({
-        title: "restarting server",
-        description: "starting screenpipe server...",
+        title: "正在重启服务",
+          description: "正在启动知迹服务...",
         duration: 3000,
       });
 
@@ -231,23 +231,23 @@ export default function OverlayPage() {
       await commands.spawnScreenpipe(null);
       
       toast({
-        title: "server restarted",
-        description: "screenpipe server has been restarted successfully.",
+        title: "服务已重启",
+          description: "screenpipe 服务已成功重启。",
         duration: 3000,
       });
     } catch (error) {
       console.error("failed to restart server:", error);
       toast({
-        title: "restart failed",
+        title: "重启失败",
         description: (
           <span>
-            failed to restart screenpipe server.{" "}
+            screenpipe 服务重启失败。{" "}
             <button
               type="button"
               className="underline underline-offset-2 text-inherit opacity-80 hover:opacity-100"
-              onClick={() => openFeedback(`Server restart failed: ${error instanceof Error ? error.message : String(error)}`)}
+            onClick={() => openFeedback(`服务器重启失败：${error instanceof Error ? error.message : String(error)}`)}
             >
-              report issue
+              报告问题
             </button>
           </span>
         ),
@@ -296,7 +296,7 @@ export default function OverlayPage() {
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
                   <div className="flex flex-col items-center gap-3">
                     <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">connecting to screenpipe...</p>
+                    <p className="text-sm text-muted-foreground">正在连接知迹服务...</p>
                   </div>
                 </div>
               )}
@@ -320,7 +320,7 @@ export default function OverlayPage() {
                     <div>
                       <h2 className="text-2xl font-bold">服务器未运行</h2>
                       <p className="text-muted-foreground mt-2">
-                        The screenpipe server is not running. Start the server or check permissions to continue.
+                        知迹服务未运行。请启动服务或检查权限后继续。
                       </p>
                     </div>
                   </div>
@@ -334,7 +334,7 @@ export default function OverlayPage() {
                       <div>
                         <h3 className="font-semibold">服务器控制</h3>
                         <p className="text-sm text-muted-foreground">
-                          Start or restart the screenpipe server
+                          启动或重启知迹服务
                         </p>
                       </div>
                       <Button
@@ -343,7 +343,7 @@ export default function OverlayPage() {
                         className="flex items-center gap-2"
                       >
                         <RefreshCw className={`h-4 w-4 ${isRestarting ? 'animate-spin' : ''}`} />
-                        {isRestarting ? "Starting..." : "Start Server"}
+                        {isRestarting ? "启动中..." : "启动服务"}
                       </Button>
                     </div>
                   </div>
@@ -356,7 +356,7 @@ export default function OverlayPage() {
                         <div>
                           <h3 className="font-semibold">系统权限</h3>
                           <p className="text-sm text-muted-foreground">
-                            Ensure screenpipe has the necessary permissions to function properly
+                            请确保 screenpipe 拥有正常运行所需的权限
                           </p>
                         </div>
                         <div className="space-y-3">
@@ -384,7 +384,7 @@ export default function OverlayPage() {
                     className="text-muted-foreground"
                   >
                     <FolderOpen className="h-4 w-4 mr-1.5" />
-                    open logs folder
+                    打开日志文件夹
                   </Button>
                   <Button
                     variant="outline"
@@ -393,7 +393,7 @@ export default function OverlayPage() {
                     className="text-muted-foreground"
                   >
                     <Calendar className="h-4 w-4 mr-1.5" />
-                    schedule call
+                    预约通话
                   </Button>
                   <Button
                     variant="outline"
@@ -402,7 +402,7 @@ export default function OverlayPage() {
                     className="text-muted-foreground"
                   >
                     <X className="h-4 w-4 mr-1.5" />
-                    close
+                    关闭
                   </Button>
                 </div>
               </div>
@@ -412,7 +412,7 @@ export default function OverlayPage() {
             <div className="flex items-center justify-center h-screen">
               <div className="flex flex-col items-center gap-3">
                 <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">starting up...</p>
+                <p className="text-sm text-muted-foreground">正在启动...</p>
               </div>
             </div>
           )}

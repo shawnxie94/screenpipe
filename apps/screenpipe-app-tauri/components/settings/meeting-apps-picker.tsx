@@ -122,16 +122,16 @@ const Row = React.memo(function Row({
           e.stopPropagation();
           onToggle(value);
         }}
-        title={added ? `${label} is ignored — click to re-enable` : `ignore ${label}`}
+        title={added ? `${label} 已忽略——点击以重新启用` : `忽略 ${label}`}
         data-testid={`meeting-apps-picker-toggle-${value.toLowerCase()}`}
       >
         {added ? (
           <>
-            <Check className="h-3 w-3 mr-1" /> ignored
+            <Check className="h-3 w-3 mr-1" /> 已忽略
           </>
         ) : (
           <>
-            <Plus className="h-3 w-3 mr-1" /> ignore
+            <Plus className="h-3 w-3 mr-1" /> 忽略
           </>
         )}
       </Button>
@@ -215,7 +215,7 @@ export function MeetingAppsPicker({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserX className="h-4 w-4" /> Ignore apps from meeting detection
+            <UserX className="h-4 w-4" /> 从会议检测中忽略应用
           </DialogTitle>
           <DialogDescription className="text-xs">
             Picked apps never auto-start a meeting or live notes — detection
@@ -252,7 +252,7 @@ export function MeetingAppsPicker({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search your apps, or type a service (e.g. meet.google.com)..."
+            placeholder="搜索应用，或输入服务名称（例如 meet.google.com）..."
             className="pl-8 h-8 text-sm"
             autoFocus
           />
@@ -270,14 +270,14 @@ export function MeetingAppsPicker({
             >
               <Plus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <span className="text-sm">
-                ignore <span className="font-mono">{search.trim()}</span>
+                忽略 <span className="font-mono">{search.trim()}</span>
               </span>
             </button>
           )}
 
           {meetingRows.length > 0 && (
             <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/30">
-              Meeting apps
+              会议应用
             </div>
           )}
           {meetingRows.map((m) => (
@@ -292,18 +292,18 @@ export function MeetingAppsPicker({
           ))}
 
           <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/30">
-            Your apps · last 7 days
+            你的应用 · 最近 7 天
           </div>
           {isLoading && (
             <div className="p-4 text-xs text-muted-foreground text-center">
-              loading your apps...
+              正在加载你的应用…
             </div>
           )}
           {!isLoading && userRows.length === 0 && (
             <div className="p-3 text-xs text-muted-foreground text-center italic">
               {q
-                ? `no recent app matches "${search.trim()}" — use the add option above for a custom service.`
-                : "no other recent apps to show."}
+                ? `最近没有匹配“${search.trim()}”的应用——请使用上方的添加选项录入自定义服务。`
+                : "没有其他最近使用的应用。"}
             </div>
           )}
           {userRows.map((n) => (
@@ -321,8 +321,8 @@ export function MeetingAppsPicker({
 
         <div className="text-[10px] text-muted-foreground">
           {selected.length === 0
-            ? "nothing ignored — all known meeting apps are detected."
-            : `${selected.length} app${selected.length === 1 ? "" : "s"} ignored.`}
+            ? "未忽略任何应用——所有已知会议应用都会被检测。"
+            : `已忽略 ${selected.length} 个应用。`}
         </div>
       </DialogContent>
     </Dialog>

@@ -18,7 +18,7 @@ function MermaidDiagramBlock({ chart }: { chart: string }) {
     <React.Suspense
       fallback={
         <div className="my-4 text-xs text-muted-foreground">
-          rendering diagram...
+          正在渲染图表…
         </div>
       }
     >
@@ -57,7 +57,7 @@ function formatDateForMemoryCopy(dateText: string): string {
     date.getMonth() === today.getMonth() &&
     date.getDate() === today.getDate();
 
-  if (isToday) return "last hour";
+  if (isToday) return "最近一小时";
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
@@ -67,7 +67,7 @@ function compactWindowCheckedCopy(text: string): string {
     (_match, prefix, openMarker, dateText, startTime, endTime, closeMarker) => {
       const when = formatDateForMemoryCopy(dateText);
       const range = `${formatTimeForMemoryCopy(startTime)}-${formatTimeForMemoryCopy(endTime)}`;
-      return `${prefix}${openMarker}Checked ${when} (${range})${closeMarker}`;
+      return `${prefix}${openMarker}已检查${when}（${range}）${closeMarker}`;
     },
   );
 }

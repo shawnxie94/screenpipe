@@ -364,7 +364,7 @@ describe("recording health hover detail", () => {
     render(<ShortcutReminderPage />);
 
     fireEvent.mouseEnter(await screen.findByTestId("shortcut-reminder-root"));
-    const brand = await screen.findByTitle("screenpipe — 右键查看选项");
+    const brand = await screen.findByTitle("知迹 — 右键查看选项");
     expect(brand).toBeVisible();
     expect(brand.parentElement?.lastElementChild).toBe(brand);
     fireEvent.contextMenu(brand);
@@ -377,7 +377,7 @@ describe("recording health hover detail", () => {
     );
 
     fireEvent.mouseEnter(screen.getByTestId("shortcut-reminder-root"));
-    fireEvent.contextMenu(screen.getByTitle("screenpipe — 右键查看选项"));
+    fireEvent.contextMenu(screen.getByTitle("知迹 — 右键查看选项"));
     fireEvent.click(screen.getByTitle("打开悬浮层设置"));
     expect(mocks.showWindow).toHaveBeenCalledWith({ Home: { page: "display" } });
     expect(screen.queryByRole("menu", { name: "快捷键提醒选项" })).toBeNull();

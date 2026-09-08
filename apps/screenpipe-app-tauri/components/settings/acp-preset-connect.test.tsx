@@ -79,7 +79,7 @@ describe("an agent that needs downloading", () => {
     renderCard("codex-acp");
 
     await screen.findByTestId("acp-preset-install");
-    expect(screen.getByRole("button", { name: /install codex/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /安装 codex/i })).toBeInTheDocument();
     // The whole complaint: picking an agent in a list is a choice about which
     // agent, not consent to fetch a package.
     expect(probeAgent).not.toHaveBeenCalled();
@@ -96,13 +96,13 @@ describe("an agent that needs downloading", () => {
     );
 
     renderCard("pi-acp");
-    fireEvent.click(await screen.findByRole("button", { name: /install pi/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /安装 pi/i }));
 
     await waitFor(() => expect(probeAgent).toHaveBeenCalled());
     await act(async () =>
       finishProbe?.({ status: "error", error: "test probe complete" }),
     );
-    await screen.findByText(/could not load choices/i);
+    await screen.findByText(/无法加载选项/);
   });
 
   it("advances through download, start, connect, and ready from runtime events", async () => {
@@ -116,11 +116,11 @@ describe("an agent that needs downloading", () => {
     );
 
     renderCard("claude-acp");
-    fireEvent.click(await screen.findByRole("button", { name: /install claude code/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /安装 claude code/i }));
 
     const progress = await screen.findByTestId("acp-setup-progress");
-    expect(progress).toHaveTextContent("Downloading Claude Code");
-    expect(progress).toHaveTextContent("step 1 of 3");
+    expect(progress).toHaveTextContent("正在下载 Claude Code");
+    expect(progress).toHaveTextContent("第 1/3 步");
 
     const emitPhase = (phase: string) =>
       act(() =>
@@ -130,15 +130,15 @@ describe("an agent that needs downloading", () => {
       );
 
     emitPhase("starting");
-    expect(progress).toHaveTextContent("Starting Claude Code");
-    expect(progress).toHaveTextContent("step 2 of 3");
+    expect(progress).toHaveTextContent("正在启动 Claude Code");
+    expect(progress).toHaveTextContent("第 2/3 步");
 
     emitPhase("connecting");
-    expect(progress).toHaveTextContent("Connecting Claude Code");
-    expect(progress).toHaveTextContent("step 3 of 3");
+    expect(progress).toHaveTextContent("正在连接 Claude Code");
+    expect(progress).toHaveTextContent("第 3/3 步");
 
     emitPhase("ready");
-    expect(progress).toHaveTextContent("Claude Code is ready");
+    expect(progress).toHaveTextContent("Claude Code 已准备就绪");
 
     await act(async () =>
       finishProbe?.({ status: "error", error: "authentication required" }),
@@ -158,18 +158,18 @@ describe("an agent that needs downloading", () => {
     renderCard("kimi", undefined, true);
 
     await waitFor(() => expect(probeAgent).toHaveBeenCalled());
-    await screen.findByText("Starting Kimi CLI");
+    await screen.findByText("正在启动 Kimi CLI");
     const progress = screen.getByTestId("acp-setup-progress");
-    expect(progress).toHaveTextContent("Install");
-    expect(progress).toHaveTextContent("step 2 of 3");
+    expect(progress).toHaveTextContent("安装");
+    expect(progress).toHaveTextContent("第 2/3 步");
 
     act(() =>
       progressHandlers.get(ACP_PRESET_SETUP_PROGRESS_EVENT)?.({
         payload: { agentId: "kimi", phase: "connecting" },
       }),
     );
-    expect(progress).toHaveTextContent("Connecting Kimi CLI");
-    expect(progress).toHaveTextContent("step 3 of 3");
+    expect(progress).toHaveTextContent("正在连接 Kimi CLI");
+    expect(progress).toHaveTextContent("第 3/3 步");
 
     await act(async () =>
       finishProbe?.({ status: "error", error: "test probe complete" }),
@@ -203,7 +203,7 @@ describe("an agent that needs signing in", () => {
     const card = await screen.findByTestId("acp-preset-signin");
     expect(card).not.toHaveTextContent(/I've signed in/i);
     // Says where signing in actually happens.
-    expect(card).toHaveTextContent(/open a chat/i);
+    expect(card).toHaveTextContent(/打开聊天/);
   });
 
   it("explains that the agent owns the credential, so no API key is asked for", async () => {
@@ -212,8 +212,8 @@ describe("an agent that needs signing in", () => {
     renderCard("claude-acp");
 
     const card = await screen.findByTestId("acp-preset-signin");
-    expect(card).toHaveTextContent(/stores the credential itself/i);
-    expect(card).toHaveTextContent(/never sees or stores an API key/i);
+    expect(card).toHaveTextContent(/会在你使用此预设打开聊天时登录/);
+    expect(card).toHaveTextContent(/不会看到或保存它的 API 密钥/);
   });
 
   it("runs Cursor's browser login directly and rechecks automatically", async () => {
@@ -227,7 +227,7 @@ describe("an agent that needs signing in", () => {
 
     const card = await screen.findByTestId("acp-preset-signin");
     expect(card).not.toHaveTextContent("cursor-agent login");
-    fireEvent.click(screen.getByRole("button", { name: /sign in with cursor/i }));
+    fireEvent.click(screen.getByRole("button", { name: /使用 cursor 登录/i }));
 
     await waitFor(() => expect(externalLogin).toHaveBeenCalledWith("cursor"));
     await waitFor(() => expect(probeAgent).toHaveBeenCalledTimes(2));

@@ -16,10 +16,10 @@ function formatTime(date: Date): string {
 }
 
 function formatDuration(seconds: number): string {
-	if (seconds < 60) return `${Math.round(seconds)}s`;
+	if (seconds < 60) return `${Math.round(seconds)} 秒`;
 	const mins = Math.floor(seconds / 60);
 	const secs = Math.round(seconds % 60);
-	return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+	return secs > 0 ? `${mins} 分钟 ${secs} 秒` : `${mins} 分钟`;
 }
 
 function getSpeakerColorClass(_speakerId?: number | string): string {
@@ -52,7 +52,7 @@ function TranscriptionText({ transcription }: { transcription: string }) {
 					onClick={() => setExpanded(!expanded)}
 					className="ml-1 text-xs text-muted-foreground hover:text-foreground transition-colors duration-150 cursor-pointer"
 				>
-					{expanded ? "show less" : "show more"}
+					{expanded ? "显示更少" : "显示更多"}
 				</button>
 			)}
 		</p>

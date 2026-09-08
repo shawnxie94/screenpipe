@@ -43,18 +43,18 @@ export function formatDuration(start: string, end: string | null): string {
     const nowMs = Date.now();
     if (nowMs < startMs) {
       const minsUntil = Math.ceil((startMs - nowMs) / 60000);
-      return minsUntil <= 1 ? "starts in <1m" : `starts in ${minsUntil}m`;
+      return minsUntil <= 1 ? "不到 1 分钟后开始" : `${minsUntil} 分钟后开始`;
     }
-    return "ongoing";
+    return "进行中";
   }
   const ms = new Date(end).getTime() - new Date(start).getTime();
   if (ms < 0) return "—";
   const totalMinutes = Math.floor(ms / 60000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (hours === 0) return `${minutes}m`;
-  if (minutes === 0) return `${hours}h`;
-  return `${hours}h ${minutes}m`;
+  if (hours === 0) return `${minutes} 分钟`;
+  if (minutes === 0) return `${hours} 小时`;
+  return `${hours} 小时 ${minutes} 分钟`;
 }
 
 export function formatTime(iso: string): string {

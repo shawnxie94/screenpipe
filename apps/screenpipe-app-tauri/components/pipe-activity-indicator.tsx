@@ -27,10 +27,10 @@ export function formatPipeElapsed(
   if (!startedAt) return null;
   const ms = now - Date.parse(startedAt);
   if (Number.isNaN(ms) || ms < 0) return null;
-  if (ms < 60_000) return `${Math.floor(ms / 1000)}s`;
-  if (ms < 3600_000) return `${Math.floor(ms / 60_000)}m`;
-  if (ms < 86_400_000) return `${Math.floor(ms / 3600_000)}h`;
-  return `${Math.floor(ms / 86_400_000)}d`;
+  if (ms < 60_000) return `${Math.floor(ms / 1000)} 秒`;
+  if (ms < 3600_000) return `${Math.floor(ms / 60_000)} 分钟`;
+  if (ms < 86_400_000) return `${Math.floor(ms / 3600_000)} 小时`;
+  return `${Math.floor(ms / 86_400_000)} 天`;
 }
 
 export function formatPipeCountdown(
@@ -41,17 +41,17 @@ export function formatPipeCountdown(
   const ms = Date.parse(runAt) - now;
   if (Number.isNaN(ms) || ms <= 0) return null;
   const s = Math.floor(ms / 1000);
-  if (s < 60) return `in ${s}s`;
+  if (s < 60) return `${s} 秒后`;
   const m = Math.floor(s / 60);
-  if (m < 60) return `in ${m}m`;
+  if (m < 60) return `${m} 分钟后`;
   const h = Math.floor(m / 60);
   if (h < 24) {
     const remM = m - h * 60;
-    return remM > 0 ? `in ${h}h ${remM}m` : `in ${h}h`;
+    return remM > 0 ? `${h} 小时 ${remM} 分钟后` : `${h} 小时后`;
   }
   const d = Math.floor(h / 24);
   const remH = h - d * 24;
-  return remH > 0 ? `in ${d}d ${remH}h` : `in ${d}d`;
+  return remH > 0 ? `${d} 天 ${remH} 小时后` : `${d} 天后`;
 }
 
 export function PipeActivityIndicator({
@@ -91,7 +91,7 @@ export function PipeActivityIndicator({
 
 function PipeActivityIcon({ kind }: { kind: PipeActivityKind }) {
   if (kind === "running") {
-    return <LiveSignal ariaLabel="running" />;
+    return <LiveSignal ariaLabel="运行中" />;
   }
 
   // "upcoming" intentionally renders no icon — the "in 4h" label already

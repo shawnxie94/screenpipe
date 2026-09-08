@@ -28,8 +28,8 @@ export function prefillContextPresentation(
         typeof value.title === "string"
       ) {
         return {
-          label: "frozen Screenpipe snapshot",
-          preview: `${value.title} · ${value.source === "live-view" ? "Live View" : "meeting notes"} · reviewed copy`,
+          label: "已冻结的 screenpipe 快照",
+          preview: `${value.title} · ${value.source === "live-view" ? "实时视图" : "会议笔记"} · 已审阅内容`,
         };
       }
     } catch {
@@ -39,10 +39,10 @@ export function prefillContextPresentation(
 
   return {
     label: source?.startsWith("activity-history-")
-      ? "activity episode"
+      ? "来自活动记录"
       : source === "timeline"
-        ? "timeline selection"
-        : "search",
+        ? "来自时间线选择"
+        : "来自搜索",
     preview: `${context.slice(0, 150)}${context.length > 150 ? "..." : ""}`,
   };
 }
@@ -68,7 +68,7 @@ export function PrefillContextBanner({
                 src={appendAuthToken(
                   `${getApiBaseUrl()}/frames/${prefill.frameId}`,
                 )}
-                alt="Attached frame"
+                alt="已附加画面"
                 className="w-16 h-12 object-cover rounded border border-border/50"
               />
               <button
@@ -84,7 +84,7 @@ export function PrefillContextBanner({
         {prefill.context && (
           <div className="flex-1 min-w-0">
             <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
-              context from {contextPresentation?.label}
+              {contextPresentation?.label}
             </div>
             <p className="text-xs text-foreground font-mono line-clamp-2">
               {contextPresentation?.preview}

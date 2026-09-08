@@ -359,7 +359,7 @@ export function ChatTabStrip({
                       <input
                         ref={renameInputRef}
                         value={renameDraft}
-                        aria-label={`Rename ${title}`}
+                        aria-label={`重命名 ${title}`}
                         data-testid={`chat-tab-rename-${session.id}`}
                         className="min-w-0 flex-1 border border-border bg-background px-1 text-xs font-medium outline-none focus:ring-1 focus:ring-foreground/30"
                         onChange={(event) => setRenameDraft(event.target.value)}
@@ -460,7 +460,7 @@ export function ChatTabStrip({
                         );
                       }}
                     >
-                      {session.pinned ? "Unpin" : "Pin"}
+                      {session.pinned ? "取消置顶" : "置顶"}
                     </ContextMenuItem>
                     <ContextMenuItem
                       onSelect={() => {
@@ -469,7 +469,7 @@ export function ChatTabStrip({
                         setRenamingId(session.id);
                       }}
                     >
-                      Rename
+                      重命名
                     </ContextMenuItem>
                     <ContextMenuSub>
                       <ContextMenuSubTrigger>复制</ContextMenuSubTrigger>
@@ -479,7 +479,7 @@ export function ChatTabStrip({
                             closeContextMenu();
                             void copyText(
                               chatConversationLink(session.id),
-                              "copied chat link",
+                              "聊天链接已复制",
                             );
                           }}
                         >
@@ -499,7 +499,7 @@ export function ChatTabStrip({
                                   messages,
                                   EMPTY_CITATION_PLAN,
                                 ),
-                                "copied chat as markdown",
+                                "聊天内容已复制为 Markdown",
                               );
                             })();
                           }}
@@ -509,7 +509,7 @@ export function ChatTabStrip({
                         <ContextMenuItem
                           onSelect={() => {
                             closeContextMenu();
-                            void copyText(session.id, "copied chat ID");
+                            void copyText(session.id, "聊天会话 ID 已复制");
                           }}
                         >
                           复制会话 ID
@@ -520,7 +520,7 @@ export function ChatTabStrip({
                               closeContextMenu();
                               void copyText(
                                 codingWorkspace.worktreePath,
-                                "copied worktree path",
+                                "工作树路径已复制",
                               );
                             }}
                           >
@@ -536,7 +536,7 @@ export function ChatTabStrip({
                         archiveTab(session.id);
                       }}
                     >
-                      Archive
+                      归档
                       <ContextMenuShortcut className="text-[10px] tracking-normal text-muted-foreground/55">
                         {archiveShortcut}
                       </ContextMenuShortcut>
@@ -551,7 +551,7 @@ export function ChatTabStrip({
                     actions.setSplitChat(session.id);
                   }}
                 >
-                  Open in split
+                 在分屏中打开
                 </ContextMenuItem>
                 {split ? (
                   <ContextMenuItem
@@ -560,7 +560,7 @@ export function ChatTabStrip({
                       actions.setSplitChat(null);
                     }}
                   >
-                    Close split
+                    关闭分屏
                   </ContextMenuItem>
                 ) : null}
                 <ContextMenuSeparator />
@@ -570,7 +570,7 @@ export function ChatTabStrip({
                     closeTab(session.id);
                   }}
                 >
-                  Close tab
+                  关闭标签页
                   <ContextMenuShortcut className="text-[10px] tracking-normal text-muted-foreground/55">
                     {closeShortcut}
                   </ContextMenuShortcut>
@@ -586,7 +586,7 @@ export function ChatTabStrip({
                     if (!active) void onActivate(session.id);
                   }}
                 >
-                  Close other tabs
+                  关闭其他标签页
                 </ContextMenuItem>
                 <ContextMenuItem
                   disabled={!hasTabsToRight}
@@ -606,7 +606,7 @@ export function ChatTabStrip({
                     }
                   }}
                 >
-                  Close tabs to the right
+                  关闭右侧标签页
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>

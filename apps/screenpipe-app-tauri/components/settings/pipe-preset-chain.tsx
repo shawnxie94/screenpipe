@@ -31,14 +31,14 @@ export function serializePipePresetChain(
 }
 
 function rowLabel(index: number): string {
-  return index === 0 ? "first choice" : `fallback ${index}`;
+  return index === 0 ? "首选" : `备用方案 ${index}`;
 }
 
 function rowDescription(index: number): string {
-  if (index === 0) return "tried first";
-  if (index === 1) return "second attempt";
-  if (index === 2) return "third attempt";
-  return "final attempt";
+  if (index === 0) return "首次尝试";
+  if (index === 1) return "第二次尝试";
+  if (index === 2) return "第三次尝试";
+  return "最后尝试";
 }
 
 export function PipePresetChain({
@@ -87,12 +87,11 @@ export function PipePresetChain({
         <div>
           <Label className="text-xs font-medium">模型回退链</Label>
           <p className="mt-0.5 max-w-md text-[11px] text-muted-foreground">
-            screenpipe tries these models from top to bottom when a run can be
-            retried.
+            重试运行时，screenpipe 会按从上到下的顺序尝试这些模型。
           </p>
         </div>
         <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-          {chain.length}/{MAX_PIPE_PRESET_CHAIN_LENGTH} models
+          {chain.length}/{MAX_PIPE_PRESET_CHAIN_LENGTH} 个模型
         </span>
       </div>
 
@@ -138,15 +137,15 @@ export function PipePresetChain({
                   allowNone
                   noneLabel={
                     index === 0
-                      ? "use task default"
+                      ? "使用任务默认模型"
                       : presetId
-                        ? "remove fallback"
-                        : "choose a model"
+                        ? "移除备用方案"
+                        : "选择模型"
                   }
                   controlledPresetId={presetId}
                   containerClassName="min-w-0 flex-1"
                   triggerClassName="rounded-none"
-                  triggerAriaLabel={`${rowLabel(index)} model`}
+                  triggerAriaLabel={`${rowLabel(index)} 模型`}
                   onControlledSelect={(selectedPreset) =>
                     updateRow(index, selectedPreset?.id ?? null)
                   }
@@ -155,7 +154,7 @@ export function PipePresetChain({
                   <button
                     type="button"
                     className="flex h-8 w-8 shrink-0 items-center justify-center border border-transparent text-muted-foreground transition-colors hover:border-border hover:text-foreground focus-visible:border-foreground focus-visible:outline-none"
-                    aria-label={`Remove ${rowLabel(index)}`}
+                    aria-label={`移除${rowLabel(index)}`}
                     onClick={() => {
                       if (index >= chain.length) setAddingFallback(false);
                       else removeFallback(index);
@@ -179,13 +178,12 @@ export function PipePresetChain({
             onClick={() => setAddingFallback(true)}
           >
             <Plus className="h-3 w-3" />
-            add fallback
+            添加备用方案
           </button>
         )}
 
       <p className="mt-3 text-[10px] text-muted-foreground">
-        coding-agent presets run unattended and use this scheduled task&apos;s
-        permissions
+        coding-agent 预设会无人值守地运行，并使用此定时任务的权限。
       </p>
     </section>
   );

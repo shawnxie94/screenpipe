@@ -2328,16 +2328,16 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       // At roughly 25% of the control height they stay softened, not pill-shaped.
       <div className="flex items-center gap-0.5 shrink-0 rounded-lg bg-muted/60 p-0.5">
         {([
-          { key: "all" as ContentFilter, label: "all", icon: null },
-          { key: "screen" as ContentFilter, label: "screen", icon: Monitor },
-          { key: "input" as ContentFilter, label: "keys", icon: Keyboard },
-          { key: "chats" as ContentFilter, label: "chats", icon: MessageSquare },
+          { key: "all" as ContentFilter, label: "全部", icon: null },
+          { key: "screen" as ContentFilter, label: "屏幕", icon: Monitor },
+          { key: "input" as ContentFilter, label: "按键", icon: Keyboard },
+          { key: "chats" as ContentFilter, label: "聊天", icon: MessageSquare },
         ] as const).map(({ key, label, icon: Icon }) => {
           const isActive = contentFilter === key;
           return (
             <button
               key={key}
-              title={key === "input" ? "keyboard & clipboard" : label}
+              title={key === "input" ? "键盘和剪贴板" : label}
               aria-pressed={isActive}
               onClick={() => { setContentFilter(key); setNavIndex(0); }}
               className={cn(
@@ -2473,7 +2473,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                 )}
               >
                 <Clock className="w-3 h-3" />
-                all dates
+                所有日期
               </button>
               {speakerTimeRanges.map((range) => (
                 <button
@@ -3306,7 +3306,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                       onClick={loadMoreOcr}
                       className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/50 hover:text-foreground"
                     >
-                      load more
+                      加载更多
                     </button>
                   )}
                 </div>
@@ -3327,7 +3327,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                   onClick={loadMoreOcr}
                   className="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-foreground/50 hover:text-foreground"
                 >
-                  search more frames
+                  搜索更多画面
                 </button>
               </div>
             )}

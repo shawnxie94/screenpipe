@@ -94,7 +94,7 @@ describe("LiveViewDashboardSwitcher", () => {
       ctrlKey: false,
       pointerType: "mouse",
     });
-    fireEvent.click(await screen.findByText("rename"));
+    fireEvent.click(await screen.findByText("重命名"));
     fireEvent.change(await screen.findByTestId("overview-dashboard-name"), {
       target: { value: "Founder dashboard" },
     });
@@ -106,7 +106,7 @@ describe("LiveViewDashboardSwitcher", () => {
       ctrlKey: false,
       pointerType: "mouse",
     });
-    fireEvent.click(await screen.findByText("duplicate"));
+    fireEvent.click(await screen.findByText("复制"));
     expect(onDuplicate).toHaveBeenCalledTimes(1);
 
     fireEvent.pointerDown(screen.getByTestId("overview-dashboard-menu"), {
@@ -114,8 +114,8 @@ describe("LiveViewDashboardSwitcher", () => {
       ctrlKey: false,
       pointerType: "mouse",
     });
-    fireEvent.click(await screen.findByText("delete"));
-    expect(await screen.findByText("Delete “Daily focus”?")).toBeTruthy();
+    fireEvent.click(await screen.findByText("删除"));
+    expect(await screen.findByText("删除“Daily focus”？")).toBeTruthy();
     expect(onDelete).not.toHaveBeenCalled();
     fireEvent.click(screen.getByTestId("overview-confirm-delete"));
     expect(onDelete).toHaveBeenCalledTimes(1);

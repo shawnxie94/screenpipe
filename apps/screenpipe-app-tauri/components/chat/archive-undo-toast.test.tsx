@@ -36,7 +36,7 @@ describe("showChatArchiveUndoToast", () => {
     expect(mocks.toast).toHaveBeenCalledTimes(1);
     const options = mocks.toast.mock.calls[0][0];
     expect(options).toMatchObject({
-      title: "chat archived",
+      title: "聊天已归档",
       duration: 6_000,
     });
     expect(options.className).toContain("p-2.5");
@@ -67,7 +67,7 @@ describe("showChatArchiveUndoToast", () => {
     dismiss = handle.dismiss;
 
     const options = mocks.toast.mock.calls[0][0];
-    expect(options.title).toBe("3 chats archived");
+    expect(options.title).toBe("3 个聊天已归档");
 
     await act(async () => {
       options.action.props.onClick();

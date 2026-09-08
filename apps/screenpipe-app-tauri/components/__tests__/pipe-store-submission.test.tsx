@@ -29,14 +29,14 @@ describe("PipeStoreSubmissionDialog", () => {
       />,
     );
 
-    expect(screen.getByText("Store publishing is curated")).toBeInTheDocument();
+    expect(screen.getByText("商店发布需要审核")).toBeInTheDocument();
     expect(screen.getByText(`email ${PIPE_STORE_SUBMISSION_EMAIL}`)).toBeInTheDocument();
-    expect(screen.getByText(/repository or pipe\.md link/i)).toBeInTheDocument();
+    expect(screen.getByText(/代码仓库或 pipe\.md 链接/i)).toBeInTheDocument();
     expect(screen.getByText(/切勿包含 API 密钥、凭据或私人数据/i)).toBeInTheDocument();
     expect(screen.queryByText("PUBLISH")).not.toBeInTheDocument();
 
     const contact = screen.getByRole("button", {
-      name: `Email ${PIPE_STORE_SUBMISSION_EMAIL} about a Screenpipe Store submission`,
+      name: `向 ${PIPE_STORE_SUBMISSION_EMAIL} 发送 Screenpipe 商店投稿邮件`,
     });
     fireEvent.click(contact);
 
@@ -56,9 +56,9 @@ describe("buildPipeStoreSubmissionMailto", () => {
     const url = new URL(href);
 
     expect(url.pathname).toBe(PIPE_STORE_SUBMISSION_EMAIL);
-    expect(url.searchParams.get("subject")).toBe("Screenpipe Store update: Daily Summary");
-    expect(url.searchParams.get("body")).toContain("Store slug: daily-summary");
-    expect(url.searchParams.get("body")).toContain("Repository or pipe.md link:");
-    expect(url.searchParams.get("body")).toContain("I have not included API keys");
+    expect(url.searchParams.get("subject")).toBe("Screenpipe 商店更新：Daily Summary");
+    expect(url.searchParams.get("body")).toContain("商店标识：daily-summary");
+    expect(url.searchParams.get("body")).toContain("代码仓库或 pipe.md 链接：");
+    expect(url.searchParams.get("body")).toContain("未包含 API 密钥");
   });
 });

@@ -494,7 +494,7 @@ export function ChatHistoryView({
                   }}
                 >
                   <CheckSquare className="h-3 w-3 text-muted-foreground" />
-                  {selected ? "Deselect" : "Select"}
+                  {selected ? "取消选择" : "选择"}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="my-1 bg-border/70" />
                 <DropdownMenuItem
@@ -574,7 +574,7 @@ export function ChatHistoryView({
                             className="text-[11px] h-[30px] px-2 rounded-none whitespace-nowrap focus:bg-muted/30"
                             onSelect={() => void handleMoveToGroup(conv.id, undefined)}
                           >
-                            Remove from group
+                            从分组中移除
                           </DropdownMenuItem>
                         </>
                       )}
@@ -765,10 +765,10 @@ export function ChatHistoryView({
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/70">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         {bulkPending === "archiving"
-                          ? "Archiving…"
+                          ? "正在归档…"
                           : bulkPending === "restoring"
-                            ? "Restoring…"
-                            : "Deleting…"}
+                            ? "正在恢复…"
+                            : "正在删除…"}
                       </span>
                     )}
                   </div>
@@ -873,7 +873,7 @@ export function ChatHistoryView({
                               }}
                             >
                               <Undo2 className="h-3.5 w-3.5" />
-                              Restore
+                              恢复
                             </button>
                           )}
                         </>
@@ -897,7 +897,7 @@ export function ChatHistoryView({
                       disabled={bulkPending != null}
                     >
                       <X className="h-3.5 w-3.5" />
-                      Close
+                      关闭
                     </button>
                   </div>
                 </div>
@@ -1006,7 +1006,7 @@ export function ChatHistoryView({
             )}
             {!hasMore && !loadingMore && list.length >= HISTORY_PAGE_SIZE && (
               <div className="py-6 text-center text-[11px] tracking-wide text-muted-foreground/60 lowercase">
-                end of list
+                已到列表末尾
               </div>
             )}
           </div>

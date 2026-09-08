@@ -71,13 +71,13 @@ export function sqlTables(sql: string): string[] {
 export function sqlVerb(sql: string): string {
   const s = sql.trim().toUpperCase();
   if (s.startsWith("SELECT")) {
-    if (/^\s*SELECT\s+COUNT\s*\(/i.test(sql.trim())) return "Counted";
-    return "Queried";
+    if (/^\s*SELECT\s+COUNT\s*\(/i.test(sql.trim())) return "统计了";
+    return "查询了";
   }
-  if (s.startsWith("WITH")) return "Queried";
-  if (s.startsWith("INSERT")) return "Inserted into";
-  if (s.startsWith("UPDATE")) return "Updated";
-  if (s.startsWith("DELETE")) return "Deleted from";
+  if (s.startsWith("WITH")) return "查询了";
+  if (s.startsWith("INSERT")) return "插入到";
+  if (s.startsWith("UPDATE")) return "更新了";
+  if (s.startsWith("DELETE")) return "删除了";
   return "在…上运行了 SQL";
 }
 
@@ -153,9 +153,9 @@ export function firstExternalWebTarget(cmd: string, kind: WebTargetKind): WebTar
 }
 
 export function externalCurlLabel(method: string, target: WebTargetPresentation): string {
-  if (method === "GET") return `Fetched ${target.domain}`;
-  if (method === "HEAD") return `Checked ${target.domain}`;
-  if (method === "POST") return `Posted to ${target.domain}`;
+  if (method === "GET") return `获取了 ${target.domain}`;
+  if (method === "HEAD") return `检查了 ${target.domain}`;
+  if (method === "POST") return `向 ${target.domain} 发送了请求`;
   return `${method} ${target.domain}`;
 }
 
@@ -170,7 +170,7 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
   if (search) {
     const target = search.appName || search.windowName || search.contentType || "recordings";
     const q = search.query ? ` "${trunc(search.query, 40)}"` : "";
-    return { label: `Searched ${target}${q}`, appName: search.appName || search.windowName };
+    return { label: `搜索了 ${target}${q}`, appName: search.appName || search.windowName };
   }
 
   const method = curlMethod(cmd);
@@ -187,7 +187,7 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
   if (path === "/raw_sql") {
     const body = curlBodyJson(cmd);
     const sql = body && typeof body.query === "string" ? body.query : null;
-    if (!sql) return { label: "Ran SQL" };
+    if (!sql) return { label: "运行了 SQL" };
     const tables = sqlTables(sql);
     const verb = sqlVerb(sql);
     if (tables.length === 0) return { label: verb };
@@ -204,9 +204,9 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
   const memMatch = path.match(/^\/memories\/(\w+)$/);
   if (memMatch) {
     const id = memMatch[1];
-    if (method === "PATCH" || method === "PUT") return { label: `Updated memory #${id}` };
-    if (method === "DELETE") return { label: `Deleted memory #${id}` };
-    return { label: `Got memory #${id}` };
+    if (method === "PATCH" || method === "PUT") return { label: `更新了记忆 #${id}` };
+    if (method === "DELETE") return { label: `删除了记忆 #${id}` };
+    return { label: `获取了记忆 #${id}` };
   }
 
   if (path === "/meetings") return { label: "列出了会议" };
@@ -217,36 +217,36 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
       const body = curlBodyJson(cmd);
       const hasTitle = body && typeof body.title === "string" && body.title.length > 0;
       const hasNote = body && typeof body.note === "string" && body.note.length > 0;
-      if (hasTitle && hasNote) return { label: `Renamed + summarized meeting #${id}` };
-      if (hasNote) return { label: `Summarized meeting #${id}` };
-      if (hasTitle) return { label: `Renamed meeting #${id}` };
-      return { label: `Updated meeting #${id}` };
+      if (hasTitle && hasNote) return { label: `重命名并总结了会议 #${id}` };
+      if (hasNote) return { label: `总结了会议 #${id}` };
+      if (hasTitle) return { label: `重命名了会议 #${id}` };
+      return { label: `更新了会议 #${id}` };
     }
-    if (method === "DELETE") return { label: `Deleted meeting #${id}` };
-    return { label: `Got meeting #${id}` };
+    if (method === "DELETE") return { label: `删除了会议 #${id}` };
+    return { label: `获取了会议 #${id}` };
   }
 
   if (path === "/speakers/similar") {
     const name = url.searchParams.get("name") || url.searchParams.get("speaker_name");
-    return { label: name ? `Found similar speakers for "${trunc(name, 30)}"` : "找到相似说话人" };
+    return { label: name ? `找到了与“${trunc(name, 30)}”相似的说话人` : "找到相似说话人" };
   }
   if (path === "/speakers/merge") return { label: "合并了说话人" };
   if (path === "/speakers/search") {
     const q = url.searchParams.get("name") || url.searchParams.get("q");
-    return { label: q ? `Searched speakers "${trunc(q, 30)}"` : "搜索了说话人" };
+    return { label: q ? `搜索了说话人“${trunc(q, 30)}”` : "搜索了说话人" };
   }
   if (path === "/speakers/unnamed") return { label: "列出了未命名说话人" };
   if (path.startsWith("/speakers/")) {
     const id = path.split("/")[2];
-    if (method === "PATCH" || method === "PUT") return { label: `Renamed speaker #${id}` };
-    return { label: `Got speaker #${id}` };
+    if (method === "PATCH" || method === "PUT") return { label: `重命名了说话人 #${id}` };
+    return { label: `获取了说话人 #${id}` };
   }
 
   if (path === "/connections/browsers/owned-default/navigate") {
     const body = curlBodyJson(cmd);
     if (body && typeof body.url === "string") {
       const target = webTargetFromUrlString(body.url, "navigate");
-      if (target) return { label: `Opened ${target.domain} in agent browser`, webTarget: target };
+      if (target) return { label: `在代理浏览器中打开了 ${target.domain}`, webTarget: target };
     }
     return { label: "在代理浏览器中导航" };
   }
@@ -254,7 +254,7 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
     const body = curlBodyJson(cmd);
     if (body && typeof body.url === "string") {
       const target = webTargetFromUrlString(body.url, "eval");
-      if (target) return { label: `Ran JS on ${target.domain}`, webTarget: target };
+      if (target) return { label: `在 ${target.domain} 上运行了 JS`, webTarget: target };
     }
     return { label: "在代理浏览器中运行了 JS" };
   }
@@ -262,8 +262,7 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
     const body = curlBodyJson(cmd);
     const action = body && typeof body.action === "string" ? body.action : "act";
     const ref = body && typeof body.ref === "string" ? ` #${body.ref.replace(/^#/, "")}` : "";
-    const verb = action.charAt(0).toUpperCase() + action.slice(1);
-    return { label: `${verb}${ref} in agent browser` };
+    return { label: `在代理浏览器中执行了 ${action}${ref}` };
   }
   if (path.startsWith("/connections/browsers/")) return { label: "代理浏览器操作" };
 
@@ -307,82 +306,82 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
         if (method === "POST") {
           return { label: "创建了 Drive 文件", connectionIconName: icon };
         }
-        return { label: "Listed Drive files", connectionIconName: icon };
+        return { label: "列出了 Drive 文件", connectionIconName: icon };
       }
       // Drive resumable/multipart upload
       if (proxyPath.startsWith("upload/")) {
-        return { label: "Uploaded file to Drive", connectionIconName: icon };
+        return { label: "上传了文件到 Drive", connectionIconName: icon };
       }
       // Generic proxy fallback — name the action by verb, not "Configured"
-      if (method === "POST") return { label: `Posted to ${name}`, connectionIconName: icon };
+      if (method === "POST") return { label: `向 ${name} 发送了请求`, connectionIconName: icon };
       if (method === "PATCH" || method === "PUT") {
-        return { label: `Updated via ${name}`, connectionIconName: icon };
+        return { label: `通过 ${name} 更新了内容`, connectionIconName: icon };
       }
-      return { label: `Read from ${name}`, connectionIconName: icon };
+      return { label: `读取了 ${name} 的内容`, connectionIconName: icon };
     }
 
     // --- Catch-all for connection root + unrecognized subpaths ---
     if (method === "DELETE") {
-      return { label: `Removed ${name} connection`, connectionIconName: icon };
+      return { label: `移除了 ${name} 连接`, connectionIconName: icon };
     }
     // Root POST/PATCH/PUT on /connections/<id> is the actual "configure" action.
     if (!sub && (method === "POST" || method === "PATCH" || method === "PUT")) {
-      return { label: `Configured ${name} connection`, connectionIconName: icon };
+      return { label: `配置了 ${name} 连接`, connectionIconName: icon };
     }
     // Sub-path POST/PATCH/PUT is an action, not a configuration change.
-    if (method === "POST") return { label: `Posted to ${name}`, connectionIconName: icon };
+    if (method === "POST") return { label: `向 ${name} 发送了请求`, connectionIconName: icon };
     if (method === "PATCH" || method === "PUT") {
-      return { label: `Updated via ${name}`, connectionIconName: icon };
+      return { label: `通过 ${name} 更新了内容`, connectionIconName: icon };
     }
-    return { label: `${name} connection`, connectionIconName: icon };
+    return { label: `${name} 连接`, connectionIconName: icon };
   }
 
   if (path === "/pipes") {
-    if (method === "POST") return { label: "Installed scheduled task" };
-    return { label: "Listed scheduled tasks" };
+    if (method === "POST") return { label: "安装了定时任务" };
+    return { label: "列出了定时任务" };
   }
   const pipeMatch = path.match(/^\/pipes\/([^/]+)(?:\/(.+))?$/);
   if (pipeMatch) {
     const name = pipeMatch[1];
     const sub = pipeMatch[2];
-    if (sub === "executions") return { label: `${name}: recent runs` };
-    if (sub === "run" || method === "POST") return { label: `Ran scheduled task ${name}` };
-    if (method === "PATCH" || method === "PUT") return { label: `Configured scheduled task ${name}` };
-    if (method === "DELETE") return { label: `Removed scheduled task ${name}` };
-    return { label: `Scheduled task ${name}` };
+    if (sub === "executions") return { label: `${name}：最近运行记录` };
+    if (sub === "run" || method === "POST") return { label: `运行了定时任务 ${name}` };
+    if (method === "PATCH" || method === "PUT") return { label: `配置了定时任务 ${name}` };
+    if (method === "DELETE") return { label: `移除了定时任务 ${name}` };
+    return { label: `定时任务 ${name}` };
   }
 
-  if (path === "/export") return { label: "Exported video" };
-  if (path === "/health") return { label: "Health check" };
-  if (path === "/list-monitors") return { label: "Listed monitors" };
-  if (path === "/list-audio-devices") return { label: "Listed audio devices" };
-  if (path === "/tags") return { label: "Listed tags" };
+  if (path === "/export") return { label: "导出了视频" };
+  if (path === "/health") return { label: "健康检查" };
+  if (path === "/list-monitors") return { label: "列出了显示器" };
+  if (path === "/list-audio-devices") return { label: "列出了音频设备" };
+  if (path === "/tags") return { label: "列出了标签" };
 
   return { label: `${method} ${path}` };
 }
 
 export function endpointFamily(path: string): string {
-  if (path === "/memories" || path.startsWith("/memories/")) return "Memory";
-  if (path === "/search") return "Screen search";
-  if (path === "/activity-summary") return "Activity";
-  if (path === "/raw_sql") return "Database";
+  if (path === "/memories" || path.startsWith("/memories/")) return "记忆";
+  if (path === "/search") return "屏幕搜索";
+  if (path === "/activity-summary") return "活动";
+  if (path === "/raw_sql") return "数据库";
   if (path.startsWith("/connections/")) {
     // Narrow the chip to the action surface, not just "Connection", so the AI's
     // user-visible card matches the verb in the title (Sent email → EMAIL).
     const segments = path.split("/").slice(2);
     const name = segments[0];
     const sub = segments.slice(1).join("/");
-    if (name === "google-calendar") return "Calendar";
-    if (name === "google-docs") return "Doc";
+    if (name === "google-calendar") return "日历";
+    if (name === "google-docs") return "文档";
     if (name === "slack") return "Slack";
     if (name === "notion") return "Notion";
     if (name === "telegram") return "Telegram";
     if (name === "discord") return "Discord";
-    return "Connection";
+    return "连接";
   }
-  if (path.startsWith("/meetings")) return "Meetings";
-  if (path.startsWith("/speakers")) return "Speakers";
-  if (path.startsWith("/pipes")) return "Scheduled tasks";
+  if (path.startsWith("/meetings")) return "会议";
+  if (path.startsWith("/speakers")) return "说话人";
+  if (path.startsWith("/pipes")) return "定时任务";
   return "Screenpipe";
 }
 
@@ -404,39 +403,39 @@ export function summarizeToolResult(result: string | undefined, family: string):
   // of the generic "JSON response returned" fallback.
   if (family.startsWith("/connections/")) {
     if (family.startsWith("/connections/google-docs/proxy/docs/v1/documents")) {
-      if (family.endsWith(":batchUpdate")) return "Document updated";
-      if (json?.documentId) return "Document created";
+      if (family.endsWith(":batchUpdate")) return "文档已更新";
+      if (json?.documentId) return "文档已创建";
     }
     if (family.startsWith("/connections/google-docs/proxy/drive/v3/files") && json?.id) {
-      return json?.mimeType?.includes("spreadsheet") ? "Spreadsheet created" : "Drive file created";
+      return json?.mimeType?.includes("spreadsheet") ? "表格已创建" : "Drive 文件已创建";
     }
     if (family.startsWith("/connections/google-docs/proxy/upload/drive/v3/files") && json?.id) {
-      return "File uploaded";
+      return "文件已上传";
     }
     if (family.endsWith(":append") && json?.updates?.updatedCells) {
-      return `Appended ${json.updates.updatedCells} cell${json.updates.updatedCells === 1 ? "" : "s"}`;
+      return `追加了 ${json.updates.updatedCells} 个单元格`;
     }
     if (typeof json?.error === "string") return trunc(json.error, 120);
   }
 
-  const noun = family === "/memories" ? "memories"
-    : family === "/search" ? "results"
-    : family.startsWith("/meetings") ? "meetings"
-    : family.startsWith("/connections") ? "items"
-    : "items";
+  const noun = family === "/memories" ? "条记忆"
+    : family === "/search" ? "条结果"
+    : family.startsWith("/meetings") ? "场会议"
+    : family.startsWith("/connections") ? "项内容"
+    : "项内容";
 
-  if (Array.isArray(json)) return json.length === 0 ? `No ${noun} returned` : `${json.length} ${noun} returned`;
+  if (Array.isArray(json)) return json.length === 0 ? `未返回${noun.replace(/^条/, "")}` : `返回了 ${json.length} ${noun}`;
   if (Array.isArray(json.data)) {
     const total = typeof json.pagination?.total === "number" ? json.pagination.total : json.data.length;
-    return total === 0 ? `No ${noun} found` : `${total} ${noun} found`;
+    return total === 0 ? `未找到${noun}` : `找到 ${total} ${noun}`;
   }
   if (Array.isArray(json.search_results)) {
-    return json.search_results.length === 0 ? "No web sources returned" : `${json.search_results.length} web sources returned`;
+    return json.search_results.length === 0 ? "未返回网页来源" : `返回了 ${json.search_results.length} 个网页来源`;
   }
-  if (Array.isArray(json.choices)) return `${json.choices.length} response${json.choices.length === 1 ? "" : "s"} returned`;
-  if (typeof json.success === "boolean") return json.success ? "Request succeeded" : "Request did not succeed";
-  if (typeof json.status === "string") return `Status: ${json.status}`;
-  return "JSON response returned";
+  if (Array.isArray(json.choices)) return `返回了 ${json.choices.length} 条响应`;
+  if (typeof json.success === "boolean") return json.success ? "请求成功" : "请求未成功";
+  if (typeof json.status === "string") return `状态：${json.status}`;
+  return "已返回 JSON 响应";
 }
 
 // Adapters stamp their own name onto messages they relay from the underlying
@@ -505,8 +504,8 @@ export type ToolActivityIcon =
   | "approval";
 
 const GENERIC_ACTIVITY: ToolActivityPresentation = {
-  runningLabel: "Working on your request",
-  completedLabel: "Completed a background step",
+  runningLabel: "正在处理你的请求",
+  completedLabel: "后台步骤已完成",
   icon: "work",
 };
 
@@ -519,8 +518,7 @@ function providerToolActivity(agentId?: string): ToolActivityPresentation | null
     "pi-acp": "Pi",
     "github-copilot-cli": "GitHub Copilot",
   } as Record<string, string>)[agentId.toLowerCase()] ?? "ACP";
-  const article = provider === "ACP" ? "an" : "a";
-  return activity(`Using ${article} ${provider} tool`, `Used ${article} ${provider} tool`, "work");
+  return activity(`正在使用 ${provider} 工具`, `已使用 ${provider} 工具`, "work");
 }
 
 function activity(
@@ -580,8 +578,8 @@ function skillActivity(pathOrCommand: string): ToolActivityPresentation | null {
   if (!SKILL_FILE_RE.test(candidate) && !pathMatch) return null;
 
   const name = skillNameFromPath(candidate);
-  const noun = name ? `${name} skill` : "a skill";
-  return activity(`Loading ${noun}`, `Loaded ${noun}`, "skill");
+  const noun = name ? `${name} 技能` : "技能";
+  return activity(`正在加载${noun}`, `已加载${noun}`, "skill");
 }
 
 function connectionActivity(
@@ -593,16 +591,16 @@ function connectionActivity(
 
   if (normalized === "google-calendar") {
     return isChange
-      ? activity("Updating your calendar", "Updated your calendar", "connection")
-      : activity("Checking your calendar", "Checked your calendar", "connection");
+      ? activity("正在更新你的日历", "已更新你的日历", "connection")
+      : activity("正在检查你的日历", "已检查你的日历", "connection");
   }
   if (normalized === "google-docs") {
     return isChange
-      ? activity("Updating a document", "Updated a document", "edit")
-      : activity("Reviewing a document", "Reviewed a document", "file");
+      ? activity("正在更新文档", "已更新文档", "edit")
+      : activity("正在查看文档", "已查看文档", "file");
   }
   if (normalized === "browsers" || normalized === "browser") {
-    return activity("Using the browser", "Used the browser", "web");
+    return activity("正在使用浏览器", "已使用浏览器", "web");
   }
 
   const displayName = normalized === "slack"
@@ -613,18 +611,18 @@ function connectionActivity(
         ? "Discord"
         : normalized === "telegram"
           ? "Telegram"
-          : "a connected app";
+          : "已连接的应用";
 
   return isChange
-    ? activity(`Updating ${displayName}`, `Updated ${displayName}`, "connection")
-    : activity(`Checking ${displayName}`, `Checked ${displayName}`, "connection");
+    ? activity(`正在更新 ${displayName}`, `已更新 ${displayName}`, "connection")
+    : activity(`正在检查 ${displayName}`, `已检查 ${displayName}`, "connection");
 }
 
 function curlActivity(command: string): ToolActivityPresentation | null {
   const search = parseSearchCommand(command);
   if (search) {
-    const target = search.appName || search.windowName || search.contentType || "your history";
-    return activity(`Searching ${target}`, `Searched ${target}`, "search");
+    const target = search.appName || search.windowName || search.contentType || "你的历史记录";
+    return activity(`正在搜索 ${target}`, `已搜索 ${target}`, "search");
   }
 
   if (!/\bcurl\b/i.test(command)) return null;
@@ -637,42 +635,42 @@ function curlActivity(command: string): ToolActivityPresentation | null {
     const target = firstExternalWebTarget(command, "fetch");
     if (!target) return null;
     return method === "GET" || method === "HEAD"
-      ? activity(`Checking ${target.domain}`, `Checked ${target.domain}`, "web")
-      : activity(`Updating ${target.domain}`, `Updated ${target.domain}`, "web");
+      ? activity(`正在检查 ${target.domain}`, `已检查 ${target.domain}`, "web")
+      : activity(`正在更新 ${target.domain}`, `已更新 ${target.domain}`, "web");
   }
 
   const path = localUrl.pathname.replace(/\/$/, "") || "/";
   if (path === "/raw_sql") {
-    return activity("Reviewing your information", "Reviewed your information", "database");
+    return activity("正在查看你的信息", "已查看你的信息", "database");
   }
   if (path === "/activity-summary" || path === "/search") {
-    return activity("Reviewing your activity", "Reviewed your activity", "screenpipe");
+    return activity("正在查看你的活动", "已查看你的活动", "screenpipe");
   }
   if (path === "/memories" || path.startsWith("/memories/")) {
     return method === "GET"
-      ? activity("Reviewing memories", "Reviewed memories", "memory")
-      : activity("Updating memory", "Updated memory", "memory");
+      ? activity("正在查看记忆", "已查看记忆", "memory")
+      : activity("正在更新记忆", "已更新记忆", "memory");
   }
   if (path === "/meetings" || path.startsWith("/meetings/")) {
     return method === "GET"
-      ? activity("Reviewing meetings", "Reviewed meetings", "meeting")
-      : activity("Updating a meeting", "Updated a meeting", "meeting");
+      ? activity("正在查看会议", "已查看会议", "meeting")
+      : activity("正在更新会议", "已更新会议", "meeting");
   }
   if (path.startsWith("/speakers")) {
     return method === "GET"
-      ? activity("Reviewing speakers", "Reviewed speakers", "meeting")
-      : activity("Updating a speaker", "Updated a speaker", "meeting");
+      ? activity("正在查看说话人", "已查看说话人", "meeting")
+      : activity("正在更新说话人", "已更新说话人", "meeting");
   }
   if (path === "/connections") {
-    return activity("Checking connected apps", "Checked connected apps", "connection");
+    return activity("正在检查已连接的应用", "已检查已连接的应用", "connection");
   }
   if (path.startsWith("/connections/")) {
     return connectionActivity(path.split("/")[2] || "", method);
   }
   if (path === "/pipes" || path.startsWith("/pipes/")) {
     return method === "GET"
-      ? activity("Checking available automations", "Checked available automations", "automation")
-      : activity("Updating an automation", "Updated an automation", "automation");
+      ? activity("正在检查可用的自动化任务", "已检查可用的自动化任务", "automation")
+      : activity("正在更新自动化任务", "已更新自动化任务", "automation");
   }
   if (
     path === "/health" ||
@@ -680,13 +678,13 @@ function curlActivity(command: string): ToolActivityPresentation | null {
     path === "/list-audio-devices" ||
     path === "/tags"
   ) {
-    return activity("Checking screenpipe", "Checked screenpipe", "screenpipe");
+    return activity("正在检查 screenpipe", "已检查 screenpipe", "screenpipe");
   }
   if (path === "/export") {
-    return activity("Preparing an export", "Prepared an export", "export");
+    return activity("正在准备导出", "已准备导出", "export");
   }
 
-  return activity("Working in screenpipe", "Completed work in screenpipe", "screenpipe");
+  return activity("正在 screenpipe 中工作", "已在 screenpipe 中完成工作", "screenpipe");
 }
 
 function commandActivity(command: string): ToolActivityPresentation {
@@ -702,22 +700,22 @@ function commandActivity(command: string): ToolActivityPresentation {
     /\b(?:bun|npm|pnpm|yarn)\s+(?:run\s+)?test\b/.test(normalized) ||
     /\bcargo\s+(?:nextest\s+run|test|check|clippy)\b/.test(normalized)
   ) {
-    return activity("Checking the work", "Checked the work", "test");
+    return activity("正在检查工作结果", "已检查工作结果", "test");
   }
   if (/\bgit\s+(?:status|diff|log|show)\b/.test(normalized)) {
-    return activity("Reviewing changes", "Reviewed changes", "search");
+    return activity("正在查看改动", "已查看改动", "search");
   }
   if (/\bgit\s+(?:commit|push|merge|rebase)\b/.test(normalized)) {
-    return activity("Saving changes", "Saved changes", "edit");
+    return activity("正在保存改动", "已保存改动", "edit");
   }
   if (/\b(?:python(?:3)?|node|deno|ruby|perl|jq|awk)\b/.test(normalized)) {
-    return activity("Analyzing information", "Analyzed information", "thinking");
+    return activity("正在分析信息", "已分析信息", "thinking");
   }
   if (/\b(?:rg|grep|find|ls|sed|cat|head|tail)\b/.test(normalized)) {
-    return activity("Finding relevant information", "Found relevant information", "search");
+    return activity("正在查找相关信息", "已找到相关信息", "search");
   }
   if (/\b(?:mkdir|touch|cp|mv|apply_patch)\b/.test(normalized)) {
-    return activity("Updating files", "Updated files", "edit");
+    return activity("正在更新文件", "已更新文件", "edit");
   }
 
   return GENERIC_ACTIVITY;
@@ -924,21 +922,21 @@ export function mcpScreenpipeCommand(
 function kindActivity(kind: string): ToolActivityPresentation | null {
   switch (kind.toLowerCase()) {
     case "read":
-      return activity("Reviewing a file", "Reviewed a file", "file");
+      return activity("正在查看文件", "已查看文件", "file");
     case "edit":
-      return activity("Updating files", "Updated files", "edit");
+      return activity("正在更新文件", "已更新文件", "edit");
     case "delete":
-      return activity("Removing files", "Removed files", "delete");
+      return activity("正在移除文件", "已移除文件", "delete");
     case "move":
-      return activity("Moving files", "Moved files", "edit");
+      return activity("正在移动文件", "已移动文件", "edit");
     case "search":
-      return activity("Finding relevant information", "Found relevant information", "search");
+      return activity("正在查找相关信息", "已找到相关信息", "search");
     case "execute":
-      return activity("Running a command", "Ran a command", "terminal");
+      return activity("正在运行命令", "已运行命令", "terminal");
     case "fetch":
-      return activity("Fetching content", "Fetched content", "web");
+      return activity("正在获取内容", "已获取内容", "web");
     case "think":
-      return activity("Thinking it through", "Thought it through", "thinking");
+      return activity("正在思考", "已完成思考", "thinking");
     default:
       return null;
   }
@@ -989,10 +987,10 @@ export function presentToolActivity(toolCall: PresentableToolCall): ToolActivity
   const mcpStartupServer = mcpStartupServerName(rawName);
   if (mcpStartupServer) {
     return activity(
-      `Starting the ${mcpStartupServer} MCP server`,
+      `正在启动 ${mcpStartupServer} MCP 服务器`,
       toolCall.isError
-        ? `${mcpStartupServer} MCP server failed to start`
-        : `Started the ${mcpStartupServer} MCP server`,
+        ? `${mcpStartupServer} MCP 服务器启动失败`
+        : `已启动 ${mcpStartupServer} MCP 服务器`,
       "connection",
     );
   }
@@ -1004,7 +1002,7 @@ export function presentToolActivity(toolCall: PresentableToolCall): ToolActivity
   // Claude's native screenpipe bridge uses this legacy tool title instead of
   // the MCP-prefixed name. Present the user job, not the adapter's method.
   if (toolName === "query_recordings" || toolName === "query-recordings") {
-    return activity("Searching recordings", "Searched recordings", "search");
+    return activity("正在搜索记录", "已搜索记录", "search");
   }
 
   if (toolName === "bash" || toolName === "shell" || toolName === "exec" || toolName === "exec_command") {
@@ -1013,7 +1011,7 @@ export function presentToolActivity(toolCall: PresentableToolCall): ToolActivity
   if (toolName === "read" || toolName === "read_file" || toolName === "open_file" || kind === "read") {
     const path = String(args.path ?? args.file_path ?? args.file ?? args.abs_path ?? "");
     const skill = skillActivity(path) ?? skillActivity(rawName);
-    return skill ?? activity("Reviewing a file", "Reviewed a file", "file");
+    return skill ?? activity("正在查看文件", "已查看文件", "file");
   }
   if (
     toolName === "grep" ||
@@ -1022,7 +1020,7 @@ export function presentToolActivity(toolCall: PresentableToolCall): ToolActivity
     toolName === "search" ||
     toolName === "search_files"
   ) {
-    return activity("Finding relevant information", "Found relevant information", "search");
+    return activity("正在查找相关信息", "已找到相关信息", "search");
   }
   if (
     toolName === "edit" ||
@@ -1030,16 +1028,16 @@ export function presentToolActivity(toolCall: PresentableToolCall): ToolActivity
     toolName === "write_file" ||
     toolName === "apply_patch"
   ) {
-    return activity("Updating files", "Updated files", "edit");
+    return activity("正在更新文件", "已更新文件", "edit");
   }
   if (toolName.includes("browser")) {
-    return activity("Using the browser", "Used the browser", "web");
+    return activity("正在使用浏览器", "已使用浏览器", "web");
   }
   if (toolName.includes("web") && toolName.includes("search")) {
-    return activity("Searching the web", "Searched the web", "web");
+    return activity("正在搜索网页", "已搜索网页", "web");
   }
   if (toolName === "ask_user") {
-    return activity("Waiting for your input", "Asked for your input", "approval");
+    return activity("正在等待你的输入", "已请求你的输入", "approval");
   }
 
   // ACP native tools carry a `kind`; use it before the generic fallback.
@@ -1085,5 +1083,5 @@ export function presentToolActivityStatus(
     }
   }
 
-  return isGenerating ? "Preparing your answer" : "Working on your request";
+  return isGenerating ? "正在准备答案" : "正在处理你的请求";
 }

@@ -153,16 +153,16 @@ export function PipeInstallDialog() {
       if (pipeConnections.length > 0) setSection("pipes");
     } catch (err: any) {
       toast({
-        title: "failed to install scheduled task",
+        title: "安装定时任务失败",
         description: (
           <span>
             {err.message}{" "}
             <button
               type="button"
               className="underline underline-offset-2 text-inherit opacity-80 hover:opacity-100"
-              onClick={() => openFeedback(`Scheduled task install failed: ${err.message}`)}
+              onClick={() => openFeedback(`安装定时任务失败：${err.message}`)}
             >
-              report issue
+              报告问题
             </button>
           </span>
         ),
@@ -202,7 +202,7 @@ export function PipeInstallDialog() {
                 ? registryRisk === "high"
                   ? "未验证的发布者。可以访问你所有的屏幕数据。"
                   : "安装前请审查请求的访问权限。"
-                : "an external link wants to install a scheduled task. these are AI agents that run on your screen data — review the prompt below before installing."}
+                : "外部链接请求安装计划任务。它们是基于屏幕数据运行的 AI 代理，请在安装前审查下方提示。"}
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -213,7 +213,7 @@ export function PipeInstallDialog() {
           {loading ? (
             <div className="flex items-center gap-2 py-4 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
-              {isRegistry ? "loading scheduled task details..." : "loading scheduled task content..."}
+              {isRegistry ? "正在加载计划任务详情…" : "正在加载计划任务内容…"}
             </div>
           ) : isRegistry && registryDetail ? (
             <InstallRiskSummary
@@ -238,7 +238,7 @@ export function PipeInstallDialog() {
             </div>
           ) : (
             <p className="text-xs text-muted-foreground py-2">
-              could not preview scheduled task content. you can still install it.
+              无法预览定时任务内容，你仍然可以安装它。
             </p>
           )}
 
@@ -253,10 +253,10 @@ export function PipeInstallDialog() {
               {installing ? (
                 <>
                   <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                  installing...
+                  正在安装…
                 </>
               ) : (
-                "install scheduled task"
+                "安装定时任务"
               )}
             </Button>
           </AlertDialogFooter>

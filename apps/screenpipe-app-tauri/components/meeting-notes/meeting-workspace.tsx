@@ -45,9 +45,9 @@ const MEETING_TABS: ReadonlyArray<{
   value: MeetingWorkspaceTab;
   label: string;
 }> = [
-  { value: "notes", label: "notes" },
-  { value: "transcript", label: "transcript" },
-  { value: "summary", label: "summary" },
+  { value: "notes", label: "笔记" },
+  { value: "transcript", label: "转写" },
+  { value: "summary", label: "摘要" },
 ];
 
 export function MeetingWorkspaceTabs({
@@ -78,7 +78,7 @@ export function MeetingWorkspaceTabs({
   const tablist = (
     <div
       role="tablist"
-      aria-label="meeting workspace"
+      aria-label="会议工作区"
       className={cn(
         "flex min-w-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         !trailing && "border-b border-border",
@@ -124,7 +124,7 @@ export function MeetingWorkspaceTabs({
             <span>{tab.label}</span>
             {state && (
               <span
-                aria-label={`summary ${state}`}
+                aria-label={`摘要${state === "working" ? "生成中" : "需要处理"}`}
                 className={cn(
                   "h-1.5 w-1.5 shrink-0",
                   state === "working" &&
@@ -256,8 +256,8 @@ export function MeetingSummarySurface({
               )}
               <span>
                 {state === "working"
-                  ? "writing summary"
-                  : "meeting summary"}
+                  ? "正在撰写摘要"
+                  : "会议摘要"}
               </span>
             </div>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -282,10 +282,10 @@ export function MeetingSummarySurface({
                 className="h-9 shrink-0 border border-foreground bg-foreground px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-background transition-colors hover:bg-background hover:text-foreground disabled:border-border disabled:bg-muted disabled:text-muted-foreground"
               >
                 {state === "attention"
-                  ? "retry"
+                  ? "重试"
                   : state === "ready"
-                    ? "summarize again"
-                    : "generate"}
+                    ? "再次生成摘要"
+                    : "生成摘要"}
               </button>
             )}
           </div>
@@ -330,8 +330,8 @@ export function MeetingSummarySurface({
                           className="flex h-9 items-center gap-2 border border-border bg-background px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground transition-colors hover:border-foreground disabled:text-muted-foreground"
                         >
                           {attention.model.saving
-                            ? "changing model"
-                            : "change summary model"}
+                            ? "正在更换模型"
+                            : "更换摘要模型"}
                           <ChevronDown className="h-3 w-3" aria-hidden="true" />
                         </button>
                       </DropdownMenuTrigger>
@@ -341,7 +341,7 @@ export function MeetingSummarySurface({
                       >
                         <div className="border-b border-border px-2 py-2">
                           <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
-                            current summary model
+                            当前摘要模型
                           </p>
                           <p className="mt-1 truncate text-xs text-foreground">
                             {attention.model.selectedLabel}
@@ -373,7 +373,7 @@ export function MeetingSummarySurface({
                           onSelect={attention.model.onManage}
                           className="rounded-none font-mono text-[10px] uppercase tracking-[0.1em]"
                         >
-                          manage models &amp; keys
+                          管理模型和密钥
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -407,20 +407,19 @@ export function MeetingSummarySurface({
               className="min-h-64 py-2"
             >
               <p className="text-sm font-medium text-foreground">
-                Draft will appear here
+                草稿会显示在这里
               </p>
               <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-                The first section replaces this message as soon as it is ready.
+                第一部分准备好后会替换这条提示。
               </p>
             </div>
           ) : state === "attention" ? null : (
             <div className="border-l border-border py-2 pl-5">
               <p className="text-sm font-medium text-foreground">
-                no summary yet
+                尚未生成摘要
               </p>
               <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-                Stop the meeting first. screenpipe will keep your notes and
-                transcript intact while the summary is written.
+                请先停止会议。生成摘要期间，screenpipe 会保留你的笔记和转写内容。
               </p>
             </div>
           )}

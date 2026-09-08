@@ -138,7 +138,7 @@ describe("first-run learning banner", () => {
     );
     expect(screen.queryByTestId("normal-home")).not.toBeInTheDocument();
     expect(
-      screen.getByText("screenpipe learned enough to help"),
+      screen.getByText("screenpipe 已学习到足够内容，可以开始帮助你"),
     ).toBeInTheDocument();
     expect(mocks.view.markReadyShown).toHaveBeenCalledTimes(1);
 
@@ -160,7 +160,7 @@ describe("first-run learning banner", () => {
   it("explains foreground writing after the evidence gate clears", () => {
     mocks.view = view({ phase: "writing", showProgress: true });
     render(<FirstRunLearningBanner />);
-    expect(screen.getByText("Writing your summary")).toBeInTheDocument();
+    expect(screen.getByText("正在撰写摘要")).toBeInTheDocument();
     expect(screen.queryByTestId("first-run-countdown")).not.toBeInTheDocument();
   });
 
@@ -172,7 +172,7 @@ describe("first-run learning banner", () => {
       ],
     });
     render(<FirstRunLearningBanner />);
-    expect(screen.getByText("Reading from")).toBeInTheDocument();
+    expect(screen.getByText("正在读取")).toBeInTheDocument();
     expect(
       screen.getByTestId("first-run-captured-app-Arc"),
     ).toBeInTheDocument();
@@ -216,7 +216,7 @@ describe("first-run learning banner", () => {
     render(<FirstRunLearningBanner />);
 
     expect(
-      screen.getByText("screenpipe learned enough to help"),
+      screen.getByText("screenpipe 已学习到足够内容，可以开始帮助你"),
     ).toBeInTheDocument();
     expect(
       screen.queryByTestId("first-run-next-steps"),
@@ -320,7 +320,7 @@ describe("agent handoff on the ready summary", () => {
     render(<FirstRunLearningBanner />);
 
     const ask = screen.getByTestId("first-run-ask-agent");
-    expect(ask).toHaveTextContent("Ask Claude");
+    expect(ask).toHaveTextContent("询问 Claude");
     expect(ask).toHaveAttribute("data-agent", "claude");
     // The summary stays the primary action; the handoff never replaces it.
     expect(screen.getByTestId("first-run-open-summary")).toBeInTheDocument();
@@ -330,7 +330,7 @@ describe("agent handoff on the ready summary", () => {
     mocks.handoff.targets = [CODEX];
     render(<FirstRunLearningBanner />);
     expect(screen.getByTestId("first-run-ask-agent")).toHaveTextContent(
-      "Ask ChatGPT",
+      "询问 ChatGPT",
     );
   });
 
@@ -359,7 +359,7 @@ describe("agent handoff on the ready summary", () => {
     ]);
     // Logos carry no text, so the accessible name is the only affordance a
     // screen reader or keyboard user gets.
-    expect(asks[1]).toHaveAccessibleName("Ask ChatGPT");
+    expect(asks[1]).toHaveAccessibleName("询问 ChatGPT");
 
     fireEvent.click(asks[1]);
     expect(mocks.handoff.askAgent).toHaveBeenCalledWith(

@@ -45,12 +45,12 @@ type PowerMode = "auto" | "performance" | "battery_saver";
 
 const PROFILE_INFO: Record<ActiveProfile, { label: string; description: string; icon: typeof Zap }> = {
   performance: {
-    label: "Performance",
+    label: "高性能",
     description: "完整采集质量与频率",
     icon: Zap,
   },
   balanced: {
-    label: "Balanced",
+    label: "均衡",
     description: "降低采集频率，低质量编码",
     icon: Gauge,
   },
@@ -73,7 +73,7 @@ const PROFILE_INFO: Record<ActiveProfile, { label: string; description: string; 
 
 // Fallback for any future Rust profile variant that lands before the UI knows about it.
 const UNKNOWN_PROFILE_INFO = {
-  label: "Unknown",
+  label: "未知",
   description: "后端报告但当前应用版本无法识别",
   icon: Gauge,
 } as const;
@@ -140,7 +140,7 @@ export function BatterySaverSection() {
     } catch (error) {
       await updateSettings({ keepComputerAwake: previous });
       toast({
-        title: "couldn't update keep-awake",
+        title: "无法更新防休眠设置",
         description: error instanceof Error ? error.message : String(error),
       });
     } finally {
@@ -161,12 +161,12 @@ export function BatterySaverSection() {
   const modes: { value: PowerMode; label: string; description: string }[] = [
     {
       value: "auto",
-      label: "Auto",
+      label: "自动",
       description: "根据电池状态调整",
     },
     {
       value: "performance",
-      label: "Performance",
+      label: "高性能",
       description: "完整质量，忽略电量",
     },
     {
@@ -180,7 +180,7 @@ export function BatterySaverSection() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-foreground">power &amp; battery</h3>
+          <h3 className="text-sm font-medium text-foreground">电源与电池</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             controls capture frequency, quality, and transcription to save battery
           </p>
@@ -218,10 +218,10 @@ export function BatterySaverSection() {
           <Zap className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <div>
             <label htmlFor="keepComputerAwake" className="text-sm font-medium text-foreground">
-              keep computer awake
+              保持电脑唤醒
             </label>
             <p className="text-xs text-muted-foreground mt-0.5">
-              keeps recording and scheduled tasks running when you step away. without it, idle sleep pauses capture.
+              离开电脑时保持录制和定时任务运行；关闭后，闲置睡眠会暂停采集。
             </p>
           </div>
         </div>

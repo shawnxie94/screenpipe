@@ -66,7 +66,7 @@ describe("ComposerDictationControl", () => {
 
   it("starts on a tap and keeps recording after a short release", () => {
     renderControl();
-    const button = screen.getByRole("button", { name: "Dictate message (⌘D)" });
+    const button = screen.getByRole("button", { name: "听写消息（⌘D）" });
 
     fireEvent.pointerDown(button);
     now = 120;
@@ -78,7 +78,7 @@ describe("ComposerDictationControl", () => {
 
   it("finishes automatically when the mic is held", () => {
     renderControl(false);
-    const button = screen.getByRole("button", { name: "Dictate message (Ctrl+D)" });
+    const button = screen.getByRole("button", { name: "听写消息（Ctrl+D）" });
 
     fireEvent.pointerDown(button);
     now = 650;
@@ -94,7 +94,7 @@ describe("ComposerDictationControl", () => {
 
     expect(screen.getByTestId("composer-dictation-recording")).toHaveAttribute(
       "aria-label",
-      "Recording dictation, 0:02",
+      "正在听写，0:02",
     );
     const waveform = screen.getByTestId("composer-dictation-waveform");
     expect(waveform.children).toHaveLength(9);

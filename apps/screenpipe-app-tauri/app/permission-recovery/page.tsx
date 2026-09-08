@@ -108,7 +108,7 @@ function PermissionRow({
 
       <div className="ml-auto shrink-0">
         {isGranted ? (
-          <span className="font-mono text-[10px] text-muted-foreground">ok</span>
+          <span className="font-mono text-[10px] text-muted-foreground">正常</span>
         ) : interactive ? (
           <span className="font-mono text-[10px] text-muted-foreground group-hover:text-background/70">
             grant →
@@ -241,8 +241,8 @@ export default function PermissionRecoveryPage() {
     {
       id: "microphone",
       icon: <Mic className="w-4 h-4" strokeWidth={1.5} />,
-      label: "microphone",
-      description: "transcribe audio",
+      label: "麦克风",
+      description: "转写音频",
       status: micStatus,
       onFix: () => handleFix("microphone"),
       testId: "permission-row-microphone",
@@ -252,8 +252,8 @@ export default function PermissionRecoveryPage() {
           {
             id: "accessibility",
             icon: <Keyboard className="w-4 h-4" strokeWidth={1.5} />,
-            label: "accessibility",
-            description: "read text from apps",
+            label: "辅助功能",
+            description: "读取应用中的文字",
             status: accessibilityStatus,
             onFix: () => handleFix("accessibility"),
             testId: "permission-row-accessibility",
@@ -263,8 +263,8 @@ export default function PermissionRecoveryPage() {
     {
       id: "screen",
       icon: <Monitor className="w-4 h-4" strokeWidth={1.5} />,
-      label: "screen",
-      description: "capture display",
+      label: "屏幕",
+      description: "采集屏幕",
       status: screenStatus,
       onFix: () => handleFix("screenRecording"),
       testId: "permission-row-screen",
@@ -274,8 +274,8 @@ export default function PermissionRecoveryPage() {
           {
             id: "keychain",
             icon: <Lock className="w-4 h-4" strokeWidth={1.5} />,
-            label: "secure storage",
-            description: "encrypt api keys & credentials",
+            label: "安全存储",
+            description: "加密 API 密钥和凭据",
             status: keychainStatus,
             onFix: handleFixKeychain,
             testId: "permission-row-keychain",
@@ -339,14 +339,14 @@ export default function PermissionRecoveryPage() {
         ) : allOk ? (
           <div className="text-center space-y-2" data-testid="permission-recovery-all-fixed">
             <Check className="w-5 h-5 mx-auto text-muted-foreground" />
-            <p className="font-mono text-sm">all fixed — resuming</p>
+            <p className="font-mono text-sm">全部修复 — 正在恢复</p>
           </div>
         ) : (
           <div className="w-full max-w-sm space-y-4" data-testid="permission-recovery-page">
             <div className="text-center">
               <h2 className="font-mono text-sm">录制已暂停</h2>
               <p className="font-mono text-xs text-muted-foreground mt-1">
-                some permissions were revoked
+                部分权限已被撤销
               </p>
             </div>
 
@@ -367,7 +367,7 @@ export default function PermissionRecoveryPage() {
             </div>
 
             <p className="font-mono text-[10px] text-muted-foreground text-center">
-              closes automatically once fixed
+              修复后会自动关闭
             </p>
           </div>
         )}

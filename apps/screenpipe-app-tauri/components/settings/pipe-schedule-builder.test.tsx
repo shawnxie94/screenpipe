@@ -67,20 +67,20 @@ function renderBuilder(current: ScheduleConfig | null, scheduleString = "manual"
   return { onSave, onCancel };
 }
 
-const saveButton = () => screen.getByRole("button", { name: "save" });
+const saveButton = () => screen.getByRole("button", { name: "保存" });
 
 describe("PipeScheduleBuilder", () => {
   test("pre-fills weekly config: pills pressed + time value", () => {
     renderBuilder(cfg({ frequency: "weeks", days_of_week: [1, 3, 5], at_hour: 9, at_minute: 30 }));
     expect(screen.getByLabelText("时间")).toHaveValue("09:30");
-    expect(screen.getByLabelText("Monday")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByLabelText("Wednesday")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByLabelText("Tuesday")).toHaveAttribute("aria-pressed", "false");
+		expect(screen.getByLabelText("星期一")).toHaveAttribute("aria-pressed", "true");
+		expect(screen.getByLabelText("星期三")).toHaveAttribute("aria-pressed", "true");
+		expect(screen.getByLabelText("星期二")).toHaveAttribute("aria-pressed", "false");
   });
 
   test("toggling a weekday pill and saving emits the updated days", () => {
     const { onSave } = renderBuilder(cfg({ frequency: "weeks", days_of_week: [1], at_hour: 9 }));
-    fireEvent.click(screen.getByLabelText("Wednesday"));
+		fireEvent.click(screen.getByLabelText("星期三"));
     fireEvent.click(saveButton());
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ days_of_week: [1, 3] }));
   });
@@ -136,13 +136,13 @@ describe("PipeScheduleBuilder", () => {
 
   test("cancel calls onCancel", () => {
     const { onCancel } = renderBuilder(cfg({ frequency: "days" }));
-    fireEvent.click(screen.getByRole("button", { name: "cancel" }));
+		fireEvent.click(screen.getByRole("button", { name: "取消" }));
     expect(onCancel).toHaveBeenCalled();
   });
 
   test("shows the next occurrence from the preview endpoint", async () => {
     renderBuilder(cfg({ frequency: "days", at_hour: 9 }));
-    await waitFor(() => expect(screen.getByText(/next occurrence:/)).toBeInTheDocument());
+		await waitFor(() => expect(screen.getByText(/下一次运行：/)).toBeInTheDocument());
     expect(fetch).toHaveBeenCalledWith(
       "http://localhost:3030/pipes/schedule/preview",
       expect.objectContaining({ method: "POST" })

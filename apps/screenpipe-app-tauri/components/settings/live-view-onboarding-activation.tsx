@@ -18,7 +18,7 @@ const PATH_COPY: Record<
 > = {
   work_memory: {
     firstAction:
-      "Work normally for a few minutes. A useful resume point appears only after Screenpipe observes real work and a loose end.",
+      "正常工作几分钟。只有知迹观察到真实工作和未完事项后，才会生成有用的恢复点。",
     reviewAction:
       "打开一个结果，检查它是否帮助你恢复正确的任务。",
   },
@@ -30,19 +30,19 @@ const PATH_COPY: Record<
   },
   work_patterns: {
     firstAction:
-      "Use a few work apps for 10–15 minutes. A useful pattern needs enough captured activity to compare.",
+      "使用几个工作应用 10–15 分钟。只有采集到足够的活动，才能比较出有用的模式。",
     reviewAction:
       "将某个模式与你记忆中的做法核对，然后将结果标记为有用或无用的。",
   },
   process_automation: {
     firstAction:
-      "Complete one repeated workflow from start to finish. A process map needs an observed run before it can suggest steps.",
+      "完整执行一次重复工作流。流程图需要先观察到一次实际运行，才能提出步骤建议。",
     reviewAction:
       "在采纳自动化建议前，确认或更正一个观察到的流程步骤。",
   },
   custom: {
     firstAction:
-      "Use Screenpipe normally. Your first result appears when it has enough activity to answer your request.",
+      "正常使用知迹。采集到足够活动、能够回答你的请求后，首个结果就会出现。",
     reviewAction:
       "审查一个结果并标记为有用或无用的，以便将来的更新不断改进。",
   },
@@ -117,11 +117,10 @@ export function LiveViewOnboardingActivation({
         </span>
         <div>
           <p className="text-xs font-semibold">
-            your first real result is ready
+            你的第一个真实结果已就绪
           </p>
           <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-            {copy.reviewAction} You can also use the thumbs controls on any card
-            to help future updates improve.
+            {copy.reviewAction} 你也可以使用卡片上的赞成或反对按钮，帮助后续更新变得更好。
           </p>
         </div>
         <Button
@@ -131,7 +130,7 @@ export function LiveViewOnboardingActivation({
           className="rounded-none"
           onClick={onComplete}
         >
-          I reviewed it
+          我已检查
         </Button>
       </div>
     );
@@ -139,7 +138,7 @@ export function LiveViewOnboardingActivation({
 
   const captureStatus =
     captureReadiness === "ready"
-      ? { state: "ready" as const, detail: "screenpipe 采集已开启。" }
+      ? { state: "ready" as const, detail: "知迹采集已开启。" }
       : captureReadiness === "blocked"
         ? {
             state: "blocked" as const,
@@ -159,21 +158,20 @@ export function LiveViewOnboardingActivation({
       <div className="grid gap-4 border-b border-border p-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div>
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-            first result
+            首个结果
           </p>
           <h3 className="mt-2 text-lg font-semibold tracking-tight">
-            this Live View starts with your real work
+            此实时视图从你的真实工作开始
           </h3>
           <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            There is no sample data to pretend the setup worked.{" "}
+            我们不会用示例数据假装设置已经完成。{" "}
             {copy.firstAction}
           </p>
         </div>
         <div className="flex items-center border border-border bg-muted/20 p-4">
           <Circle className="mr-3 h-3 w-3 fill-foreground" />
           <p className="text-[11px] leading-relaxed">
-            Keep Screenpipe running. This page will reveal the dashboard as soon
-            as soon as one real result is ready.
+            请保持知迹运行。第一个真实结果就绪后，这里会显示仪表板。
           </p>
         </div>
       </div>
@@ -197,7 +195,7 @@ export function LiveViewOnboardingActivation({
             setupStatus === "needs_retry"
               ? (setupError ?? "设置未完成即已暂停。")
               : pipesReady
-                ? "screenpipe 已准备好更新此视图。"
+                ? "知迹已准备好更新此视图。"
                 : "正在完成此视图的设置。"
           }
         />
@@ -224,7 +222,7 @@ export function LiveViewOnboardingActivation({
             <RefreshCw
               className={`mr-1.5 h-3.5 w-3.5 ${retrying ? "animate-spin" : ""}`}
             />
-            {retrying ? "finishing setup" : "finish setup"}
+            {retrying ? "正在完成设置…" : "完成设置"}
           </Button>
         ) : captureReadiness === "blocked" ? (
           <Button
@@ -233,7 +231,7 @@ export function LiveViewOnboardingActivation({
             className="rounded-none"
             onClick={onFixCapture}
           >
-            fix capture
+           修复采集
           </Button>
         ) : (
           <Button
@@ -247,11 +245,11 @@ export function LiveViewOnboardingActivation({
             <RefreshCw
               className={`mr-1.5 h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
             />
-            {refreshing ? "checking" : "check now"}
+            {refreshing ? "正在检查" : "立即检查"}
           </Button>
         )}
         <span className="text-[11px] text-muted-foreground">
-          You can leave this page. Screenpipe keeps working.
+          你可以离开此页面，知迹会继续工作。
         </span>
       </div>
     </div>

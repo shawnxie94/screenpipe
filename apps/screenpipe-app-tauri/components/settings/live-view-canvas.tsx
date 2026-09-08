@@ -133,11 +133,11 @@ const TOOL_OPTIONS: Array<{
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }> = [
-  { value: "select", label: "select", icon: MousePointer2 },
-  { value: "pan", label: "pan", icon: Hand },
-  { value: "note", label: "note", icon: StickyNote },
-  { value: "arrow", label: "connect", icon: ArrowRight },
-  { value: "draw", label: "draw", icon: Pencil },
+  { value: "select", label: "选择", icon: MousePointer2 },
+  { value: "pan", label: "平移", icon: Hand },
+  { value: "note", label: "便签", icon: StickyNote },
+  { value: "arrow", label: "连接", icon: ArrowRight },
+  { value: "draw", label: "绘制", icon: Pencil },
 ];
 
 const RESIZE_HANDLE_STYLE: React.CSSProperties = {
@@ -1718,9 +1718,9 @@ export function LiveViewCanvas({
           <button
             type="button"
             data-testid="canvas-tools-toggle"
-            aria-label={`open canvas tools. ${activeTool.label} tool active`}
+            aria-label={`打开画布工具，当前激活：${activeTool.label}`}
             aria-expanded="false"
-            title={`open canvas tools · ${activeTool.label} active`}
+            title={`打开画布工具 · 当前：${activeTool.label}`}
             className="flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-1 focus-visible:outline-foreground"
             onClick={() => setToolsOpen(true)}
           >
@@ -1731,7 +1731,7 @@ export function LiveViewCanvas({
 
       {tool === "arrow" && arrowSource && (
         <div className="absolute bottom-14 left-3 z-30 border border-foreground bg-background px-3 py-2 text-xs">
-          choose another Block or note to connect
+          请选择另一个区块或便签进行连接
         </div>
       )}
       {!toolsOpen && (

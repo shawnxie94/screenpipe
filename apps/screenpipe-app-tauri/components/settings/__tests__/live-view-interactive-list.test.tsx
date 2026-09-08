@@ -204,8 +204,8 @@ describe("Live View interactive list decisions", () => {
     };
     render(<LiveViewCard slot={handledSlot} onItemAction={onItemAction} />);
 
-    expect(screen.getByText("nothing needs attention")).toBeTruthy();
-    fireEvent.click(screen.getByText("1 handled · show"));
+    expect(screen.getByText("当前没有需要处理的事项")).toBeTruthy();
+    fireEvent.click(screen.getByText("1 已处理 · 显示"));
     const handled = screen.getByTestId("live-view-item-customer-recap");
     expect(handled.getAttribute("data-item-state")).toBe("dismissed");
     expect(screen.getByText("已移除")).toBeTruthy();

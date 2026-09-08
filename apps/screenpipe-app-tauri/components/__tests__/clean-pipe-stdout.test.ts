@@ -124,7 +124,7 @@ describe("cleanPipeStdout", () => {
       '{"type":"message_end","message":{"role":"assistant","content":[],"stopReason":"error","timestamp":1772385731429,"errorMessage":"429 credits_exhausted"}}',
     ].join("\n");
 
-    expect(cleanPipeStdout(stdout)).toBe("daily AI limit reached — upgrade or wait until tomorrow");
+    expect(cleanPipeStdout(stdout)).toBe("已达到每日 AI 限额——请升级，或等到明天再试");
   });
 
   it("renders daily_cost_limit_exceeded as friendly text", () => {
@@ -133,7 +133,7 @@ describe("cleanPipeStdout", () => {
       '{"type":"message_end","message":{"role":"assistant","content":[],"stopReason":"error","errorMessage":"429 \\"daily_cost_limit_exceeded\\""}}',
     ].join("\n");
 
-    expect(cleanPipeStdout(stdout)).toBe("daily AI usage limit reached");
+    expect(cleanPipeStdout(stdout)).toBe("已达到每日 AI 使用上限");
   });
 
   it("extracts error from agent_end last assistant message", () => {
@@ -141,7 +141,7 @@ describe("cleanPipeStdout", () => {
       '{"type":"agent_end","messages":[{"role":"user","content":[{"type":"text","text":"hello"}]},{"role":"assistant","content":[],"stopReason":"error","errorMessage":"429 credits_exhausted"}]}',
     ].join("\n");
 
-    expect(cleanPipeStdout(stdout)).toBe("daily AI limit reached — upgrade or wait until tomorrow");
+    expect(cleanPipeStdout(stdout)).toBe("已达到每日 AI 限额——请升级，或等到明天再试");
   });
 
   it("extracts error from turn_end", () => {
@@ -150,7 +150,7 @@ describe("cleanPipeStdout", () => {
     ].join("\n");
 
     expect(cleanPipeStdout(stdout)).toBe(
-      "error: 400 Please reduce the length of the messages"
+      "错误：400 Please reduce the length of the messages"
     );
   });
 
@@ -205,7 +205,7 @@ describe("cleanPipeStdout", () => {
       '{"type":"message_end","message":{"role":"assistant","content":[],"stopReason":"error","errorMessage":"429 credits_exhausted"}}',
     ].join("\n");
 
-    expect(cleanPipeStdout(stdout)).toBe("daily AI limit reached — upgrade or wait until tomorrow");
+    expect(cleanPipeStdout(stdout)).toBe("已达到每日 AI 限额——请升级，或等到明天再试");
   });
 
   // ─── auto_compaction events ─────────────────────────────────────────

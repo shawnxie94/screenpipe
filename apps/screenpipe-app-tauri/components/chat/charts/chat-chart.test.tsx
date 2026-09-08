@@ -159,7 +159,7 @@ describe("ChatChart — bar", () => {
         })}
       />,
     );
-    expect(screen.getByText(/showing first 20 of 25 points/)).toBeInTheDocument();
+    expect(screen.getByText(/显示前 20 项（共 25 条数据）/)).toBeInTheDocument();
   });
 
   it("uses one shared diverging scale for signed values", () => {

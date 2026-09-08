@@ -87,7 +87,7 @@ export function useTranscriptionDiagnostics(opts: {
         ...Object.fromEntries(
           steps
             .filter((_, i) => i > failIdx)
-            .map((k) => [k, { status: "skip" as const, message: "Skipped" }])
+            .map((k) => [k, { status: "skip" as const, message: "已跳过" }])
         ),
       }));
       setTxTestStatus("done");
@@ -96,7 +96,7 @@ export function useTranscriptionDiagnostics(opts: {
     // Step 1: Endpoint connectivity — try root URL or /v1/models
     setTxTestResults((prev) => ({
       ...prev,
-      endpoint: { status: "running", message: "Connecting..." },
+      endpoint: { status: "running", message: "正在连接…" },
     }));
 
     let endpointReachable = false;
@@ -119,14 +119,14 @@ export function useTranscriptionDiagnostics(opts: {
 
     if (!endpointReachable) {
       const detail = endpointError ? ` (${endpointError.slice(0, 120)})` : "";
-      skipRemaining("endpoint", `Connection failed${detail}. Is the server running at ${endpoint}?`);
+      skipRemaining("endpoint", `连接失败${detail}。请确认服务器是否运行在 ${endpoint}？`);
       return;
     }
 
     setTxTestResults((prev) => ({
       ...prev,
-      endpoint: { status: "pass", message: `Server reachable` },
-      auth: { status: "running", message: "Checking..." },
+      endpoint: { status: "pass", message: "服务器可访问" },
+      auth: { status: "running", message: "正在检查…" },
     }));
 
     // Step 2+3: Try to list models (also tests auth)
@@ -135,7 +135,7 @@ export function useTranscriptionDiagnostics(opts: {
     try {
       const modelsResponse = await probe(`${endpoint}/v1/models`, { headers });
       if (modelsResponse.status === 401 || modelsResponse.status === 403) {
-        skipRemaining("auth", `${modelsResponse.status} Unauthorized. Check your API key.`);
+        skipRemaining("auth", `${modelsResponse.status} 未授权。请检查 API 密钥。`);
         return;
       }
       if (modelsResponse.ok) {
@@ -163,14 +163,14 @@ export function useTranscriptionDiagnostics(opts: {
 
     setTxTestResults((prev) => ({
       ...prev,
-      auth: { status: "pass", message: apiKey ? "API key accepted" : "No auth required" },
+      auth: { status: "pass", message: apiKey ? "API 密钥有效" : "无需身份验证" },
       models: {
         status: "pass",
         message: modelCount > 0
-          ? `${modelCount} model${modelCount !== 1 ? "s" : ""} available`
-          : "No models listed (you can still type a model name)",
+          ? `可用模型：${modelCount} 个`
+          : "未列出模型（你仍可手动输入模型名称）",
       },
-      transcribe: { status: "running", message: "Sending test audio..." },
+      transcribe: { status: "running", message: "正在发送测试音频…" },
     }));
 
     // Step 4: the exact request "Test and enable" and production recording

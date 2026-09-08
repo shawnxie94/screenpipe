@@ -92,14 +92,14 @@ export function presetAllowanceExemption(
 
   const provider = String(preset?.provider ?? "").trim().toLowerCase();
   if (provider === "acp") {
-    return "this agent uses its own configured account.";
+    return "此代理使用自己配置的账户。";
   }
   if (provider === "native-ollama") {
-    return "this model runs on your machine, so it costs nothing.";
+    return "此模型运行在你的设备上，因此不会产生费用。";
   }
   const name = OWN_ACCOUNT_PROVIDER_NAMES[provider];
-  if (name) return `this preset uses your own ${name} key.`;
-  return "this preset uses a local or user-configured provider.";
+  if (name) return `此预设使用你自己的 ${name} 密钥。`;
+  return "此预设使用本地服务商或你自行配置的服务商。";
 }
 
 export type ModelAllowanceNotice = {
@@ -115,12 +115,12 @@ const NOTICES: Record<
   Omit<ModelAllowanceNotice, "tier">
 > = {
   higher: {
-    label: "uses allowance faster",
+    label: "额度消耗较快",
     description:
       "This model uses your monthly AI allowance faster than the default. Switch to Auto to make it last longer.",
   },
   highest: {
-    label: "uses allowance much faster",
+    label: "额度消耗非常快",
     description:
       "This model uses your monthly AI allowance much faster than the default. Heavy use can exhaust a month of allowance in a day. Switch to Auto to make it last longer.",
   },

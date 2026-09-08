@@ -183,7 +183,7 @@ export async function checkLivePiSession(
       // session is down; mark indeterminate so callers don't hard-abort.
       return {
         running: false,
-        error: result.error || "Could not check the AI assistant",
+        error: result.error || "无法检查 AI 助手状态",
         indeterminate: true,
       };
     }
@@ -357,7 +357,7 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
     if (!aborted) {
       const providerConfig = buildProviderConfig();
       if (!providerConfig) {
-        throw new Error("No AI preset selected");
+        throw new Error("未选择 AI 预设");
       }
       await restartCurrentPiSession(providerConfig);
     }
@@ -436,7 +436,7 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
       const message = error instanceof Error ? error.message : String(error);
       if (!isAcpAuthenticationCancelledError(message) && !isAcpExternalAuthError(message)) {
         toast({
-          title: "could not switch AI assistant",
+          title: "无法切换 AI 助手",
           description: message,
           variant: "destructive",
         });
@@ -540,8 +540,8 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
                 if (preset.id !== activeP?.id) {
                   console.log(`[Pi] Fell back to preset "${preset.id}" for this session (not persisted)`);
                   toast({
-                    title: `using "${preset.id}" preset for this session`,
-                    description: `"${activeP?.id ?? "active"}" preset failed to start — using fallback for this session only`,
+                    title: `本次会话使用“${preset.id}”预设`,
+                    description: `“${activeP?.id ?? "当前"}”预设启动失败——本次会话将使用备用预设`,
                   });
                 }
                 started = true;
@@ -549,8 +549,8 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
                 break;
               } else {
                 lastError = result.status === "error"
-                  ? result.error ?? "Unknown error"
-                  : result.data.startupError ?? "Unknown error";
+                  ? result.error ?? "未知错误"
+                  : result.data.startupError ?? "未知错误";
                 console.warn(`[Pi] Preset "${preset.id}" (${providerConfig.provider}) failed: ${lastError}`);
                 if (
                   providerConfig.backend === "acp"
@@ -564,7 +564,7 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
                     !isAcpExternalAuthError(lastError)
                   ) {
                     toast({
-                      title: `failed to start AI assistant (${preset.id})`,
+                      title: `AI 助手启动失败（${preset.id}）`,
                       description: lastError,
                       variant: "destructive",
                     });
@@ -588,7 +588,7 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
                     !isAcpExternalAuthError(lastError)
                   ) {
                     toast({
-                      title: `failed to start AI assistant (${preset.id})`,
+                      title: `AI 助手启动失败（${preset.id}）`,
                       description: lastError,
                       variant: "destructive",
                     });
@@ -604,9 +604,9 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
           if (!started) {
             const providerLabel = activeP?.provider || "AI";
             toast({
-              title: `failed to start AI assistant (${providerLabel})`,
+              title: `AI 助手启动失败（${providerLabel}）`,
               description: presetsToTry.length > 1
-                ? `all ${presetsToTry.length} presets failed — ${lastError}`
+                ? `${presetsToTry.length} 个预设均启动失败——${lastError}`
                 : lastError,
               variant: "destructive",
             });
@@ -640,7 +640,7 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
       liveSession = await checkLivePiSession(attemptSessionId, setAttemptPiInfo);
       if (!liveSession.running && !liveSession.indeterminate) {
         toast({
-          title: "AI assistant is not ready",
+          title: "AI 助手尚未准备好",
           description: liveSession.error,
           variant: "destructive",
         });
@@ -979,19 +979,19 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
     } catch (error) {
       if (timeoutId) clearTimeout(timeoutId);
       if (isAttemptForeground()) piMessageIdRef.current = null;
-      const rawError = error instanceof Error ? error.message : "Unknown error";
+      const rawError = error instanceof Error ? error.message : "未知错误";
       const providerError = buildProviderErrorPresentation(rawError, attemptPreset);
       if (isAttemptForeground()) {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMessageId
-              ? { ...m, content: providerError?.message || `Error: ${rawError}` }
+              ? { ...m, content: providerError?.message || `错误：${rawError}` }
               : m
           )
         );
       }
       if (sidNow) {
-        const content = providerError?.message || `Error: ${rawError}`;
+        const content = providerError?.message || `错误：${rawError}`;
         const storeState = useChatStore.getState();
         storeState.actions.patchMessage(sidNow, assistantMessageId, (message: any) => ({
           ...message,
@@ -1037,7 +1037,7 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
     if (!workspacePreparation.proceed) {
       if (workspacePreparation.error) {
         toast({
-          title: "could not prepare coding workspace",
+          title: "无法准备编码工作区",
           description: workspacePreparation.error,
           variant: "destructive",
         });
@@ -1109,14 +1109,14 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
       if (prepared.externalized) {
         stagePendingAttachments(attachmentMetadata);
         toast({
-          title: "large context saved as file",
-          description: "Pi will use local chunk files instead of sending the full text inline.",
+          title: "大段上下文已保存为文件",
+          description: "Pi 将使用本地分块文件，而不是直接发送完整文字。",
         });
       }
     } catch (e) {
       toast({
-        title: "failed to save large context",
-        description: "The message was not sent because the pasted input is too large to send inline.",
+        title: "保存大段上下文失败",
+        description: "粘贴内容过大，无法直接发送，因此消息未发送。",
         variant: "destructive",
       });
       restoreDocsOnError(e);

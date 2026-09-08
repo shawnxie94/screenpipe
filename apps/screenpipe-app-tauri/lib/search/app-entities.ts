@@ -116,9 +116,9 @@ export function filterAppEntities(
  * The recency half is what tells you a keyword-free browse is worth opening.
  */
 export function formatAppEntityMeta(entity: AppEntity): string {
-	const frames = `${entity.count.toLocaleString()} ${entity.count === 1 ? "frame" : "frames"}`;
+	const frames = `${entity.count.toLocaleString()} 个画面`;
 	const date = entity.lastSeen ? new Date(entity.lastSeen) : null;
 	if (!date || Number.isNaN(date.getTime())) return frames;
-	const stamp = isThisYear(date) ? format(date, "MMM d") : format(date, "MMM yyyy");
-	return `${frames} · last seen ${stamp}`;
+	const stamp = isThisYear(date) ? format(date, "M月d日") : format(date, "yyyy年M月");
+	return `${frames} · 最近记录于 ${stamp}`;
 }

@@ -139,11 +139,11 @@ function bashToolDetailsPresentation(toolCall: ToolCall): BashToolDetailsPresent
   if (!localUrl) {
     const target = firstExternalWebTarget(command, "fetch");
     if (!target || !classified) return null;
-    fields.push({ label: "domain", value: target.domain });
-    fields.push({ label: "method", value: method });
+    fields.push({ label: "域名", value: target.domain });
+    fields.push({ label: "方法", value: method });
     return {
       title: classified.label,
-      eyebrow: "Web request",
+      eyebrow: "网页请求",
       fields,
       resultSummary: summarizeToolResult(toolCall.result, "web"),
       rawCommand: command,
@@ -152,8 +152,8 @@ function bashToolDetailsPresentation(toolCall: ToolCall): BashToolDetailsPresent
   }
 
   const path = localUrl.pathname.replace(/\/$/, "") || "/";
-  fields.push({ label: "endpoint", value: path });
-  fields.push({ label: "method", value: method });
+  fields.push({ label: "接口", value: path });
+  fields.push({ label: "方法", value: method });
 
   const sp = localUrl.searchParams;
   const addParam = (label: string, key: string) => {
@@ -161,21 +161,21 @@ function bashToolDetailsPresentation(toolCall: ToolCall): BashToolDetailsPresent
     if (value) fields.push({ label, value: trunc(value, 80) });
   };
 
-  addParam("query", "q");
-  addParam("content", "content_type");
-  addParam("app", "app_name");
-  addParam("window", "window_name");
-  addParam("limit", "limit");
+  addParam("查询", "q");
+  addParam("内容类型", "content_type");
+  addParam("应用", "app_name");
+  addParam("窗口", "window_name");
+  addParam("数量上限", "limit");
 
   const body = curlBodyJson(command);
   if (path === "/raw_sql" && body && typeof body.query === "string") {
     const tables = sqlTables(body.query);
-    if (tables.length > 0) fields.push({ label: "tables", value: tables.join(", ") });
+    if (tables.length > 0) fields.push({ label: "数据表", value: tables.join(", ") });
   }
 
   if (path.startsWith("/connections/")) {
     const connection = path.split("/")[2];
-    if (connection) fields.push({ label: "connection", value: connection });
+    if (connection) fields.push({ label: "连接", value: connection });
   }
 
   return {
@@ -231,11 +231,11 @@ function BashToolDetails({ toolCall }: { toolCall: ToolCall }) {
 
       <details className="group rounded-md border border-border/30 bg-background/40 px-2 py-1.5">
         <summary className="cursor-pointer select-none text-[10px] font-mono uppercase tracking-wide text-muted-foreground/70 transition-colors hover:text-foreground/70">
-          technical details
+          技术细节
         </summary>
         <div className="mt-2 space-y-2">
-          <ToolCodeBlock label="command" code={sanitizeCommand(details.rawCommand)} language="shell" />
-          {formattedResult && <ToolCodeBlock label="response" code={formattedResult} language="json" />}
+          <ToolCodeBlock label="命令" code={sanitizeCommand(details.rawCommand)} language="shell" />
+          {formattedResult && <ToolCodeBlock label="响应" code={formattedResult} language="json" />}
         </div>
       </details>
     </div>
@@ -337,8 +337,8 @@ function FriendlyToolDetails({ toolCall }: { toolCall: ToolCall }) {
 // Single tool call row in the progress rail
 function formatElapsedSeconds(totalSeconds: number): string {
   const seconds = Math.max(0, Math.floor(totalSeconds));
-  if (seconds < 60) return `${seconds}s`;
-  return `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
+  if (seconds < 60) return `${seconds} 秒`;
+  return `${Math.floor(seconds / 60)} 分钟 ${String(seconds % 60).padStart(2, "0")} 秒`;
 }
 
 /** One-line live status for a running tool: subagent type, elapsed time,
@@ -357,8 +357,8 @@ function RunningToolStatus({ toolCall }: { toolCall: ToolCall }) {
   const retry = toolCall.retry;
   const retryLabel = retry
     ? typeof retry === "object" && retry !== null && "attempt" in retry
-      ? `retry ${(retry as { attempt?: unknown }).attempt}`
-      : "retrying"
+      ? `重试 ${(retry as { attempt?: unknown }).attempt}`
+      : "正在重试"
     : null;
   const outputTail = toolCall.progress
     ?.split("\n")
@@ -475,7 +475,7 @@ function compactToolActivityRows(
 }
 
 function compactedToolCountLabel(toolCall: ToolCall, count: number): string {
-  const noun = toolCall.toolName.toLowerCase().includes("query") ? "queries" : "steps";
+  const noun = toolCall.toolName.toLowerCase().includes("query") ? "次查询" : "个步骤";
   return `${count} ${noun}`;
 }
 
@@ -576,8 +576,8 @@ function ToolCallRailItem({
             {showError && (
               <span className="shrink-0 border border-destructive/40 px-1 font-mono text-[9px] uppercase tracking-wide text-destructive">
                 {compactedCalls
-                  ? `${compactedCalls.filter((call) => call.isError).length} failed`
-                  : "failed"}
+                    ? `${compactedCalls.filter((call) => call.isError).length} 个失败`
+                  : "失败"}
               </span>
             )}
             {compactedCalls && !expanded ? (
@@ -586,7 +586,7 @@ function ToolCallRailItem({
               </span>
             ) : hasChildren && !expanded ? (
               <span className="flex-shrink-0 text-[11px] text-foreground/30">
-                {childToolCalls!.length} {childToolCalls!.length === 1 ? "step" : "steps"}
+                {childToolCalls!.length} 步
               </span>
             ) : null}
             {expanded ? (
@@ -691,11 +691,11 @@ function nameToColor(name: string): string {
 }
 
 function formatMinutes(minutes: number): string {
-  if (minutes < 1) return "<1m";
-  if (minutes < 60) return `${Math.round(minutes)}m`;
+  if (minutes < 1) return "不到 1 分钟";
+  if (minutes < 60) return `${Math.round(minutes)} 分钟`;
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return m > 0 ? `${h} 小时 ${m} 分钟` : `${h} 小时`;
 }
 
 // Static fallback for web/SaaS apps the OS won't give us via /app-icon. Keys
@@ -1016,15 +1016,15 @@ function InlineConnectionActionCard({
   const [locallyConnected, setLocallyConnected] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const effectiveConnected = connected || locallyConnected;
-  const connectLabel = effectiveConnected ? `${block.connectionName} connected` : `connect ${block.connectionName}`;
-  const continueLabel = block.pendingActionLabel ?? `continue with ${block.connectionName}`;
+  const connectLabel = effectiveConnected ? `${block.connectionName} 已连接` : `连接 ${block.connectionName}`;
+  const continueLabel = block.pendingActionLabel ?? `继续使用 ${block.connectionName}`;
   const continuePrompt = block.pendingActionPrompt ??
     `${block.connectionName} is connected now. Continue the action we were discussing, but ask me for confirmation before writing to ${block.connectionName}.`;
   const isPiGate = Boolean(block.extensionRequestId);
 
   const handleConnect = async () => {
     setConnectState("waiting");
-    setStatusMessage("opening authorization in your browser...");
+    setStatusMessage("正在浏览器中打开授权页面...");
     try {
       const result = await onConnect();
       if (result?.status === "error") {
@@ -1039,7 +1039,7 @@ function InlineConnectionActionCard({
       }
       if (result?.status === "connected") {
         setLocallyConnected(true);
-        setStatusMessage("connected");
+        setStatusMessage("已连接");
       }
     } finally {
       setTimeout(() => {
@@ -1068,11 +1068,11 @@ function InlineConnectionActionCard({
             {connectLabel}
           </div>
           <div className="mt-1 max-w-md text-xs leading-5 text-muted-foreground">
-            {statusMessage ?? block.extensionReason ?? "token stays in the local secret store and is never shown to the model."}
+            {statusMessage ?? block.extensionReason ?? "令牌会保存在本地密钥库中，不会展示给模型。"}
           </div>
           {effectiveConnected && isPiGate ? (
             <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">
-              continuing...
+              继续中...
             </div>
           ) : effectiveConnected ? (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -1088,7 +1088,7 @@ function InlineConnectionActionCard({
                 onClick={onDismiss}
                 className="border border-border px-2.5 py-1.5 text-xs uppercase tracking-wide text-muted-foreground transition-colors duration-150 hover:bg-foreground hover:text-background"
               >
-                dismiss
+                忽略
               </button>
             </div>
           ) : (
@@ -1099,14 +1099,14 @@ function InlineConnectionActionCard({
                 disabled={connectState === "waiting"}
                 className="border border-foreground bg-foreground px-2.5 py-1.5 text-xs uppercase tracking-wide text-background transition-opacity duration-150 disabled:opacity-60"
               >
-                {connectState === "waiting" ? "waiting" : connectState === "error" ? "retry" : "connect"}
+                {connectState === "waiting" ? "等待中" : connectState === "error" ? "重试" : "连接"}
               </button>
               <button
                 type="button"
                 onClick={onDismiss}
                 className="border border-border px-2.5 py-1.5 text-xs uppercase tracking-wide text-muted-foreground transition-colors duration-150 hover:bg-foreground hover:text-background"
               >
-                not now
+                暂不处理
               </button>
             </div>
           )}
@@ -1121,13 +1121,13 @@ function InlineConnectionActionCard({
 function permissionOptionLabel(kind: string | undefined): string | null {
   switch (kind) {
     case "allow_once":
-      return "allow once";
+      return "允许一次";
     case "allow_always":
-      return "always allow";
+      return "始终允许";
     case "reject_once":
-      return "reject";
+      return "拒绝";
     case "reject_always":
-      return "never allow";
+      return "永不允许";
     default:
       return null;
   }
@@ -1143,7 +1143,7 @@ export function InlineAgentActionCard({
   const [responseState, setResponseState] = useState<"idle" | "waiting" | "error">("idle");
   const titleId = React.useId();
   const isAuth = block.actionKind === "auth";
-  const defaultTitle = isAuth ? "sign in to continue" : "permission needed";
+  const defaultTitle = isAuth ? "登录后继续" : "需要授权";
 
   const respond = async (selectedOptionId?: string) => {
     if (responseState === "waiting") return;
@@ -1173,7 +1173,7 @@ export function InlineAgentActionCard({
         <div className="flex items-center gap-3">
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-foreground" aria-hidden />
           <div className="text-sm leading-5 text-foreground">
-            {isAuth ? "signing you in…" : "waiting for the agent…"}
+            {isAuth ? "正在登录…" : "正在等待代理响应…"}
           </div>
         </div>
       </div>
@@ -1203,10 +1203,10 @@ export function InlineAgentActionCard({
           </div>
           <div className="mt-1 max-w-md text-xs leading-5 text-muted-foreground">
             {responseState === "error"
-              ? "that did not work. please try again."
+              ? "操作未成功，请重试。"
               : block.message ?? (isAuth
-                ? "choose how you want to connect this agent."
-                : "the agent needs your approval before it can continue.")}
+                ? "选择连接此代理的方式。"
+                : "代理需要获得你的授权才能继续。")}
           </div>
           {block.detail && (
             <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all border border-border bg-muted/40 px-2 py-1.5 text-xs leading-5 text-foreground/80">
@@ -1252,7 +1252,7 @@ export function InlineAgentActionCard({
               onClick={() => void respond()}
               className="border border-border px-2.5 py-1.5 text-xs uppercase tracking-wide text-muted-foreground transition-colors duration-150 hover:bg-foreground hover:text-background disabled:opacity-60"
             >
-              not now
+              暂不处理
             </button>
           </div>
         </div>
@@ -1291,16 +1291,16 @@ function completedWorkSummaryFromRunning(runningSummary: string): string {
   const separator = " · ";
   const separatorIndex = runningSummary.lastIndexOf(separator);
   if (separatorIndex >= 0) {
-    return `done in ${runningSummary.slice(separatorIndex + separator.length)}`;
+    return `已完成，用时 ${runningSummary.slice(separatorIndex + separator.length)}`;
   }
-  return "done";
+  return "已完成";
 }
 
 function friendlyCompletedSummary(summary?: string): string | undefined {
   if (!summary) return undefined;
-  if (summary === "Worked") return "done";
+  if (summary === "Worked") return "已完成";
   if (summary.startsWith("Worked for ")) {
-    return `done in ${summary.slice("Worked for ".length)}`;
+    return `已完成，用时 ${summary.slice("Worked for ".length)}`;
   }
   return summary;
 }
@@ -1324,7 +1324,7 @@ function WorkSummaryText({
 
   return (
     <>
-      {prefix}
+      工作中
       <AnimatePresence initial={false}>
         {durationSuffix && (
           <motion.span
@@ -1388,7 +1388,7 @@ function ToolActivityGroup({
   const endedAtMs = allDone ? toolWorkEndedAt(toolCalls) : undefined;
   const completedDurationMs = startedAtMs && endedAtMs ? Math.max(1, endedAtMs - startedAtMs) : undefined;
   const runningLabel = waitingForApproval
-    ? "Waiting for your approval"
+    ? "等待你的授权"
     : presentToolActivityStatus(toolCalls, isGenerating);
   const justCompletedSummary = !isWorking && wasWorkingRef.current
     ? completedWorkSummaryFromRunning(runningSummary)
@@ -1400,8 +1400,8 @@ function ToolActivityGroup({
           : justCompletedSummary ||
             completedLiveSummary ||
             (completedDurationMs
-              ? `done in ${formatDurationParts(completedDurationMs)}`
-              : (friendlyCompletedSummary(summaryOverride) || "done"))
+              ? `已完成，用时 ${formatDurationParts(completedDurationMs)}`
+              : (friendlyCompletedSummary(summaryOverride) || "已完成"))
       )
     : "";
   const summaryToolCall = [...toolCalls].reverse().find((toolCall) => toolCall.isRunning)
@@ -1508,15 +1508,15 @@ function ToolActivityGroup({
                   <WorkSummaryText text={runningSummary} animateRunningDuration />
                   {total > 1 && (
                     <span className="text-foreground/30">
-                      {" "}· {toolCalls.filter((tc) => !tc.isRunning).length}/{total} done
+                      {" "}· {toolCalls.filter((tc) => !tc.isRunning).length}/{total} 已完成
                     </span>
                   )}
                 </>
               ) : (
                 <>
-                  <WorkSummaryText text={summary || `${total} steps`} animateRunningDuration={false} />
+                  <WorkSummaryText text={summary || `${total} 个步骤`} animateRunningDuration={false} />
                   {hasError && !recoveredWithAnswer && (
-                    <span className="ml-1.5 text-destructive">· {toolCalls.filter(tc => tc.isError).length} failed</span>
+                    <span className="ml-1.5 text-destructive">· {toolCalls.filter(tc => tc.isError).length} 个失败</span>
                   )}
                 </>
               )}
@@ -1692,7 +1692,7 @@ export function MessageContent({
         className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-foreground text-background hover:bg-foreground/80 transition-colors"
       >
         <RefreshCw className="h-3 w-3" />
-        Try again
+        再试一次
       </button>
       <span className="text-xs text-muted-foreground">或在上方编辑你的消息</span>
       <button
@@ -1700,7 +1700,7 @@ export function MessageContent({
         onClick={() => openFeedback(`AI error in chat: ${message.content.slice(0, 300)}`)}
         className="ml-auto flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
       >
-        report issue
+        报告问题
       </button>
     </div>
   ) : isErrorMessage ? (
@@ -1711,7 +1711,7 @@ export function MessageContent({
         onClick={() => openFeedback(`AI error in chat: ${message.content.slice(0, 300)}`)}
         className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
       >
-        report issue
+        报告问题
       </button>
     </div>
   ) : null;
@@ -1844,7 +1844,7 @@ export function MessageContent({
     // A turn cut off by app quit / crash: tell the truth on the work
     // summary instead of showing a normal "Worked for X" completion.
     const interruptedSummary = message.interruptedByQuit && hasToolWorkGroup
-      ? "interrupted — app closed mid-task"
+      ? "已中断——应用在任务进行中关闭"
       : undefined;
     const workSummaryOverride = stoppedSummary || interruptedSummary;
     const recoveredWithAnswer = !isGenerating && displayGroups.some(
@@ -2068,7 +2068,7 @@ function CollapsibleUserMessage({ label, fullContent }: { label: string; fullCon
           }}
           onMouseUp={(e) => e.stopPropagation()}
           className="shrink-0 p-0.5 rounded hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground transition-colors"
-          title={expanded ? "Collapse prompt" : "Show full prompt"}
+          title={expanded ? "收起提示词" : "显示完整提示词"}
         >
           {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
         </button>

@@ -39,7 +39,7 @@ describe("ContextUsagePanel", () => {
 
     fireEvent.click(screen.getByText("分类明细"));
     expect(disclosure).toHaveAttribute("open");
-    expect(screen.getByText("Tool definitions")).toBeInTheDocument();
+    expect(screen.getByText("工具定义")).toBeInTheDocument();
     expect(screen.getByText("10.1K")).toBeInTheDocument();
     expect(
       screen.queryByText("Summarized conversation"),

@@ -84,10 +84,10 @@ describe("MessageContent — MCP startup status", () => {
     );
 
     const workSummary = screen.getByTestId("tool-activity-summary");
-    expect(workSummary).not.toHaveTextContent("failed");
+    expect(workSummary).not.toHaveTextContent("失败");
     fireEvent.click(workSummary);
     expect(screen.getByTestId("tool-activity-list")).toHaveTextContent(
-      "Reviewed a file",
+      "已查看文件",
     );
     expect(screen.getAllByTestId("tool-activity-item")).toHaveLength(1);
   });
@@ -112,11 +112,11 @@ describe("MessageContent — MCP startup status", () => {
     render(<MessageContent message={message} />);
 
     const workSummary = screen.getByTestId("tool-activity-summary");
-    expect(workSummary).not.toHaveTextContent("failed");
+    expect(workSummary).not.toHaveTextContent("失败");
     expect(screen.getByText("I recovered and finished the answer.")).toBeTruthy();
     fireEvent.click(workSummary);
     expect(screen.getByTestId("tool-activity-list")).toHaveTextContent(
-      "Completed a background step",
+      "后台步骤已完成",
     );
   });
 });

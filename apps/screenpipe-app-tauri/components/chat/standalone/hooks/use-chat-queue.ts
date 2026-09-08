@@ -142,15 +142,15 @@ export function useChatQueue(currentQueueSessionId: string, piSessionIdRef: Muta
       const result = await commands.piCancelQueued(piSessionIdRef.current, prompt.id);
       if (result.status !== "ok") {
         if (!options.silent) {
-          toast({ title: "failed to cancel queued message", description: result.error, variant: "destructive" });
+          toast({ title: "取消排队消息失败", description: result.error, variant: "destructive" });
         }
         return false;
       }
       if (!result.data) {
         if (!options.silent) {
           toast({
-            title: "message already started",
-            description: "Use stop if you want to interrupt the active reply.",
+            title: "消息已经开始处理",
+            description: "如果要中断当前回复，请使用“停止”。",
           });
         }
         return false;
@@ -161,7 +161,7 @@ export function useChatQueue(currentQueueSessionId: string, piSessionIdRef: Muta
     } catch (e) {
       if (!options.silent) {
         toast({
-          title: "failed to cancel queued message",
+          title: "取消排队消息失败",
           description: e instanceof Error ? e.message : String(e),
           variant: "destructive",
         });

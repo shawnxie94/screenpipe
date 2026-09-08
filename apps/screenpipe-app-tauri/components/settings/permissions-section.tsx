@@ -26,23 +26,23 @@ import type { SettingsField } from "./settings-search";
 /** Settings search index for this section. Co-located with the component. */
 export const searchIndex: SettingsField[] = [
   {
-    label: "Screen Recording",
+    label: "屏幕录制",
     keywords: ["screen", "display", "capture", "tcc", "permission"],
   },
   {
-    label: "Microphone",
+    label: "麦克风",
     keywords: ["mic", "audio", "voice", "permission"],
   },
   {
-    label: "Accessibility",
+    label: "辅助功能",
     keywords: ["ax", "ui", "context", "permission"],
   },
   {
-    label: "Input Monitoring",
+    label: "输入监控",
     keywords: ["keyboard", "keystroke", "clicks", "permission"],
   },
   {
-    label: "Calendar",
+    label: "日历",
     keywords: ["apple calendar", "events", "permission"],
   },
 ];
@@ -119,7 +119,7 @@ function PermissionRow({
                   onClick={onManage}
                   data-testid={`permission-manage-${id}`}
                 >
-                  Manage
+                  管理
                 </Button>
               </>
             ) : restartRequired ? (
@@ -131,7 +131,7 @@ function PermissionRow({
                 data-testid={`permission-restart-${id}`}
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                Restart
+                重启
               </Button>
             ) : (
               <Button
@@ -141,7 +141,7 @@ function PermissionRow({
                 onClick={onEnable}
                 data-testid={`permission-enable-${id}`}
               >
-                Enable
+                启用
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             )}
@@ -234,7 +234,7 @@ function RequiredPermissions() {
     {
       id: "screen-recording",
       permission: "screenRecording",
-      title: "Screen Recording",
+      title: "屏幕录制",
       description:
         "用于捕获屏幕内容，为时间线和 AI 上下文提供数据。",
       statusKey: "screenRecording",
@@ -242,7 +242,7 @@ function RequiredPermissions() {
     {
       id: "microphone",
       permission: "microphone",
-      title: "Microphone",
+      title: "麦克风",
       description:
         "用于在会议和对话中录制你的声音。",
       statusKey: "microphone",
@@ -250,7 +250,7 @@ function RequiredPermissions() {
     {
       id: "accessibility",
       permission: "accessibility",
-      title: "Accessibility",
+      title: "辅助功能",
       description:
         "用于读取应用和窗口上下文、会议控件和界面文本。",
       statusKey: "accessibility",
@@ -260,7 +260,7 @@ function RequiredPermissions() {
   return (
     <div className="space-y-2" data-testid="permissions-required">
       <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-        Required
+        必需权限
       </h2>
       {rows.map((row) => {
         const status = rowStatus(statuses?.[row.statusKey]);
@@ -307,7 +307,7 @@ function InputMonitoringPermissionRow() {
     <PermissionRow
       id="input-monitoring"
       title="输入监控"
-      description="Lets screenpipe capture keystrokes and clicks for full input replay."
+      description="允许 screenpipe 捕获按键和点击，以完整回放输入操作。"
       status={rowStatus}
       busy={requesting || resetting || managing}
       onEnable={() => void enable()}
@@ -330,7 +330,7 @@ function InputMonitoringPermissionRow() {
             {resetting ? (
               <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
             ) : null}
-            Reset & try again
+            重置并重试
           </Button>
         ) : null
       }
@@ -406,7 +406,7 @@ export function PermissionsSection() {
       >
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Checking platform…
+          正在检查平台…
         </div>
       </div>
     );
@@ -415,14 +415,14 @@ export function PermissionsSection() {
   return (
     <div className="space-y-5" data-testid="section-settings-permissions">
       <p className="text-sm text-muted-foreground">
-        Grant or manage the macOS permissions screenpipe needs.
+        授予或管理 screenpipe 所需的 macOS 权限。
       </p>
 
       <RequiredPermissions />
 
       <div className="space-y-2" data-testid="permissions-optional">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
-          Optional
+          可选权限
         </h2>
         <InputMonitoringPermissionRow />
         <CalendarPermissionRow />

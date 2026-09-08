@@ -64,7 +64,7 @@ export function registerPiLogListener({
       } else if (line.includes("ECONNREFUSED") || line.includes("connection refused")) {
         hint = "Cannot connect to Ollama — is it running? Start with: ollama serve";
       }
-      toast({ title: "Pi agent error", description: hint, variant: "destructive" });
+      toast({ title: "Pi 代理错误", description: hint, variant: "destructive" });
     }
   });
 }

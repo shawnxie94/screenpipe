@@ -69,11 +69,11 @@ describe("HomeCardAgentActions", () => {
 
     openAgentMenu();
 
-    expect(await screen.findByText("start with agent")).toBeInTheDocument();
+    expect(await screen.findByText("使用代理开始")).toBeInTheDocument();
     expect(screen.getByRole("menu")).toHaveAttribute("data-side", "bottom");
     expect(
       screen.getByText(
-        "The agent runs inside Screenpipe with your recorded context.",
+        "代理会在 Screenpipe 中运行，并使用你已记录的上下文。",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Screenpipe")).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe("HomeCardAgentActions", () => {
     expect(screen.getByText("Cursor")).toBeInTheDocument();
     expect(screen.getByText("Codex")).toBeInTheDocument();
     expect(
-      screen.queryByText("Start this task in Screenpipe"),
+      screen.queryByText("在 Screenpipe 中开始此任务"),
     ).not.toBeInTheDocument();
     expect(
       screen
@@ -117,7 +117,7 @@ describe("HomeCardAgentActions", () => {
       "day_recap",
     );
     await waitFor(() =>
-      expect(screen.queryByText("start with agent")).not.toBeInTheDocument(),
+      expect(screen.queryByText("使用代理开始")).not.toBeInTheDocument(),
     );
   });
 
@@ -131,11 +131,11 @@ describe("HomeCardAgentActions", () => {
 
     expect(
       await screen.findByTestId("home-card-acp-setup-dialog"),
-    ).toHaveTextContent("set up Claude Code");
+    ).toHaveTextContent("配置 Claude Code");
     expect(screen.getByTestId("home-card-acp-setup-dialog")).toHaveTextContent(
-      "Add a Claude Code ACP preset first",
+      "请先添加 Claude Code 的 ACP 预设",
     );
-    fireEvent.click(screen.getByRole("button", { name: "open AI presets" }));
+    fireEvent.click(screen.getByRole("button", { name: "打开 AI 预设" }));
     expect(onOpenAcpSetup).toHaveBeenCalledWith("claude-acp");
   });
 

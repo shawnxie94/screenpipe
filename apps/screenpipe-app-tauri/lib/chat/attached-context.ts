@@ -54,7 +54,7 @@ function describeSnapshot(
         ? `${value.snapshot.length.toLocaleString()} characters`
         : null;
     return {
-      label: "frozen Screenpipe snapshot",
+      label: "已冻结的 screenpipe 快照",
       detail: [title, surface, size].filter(Boolean).join(" · "),
     };
   } catch {
@@ -84,8 +84,14 @@ export function parseAttachedContext(content: string): AttachedContext | null {
   // Timeline and search selections are plain text. The first line is the most
   // useful thing to show, and it is usually the app and window.
   const firstLine = payload.split("\n").find((line) => line.trim().length > 0);
+  const label =
+    {
+      search: "来自搜索",
+      "timeline selection": "来自时间线选择",
+      "activity episode": "来自活动记录",
+    }[rawLabel.trim()] ?? `来自 ${rawLabel.trim()}`;
   return {
-    label: `context from ${rawLabel.trim()}`,
+    label,
     detail: firstLine ? firstLine.slice(0, 120) : "",
     payload,
     message,

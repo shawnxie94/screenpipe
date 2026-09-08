@@ -46,7 +46,7 @@ afterEach(() => vi.clearAllTimers());
 
 /** Accept the step-0 consent card so the tour enters the ASK phase. */
 function startTour() {
-  fireEvent.click(screen.getByRole("button", { name: "show me · 30 sec" }));
+  fireEvent.click(screen.getByRole("button", { name: "带我看看 · 30 秒" }));
 }
 
 describe("first-run guide", () => {
@@ -59,7 +59,7 @@ describe("first-run guide", () => {
     );
 
     // Step 0: no tour yet, no prompt card — just the invitation.
-    expect(screen.getByText("you're all set")).toBeInTheDocument();
+    expect(screen.getByText("准备就绪")).toBeInTheDocument();
     expect(screen.queryByText("1 of 3")).not.toBeInTheDocument();
 
     startTour();
@@ -76,7 +76,7 @@ describe("first-run guide", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "i'll explore" }));
+    fireEvent.click(screen.getByRole("button", { name: "我先自己探索" }));
 
     expect(onDone).toHaveBeenCalledOnce();
   });
@@ -154,7 +154,7 @@ describe("first-run guide", () => {
     );
     startTour();
 
-    expect(screen.getByText("esc to exit anytime")).toBeInTheDocument();
+    expect(screen.getByText("按 Esc 可随时退出")).toBeInTheDocument();
     expect(screen.getByText("1 of 3")).toBeInTheDocument();
   });
 
@@ -234,7 +234,7 @@ describe("first-run guide", () => {
     // Still in ASK: card + prompt visible, no streaming pill.
     expect(screen.getByText("1 of 3")).toBeInTheDocument();
     expect(
-      screen.queryByText("2 of 3 · building your automation"),
+      screen.queryByText("2 / 3 · 正在创建你的自动化"),
     ).not.toBeInTheDocument();
   });
 
@@ -262,7 +262,7 @@ describe("first-run guide", () => {
     // No scrim while the response streams — never dim live AI output.
     expect(screen.queryByTestId("firstrun-scrim")).not.toBeInTheDocument();
     expect(
-      screen.getByText("2 of 3 · building your automation"),
+      screen.getByText("2 / 3 · 正在创建你的自动化"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "跳过引导" }),

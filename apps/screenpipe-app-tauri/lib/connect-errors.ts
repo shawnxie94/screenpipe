@@ -43,7 +43,7 @@ export function classifyConnectError(
   ctx: ConnectContext,
   rawMessage: string | null | undefined,
 ): HumanConnectError {
-  const name = (ctx.name || "this app").toLowerCase();
+  const name = ctx.name || "此应用";
   const raw = (rawMessage ?? "").toLowerCase();
 
   // User closed the OAuth / sign-in window before it finished. Not really an
@@ -57,7 +57,7 @@ export function classifyConnectError(
   ) {
     return {
       kind: "cancelled",
-      message: `${name} sign-in didn't finish — try again`,
+      message: `${name} 登录未完成——请重试`,
     };
   }
 
@@ -67,13 +67,13 @@ export function classifyConnectError(
     raw.includes("not supported") ||
     raw.includes("unsupported")
   ) {
-    return { kind: "unsupported", message: "not available on this device" };
+    return { kind: "unsupported", message: "此设备不支持" };
   }
 
   // Obsidian is the dominant "prerequisite app not set up" case: the vault
   // can't be found until Obsidian has been opened once.
   if (ctx.type === "obsidian" || raw.includes("vault") || raw.includes("obsidian")) {
-    return { kind: "needs_app", message: "open obsidian once, then try again" };
+    return { kind: "needs_app", message: "请先打开一次 Obsidian，然后重试" };
   }
 
   // Couldn't read/write the tool's config file. MCP installs edit JSON/TOML in
@@ -89,7 +89,7 @@ export function classifyConnectError(
   ) {
     return {
       kind: "config_write",
-      message: `couldn't update ${name}'s settings — try again`,
+      message: `无法更新 ${name} 的设置 — 请重试`,
     };
   }
 
@@ -104,11 +104,11 @@ export function classifyConnectError(
     raw.includes("dns") ||
     raw.includes("offline")
   ) {
-    return { kind: "network", message: "connection dropped — try again" };
+    return { kind: "network", message: "连接已断开 — 请重试" };
   }
 
   // Never leak the raw string to a non-technical user.
-  return { kind: "unknown", message: "couldn't connect — try again" };
+  return { kind: "unknown", message: "无法连接 — 请重试" };
 }
 
 /** Convenience: just the user-facing line. */

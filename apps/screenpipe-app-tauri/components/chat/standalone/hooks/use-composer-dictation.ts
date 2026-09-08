@@ -45,12 +45,12 @@ function preferredAudioType(): string | undefined {
 function captureErrorMessage(error: unknown): string {
   const name = error instanceof DOMException ? error.name : "";
   if (name === "NotAllowedError" || name === "SecurityError") {
-    return "Microphone access is blocked. Allow it in system settings and try again.";
+    return "麦克风访问被阻止，请在系统设置中允许访问后重试。";
   }
   if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-    return "No microphone was found.";
+    return "未找到麦克风。";
   }
-  return "Couldn't start the microphone. Check its connection and try again.";
+  return "无法启动麦克风，请检查连接后重试。";
 }
 
 export function formatDictationDuration(elapsedMs: number): string {
@@ -196,7 +196,7 @@ export function useComposerDictation({
         const message =
           caught instanceof ComposerDictationError
             ? caught.message
-            : "Couldn't transcribe that recording. Try again.";
+            : "无法转写这段录音，请重试。";
         setError(message);
         updateStatus("error");
       } finally {
@@ -294,7 +294,7 @@ export function useComposerDictation({
         });
         chunksRef.current = [];
         if (audio.size === 0) {
-          setError("No audio was captured. Try again.");
+          setError("没有采集到音频，请重试。");
           updateStatus("error");
           return;
         }

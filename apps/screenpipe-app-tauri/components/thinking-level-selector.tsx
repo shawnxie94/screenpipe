@@ -21,9 +21,9 @@ interface ThinkingLevelOption {
 }
 
 const THINKING_LEVELS: ThinkingLevelOption[] = [
-  { value: "low",    label: "Low" },
-  { value: "medium", label: "Medium" },
-  { value: "high",   label: "High" },
+  { value: "low",    label: "低" },
+  { value: "medium", label: "中" },
+  { value: "high",   label: "高" },
 ];
 
 function isValidLevel(v: string): v is ThinkingLevel {
@@ -107,7 +107,7 @@ export function ThinkingLevelSelector({
 
   const currentLabel = THINKING_LEVELS.find((l) => l.value === currentLevel)?.label ?? currentLevel;
 
-  const disabledReason = piThinkingUnsupported ? "Model doesn't support thinking" : null;
+  const disabledReason = piThinkingUnsupported ? "当前模型不支持思考" : null;
 
   const handleSetLevel = async (level: ThinkingLevel) => {
     if (isRpcLoading || piThinkingUnsupported) return;
@@ -161,7 +161,7 @@ export function ThinkingLevelSelector({
     <ComposerSettingsPopover
       label={currentLabel}
       title={disabledReason || "思考深度：控制推理深度"}
-      ariaLabel={`Thinking level: ${currentLabel}`}
+      ariaLabel={`思考级别：${currentLabel}`}
       triggerTestId="thinking-level-trigger"
       contentTestId="thinking-level-popover"
       triggerIcon={Gauge}

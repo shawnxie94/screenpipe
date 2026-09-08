@@ -191,21 +191,20 @@ export function CustomMcpCard() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-sm font-semibold text-foreground">
-                Custom MCP Server
+                自定义 MCP 服务器
               </h3>
               {servers.length > 0 && (
                 <span className="px-2 py-0.5 text-xs font-medium bg-foreground text-background rounded-full">
-                  {servers.length} server{servers.length === 1 ? "" : "s"}
+                  {servers.length} 个服务器
                 </span>
               )}
             </div>
 
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              Register MCP (Model Context Protocol) servers — browse the
-              official registry, or add an HTTP endpoint like Brave Search,
-              Linear, Notion, or a local stdio process like{" "}
+              注册 MCP（模型上下文协议）服务器——可以浏览官方注册表，或添加 Brave Search、
+              Linear、Notion 等 HTTP 端点，也可以添加类似{" "}
               <code className="text-xs bg-muted px-1 rounded">uvx mcp-server-brave</code>
-              {" "}— so scheduled tasks and chat can call their tools via{" "}
+              {" "}的本地 stdio 进程，让定时任务和聊天通过{" "}
               <code className="text-xs bg-muted px-1 rounded">sp_mcp_call</code>
               .
             </p>
@@ -223,8 +222,7 @@ export function CustomMcpCard() {
               </div>
             ) : loaded ? (
               <div className="text-[11px] text-muted-foreground bg-muted/30 rounded-md px-2.5 py-2 mb-3 leading-relaxed">
-                No servers yet. Browse the registry to discover servers, or add
-                one by URL like{" "}
+                尚未添加服务器。你可以浏览注册表发现服务器，或通过类似{" "}
                 <code className="text-[10px] bg-muted px-1 rounded">
                   https://mcp.brave.com/v1
                 </code>
@@ -241,7 +239,7 @@ export function CustomMcpCard() {
                 disabled={!loaded}
               >
                 <Boxes className="h-3 w-3 mr-1.5" />
-                Browse registry
+                浏览注册表
               </Button>
               <Button
                 variant="ghost"
@@ -268,16 +266,16 @@ export function CustomMcpCard() {
                 if (servers.length === 0)
                   return "支持 HTTP 和 stdio MCP 服务器";
                 if (enabled === 0)
-                  return `${servers.length} server${servers.length === 1 ? "" : "s"} registered, none enabled`;
+                    return `已注册 ${servers.length} 个服务器，当前均未启用`;
                 if (enabled === servers.length)
-                  return `${enabled} server${enabled === 1 ? "" : "s"} available to the agent`;
-                return `${enabled} of ${servers.length} servers enabled`;
+                  return `${enabled} 个服务器可供代理使用`;
+                return `${servers.length} 个服务器中已启用 ${enabled} 个`;
               })()}
             </span>
             <span className="ml-auto">
               {servers.some((s) => s.enabled)
-                ? "● enabled"
-                : "○ disabled"}
+                ? "● 已启用"
+                : "○ 未启用"}
             </span>
           </div>
         </div>
@@ -770,7 +768,7 @@ function ServerEditor({
             if (status.connected) {
               clearOAuthTimer();
               setOauthWaiting(false);
-              setOauthMessage("OAuth connected");
+              setOauthMessage("OAuth 已连接");
               await foregroundAfterOAuth();
               onSaved();
               return;
@@ -782,7 +780,7 @@ function ServerEditor({
         } else {
           setOauthWaiting(false);
           setOauthMessage(
-            "Sign-in was not completed — if your browser blocks http://localhost (e.g. Safari HTTPS-Only mode), click \"Open screenpipe\" on the confirmation page"
+            "登录未完成——如果浏览器阻止了 http://localhost（例如 Safari 的“仅 HTTPS”模式），请在确认页面点击“打开 screenpipe”。"
           );
         }
       };
@@ -801,7 +799,7 @@ function ServerEditor({
     clearOAuthTimer();
     setOauthWaiting(false);
     setOauthBusy(false);
-    setOauthMessage("Sign-in was cancelled");
+    setOauthMessage("登录已取消");
   };
 
   const handleOAuthDisconnect = async () => {
@@ -827,7 +825,7 @@ function ServerEditor({
       )}
       <div className="space-y-1.5">
         <Label htmlFor="mcp-name" className="text-xs">
-          Name
+          名称
         </Label>
             <Input
               id="mcp-name"
@@ -844,7 +842,7 @@ function ServerEditor({
             />
             {!name.trim() && effectiveName && (
               <p className="text-[11px] text-muted-foreground">
-                Will be saved as {effectiveName}.
+                将保存为 {effectiveName}。
               </p>
             )}
           </div>
@@ -856,7 +854,7 @@ function ServerEditor({
           </Label>
           {serverInput.trim().length > 0 && (
             <span className="text-[10px] text-muted-foreground">
-              {transport === "http" ? "Remote URL" : "本地命令"}
+              {transport === "http" ? "远程 URL" : "本地命令"}
             </span>
           )}
         </div>
@@ -867,7 +865,7 @@ function ServerEditor({
             setServerInput(e.target.value);
             setTestResult(null);
           }}
-          placeholder="https://mcp.notion.com/mcp or npx -y @modelcontextprotocol/server-filesystem"
+          placeholder="https://mcp.notion.com/mcp 或 npx -y @modelcontextprotocol/server-filesystem"
           className="h-8 text-sm font-mono"
         />
       </div>
@@ -890,14 +888,14 @@ function ServerEditor({
                     className="h-7 text-xs ml-auto border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                   >
                     <X className="h-3 w-3 mr-1" />
-                    Cancel
+                    取消
                   </Button>
                 </>
               ) : oauthStatus?.connected ? (
                 <>
                   <span className="flex items-center gap-1.5 text-xs font-medium">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                    Connected
+                    已连接
                   </span>
                   <Button
                     type="button"
@@ -910,7 +908,7 @@ function ServerEditor({
                     {oauthBusy ? (
                       <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                     ) : null}
-                    Disconnect
+                    断开连接
                   </Button>
                 </>
               ) : (
@@ -933,7 +931,7 @@ function ServerEditor({
                     ) : (
                       <LogIn className="h-3 w-3 mr-1" />
                     )}
-                    Connect
+                    连接
                   </Button>
                   {oauthMessage && (
                     <span className="text-[11px] text-muted-foreground ml-1">
@@ -942,7 +940,7 @@ function ServerEditor({
                   )}
                   {!oauthMessage && duplicateServer && (
                     <span className="text-[11px] text-muted-foreground ml-1">
-                      Will update {duplicateServer.name}
+                      将更新 {duplicateServer.name}
                     </span>
                   )}
                 </>
@@ -950,13 +948,12 @@ function ServerEditor({
             </div>
             {oauthWaiting && (
               <p className="text-[11px] text-muted-foreground pl-1">
-                Complete sign-in in the browser window, then return here.
+                请在浏览器窗口完成登录，然后返回这里。
               </p>
             )}
             {duplicateServer && !oauthWaiting && (
               <p className="text-[11px] text-muted-foreground">
-                This URL already exists. OAuth will update the existing server
-                instead of adding a duplicate.
+                此 URL 已存在。OAuth 会更新现有服务器，而不是添加重复项。
               </p>
             )}
           </div>
@@ -973,7 +970,7 @@ function ServerEditor({
                   showAdvanced ? "" : "-rotate-90"
                 }`}
               />
-              Manual authentication
+              手动身份验证
               {(bearerToken || headers.length > 0) && (
                 <span className="ml-1 text-foreground">
                   ({(bearerToken ? 1 : 0) + headers.length})
@@ -983,18 +980,17 @@ function ServerEditor({
             {showAdvanced && (
               <div className="space-y-1.5 pl-2 border-l border-border">
                 <p className="text-[11px] text-muted-foreground">
-                  Use this for MCP servers that require an API key instead of
-                  browser sign-in.
+                  如果 MCP 服务器需要 API 密钥而不是浏览器登录，请使用此方式。
                 </p>
                 <div className="space-y-1">
                   <Label htmlFor="mcp-bearer-token" className="text-[11px]">
-                    Bearer token
+                    Bearer 令牌
                   </Label>
                   <Input
                     id="mcp-bearer-token"
                     value={bearerToken}
                     onChange={(e) => setBearerToken(e.target.value)}
-                    placeholder="lin_api_... or Bearer ..."
+                    placeholder="lin_api_... 或 Bearer ..."
                     className="h-7 text-xs font-mono"
                     type={bearerToken === PLACEHOLDER_VALUE ? "password" : "text"}
                     autoComplete="off"
@@ -1041,7 +1037,7 @@ function ServerEditor({
                   className="text-xs h-7"
                 >
                   <Plus className="h-3 w-3 mr-1" />
-                  Add header
+                  添加请求头
                 </Button>
               </div>
             )}
@@ -1050,8 +1046,8 @@ function ServerEditor({
       ) : (
         <div className="space-y-1.5">
           <p className="text-[11px] text-muted-foreground">
-            Executable + arguments (space-separated). Screenpipe spawns this
-            process locally and speaks JSON-RPC 2.0 over stdin/stdout.
+            可执行文件和参数（以空格分隔）。Screenpipe 会在本地启动此进程，
+            并通过 stdin/stdout 使用 JSON-RPC 2.0 通信。
           </p>
         </div>
       )}
@@ -1077,16 +1073,14 @@ function ServerEditor({
             <>
               <div className="flex items-center gap-1.5 font-medium">
                 <Check className="h-3 w-3" />
-                Connected — {testResult.data.count} tool
-                {testResult.data.count === 1 ? "" : "s"} discovered
+                已连接——发现 {testResult.data.count} 个工具
               </div>
               <div className="font-mono text-[11px] text-muted-foreground leading-tight max-h-32 overflow-auto">
                 {testResult.data.tools.map((t) => t.name).join(", ")}
               </div>
               <p className="text-[11px] text-muted-foreground pt-1">
-                Heads up — when a scheduled task calls these tools they run with
-                screenpipe&apos;s grants. Review what each tool can do
-                before enabling on a sensitive workspace.
+                注意：定时任务调用这些工具时，会使用 screenpipe 的权限。
+                在敏感工作区启用前，请先确认每个工具的能力。
               </p>
             </>
           ) : (
@@ -1115,7 +1109,7 @@ function ServerEditor({
           {testing ? (
             <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
           ) : null}
-          Test connection
+          测试连接
         </Button>
         <div className="flex items-center gap-2">
           <Button
@@ -1125,7 +1119,7 @@ function ServerEditor({
             onClick={onCancel}
             className="text-xs"
           >
-            Cancel
+            取消
           </Button>
           <Button
             type="button"

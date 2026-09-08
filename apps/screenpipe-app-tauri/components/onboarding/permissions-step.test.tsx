@@ -66,11 +66,11 @@ vi.mock("posthog-js", () => ({
 
 import PermissionsStep from "./permissions-step";
 
-const micRow = () => screen.getByRole("button", { name: /capture what you say/i });
+const micRow = () => screen.getByRole("button", { name: /捕捉你说的话/ });
 const accessibilityRow = () =>
-  screen.getByRole("button", { name: /read on-screen text/i });
+  screen.getByRole("button", { name: /读取屏幕文字/ });
 const screenRow = () =>
-  screen.getByRole("button", { name: /capture your screen/i });
+  screen.getByRole("button", { name: /捕捉你的屏幕/ });
 
 describe("onboarding permission wheel", () => {
   beforeEach(() => {
@@ -227,7 +227,7 @@ describe("onboarding permission wheel", () => {
     // screen recording is last on the wheel — focused once the rest granted
     await waitFor(() => expect(screenRow()).toBeEnabled());
     const restartWarning = screen.getByText(
-      "restart after granting this permission."
+      "授予此权限后需要重启。"
     );
     expect(restartWarning.tagName).toBe("STRONG");
     expect(restartWarning).toHaveClass("font-bold");
@@ -255,7 +255,7 @@ describe("onboarding permission wheel", () => {
     );
     expect(prompt).toHaveTextContent("需要重启");
     expect(prompt).toHaveTextContent(
-      "screenpipe won't work until you restart."
+      "重启前 screenpipe 无法正常工作。"
     );
     expect(handleNextSlide).not.toHaveBeenCalled();
 
@@ -325,7 +325,7 @@ describe("onboarding permission wheel", () => {
 
     const details = await screen.findByTestId("onboarding-trust-details");
     await waitFor(() =>
-      expect(details).toHaveTextContent("couldn't open the folder")
+      expect(details).toHaveTextContent("无法打开文件夹")
     );
   });
 
@@ -350,12 +350,12 @@ describe("onboarding permission wheel", () => {
     render(<PermissionsStep handleNextSlide={vi.fn()} />);
 
     const summary = await screen.findByTestId("onboarding-trust-summary");
-    expect(summary).toHaveTextContent("pause anytime");
+    expect(summary).toHaveTextContent("可随时暂停");
 
     fireEvent.click(summary);
     expect(
       await screen.findByTestId("onboarding-pause-detail")
-    ).toHaveTextContent("pause recording anytime from the screenpipe icon");
+    ).toHaveTextContent("随时点击 screenpipe 图标暂停录制");
   });
 
   it("keeps the trust disclosure out of the restart-required state", async () => {

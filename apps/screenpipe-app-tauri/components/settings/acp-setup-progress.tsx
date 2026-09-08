@@ -18,24 +18,24 @@ export type AcpSetupPhase =
 const phaseTitle = (phase: AcpSetupPhase, agentName: string) => {
   switch (phase) {
     case "checking":
-      return `Preparing ${agentName}`;
+      return `正在准备 ${agentName}`;
     case "downloading":
-      return `Downloading ${agentName}`;
+      return `正在下载 ${agentName}`;
     case "installing":
-      return `Installing ${agentName}`;
+      return `正在安装 ${agentName}`;
     case "starting":
-      return `Starting ${agentName}`;
+      return `正在启动 ${agentName}`;
     case "connecting":
-      return `Connecting ${agentName}`;
+      return `正在连接 ${agentName}`;
     case "ready":
-      return `${agentName} is ready`;
+      return `${agentName} 已准备就绪`;
   }
 };
 
 const phaseDescription = (phase: AcpSetupPhase) => {
   switch (phase) {
     case "checking":
-      return "正在检查这台电脑上已有哪些可用项。";
+      return "正在检查这台电脑上有哪些可用项。";
     case "downloading":
       return "正在获取官方 ACP 适配器。首次安装可能需要一分钟。";
     case "installing":
@@ -45,7 +45,7 @@ const phaseDescription = (phase: AcpSetupPhase) => {
     case "connecting":
       return "适配器正在运行。正在加载其模型和模式选项。";
     case "ready":
-      return "Connected. Finishing the preset setup.";
+      return "已连接，正在完成预设配置。";
   }
 };
 
@@ -71,8 +71,8 @@ export function AcpSetupProgress({
   compact?: boolean;
 }) {
   const stages = includesInstall
-    ? [installKind === "download" ? "Download" : "Install", "Start", "Connect"]
-    : ["Start", "Connect"];
+    ? [installKind === "download" ? "下载" : "安装", "启动", "连接"]
+    : ["启动", "连接"];
   const currentStep = (() => {
     if (phase === "checking") return 0;
     if (phase === "downloading" || phase === "installing") return 1;
@@ -114,7 +114,7 @@ export function AcpSetupProgress({
         <div className="space-y-1.5">
           <div
             className="flex items-center"
-            aria-label={`${currentStep} of ${stages.length} setup steps`}
+            aria-label={`设置步骤 ${currentStep}/${stages.length}`}
           >
             {stages.map((label, index) => {
               const step = index + 1;
@@ -160,7 +160,7 @@ export function AcpSetupProgress({
             })}
           </div>
           <p className="text-right text-[10px] tabular-nums text-muted-foreground">
-            step {currentStep} of {stages.length}
+           第 {currentStep}/{stages.length} 步
           </p>
         </div>
       )}

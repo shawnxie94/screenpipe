@@ -142,7 +142,7 @@ export function useFrameContext(frameId: number | null): UseFrameContextReturn {
 				setError(
 					err instanceof Error
 						? err.message
-						: "Failed to fetch frame context"
+						: "获取画面上下文失败"
 				);
 				setContext(null);
 			}

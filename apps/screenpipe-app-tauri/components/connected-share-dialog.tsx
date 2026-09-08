@@ -122,9 +122,9 @@ const EMPTY_AVAILABILITY: ShareConnectionAvailability = {
 
 function slackChannelErrorMessage(error: string): string {
   if (error.toLowerCase().includes("missing_scope")) {
-    return 'Channels need Slack "Send + read" permission. You can still send to your own Slack messages.';
+    return '频道需要 Slack“发送和读取”权限。你仍然可以发送到自己的 Slack 消息。';
   }
-  return `${error} You can still send to your own Slack messages.`;
+  return `频道加载失败。你仍然可以发送到自己的 Slack 消息。`;
 }
 
 const CONNECTION_NAME: Record<ConnectedShareApp, string> = {
@@ -427,10 +427,10 @@ export function ConnectedShareDialog({
         setDestination(null);
         setConnectionsError(
           didTimeout
-            ? "Connection check timed out."
+            ? "连接检查超时。"
             : error instanceof Error
-              ? error.message
-              : "Couldn't check connected apps.",
+              ? "连接服务暂不可用。"
+              : "无法检查已连接的应用。",
         );
       })
       .finally(() => {
@@ -578,11 +578,11 @@ export function ConnectedShareDialog({
   const destinationLabel = (value: ConnectedShareDestination) => {
     if (value === "slack") {
       const channel = slackChannels.find((item) => item.id === slackTarget);
-      return channel ? `send to #${channel.name}` : "send to my Slack messages";
+      return channel ? `发送到 #${channel.name}` : "发送到我的 Slack 消息";
     }
-    if (value === "chat-notion") return "prepare Notion in Chat";
-    if (value === "chat-obsidian") return "prepare Obsidian in Chat";
-    return "copy snapshot";
+    if (value === "chat-notion") return "在聊天中准备 Notion";
+    if (value === "chat-obsidian") return "在聊天中准备 Obsidian";
+    return "复制快照";
   };
 
   /**
@@ -596,7 +596,7 @@ export function ConnectedShareDialog({
   ): string | undefined => {
     if (value === "slack") {
       const channel = slackChannels.find((item) => item.id === slackTarget);
-      return channel ? `#${channel.name}` : "my Slack messages";
+      return channel ? `#${channel.name}` : "我的 Slack 消息";
     }
     return undefined;
   };
@@ -632,8 +632,8 @@ export function ConnectedShareDialog({
       instance: slackInstance,
     });
     setReceipt({
-      title: "sent to Slack",
-      detail: `${result.team || "Slack"} · ${channel ? `#${channel.name}` : "your messages"} · ${result.ts || "delivered"}`,
+      title: "已发送到 Slack",
+        detail: `${result.team || "Slack"} · ${channel ? `#${channel.name}` : "你的消息"} · ${result.ts || "已送达"}`,
     });
   };
 
@@ -647,7 +647,7 @@ export function ConnectedShareDialog({
         snapshot: message,
       }),
       prompt: buildConnectedShareChatPrompt(provider),
-      displayLabel: `Share “${artifact.title}” to ${providerName}`,
+      displayLabel: `将“${artifact.title}”分享到 ${providerName}`,
       autoSend: false,
       source: `connected-share-${artifact.surface}`,
       useHomeChat: true,
@@ -676,14 +676,14 @@ export function ConnectedShareDialog({
         instance: destination === "slack" ? slackInstance : undefined,
       });
       if (destination === "slack") {
-        toast({ title: "sent to Slack" });
+        toast({ title: "已发送到 Slack" });
       }
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "The action did not complete.";
+        error instanceof Error ? error.message : "操作未完成。";
       setActionError(message);
       toast({
-        title: "couldn't complete sharing",
+        title: "分享未完成",
         description: message,
         variant: "destructive",
       });
@@ -795,31 +795,31 @@ export function ConnectedShareDialog({
     destination === "slack"
       ? slackChannels.find((item) => item.id === slackTarget)?.name
         ? `#${slackChannels.find((item) => item.id === slackTarget)?.name}`
-        : "my messages"
-      : currentIsChat && destination
-          ? "prepare a prompt in Chat"
+        : "我的 Slack 消息"
+          : currentIsChat && destination
+        ? "在聊天中准备提示词"
           : hasAnyDestination
-            ? "choose where this goes"
-            : "connect an app to send";
+            ? "请选择一个已连接的应用"
+            : "连接应用后发送";
 
   // Every label is a send verb now. `copy snapshot` was the odd one out and it
   // collided with the copy button on the same rule.
   const submitLabel =
     destination === "slack"
-      ? "send to Slack"
+      ? "发送到 Slack"
       : destination === "chat-notion"
-        ? "prepare Notion in Chat"
+        ? "在聊天中准备 Notion"
         : destination === "chat-obsidian"
-          ? "prepare Obsidian in Chat"
+          ? "在聊天中准备 Obsidian"
           : hasAnyDestination
-            ? "choose a destination"
-            : "connect an app to send";
+            ? "选择目标位置"
+            : "连接应用后发送";
 
   const contentsSummary = `${
     selectedSectionIds.length === artifact.sections.length
-      ? `all ${artifact.sections.length} blocks`
-      : `${selectedSectionIds.length} of ${artifact.sections.length} blocks`
-  } · ${outgoingMessage.length.toLocaleString()} characters`;
+      ? `全部 ${artifact.sections.length} 个内容块`
+      : `${selectedSectionIds.length} / ${artifact.sections.length} 个内容块`
+  } · ${outgoingMessage.length.toLocaleString()} 个字符`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -830,7 +830,7 @@ export function ConnectedShareDialog({
         <DialogHeader>
           <DialogTitle>发送快照</DialogTitle>
           <DialogDescription>
-            A frozen copy of “{artifact.title}”.
+            “{artifact.title}”的冻结副本。
           </DialogDescription>
         </DialogHeader>
 
@@ -839,8 +839,7 @@ export function ConnectedShareDialog({
             className="flex items-center gap-1.5 text-xs text-muted-foreground"
             role="status"
           >
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> checking connected
-            apps
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> 正在检查已连接的应用
           </p>
         )}
 
@@ -854,10 +853,10 @@ export function ConnectedShareDialog({
               <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-destructive" />
               <div>
                 <p className="font-medium">
-                  connected apps could not be checked
+                  无法检查已连接的应用
                 </p>
                 <p className="mt-0.5 text-muted-foreground">
-                  {connectionsError} Retry, or use copy on the rule above.
+                  {connectionsError} 请重试，或使用上方规则中的复制功能。
                 </p>
               </div>
             </div>
@@ -868,7 +867,7 @@ export function ConnectedShareDialog({
               className="h-7 rounded-none px-2"
               onClick={() => setConnectionsRefresh((value) => value + 1)}
             >
-              <RefreshCw className="mr-1 h-3 w-3" /> retry
+              <RefreshCw className="mr-1 h-3 w-3" /> 重试
             </Button>
           </div>
         )}
@@ -898,7 +897,7 @@ export function ConnectedShareDialog({
                   }`}
                 >
                   <span className="block text-xs font-medium">
-                    send unchanged
+                    原样发送
                   </span>
                   <span
                     className={`mt-0.5 block text-[10px] leading-snug ${
@@ -907,7 +906,7 @@ export function ConnectedShareDialog({
                         : "text-muted-foreground"
                     }`}
                   >
-                    exact frozen copy · no new AI processing
+                    完全保留冻结副本 · 不进行新的 AI 处理
                   </span>
                 </button>
                 <button
@@ -922,7 +921,7 @@ export function ConnectedShareDialog({
                   }`}
                 >
                   <span className="flex items-center gap-1 text-xs font-medium">
-                    <Sparkles className="h-3 w-3" /> review in Chat
+                    <Sparkles className="h-3 w-3" /> 在聊天中查看
                   </span>
                   <span
                     className={`mt-0.5 block text-[10px] leading-snug ${
@@ -931,7 +930,7 @@ export function ConnectedShareDialog({
                         : "text-muted-foreground"
                     }`}
                   >
-                    AI can format it · approval before any write
+                    AI 可以格式化内容 · 写入前需要授权
                   </span>
                 </button>
               </div>
@@ -946,7 +945,7 @@ export function ConnectedShareDialog({
                   <span className="flex min-w-0 items-center gap-2">
                     {currentOption?.icon}
                     <span className="shrink-0 text-sm">
-                      {currentOption?.name ?? "no destination"}
+                    {currentOption?.name ?? "选择发送位置"}
                     </span>
                     <span className="shrink-0 text-muted-foreground">·</span>
                     <span className="truncate text-xs text-muted-foreground">
@@ -954,7 +953,7 @@ export function ConnectedShareDialog({
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
-                    change
+                    更改
                     <ChevronDown className="h-3 w-3" />
                   </span>
                 </button>
@@ -963,7 +962,7 @@ export function ConnectedShareDialog({
                 {shareMode !== "chat" && directOptions.length > 0 && (
                   <>
                     <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                      send unchanged
+                      原样发送
                     </DropdownMenuLabel>
                     {directOptions.map((option) => (
                       <DropdownMenuItem
@@ -984,7 +983,7 @@ export function ConnectedShareDialog({
                 {shareMode === "chat" && chatOptions.length > 0 && (
                   <>
                     <DropdownMenuLabel className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                      review in Chat
+                      在聊天中查看
                     </DropdownMenuLabel>
                     {chatOptions.map((option) => (
                       <DropdownMenuItem
@@ -1017,7 +1016,7 @@ export function ConnectedShareDialog({
                         className="gap-2 text-xs text-muted-foreground"
                       >
                         <Plus className="h-3.5 w-3.5" />
-                        connect {CONNECTION_NAME[id]}
+                        连接 {CONNECTION_NAME[id]}
                       </DropdownMenuItem>
                     ))}
                   </>
@@ -1030,21 +1029,17 @@ export function ConnectedShareDialog({
                 className="text-[11px] text-muted-foreground"
                 data-testid="connected-share-empty"
               >
-                Nothing is connected for sharing yet. Connect an app to send
-                this snapshot, or use copy on the rule above to put it on your
-                clipboard.
+                暂无可用于分享的已连接应用。请先连接应用以发送此快照，或使用上方规则中的复制功能。
               </p>
             )}
             {!hasBothModes && shareMode === "unchanged" && destination && (
               <p className="text-[11px] text-muted-foreground">
-                Sends the frozen snapshot exactly as shown. No new AI
-                processing.
+                将按当前显示内容原样发送冻结快照，不会进行新的 AI 处理。
               </p>
             )}
             {currentIsChat && (
               <p className="text-[11px] text-muted-foreground">
-                Opens an editable Chat prompt. AI does not run until you submit
-                it, and Chat must ask before creating anything.
+                打开可编辑的聊天提示。提交前不会运行 AI，且聊天在创建任何内容前都会先征求确认。
               </p>
             )}
           </div>
@@ -1059,7 +1054,7 @@ export function ConnectedShareDialog({
             {slackInstances.length > 1 && (
               <div className="space-y-1.5">
                 <label className="text-xs text-muted-foreground">
-                  workspace
+                  工作区
                 </label>
                 <Select
                   value={slackInstance}
@@ -1086,7 +1081,7 @@ export function ConnectedShareDialog({
               </div>
             )}
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">channel</label>
+              <label className="text-xs text-muted-foreground">频道</label>
               <Select
                 value={slackTarget}
                 onValueChange={(value) => {
@@ -1100,11 +1095,11 @@ export function ConnectedShareDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={SELF_SLACK_TARGET}>
-                    my Slack messages
+                    我的 Slack 消息
                   </SelectItem>
                   {slackChannels.map((channel) => (
                     <SelectItem key={channel.id} value={channel.id}>
-                      {channel.is_private ? "private · " : "#"}
+                      {channel.is_private ? "私密 · " : "#"}
                       {channel.name}
                     </SelectItem>
                   ))}
@@ -1112,7 +1107,7 @@ export function ConnectedShareDialog({
               </Select>
               {slackChannelsLoading && (
                 <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin" /> loading channels
+                  <Loader2 className="h-3 w-3 animate-spin" /> 正在加载频道…
                 </p>
               )}
               {slackChannelsError && (
@@ -1127,7 +1122,7 @@ export function ConnectedShareDialog({
                     className="underline underline-offset-2"
                     onClick={() => setSlackRefresh((value) => value + 1)}
                   >
-                    retry
+                    重试
                   </button>
                 </p>
               )}
@@ -1172,10 +1167,10 @@ export function ConnectedShareDialog({
             label="消息"
             value={
               currentIsChat
-                ? "what Chat will review"
+                ? "聊天将要审阅的内容"
                 : destination === "slack"
-                  ? "Slack-formatted"
-                  : "plain text"
+                  ? "Slack 格式"
+                  : "纯文本"
             }
             action="preview"
             open={previewOpen}
@@ -1189,8 +1184,8 @@ export function ConnectedShareDialog({
                   className="text-[11px] text-muted-foreground"
                 >
                   {destination === "slack"
-                    ? "edits here apply only to Slack"
-                    : "edit before sending"}
+                    ? "此处的编辑仅应用于 Slack"
+                    : "发送前编辑"}
                 </label>
                 <span
                   className={`text-[10px] tabular-nums ${outgoingMessage.length > 39_000 ? "text-destructive" : "text-muted-foreground"}`}
@@ -1220,8 +1215,7 @@ export function ConnectedShareDialog({
 
         {artifact.sections.length === 0 && (
           <div className="border border-border px-3 py-2 text-xs" role="status">
-            This snapshot has no shareable blocks yet. Close this review, let
-            the Live View finish loading, then try again.
+            此快照还没有可分享的区块。请关闭此预览，等待 Live View 加载完成后重试。
           </div>
         )}
 
@@ -1229,13 +1223,12 @@ export function ConnectedShareDialog({
             button is disabled must never itself be behind a disclosure. */}
         {selectedSectionIds.length === 0 && artifact.sections.length > 0 && (
           <p className="text-[11px] text-destructive" role="alert">
-            Choose at least one block to share.
+            请至少选择一个要分享的区块。
           </p>
         )}
         {outgoingMessage.length > 39_000 && (
           <p className="text-[11px] text-destructive" role="alert">
-            This snapshot is too long. Remove some text or blocks before
-            sharing.
+            此快照过长。请在分享前移除部分文字或区块。
           </p>
         )}
 
@@ -1247,7 +1240,7 @@ export function ConnectedShareDialog({
           className="text-[11px] leading-relaxed text-muted-foreground"
           data-testid="connected-share-safety"
         >
-          {artifact.privacyNote} Nothing runs or sends until you press send.
+          {artifact.privacyNote} 在你点击发送前，不会运行或发送任何内容。
         </p>
 
         {actionError && (
@@ -1261,7 +1254,7 @@ export function ConnectedShareDialog({
               <p className="font-medium">操作未完成</p>
               <p className="mt-0.5 text-muted-foreground">{actionError}</p>
               <p className="mt-1 text-muted-foreground">
-                No success was recorded. Review the destination and try again.
+                尚未记录成功结果。请检查目标位置后重试。
               </p>
             </div>
           </div>
@@ -1287,7 +1280,7 @@ export function ConnectedShareDialog({
                 className="h-7 rounded-none px-2"
                 onClick={() => void openExternal(receipt.url as string)}
               >
-                open <ExternalLink className="ml-1 h-3 w-3" />
+                打开 <ExternalLink className="ml-1 h-3 w-3" />
               </Button>
             )}
           </div>
@@ -1300,7 +1293,7 @@ export function ConnectedShareDialog({
             className="rounded-none"
             onClick={() => onOpenChange(false)}
           >
-            close
+            关闭
           </Button>
           <Button
             type="button"

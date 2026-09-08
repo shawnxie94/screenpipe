@@ -31,6 +31,35 @@ import { cn } from "@/lib/utils";
 
 export type ActivityIconState = "running" | "completed" | "error" | "waiting";
 
+const ACTIVITY_KIND_LABELS: Record<ToolActivityIconKind, string> = {
+  work: "工作",
+  skill: "技能",
+  search: "搜索",
+  file: "文件",
+  edit: "编辑",
+  delete: "删除",
+  terminal: "终端",
+  test: "测试",
+  web: "网页",
+  screenpipe: "屏幕记录",
+  database: "数据库",
+  memory: "记忆",
+  meeting: "会议",
+  connection: "连接",
+  automation: "自动化",
+  export: "导出",
+  subagent: "子代理",
+  thinking: "思考",
+  approval: "授权",
+};
+
+const ACTIVITY_STATE_LABELS: Record<ActivityIconState, string> = {
+  running: "进行中",
+  completed: "已完成",
+  error: "出错",
+  waiting: "等待中",
+};
+
 const ACTIVITY_ICONS: Record<ToolActivityIconKind, LucideIcon> = {
   work: Sparkles,
   skill: ScrollText,
@@ -81,7 +110,7 @@ export function ActivityIcon({
       data-activity-state={state}
       data-testid={testId}
       role="img"
-      aria-label={`${kind} activity ${state}`}
+      aria-label={`${ACTIVITY_KIND_LABELS[kind]}活动：${ACTIVITY_STATE_LABELS[state]}`}
     >
       <span className="flex h-full w-full items-center justify-center overflow-hidden">
         {children ?? <Glyph className="h-3 w-3" strokeWidth={1.75} aria-hidden="true" />}

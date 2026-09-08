@@ -112,15 +112,15 @@ describe("meeting workspace tabs", () => {
       />,
     );
 
-    const notes = screen.getByRole("tab", { name: "notes" });
-    const transcript = screen.getByRole("tab", { name: "transcript" });
+    const notes = screen.getByRole("tab", { name: "笔记" });
+    const transcript = screen.getByRole("tab", { name: "转写" });
     expect(notes).toHaveAttribute("aria-selected", "true");
     expect(transcript).toHaveAttribute("aria-selected", "false");
 
     fireEvent.keyDown(notes, { key: "ArrowRight" });
     expect(onValueChange).toHaveBeenCalledWith("transcript");
     expect(transcript).toHaveFocus();
-    expect(screen.getByLabelText("summary working")).toBeVisible();
+    expect(screen.getByLabelText("摘要生成中")).toBeVisible();
   });
 
   // The note-wide copy action shares the tab rule so it is visible from every
@@ -133,7 +133,7 @@ describe("meeting workspace tabs", () => {
         value="notes"
         onValueChange={onValueChange}
         trailing={
-          <button type="button" aria-label="copy meeting and transcript">
+          <button type="button" aria-label="复制会议和转写">
             copy
           </button>
         }
@@ -141,18 +141,18 @@ describe("meeting workspace tabs", () => {
     );
 
     const copy = screen.getByRole("button", {
-      name: "copy meeting and transcript",
+      name: "复制会议和转写",
     });
     expect(copy).toBeVisible();
     expect(screen.getAllByRole("tab")).toHaveLength(3);
     expect(copy.closest('[role="tablist"]')).toBeNull();
 
     // End must land on the last real tab, not the trailing action.
-    fireEvent.keyDown(screen.getByRole("tab", { name: "notes" }), {
+    fireEvent.keyDown(screen.getByRole("tab", { name: "笔记" }), {
       key: "End",
     });
     expect(onValueChange).toHaveBeenCalledWith("summary");
-    expect(screen.getByRole("tab", { name: "summary" })).toHaveFocus();
+    expect(screen.getByRole("tab", { name: "摘要" })).toHaveFocus();
   });
 
   // A dot on a tab is a request for attention. Work in flight and failures
@@ -166,7 +166,7 @@ describe("meeting workspace tabs", () => {
         summaryState="working"
       />,
     );
-    expect(screen.getByLabelText("summary working")).toBeVisible();
+    expect(screen.getByLabelText("摘要生成中")).toBeVisible();
 
     rerender(
       <MeetingWorkspaceTabs
@@ -175,7 +175,7 @@ describe("meeting workspace tabs", () => {
         summaryState="attention"
       />,
     );
-    expect(screen.getByLabelText("summary attention")).toBeVisible();
+    expect(screen.getByLabelText("摘要需要处理")).toBeVisible();
 
     rerender(
       <MeetingWorkspaceTabs
@@ -184,7 +184,7 @@ describe("meeting workspace tabs", () => {
         summaryState={null}
       />,
     );
-    expect(screen.queryByLabelText(/^summary /)).toBeNull();
+    expect(screen.queryByLabelText(/^摘要/)).toBeNull();
   });
 
   // Standalone, the tabs draw their own rule. With a trailing action they are
@@ -257,7 +257,7 @@ describe("meeting summary surface", () => {
         .closest(".max-w-3xl"),
     ).not.toBeNull();
     expect(screen.queryByText(/private draft/)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "summarize again" }));
+    fireEvent.click(screen.getByRole("button", { name: "再次生成摘要" }));
     expect(onGenerate).toHaveBeenCalledOnce();
   });
 
@@ -317,8 +317,8 @@ describe("meeting summary surface", () => {
       />,
     );
 
-    expect(screen.getByText("no summary yet")).toBeVisible();
-    expect(screen.getByRole("button", { name: "generate" })).toBeDisabled();
+    expect(screen.getByText("尚未生成摘要")).toBeVisible();
+    expect(screen.getByRole("button", { name: "生成摘要" })).toBeDisabled();
   });
 
   it("keeps an existing summary visible while a refresh is running", () => {
@@ -333,7 +333,7 @@ describe("meeting summary surface", () => {
     );
 
     expect(screen.getByText("Existing decision.")).toBeVisible();
-    expect(screen.getByRole("status")).toHaveTextContent("writing summary");
+    expect(screen.getByRole("status")).toHaveTextContent("正在撰写摘要");
     expect(screen.getByRole("status")).toHaveTextContent(
       "writing an updated summary",
     );
@@ -350,8 +350,8 @@ describe("meeting summary surface", () => {
       />,
     );
 
-    expect(screen.getByRole("status")).toHaveTextContent("writing summary");
-    expect(screen.getByText("Draft will appear here")).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent("正在撰写摘要");
+    expect(screen.getByText("草稿会显示在这里")).toBeVisible();
     expect(
       screen.getByTestId("meeting-summary-writing-placeholder"),
     ).toHaveClass("min-h-64");
@@ -378,7 +378,7 @@ describe("meeting summary surface", () => {
       ),
     ).toBeVisible();
     expect(screen.queryByText("Earlier summary.")).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("writing summary");
+    expect(screen.getByRole("status")).toHaveTextContent("正在撰写摘要");
     expect(screen.getByTestId("meeting-summary-stream-cursor")).toBeVisible();
   });
 
@@ -395,12 +395,12 @@ describe("meeting summary surface", () => {
         onGenerate={onGenerate}
         canGenerate
         recovery={{
-          title: "AI usage limit reached",
+          title: "已达到 AI 使用上限",
           detail:
-            "The configured summary model has no usage left. Choose another model or upgrade.",
+            "配置的摘要模型已没有可用额度。请选择其他模型或升级。",
           retryable: false,
           upgrade: {
-            label: "upgrade to business",
+            label: "升级到 Business",
             onSelect: onUpgrade,
           },
           model: {
@@ -410,7 +410,7 @@ describe("meeting summary surface", () => {
             options: [
               {
                 id: "local",
-                label: "local",
+                label: "本地",
                 detail: "ollama · llama 3.2",
                 onSelect: onSelectModel,
               },
@@ -422,25 +422,25 @@ describe("meeting summary surface", () => {
     );
 
     const alert = screen.getByRole("alert");
-    expect(alert).toHaveTextContent("AI usage limit reached");
-    expect(alert).toHaveTextContent("configured summary model");
+    expect(alert).toHaveTextContent("已达到 AI 使用上限");
+    expect(alert).toHaveTextContent("配置的摘要模型");
     expect(
       screen.getByText("生成在写出摘要前停止了。"),
     ).toBeVisible();
-    expect(screen.getAllByText(/configured summary model/i)).toHaveLength(1);
-    expect(screen.queryByRole("button", { name: "retry" })).toBeNull();
-    expect(screen.queryByText("no summary yet")).toBeNull();
+    expect(screen.getAllByText(/配置的摘要模型/)).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "重试" })).toBeNull();
+    expect(screen.queryByText("尚未生成摘要")).toBeNull();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "upgrade to business" }),
+      screen.getByRole("button", { name: "升级到 Business" }),
     );
     expect(onUpgrade).toHaveBeenCalledOnce();
 
     fireEvent.keyDown(
-      screen.getByRole("button", { name: /change summary model/i }),
+      screen.getByRole("button", { name: /更换摘要模型/ }),
       { key: "Enter" },
     );
-    const localModel = (await screen.findByText("local")).closest(
+    const localModel = (await screen.findByText("本地")).closest(
       '[role="menuitem"]',
     );
     expect(localModel).not.toBeNull();
@@ -448,11 +448,11 @@ describe("meeting summary surface", () => {
     expect(onSelectModel).toHaveBeenCalledOnce();
 
     fireEvent.keyDown(
-      screen.getByRole("button", { name: /change summary model/i }),
+      screen.getByRole("button", { name: /更换摘要模型/ }),
       { key: "Enter" },
     );
     fireEvent.click(
-      await screen.findByRole("menuitem", { name: "manage models & keys" }),
+      await screen.findByRole("menuitem", { name: "管理模型和密钥" }),
     );
     expect(onManage).toHaveBeenCalledOnce();
   });
@@ -474,7 +474,7 @@ describe("meeting summary surface", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "retry" }));
+    fireEvent.click(screen.getByRole("button", { name: "重试" }));
     expect(onGenerate).toHaveBeenCalledOnce();
   });
 });

@@ -36,10 +36,10 @@ export type ChatRichResultKind = (typeof CHAT_RICH_RESULT_KINDS)[number];
 export type ChatRichResultState = (typeof CHAT_RICH_RESULT_STATES)[number];
 
 const CHAT_RICH_RESULT_KIND_LABELS: Record<ChatRichResultKind, string> = {
-  "scheduled-task": "Scheduled task",
-  artifact: "Artifact",
-  chat: "Chat",
-  "live-view": "Live View",
+  "scheduled-task": "定时任务",
+  artifact: "内容文件",
+  chat: "聊天",
+  "live-view": "实时视图",
   link: "Web resource",
 };
 
@@ -211,7 +211,7 @@ function artifactFromToolCall(toolCall: ToolCall): ChatRichResult | null {
     kind: "artifact",
     state: "created",
     title,
-    subtitle: "Saved to Artifacts",
+    subtitle: "已保存到产物",
     path,
     source: "tool",
   };
@@ -242,15 +242,15 @@ export function dedupeChatRichResults(results: ChatRichResult[]): ChatRichResult
 
 export function chatRichResultStateLabel(state: ChatRichResultState): string {
   return ({
-    proposed: "Proposed",
-    pending: "Working",
-    created: "Created",
-    updated: "Updated",
-    completed: "Completed",
-    paused: "Paused",
-    deleted: "Deleted",
-    missing: "Unavailable",
-    error: "Needs attention",
+    proposed: "待确认",
+    pending: "处理中",
+    created: "已创建",
+    updated: "已更新",
+    completed: "已完成",
+    paused: "已暂停",
+    deleted: "已删除",
+    missing: "不可用",
+    error: "需要处理",
   } satisfies Record<ChatRichResultState, string>)[state];
 }
 

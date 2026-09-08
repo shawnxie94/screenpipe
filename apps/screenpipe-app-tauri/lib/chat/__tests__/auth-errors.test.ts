@@ -32,7 +32,7 @@ describe("auth error classification", () => {
   });
 
   it("has user-facing copy for the forced sign-in message", () => {
-    expect(buildInvalidatedAuthTokenMessage()).toContain("Sign in again");
+    expect(buildInvalidatedAuthTokenMessage()).toContain("重新登录");
   });
 
   it("distinguishes a user-cancelled ACP login from provider failures", () => {

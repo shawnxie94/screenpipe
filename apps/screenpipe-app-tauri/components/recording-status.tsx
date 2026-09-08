@@ -252,7 +252,7 @@ export function RecordingStatus({
             <div className="px-3 py-2 text-[11px] text-muted-foreground">
               {allCaptureDisabled ? (
                 <>
-                  no devices enabled{" "}
+                  未启用任何设备{" "}
                   <button
                     type="button"
                     onClick={() => {
@@ -261,11 +261,11 @@ export function RecordingStatus({
                     }}
                     className="underline text-foreground hover:opacity-70 transition-opacity"
                   >
-                    open settings
+                    打开设置
                   </button>
                 </>
               ) : (
-                "no capture devices reported"
+                "没有检测到采集设备"
               )}
             </div>
           )}

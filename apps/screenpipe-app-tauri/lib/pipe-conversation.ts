@@ -83,7 +83,7 @@ export function pipeExecutionErrorMessage(
   return (
     execution.error_message?.trim() ||
     execution.stderr?.trim() ||
-    "the latest run failed"
+    "最近一次运行失败"
   );
 }
 

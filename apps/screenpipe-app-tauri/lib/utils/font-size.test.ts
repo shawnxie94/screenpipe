@@ -30,10 +30,10 @@ describe("FONT_SIZE_OPTIONS", () => {
 
   it("has human-readable labels", () => {
     expect(FONT_SIZE_OPTIONS.map((o) => o.label)).toEqual([
-      "Small",
-      "Medium",
-      "Large",
-      "X-Large",
+      "小",
+      "中",
+      "大",
+      "特大",
     ]);
   });
 });

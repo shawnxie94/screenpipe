@@ -73,18 +73,18 @@ describe("resolveTurnPhase", () => {
 
 describe("turnPhaseLabel", () => {
   it("only says done for an observed completion", () => {
-    expect(turnPhaseLabel("done", { active: false }, 6000)).toBe("done in 6s");
+    expect(turnPhaseLabel("done", { active: false }, 6000)).toBe("已完成，用时 6 秒");
   });
 
   it("says stopped, not done, when the user stops the turn", () => {
     const label = turnPhaseLabel("stopped", { active: false }, 4000);
-    expect(label).toBe("stopped · 4s");
+    expect(label).toBe("已停止 · 4 秒");
     expect(label).not.toContain("done");
   });
 
   it("says interrupted for an abandoned turn", () => {
     const label = turnPhaseLabel("interrupted", { active: false }, 9000);
-    expect(label).toBe("interrupted");
+    expect(label).toBe("已中断");
     expect(label).not.toContain("done");
   });
 
@@ -101,12 +101,12 @@ describe("turnPhaseLabel", () => {
         { active: true, booting: true, bootLabel: "installing Claude Code" },
         12_000,
       ),
-    ).toBe("installing Claude Code · 12s");
+    ).toBe("installing Claude Code · 12 秒");
   });
 
   it("falls back to a generic starting label", () => {
     expect(turnPhaseLabel("starting", { active: true, booting: true })).toBe(
-      "starting the AI",
+      "正在启动 AI",
     );
   });
 
@@ -125,9 +125,9 @@ describe("turnPhaseLabel", () => {
   });
 
   it("omits an elapsed time that is not worth reading", () => {
-    expect(turnPhaseLabel("analyzing", { active: true }, 400)).toBe("analyzing");
+    expect(turnPhaseLabel("analyzing", { active: true }, 400)).toBe("正在分析");
     expect(turnPhaseLabel("analyzing", { active: true }, 3000)).toBe(
-      "analyzing · 3s",
+      "正在分析 · 3 秒",
     );
   });
 
@@ -137,7 +137,7 @@ describe("turnPhaseLabel", () => {
         active: true,
         liveness: { state: "offline" },
       }),
-    ).toBe("offline · message saved; retrying when online");
+    ).toBe("离线 · 消息已保存，联网后重试");
   });
 
   it("shows the bounded retry attempt and countdown", () => {
@@ -152,7 +152,7 @@ describe("turnPhaseLabel", () => {
           retryInMs: 4_100,
         },
       }),
-    ).toBe("retrying · attempt 2/3 · in 5s");
+    ).toBe("正在重试 · 第 2/3 次尝试 · 5 秒后");
   });
 
   it("shows how long the harness has been silent", () => {
@@ -161,7 +161,7 @@ describe("turnPhaseLabel", () => {
         active: true,
         liveness: { state: "stalled", silentForMs: 31_000 },
       }),
-    ).toBe("still working · no update for 31s");
+    ).toBe("仍在处理 · 已有 31 秒 没有更新");
   });
 
   it("never lets stale liveness replace a terminal receipt", () => {
@@ -170,7 +170,7 @@ describe("turnPhaseLabel", () => {
         active: false,
         liveness: { state: "offline" },
       }),
-    ).toBe("failed");
+    ).toBe("失败");
   });
 });
 
@@ -181,10 +181,10 @@ describe("formatTurnElapsed", () => {
   });
 
   it("formats seconds and minutes", () => {
-    expect(formatTurnElapsed(1000)).toBe("1s");
-    expect(formatTurnElapsed(59_000)).toBe("59s");
-    expect(formatTurnElapsed(60_000)).toBe("1m");
-    expect(formatTurnElapsed(111_000)).toBe("1m 51s");
+    expect(formatTurnElapsed(1000)).toBe("1 秒");
+    expect(formatTurnElapsed(59_000)).toBe("59 秒");
+    expect(formatTurnElapsed(60_000)).toBe("1 分钟");
+    expect(formatTurnElapsed(111_000)).toBe("1 分钟 51 秒");
   });
 
   it("tolerates a non-finite duration", () => {

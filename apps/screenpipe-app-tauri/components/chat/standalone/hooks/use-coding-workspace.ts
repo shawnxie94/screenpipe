@@ -125,10 +125,10 @@ export function useCodingWorkspace({
   const attachRepositoryPath = useCallback(
     async (repositoryPath: string) => {
       if (!conversationId)
-        throw new Error("Start a conversation before choosing a repository");
+        throw new Error("请先开始一段对话，再选择仓库");
       if (lockedRef.current)
         throw new Error(
-          "Choose a coding workspace before sending the first message",
+          "发送第一条消息前，请先选择编码工作区",
         );
       const requestConversationId = conversationId;
       const generation = ++requestGenerationRef.current;
@@ -150,9 +150,9 @@ export function useCodingWorkspace({
         publishWorkspaceIdentity(requestConversationId, result.data);
         setResolvedConversationId(requestConversationId);
         toast({
-          title: "coding workspace ready",
+          title: "编码工作区已准备好",
           description: result.data.sourceDirty
-            ? "created from HEAD; your uncommitted source changes were left untouched"
+            ? "已从 HEAD 创建；未提交的源代码改动保持不变"
             : result.data.branch,
         });
         return result.data;
@@ -165,7 +165,7 @@ export function useCodingWorkspace({
           setEnabled(false);
           setError(message);
           toast({
-            title: "could not create coding workspace",
+            title: "无法创建编码工作区",
             description: message,
             variant: "destructive",
           });
@@ -215,7 +215,7 @@ export function useCodingWorkspace({
         return { ok: true, created: false, workspace: currentWorkspace };
       }
       if (!conversationId)
-        throw new Error("Start a conversation before enabling worktree mode");
+        throw new Error("请先开始一段对话，再启用工作树模式");
       if (lockedRef.current)
         throw new Error(
           "Worktree mode must be enabled before the first message",
@@ -237,10 +237,10 @@ export function useCodingWorkspace({
         let created = result.data.status === "created";
         if (!preparedWorkspace && result.data.status === "select") {
           if (!router) {
-            throw new Error("The AI repository router is unavailable");
+            throw new Error("AI 仓库路由器不可用");
           }
           if (!result.data.routeSessionId) {
-            throw new Error("The AI repository route is unavailable");
+            throw new Error("AI 仓库路由不可用");
           }
           preparedWorkspace = await selectWorktreeRepository({
             routeSessionId: result.data.routeSessionId,
@@ -254,7 +254,7 @@ export function useCodingWorkspace({
         }
         if (!preparedWorkspace) {
           const message =
-            "No nearby Git repository was found for this coding task.";
+            "未找到适合此编码任务的附近 Git 仓库。";
           if (
             generation === requestGenerationRef.current &&
             conversationIdRef.current === requestConversationId
@@ -262,7 +262,7 @@ export function useCodingWorkspace({
             setEnabled(false);
             setError(message);
             toast({
-              title: "could not resolve a coding repository",
+            title: "无法找到编码仓库",
               description: message,
               variant: "destructive",
             });
@@ -278,9 +278,9 @@ export function useCodingWorkspace({
           setEnabled(true);
           setResolvedConversationId(requestConversationId);
           toast({
-            title: "coding workspace ready",
+            title: "编码工作区已准备好",
             description: preparedWorkspace.sourceDirty
-              ? "created from HEAD; your uncommitted source changes were left untouched"
+              ? "已从 HEAD 创建；未提交的源代码改动保持不变"
               : preparedWorkspace.branch,
           });
         }
@@ -298,7 +298,7 @@ export function useCodingWorkspace({
           setEnabled(false);
           setError(message);
           toast({
-            title: "could not create coding workspace",
+            title: "无法创建编码工作区",
             description: message,
             variant: "destructive",
           });

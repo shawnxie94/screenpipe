@@ -59,7 +59,7 @@ export function parsePipeError(stderr: string): ParsedPipeError {
   if (hasSafetyRefusalToken(normalized)) {
     return {
       type: "safety_refusal",
-      message: "AI provider declined this scheduled task under its safety policy",
+      message: "AI 服务商根据安全策略拒绝了此计划任务",
     };
   }
   if (
@@ -68,26 +68,26 @@ export function parsePipeError(stderr: string): ParsedPipeError {
   ) {
     return {
       type: "daily_limit",
-      message: "daily AI usage limit reached",
+      message: "已达到每日 AI 使用上限",
     };
   }
   if (normalized.includes("credits_exhausted")) {
     return {
       type: "credits_exhausted",
-      message: "daily AI limit reached — upgrade or wait until tomorrow",
+      message: "已达到每日 AI 限额——请升级，或等到明天再试",
       credits_remaining: 0,
     };
   }
   if (normalized.includes("model_not_allowed")) {
     return {
       type: "model_not_allowed",
-      message: "uses a model that needs business — switch to a free model (auto) or upgrade",
+      message: "使用了需要商业版权限的模型——请切换到免费模型（自动），或进行升级",
     };
   }
   if (hasQuotaExhaustedToken(normalized)) {
     return {
       type: "quota_exhausted",
-      message: "provider quota or billing limit reached",
+      message: "已达到服务商配额或计费上限",
     };
   }
   if (
@@ -97,7 +97,7 @@ export function parsePipeError(stderr: string): ParsedPipeError {
   ) {
     return {
       type: "rate_limit",
-      message: "rate limited — retrying automatically",
+      message: "触发频率限制——正在自动重试",
     };
   }
   return { type: "unknown", message: stderr.slice(0, 150) };
@@ -140,7 +140,7 @@ function classifyStructuredPipeError(value: unknown): ParsedPipeError | null {
   if (hasSafetyRefusalToken(combined)) {
     return {
       type: "safety_refusal",
-      message: message || "AI provider declined this scheduled task under its safety policy",
+      message: "AI 服务商根据安全策略拒绝了此计划任务",
     };
   }
   if (combined.includes("daily_limit_exceeded")) {
@@ -148,8 +148,8 @@ function classifyStructuredPipeError(value: unknown): ParsedPipeError | null {
       type: "daily_limit",
       message:
         typeof record.used_today === "number" && typeof record.limit_today === "number"
-          ? `daily limit reached (${record.used_today}/${record.limit_today})`
-          : message || "daily AI usage limit reached",
+          ? `已达到每日 AI 使用上限（${record.used_today}/${record.limit_today}）`
+          : "已达到每日 AI 使用上限",
       used: numberValue(record.used_today),
       limit: numberValue(record.limit_today),
       resets_at: stringValue(record.resets_at),
@@ -158,29 +158,27 @@ function classifyStructuredPipeError(value: unknown): ParsedPipeError | null {
   if (combined.includes("daily_cost_limit_exceeded")) {
     return {
       type: "daily_limit",
-      message:
-        message ||
-        "daily AI usage limit reached — try a lighter model or wait until tomorrow",
+      message: "已达到每日 AI 使用上限",
       resets_at: stringValue(record.resets_at),
     };
   }
   if (combined.includes("credits_exhausted")) {
     return {
       type: "credits_exhausted",
-      message: message || "daily AI limit reached — upgrade or wait until tomorrow",
+      message: "已达到每日 AI 限额——请升级，或等到明天再试",
       credits_remaining: numberValue(record.credits_remaining) ?? 0,
     };
   }
   if (combined.includes("model_not_allowed")) {
     return {
       type: "model_not_allowed",
-      message: "uses a model that needs business — switch to a free model (auto) or upgrade",
+      message: "使用了需要商业版权限的模型——请切换到免费模型（自动），或进行升级",
     };
   }
   if (hasQuotaExhaustedToken(combined)) {
     return {
       type: "quota_exhausted",
-      message: message || "provider quota or billing limit reached",
+      message: "已达到服务商配额或计费上限",
     };
   }
   if (
@@ -190,7 +188,7 @@ function classifyStructuredPipeError(value: unknown): ParsedPipeError | null {
   ) {
     return {
       type: "rate_limit",
-      message: message || "rate limited — retrying automatically",
+      message: "触发频率限制——正在自动重试",
     };
   }
   return null;

@@ -20,13 +20,13 @@ function useMinuteTick(enabled = true): number {
 function formatCompactAge(timestamp?: number, now = Date.now()): string | null {
   if (!timestamp || !Number.isFinite(timestamp)) return null;
   const ms = Math.max(0, now - timestamp);
-  if (ms < 60_000) return "now";
+  if (ms < 60_000) return "刚刚";
   const minutes = Math.floor(ms / 60_000);
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60) return `${minutes} 分钟前`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) return `${hours} 小时前`;
   const days = Math.floor(hours / 24);
-  return `${Math.max(1, days)}d`;
+  return `${Math.max(1, days)} 天前`;
 }
 
 interface RecentChatSwitcherProps {
@@ -79,11 +79,11 @@ export function RecentChatSwitcher({
           >
             {hasSessions ? (
               <div className="px-4 pb-1.5 pt-3 text-[12px] font-normal text-muted-foreground/70">
-                Open chats
+                已打开的聊天
               </div>
             ) : (
               <div className="px-4 pb-1.5 pt-3 text-[12px] font-normal text-muted-foreground/70">
-                No open chats
+               没有打开的聊天
               </div>
             )}
             <div

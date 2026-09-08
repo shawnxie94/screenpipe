@@ -77,17 +77,17 @@ describe("AskUserToolCard", () => {
       ],
     })} onSubmit={onSubmit} />);
 
-    fireEvent.change(screen.getByLabelText("Answer Scope"), {
+    fireEvent.change(screen.getByLabelText("回答：Scope"), {
       target: { value: "ui" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Reply" }));
+    fireEvent.click(screen.getByRole("button", { name: "回复" }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit.mock.calls[0][0]).toBe(
       "以下是我对你 ask_user 问题的回答：\n- Where should I start?: UI polish",
     );
-    expect(onSubmit.mock.calls[0][1]).toBe("Answered Ask user: UI polish");
-    expect(await screen.findByText("sent")).toBeInTheDocument();
+    expect(onSubmit.mock.calls[0][1]).toBe("已回答用户问题：UI polish");
+    expect(await screen.findByText("已发送")).toBeInTheDocument();
   });
 
   it("supports multi-select plus free-form nuance", async () => {
@@ -106,10 +106,10 @@ describe("AskUserToolCard", () => {
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Unit tests" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "E2E" }));
-    fireEvent.change(screen.getByLabelText("Custom answer Checks"), {
+    fireEvent.change(screen.getByLabelText("自定义回答：Checks"), {
       target: { value: "Also inspect the screenshot state." },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Reply" }));
+    fireEvent.click(screen.getByRole("button", { name: "回复" }));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit.mock.calls[0][0]).toContain(

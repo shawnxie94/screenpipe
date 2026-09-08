@@ -40,8 +40,8 @@ describe("MessageContent — repeated Claude tools", () => {
 
     const compactRows = screen.getAllByTestId("tool-activity-item");
     expect(compactRows).toHaveLength(1);
-    expect(compactRows[0]).toHaveTextContent("Searched recordings");
-    expect(compactRows[0]).toHaveTextContent("25 queries");
+    expect(compactRows[0]).toHaveTextContent("已搜索记录");
+    expect(compactRows[0]).toHaveTextContent("25 次查询");
 
     fireEvent.click(compactRows[0]);
 
@@ -57,7 +57,7 @@ describe("MessageContent — repeated Claude tools", () => {
     fireEvent.click(screen.getByTestId("tool-activity-summary"));
 
     expect(screen.getAllByTestId("tool-activity-item")).toHaveLength(2);
-    expect(screen.queryByText("2 queries")).toBeNull();
+    expect(screen.queryByText("2 次查询")).toBeNull();
   });
 
   it("keeps a failed query separate from a successful batch", () => {
@@ -72,7 +72,7 @@ describe("MessageContent — repeated Claude tools", () => {
     fireEvent.click(screen.getByTestId("tool-activity-summary"));
 
     expect(screen.getAllByTestId("tool-activity-item")).toHaveLength(2);
-    expect(screen.getByText("3 queries")).toBeTruthy();
-    expect(screen.getAllByText("failed")).toHaveLength(1);
+    expect(screen.getByText("3 次查询")).toBeTruthy();
+    expect(screen.getAllByText("失败")).toHaveLength(1);
   });
 });

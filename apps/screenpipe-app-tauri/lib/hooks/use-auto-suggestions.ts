@@ -25,12 +25,12 @@ export type ActivityMode =
 // the same one this hook used to fall back to whenever the scheduler's cache
 // was unavailable, i.e. the de facto behavior for every local-only session.
 const STARTER_SUGGESTIONS: Suggestion[] = [
-  { text: "what did I work on in the last hour?", priority: 1 },
-  { text: "summarize my day so far" },
-  { text: "which apps did I use most today" },
-  { text: "show my recent screen activity" },
-  { text: "what was I working on" },
-  { text: "how much time did I spend on each app" },
+  { text: "我过去一小时做了什么？", priority: 1 },
+  { text: "总结一下我今天到目前为止的活动" },
+  { text: "我今天最常使用哪些应用？" },
+  { text: "查看我最近的屏幕活动" },
+  { text: "我刚才在做什么？" },
+  { text: "我在每个应用上分别花了多少时间？" },
 ];
 
 export function useAutoSuggestions() {

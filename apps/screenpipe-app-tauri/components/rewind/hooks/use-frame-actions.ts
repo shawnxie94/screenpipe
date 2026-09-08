@@ -81,7 +81,7 @@ export function useFrameActions(opts: {
 		const textSnippet = rawText.slice(0, 300);
 		const context = `Context from timeline frame:\n${device.metadata?.app_name || "?"} - ${device.metadata?.window_name || "?"}\nTime: ${currentFrame?.timestamp || "?"}\n\nText:\n${textSnippet}${textSnippet.length >= 300 ? "…" : ""}`;
 		await showChatWithPrefill({ context, frameId: parseInt(debouncedFrame.frameId, 10) });
-		toast({ title: "ask about this frame", description: "chat opened with frame context" });
+		toast({ title: "询问此画面", description: "已打开包含画面上下文的聊天" });
 	}, [debouncedFrame, device, frameContext?.text, textPositions, currentFrame]);
 
 	const runPipeWithContext = useCallback(async (pipe: TemplatePipe) => {

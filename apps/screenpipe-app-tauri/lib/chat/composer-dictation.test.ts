@@ -38,7 +38,7 @@ describe("composer dictation", () => {
       transcribeComposerAudio(new Blob(["audio"]), "signed-token"),
     ).rejects.toMatchObject<Partial<ComposerDictationError>>({
       code: "unavailable",
-      message: "Cloud dictation is no longer available. Configure a local transcription engine in Settings.",
+      message: "云端听写已不可用，请在设置中配置本地转写引擎。",
     });
   });
 });

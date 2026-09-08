@@ -286,13 +286,13 @@ function setStore(next: Partial<typeof store>) {
  * make the "both surfaces agree" test meaningless.
  */
 const panel = () =>
-	screen.getByRole("heading", { name: /screen recording is off/i });
+  screen.getByRole("heading", { name: /屏幕录制已关闭/i });
 const queryPanel = () =>
-	screen.queryByRole("heading", { name: /screen recording is off/i });
+  screen.queryByRole("heading", { name: /屏幕录制已关闭/i });
 /** The bar under the scrubber. */
-const statusBar = () => screen.queryByText(/no timeline to show/i);
+const statusBar = () => screen.queryByText(/暂无时间线可显示/i);
 const recordingCopy = () =>
-	screen.queryByText(/Recording\.\.\. timeline will appear soon/i);
+  screen.queryByText(/正在录制……时间线很快会显示/i);
 
 beforeEach(() => {
 	setStore({

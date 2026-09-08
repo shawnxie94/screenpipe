@@ -41,19 +41,19 @@ export function DiskUsageSection() {
     return (
       <div className="space-y-6">
         <p className="text-muted-foreground text-sm mb-4">
-          Monitor storage usage for your Screenpipe data
+          查看 Screenpipe 数据的存储空间使用情况
         </p>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center text-destructive">
-              <p>Failed to load disk usage: {error}</p>
+              <p>磁盘使用情况加载失败：{error}</p>
               <Button
                 onClick={handleRefresh}
                 variant="outline"
                 className="mt-2"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
+                重试
               </Button>
             </div>
           </CardContent>
@@ -65,7 +65,7 @@ export function DiskUsageSection() {
   return (
     <div className="space-y-5">
       <p className="text-muted-foreground text-sm mb-4">
-        Storage usage at ~/.screenpipe
+        ~/.screenpipe 中的存储空间使用情况
       </p>
 
       <div className="flex items-center justify-end">
@@ -79,7 +79,7 @@ export function DiskUsageSection() {
           <RefreshCw
             className={`h-3 w-3 mr-1.5 ${isLoading ? "animate-spin" : ""}`}
           />
-          {isLoading ? "..." : "Refresh"}
+          {isLoading ? "…" : "刷新"}
         </Button>
       </div>
 
@@ -116,13 +116,13 @@ export function DiskUsageSection() {
           return (
             <div className="rounded-md border border-border bg-card px-3 py-2.5 space-y-1.5">
               <p className="text-sm font-medium">
-                {months} {months === 1 ? "month" : "months"} of memory in{" "}
+                已记录 {months} {months === 1 ? "个月" : "个月"}，占用{" "}
                 {dataGb} GB
               </p>
               <Progress value={usedPct} className="h-1.5" />
               <p className="text-xs text-muted-foreground">
-                ~{remainingMonths} {remainingMonths === 1 ? "month" : "months"}{" "}
-                of space remaining
+                预计还可用约 {remainingMonths} 个月，剩余{" "}
+                可用空间
               </p>
             </div>
           );
@@ -193,7 +193,7 @@ export function DiskUsageSection() {
               <Skeleton className="h-5 w-16" />
             ) : (
               <div className="text-sm font-bold">
-                {diskUsage?.available_space || "Unknown"}
+                {diskUsage?.available_space || "未知"}
               </div>
             )}
           </CardContent>

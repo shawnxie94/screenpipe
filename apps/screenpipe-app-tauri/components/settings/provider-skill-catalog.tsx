@@ -123,11 +123,10 @@ export function ProviderSkillCatalog({
           id="provider-skill-catalog-title"
           className="text-sm font-medium text-foreground"
         >
-          Recommended skills
+          推荐技能
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Install reviewed OpenAI and Anthropic workflows without leaving
-          screenpipe.
+          无需离开 screenpipe，即可安装经过审核的 OpenAI 和 Anthropic 工作流。
         </p>
       </div>
 
@@ -151,12 +150,12 @@ export function ProviderSkillCatalog({
             onClick={() => void load()}
           >
             <RotateCw className="h-3 w-3" aria-hidden />
-            retry
+            重试
           </Button>
         </div>
       ) : recommended.length === 0 ? (
         <p className="rounded-lg border border-border bg-muted/20 p-4 text-xs text-muted-foreground">
-          No provider skills are available right now.
+          当前没有可用的服务商技能。
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
@@ -195,7 +194,7 @@ export function ProviderSkillCatalog({
                 {isInstalled && !isBusy ? (
                   <span className="inline-flex shrink-0 items-center gap-1 px-2 py-1 text-[10px] text-muted-foreground">
                     <Check className="h-3 w-3" aria-hidden />
-                    added
+                    已添加
                   </span>
                 ) : (
                   <Button
@@ -210,7 +209,7 @@ export function ProviderSkillCatalog({
                     ) : (
                       <Download className="h-3 w-3" aria-hidden />
                     )}
-                    {installError ? "retry" : isBusy ? "installing" : "install"}
+                    {installError ? "重试" : isBusy ? "安装中" : "安装"}
                   </Button>
                 )}
               </article>

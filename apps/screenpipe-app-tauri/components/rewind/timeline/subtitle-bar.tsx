@@ -150,7 +150,7 @@ export function SubtitleBar({ frames, currentIndex, isPlaying, onClick, transcri
 					title="显示字幕"
 				>
 					<MessageSquareText className="w-3.5 h-3.5" />
-					<span className="text-[10px] font-medium">captions</span>
+					<span className="text-[10px] font-medium">字幕</span>
 				</button>
 			</div>
 		);
@@ -174,7 +174,7 @@ export function SubtitleBar({ frames, currentIndex, isPlaying, onClick, transcri
 					title="隐藏字幕"
 				>
 					<X className="w-3 h-3" />
-					<span>hide</span>
+					<span>隐藏</span>
 				</button>
 			</div>
 			<div
@@ -189,7 +189,7 @@ export function SubtitleBar({ frames, currentIndex, isPlaying, onClick, transcri
 							<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
 							<span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
 						</span>
-						<span>transcription paused{meetingApp ? ` (${meetingApp})` : ""}</span>
+						<span>转写已暂停{meetingApp ? `（${meetingApp}）` : ""}</span>
 					</div>
 				)}
 
@@ -250,7 +250,7 @@ function SubtitleLine({
 	isLookahead: boolean;
 }) {
 	const speakerLabel = entry.is_input
-		? "You"
+		? "你"
 		: entry.speaker_name || entry.device_name || "Speaker";
 
 	const timeStr = entry.timestamp.toLocaleTimeString([], {

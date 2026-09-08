@@ -35,7 +35,7 @@ export function ContextUsagePanel({
     return (
       <section data-testid="context-usage-panel">
         <div className="text-xs font-medium lowercase text-foreground">
-          context
+          上下文
         </div>
         <p className="mt-1.5 text-xs text-muted-foreground">
           在此智能体报告其上下文窗口后显示用量。
@@ -58,7 +58,7 @@ export function ContextUsagePanel({
     <section className="space-y-2.5" data-testid="context-usage-panel">
       <div>
         <div className="flex items-baseline justify-between gap-3 text-xs">
-          <span className="font-medium lowercase text-foreground">context</span>
+          <span className="font-medium text-foreground">上下文</span>
           <span className="font-mono text-muted-foreground">
             {roundedPercent}% · ~
             {compactContextTokenCount(snapshot.totalUsedTokens)} /{" "}
@@ -78,7 +78,7 @@ export function ContextUsagePanel({
             {visibleCategories.map((category) => (
               <div
                 key={category.id}
-                title={`${CONTEXT_CATEGORY_META[category.id].label}: ${category.estimatedTokens} tokens`}
+                title={`${CONTEXT_CATEGORY_META[category.id].label}：${category.estimatedTokens} 个令牌`}
                 style={{
                   backgroundColor: CONTEXT_CATEGORY_META[category.id].color,
                   flexGrow: category.estimatedTokens,

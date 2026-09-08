@@ -234,10 +234,10 @@ export function FocusedSpotlight({
           onClick={() => onDismiss("skip_button")}
           className="mt-2 w-full border border-foreground/40 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-foreground transition-colors hover:border-foreground"
         >
-          skip guide
+          跳过引导
         </button>
         <p className="mt-2 text-center font-mono text-[9px] lowercase tracking-wide text-muted-foreground">
-          esc to exit anytime
+          随时按 Esc 退出
         </p>
       </div>
     </div>

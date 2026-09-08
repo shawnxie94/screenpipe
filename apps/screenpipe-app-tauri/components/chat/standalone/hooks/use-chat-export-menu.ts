@@ -22,7 +22,7 @@ export function useChatExportMenu({ messages, citationPlan }: UseChatExportMenuO
     if (messages.length === 0) return;
     const md = formatChatAsMarkdown(messages, citationPlan);
     await commands.copyTextToClipboard(md);
-    toast({ title: "copied full chat as markdown" });
+    toast({ title: "已将完整聊天复制为 Markdown" });
   }, [citationPlan, messages]);
 
   const exportChatAsMarkdownFile = useCallback(async () => {
@@ -35,11 +35,11 @@ export function useChatExportMenu({ messages, citationPlan }: UseChatExportMenuO
       });
       if (filePath) {
         await writeTextFile(filePath, md);
-        toast({ title: "chat exported as markdown" });
+        toast({ title: "聊天已导出为 Markdown" });
       }
     } catch (e) {
       console.error("Failed to export chat:", e);
-      toast({ title: "failed to export chat", variant: "destructive" });
+      toast({ title: "导出聊天失败", variant: "destructive" });
     }
   }, [citationPlan, messages]);
 
@@ -54,7 +54,7 @@ export function useChatExportMenu({ messages, citationPlan }: UseChatExportMenuO
     const item = document.createElement("button");
     item.className =
       "w-full text-left px-3 py-1.5 hover:bg-muted transition-colors text-foreground cursor-pointer";
-    item.textContent = "Copy full chat as markdown";
+    item.textContent = "复制完整聊天（Markdown）";
     item.onclick = () => {
       copyFullChatAsMarkdown();
       menu.remove();
@@ -63,7 +63,7 @@ export function useChatExportMenu({ messages, citationPlan }: UseChatExportMenuO
     const exportItem = document.createElement("button");
     exportItem.className =
       "w-full text-left px-3 py-1.5 hover:bg-muted transition-colors text-foreground cursor-pointer";
-    exportItem.textContent = "Export as markdown file";
+    exportItem.textContent = "导出为 Markdown 文件";
     exportItem.onclick = () => {
       exportChatAsMarkdownFile();
       menu.remove();

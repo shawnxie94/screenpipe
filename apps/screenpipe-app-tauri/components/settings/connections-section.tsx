@@ -39,6 +39,10 @@ import { Command } from "@tauri-apps/plugin-shell";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { message, open as openDialog } from "@tauri-apps/plugin-dialog";
 import { localFetch } from "@/lib/api";
+import { listOfficeConnections } from "@/lib/connections/office";
+import type { OfficeConnectionStatus } from "@/lib/connections/office-types";
+import { FeishuConnectionPanel } from "@/components/settings/feishu-connection-panel";
+import { TencentMeetingConnectionPanel } from "@/components/settings/tencent-meeting-connection-panel";
 import { screenpipeWebUrl } from "@/lib/web-url";
 import { exists, writeFile, readTextFile, mkdir } from "@tauri-apps/plugin-fs";
 import { tauriFetchWithDeadline } from "@/lib/http/tauri-fetch";
@@ -87,13 +91,13 @@ interface McpVersionInfo { available: string | null; installed: string | null; }
 
 function formatRelativeTime(ts: number): string {
   const secs = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-  if (secs < 5) return "just now";
-  if (secs < 60) return `${secs}s ago`;
+  if (secs < 5) return "刚刚";
+  if (secs < 60) return `${secs} 秒前`;
   const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return `${mins} 分钟前`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return `${hours} 小时前`;
+  return `${Math.floor(hours / 24)} 天前`;
 }
 
 /** One budget for the whole release walk, not one per page. */
@@ -543,6 +547,20 @@ const INTEGRATION_ICONS: Record<string, React.ReactNode> = {
     "google-sheets": <img src="/images/google-sheets.svg" alt="Google Sheets" className="w-5 h-5" />,
     "ics-calendar": <CalendarIcon className="h-5 w-5 text-muted-foreground" />,
     "remote-agent": <img src="/openclaw-icon.svg" alt="远程代理" className="w-5 h-5" />,
+    feishu: (
+      <svg viewBox="0 0 24 24" className="w-5 h-5" aria-label="飞书">
+        <path fill="#3370FF" d="M4 3h9.5c.4 2.5-.4 4.9-2.1 6.6L4 17V3z"/>
+        <path fill="#00D6B9" d="M20 21h-9.5c-.4-2.5.4-4.9 2.1-6.6L20 7v14z"/>
+        <path fill="#FF7050" d="M13.3 10.7L4.6 19.4c1.2 1.2 2.8 1.9 4.5 1.9h3.4l6.9-6.9c-1.5-1.7-3.9-2.7-6.1-3.7z"/>
+      </svg>
+    ),
+    "tencent-meeting": (
+      <svg viewBox="0 0 24 24" className="w-5 h-5" aria-label="腾讯会议">
+        <rect x="2" y="5" width="14" height="14" rx="3" fill="#2B6BFF"/>
+        <path d="M17 10.5l4.2-2.6c.5-.3 1.1.1 1.1.7v6.8c0 .6-.6 1-1.1.7L17 13.5v-3z" fill="#2B6BFF"/>
+        <circle cx="9" cy="12" r="3.2" fill="#fff"/>
+      </svg>
+    ),
     bee: <img src="/images/bee.png" alt="Bee" className="w-5 h-5 rounded" />,
     email: <Send className="h-5 w-5 text-muted-foreground" />,
     imap: <Inbox className="h-5 w-5 text-muted-foreground" />,
@@ -596,7 +614,7 @@ const INTEGRATION_ICONS: Record<string, React.ReactNode> = {
     toggl: <img src="/images/toggl.png" alt="Toggl" className="w-5 h-5 rounded" />,
     monday: <img src="/images/monday.png" alt="Monday.com" className="w-5 h-5 rounded" />,
     asana: <img src="/images/asana.svg" alt="Asana" className="w-5 h-5" />,
-    "browser-url": <img src="/images/browser-url.svg" alt="Browser URL" className="w-5 h-5 rounded" />,
+    "browser-url": <img src="/images/browser-url.svg" alt="浏览器 URL" className="w-5 h-5 rounded" />,
     // user-browser: your real Chrome/Arc/Edge via the screenpipe extension.
     // The arrow-out-of-square hints at "drives an external browser".
     "user-browser": (
@@ -1064,7 +1082,7 @@ function PanelConfigError({ err }: { err: FriendlyToolError }) {
           onClick={() => revealPath(err.path!)}
           className="underline text-foreground/80 hover:text-foreground transition-colors shrink-0"
         >
-          open file
+          打开文件
         </button>
       )}
     </div>
@@ -1188,12 +1206,12 @@ function ClaudePanel({
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Let Claude search your screen and audio history.
+        允许 Claude 搜索你的屏幕和音频历史记录。
       </p>
       <div className="flex flex-wrap gap-2">
         {state === "connected" ? (
           <Button onClick={handleDisconnect} variant="outline" size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            <LogOut className="h-3 w-3" />disconnect
+            <LogOut className="h-3 w-3" />断开连接
           </Button>
         ) : (
           <Button onClick={handleConnect} disabled={state === "connecting"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
@@ -1453,7 +1471,7 @@ function GrokPanel({ onConnected, onDisconnected }: { onConnected?: () => void; 
       {connectError && <PanelConfigError err={connectError} />}
       {state === "installed" && (
         <p className="text-xs text-muted-foreground">
-          <strong>已连接。</strong> Start a new <code>grok</code> session and ask: &quot;what did I do in the last 5 minutes?&quot;
+          <strong>已连接。</strong> 启动新的 <code>grok</code> 会话并询问：“我过去 5 分钟做了什么？”
         </p>
       )}
       <details className="text-xs text-muted-foreground">
@@ -1472,16 +1490,16 @@ function GrokPanel({ onConnected, onDisconnected }: { onConnected?: () => void; 
 function describeSyncOutcome(result: any): string {
   if (result?.wrote) {
     const n = result.wrote.entries;
-    return `wrote ${n} ${n === 1 ? "memory" : "memories"}`;
+    return `已写入 ${n} 条记忆`;
   }
   if (result?.unchanged) {
     const n = result.unchanged.entries;
-    return `up to date · ${n} ${n === 1 ? "memory" : "memories"}`;
+    return `已是最新 · ${n} 条记忆`;
   }
   if (result?.skipped) {
-    return `skipped · ${result.skipped.reason}`;
+    return `已跳过 · ${result.skipped.reason}`;
   }
-  return "synced";
+  return "已同步";
 }
 
 // Shared subsection used by the merged Claude panel + CodexPanel. Surfaces the
@@ -1550,7 +1568,7 @@ function useMemorySyncDestination(integrationId: string) {
         body: JSON.stringify({ credentials }),
       });
       const testData = await testRes.json();
-      if (!testRes.ok || testData.error) throw new Error(testData.error || "test failed");
+      if (!testRes.ok || testData.error) throw new Error(testData.error || "测试失败");
 
       const saveRes = await localFetch(`/connections/${integrationId}`, {
         method: "PUT",
@@ -1558,13 +1576,13 @@ function useMemorySyncDestination(integrationId: string) {
         body: JSON.stringify({ credentials }),
       });
       const saveData = await saveRes.json();
-      if (!saveRes.ok || saveData.error) throw new Error(saveData.error || "save failed");
+      if (!saveRes.ok || saveData.error) throw new Error(saveData.error || "保存失败");
 
       setConnected(true);
       notifyConnectionsUpdated();
       await triggerSyncNow();
     } catch (e: any) {
-      setError(e?.message || "connection failed");
+      setError(e?.message || "连接失败");
     } finally {
       setStatus("idle");
     }
@@ -1574,13 +1592,13 @@ function useMemorySyncDestination(integrationId: string) {
     setError(null);
     try {
       const res = await localFetch(`/connections/${integrationId}`, { method: "DELETE" });
-      if (!res.ok && res.status !== 404) throw new Error("disconnect failed");
+      if (!res.ok && res.status !== 404) throw new Error("断开连接失败");
       setConnected(false);
       setLastResult(null);
       setLastResultAt(null);
       notifyConnectionsUpdated();
     } catch (e: any) {
-      setError(e?.message || "disconnect failed");
+      setError(e?.message || "断开连接失败");
     }
   }, [integrationId]);
 
@@ -1628,10 +1646,10 @@ function MemorySyncSubsection({
   return (
     <div className="border-t border-border pt-3 mt-3 space-y-2">
       <div className="space-y-0.5">
-        <p className="text-xs font-medium text-foreground">memory sync (beta)</p>
+        <p className="text-xs font-medium text-foreground">记忆同步（测试版）</p>
         <p className="text-xs text-muted-foreground">
-          writes safe recall instructions into {targetFilename} so {assistantName} can retrieve
-          relevant memories through screenpipe MCP. updates automatically every 5 minutes.
+          会将安全的记忆召回指令写入 {targetFilename}，让 {assistantName} 可以通过 screenpipe MCP
+          获取相关记忆。每 5 分钟自动更新。
         </p>
       </div>
 
@@ -1644,24 +1662,24 @@ function MemorySyncSubsection({
             </div>
             {lastResult && (
               <div className="pt-1 border-t border-border space-y-0.5">
-                <p className="text-xs text-muted-foreground">last sync{lastResultAt && ` · ${formatRelativeTime(lastResultAt)}`}</p>
+                <p className="text-xs text-muted-foreground">上次同步{lastResultAt && ` · ${formatRelativeTime(lastResultAt)}`}</p>
                 <p className="text-xs text-foreground break-all">{lastResult}</p>
               </div>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={triggerSyncNow} disabled={status === "syncing"} size="sm" variant="outline" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-              {status === "syncing" ? (<><Loader2 className="h-3 w-3 animate-spin" />syncing...</>) : (<><Send className="h-3 w-3" />立即同步</>)}
+              {status === "syncing" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在同步…</>) : (<><Send className="h-3 w-3" />立即同步</>)}
             </Button>
             <Button onClick={disconnect} size="sm" variant="ghost" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-              <LogOut className="h-3 w-3" />stop syncing
+              <LogOut className="h-3 w-3" />停止同步
             </Button>
           </div>
         </>
       ) : (
         <>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">home directory (optional)</Label>
+            <Label className="text-xs text-muted-foreground">主目录（可选）</Label>
             <Input
               value={homePath}
               onChange={(e) => setHomePath(e.target.value)}
@@ -1671,7 +1689,7 @@ function MemorySyncSubsection({
             />
           </div>
           <Button onClick={() => connect({ home_path: persistedPath })} disabled={status === "connecting"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />enabling...</>) : (<><Download className="h-3 w-3" />启用记忆同步</>)}
+            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在启用…</>) : (<><Download className="h-3 w-3" />启用记忆同步</>)}
           </Button>
         </>
       )}
@@ -1752,7 +1770,7 @@ function ObsidianMemorySyncSubsection() {
 
   const handleEnable = useCallback(() => {
     const vault = vaultPath.trim();
-    if (!vault) { setError("pick a vault folder first"); return; }
+    if (!vault) { setError("请先选择知识库文件夹"); return; }
     // Backend re-sanitizes the folder authoritatively; send the raw value.
     return connect({ vault_path: vault, memories_folder: folder.trim() || OBSIDIAN_DEFAULT_FOLDER });
   }, [vaultPath, folder, connect, setError]);
@@ -1764,10 +1782,9 @@ function ObsidianMemorySyncSubsection() {
   return (
     <div className="border-t border-border pt-3 mt-1 space-y-2">
       <div className="space-y-0.5">
-        <p className="text-xs font-medium text-foreground">memory sync (beta)</p>
+        <p className="text-xs font-medium text-foreground">记忆同步（测试版）</p>
         <p className="text-xs text-muted-foreground">
-          writes your screenpipe memories into a note in this vault so they show up
-          in your graph and search. updates automatically every 5 minutes.
+          将你的 screenpipe 记忆写入此知识库中的笔记，以便在图谱和搜索中查看。每 5 分钟自动更新。
         </p>
       </div>
 
@@ -1775,43 +1792,43 @@ function ObsidianMemorySyncSubsection() {
         <>
           <div className="p-2 bg-muted border border-border rounded-lg space-y-1">
             <div className="space-y-0.5">
-              <p className="text-xs text-muted-foreground">note</p>
+              <p className="text-xs text-muted-foreground">笔记</p>
               <p className="text-xs text-foreground font-mono break-all">{notePath}</p>
             </div>
             {lastResult && (
               <div className="pt-1 border-t border-border space-y-0.5">
-                <p className="text-xs text-muted-foreground">last sync{lastResultAt && ` · ${formatRelativeTime(lastResultAt)}`}</p>
+                <p className="text-xs text-muted-foreground">上次同步{lastResultAt && ` · ${formatRelativeTime(lastResultAt)}`}</p>
                 <p className="text-xs text-foreground break-all">{lastResult}</p>
               </div>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={triggerSyncNow} disabled={status === "syncing"} size="sm" variant="outline" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-              {status === "syncing" ? (<><Loader2 className="h-3 w-3 animate-spin" />syncing...</>) : (<><Send className="h-3 w-3" />立即同步</>)}
+              {status === "syncing" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在同步…</>) : (<><Send className="h-3 w-3" />立即同步</>)}
             </Button>
             <Button onClick={disconnect} size="sm" variant="ghost" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-              <LogOut className="h-3 w-3" />stop syncing
+              <LogOut className="h-3 w-3" />停止同步
             </Button>
           </div>
         </>
       ) : (
         <>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Vault 文件夹</Label>
+            <Label className="text-xs text-muted-foreground">知识库文件夹</Label>
             <div className="relative">
               <Input
                 value={vaultPath}
                 onChange={(e) => setVaultPath(e.target.value)}
-                placeholder={platform() === "windows" ? "C:\\Users\\you\\Documents\\MyVault" : "/Users/you/Documents/MyVault"}
+                placeholder={platform() === "windows" ? "C:\\Users\\你\\Documents\\我的知识库" : "/Users/你/Documents/我的知识库"}
                 className="h-7 text-xs font-mono pr-8"
                 spellCheck={false}
               />
               <button
                 type="button"
-                title="浏览 Vault 文件夹"
+                title="浏览知识库文件夹"
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={async () => {
-                  const selected = await openDialog({ directory: true, multiple: false, title: "选择 Obsidian Vault 文件夹" });
+                  const selected = await openDialog({ directory: true, multiple: false, title: "选择 Obsidian 知识库文件夹" });
                   if (typeof selected === "string") setVaultPath(selected);
                 }}
               >
@@ -1820,7 +1837,7 @@ function ObsidianMemorySyncSubsection() {
             </div>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">vault 内的文件夹（可选）</Label>
+            <Label className="text-xs text-muted-foreground">知识库内的文件夹（可选）</Label>
             <Input
               value={folder}
               onChange={(e) => setFolder(e.target.value)}
@@ -1830,7 +1847,7 @@ function ObsidianMemorySyncSubsection() {
             />
           </div>
           <Button onClick={handleEnable} disabled={status === "connecting" || !vaultPath.trim()} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />enabling...</>) : (<><Download className="h-3 w-3" />启用记忆同步</>)}
+            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在启用…</>) : (<><Download className="h-3 w-3" />启用记忆同步</>)}
           </Button>
         </>
       )}
@@ -1861,13 +1878,13 @@ function AnythingLLMPanel() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Let AnythingLLM search your screen and audio history.
+        允许 AnythingLLM 搜索你的屏幕和音频历史记录。
       </p>
       <p className="text-xs text-muted-foreground">
-        1. In AnythingLLM, go to <strong>代理技能</strong> &gt; <strong>MCP Servers</strong>
+        1. 在 AnythingLLM 中进入 <strong>代理技能</strong> &gt; <strong>MCP 服务器</strong>
       </p>
       <p className="text-xs text-muted-foreground">
-        2. Add this config to your <code className="bg-muted px-1 rounded">anythingllm_mcp_servers.json</code>:
+        2. 将以下配置添加到 <code className="bg-muted px-1 rounded">anythingllm_mcp_servers.json</code>：
       </p>
       <div className="relative group">
         <pre className="bg-muted border border-border rounded-lg p-3 pr-10 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">{config}</pre>
@@ -1899,13 +1916,13 @@ function MstyPanel() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Let Msty search your screen and audio history.
+        允许 Msty 搜索你的屏幕和音频历史记录。
       </p>
       <p className="text-xs text-muted-foreground">
-        1. Open Msty and go to <strong>设置</strong> &gt; <strong>工具箱</strong>
+        1. 打开 Msty，进入 <strong>设置</strong> &gt; <strong>工具箱</strong>
       </p>
       <p className="text-xs text-muted-foreground">
-        2. Click <strong>添加新工具</strong>, select <strong>STDIO / JSON</strong>, and paste this config:
+        2. 点击 <strong>添加新工具</strong>，选择 <strong>STDIO / JSON</strong>，然后粘贴以下配置：
       </p>
       <div className="relative group">
         <pre className="bg-muted border border-border rounded-lg p-3 pr-10 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">{config}</pre>
@@ -1914,7 +1931,7 @@ function MstyPanel() {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        3. Give the tool a name (e.g. <strong>screenpipe</strong>) and click <strong>添加</strong>
+        3. 为工具命名（例如 <strong>screenpipe</strong>），然后点击 <strong>添加</strong>
       </p>
       <Button variant="outline" onClick={() => openUrl("https://msty.app")} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
         <ExternalLink className="h-3 w-3" />open msty
@@ -1945,13 +1962,13 @@ function WarpPanel() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Let Warp search your screen and audio history.
+        允许 Warp 搜索你的屏幕和音频历史记录。
       </p>
       <p className="text-xs text-muted-foreground">
-        1. In Warp, open <strong>设置</strong> &gt; <strong>AI</strong> &gt; <strong>管理 MCP 服务器</strong> &gt; <strong>+ Add</strong> (or run <code className="bg-muted px-1 rounded">打开 MCP 服务器</code> from the Command Palette)
+        1. 在 Warp 中打开 <strong>设置</strong> &gt; <strong>AI</strong> &gt; <strong>管理 MCP 服务器</strong> &gt; <strong>+ 添加</strong>（或从命令面板运行 <code className="bg-muted px-1 rounded">打开 MCP 服务器</code>）
       </p>
       <p className="text-xs text-muted-foreground">
-        2. Choose <strong>CLI Server (Command)</strong> and paste this config:
+        2. 选择 <strong>CLI 服务器（命令）</strong>，然后粘贴以下配置：
       </p>
       <div className="relative group">
         <pre className="bg-muted border border-border rounded-lg p-3 pr-10 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">{config}</pre>
@@ -1960,7 +1977,7 @@ function WarpPanel() {
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        3. Click <strong>保存</strong>. The server should show <strong>运行中</strong>. 然后询问 Warp 的代理：<em>“我过去 5 分钟做了什么？”</em>
+        3. 点击 <strong>保存</strong>。服务器应显示 <strong>运行中</strong>。然后询问 Warp 的代理：<em>“我过去 5 分钟做了什么？”</em>
       </p>
       <Button variant="outline" onClick={() => openUrl("https://www.warp.dev")} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
         <ExternalLink className="h-3 w-3" />open warp
@@ -1991,10 +2008,10 @@ function OllamaPanel() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Use Ollama as a local AI provider for screenpipe.
+        使用 Ollama 作为 screenpipe 的本地 AI 提供商。
       </p>
       <Button onClick={handleCheck} disabled={status === "checking"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-        {status === "checking" ? (<><Loader2 className="h-3 w-3 animate-spin" />checking...</>) : "check connection"}
+        {status === "checking" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在检查…</>) : "检查连接"}
       </Button>
       {status === "connected" && (
         <div className="p-3 bg-muted border border-border rounded-lg space-y-1">
@@ -2038,14 +2055,14 @@ function LMStudioPanel() {
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Connect LM Studio to screenpipe&apos;s screen &amp; audio data, or use it as a local AI provider.
+        将 LM Studio 连接到知迹的屏幕和音频数据，或将其用作本地 AI 提供商。
       </p>
       <div className="flex flex-wrap gap-2">
         <Button onClick={() => openUrl(deeplink)} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-          <Download className="h-3 w-3" /> add screenpipe MCP to LM Studio
+          <Download className="h-3 w-3" /> 将 screenpipe MCP 添加到 LM Studio
         </Button>
         <Button onClick={handleCheck} variant="outline" disabled={status === "checking"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-          {status === "checking" ? (<><Loader2 className="h-3 w-3 animate-spin" />checking...</>) : "check connection"}
+          {status === "checking" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在检查…</>) : "检查连接"}
         </Button>
       </div>
       {status === "connected" && (
@@ -2056,7 +2073,7 @@ function LMStudioPanel() {
               {models.map(m => <li key={m}>{m}</li>)}
             </ul>
           ) : (
-            <p className="text-xs text-muted-foreground">no models loaded. load a model in lm studio to get started.</p>
+            <p className="text-xs text-muted-foreground">尚未加载模型。请在 LM Studio 中加载模型后开始使用。</p>
           )}
         </div>
       )}
@@ -2122,7 +2139,7 @@ function ChatGptPanel() {
         );
       } else {
         setStatus("idle");
-        const msg = String((res as any).error || "unknown error");
+        const msg = String((res as any).error || "未知错误");
         toast({
           title: "ChatGPT 登录失败",
           description: msg.includes("timed out") || msg.includes("not logged in")
@@ -2319,14 +2336,14 @@ export function ConnectionCredentialForm({
         body: JSON.stringify({ credentials: credsToSend }),
       });
       const testData = await testRes.json();
-      if (!testRes.ok || testData.error) throw new Error(testData.error || "connection test failed");
+      if (!testRes.ok || testData.error) throw new Error(testData.error || "连接测试失败");
       const saveRes = await localFetch(endpoint, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ credentials: credsToSend }),
       });
       const saveData = await saveRes.json();
-      if (!saveRes.ok || saveData.error) throw new Error(saveData.error || "save failed");
+      if (!saveRes.ok || saveData.error) throw new Error(saveData.error || "保存失败");
       sessionStorage.removeItem(sessionKey);
       userDisconnectedRef.current = false; // allow future syncs after reconnect
       setStatus("idle");
@@ -2334,7 +2351,7 @@ export function ConnectionCredentialForm({
       notifyConnectionsUpdated();
       onSaved?.();
     } catch (e: any) {
-      setError(e?.message || "unknown error");
+      setError(e?.message || "未知错误");
       setStatus("error");
     }
   };
@@ -2342,7 +2359,7 @@ export function ConnectionCredentialForm({
   const handleDisconnect = async () => {
     try {
       const res = await localFetch(endpoint, { method: "DELETE" });
-      if (!res.ok && res.status !== 404) throw new Error("disconnect failed");
+      if (!res.ok && res.status !== 404) throw new Error("断开连接失败");
       sessionStorage.setItem(sessionKey, "1");
       userDisconnectedRef.current = true; // block any async re-sync of saved creds
       setCreds({});
@@ -2352,7 +2369,7 @@ export function ConnectionCredentialForm({
       notifyConnectionsUpdated();
       onDisconnect?.();
     } catch (e: any) {
-      setError(e?.message || "disconnect failed");
+      setError(e?.message || "断开连接失败");
     }
   };
 
@@ -2519,7 +2536,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
         body: JSON.stringify({ credentials: { vault_path: vaultPath } }),
       });
       const testData = await testRes.json();
-      if (!testRes.ok || testData.error) throw new Error(testData.error || "test failed");
+      if (!testRes.ok || testData.error) throw new Error(testData.error || "测试失败");
 
       // First vault → default connection (backward compatible). Additional
       // vaults → a named instance keyed by a unique slug of the folder name.
@@ -2538,7 +2555,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
         body: JSON.stringify({ credentials: { vault_path: vaultPath } }),
       });
       const saveData = await saveRes.json();
-      if (!saveRes.ok || saveData.error) throw new Error(saveData.error || "save failed");
+      if (!saveRes.ok || saveData.error) throw new Error(saveData.error || "保存失败");
 
       sessionStorage.removeItem(sessionKey);
       setManualPath("");
@@ -2546,7 +2563,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
       notifyConnectionsUpdated();
       onConnected?.();
     } catch (e: any) {
-      setError(e?.message || "connection failed");
+      setError(e?.message || "连接失败");
     } finally {
       setBusyPath(null);
     }
@@ -2558,7 +2575,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
         ? "/connections/obsidian"
         : `/connections/obsidian/instances/${encodeURIComponent(vault.instance)}`;
       const res = await localFetch(endpoint, { method: "DELETE" });
-      if (!res.ok && res.status !== 404) throw new Error("disconnect failed");
+      if (!res.ok && res.status !== 404) throw new Error("断开连接失败");
 
       const remaining = connected.filter(v => v.instance !== vault.instance);
       // Keep the default `obsidian` slot filled so single-vault consumers (the
@@ -2582,7 +2599,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
       notifyConnectionsUpdated();
       onDisconnected?.();
     } catch (e: any) {
-      setError(e?.message || "disconnect failed");
+      setError(e?.message || "断开连接失败");
       loadConnected();
     }
   };
@@ -2595,7 +2612,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
     <div className="space-y-4">
       {connected.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">已连接 {connected.length === 1 ? "1 个 vault" : `${connected.length} 个 vault`}</p>
+          <p className="text-xs text-muted-foreground">已连接 {connected.length === 1 ? "1 个知识库" : `${connected.length} 个知识库`}</p>
           <div className="space-y-1">
             {connected.map(v => (
               <div
@@ -2609,7 +2626,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
                 <button
                   type="button"
                   onClick={() => handleDisconnect(v)}
-                  title="断开 vault"
+                  title="断开知识库"
                   className="text-muted-foreground hover:text-destructive shrink-0"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -2622,7 +2639,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
 
       {suggestions.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-xs text-muted-foreground">{connected.length > 0 ? "添加另一个 vault" : "检测到的 vault"}</p>
+          <p className="text-xs text-muted-foreground">{connected.length > 0 ? "添加另一个知识库" : "检测到的知识库"}</p>
           <div className="space-y-1">
             {suggestions.map(v => (
               <button
@@ -2644,23 +2661,23 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
 
       <div className="space-y-1.5">
         <p className="text-xs text-muted-foreground">
-          {connected.length > 0 || suggestions.length > 0 ? "或手动输入 vault 路径" : "选择你的 vault 文件夹"}
+          {connected.length > 0 || suggestions.length > 0 ? "或手动输入知识库路径" : "选择你的知识库文件夹"}
         </p>
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Input
               value={manualPath}
               onChange={e => setManualPath(e.target.value)}
-              placeholder={isWindows ? "C:\\Users\\you\\Documents\\MyVault" : "/Users/you/Documents/MyVault"}
+              placeholder={isWindows ? "C:\\Users\\你\\Documents\\我的知识库" : "/Users/你/Documents/我的知识库"}
               className="h-8 text-xs font-mono pr-8"
               onKeyDown={e => { if (e.key === "Enter") handleConnect(manualPath); }}
             />
             <button
               type="button"
-              title="浏览 Vault 文件夹"
+              title="浏览知识库文件夹"
               className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               onClick={async () => {
-                const selected = await openDialog({ directory: true, multiple: false, title: "选择 Obsidian Vault 文件夹" });
+                const selected = await openDialog({ directory: true, multiple: false, title: "选择 Obsidian 知识库文件夹" });
                 if (typeof selected === "string") setManualPath(selected);
               }}
             >
@@ -2674,7 +2691,7 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
             className="gap-1.5 h-8 text-xs normal-case font-sans tracking-normal shrink-0"
           >
             {busyPath && busyPath === manualPath.trim() ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-            add vault
+            添加知识库
           </Button>
         </div>
       </div>
@@ -2721,19 +2738,19 @@ function BeePairPanel({ onConnected }: { onConnected: () => void }) {
       const res = await localFetch("/connections/bee/pair/start", { method: "POST" });
       const body = await res.json();
       if (!res.ok) {
-        setStatusMsg(body?.error ?? `Couldn't start pairing (HTTP ${res.status})`);
+        setStatusMsg(body?.error ?? `无法开始配对（HTTP ${res.status}）`);
         setBusy(false);
         return;
       }
       const requestId = body.request_id as string;
       await openUrl(body.pairing_url as string);
-      setStatusMsg("approve the connection in your browser, then come back…");
+      setStatusMsg("请在浏览器中批准连接，然后返回此处…");
 
       const deadline = Date.now() + 5 * 60 * 1000;
       const poll = async () => {
         if (cancelledRef.current) return;
         if (Date.now() > deadline) {
-          setStatusMsg("pairing timed out — try again");
+          setStatusMsg("配对超时，请重试");
           setBusy(false);
           return;
         }
@@ -2751,7 +2768,7 @@ function BeePairPanel({ onConnected }: { onConnected: () => void }) {
             return;
           }
           if (pb?.status === "expired" || pb?.status === "unknown") {
-            setStatusMsg("pairing expired — try again");
+            setStatusMsg("配对已过期，请重试");
             setBusy(false);
             return;
           }
@@ -2762,7 +2779,7 @@ function BeePairPanel({ onConnected }: { onConnected: () => void }) {
       };
       setTimeout(poll, 2000);
     } catch (e) {
-      setStatusMsg(`pairing failed: ${e instanceof Error ? e.message : String(e)}`);
+      setStatusMsg(`配对失败：${e instanceof Error ? e.message : String(e)}`);
       setBusy(false);
     }
   };
@@ -2882,7 +2899,7 @@ export function ApiIntegrationPanel({ integration, onRefresh }: {
     <div className="space-y-4">
       {/* Default instance */}
       <div>
-        <p className="text-xs text-muted-foreground mb-2">default</p>
+        <p className="text-xs text-muted-foreground mb-2">默认</p>
         <ConnectionCredentialForm
           integrationId={integration.id}
           fields={integration.fields}
@@ -2970,8 +2987,8 @@ export const MCP_OAUTH_PROVIDERS: {
   url: string;
   description: React.ReactNode;
 }[] = [
-  { id: "jira", name: "Jira", url: "https://mcp.atlassian.com/v1/mcp", description: <>连接 Atlassian，让 AI 搜索和管理你的 Jira 问题（以及 Confluence 页面）。使用 Atlassian 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
-  { id: "notion", name: "Notion", url: "https://mcp.notion.com/mcp", description: <>连接 Notion，让 AI 搜索、读取和写入你的页面和数据库。使用 Notion 的 OAuth 登录 — 无需 API 密钥，screenpipe 永远不会看到你的密码。</> },
+  { id: "jira", name: "Jira", url: "https://mcp.atlassian.com/v1/mcp", description: <>连接 Atlassian，让 AI 搜索和管理你的 Jira 问题（以及 Confluence 页面）。使用 Atlassian 的 OAuth 登录 — 无需 API 密钥，知迹永远不会看到你的密码。</> },
+  { id: "notion", name: "Notion", url: "https://mcp.notion.com/mcp", description: <>连接 Notion，让 AI 搜索、读取和写入你的页面和数据库。使用 Notion 的 OAuth 登录 — 无需 API 密钥，知迹永远不会看到你的密码。</> },
 ];
 
 export function isMcpOAuthProviderTileConnected(
@@ -3121,7 +3138,7 @@ function OAuthMcpPanel({
         } else {
           setWaiting(false);
           setStatusMsg(
-            "Sign-in was not completed — if your browser blocks http://localhost (e.g. Safari HTTPS-Only mode), click \"Open screenpipe\" on the confirmation page"
+            "登录未完成——如果浏览器阻止了 http://localhost（例如 Safari 的“仅 HTTPS”模式），请在确认页面点击“打开 screenpipe”"
           );
         }
       };
@@ -3167,7 +3184,7 @@ function OAuthMcpPanel({
       {connected ? (
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
-            <Check className="h-3.5 w-3.5" /> Connected
+            <Check className="h-3.5 w-3.5" /> 已连接
           </span>
           <Button
             onClick={handleDisconnect}
@@ -3181,14 +3198,14 @@ function OAuthMcpPanel({
             ) : (
               <LogOut className="h-3 w-3" />
             )}
-            Disconnect
+            断开连接
           </Button>
         </div>
       ) : waiting ? (
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />{" "}
-            {statusMsg ?? "Waiting for sign-in…"}
+            {statusMsg ?? "等待登录…"}
           </span>
           <Button
             onClick={handleCancel}
@@ -3196,7 +3213,7 @@ function OAuthMcpPanel({
             size="sm"
             className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal ml-auto"
           >
-            <X className="h-3 w-3" /> Cancel
+            <X className="h-3 w-3" /> 取消
           </Button>
         </div>
       ) : (
@@ -3211,7 +3228,7 @@ function OAuthMcpPanel({
           ) : (
             <LogIn className="h-3 w-3" />
           )}
-          Connect {name}
+          连接 {name}
         </Button>
       )}
       {statusMsg && !waiting && !connected && (
@@ -3395,7 +3412,7 @@ function ApiKeyMcpPanel({
               ) : (
                 <LogIn className="h-3 w-3" />
               )}
-              Connect
+              连接
             </Button>
           </div>
           <button
@@ -3496,6 +3513,20 @@ export function ConnectionsSection({
   const [mcpProviderConnected, setMcpProviderConnected] = useState<Record<string, boolean>>({});
   const [excalidrawConnected, setExcalidrawConnected] = useState(false);
   const [importedSkillsCount, setImportedSkillsCount] = useState(0);
+  // Office connections (知迹 Local Brain read-only imports)
+  const [officeStatuses, setOfficeStatuses] = useState<Record<string, OfficeConnectionStatus>>({});
+  const refreshOfficeStatuses = useCallback(() => {
+    listOfficeConnections()
+      .then((list) => {
+        const next: Record<string, OfficeConnectionStatus> = {};
+        for (const s of list) next[s.provider] = s;
+        setOfficeStatuses(next);
+      })
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    refreshOfficeStatuses();
+  }, [refreshOfficeStatuses]);
   const loadSkillsCount = useCallback(() => {
     commands
       .listImportedSkills()
@@ -3678,6 +3709,8 @@ export function ConnectionsSection({
       { id: "krisp", name: "Krisp", icon: "krisp", connected: krispConnected, detected: detectedConnectionIds.has("krisp") },
       { id: "plaud", name: "Plaud", icon: "plaud", connected: plaudConnected },
       { id: "excalidraw", name: "Excalidraw", icon: "excalidraw", connected: excalidrawConnected },
+      { id: "feishu", name: "飞书", icon: "feishu", connected: officeStatuses["feishu"]?.auth_status === "authorized", description: "只读导入所选文档与会话消息" },
+      { id: "tencent-meeting", name: "腾讯会议", icon: "tencent-meeting", connected: officeStatuses["tencent-meeting"]?.auth_status === "authorized", description: "只读导入会议转写与智能纪要" },
       { id: "custom-mcp", name: "高级连接", icon: "custom-mcp", connected: false, detected: customMcpServerCount > 0 },
       { id: "skills", name: "技能", icon: "skills", connected: importedSkillsCount > 0, category: "Agent" },
       { id: "pi-extensions", name: "AI 工具", icon: "pi-extensions", connected: true, category: "Agent" },
@@ -3769,7 +3802,7 @@ export function ConnectionsSection({
   const CATEGORY_LABELS: Record<string, string> = {
     Desktop: "桌面应用",
     AI: "AI",
-    Agent: "Agent",
+    Agent: "代理",
     Automation: "自动化",
     Meetings: "会议",
     Calendar: "日历",
@@ -3851,9 +3884,9 @@ export function ConnectionsSection({
           {hasManual && existing && (
             <details open={existing.connected && !mcpProviderConnected[mcpProvider.id]}>
               <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground">
-                advanced: {existing.connected
-                  ? "manage your existing connection"
-                  : "connect with an API key instead"}
+                高级：{existing.connected
+                  ? "管理现有连接"
+                  : "改用 API 密钥连接"}
               </summary>
               <div className="pt-2">
                 <ApiIntegrationPanel
@@ -3890,6 +3923,8 @@ export function ConnectionsSection({
       case "browser-url": return <BrowserUrlCard onStatusChange={setBrowserUrlConnected} />;
       case "voice-memos": return <VoiceMemosCard />;
       case "apple-calendar": return <AppleCalendarCard onStatusChange={setAppleCalendarConnected} />;
+      case "feishu": return <FeishuConnectionPanel onChanged={refreshOfficeStatuses} />;
+      case "tencent-meeting": return <TencentMeetingConnectionPanel onChanged={refreshOfficeStatuses} />;
       case "imap": return <ImapCard onChanged={fetchIntegrations} />;
       case "google-docs":
       case "google-drive":
@@ -3906,14 +3941,14 @@ export function ConnectionsSection({
       case "krisp": return <OAuthMcpPanel
         name="Krisp"
         mcpUrl={KRISP_MCP_URL}
-        description={<>连接 Krisp，让 AI 搜索你的会议转写、笔记和行动项。登录由 Krisp 的 OAuth 处理，screenpipe 永远不会看到你的密码。</>}
+        description={<>连接 Krisp，让 AI 搜索你的会议转写、笔记和行动项。登录由 Krisp 的 OAuth 处理，知迹永远不会看到你的密码。</>}
         onConnected={() => setKrispConnected(true)}
         onDisconnected={() => setKrispConnected(false)}
       />;
       case "plaud": return <OAuthMcpPanel
         name="Plaud"
         mcpUrl={PLAUD_MCP_URL}
-        description={<>连接 Plaud，让 AI 搜索你的 Plaud 录音、转写、摘要和笔记。登录由 Plaud 的 OAuth 处理，screenpipe 永远不会看到你的密码。</>}
+        description={<>连接 Plaud，让 AI 搜索你的 Plaud 录音、转写、摘要和笔记。登录由 Plaud 的 OAuth 处理，知迹永远不会看到你的密码。</>}
         onConnected={() => setPlaudConnected(true)}
         onDisconnected={() => setPlaudConnected(false)}
       />;
@@ -3958,7 +3993,7 @@ export function ConnectionsSection({
                 />
                 <details>
                   <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground">
-                    advanced: connect with a token instead
+                    高级：改用令牌连接
                   </summary>
                   <div className="pt-2">
                     <ApiIntegrationPanel

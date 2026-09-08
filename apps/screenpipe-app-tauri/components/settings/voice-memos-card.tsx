@@ -22,13 +22,13 @@ export function VoiceMemosCard() {
       <CardContent className="p-0">
         <div className="flex items-start p-4 gap-4">
           <div className="flex-shrink-0">
-            <img src="/images/voice-memos.svg" alt="Voice Memos" className="w-10 h-10 rounded-lg" />
+            <img src="/images/voice-memos.svg" alt="语音备忘录" className="w-10 h-10 rounded-lg" />
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-sm font-semibold text-foreground">
-                Voice Memos
+                语音备忘录
               </h3>
               <span className="px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full">
                 macOS
@@ -36,8 +36,7 @@ export function VoiceMemosCard() {
             </div>
 
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              Indexes your Apple Voice Memos so you can search and reference
-              them. Requires Full Disk Access to read the Voice Memos database.
+              为 Apple 语音备忘录建立索引，便于搜索和引用。读取语音备忘录数据库需要“完全磁盘访问”权限。
             </p>
 
             <Button
@@ -47,15 +46,14 @@ export function VoiceMemosCard() {
               className="text-xs"
             >
               <ExternalLink className="h-3 w-3 mr-1.5" />
-              Open Full Disk Access
+              打开“完全磁盘访问”
             </Button>
           </div>
         </div>
 
         <div className="px-4 py-2 bg-muted/50 border-t border-border">
           <p className="text-xs text-muted-foreground">
-            Toggle on screenpipe in Privacy &amp; Security → Full Disk Access
-            to enable Voice Memos indexing
+            请在“隐私与安全性 → 完全磁盘访问”中打开 screenpipe，以启用语音备忘录索引。
           </p>
         </div>
       </CardContent>

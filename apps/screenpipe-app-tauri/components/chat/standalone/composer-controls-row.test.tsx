@@ -260,14 +260,14 @@ describe("ComposerControlsRow", () => {
 
     expect(screen.queryByLabelText("worktree")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "worktree 设置失败" }),
+      screen.getByRole("button", { name: "工作树设置失败" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("The AI did not choose a repository in time"),
     ).not.toBeInTheDocument();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "worktree 设置失败" }),
+      screen.getByRole("button", { name: "工作树设置失败" }),
     );
     expect(
       screen.getByText("The AI did not choose a repository in time"),
@@ -309,7 +309,7 @@ describe("ComposerControlsRow", () => {
 
     expect(
       screen
-        .getByRole("button", { name: "send message" })
+        .getByRole("button", { name: "发送消息" })
         .querySelector(".lucide-arrow-up"),
     ).toBeInTheDocument();
   });

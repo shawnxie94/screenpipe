@@ -88,15 +88,15 @@ describe("final onboarding setup", () => {
 
     expect(
       await screen.findByTestId("onboarding-digital-clone-action"),
-    ).toHaveTextContent("set up");
+    ).toHaveTextContent("设置");
     expect(
       screen.getByTestId("onboarding-speaker-reconciliation-action"),
-    ).toHaveTextContent("set up");
+    ).toHaveTextContent("设置");
     expect(
       screen.getByTestId("onboarding-daily-email-summary-action"),
-    ).toHaveTextContent("set up");
+    ).toHaveTextContent("设置");
 
-    fireEvent.click(screen.getByRole("button", { name: "continue" }));
+    fireEvent.click(screen.getByRole("button", { name: "继续" }));
     expect(handleNextSlide).toHaveBeenCalledTimes(1);
   });
 
@@ -140,7 +140,7 @@ describe("final onboarding setup", () => {
     const action = screen.getByTestId("onboarding-digital-clone-action");
     fireEvent.click(action);
 
-    await waitFor(() => expect(action).toHaveTextContent("on"));
+    await waitFor(() => expect(action).toHaveTextContent("已开启"));
     expect(action).toBeDisabled();
     expect(mocks.localFetch).toHaveBeenCalledWith(
       "/pipes/digital-clone/enable",
@@ -182,9 +182,9 @@ describe("final onboarding setup", () => {
     const action = screen.getByTestId("onboarding-digital-clone-action");
     fireEvent.click(action);
 
-    expect(action).toHaveTextContent("setting up");
+    expect(action).toHaveTextContent("设置中");
     expect(action).toBeDisabled();
-    await waitFor(() => expect(action).toHaveTextContent("on"), {
+    await waitFor(() => expect(action).toHaveTextContent("已开启"), {
       timeout: 2_000,
     });
     expect(mocks.localFetch).toHaveBeenCalledWith(

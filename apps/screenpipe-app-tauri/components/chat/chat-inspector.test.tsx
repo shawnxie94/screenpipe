@@ -62,8 +62,8 @@ describe("ChatInspectorPopover", () => {
     fireEvent.click(screen.getByRole("button", { name: "Run /inspector" }));
 
     expect(screen.getByRole("region", { name: "固定的摘要" })).toBeTruthy();
-    expect(screen.getByText("No outputs yet")).toBeTruthy();
-    expect(screen.getByText("No sources yet")).toBeTruthy();
+    expect(screen.getByText("暂无输出")).toBeTruthy();
+    expect(screen.getByText("暂无来源")).toBeTruthy();
   });
 
   it("toggles a pinned summary from the toolbar control", () => {

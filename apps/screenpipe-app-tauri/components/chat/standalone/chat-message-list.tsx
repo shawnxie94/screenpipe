@@ -576,7 +576,7 @@ export function ChatMessageList({
                                     className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-muted text-left"
                                   >
                                     <Clock className="h-3.5 w-3.5 shrink-0" />
-                                    Run on schedule
+                                   按计划运行
                                   </button>
                                 )}
                                 <button
@@ -589,7 +589,7 @@ export function ChatMessageList({
                                   className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-muted text-left"
                                 >
                                   <GitBranch className="h-3.5 w-3.5 shrink-0" />
-                                  Branch in new chat
+                                  在新聊天中创建分支
                                 </button>
                               </PopoverContent>
                             </Popover>

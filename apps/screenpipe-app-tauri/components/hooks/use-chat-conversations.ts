@@ -1986,10 +1986,10 @@ export function useChatConversations(opts: UseChatConversationsOpts) {
       }
     }
 
-    if (todayConvs.length > 0) groups.push({ label: "Today", conversations: todayConvs });
-    if (yesterdayConvs.length > 0) groups.push({ label: "Yesterday", conversations: yesterdayConvs });
-    if (lastWeekConvs.length > 0) groups.push({ label: "Last 7 Days", conversations: lastWeekConvs });
-    if (olderConvs.length > 0) groups.push({ label: "Older", conversations: olderConvs });
+    if (todayConvs.length > 0) groups.push({ label: "今天", conversations: todayConvs });
+    if (yesterdayConvs.length > 0) groups.push({ label: "昨天", conversations: yesterdayConvs });
+    if (lastWeekConvs.length > 0) groups.push({ label: "最近 7 天", conversations: lastWeekConvs });
+    if (olderConvs.length > 0) groups.push({ label: "更早", conversations: olderConvs });
 
     return groups;
   }, [filteredConversations]);

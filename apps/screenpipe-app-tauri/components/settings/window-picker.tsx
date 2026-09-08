@@ -127,7 +127,7 @@ export function WindowPicker({
     onAdd(`${app}::${title}`);
   };
 
-  const title = action === "ignore" ? "Browse to ignore" : "Browse to include";
+  const title = action === "ignore" ? "浏览并排除" : "浏览并包含";
   const totalApps = merged.length;
   const totalWindows = merged.reduce((s, n) => s + n.windowCount, 0);
 
@@ -139,11 +139,11 @@ export function WindowPicker({
             <AppWindowMac className="h-4 w-4" /> {title}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Last 7 days · {totalApps} apps · {formatCount(totalWindows)} windows.
-            Click an app to expand its top windows. Adding an{" "}
-            <span className="font-mono">应用</span> blocks the entire app;
-            adding a window adds it as{" "}
-            <span className="font-mono">App::Title</span> (scoped).
+            最近 7 天 · {totalApps} 个应用 · {formatCount(totalWindows)} 个窗口。
+            点击应用可展开其常用窗口。添加一个{" "}
+            <span className="font-mono">应用</span> 会排除/包含整个应用；
+            添加窗口则只作用于{" "}
+            <span className="font-mono">App::Title</span>（限定范围）。
           </DialogDescription>
         </DialogHeader>
 
@@ -161,14 +161,14 @@ export function WindowPicker({
         <div className="flex-1 overflow-y-auto border border-border rounded-md">
           {isLoading && (
             <div className="p-4 text-xs text-muted-foreground text-center">
-              loading apps and windows...
+              正在加载应用和窗口…
             </div>
           )}
           {!isLoading && filtered.length === 0 && (
             <div className="p-4 text-xs text-muted-foreground text-center">
               {search
-                ? `nothing in the last 7 days matches "${search}".`
-                : "no recorded apps yet. record something first."}
+                ? `最近 7 天没有匹配“${search}”的内容。`
+                : "尚未记录应用，请先开始采集。"}
             </div>
           )}
           {!isLoading &&
@@ -203,9 +203,9 @@ export function WindowPicker({
                     </span>
                     <span className="text-[10px] text-muted-foreground tabular-nums">
                       {node.totalCount === 0
-                        ? "not captured yet"
+                        ? "尚未采集"
                         : node.windowCount > 1
-                          ? `${node.windowCount} windows · ${formatCount(node.totalCount)}`
+                          ? `${node.windowCount} 个窗口 · ${formatCount(node.totalCount)}`
                           : formatCount(node.totalCount)}
                     </span>
                     <Button
@@ -219,17 +219,17 @@ export function WindowPicker({
                       }}
                       title={
                         appAdded
-                          ? `${node.app} already added`
-                          : `${action} all of ${node.app}`
+                          ? `${node.app} 已添加`
+                          : `${action === "ignore" ? "排除" : "包含"} ${node.app} 的全部窗口`
                       }
                     >
                       {appAdded ? (
                         <>
-                          <Check className="h-3 w-3 mr-1" /> added
+                          <Check className="h-3 w-3 mr-1" /> 已添加
                         </>
                       ) : (
                         <>
-                          <Plus className="h-3 w-3 mr-1" /> {action} app
+                          <Plus className="h-3 w-3 mr-1" /> {action === "ignore" ? "排除" : "包含"}应用
                         </>
                       )}
                     </Button>
@@ -239,8 +239,8 @@ export function WindowPicker({
                       {node.windows.length === 0 && (
                         <div className="pl-9 pr-2 py-1.5 text-[11px] text-muted-foreground italic">
                           {node.totalCount === 0
-                            ? "not captured yet. add the whole app above."
-                            : "no window titles available — accessibility permission may be blocked for this app"}
+                            ? "尚未采集，请先添加上方的整个应用。"
+                            : "没有可用的窗口标题——此应用的辅助功能权限可能被阻止。"}
                         </div>
                       )}
                       {node.windows.map((w) => {
@@ -274,8 +274,8 @@ export function WindowPicker({
                               }}
                               title={
                                 winAdded
-                                  ? "already covered"
-                                  : `${action} ${scoped}`
+                                  ? "已覆盖"
+                                  : `${action === "ignore" ? "排除" : "包含"} ${scoped}`
                               }
                             >
                               {winAdded ? (

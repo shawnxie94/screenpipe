@@ -23,7 +23,7 @@ describe("first-run summary notification", () => {
     expect(payload.transient).toBe(false);
     expect(payload.actions).toEqual([
       expect.objectContaining({
-        label: "open summary",
+        label: "打开摘要",
         type: "deeplink",
         url: FIRST_RUN_SUMMARY_DEEPLINK,
         primary: true,
@@ -41,7 +41,7 @@ describe("first-run summary notification", () => {
     );
     expect(payload.actions[1]).toMatchObject({
       id: "ask_cursor",
-      label: "ask Cursor",
+      label: "询问 Cursor",
       type: "deeplink",
       url: "screenpipe://first-run-agent?target=cursor",
     });

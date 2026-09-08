@@ -71,12 +71,12 @@ export function ArtifactHtmlBody({
   if (!expanded) {
     body = hideTitle ? null : <p className="text-sm font-medium">{title}</p>;
   } else if (content == null) {
-    body = <p className="text-xs text-muted-foreground">loading artifact…</p>;
+    body = <p className="text-xs text-muted-foreground">正在加载产物…</p>;
   } else {
     body = (
       <div className={`space-y-2 ${fillHeight ? "flex h-full flex-col" : ""}`}>
         <div className="flex shrink-0 items-center justify-between gap-2 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
-          <span>html · sandboxed{showSource ? " · source" : " · rendered"}</span>
+          <span>HTML · 沙箱{showSource ? " · 源代码" : " · 已渲染"}</span>
           <button
             data-testid="brain-html-render-toggle"
             onClick={(e) => {
@@ -85,7 +85,7 @@ export function ArtifactHtmlBody({
             }}
             className="underline opacity-80 hover:opacity-100 hover:text-foreground transition-colors"
           >
-            {showSource ? "preview rendered" : "view source"}
+            {showSource ? "预览渲染结果" : "查看源代码"}
           </button>
         </div>
         {showSource ? (
@@ -119,11 +119,11 @@ export function ArtifactHtmlBody({
         >
           {expanded ? (
             <>
-              <ChevronUp className="h-2.5 w-2.5" /> show less
+              <ChevronUp className="h-2.5 w-2.5" /> 收起
             </>
           ) : (
             <>
-              <ChevronDown className="h-2.5 w-2.5" /> show more
+              <ChevronDown className="h-2.5 w-2.5" /> 展开
             </>
           )}
         </button>

@@ -95,7 +95,7 @@ export function ChatSplitPane({
           variant="ghost"
           size="icon"
           className="h-7 w-7"
-          aria-label={`Work in ${title}`}
+          aria-label={`在“${title}”中工作`}
           title="设为当前聊天"
           onClick={() => void onPromote(sessionId)}
         >
@@ -119,7 +119,7 @@ export function ChatSplitPane({
       >
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center text-xs text-muted-foreground">
-            This conversation is ready. Make it active to start writing.
+          此聊天已准备就绪。将它设为当前聊天后即可开始输入。
           </div>
         ) : (
           messages.map((message) => (
@@ -155,7 +155,7 @@ export function ChatSplitPane({
         className="shrink-0 border-t border-border/50 px-4 py-2.5 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         onClick={() => void onPromote(sessionId)}
       >
-        Select this pane to write or steer
+        选择此窗格以输入或引导
       </button>
     </section>
   );

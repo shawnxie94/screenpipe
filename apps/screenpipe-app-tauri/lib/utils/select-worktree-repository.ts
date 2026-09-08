@@ -184,11 +184,11 @@ export async function selectWorktreeRepository({
       if (workspace.data) return workspace.data;
       if (routeError) throw new Error(routeError);
       if (routeFinished) {
-        throw new Error("The AI did not choose a repository");
+        throw new Error("AI 未选择代码仓库");
       }
       await new Promise((resolve) => setTimeout(resolve, ROUTE_POLL_MS));
     }
-    throw new Error("The AI did not choose a repository in time");
+    throw new Error("AI 未能及时选择代码仓库");
   } finally {
     unregister();
     void commands.piStop(routeSessionId);

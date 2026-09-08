@@ -29,7 +29,7 @@ interface FirstRunGuideProps {
   onEnsureChatVisible?: () => void;
 }
 
-const PROMPT = "create a scheduled task that tracks what i do every hour";
+const PROMPT = "创建一个每小时记录我在做什么的定时任务";
 const LEGACY_PROMPT = "create a pipe that tracks what i do every hour";
 const GUIDE_PROMPTS = new Set([PROMPT, LEGACY_PROMPT]);
 const SKIP_BUTTON_CLASS =
@@ -455,29 +455,29 @@ export default function FirstRunGuide({
             <div className="flex items-center gap-2 mb-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-foreground" />
               <span className="font-mono text-[10px] tracking-wider lowercase text-muted-foreground/70">
-                you&apos;re all set
+                准备就绪
               </span>
             </div>
             <p className="font-sans text-sm text-foreground/90 leading-snug">
-              want to see how screenpipe works? one prompt, one automation,
-              about 30 seconds.
+              想了解 screenpipe 如何工作吗？只需一条提示词和一个自动化，
+              大约 30 秒即可完成。
             </p>
             <button
               onClick={acceptInvite}
               data-testid="firstrun-accept"
               className="mt-4 w-full flex items-center justify-center gap-1.5 border border-foreground bg-foreground py-2.5 font-mono text-xs uppercase tracking-widest text-background hover:bg-background hover:text-foreground transition-colors"
             >
-              show me · 30 sec
+              带我看看 · 30 秒
             </button>
             <button
               onClick={() => dismiss("declined")}
               data-testid="firstrun-decline"
               className={SKIP_BUTTON_CLASS}
             >
-              i&apos;ll explore
+              我先自己探索
             </button>
             <p className="mt-2 text-center font-mono text-[9px] lowercase tracking-wider text-muted-foreground/60">
-              rerun anytime from help
+              可随时从帮助中重新打开
             </p>
           </motion.div>
         </div>
@@ -491,14 +491,14 @@ export default function FirstRunGuide({
           className="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 border border-foreground/30 bg-background px-3 py-1.5 shadow-lg"
         >
           <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            2 of 3 · building your automation
+            2 / 3 · 正在创建你的自动化
           </span>
           <button
             onClick={skip}
             aria-label="跳过引导"
             className="font-mono text-[10px] uppercase tracking-widest text-foreground transition-opacity hover:opacity-60"
           >
-            skip ✕
+            跳过 ✕
           </button>
         </div>
       )}
@@ -520,15 +520,14 @@ export default function FirstRunGuide({
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-foreground" />
                   <span className="font-mono text-[10px] tracking-wider lowercase text-muted-foreground/70">
-                    let&apos;s try one thing
+                    先试一件事
                   </span>
                   <span className="ml-auto font-mono text-[10px] tracking-wider text-muted-foreground/70">
                     1 of 3
                   </span>
                 </div>
                 <p className="font-sans text-sm text-foreground/90 leading-snug">
-                  i filled the prompt below. send it to create your first
-                  automation.
+                  我已经填好下面的提示词，发送后即可创建你的第一个自动化。
                 </p>
                 <button
                   type="button"
@@ -544,7 +543,7 @@ export default function FirstRunGuide({
                   跳过引导
                 </button>
                 <p className="mt-2 text-center font-mono text-[9px] lowercase tracking-wider text-muted-foreground/60">
-                  esc to exit anytime
+                  按 Esc 可随时退出
                 </p>
               </div>
               {/* Speech-bubble tail pointing down at the composer */}
@@ -577,10 +576,10 @@ export default function FirstRunGuide({
                 <Zap className="w-4 h-4 text-foreground mt-0.5 shrink-0" strokeWidth={2} />
                 <div>
                   <p className="font-mono text-xs font-semibold lowercase text-foreground">
-                    your automation is being set up
+                    正在设置你的自动化
                   </p>
                   <p className="font-mono text-[11px] text-muted-foreground mt-0.5 leading-snug">
-                    head over to scheduled to see it running and explore more automations
+                    前往“定时任务”查看运行状态，也可以探索更多自动化
                   </p>
                 </div>
                 <span className="ml-auto shrink-0 font-mono text-[10px] tracking-wider text-muted-foreground/70">
@@ -591,7 +590,7 @@ export default function FirstRunGuide({
                 onClick={goToPipes}
                 className="w-full flex items-center justify-center gap-1.5 border border-foreground bg-foreground py-2.5 font-mono text-xs uppercase tracking-widest text-background hover:bg-background hover:text-foreground transition-colors"
               >
-                go to scheduled <ArrowRight className="w-3 h-3" strokeWidth={2} />
+                前往“定时任务” <ArrowRight className="w-3 h-3" strokeWidth={2} />
               </button>
               <button
                 onClick={skip}
@@ -600,7 +599,7 @@ export default function FirstRunGuide({
                 跳过引导
               </button>
               <p className="mt-2 text-center font-mono text-[9px] lowercase tracking-wider text-muted-foreground/60">
-                esc to exit anytime
+                按 Esc 可随时退出
               </p>
             </motion.div>
           )}
@@ -663,12 +662,12 @@ export default function FirstRunGuide({
           <div className="flex items-start gap-2.5 mb-3">
             <div>
               <p className="font-mono text-xs font-semibold lowercase text-foreground">
-                one last thing — run your scheduled task
+                最后一步 — 运行你的定时任务
               </p>
               <p className="font-mono text-[11px] text-muted-foreground mt-0.5 leading-snug">
-                hit the{" "}
+                点击定时任务上的{" "}
                 <Play className="inline w-3 h-3 -mt-0.5" strokeWidth={2} />{" "}
-                button on your scheduled task to start it
+                按钮即可启动
               </p>
             </div>
             <span className="ml-auto shrink-0 font-mono text-[10px] tracking-wider text-muted-foreground/70">
@@ -679,7 +678,7 @@ export default function FirstRunGuide({
             onClick={finishGuide}
             className="w-full flex items-center justify-center gap-1.5 border border-foreground bg-foreground py-2.5 font-mono text-xs uppercase tracking-widest text-background hover:bg-background hover:text-foreground transition-colors"
           >
-            got it <ArrowRight className="w-3 h-3" strokeWidth={2} />
+            知道了 <ArrowRight className="w-3 h-3" strokeWidth={2} />
           </button>
           <button
             onClick={skip}
@@ -688,7 +687,7 @@ export default function FirstRunGuide({
             跳过引导
           </button>
           <p className="mt-2 text-center font-mono text-[9px] lowercase tracking-wider text-muted-foreground/60">
-            esc to exit anytime
+            按 Esc 可随时退出
           </p>
         </motion.div>
         );

@@ -136,10 +136,10 @@ export function useChatMentions({
   const filterSearchGroups = useMemo(() => {
     const groups: { label: string; suggestions: MentionSuggestion[] }[] = [];
     if (filterTagResults.length > 0) {
-      groups.push({ label: "tags", suggestions: filterTagResults });
+      groups.push({ label: "标签", suggestions: filterTagResults });
     }
     if (filterSpeakerResults.length > 0) {
-      groups.push({ label: "speakers", suggestions: filterSpeakerResults });
+      groups.push({ label: "说话人", suggestions: filterSpeakerResults });
     }
     return groups;
   }, [filterTagResults, filterSpeakerResults]);
@@ -376,7 +376,7 @@ export function useChatMentions({
             .filter((speaker) => speaker.name)
             .map((speaker) => ({
               tag: speaker.name.includes(" ") ? `@"${speaker.name}"` : `@${speaker.name}`,
-              description: "speaker",
+              description: "说话人",
               category: "speaker" as const,
             }));
           setSpeakerSuggestions(suggestions);
@@ -459,7 +459,7 @@ export function useChatMentions({
                   .filter((speaker) => speaker.name)
                   .map((speaker) => ({
                     tag: speaker.name.includes(" ") ? `@"${speaker.name}"` : `@${speaker.name}`,
-                    description: "speaker",
+                    description: "说话人",
                     category: "speaker" as const,
                   }))
               : []
@@ -601,7 +601,7 @@ export function useChatMentions({
               .filter((speaker) => speaker.name)
               .map((speaker) => ({
                 tag: speaker.name.includes(" ") ? `@"${speaker.name}"` : `@${speaker.name}`,
-                description: "speaker",
+                description: "说话人",
                 category: "speaker" as const,
               }))
           );

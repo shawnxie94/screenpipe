@@ -83,8 +83,8 @@ describe("connection suggestions", () => {
     expect(merged).toEqual([
       { text: "Summarize current work" },
       {
-        text: "Prep upcoming meeting briefs from Google Calendar",
-        preview: "uses Google Calendar",
+        text: "根据 Google Calendar 准备即将开始的会议简报",
+        preview: "使用 Google Calendar",
         priority: 1,
         connectionIcon: "google-calendar",
       },
@@ -135,20 +135,20 @@ describe("connection suggestions", () => {
     expect(suggestions).toEqual([
       {
         id: "slack",
-        title: "Connect Slack",
-        description: "Search team threads",
+        title: "连接 Slack",
+        description: "搜索团队讨论",
         icon: "slack",
       },
       {
         id: "notion",
-        title: "Connect Notion",
-        description: "Search your docs",
+        title: "连接 Notion",
+        description: "搜索你的文档",
         icon: "notion",
       },
       {
         id: "google-docs",
-        title: "Connect Google Docs",
-        description: "Search your docs",
+        title: "连接 Google Docs",
+        description: "搜索你的文档",
         icon: "google-docs",
       },
     ]);

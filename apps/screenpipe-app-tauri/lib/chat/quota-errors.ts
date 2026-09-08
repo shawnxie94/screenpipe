@@ -96,20 +96,20 @@ function costLimitReason(window: CostLimitWindow, errorStr: string): string {
   const resetTime = formatResetMoment(resetsAt);
   // Background pipes draw on the same budget, which is why this fires for
   // people who feel they barely used chat. Keep saying so.
-  const shared = "Background scheduled tasks share this budget.";
+  const shared = "后台计划任务也会共用此额度。";
   switch (window) {
     case "trial":
-      return `you've used the AI allowance included with your trial. It doesn't refill during the trial. ${shared}`;
+      return `你已用完试用版包含的 AI 额度。试用期间不会补充。${shared}`;
     case "month":
       return resetTime
-        ? `you've used this month's AI usage limit. It resets ${resetTime}. ${shared}`
-        : `you've used this month's AI usage limit. It resets at the start of next month. ${shared}`;
+        ? `你已用完本月的 AI 使用额度，将于${resetTime}重置。${shared}`
+        : `你已用完本月的 AI 使用额度，将于下月初重置。${shared}`;
     case "day":
       return resetTime
-        ? `you've used today's AI usage limit. It resets ${resetTime}. ${shared}`
-        : `you've used today's AI usage limit. It resets tomorrow. ${shared}`;
+        ? `你已用完今天的 AI 使用额度，将于${resetTime}重置。${shared}`
+        : `你已用完今天的 AI 使用额度，将于明天重置。${shared}`;
     default:
-      return `your plan's AI usage limit is reached. ${shared}`;
+      return `你的方案已达到 AI 使用上限。${shared}`;
   }
 }
 
@@ -120,8 +120,8 @@ function formatResetMoment(resetsAt: string | null): string | null {
   if (Number.isNaN(at.getTime())) return null;
   const withinADay = at.getTime() - Date.now() < 24 * 60 * 60 * 1000;
   return withinADay
-    ? `at ${at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`
-    : `on ${at.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+    ? `在 ${at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`
+    : `在 ${at.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
 
 function isUpgradeLimitError(errorStr: string): boolean {
@@ -184,11 +184,11 @@ export function buildModelNotAllowedMessage(errorStr: string): string {
   });
   if (upgrade) {
     const plan = QUOTA_PLAN_LABELS[upgrade.requiredPlan];
-    return `This model needs the ${plan} plan. Switch to Auto to keep going, or upgrade.`;
+      return `此模型需要${plan}方案。请切换到“自动”继续，或进行升级。`;
   }
   const modelName = modelNotAllowedName(errorStr);
-  const named = modelName ? `"${modelName}"` : "This model";
-  return `${named} is not available through the selected provider. Choose another model or configure a provider that supports it.`;
+  const named = modelName ? `“${modelName}”` : "此模型";
+  return `${named} 无法通过所选服务商使用。请选择其他模型，或配置支持该模型的服务商。`;
 }
 
 export function buildDailyLimitMessage(errorStr: string): string {
@@ -196,14 +196,14 @@ export function buildDailyLimitMessage(errorStr: string): string {
     const normalized = errorStr.toLowerCase();
     if (normalized.includes("hosted_ai_allowance_exceeded")) {
       return parseQuotaUpgradeAction(errorStr)
-        ? "Your AI usage limit is reached. Switch to Auto or upgrade."
-        : "Your AI usage limit is reached. Switch to Auto.";
+        ? "已达到 AI 使用上限。请切换到“自动”或进行升级。"
+        : "已达到 AI 使用上限。请切换到“自动”。";
     }
     if (normalized.includes("free_chat_limit_exceeded")) {
-      return "You've used today's 2 free AI messages. Try again tomorrow, upgrade, or switch your AI preset to Ollama, Claude, Codex, or your own provider key.";
+      return "你已用完今天的 2 条免费 AI 消息。请明天再试、进行升级，或将 AI 预设切换到 Ollama、Claude、Codex 或自有服务商密钥。";
     }
     if (normalized.includes("free_chat_turn_request_limit_exceeded")) {
-      return "This free message reached its 8-step agent limit. Upgrade for longer agent runs, or switch your AI preset to your own provider.";
+      return "这条免费消息已达到代理 8 步上限。请升级以运行更长的代理任务，或将 AI 预设切换到自有服务商。";
     }
     const isCostLimit = isCostLimitError(errorStr);
     const isRateLimit =
@@ -221,17 +221,17 @@ export function buildDailyLimitMessage(errorStr: string): string {
       const window = costLimitWindow(errorStr);
       const recovery = parseQuotaUpgradeAction(errorStr)
         ? // The persistent recovery panel owns the explanation and actions.
-          "Choose a recovery option below."
-        : "Switch to a local model or your own provider key to keep working.";
-      return `This request didn't run because ${costLimitReason(window, errorStr)} ${recovery}`;
+          "请在下方选择恢复选项。"
+        : "请切换到本地模型或自有服务商密钥以继续工作。";
+      return `此请求未运行，因为${costLimitReason(window, errorStr)}${recovery}`;
     }
 
     if (isRateLimit) {
-      return "This model is temporarily rate-limited. Try again in a few seconds, or switch to a different model.";
+      return "此模型暂时受到频率限制。请几秒后重试，或切换到其他模型。";
     }
 
     if (parseQuotaUpgradeAction(errorStr)) {
-      return "This request didn't run because your plan's usage limit is reached. Choose a recovery option below.";
+      return "此请求未运行，因为你的方案已达到使用上限。请在下方选择恢复选项。";
     }
 
     const tierMatch = errorStr.match(/"tier":\s*"([^"]+)"/);
@@ -242,14 +242,14 @@ export function buildDailyLimitMessage(errorStr: string): string {
       tier === "business_max" ||
       tier === "business_ultra"
     ) {
-      return "You've hit your daily model limit. Switch to Auto, or use a local model or your own provider key.";
+      return "你已达到每日模型上限。请切换到“自动”，或使用本地模型/自有服务商密钥。";
     } else if (tier === "logged_in") {
-      return "You've used your included model queries for today. Switch to Auto, use your own provider, or upgrade to Business.";
+      return "你已用完今天包含的模型查询次数。请切换到“自动”、使用自有服务商，或升级到商业版。";
     } else {
-      return "You've used your included model queries for today. Sign in for more, or switch to Auto.";
+      return "你已用完今天包含的模型查询次数。请登录以获得更多次数，或切换到“自动”。";
     }
   } catch {
-    return "You've reached your daily limit. Switch to Auto or use your own provider.";
+    return "你已达到每日上限。请切换到“自动”或使用自有服务商。";
   }
 }
 
@@ -257,10 +257,10 @@ export const QUOTA_PLAN_LABELS: Record<
   QuotaUpgradeAction["requiredPlan"],
   string
 > = {
-  basic: "Basic",
-  business: "Business",
-  business_max: "Business Max",
-  business_ultra: "Business Ultra",
+  basic: "基础版",
+  business: "商业版",
+  business_max: "商业版 Max",
+  business_ultra: "商业版 Ultra",
 };
 
 /**
@@ -279,21 +279,21 @@ export function quotaPlanLabel(plan: string | null | undefined): string | null {
   }
   switch (normalized) {
     case "free":
-      return "Free";
+      return "免费版";
     case "standard":
-      return "Basic";
+      return "基础版";
     case "pro":
-      return "Business";
+      return "商业版";
     case "pro_max":
-      return "Business Max";
+      return "商业版 Max";
     case "pro_ultra":
-      return "Business Ultra";
+      return "商业版 Ultra";
     case "lifetime":
-      return "Lifetime";
+      return "终身版";
     case "team":
-      return "Team";
+      return "团队版";
     case "enterprise":
-      return "Enterprise";
+      return "企业版";
     default:
       return null;
   }
@@ -353,9 +353,9 @@ export function presentQuotaError(errorStr: string): QuotaErrorPresentation {
       // panel ("below"), which doesn't exist on these surfaces — each surface
       // renders its own upgrade action next to this copy instead.
       const message = buildDailyLimitMessage(errorStr).endsWith(
-        "Choose a recovery option below.",
+        "请在下方选择恢复选项。",
       )
-        ? "Your plan's AI usage limit is reached. Upgrade for a higher limit, or switch to a local model or your own provider key."
+        ? "你的方案已达到 AI 使用上限。请升级以获得更高上限，或切换到本地模型/自有服务商密钥。"
         : buildDailyLimitMessage(errorStr);
       return { kind, message, upgrade };
     }
@@ -369,7 +369,7 @@ export function presentQuotaError(errorStr: string): QuotaErrorPresentation {
 }
 
 export function buildHostedBusyMessage(): string {
-  return "Another AI request is finishing. Retrying automatically… You can keep typing — new messages will be queued.";
+  return "另一个 AI 请求即将完成。正在自动重试……你可以继续输入，新消息会排队等待。";
 }
 
 export function buildHostedBusyRetryMessage(
@@ -378,11 +378,11 @@ export function buildHostedBusyRetryMessage(
   delayMs: number,
 ): string {
   const waitSeconds = Math.max(1, Math.ceil(delayMs / 1000));
-  return `Another AI request is finishing. Retrying in ${waitSeconds}s… (${attempt}/${maxAttempts}) You can keep typing — new messages will be queued.`;
+  return `另一个 AI 请求即将完成。将在 ${waitSeconds} 秒后重试……（${attempt}/${maxAttempts}）你可以继续输入，新消息会排队等待。`;
 }
 
 export function buildHostedBusyFinalMessage(): string {
-  return "AI stayed busy with another request, so this reply could not start. Try again in a moment.";
+  return "AI 正在处理另一个请求，因此无法开始此回复。请稍后重试。";
 }
 
 export function buildRateLimitMessage(errorStr: string): string {
@@ -392,8 +392,8 @@ export function buildRateLimitMessage(errorStr: string): string {
     errorStr,
   );
   return isPerMinuteRate
-    ? `Rate limited — please wait ${waitTime} seconds and try again.`
-    : "Rate limited — try again in a moment or switch to a different model.";
+    ? `触发频率限制——请等待 ${waitTime} 秒后重试。`
+    : "触发频率限制——请稍后重试或切换到其他模型。";
 }
 
 /** How many times a single turn auto-retries on a 429 before giving up. */

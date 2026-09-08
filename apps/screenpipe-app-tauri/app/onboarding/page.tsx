@@ -57,7 +57,7 @@ const EndowedProgress = ({
     <div className="flex justify-between font-mono text-[9px] lowercase tracking-[0.04em] text-muted-foreground mb-[5px]">
       <span>设置</span>
       <span>
-        {step} of {total}
+        第 {step} 步，共 {total} 步
       </span>
     </div>
     <div className="flex gap-[3px]">

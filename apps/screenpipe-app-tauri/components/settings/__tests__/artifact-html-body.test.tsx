@@ -87,11 +87,11 @@ describe("ArtifactHtmlBody (Brain html artifact)", () => {
 
     expect(container.querySelector("iframe")).not.toBeNull();
     expect(screen.getByTestId("brain-html-render-toggle").textContent).toContain(
-      "view source",
+      "查看源代码",
     );
   });
 
-  it("expanded: 'view source' toggles to escaped source (still no leak)", () => {
+  it("expanded: toggles to escaped source (still no leak)", () => {
     render(
       <ArtifactHtmlBody
         title="t"
@@ -120,7 +120,7 @@ describe("ArtifactHtmlBody (Brain html artifact)", () => {
         onToggleExpanded={() => {}}
       />,
     );
-    expect(screen.getByText(/loading artifact/i)).toBeTruthy();
+    expect(screen.getByText("正在加载产物…")).toBeTruthy();
     expect(document.querySelector("iframe")).toBeNull();
   });
 

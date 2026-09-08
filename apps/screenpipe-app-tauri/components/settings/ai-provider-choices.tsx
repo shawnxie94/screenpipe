@@ -124,7 +124,7 @@ export function AIProviderChoices({
               key={adapter.id}
               type="acp"
               title={adapter.name}
-              description={`Let ${adapter.name} handle tasks for you.`}
+              description={`让 ${adapter.name} 为你处理任务。`}
               imageSrc={adapter.imageSrc}
               imageClassName={adapter.invertInDark ? "dark:invert" : undefined}
               selected={
@@ -168,7 +168,7 @@ export function AIProviderChoices({
               <AIProviderCard
                 type="anthropic"
                 title="Claude API"
-                description="Use Claude models with an Anthropic API key."
+                description="使用 Anthropic API 密钥调用 Claude 模型。"
                 imageSrc="/images/claude-ai.svg"
                 selected={selectedProvider === "anthropic"}
                 onClick={() => onSelectProvider("anthropic")}
@@ -186,7 +186,7 @@ export function AIProviderChoices({
               <AIProviderCard
                 type="custom"
                 title="使用 API 密钥"
-                description="Connect another AI service."
+                description="连接其他 AI 服务。"
                 imageSrc="/images/custom.png"
                 selected={selectedProvider === "custom"}
                 onClick={() => onSelectProvider("custom")}

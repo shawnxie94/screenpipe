@@ -25,7 +25,7 @@ export function useCopyToClipboard({
     commands.copyTextToClipboard(value).then(() => {
       setIsCopied(true);
       toast({
-        title: "Copied to clipboard",
+        title: "已复制到剪贴板",
         duration: 2000,
       });
 

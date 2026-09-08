@@ -87,7 +87,7 @@ export function AcpInstallGate({
       if (result.data.installed) onInstalled?.();
       if (result.data.requiresInstall && !result.data.installed) {
         setInstallError(
-          `the installer finished, but ${result.data.command ?? "the command"} is still unavailable.`,
+          `安装程序已完成，但 ${result.data.command ?? "该命令"} 仍不可用。`,
         );
       }
     } catch (error) {
@@ -150,21 +150,21 @@ export function AcpInstallGate({
       <div className="flex items-start gap-2">
         <Download className={cn("mt-0.5 shrink-0 text-muted-foreground", compact ? "h-3.5 w-3.5" : "h-4 w-4")} />
         <div className="space-y-1">
-          <p className={cn("font-medium", compact ? "text-xs" : "text-sm")}>Install {agentName}</p>
+          <p className={cn("font-medium", compact ? "text-xs" : "text-sm")}>安装 {agentName}</p>
           <p className={cn("text-muted-foreground", compact ? "text-[11px]" : "text-xs")}>
             {canInstallAutomatically ? (
               <>
-                Screenpipe installs the official{" "}
-                <code className="rounded bg-muted px-1">{command}</code> command in the background.
+                Screenpipe 会在后台安装官方{" "}
+                <code className="rounded bg-muted px-1">{command}</code> 命令。
               </>
             ) : command ? (
               <>
-                Install the <code className="rounded bg-muted px-1">{command}</code> command, then retry.
+                请安装 <code className="rounded bg-muted px-1">{command}</code> 命令，然后重试。
               </>
             ) : (
               <>安装后重试。</>
             )}
-            {onSwitchToDefault ? " Or use Screenpipe Cloud instead." : ""}
+            {onSwitchToDefault ? " 或改用 Screenpipe Cloud。" : ""}
           </p>
         </div>
       </div>
@@ -179,7 +179,7 @@ export function AcpInstallGate({
             compact ? "text-[11px]" : "text-xs",
           )}
         >
-          still not installed. finish the install, then retry.
+          尚未安装完成。请完成安装后重试。
         </div>
       )}
       {installError && (
@@ -204,11 +204,11 @@ export function AcpInstallGate({
           >
             {installing ? (
               <>
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> installing…
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> 正在安装…
               </>
             ) : (
               <>
-                <Download className="mr-1.5 h-3.5 w-3.5" /> install {agentName}
+                <Download className="mr-1.5 h-3.5 w-3.5" /> 安装 {agentName}
               </>
             )}
           </Button>
@@ -220,7 +220,7 @@ export function AcpInstallGate({
             variant={canInstallAutomatically ? "outline" : "default"}
             onClick={() => void openUrl(url).catch(() => window.open(url, "_blank"))}
           >
-            <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> open official installer
+            <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> 打开官方安装程序
           </Button>
         )}
         <Button
@@ -231,14 +231,14 @@ export function AcpInstallGate({
           onClick={beginRetry}
         >
           {checking ? (
-            <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> checking…</>
+                <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> 正在检查…</>
           ) : (
-            <><RefreshCw className="mr-1.5 h-3.5 w-3.5" /> retry</>
+            <><RefreshCw className="mr-1.5 h-3.5 w-3.5" /> 重试</>
           )}
         </Button>
         {onSwitchToDefault && (
           <Button type="button" size="sm" variant="ghost" onClick={onSwitchToDefault}>
-            use Screenpipe Cloud
+            使用 Screenpipe Cloud
           </Button>
         )}
       </div>

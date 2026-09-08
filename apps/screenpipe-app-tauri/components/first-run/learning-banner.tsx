@@ -62,15 +62,14 @@ export function FirstRunReadyPanel({
         <div className="flex items-center gap-2">
           <span className="h-2 w-2 bg-signal" aria-hidden="true" />
           <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-signal">
-            first result · ready
+            首个结果 · 已准备好
           </span>
         </div>
         <h2 className="mt-3 font-mono text-base font-semibold lowercase text-foreground">
-          screenpipe learned enough to help
+          screenpipe 已学习到足够内容，可以开始帮助你
         </h2>
         <p className="mt-2 max-w-xl text-[11px] leading-relaxed text-muted-foreground">
-          an evidence-backed summary of the apps and activity captured since
-          setup is waiting in a new chat.
+          基于证据整理的应用与活动摘要已准备好，正在新的聊天中等待查看。
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Button
@@ -79,7 +78,7 @@ export function FirstRunReadyPanel({
             data-testid="first-run-open-summary"
             onClick={onOpenSummary}
           >
-            open the summary
+            打开摘要
           </Button>
           <AgentHandoffPicker targets={handoffTargets} onPick={onPickAgent} />
         </div>
@@ -96,7 +95,7 @@ export function FirstRunReadyPanel({
 
       <div className="flex items-center justify-between gap-4 border-t border-border px-4 py-3">
         <p className="text-[10px] leading-relaxed text-muted-foreground">
-          this summary stays available in chat history.
+          此摘要会保留在聊天历史中。
         </p>
         <Button
           size="sm"
@@ -217,7 +216,7 @@ export function FirstRunLearningBanner(
           <div className="flex items-center gap-3">
             <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
             <p className="text-xs font-medium text-foreground">
-              Learning about your work
+              正在了解你的工作
             </p>
             <span className="ml-auto flex shrink-0 items-center gap-1.5 text-muted-foreground">
               <Clock className="h-3 w-3" />
@@ -230,13 +229,12 @@ export function FirstRunLearningBanner(
             </span>
           </div>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            Keep working normally. As soon as there is enough to describe, a
-            summary of what Screenpipe picked up shows up in a new chat.
+            请正常工作。采集到足够内容后，Screenpipe 会在新的聊天中生成活动摘要。
           </p>
           {capturedApps.length > 0 && (
             <div className="flex items-center gap-2 pt-0.5">
               <span className="shrink-0 text-[11px] text-muted-foreground">
-                Reading from
+                正在读取
               </span>
               <span className="flex items-center gap-1">
                 {capturedApps.map((app) => (
@@ -253,19 +251,18 @@ export function FirstRunLearningBanner(
           <div className="flex items-center gap-3">
             <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
             <p className="text-xs font-medium text-foreground">
-              Writing your summary
+              正在撰写摘要
             </p>
           </div>
           {/* No countdown. The clock measured evidence collection; the selected
               agent now owns this visible writing state until it finishes. */}
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            Screenpipe saw enough. Your selected AI is putting the summary
-            together now — this can take a minute or two.
+            Screenpipe 已采集到足够内容。你选择的 AI 正在整理摘要，可能需要一两分钟。
           </p>
           {capturedApps.length > 0 && (
             <div className="flex items-center gap-2 pt-0.5">
               <span className="shrink-0 text-[11px] text-muted-foreground">
-                Reading from
+                正在读取
               </span>
               <span className="flex items-center gap-1">
                 {capturedApps.map((app) => (

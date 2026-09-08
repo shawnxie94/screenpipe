@@ -1138,8 +1138,8 @@ export function WaterfallChart({
       palette={palette}
       table={
         <DataTable
-          caption={spec.title || "waterfall"}
-          columns={["step", "change", "running total"]}
+          caption={spec.title || "瀑布图"}
+          columns={["步骤", "变化", "累计值"]}
           rows={geometry.steps.map((step) => ({
             header: step.label,
             cells: [

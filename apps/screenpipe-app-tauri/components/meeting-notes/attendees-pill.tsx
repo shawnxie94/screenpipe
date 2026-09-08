@@ -197,8 +197,8 @@ export function AttendeesPill({ value, count, onChange }: AttendeesPillProps) {
         >
           <Users className="h-3.5 w-3.5" />
           {count === 0
-            ? "add attendees"
-            : `${count} ${count === 1 ? "attendee" : "attendees"}`}
+            ? "添加参会者"
+            : `${count} 位参会者`}
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -284,7 +284,7 @@ export function AttendeesPill({ value, count, onChange }: AttendeesPillProps) {
           <>
             <div className="px-2.5 pt-2 text-[11px] lowercase text-muted-foreground">
               {attendees.length}{" "}
-              {attendees.length === 1 ? "attendee" : "attendees"}
+              位参会者
             </div>
             <div className="flex max-h-[140px] flex-wrap gap-1.5 overflow-y-auto p-2.5">
               {attendees.map((name) => (

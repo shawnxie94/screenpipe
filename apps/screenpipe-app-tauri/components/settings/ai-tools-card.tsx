@@ -268,10 +268,10 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
   if (detected.length === 0) return null;
 
   const summary = noneConnected
-    ? `${rows.length} found. Connect ${rows.length === 1 ? "it" : "them"} in one click.`
+    ? `发现 ${rows.length} 个应用，可一键连接。`
     : allConnected
-    ? `All ${rows.length} connected`
-    : `${connectedCount} of ${rows.length} connected`;
+    ? `已连接全部 ${rows.length} 个应用`
+    : `${rows.length} 个应用中已连接 ${connectedCount} 个`;
 
   return (
     <div className={`rounded-lg border bg-card p-3 transition-colors ${expanded ? "border-foreground bg-accent" : "border-border"}`}>
@@ -286,13 +286,13 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium text-foreground">AI apps</h3>
+              <h3 className="text-sm font-medium text-foreground">AI 应用</h3>
               {connectedCount > 0 && <span className="h-2 w-2 rounded-full bg-foreground" />}
             </div>
             <p className="text-xs text-muted-foreground">{summary}</p>
           </div>
         </button>
-        {/* Adaptive: one-click magic for first-timers, Manage once anything is on. */}
+        {/* 首次使用时提供一键连接；已有连接后显示管理入口。 */}
         {noneConnected ? (
           <Button
             type="button"
@@ -307,7 +307,7 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
             ) : (
               <Plus className="h-3.5 w-3.5" />
             )}
-            {bulkRunning ? "Connecting..." : "Connect all"}
+            {bulkRunning ? "正在连接…" : "全部连接"}
           </Button>
         ) : (
           <Button
@@ -318,7 +318,7 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
             className="h-8 gap-1.5 text-xs normal-case font-sans tracking-normal"
           >
             <Plus className="h-3.5 w-3.5" />
-            Manage
+            管理
           </Button>
         )}
       </div>
@@ -343,7 +343,7 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
                   <div className="min-w-0 flex-1">
                     <span className="text-[13px] text-foreground">{DISPLAY_NAMES[id]}</span>
                     <span className="ml-2 text-xs text-muted-foreground">
-                      screen and audio history
+                      屏幕和音频历史
                     </span>
                     {err && (
                       <p className="text-[11px] mt-1 flex items-center gap-1.5 flex-wrap">
@@ -357,27 +357,27 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
                             onClick={() => revealPath(err.path!)}
                             className="underline text-foreground/80 hover:text-foreground"
                           >
-                            open file
+                            打开文件
                           </button>
                         )}
                       </p>
                     )}
                     {id === "runner" && isOn && !err && (
                       <p className="text-[11px] mt-1 text-muted-foreground">
-                        In Runner, enable Settings &gt; Workspace &gt; Local MCP Servers, then start a new conversation.
+                        请在 Runner 中启用“设置 &gt; 工作区 &gt; 本地 MCP 服务器”，然后开始新对话。
                       </p>
                     )}
                   </div>
                   {toolBusy ? (
                     <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Loader2 className="h-3 w-3 animate-spin" />
-                      {toolBusy === "connecting" ? "Connecting..." : "Removing..."}
+                      {toolBusy === "connecting" ? "正在连接…" : "正在移除…"}
                     </span>
                   ) : isOn ? (
                     <>
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                         <Check className="h-3 w-3" />
-                        Connected
+                        已连接
                       </span>
                       <button
                         type="button"
@@ -425,13 +425,11 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
               );
             })}
           </div>
-          {/* Bulk-action placement rule: one bulk action per place. When
-              nothing is connected the header's "+ Connect all" is the only
-              bulk control — no footer duplicate. */}
+          {/* 批量操作只保留一个入口；没有连接时使用顶部的一键连接按钮。 */}
           {hasAnyConnection && (
             <div className="flex items-center justify-between pt-2.5">
               <span className="text-[11px] text-muted-foreground/70">
-                {connectedCount} of {rows.length} connected
+                {rows.length} 个应用中已连接 {connectedCount} 个
               </span>
               <span className="flex items-center gap-2">
                 <button
@@ -440,7 +438,7 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
                   disabled={bulkRunning}
                   className="text-xs text-muted-foreground/60 hover:text-foreground transition-colors disabled:opacity-50"
                 >
-                  {confirmingDisconnect ? "Click again to confirm" : "Disconnect all…"}
+                  {confirmingDisconnect ? "再次点击确认" : "全部断开…"}
                 </button>
                 {!allConnected && (
                   <Button
@@ -452,7 +450,7 @@ export function AiToolsCard({ onChanged }: { onChanged?: () => void }) {
                     className="h-7 gap-1 text-xs normal-case font-sans tracking-normal"
                   >
                     <Plus className="h-3 w-3" />
-                    Connect all
+                    全部连接
                   </Button>
                 )}
               </span>

@@ -400,16 +400,16 @@ export function canResolveYet(
 }
 
 function formatMinutes(minutes: number): string {
-  if (minutes < 1) return "under a minute";
+  if (minutes < 1) return "不到 1 分钟";
   const rounded = Math.round(minutes);
-  return `${rounded} minute${rounded === 1 ? "" : "s"}`;
+  return `${rounded} 分钟`;
 }
 
 function formatList(items: string[]): string {
   if (items.length === 0) return "";
   if (items.length === 1) return items[0];
-  if (items.length === 2) return `${items[0]} and ${items[1]}`;
-  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+  if (items.length === 2) return `${items[0]} 和 ${items[1]}`;
+  return `${items.slice(0, -1).join("、")} 和 ${items[items.length - 1]}`;
 }
 
 function fileName(path: string): string {
@@ -505,13 +505,9 @@ export function buildLearningSummary(
   const lines: string[] = [];
 
   if (apps.length > 0) {
-    lines.push(
-      `Since setup ended I watched ${formatList(
-        apps.map((app) => app.name),
-      )} for ${formatMinutes(minutes)}.`,
-    );
+    lines.push(`设置完成后，我记录了 ${formatList(apps.map((app) => app.name))} ${formatMinutes(minutes)}。`);
   } else {
-    lines.push(`Since setup ended I recorded ${formatMinutes(minutes)}.`);
+    lines.push(`设置完成后，我记录了 ${formatMinutes(minutes)}。`);
   }
 
   // What was actually on screen. This is the part worth reading.
@@ -519,12 +515,10 @@ export function buildLearningSummary(
     lines.push(focus.map((line) => `- ${line}`).join("\n"));
   }
 
-  const details: string[] = [`${frames} screen${frames === 1 ? "" : "s"} indexed`];
-  if (files.length > 0) details.push(`files open: ${formatList(files)}`);
+  const details: string[] = [`${frames} 个画面`];
+  if (files.length > 0) details.push(`打开的文件：${formatList(files)}`);
   if (transcriptions > 0) {
-    details.push(
-      `${transcriptions} audio transcript${transcriptions === 1 ? "" : "s"}`,
-    );
+    details.push(`${transcriptions} 条音频转录`);
   }
   // A bare count on its own line reads as a stray fragment, but it must never
   // simply disappear — it is the proof that something was captured. Give it
@@ -533,17 +527,13 @@ export function buildLearningSummary(
   if (details.length > 1) {
     lines.push(details.join(" · "));
   } else {
-    lines[0] = `${lines[0].slice(0, -1)}, and indexed ${frames} screen${
-      frames === 1 ? "" : "s"
-    }.`;
+    lines[0] = `${lines[0].slice(0, -1)}，并记录了 ${frames} 个画面。`;
   }
 
   lines.push(
     focus.length > 0
-      ? `Ask me about any of it — "what was I doing in ${
-          apps[0]?.name ?? "that app"
-        }?" works. I keep recording in the background.`
-      : "Ask me anything you saw, said, or heard from here on — I keep recording in the background.",
+      ? `你可以继续询问相关内容，例如“我在 ${apps[0]?.name ?? "那个应用"} 里做了什么？”；我会在后台持续记录。`
+      : "你可以继续询问之后看到、说过或听到的任何内容；我会在后台持续记录。",
   );
 
   return lines.join("\n\n");

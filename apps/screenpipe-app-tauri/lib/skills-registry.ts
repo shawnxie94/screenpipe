@@ -38,7 +38,7 @@ const SOURCE_LABELS: Record<string, string> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
   screenpipe: "Screenpipe",
-  community: "Community",
+  community: "社区",
 };
 
 // Order sources appear in the browser. Unknown sources sort last.
@@ -48,7 +48,7 @@ const SOURCE_ORDER = ["anthropic", "openai", "screenpipe", "community"];
  *  empty source reads as "Community". */
 export function sourceLabel(source?: string | null): string {
   const key = (source ?? "").trim().toLowerCase();
-  if (!key) return "Community";
+  if (!key) return "社区";
   return SOURCE_LABELS[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
 }
 

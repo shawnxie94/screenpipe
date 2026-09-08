@@ -31,7 +31,7 @@ type PendingPair = {
 const POLL_INTERVAL_MS = 1_500;
 
 function labelBrowser(browser: string): string {
-  if (!browser) return "your browser";
+  if (!browser) return "你的浏览器";
   return browser.charAt(0).toUpperCase() + browser.slice(1);
 }
 
@@ -89,7 +89,7 @@ export function BrowserPairingDialog() {
       setPending(null);
     } catch (e) {
       toast({
-        title: "browser pairing failed",
+        title: "浏览器配对失败",
         description: e instanceof Error ? e.message : String(e),
         variant: "destructive",
       });
@@ -109,7 +109,7 @@ export function BrowserPairingDialog() {
           <DialogTitle>连接浏览器</DialogTitle>
           <DialogDescription>
             {pending
-              ? `${labelBrowser(pending.browser)} wants to connect to Screenpipe. This lets agents use your open tabs when browser context is needed.`
+              ? `${labelBrowser(pending.browser)} 想要连接到知迹。这将允许代理在需要浏览器上下文时使用你打开的标签页。`
               : "A browser wants to connect to Screenpipe."}
           </DialogDescription>
         </DialogHeader>

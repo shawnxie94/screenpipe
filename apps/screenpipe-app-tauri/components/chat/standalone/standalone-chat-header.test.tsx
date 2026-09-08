@@ -84,7 +84,7 @@ describe("StandaloneChatHeader", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "chat options for crm" }),
+      screen.getByRole("button", { name: "聊天选项：crm" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByTestId("chat-header-tab-spacer"),

@@ -189,12 +189,12 @@ export function ChatMainPane({
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium">
                     {continuousPipeChat.state === "on"
-                      ? "one chat"
+                      ? "单一聊天"
                       : continuousPipeChat.state === "off"
-                        ? "memory paused"
+                        ? "记忆已暂停"
                         : continuousPipeChat.state === "missing"
-                          ? "scheduled task unavailable"
-                          : "checking one-chat memory"}
+                          ? "定时任务不可用"
+                          : "正在检查单一聊天记忆"}
                   </p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
                     {continuousPipeChat.state === "on"
@@ -203,7 +203,7 @@ export function ChatMainPane({
                         ? "未来的运行将启动单独的聊天。保存的上下文会保留在此，直到你清除。"
                         : continuousPipeChat.state === "missing"
                           ? "此文字记录会保留，但在你重新安装任务前，回复会被禁用。"
-                          : "The saved transcript is available while screenpipe checks the current task setting."}
+                          : "screenpipe 正在检查当前任务设置，已保存的文字记录仍可用。"}
                   </p>
                 </div>
                 <Button
@@ -213,7 +213,7 @@ export function ChatMainPane({
                   className="h-7 shrink-0 px-2 text-[11px]"
                   onClick={onOpenPipeSettings}
                 >
-                  manage
+                  管理
                 </Button>
               </div>
             )}
@@ -237,10 +237,10 @@ export function ChatMainPane({
                   <div className="text-center space-y-2">
                     <h3 className="font-semibold tracking-tight">
                       {!hasPresets
-                        ? "No AI Presets"
+                        ? "没有可用的 AI 预设"
                         : !hasValidModel
-                          ? "No Model Selected"
-                            : "Setup Required"}
+                          ? "尚未选择模型"
+                            : "需要完成设置"}
                     </h3>
                     <p className="text-sm text-muted-foreground max-w-sm">
                       {disabledReason}
@@ -249,7 +249,7 @@ export function ChatMainPane({
                   {!hasPresets && (
                     <Button variant="outline" onClick={onOpenSettings} className="gap-2">
                       <Settings className="h-4 w-4" />
-                      Go to Settings
+                      前往设置
                     </Button>
                   )}
                 </div>

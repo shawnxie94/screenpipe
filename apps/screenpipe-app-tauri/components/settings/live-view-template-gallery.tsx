@@ -26,7 +26,6 @@ export function getTemplatePipeReadiness(
   );
   const installed = kit.pipes.length - missingPipes.length;
   const required = kit.pipes.length;
-  const helperLabel = required === 1 ? "helper" : "helpers";
 
   if (missingPipes.length === 0) {
     return {
@@ -34,7 +33,7 @@ export function getTemplatePipeReadiness(
       installed,
       required,
       missingPipes,
-      label: `${required} local starting point${required === 1 ? "" : "s"} available`,
+      label: `有 ${required} 个可用的本地起点`,
       explanation:
         "代理可以在合适时复用这些辅助工具，或选择更好的方法。",
     };
@@ -46,8 +45,8 @@ export function getTemplatePipeReadiness(
       installed,
       required,
       missingPipes,
-      label: "Agent chooses the data helpers",
-      explanation: `This template suggests ${required} built-in ${helperLabel}, but the agent decides what to reuse or create after checking your data.`,
+      label: "由代理选择数据助手",
+      explanation: `此模板建议使用 ${required} 个内置数据助手，但代理会先检查你的数据，再决定复用或创建哪些助手。`,
     };
   }
 
@@ -56,9 +55,9 @@ export function getTemplatePipeReadiness(
     installed,
     required,
     missingPipes,
-    label: `${installed} local starting point${installed === 1 ? "" : "s"} available`,
+    label: `有 ${installed} 个本地起点可用`,
     explanation:
-      "The agent will inspect what is useful, then reuse, improve, or create only the helpers this dashboard needs.",
+        "代理会先检查哪些内容有用，再仅复用、改进或创建此仪表盘需要的助手。",
   };
 }
 
@@ -78,8 +77,7 @@ export function LiveViewTemplateGallery({
         <div>
           <h3 className="text-sm font-medium">入门模板</h3>
           <p className="text-[11px] text-muted-foreground">
-            Pick an outcome. The agent checks your data, then chooses the Blocks
-            and local helpers that fit.
+            选择一个结果目标。代理会检查你的数据，然后选择合适的模块和本地助手。
           </p>
         </div>
       </div>
@@ -100,7 +98,7 @@ export function LiveViewTemplateGallery({
                   </p>
                 </div>
                 <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
-                  {kit.slots.length} section{kit.slots.length === 1 ? "" : "s"}{" "}
+                  {kit.slots.length} 个模块{" "}
                   · {getLiveViewTimeRangeOption(kit.timeRange).label}
                 </span>
               </div>
@@ -117,7 +115,7 @@ export function LiveViewTemplateGallery({
               </div>
               <details className="mt-2 text-[10px] text-muted-foreground">
                 <summary className="cursor-pointer select-none hover:text-foreground">
-                  possible starting points
+                  可能的起点
                 </summary>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {kit.pipes.map((pipe) => {
@@ -140,7 +138,7 @@ export function LiveViewTemplateGallery({
               </details>
               <div className="mt-auto flex items-end justify-between gap-3 pt-4">
                 <span className="text-[10px] text-muted-foreground">
-                  Preview the goal; the agent decides the build.
+                  先预览目标，具体构建由代理决定。
                 </span>
                 <Button
                   data-testid={`preview-live-view-template-${kit.id}`}
@@ -149,7 +147,7 @@ export function LiveViewTemplateGallery({
                   className="rounded-none"
                   onClick={() => onPreview(kit)}
                 >
-                  preview
+                  预览
                 </Button>
               </div>
             </article>

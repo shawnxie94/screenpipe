@@ -272,7 +272,7 @@ describe("onboarding engine startup", () => {
 
     await waitFor(() => expect(mocks.startCapture).toHaveBeenCalledTimes(1));
     expect(mocks.handleNextSlide).not.toHaveBeenCalled();
-    expect(await screen.findByText(/engine failed to start/i)).toBeInTheDocument();
+    expect(await screen.findByText(/引擎启动失败/)).toBeInTheDocument();
   });
 
   it("ensures capture after native startup becomes reachable", async () => {

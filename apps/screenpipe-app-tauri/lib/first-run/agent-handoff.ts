@@ -70,7 +70,7 @@ export type AgentHandoffResult = AgentHandoffOpenResult & {
  * answers about the session they were part of rather than an arbitrary range.
  */
 export const HANDOFF_PROMPT =
-  "Using screenpipe, summarize what I worked on in the last 5 minutes.";
+  "使用 screenpipe，总结我过去 5 分钟的工作内容。";
 
 const ENCODED_HANDOFF_PROMPT = encodeURIComponent(HANDOFF_PROMPT);
 

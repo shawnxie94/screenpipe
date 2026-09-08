@@ -26,7 +26,7 @@ describe("validatePresetName", () => {
   it("rejects duplicates that only differ by surrounding whitespace", () => {
     expect(validatePresetName("  Daily Summary  ", visiblePresets)).toEqual({
       isValid: false,
-      error: "A preset with this name already exists",
+      error: "已存在同名预设",
     });
   });
 
@@ -47,7 +47,7 @@ describe("aiProviderTypeSchema", () => {
       validateApiKey("not-a-google-key", "custom", GEMINI_OPENAI_BASE_URL),
     ).toEqual({
       isValid: true,
-      warning: "Gemini API keys usually start with 'AIza'; the connection test will verify it",
+      warning: "Gemini API 密钥通常以“AIza”开头，连接测试会验证它",
     });
   });
 });
@@ -61,7 +61,7 @@ describe("BYOK connection validation", () => {
       validateAiProviderUrl(`${GEMINI_OPENAI_BASE_URL}/v1`, "custom"),
     ).toEqual({
       isValid: false,
-      error: `For Gemini, use exactly ${GEMINI_OPENAI_BASE_URL}`,
+      error: `对于 Gemini，请严格使用 ${GEMINI_OPENAI_BASE_URL}`,
     });
     expect(
       validateAiProviderUrl(
@@ -70,7 +70,7 @@ describe("BYOK connection validation", () => {
       ),
     ).toEqual({
       isValid: false,
-      error: `For Gemini, use exactly ${GEMINI_OPENAI_BASE_URL}`,
+      error: `对于 Gemini，请严格使用 ${GEMINI_OPENAI_BASE_URL}`,
     });
   });
 
@@ -79,7 +79,7 @@ describe("BYOK connection validation", () => {
       validateAiModel("models/gemini-3.6-flash", "custom", GEMINI_OPENAI_BASE_URL),
     ).toEqual({
       isValid: false,
-      error: 'For Gemini, use "gemini-3.6-flash" without the models/ prefix',
+      error: '对于 Gemini，请使用“gemini-3.6-flash”，不要包含 models/ 前缀',
     });
     expect(
       validateAiModel("gemini-3.6-flash", "custom", GEMINI_OPENAI_BASE_URL),
@@ -139,7 +139,7 @@ describe("BYOK connection validation", () => {
         model: "gpt-5",
         apiKey: "",
       }),
-    ).toEqual({ apiKey: "API key is required" });
+    ).toEqual({ apiKey: "必须填写 API 密钥" });
     expect(
       validateAiPresetConnectionFields({
         provider: "custom",
@@ -155,7 +155,7 @@ describe("BYOK connection validation", () => {
         model: "gemini-3.6-flash",
         apiKey: "",
       }),
-    ).toEqual({ apiKey: "API key is required" });
+    ).toEqual({ apiKey: "必须填写 API 密钥" });
   });
 
   it("never requires an api key for an ACP preset (agents sign in on their own)", () => {
@@ -171,7 +171,7 @@ describe("BYOK connection validation", () => {
         url: "not-a-url",
         model: "qwen3.5:9b",
       }),
-    ).toEqual({ url: "Please enter a valid URL" });
+    ).toEqual({ url: "请输入有效的 URL" });
   });
 
   it("fingerprints only fields that change the provider connection", () => {

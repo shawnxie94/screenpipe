@@ -112,15 +112,14 @@ export function NotificationPipeControls({
 
   if (loading && pipeRows.length === 0) {
     return (
-      <p className="px-3 py-3 text-xs text-muted-foreground">loading scheduled tasks…</p>
+      <p className="px-3 py-3 text-xs text-muted-foreground">正在加载定时任务…</p>
     );
   }
 
   if (pipeRows.length === 0) {
     return (
       <div className="px-3 py-4 text-xs text-muted-foreground">
-        no scheduled tasks installed yet. install one from the Store and it&apos;ll
-        show up here.
+        还没有安装定时任务。请从商店安装一个，它会显示在这里。
       </div>
     );
   }
@@ -130,12 +129,12 @@ export function NotificationPipeControls({
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] text-muted-foreground">
           {mutedCount > 0
-            ? `${mutedCount} of ${pipeRows.length} muted`
-            : `${pipeRows.length} scheduled task${pipeRows.length === 1 ? "" : "s"} can notify you`}
+            ? `${pipeRows.length} 个定时任务中已静音 ${mutedCount} 个`
+            : `${pipeRows.length} 个定时任务可以通知你`}
           {vipCount > 0 && (
             <span className="text-muted-foreground/80">
               {" · "}
-              {vipCount} always notifies
+              {vipCount} 个始终通知
             </span>
           )}
         </p>
@@ -146,13 +145,13 @@ export function NotificationPipeControls({
             className="text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:pointer-events-none"
             onClick={() => onChange([])}
           >
-            unmute all
+            取消全部静音
           </button>
         )}
       </div>
       {canVip && (
         <p className="text-[10px] text-muted-foreground/70">
-          ★ = always notify, even while snoozed or in quiet hours
+          ★ = 始终通知，即使处于暂停或免打扰时段
         </p>
       )}
 
@@ -203,7 +202,7 @@ export function NotificationPipeControls({
                           : `always notify for ${row.title}`
                       }
                       aria-pressed={isVip}
-                      title="always notify, even while paused"
+                      title="始终通知，即使已暂停"
                       data-testid={`notification-pipe-vip-${row.name}`}
                       onClick={() => setVip(row.name, !isVip)}
                       className={cn(

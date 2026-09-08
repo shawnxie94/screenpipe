@@ -285,7 +285,7 @@ function truncationNote(
   noun: string,
 ): string | null {
   if (received <= kept) return null;
-  return `showing first ${kept} of ${received} ${noun}`;
+  return `显示前 ${kept} 项（共 ${received} ${noun}）`;
 }
 
 function parseBarOrLine(
@@ -301,7 +301,7 @@ function parseBarOrLine(
     ...base,
     type,
     items,
-    truncatedNote: truncationNote(received, items.length, "points"),
+    truncatedNote: truncationNote(received, items.length, "条数据"),
   };
 }
 

@@ -27,13 +27,13 @@ describe("meeting share control", () => {
       items: [
         {
           key: "resume",
-          label: "resume meeting",
+          label: "恢复会议",
           icon: Play,
           onSelect: vi.fn(),
         },
         {
           key: "delete",
-          label: "delete meeting",
+          label: "删除会议",
           icon: Trash2,
           onSelect: vi.fn(),
           destructive: true,
@@ -60,9 +60,9 @@ describe("meeting share control", () => {
 
     // copy, send, more — and nothing else, however many actions exist below.
     expect(screen.getAllByRole("button")).toHaveLength(3);
-    expect(screen.getByRole("button", { name: "copy summary" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "复制摘要" })).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "send to an app…" }),
+      screen.getByRole("button", { name: "发送到应用…" }),
     ).toBeVisible();
     expect(
       screen.getByRole("button", { name: "更多会议操作" }),
@@ -80,7 +80,7 @@ describe("meeting share control", () => {
     const onShare = vi.fn();
     render(<MeetingShareMenu canShareSummary onShare={onShare} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "copy summary" }));
+    fireEvent.click(screen.getByRole("button", { name: "复制摘要" }));
     expect(onShare).toHaveBeenCalledWith("summary");
   });
 
@@ -93,7 +93,7 @@ describe("meeting share control", () => {
     // rest: fewer than 1 in 10 people who open a meeting use any share action,
     // so a visible word here competed with the tabs beside it.
     const primary = screen.getByRole("button", {
-      name: "copy meeting + transcript",
+      name: "复制会议和转写",
     });
     expect(primary).toHaveTextContent("");
     fireEvent.click(primary);
@@ -112,8 +112,8 @@ describe("meeting share control", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "copy meeting + transcript" }),
-    ).toHaveTextContent("copied");
+      screen.getByRole("button", { name: "复制会议和转写" }),
+    ).toHaveTextContent("已复制");
   });
 
   // Sending has a consequence outside the app, so unlike `copy` it says what
@@ -127,7 +127,7 @@ describe("meeting share control", () => {
     // Visible fixes the discoverability bug; unlabelled keeps the rule's
     // scarcest slot off an action measured at 2 users in 30 days.
     expect(send).toHaveTextContent("");
-    expect(send).toHaveAccessibleName("send to an app…");
+    expect(send).toHaveAccessibleName("发送到应用…");
     fireEvent.click(send);
     expect(onShare).toHaveBeenCalledWith("send");
   });
@@ -159,15 +159,15 @@ describe("meeting share control", () => {
 
     const stack = screen.getByTestId("meeting-share-destinations");
     expect(stack).toBeVisible();
-    const destinations = screen.getAllByRole("button", {
-      name: /review and send to/,
+      const destinations = screen.getAllByRole("button", {
+      name: /审阅并发送到/,
     });
     expect(
       destinations.map((button) => button.getAttribute("aria-label")),
-    ).toEqual(["review and send to Obsidian", "review and send to Notion"]);
+    ).toEqual(["审阅并发送到 Obsidian", "审阅并发送到 Notion"]);
     expect(screen.getByTestId("meeting-send-obsidian")).toHaveAttribute(
       "title",
-      "Obsidian · used during this meeting",
+      "Obsidian · 本次会议中使用过",
     );
 
     fireEvent.click(screen.getByTestId("meeting-send-notion"));
@@ -189,7 +189,7 @@ describe("meeting share control", () => {
     );
 
     openMenu();
-    await screen.findByRole("menuitem", { name: /copy transcript/ });
+    await screen.findByRole("menuitem", { name: /复制转写/ });
     expect(onMenuOpenChange).toHaveBeenCalledWith(true);
   });
 
@@ -200,13 +200,13 @@ describe("meeting share control", () => {
       <MeetingShareMenu
         canShareSummary
         canSend
-        sendLabel="send to Slack…"
+        sendLabel="发送到 Slack…"
         onShare={vi.fn()}
       />,
     );
 
     expect(
-      screen.getByRole("button", { name: "send to Slack…" }),
+      screen.getByRole("button", { name: "发送到 Slack…" }),
     ).toBeVisible();
   });
 
@@ -217,20 +217,20 @@ describe("meeting share control", () => {
     openMenu();
 
     const email = await screen.findByRole("menuitem", {
-      name: /email summary/,
+      name: /通过邮件发送摘要/,
     });
     expect(
-      await screen.findByRole("menuitem", { name: /copy transcript/ }),
+      await screen.findByRole("menuitem", { name: /复制转写/ }),
     ).toBeVisible();
     expect(
       await screen.findByRole("menuitem", {
-        name: /copy meeting \+ transcript/,
+        name: /复制会议和转写/,
       }),
     ).toBeVisible();
     // The primary action is not repeated inside its own menu, and neither is
     // send now that it has its own button.
     expect(
-      screen.queryByRole("menuitem", { name: /^copy summary/ }),
+      screen.queryByRole("menuitem", { name: /^复制摘要/ }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("menuitem", { name: /send/ }),
@@ -249,11 +249,11 @@ describe("meeting share control", () => {
 
     openMenu();
 
-    await screen.findByRole("menuitem", { name: /email summary/ });
+    await screen.findByRole("menuitem", { name: /通过邮件发送摘要/ });
 
     // Both headings exist, so the mail draft has somewhere honest to live.
-    expect(screen.getByText("copy")).toBeVisible();
-    expect(screen.getByText("send")).toBeVisible();
+    expect(screen.getByText("复制")).toBeVisible();
+    expect(screen.getByText("发送")).toBeVisible();
 
     // The clipboard rows come first, and the mail draft sorts after them —
     // under `send`, not inside `copy`.
@@ -261,9 +261,9 @@ describe("meeting share control", () => {
       .getAllByRole("menuitem")
       .map((item) => item.textContent ?? "");
     const lastClipboardIndex = labels.findLastIndex((label) =>
-      /^copy /.test(label),
+      /^复制/.test(label),
     );
-    const emailIndex = labels.findIndex((label) => /email summary/.test(label));
+    const emailIndex = labels.findIndex((label) => /通过邮件发送摘要/.test(label));
     expect(lastClipboardIndex).toBeGreaterThanOrEqual(0);
     expect(emailIndex).toBeGreaterThan(lastClipboardIndex);
   });
@@ -274,10 +274,10 @@ describe("meeting share control", () => {
     openMenu();
 
     expect(
-      await screen.findByRole("menuitem", { name: /copy transcript/ }),
+      await screen.findByRole("menuitem", { name: /复制转写/ }),
     ).toBeVisible();
     expect(
-      screen.queryByRole("menuitem", { name: /summary/ }),
+      screen.queryByRole("menuitem", { name: /摘要/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -291,9 +291,9 @@ describe("meeting share control", () => {
         canShareSummary
         moreGroups={[
           {
-            label: "meeting",
+            label: "会议",
             items: [
-              { key: "resume", label: "resume meeting", icon: Play, onSelect },
+              { key: "resume", label: "恢复会议", icon: Play, onSelect },
             ],
           },
         ]}
@@ -305,13 +305,13 @@ describe("meeting share control", () => {
 
     // Both worlds are reachable from the single trigger.
     expect(
-      await screen.findByRole("menuitem", { name: /copy transcript/ }),
+      await screen.findByRole("menuitem", { name: /复制转写/ }),
     ).toBeVisible();
     const resume = await screen.findByRole("menuitem", {
-      name: /resume meeting/,
+      name: /恢复会议/,
     });
-    expect(screen.getByText("copy")).toBeVisible();
-    expect(screen.getByText("meeting")).toBeVisible();
+    expect(screen.getByText("复制")).toBeVisible();
+    expect(screen.getByText("会议")).toBeVisible();
 
     fireEvent.click(resume);
     expect(onSelect).toHaveBeenCalled();
@@ -324,25 +324,25 @@ describe("meeting share control", () => {
         canShareSummary
         moreGroups={[
           {
-            label: "summary",
+            label: "摘要",
             items: [
               {
                 key: "summary-model",
-                label: "summary model",
+                label: "摘要模型",
                 icon: Play,
                 submenu: {
                   selectedKey: "screenpipe",
-                  selectedLabel: "auto",
+                  selectedLabel: "自动",
                   options: [
                     {
                       key: "screenpipe",
                       label: "screenpipe",
-                      detail: "auto",
+                      detail: "自动",
                       onSelect: vi.fn(),
                     },
                     {
                       key: "local",
-                      label: "local",
+                      label: "本地",
                       detail: "llama 3.2",
                       onSelect: chooseLocal,
                     },
@@ -358,18 +358,18 @@ describe("meeting share control", () => {
 
     openMenu();
     const modelMenu = await screen.findByRole("menuitem", {
-      name: /summary model auto/,
+      name: /摘要模型 自动/,
     });
     fireEvent.keyDown(modelMenu, { key: "ArrowRight" });
 
     expect(
       await screen.findByRole("menuitemradio", {
-        name: /screenpipe auto/,
+        name: /screenpipe 自动/,
       }),
     ).toHaveAttribute("aria-checked", "true");
     fireEvent.click(
       await screen.findByRole("menuitemradio", {
-        name: /local llama 3\.2/,
+        name: /本地 llama 3\.2/,
       }),
     );
     expect(chooseLocal).toHaveBeenCalledOnce();
@@ -389,7 +389,7 @@ describe("meeting share control", () => {
     const items = await screen.findAllByRole("menuitem");
     // Delete is last, after its own separator, so it never sits directly under
     // the pointer's resting place on an adjacent action.
-    expect(items[items.length - 1]).toHaveTextContent("delete meeting");
+    expect(items[items.length - 1]).toHaveTextContent("删除会议");
   });
 
   it("disables a menu entry the meeting cannot currently run", async () => {
@@ -398,11 +398,11 @@ describe("meeting share control", () => {
         canShareSummary
         moreGroups={[
           {
-            label: "summary",
+            label: "摘要",
             items: [
               {
                 key: "summarize",
-                label: "summarizing meeting",
+                label: "正在总结会议",
                 icon: Play,
                 onSelect: vi.fn(),
                 disabled: true,
@@ -417,7 +417,7 @@ describe("meeting share control", () => {
     openMenu();
 
     expect(
-      await screen.findByRole("menuitem", { name: /summarizing meeting/ }),
+      await screen.findByRole("menuitem", { name: /正在总结会议/ }),
     ).toHaveAttribute("aria-disabled", "true");
   });
 
@@ -430,8 +430,8 @@ describe("meeting share control", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: "copy summary" }),
-    ).toHaveTextContent("copied");
+      screen.getByRole("button", { name: "复制摘要" }),
+    ).toHaveTextContent("已复制");
 
     // A transcript copy came from the menu, so the primary label must not claim
     // the summary was copied.
@@ -443,8 +443,8 @@ describe("meeting share control", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: "copy summary" }),
-    ).not.toHaveTextContent("copied");
+      screen.getByRole("button", { name: "复制摘要" }),
+    ).not.toHaveTextContent("已复制");
   });
 
   it("locks every control while a copy is in flight", () => {

@@ -193,7 +193,7 @@ export const validateAiProviderUrl = (
 
   const parsed = parseUrl(url)!;
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return { isValid: false, error: "Custom URL must use http or https" };
+    return { isValid: false, error: "自定义 URL 必须使用 http 或 https" };
   }
 
   if (parsed.hostname.toLowerCase() === GEMINI_API_HOST) {
@@ -205,7 +205,7 @@ export const validateAiProviderUrl = (
     ) {
       return {
         isValid: false,
-        error: `For Gemini, use exactly ${GEMINI_OPENAI_BASE_URL}`,
+        error: `对于 Gemini，请严格使用 ${GEMINI_OPENAI_BASE_URL}`,
       };
     }
   }
@@ -225,7 +225,7 @@ export const validateAiModel = (
   if (provider === "custom" && isGeminiApiUrl(url) && normalized.startsWith("models/")) {
     return {
       isValid: false,
-      error: `For Gemini, use "${normalized.slice("models/".length)}" without the models/ prefix`,
+      error: `对于 Gemini，请使用“${normalized.slice("models/".length)}”，不要包含 models/ 前缀`,
     };
   }
 
@@ -346,7 +346,7 @@ export const validateField = (
     const schemaShape = settingsStoreSchema.shape as Record<string, z.ZodTypeAny>;
     const fieldSchema = schemaShape[field];
     if (!fieldSchema) {
-      return { isValid: false, error: "Unknown field" };
+      return { isValid: false, error: "未知字段" };
     }
     
     fieldSchema.parse(value);
@@ -355,10 +355,10 @@ export const validateField = (
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        error: error.errors[0]?.message || "Invalid value",
+        error: error.errors[0]?.message || "值无效",
       };
     }
-    return { isValid: false, error: "Validation failed" };
+    return { isValid: false, error: "验证失败" };
   }
 };
 
@@ -472,11 +472,11 @@ export const validatePresetName = (name: string, visiblePresets: AIPreset[], cur
   );
 
   if (exists) {
-    return { isValid: false, error: "A preset with this name already exists" };
+    return { isValid: false, error: "已存在同名预设" };
   }
 
   if (!/^[a-zA-Z0-9\s\-_]+$/.test(normalizedName)) {
-    return { isValid: false, error: "Only letters, numbers, spaces, hyphens, and underscores are allowed" };
+    return { isValid: false, error: "只能包含字母、数字、空格、连字符和下划线" };
   }
 
   return { isValid: true };
@@ -485,14 +485,14 @@ export const validatePresetName = (name: string, visiblePresets: AIPreset[], cur
 // URL validation
 export const validateUrl = (url: string): FieldValidationResult => {
   if (!url.trim()) {
-    return { isValid: false, error: "URL is required" };
+    return { isValid: false, error: "必须填写 URL" };
   }
   
   try {
     new URL(url);
     return { isValid: true };
   } catch {
-    return { isValid: false, error: "Please enter a valid URL" };
+    return { isValid: false, error: "请输入有效的 URL" };
   }
 };
 
@@ -503,18 +503,18 @@ export const validateApiKey = (
   url?: string | null,
 ): FieldValidationResult => {
   if (!apiKey.trim()) {
-    return { isValid: false, error: "API key is required" };
+    return { isValid: false, error: "必须填写 API 密钥" };
   }
   
   switch (provider) {
     case "openai":
       if (!apiKey.startsWith("sk-")) {
-        return { isValid: false, error: "OpenAI API keys should start with 'sk-'" };
+        return { isValid: false, error: "OpenAI API 密钥应以“sk-”开头" };
       }
       break;
     case "anthropic":
       if (!apiKey.startsWith("sk-ant-")) {
-        return { isValid: false, error: "Anthropic API keys should start with 'sk-ant-'" };
+        return { isValid: false, error: "Anthropic API 密钥应以“sk-ant-”开头" };
       }
       break;
     case "custom":
@@ -522,7 +522,7 @@ export const validateApiKey = (
       if (isGeminiApiUrl(url) && !apiKey.startsWith("AIza")) {
         return {
           isValid: true,
-          warning: "Gemini API keys usually start with 'AIza'; the connection test will verify it",
+          warning: "Gemini API 密钥通常以“AIza”开头，连接测试会验证它",
         };
       }
       break;
@@ -534,20 +534,20 @@ export const validateApiKey = (
 // Context length validation
 export const validateContextLength = (length: number, model: string): FieldValidationResult => {
   if (length < 1000) {
-    return { isValid: false, error: "Context length must be at least 1,000 characters" };
+    return { isValid: false, error: "上下文长度至少需要 1,000 个字符" };
   }
   
   if (length > 2000000) {
-    return { isValid: false, error: "Context length cannot exceed 2,000,000 characters" };
+    return { isValid: false, error: "上下文长度不能超过 2,000,000 个字符" };
   }
   
   // Model-specific warnings
   if (model.includes("gpt-4") && length > 128000 * 4) {
-    return { isValid: true, warning: "This context length exceeds GPT-4's recommended limit" };
+    return { isValid: true, warning: "此上下文长度超过 GPT-4 的建议上限" };
   }
   
   if (model.includes("gpt-3.5") && length > 16000 * 4) {
-    return { isValid: true, warning: "This context length exceeds GPT-3.5's limit" };
+    return { isValid: true, warning: "此上下文长度超过 GPT-3.5 的上限" };
   }
   
   return { isValid: true };

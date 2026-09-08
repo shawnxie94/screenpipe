@@ -157,7 +157,7 @@ export function useTimelineKeyboard(opts: {
 				.then(() =>
 					toast({
 						title: "已复制图片",
-						description: "frame copied to clipboard",
+      description: "画面已复制到剪贴板",
 					}),
 				)
 				.catch((err) => {

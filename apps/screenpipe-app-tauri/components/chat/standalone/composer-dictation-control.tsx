@@ -83,7 +83,7 @@ export function ComposerDictationControl({
     return (
       <div
         role="status"
-        aria-label={`Recording dictation, ${formatDictationDuration(dictation.elapsedMs)}`}
+        aria-label={`正在听写，${formatDictationDuration(dictation.elapsedMs)}`}
         className="flex h-8 shrink-0 items-center gap-1 rounded-md border border-signal/45 bg-signal/10 px-1 text-signal"
         data-testid="composer-dictation-recording"
       >
@@ -140,7 +140,7 @@ export function ComposerDictationControl({
       >
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
         <span className="font-mono text-[10px]">
-          {isTranscribing ? "transcribing" : "microphone"}
+          {isTranscribing ? "正在转录" : "正在请求麦克风"}
         </span>
         <Button
           type="button"
@@ -169,7 +169,7 @@ export function ComposerDictationControl({
         title={dictation.error || undefined}
       >
         <span className="max-w-28 truncate font-mono text-[10px]">
-          {dictation.error || "dictation failed"}
+          {dictation.error || "听写失败"}
         </span>
         <Button
           type="button"
@@ -215,7 +215,7 @@ export function ComposerDictationControl({
               "h-8 w-8 shrink-0 rounded-md text-muted-foreground transition-colors duration-150 hover:bg-muted/50 hover:text-foreground focus-visible:ring-1 focus-visible:ring-signal focus-visible:ring-offset-1 motion-reduce:transition-none",
             )}
             onPointerDown={handlePointerDown}
-            aria-label={`Dictate message (${shortcut})`}
+            aria-label={`听写消息（${shortcut}）`}
           >
             <Mic className="h-4 w-4" />
           </Button>
@@ -228,8 +228,7 @@ export function ComposerDictationControl({
             </kbd>
           </div>
           <p className="mt-1 text-muted-foreground">
-            Tap to toggle or hold while speaking. Audio is sent to the configured
-            transcription provider.
+            点击即可切换，也可在说话时按住。音频会发送到已配置的转录服务。
           </p>
         </TooltipContent>
       </Tooltip>

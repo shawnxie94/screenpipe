@@ -32,29 +32,29 @@ export type AcpBoundaryRow = {
 export function acpBoundaryRows(agentName: string): AcpBoundaryRow[] {
   return [
     {
-      what: "Sign-in and billing",
+      what: "登录与计费",
       owner: "agent",
-      detail: `You sign in to ${agentName} itself. Your Screenpipe plan does not pay for it.`,
+      detail: `你需要直接登录 ${agentName}。Screenpipe 的套餐不会为它付费。`,
     },
     {
-      what: "Model choice",
+      what: "模型选择",
       owner: "agent",
-      detail: `Set the model inside ${agentName}. The model picker in Screenpipe presets does not apply.`,
+      detail: `请在 ${agentName} 内设置模型。Screenpipe 预设中的模型选择不会应用到它。`,
     },
     {
-      what: "API keys in AI presets",
+      what: "AI 预设中的 API 密钥",
       owner: "screenpipe",
-      detail: `Used for Screenpipe's own AI. They are not passed to ${agentName}.`,
+      detail: `仅供 Screenpipe 自己的 AI 使用，不会传给 ${agentName}。`,
     },
     {
-      what: "Screen and audio context",
+      what: "屏幕与音频上下文",
       owner: "screenpipe",
-      detail: `Screenpipe supplies what you have seen, said, and heard as tools ${agentName} can call.`,
+      detail: `Screenpipe 会将你看到、说过和听到的内容作为工具提供给 ${agentName} 调用。`,
     },
     {
-      what: "File and terminal access",
+      what: "文件与终端访问",
       owner: "agent",
-      detail: `${agentName} runs on your machine and asks before each action it takes.`,
+      detail: `${agentName} 在你的电脑上运行，并会在执行每项操作前征求确认。`,
     },
   ];
 }
@@ -81,7 +81,7 @@ export function AcpBoundaries({
           compact ? "text-[10px]" : "text-xs",
         )}
       >
-        What {agentName} controls, and what Screenpipe controls
+        {agentName} 与 Screenpipe 各自负责的内容
       </p>
       <dl className={cn("mt-1.5 space-y-1.5")}>
         {rows.map((row) => (

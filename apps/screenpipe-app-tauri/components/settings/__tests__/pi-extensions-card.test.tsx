@@ -127,7 +127,7 @@ describe("PiExtensionsCard", () => {
 
     expect(screen.getByText("网页代理")).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "子代理 始终启用" })).toBeInTheDocument();
-    expect(screen.getByText(/community tools can run code/i)).toBeInTheDocument();
+    expect(screen.getByText(/社区工具可以运行代码/)).toBeInTheDocument();
   });
 
   it("installs a curated package and refreshes enabled state from the returned package list", async () => {
@@ -173,7 +173,7 @@ describe("PiExtensionsCard", () => {
     } as Response);
     render(<PiExtensionsCard />);
 
-    expect(await screen.findByText("Community")).toBeInTheDocument();
+    expect(await screen.findByText("社区")).toBeInTheDocument();
     expect(await screen.findByText("Reflag")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("switch", { name: "启用 Reflag" }));
@@ -211,15 +211,15 @@ describe("PiExtensionsCard", () => {
     } as Response);
     render(<PiExtensionsCard />);
 
-    expect(await screen.findByText("Recently added")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Add Recent Tool" }));
+    expect(await screen.findByText("最近添加")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "添加 Recent Tool" }));
 
     await waitFor(() =>
       expect(commandMocks.piInstallExtensionPackage).toHaveBeenCalledWith(
         "npm:@example/pi-recent-tool",
       ),
     );
-    expect(await screen.findByRole("button", { name: "Remove Recent Tool" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "移除 Recent Tool" })).toBeInTheDocument();
   });
 
   it("locks other extension toggles while a package change is in flight", async () => {
@@ -284,7 +284,7 @@ describe("PiExtensionsCard", () => {
 
     fireEvent.click(askUserSwitch);
 
-    expect(await screen.findByText("Pi is still working in chat.")).toBeInTheDocument();
+    expect(await screen.findByText("Pi 当前仍在聊天中工作。")).toBeInTheDocument();
     expect(screen.getByRole("switch", { name: "启用 询问用户" })).toHaveAttribute(
       "aria-checked",
       "false",

@@ -135,7 +135,7 @@ describe("ConnectedShareDialog", () => {
       await screen.findByTestId("connected-share-destination-slack"),
     );
     const send = await screen.findByRole("button", {
-      name: "send to Slack",
+      name: "发送到 Slack",
     });
     expect(
       mocks.localFetch.mock.calls.some(
@@ -145,7 +145,7 @@ describe("ConnectedShareDialog", () => {
 
     fireEvent.click(send);
 
-    await screen.findByText("sent to Slack");
+    await screen.findByText("已发送到 Slack");
     const sendCall = mocks.localFetch.mock.calls.find(
       ([path]) => path === "/connections/slack/send",
     );
@@ -154,7 +154,7 @@ describe("ConnectedShareDialog", () => {
       text: expect.stringContaining("Decision: ship it."),
       instance: "acme",
     });
-    await waitFor(() => expect(screen.findByText("sent to Slack")).toBeTruthy());
+    await waitFor(() => expect(screen.findByText("已发送到 Slack")).toBeTruthy());
   });
 
   it("explains the safety boundary and opens the exact disconnected app", async () => {
@@ -179,7 +179,7 @@ describe("ConnectedShareDialog", () => {
     );
 
     expect(
-      await screen.findByText(/Nothing runs or sends until you press send/),
+      await screen.findByText(/不会运行或发送任何内容/),
     ).toBeInTheDocument();
 
     // Connecting an app is setup, so it sits at the bottom of the destination
@@ -187,7 +187,7 @@ describe("ConnectedShareDialog", () => {
     await openDestinations();
     expect(
       await screen.findByTestId("connected-share-connect-slack"),
-    ).toHaveTextContent("connect Slack");
+    ).toHaveTextContent("连接 Slack");
 
     fireEvent.click(screen.getByTestId("connected-share-connect-notion"));
 
@@ -227,7 +227,7 @@ describe("ConnectedShareDialog", () => {
     expect(mocks.showChatWithPrefill).not.toHaveBeenCalled();
     fireEvent.click(notion);
     fireEvent.click(
-      screen.getByRole("button", { name: "prepare Notion in Chat" }),
+      screen.getByRole("button", { name: "在聊天中准备 Notion" }),
     );
 
     await waitFor(() =>
@@ -280,7 +280,7 @@ describe("ConnectedShareDialog", () => {
     expect(mocks.showChatWithPrefill).not.toHaveBeenCalled();
 
     fireEvent.click(
-      screen.getByRole("button", { name: "prepare Obsidian in Chat" }),
+      screen.getByRole("button", { name: "在聊天中准备 Obsidian" }),
     );
 
     await waitFor(() =>
@@ -289,7 +289,7 @@ describe("ConnectedShareDialog", () => {
     expect(mocks.showChatWithPrefill).toHaveBeenCalledWith(
       expect.objectContaining({
         autoSend: false,
-        displayLabel: "Share “Roadmap” to Obsidian",
+        displayLabel: "将“Roadmap”分享到 Obsidian",
         prompt: expect.stringContaining("exact vault-relative path"),
       }),
     );
@@ -325,7 +325,7 @@ describe("ConnectedShareDialog", () => {
     const chat = screen.getByTestId("connected-share-mode-chat");
     expect(unchanged).toHaveAttribute("aria-pressed", "true");
     expect(chat).toHaveAttribute("aria-pressed", "false");
-    expect(unchanged).toHaveTextContent("no new AI processing");
+    expect(unchanged).toHaveTextContent("不进行新的 AI 处理");
 
     fireEvent.click(chat);
     await waitFor(() => expect(chat).toHaveAttribute("aria-pressed", "true"));
@@ -333,7 +333,7 @@ describe("ConnectedShareDialog", () => {
       await screen.findByTestId("connected-share-destination"),
     ).toHaveTextContent("Notion");
     expect(screen.getByTestId("connected-share-confirm")).toHaveTextContent(
-      "prepare Notion in Chat",
+      "在聊天中准备 Notion",
     );
 
     fireEvent.click(unchanged);
@@ -344,7 +344,7 @@ describe("ConnectedShareDialog", () => {
       "Slack",
     );
     expect(screen.getByTestId("connected-share-confirm")).toHaveTextContent(
-      "send to Slack",
+      "发送到 Slack",
     );
   });
 
@@ -387,7 +387,7 @@ describe("ConnectedShareDialog", () => {
     // Chat has two apps, so it opens unanswered until the person picks one.
     fireEvent.click(chat);
     await waitFor(() => expect(chat).toHaveAttribute("aria-pressed", "true"));
-    expect(destination).toHaveTextContent("choose where this goes");
+    expect(destination).toHaveTextContent("选择发送位置");
     await openDestinations();
     fireEvent.click(
       await screen.findByTestId("connected-share-destination-chat-obsidian"),
@@ -401,13 +401,13 @@ describe("ConnectedShareDialog", () => {
       expect(unchanged).toHaveAttribute("aria-pressed", "true"),
     );
     expect(destination).toHaveTextContent("Slack");
-    expect(confirm).toHaveTextContent("send to Slack");
+    expect(confirm).toHaveTextContent("发送到 Slack");
 
     fireEvent.click(chat);
     await waitFor(() => expect(chat).toHaveAttribute("aria-pressed", "true"));
     expect(destination).toHaveTextContent("Obsidian");
-    expect(destination).not.toHaveTextContent("choose where this goes");
-    expect(confirm).toHaveTextContent("prepare Obsidian in Chat");
+    expect(destination).not.toHaveTextContent("选择发送位置");
+    expect(confirm).toHaveTextContent("在聊天中准备 Obsidian");
     expect(confirm).not.toBeDisabled();
 
     // And back again: the unchanged side kept its own answer too.
@@ -433,13 +433,13 @@ describe("ConnectedShareDialog", () => {
     const error = await screen.findByTestId(
       "connected-share-connections-error",
     );
-    expect(error).toHaveTextContent("local service unavailable");
+    expect(error).toHaveTextContent("连接服务暂不可用");
     expect(
       screen.queryByRole("button", { name: /copy snapshot/i }),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId("connected-share-confirm")).toBeDisabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "retry" }));
+    fireEvent.click(screen.getByRole("button", { name: "重试" }));
     await screen.findByTestId("connected-share-empty");
     expect(
       screen.queryByTestId("connected-share-connections-error"),
@@ -447,7 +447,7 @@ describe("ConnectedShareDialog", () => {
     // Still nothing connected, so still nothing to send to.
     expect(screen.getByTestId("connected-share-confirm")).toBeDisabled();
     expect(screen.getByTestId("connected-share-confirm")).toHaveTextContent(
-      "connect an app to send",
+      "连接应用后发送",
     );
   });
 
@@ -478,12 +478,12 @@ describe("ConnectedShareDialog", () => {
     );
 
     const row = await screen.findByTestId("connected-share-destination");
-    expect(row).toHaveTextContent("choose where this goes");
-    expect(row).not.toHaveTextContent("connect an app to send");
+    expect(row).toHaveTextContent("选择发送位置");
+    expect(row).not.toHaveTextContent("连接应用后发送");
 
     const confirm = screen.getByTestId("connected-share-confirm");
     expect(confirm).toBeDisabled();
-    expect(confirm).toHaveTextContent("choose a destination");
+    expect(confirm).toHaveTextContent("选择目标位置");
   });
 
   // The clipboard had a destination row of its own, which made the send dialog
@@ -534,9 +534,9 @@ describe("ConnectedShareDialog", () => {
     );
     expect(
       await screen.findByTestId("connected-share-slack-channels-error"),
-    ).toHaveTextContent("You can still send to your own Slack messages");
-    fireEvent.click(screen.getByRole("button", { name: "send to Slack" }));
-    await screen.findByText("sent to Slack");
+    ).toHaveTextContent("你仍然可以发送到自己的 Slack 消息");
+    fireEvent.click(screen.getByRole("button", { name: "发送到 Slack" }));
+    await screen.findByText("已发送到 Slack");
   });
 
   it("keeps a failed provider action visible and retryable", async () => {
@@ -566,7 +566,7 @@ describe("ConnectedShareDialog", () => {
     );
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "send to Slack",
+        name: "发送到 Slack",
       }),
     );
 
@@ -576,7 +576,7 @@ describe("ConnectedShareDialog", () => {
     expect(
       screen.queryByTestId("connected-share-receipt"),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "send to Slack" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "发送到 Slack" })).toBeEnabled();
   });
 
   // The dialog used to open on ten stacked regions and ask five questions
@@ -609,7 +609,7 @@ describe("ConnectedShareDialog", () => {
       const contents = await screen.findByTestId(
         "connected-share-contents-toggle",
       );
-      expect(contents).toHaveTextContent("all 3 blocks");
+      expect(contents).toHaveTextContent("全部 3 个内容块");
       expect(contents).toHaveAttribute("aria-expanded", "false");
       expect(
         screen.getByTestId("connected-share-preview-toggle"),
@@ -618,7 +618,7 @@ describe("ConnectedShareDialog", () => {
       // And the two controls they hide are genuinely not mounted.
       expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
       expect(
-        screen.queryByLabelText(/edits here apply only to Slack/),
+        screen.queryByLabelText(/此处的编辑仅应用于 Slack/),
       ).not.toBeInTheDocument();
     });
 
@@ -639,7 +639,7 @@ describe("ConnectedShareDialog", () => {
         await screen.findByTestId("connected-share-preview-toggle"),
       );
       expect(
-        screen.getByLabelText(/edits here apply only to Slack/),
+        screen.getByLabelText(/此处的编辑仅应用于 Slack/),
       ).toBeVisible();
 
       fireEvent.click(
@@ -673,10 +673,10 @@ describe("ConnectedShareDialog", () => {
       fireEvent.click(screen.getByTestId("connected-share-contents-toggle"));
 
       expect(
-        screen.getByText(/Choose at least one block to share/),
+        screen.getByText(/请至少选择一个要分享的区块/),
       ).toBeVisible();
       expect(
-        screen.getByRole("button", { name: "send to Slack" }),
+        screen.getByRole("button", { name: "发送到 Slack" }),
       ).toBeDisabled();
     });
 
@@ -696,7 +696,7 @@ describe("ConnectedShareDialog", () => {
       // One control carries the whole choice, and it is already answered.
       const row = await screen.findByTestId("connected-share-destination");
       expect(row).toHaveTextContent("Slack");
-      expect(row).toHaveTextContent("my messages");
+      expect(row).toHaveTextContent("我的 Slack 消息");
 
       // Nothing is a peer of it until it is opened.
       expect(
@@ -756,7 +756,7 @@ describe("ConnectedShareDialog", () => {
       );
       fireEvent.click(confirm);
 
-      await screen.findByText("sent to Slack");
+      await screen.findByText("已发送到 Slack");
       expect(sendBody()).toMatchObject({ channel: "C1", instance: "acme" });
     });
 
@@ -783,7 +783,7 @@ describe("ConnectedShareDialog", () => {
       );
       fireEvent.click(confirm);
 
-      await screen.findByText("sent to Slack");
+      await screen.findByText("已发送到 Slack");
       expect(sendBody()).not.toHaveProperty("channel");
     });
   });

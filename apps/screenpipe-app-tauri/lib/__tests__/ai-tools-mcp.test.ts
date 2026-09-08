@@ -159,7 +159,7 @@ describe("safe config IO", () => {
   it("refuses to overwrite invalid JSON and leaves the file untouched", async () => {
     fsMock.files.set(CURSOR, "{ definitely not json");
 
-    await expect(installCursorMcp()).rejects.toThrow(/not valid JSON/);
+    await expect(installCursorMcp()).rejects.toThrow(/不是有效的 JSON/);
 
     expect(fsMock.files.get(CURSOR)).toBe("{ definitely not json");
     expect(backupsOf(CURSOR)).toHaveLength(0);
@@ -168,7 +168,7 @@ describe("safe config IO", () => {
   it("treats an unreadable file as an error, never as empty", async () => {
     fsMock.unreadable.add(CURSOR);
 
-    await expect(installCursorMcp()).rejects.toThrow(/could not read/);
+    await expect(installCursorMcp()).rejects.toThrow(/无法读取/);
   });
 
   it("starts fresh on a missing config without creating a backup", async () => {
@@ -198,7 +198,7 @@ describe("safe config IO", () => {
     await expect(uninstallCursorMcp()).resolves.toBeUndefined(); // no entry → no-op
 
     fsMock.files.set(CURSOR, "broken{");
-    await expect(uninstallCursorMcp()).rejects.toThrow(/not valid JSON/);
+    await expect(uninstallCursorMcp()).rejects.toThrow(/不是有效的 JSON/);
     expect(fsMock.files.get(CURSOR)).toBe("broken{");
   });
 });
@@ -344,7 +344,7 @@ describe("friendlyToolError", () => {
     expect(err.path).toBe("/Users/ansh/.cursor/mcp.json"); // absolute — feeds `open -R`
     // Cause only — no embedded path (that's the open-file button's job), no
     // fix instructions (the retry button is the instruction).
-    expect(err.message).toBe("config file has a syntax error");
+    expect(err.message).toBe("配置文件存在语法错误");
     expect(err.detail).toContain("~/.cursor/mcp.json");
     expect(err.detail).not.toContain("/Users/");
   });
@@ -353,7 +353,7 @@ describe("friendlyToolError", () => {
     const err = friendlyToolError(
       new Error("screenpipe's local API key isn't available yet (engine still starting?) — try connecting again in a moment")
     );
-    expect(err.message).toBe("screenpipe isn't responding — give it a few seconds and try again");
+    expect(err.message).toBe("screenpipe 暂无响应——请稍等片刻后重试");
     expect(err.path).toBeUndefined();
   });
 });
@@ -362,7 +362,7 @@ describe("transactional connect / disconnect", () => {
   it("rolls back skills when the MCP write fails", async () => {
     fsMock.files.set(CURSOR, "{ invalid json");
 
-    await expect(connectAiTool("cursor")).rejects.toThrow(/not valid JSON/);
+    await expect(connectAiTool("cursor")).rejects.toThrow(/不是有效的 JSON/);
 
     expect(skillsMock.installExternalAgentSkills).toHaveBeenCalledWith("cursor");
     expect(skillsMock.removeExternalAgentSkills).toHaveBeenCalledWith("cursor");
@@ -392,7 +392,7 @@ describe("transactional connect / disconnect", () => {
   it("disconnect removes skills even when the MCP step fails, then rethrows", async () => {
     fsMock.files.set(CURSOR, "broken{");
 
-    await expect(disconnectAiTool("cursor")).rejects.toThrow(/not valid JSON/);
+    await expect(disconnectAiTool("cursor")).rejects.toThrow(/不是有效的 JSON/);
     expect(skillsMock.removeExternalAgentSkills).toHaveBeenCalledWith("cursor");
   });
 

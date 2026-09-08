@@ -135,13 +135,13 @@ const TAG_SUGGESTION_LIMIT = 10;
 const STREAM_RENDER_THROTTLE_MS = 80;
 
 const STATIC_MENTION_SUGGESTIONS: MentionSuggestion[] = [
-  { tag: "@today", description: "today's activity", category: "time" },
-  { tag: "@yesterday", description: "yesterday", category: "time" },
-  { tag: "@last-week", description: "past 7 days", category: "time" },
-  { tag: "@last-hour", description: "past hour", category: "time" },
-  { tag: "@audio", description: "audio/meetings only", category: "content" },
-  { tag: "@screen", description: "screen text only", category: "content" },
-  { tag: "@input", description: "UI events (clicks, keys)", category: "content" },
+  { tag: "@today", description: "今天的活动", category: "time" },
+  { tag: "@yesterday", description: "昨天", category: "time" },
+  { tag: "@last-week", description: "过去 7 天", category: "time" },
+  { tag: "@last-hour", description: "过去 1 小时", category: "time" },
+  { tag: "@audio", description: "仅音频/会议", category: "content" },
+  { tag: "@screen", description: "仅屏幕文字", category: "content" },
+  { tag: "@input", description: "界面事件（点击、按键）", category: "content" },
 ];
 
 /**
@@ -420,9 +420,9 @@ export function StandaloneChat({
     };
 
     return [
-      { label: "memory tags", suggestions: pick("memory_count") },
-      { label: "audio tags", suggestions: pick("audio_count") },
-      { label: "screen tags", suggestions: pick("frame_count") },
+      { label: "记忆标签", suggestions: pick("memory_count") },
+      { label: "音频标签", suggestions: pick("audio_count") },
+      { label: "屏幕标签", suggestions: pick("frame_count") },
     ].filter((section) => section.suggestions.length > 0);
   }, [tagItems]);
 
@@ -641,7 +641,7 @@ export function StandaloneChat({
     }
 
     toast({
-      title: "sign in required",
+      title: "需要登录",
       description: buildInvalidatedAuthTokenMessage(),
       variant: "destructive",
     });
@@ -1293,7 +1293,7 @@ export function StandaloneChat({
     requestId: string | undefined,
     response: JsonValue,
     sessionId = piSessionIdRef.current,
-    failureTitle = "failed to answer connection request",
+    failureTitle = "无法响应连接请求",
   ) => {
     if (!requestId) return false;
     let result;
@@ -1924,7 +1924,7 @@ export function StandaloneChat({
       acpSignInTimeoutRef.current = window.setTimeout(() => {
         if (!acpSignInBusyRef.current) return;
         clearAcpSignInProbe();
-        setAcpSignInError(`couldn't reach ${agentName}. try signing in again.`);
+        setAcpSignInError(`无法连接 ${agentName}。请重新登录。`);
       }, 25_000);
 
       // Trigger a fresh connection. A pending message rides along on success;
@@ -2134,8 +2134,8 @@ export function StandaloneChat({
   const askSelectedTextInSideChat = useCallback(async (text: string) => {
     if (activePresetRef.current?.provider === "acp") {
       toast({
-        title: "temporary side chat is not available with coding agents",
-        description: "coding-agent sessions cannot guarantee ephemeral history",
+        title: "编码代理暂不支持临时侧边聊天",
+        description: "编码代理会话无法保证临时历史记录",
       });
       return;
     }
@@ -2246,8 +2246,8 @@ export function StandaloneChat({
                   "h-7 w-7",
                   sidePanelOpen && "bg-muted ring-2 ring-primary ring-offset-1 ring-offset-background",
                 )}
-                title={sidePanelHasContent ? "Toggle side panel" : "Open browser tab"}
-                aria-label={sidePanelHasContent ? "Toggle side panel" : "Open browser tab"}
+                title={sidePanelHasContent ? "切换侧边栏" : "打开浏览器标签页"}
+                aria-label={sidePanelHasContent ? "切换侧边栏" : "打开浏览器标签页"}
                 aria-pressed={sidePanelOpen}
               >
                 {sidePanelOpen ? (

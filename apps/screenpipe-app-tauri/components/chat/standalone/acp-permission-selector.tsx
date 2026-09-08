@@ -137,6 +137,37 @@ function isUnrestrictedMode(mode: AcpConfigValue): boolean {
   );
 }
 
+function localizedPermissionDescription(
+  description: string | null | undefined,
+  fallback: string,
+): string {
+  const normalized = description?.trim().toLowerCase();
+  const known: Record<string, string> = {
+    "standard behavior, prompts for dangerous operations.": "标准行为，在危险操作前请求批准。",
+    "auto-accept file edit operations.": "自动批准文件编辑操作。",
+    "planning mode, no actual tool execution.": "仅规划，不实际执行工具。",
+    "read and edit files, and run commands.": "读取和编辑文件，并运行命令。",
+    "codex can edit files outside this workspace.": "Codex 可以编辑此工作区之外的文件。",
+    "requires approval to edit files and run commands.": "编辑文件和运行命令前需要批准。",
+  };
+  return (normalized && known[normalized]) || description || fallback;
+}
+
+function localizedPermissionLabel(label: string | null | undefined): string {
+  const known: Record<string, string> = {
+    "confirm changes": "确认更改",
+    ask: "请求批准",
+    agent: "代理模式",
+    "allow all": "完全访问",
+    "plan only": "仅规划",
+    "plan mode": "仅规划",
+    "don't ask": "不再询问",
+    "accept edits": "批准编辑",
+    automatic: "自动",
+  };
+  return (label && known[label.trim().toLowerCase()]) || label || "权限模式";
+}
+
 function permissionPresentation(mode: AcpConfigValue): PermissionPresentation {
   switch (mode.value) {
     case CLIENT_FULL_ACCESS_VALUE:
@@ -167,8 +198,10 @@ function permissionPresentation(mode: AcpConfigValue): PermissionPresentation {
     case "default":
       return {
         label: "请求批准",
-        description:
-          mode.description || "在编辑文件或运行命令前询问。",
+        description: localizedPermissionDescription(
+          mode.description,
+          "在编辑文件或运行命令前询问。",
+        ),
         icon: Hand,
       };
     case "agent":
@@ -181,20 +214,19 @@ function permissionPresentation(mode: AcpConfigValue): PermissionPresentation {
       return {
         label: "批准编辑",
         description:
-          mode.description || "自动批准文件编辑操作。",
+          localizedPermissionDescription(mode.description, "自动批准文件编辑操作。"),
         icon: ShieldCheck,
       };
     case "plan":
       return {
-        label: "Plan only",
-        description: mode.description || "规划而不修改文件。",
+        label: "仅规划",
+        description: localizedPermissionDescription(mode.description, "规划而不修改文件。"),
         icon: Shield,
       };
     case "dontAsk":
       return {
-        label: "Don't ask",
-        description:
-          mode.description || "拒绝未经批准的操作。",
+        label: "不再询问",
+        description: localizedPermissionDescription(mode.description, "拒绝未经批准的操作。"),
         icon: Shield,
       };
     case "agent-full-access":
@@ -208,14 +240,17 @@ function permissionPresentation(mode: AcpConfigValue): PermissionPresentation {
     case "bypassPermissions":
       return {
         label: "完全访问",
-        description: mode.description || "绕过所有权限检查。",
+        description: localizedPermissionDescription(
+          mode.description,
+          "绕过所有权限检查。",
+        ),
         icon: ShieldAlert,
         warning: true,
       };
     default:
       return {
-        label: mode.name,
-        description: mode.description || "使用此代理权限模式。",
+        label: localizedPermissionLabel(mode.name),
+        description: localizedPermissionDescription(mode.description, "使用此代理权限模式。"),
         icon: isUnrestrictedMode(mode) ? ShieldAlert : Shield,
         warning: isUnrestrictedMode(mode),
       };
@@ -342,7 +377,7 @@ export function AcpPermissionSelector({
       }
       setOpen(false);
     } catch (error) {
-      toast.error(`could not change ${agentName.toLowerCase()} permissions`, {
+      toast.error(`无法修改 ${agentName.toLowerCase()} 的权限`, {
         description: String(error),
       });
     } finally {
@@ -364,7 +399,7 @@ export function AcpPermissionSelector({
               : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
           )}
           title={selected.description}
-          aria-label={`${agentName} permissions: ${selected.label}`}
+          aria-label={`${agentName} 权限：${selected.label}`}
           data-testid="acp-permission-trigger"
         >
           <SelectedIcon
@@ -387,7 +422,7 @@ export function AcpPermissionSelector({
         }}
       >
         <p className="px-2 pb-1 pt-0.5 text-xs text-muted-foreground">
-          how should {agentName.toLowerCase()} actions be approved?
+          如何批准 {agentName} 的操作？
         </p>
         {control.values.map((mode) => {
           const presentation = permissionPresentation(mode);

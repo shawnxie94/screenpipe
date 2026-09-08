@@ -106,7 +106,7 @@ describe("meeting chat panel", () => {
       screen.getByText("Claimio enterprise discovery call"),
     ).toBeInTheDocument();
     expect(screen.getByTestId("meeting-chat-context")).toHaveTextContent(
-      "transcript + notes",
+      "转写 + 笔记",
     );
     expect(screen.getByTestId("meeting-chat-context")).toHaveTextContent(
       formatMeetingChatTimeRange(
@@ -118,7 +118,7 @@ describe("meeting chat panel", () => {
 
   it("formats epoch-millisecond context times and live ranges", () => {
     const start = new Date(2026, 7, 14, 15, 29).getTime();
-    expect(formatMeetingChatTimeRange(start, null)).toContain("–now");
+    expect(formatMeetingChatTimeRange(start, null)).toContain("–现在");
     expect(formatMeetingChatTimeRange(Number.NaN, null)).toBeNull();
   });
 
@@ -168,15 +168,15 @@ describe("meeting chat panel", () => {
 
   it("case 43: a suggestion sends in one action", () => {
     const { props } = setup();
-    fireEvent.click(screen.getByRole("button", { name: "what did i commit to?" }));
-    expect(props.onSubmit).toHaveBeenCalledWith("what did i commit to?");
+    fireEvent.click(screen.getByRole("button", { name: "我承诺了什么？" }));
+    expect(props.onSubmit).toHaveBeenCalledWith("我承诺了什么？");
   });
 
   it("case 7: the summary suggestion runs the summary path, not a chat turn", () => {
     const { props } = setup({
       conditions: conditions({ summaryLifecycle: { kind: "idle" } }),
     });
-    fireEvent.click(screen.getByRole("button", { name: "summarize this" }));
+    fireEvent.click(screen.getByRole("button", { name: "总结这次会议" }));
     expect(props.onRunSummary).toHaveBeenCalled();
     expect(props.onSubmit).not.toHaveBeenCalled();
   });
@@ -185,7 +185,7 @@ describe("meeting chat panel", () => {
     const { props } = setup({
       conditions: conditions({ turnInFlight: true }),
     });
-    fireEvent.click(screen.getByRole("button", { name: "what did i commit to?" }));
+    fireEvent.click(screen.getByRole("button", { name: "我承诺了什么？" }));
     expect(props.onSubmit).not.toHaveBeenCalled();
   });
 
@@ -276,14 +276,14 @@ describe("meeting chat panel", () => {
     const noPreset = setup({ conditions: conditions({ hasPreset: false }) });
     expect(screen.getByTestId("meeting-chat-input")).toHaveAttribute(
       "placeholder",
-      "set up ai in settings",
+      "请先在设置中配置 AI",
     );
     expect(screen.getByTestId("meeting-chat-input")).toBeDisabled();
     noPreset.unmount();
     setup({ conditions: conditions({ quotaExhausted: true }) });
     expect(screen.getByTestId("meeting-chat-input")).toHaveAttribute(
       "placeholder",
-      "ai limit reached",
+      "已达到 AI 使用上限",
     );
   });
 
@@ -293,7 +293,7 @@ describe("meeting chat panel", () => {
     });
     expect(screen.getByTestId("meeting-chat-input")).toHaveAttribute(
       "placeholder",
-      "nothing recorded yet",
+      "尚未记录内容",
     );
   });
 
@@ -315,7 +315,7 @@ describe("meeting chat panel", () => {
     setup({ conditions: conditions({ refreshingAfterRetranscription: true }) });
     const input = screen.getByTestId("meeting-chat-input");
     expect(input).toBeDisabled();
-    expect(input).toHaveAttribute("placeholder", "refreshing…");
+    expect(input).toHaveAttribute("placeholder", "正在刷新转写…");
   });
 
   it("renders clock citations as controls back into the transcript", () => {
@@ -413,7 +413,7 @@ describe("meeting chat panel", () => {
         },
       ],
     });
-    fireEvent.click(screen.getByRole("button", { name: "retry" }));
+    fireEvent.click(screen.getByRole("button", { name: "重试" }));
     expect(props.onRetry).toHaveBeenCalled();
   });
 

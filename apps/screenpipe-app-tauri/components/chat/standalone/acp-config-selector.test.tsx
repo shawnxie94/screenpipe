@@ -99,14 +99,14 @@ describe("ACP config trigger", () => {
     const trigger = screen.getByTestId("acp-config-trigger");
     expect(trigger).toHaveTextContent("Opus 5");
     expect(trigger).not.toHaveTextContent("1M context");
-    expect(trigger).not.toHaveTextContent("Default (recommended)");
+    expect(trigger).not.toHaveTextContent("默认（推荐）");
     expect(trigger).toHaveAttribute(
       "title",
-      expect.stringContaining("Default (recommended)"),
+      expect.stringContaining("默认（推荐）"),
     );
 
     fireEvent.click(trigger);
-    expect(screen.getByText(/currently resolves to Opus 5/)).toBeInTheDocument();
+    expect(screen.getByText(/默认（推荐）\s+当前解析为 Opus 5/)).toBeInTheDocument();
   });
 
   it("keeps recommendation copy in the list but out of the composer bar", () => {
@@ -129,11 +129,11 @@ describe("ACP config trigger", () => {
 
     const trigger = screen.getByTestId("acp-config-trigger");
     expect(trigger).toHaveTextContent("screenpipe/Auto");
-    expect(trigger).not.toHaveTextContent("recommended");
+    expect(trigger).not.toHaveTextContent("推荐");
 
     fireEvent.click(trigger);
     expect(screen.getByRole("option")).toHaveTextContent(
-      "screenpipe/Auto (recommended)",
+      "screenpipe/自动（推荐）",
     );
   });
 
@@ -197,7 +197,7 @@ describe("ACP config trigger", () => {
     );
 
     fireEvent.click(screen.getByTestId("acp-config-trigger"));
-    fireEvent.change(screen.getByLabelText("Model"), {
+    fireEvent.change(screen.getByLabelText("模型"), {
       target: { value: "opus" },
     });
 
@@ -219,7 +219,7 @@ describe("ACP config trigger", () => {
 
     render(<AcpConfigSelector sessionId={SESSION} agentId="claude-acp" />);
 
-    expect(screen.getByTestId("acp-config-trigger")).toHaveTextContent("Plan");
+    expect(screen.getByTestId("acp-config-trigger")).toHaveTextContent("计划");
   });
 
   it("falls back to the adapter name for a non-model select", () => {
@@ -306,8 +306,8 @@ describe("ACP config trigger", () => {
     );
 
     fireEvent.click(screen.getByTestId("acp-config-trigger"));
-    expect(screen.getByLabelText("Model")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Mode")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("模型")).toBeInTheDocument();
+    expect(screen.queryByLabelText("模式")).not.toBeInTheDocument();
   });
 
   it("keeps Copilot's mode visible while moving Allow All into permissions", () => {
@@ -345,8 +345,8 @@ describe("ACP config trigger", () => {
     expect(trigger).toHaveTextContent("Agent");
     expect(trigger).not.toHaveTextContent("config");
     fireEvent.click(trigger);
-    expect(screen.getByLabelText("Mode")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Allow All")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("模式")).toBeInTheDocument();
+    expect(screen.queryByLabelText("全部允许")).not.toBeInTheDocument();
   });
 
   it("keeps model and effort in one popover", () => {
@@ -368,7 +368,7 @@ describe("ACP config trigger", () => {
     render(<AcpConfigSelector sessionId={SESSION} agentId="claude-acp" />);
 
     fireEvent.click(screen.getByTestId("acp-config-trigger"));
-    expect(screen.getByLabelText("Model")).toBeInTheDocument();
+    expect(screen.getByLabelText("模型")).toBeInTheDocument();
     expect(screen.getByTestId("acp-effort-slider")).toBeInTheDocument();
     expect(screen.getByTestId("acp-config-popover")).toContainElement(
       screen.getByTestId("acp-effort-slider"),
@@ -441,7 +441,7 @@ describe("ACP config trigger", () => {
     );
     expect(screen.queryByTestId("acp-effort-trigger")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("acp-config-trigger"));
-    expect(screen.getByLabelText("Effort").tagName).toBe("SELECT");
+    expect(screen.getByLabelText("强度").tagName).toBe("SELECT");
     expect(screen.queryByTestId("acp-effort-slider")).not.toBeInTheDocument();
   });
 
@@ -470,6 +470,6 @@ describe("ACP config trigger", () => {
     );
 
     fireEvent.click(screen.getByTestId("acp-config-trigger"));
-    expect(screen.getByLabelText("Thinking level")).toBeInTheDocument();
+    expect(screen.getByLabelText("思考级别")).toBeInTheDocument();
   });
 });

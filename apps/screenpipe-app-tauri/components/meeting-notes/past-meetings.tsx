@@ -74,7 +74,16 @@ function bucketByRelativeDay(meetings: MeetingRecord[]): Bucket[] {
 
   return Array.from(buckets.entries())
     .filter(([, ms]) => ms.length > 0)
-    .map(([label, ms]) => ({ label, meetings: ms }));
+    .map(([label, ms]) => ({
+      label: {
+        today: "今天",
+        yesterday: "昨天",
+        "earlier this week": "本周较早时间",
+        "earlier this month": "本月较早时间",
+        older: "更早之前",
+      }[label] ?? label,
+      meetings: ms,
+    }));
 }
 
 export function PastMeetings({
@@ -170,7 +179,7 @@ export function PastMeetings({
       setPendingMerge(null);
     } catch (err) {
       toast({
-        title: "couldn't merge meetings",
+        title: "无法合并会议",
         description: String(err),
         variant: "destructive",
       });
@@ -221,9 +230,7 @@ export function PastMeetings({
           <AlertDialogHeader>
             <AlertDialogTitle>合并会议</AlertDialogTitle>
             <AlertDialogDescription>
-              combine these two meetings into one. titles, attendees, notes
-              and transcripts are joined chronologically. this can't be
-              undone.
+              将这两场会议合并为一场。标题、参会者、笔记和转写内容会按时间顺序合并，且无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           {pendingMerge && (
@@ -233,7 +240,7 @@ export function PastMeetings({
             </div>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={merging}>cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={merging}>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
@@ -244,10 +251,10 @@ export function PastMeetings({
               {merging ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  merging
+                  正在合并
                 </span>
               ) : (
-                "merge"
+                "合并"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -314,7 +321,7 @@ function PastMeetingRow({
     } catch (err) {
       setCopyState("idle");
       toast({
-        title: "couldn't copy meeting",
+        title: "无法复制会议",
         description: String(err),
         variant: "destructive",
       });
@@ -330,7 +337,7 @@ function PastMeetingRow({
       onDelete(meeting.id);
     } catch (err) {
       toast({
-        title: "couldn't delete meeting",
+        title: "无法删除会议",
         description: String(err),
         variant: "destructive",
       });
@@ -433,16 +440,16 @@ function PastMeetingRow({
                 <AlertDialogHeader>
                   <AlertDialogTitle>删除会议</AlertDialogTitle>
                   <AlertDialogDescription>
-                    your notes and transcript will be permanently deleted.
+                  你的笔记和转写内容将被永久删除。
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>cancel</AlertDialogCancel>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
                   <AlertDialogAction
                     variant="destructive"
                     onClick={() => void handleDelete()}
                   >
-                    delete
+                    删除
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

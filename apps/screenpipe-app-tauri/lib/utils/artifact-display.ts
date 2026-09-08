@@ -72,13 +72,13 @@ export function getArtifactCardDisplay(artifact: UnifiedArtifact): ArtifactCardD
     heading && (!titleFromArtifact || looksLikeFilename(titleFromArtifact));
   const title = shouldPreferHeading
     ? heading
-    : titleFromArtifact || heading || fileName || "Untitled artifact";
-  const source = artifact.source_type === "chat" ? "chat" : artifact.source;
-  const kind = artifact.kind?.replace(/[-_]+/g, " ") || "file";
+    : titleFromArtifact || heading || fileName || "未命名产物";
+  const source = artifact.source_type === "chat" ? "聊天" : artifact.source;
+  const kind = artifact.kind?.replace(/[-_]+/g, " ") || "文件";
   const properties = [
-    { label: "file", value: fileName },
-    { label: "source", value: source },
-    { label: "kind", value: kind },
+    { label: "文件", value: fileName },
+    { label: "来源", value: source },
+    { label: "类型", value: kind },
   ];
 
   const htmlContent =

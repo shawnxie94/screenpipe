@@ -117,11 +117,11 @@ describe("Live View item handoff", () => {
         },
       }),
     ).toEqual({
-      context: "Live View “Commitments” · Needs attention",
+      context: "实时视图“Commitments” · Needs attention",
       prompt: expect.stringContaining(
         "Ask me to confirm the exact destination before sending anything.",
       ),
-      displayLabel: "send Send the recap",
+      displayLabel: "发送 Send the recap",
     });
   });
 });

@@ -46,8 +46,38 @@ interface AcpPresetSetupProgressPayload {
 }
 
 /** The no-override choice, named after what the agent will actually use. */
+const ACP_TEXT_LABELS: Record<string, string> = {
+  Model: "模型",
+  model: "模型",
+  Mode: "模式",
+  mode: "模式",
+  Plan: "计划",
+  plan: "计划",
+  Edit: "编辑",
+  edit: "编辑",
+  Ask: "询问",
+  ask: "询问",
+  Agent: "代理",
+  agent: "代理",
+  "Thinking level": "思考级别",
+  "Reasoning effort": "推理强度",
+  Effort: "强度",
+  Standard: "标准",
+  Deep: "深入",
+  High: "高",
+  Medium: "中",
+  Low: "低",
+  Default: "默认",
+  default: "默认",
+  Auto: "自动",
+  on: "开启",
+  off: "关闭",
+};
+
+const localizeAcpText = (value: string): string => ACP_TEXT_LABELS[value] ?? value;
+
 const defaultChoiceLabel = (name?: string) =>
-  name ? `default (${name})` : "agent default";
+  name ? `默认（${localizeAcpText(name)}）` : "代理默认";
 
 /** Model/mode default pickers for an ACP preset. Choices come from the
  *  adapter's advertised selectors: cached from earlier sessions, otherwise
@@ -298,7 +328,7 @@ export function AcpPresetDefaults({
       return (
         <p className={hintClass}>
           {compact
-            ? "enter the agent command to load its model and mode choices"
+            ? "输入代理命令以加载模型和模式选项"
             : "输入代理命令以加载其模型和模式选项。"}
         </p>
       );
@@ -328,11 +358,10 @@ export function AcpPresetDefaults({
           data-testid="acp-preset-install"
         >
           <p className={cn("font-medium", compact ? "text-xs" : "text-sm")}>
-            {name} isn&apos;t installed yet
+            {name} 尚未安装
           </p>
           <p className={cn("text-muted-foreground", compact ? "text-[11px]" : "text-xs")}>
-            Screenpipe can download it for you. It runs on this computer as its
-            own program, and signs in with its own account.
+            Screenpipe 可以为你下载。它会作为独立程序运行在这台电脑上，并使用自己的账户登录。
           </p>
           <Button
             type="button"
@@ -343,7 +372,7 @@ export function AcpPresetDefaults({
               setInstallApproved(true);
             }}
           >
-            <Download className="mr-1.5 h-3.5 w-3.5" /> Install {name}
+            <Download className="mr-1.5 h-3.5 w-3.5" /> 安装 {name}
           </Button>
         </div>
       );
@@ -381,11 +410,11 @@ export function AcpPresetDefaults({
           data-testid="acp-preset-signin"
         >
           <div className="space-y-1">
-            <p className={cn("font-medium", compact ? "text-xs" : "text-sm")}>Sign in to {info.name}</p>
+            <p className={cn("font-medium", compact ? "text-xs" : "text-sm")}>登录 {info.name}</p>
             <p className={cn("text-muted-foreground", compact ? "text-[11px]" : "text-xs")}>
               {signInCommand
-                ? `${info.name} opens its secure login in your browser and keeps the credential.`
-                : `${info.name} signs in when you open a chat with this preset: it runs its own login and stores the credential itself. Screenpipe never sees or stores an API key for it.`}
+                ? `${info.name} 会在浏览器中打开安全登录页面，并自行保存凭据。`
+                : `${info.name} 会在你使用此预设打开聊天时登录：它会自行完成登录并保存凭据。Screenpipe 不会看到或保存它的 API 密钥。`}
             </p>
           </div>
           {/* A retry that still failed: say so plainly, kept visible, like the
@@ -400,16 +429,16 @@ export function AcpPresetDefaults({
               )}
             >
               {signInError
-                ? `Couldn't open ${info.name}'s login: ${signInError}`
+                ? `无法打开 ${info.name} 的登录：${signInError}`
                 : signInCommand
-                ? `Still not signed in to ${info.name}. Try signing in again.`
-                : `Still not signed in. ${info.name} signs in from a chat, not from here.`}
+                ? `${info.name} 仍未登录，请重新登录。`
+                : `仍未登录。请在聊天中完成 ${info.name} 的登录，而不是在此处登录。`}
             </div>
           )}
           {signInCommand && signInError && (
             <div>
               <p className={cn("mb-1 text-muted-foreground", compact ? "text-[10px]" : "text-xs")}>
-                You can still run this manually:
+                你也可以手动运行：
               </p>
               <pre className={cn("overflow-x-auto rounded-md bg-muted px-3 py-2 font-mono text-foreground", compact ? "text-[11px]" : "text-xs")}>
                 <code>{signInCommand}</code>
@@ -422,22 +451,22 @@ export function AcpPresetDefaults({
           {signInCommand ? (
             <Button type="button" size="sm" disabled={busy} onClick={() => void beginExternalLogin()}>
               {signInPending || retryPending || probing ? (
-                <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> {signInPending ? "Signing in…" : "Connecting…"}</>
+                <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> {signInPending ? "正在登录…" : "正在连接…"}</>
               ) : (
-                <><LogIn className="mr-1.5 h-3.5 w-3.5" /> Sign in with {info.name}</>
+                <><LogIn className="mr-1.5 h-3.5 w-3.5" /> 使用 {info.name} 登录</>
               )}
             </Button>
           ) : (
             <div className="flex items-center gap-2">
               <Button type="button" size="sm" variant="outline" disabled={busy} onClick={beginRetry}>
                 {busy ? (
-                  <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Checking…</>
+                  <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> 正在检查…</>
                 ) : (
-                  <><RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Check again</>
+                  <><RefreshCw className="mr-1.5 h-3.5 w-3.5" /> 再次检查</>
                 )}
               </Button>
               <span className={cn("text-muted-foreground", compact ? "text-[10px]" : "text-xs")}>
-                Save this preset and open a chat to sign in.
+                保存此预设，然后打开聊天完成登录。
               </span>
             </div>
           )}
@@ -448,9 +477,9 @@ export function AcpPresetDefaults({
       <div className={cn(hintClass, "flex items-center gap-2")}>
         <span>
           {probeError
-            ? `could not load choices: ${probeError}`
+            ? `无法加载选项：${probeError}`
             : compact
-              ? "model and mode choices unavailable"
+              ? "模型和模式选项不可用"
               : "此代理的模型和模式选项不可用。"}
         </span>
         <button
@@ -460,7 +489,7 @@ export function AcpPresetDefaults({
           className="inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground disabled:opacity-60"
         >
           {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-          {busy ? "checking…" : "retry"}
+          {busy ? "检查中…" : "重试"}
         </button>
       </div>
     );
@@ -471,7 +500,7 @@ export function AcpPresetDefaults({
       {selects.map((option) => (
         <div key={option.id} className="space-y-1">
           <Label htmlFor={`acpDefault-${option.id}`} className={labelClass}>
-            {compact ? option.name.toLowerCase() : option.name}
+            {localizeAcpText(option.name)}
           </Label>
           <select
             id={`acpDefault-${option.id}`}
@@ -495,7 +524,7 @@ export function AcpPresetDefaults({
             </option>
             {option.values.map((value) => (
               <option key={value.value} value={value.value}>
-                {value.name}
+                {localizeAcpText(value.name)}
               </option>
             ))}
           </select>
@@ -504,7 +533,7 @@ export function AcpPresetDefaults({
       {toggles.map((option) => (
         <div key={option.id} className="space-y-1">
           <Label htmlFor={`acpDefault-${option.id}`} className={labelClass}>
-            {compact ? option.name.toLowerCase() : option.name}
+            {localizeAcpText(option.name)}
           </Label>
           <select
             id={`acpDefault-${option.id}`}
@@ -522,15 +551,15 @@ export function AcpPresetDefaults({
             <option value="">
               {defaultChoiceLabel(option.currentValue === true ? "on" : "off")}
             </option>
-            <option value="true">{compact ? "on" : "On"}</option>
-            <option value="false">{compact ? "off" : "Off"}</option>
+            <option value="true">开启</option>
+            <option value="false">关闭</option>
           </select>
         </div>
       ))}
       {modes && (
         <div className="space-y-1">
           <Label htmlFor="acpDefaultMode" className={labelClass}>
-            {compact ? "mode" : "Mode"}
+            模式
           </Label>
           <select
             id="acpDefaultMode"
@@ -550,7 +579,7 @@ export function AcpPresetDefaults({
             </option>
             {modes.availableModes.map((mode) => (
               <option key={mode.value} value={mode.value}>
-                {mode.name}
+                {localizeAcpText(mode.name)}
               </option>
             ))}
           </select>
@@ -558,8 +587,8 @@ export function AcpPresetDefaults({
       )}
       <p className={hintClass}>
         {compact
-          ? "applied when the agent starts"
-          : "在此代理启动时应用。对话中仍可通过 composer 更改。"}
+          ? "代理启动时应用"
+          : "在此代理启动时应用。对话中仍可通过输入区更改。"}
       </p>
     </div>
   );

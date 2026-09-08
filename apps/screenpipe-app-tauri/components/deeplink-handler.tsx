@@ -186,11 +186,11 @@ export function DeeplinkHandler() {
         await openSettingsWindow();
         toast({
           title: success
-            ? "google calendar connected!"
-            : "google calendar connection failed",
+            ? "Google 日历已连接"
+            : "Google 日历连接失败",
           description: success
-            ? "your google calendar is now linked"
-            : error || "something went wrong",
+            ? "你的 Google 日历现已关联"
+            : error || "发生未知错误",
           variant: success ? undefined : "destructive",
         });
       }
@@ -209,7 +209,7 @@ export function DeeplinkHandler() {
         try {
           if (oauthPath === "connections/callback") {
             const response = await localFetch(`/connections/oauth/callback${query}`);
-            if (!response.ok) throw new Error(`callback failed (HTTP ${response.status})`);
+            if (!response.ok) throw new Error(`回调失败（HTTP ${response.status}）`);
             await foregroundAfterOAuth();
           } else {
             const mcpMatch = oauthPath.match(/^mcp\/([^/]+)\/callback$/);
@@ -218,15 +218,15 @@ export function DeeplinkHandler() {
               const response = await localFetch(
                 `/mcp-servers/${mcpMatch[1]}/oauth/callback${query}`,
               );
-              if (!response.ok) throw new Error(`callback failed (HTTP ${response.status})`);
+              if (!response.ok) throw new Error(`回调失败（HTTP ${response.status}）`);
               await foregroundAfterOAuth();
             }
           }
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error);
           toast({
-            title: "sign-in hand-off failed",
-            description: msg || "couldn't reach the local screenpipe engine",
+            title: "登录交接失败",
+            description: msg || "无法连接本地 screenpipe 引擎",
             variant: "destructive",
           });
         }
@@ -298,8 +298,8 @@ export function DeeplinkHandler() {
               await commands.showWindow("Main");
               await emit("navigate-to-timestamp", timestamp);
               toast({
-                title: "navigating to timestamp",
-                description: `jumping to ${date.toLocaleString()}`,
+                title: "正在跳转到时间点",
+                description: `正在跳转到 ${date.toLocaleString()}`,
               });
             } else {
               throw new Error("Invalid date");
@@ -307,8 +307,8 @@ export function DeeplinkHandler() {
           } catch (error) {
             console.error("解析时间线时间戳失败：", error);
             toast({
-              title: "invalid timestamp",
-              description: "could not parse the timeline link",
+              title: "时间点无效",
+              description: "无法解析时间线链接",
               variant: "destructive",
             });
           }
@@ -317,8 +317,8 @@ export function DeeplinkHandler() {
           parsedUrl.searchParams.has("start_time")
         ) {
           toast({
-            title: "invalid timestamp",
-            description: "could not parse the timeline link",
+            title: "时间点无效",
+            description: "无法解析时间线链接",
             variant: "destructive",
           });
         }
@@ -396,7 +396,7 @@ export function DeeplinkHandler() {
           } catch (error) {
             console.error("Failed to open viewer:", error);
             toast({
-              title: "couldn't open file",
+              title: "无法打开文件",
               description: filePath,
               variant: "destructive",
             });
@@ -414,8 +414,8 @@ export function DeeplinkHandler() {
             await commands.showWindow("Main");
             await emit("navigate-to-frame", frameId);
             toast({
-              title: "navigating to frame",
-              description: `jumping to frame ${frameId}`,
+              title: "正在跳转到画面",
+              description: `正在跳转到画面 ${frameId}`,
             });
           } catch (error) {
             console.error("Failed to navigate to frame:", error);
@@ -487,7 +487,7 @@ export function DeeplinkHandler() {
 
         if (result.status === "error") {
           toast({
-            title: "recording could not start",
+            title: "无法开始录制",
             description: result.error,
             variant: "destructive",
           });
@@ -495,8 +495,8 @@ export function DeeplinkHandler() {
         }
 
         toast({
-          title: "recording started",
-          description: "screen recording has been initiated",
+          title: "录制已开始",
+          description: "屏幕录制已启动",
         });
       }),
 
@@ -518,7 +518,7 @@ export function DeeplinkHandler() {
           title: started ? "录制已开始" : "录制已暂停",
           description: started
             ? "屏幕录制已启动"
-            : "capture paused — scheduled tasks and search still available",
+            : "采集已暂停——定时任务和搜索仍然可用",
         });
       }),
 
@@ -527,8 +527,8 @@ export function DeeplinkHandler() {
         await commands.spawnScreenpipe(null);
 
         toast({
-          title: "audio recording started",
-          description: "audio capture has been enabled",
+          title: "音频录制已开始",
+          description: "音频采集已启用",
         });
       }),
 
@@ -537,8 +537,8 @@ export function DeeplinkHandler() {
         await commands.spawnScreenpipe(null);
 
         toast({
-          title: "audio recording stopped",
-          description: "audio capture has been disabled",
+          title: "音频录制已停止",
+          description: "音频采集已停用",
         });
       }),
 

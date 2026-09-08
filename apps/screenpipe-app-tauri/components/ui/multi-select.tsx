@@ -177,7 +177,7 @@ export const MultiSelect = React.forwardRef<
       variant,
       defaultValue = [],
       value,
-      placeholder = "Select options",
+      placeholder = "选择选项",
       animation = 0,
       maxCount = 3,
       modalPopover = false,
@@ -406,10 +406,10 @@ export const MultiSelect = React.forwardRef<
               <CommandEmpty>
                 {allowCustomValues ? (
                   <CommandItem onSelect={() => addCustomValue(inputValue)}>
-                    Add &quot;{inputValue}&quot;
+                    添加“{inputValue}”
                   </CommandItem>
                 ) : (
-                  "No results found."
+                  "未找到结果。"
                 )}
               </CommandEmpty>
               <CommandGroup>
@@ -428,7 +428,7 @@ export const MultiSelect = React.forwardRef<
                   >
                     <CheckIcon className="h-4 w-4" />
                   </div>
-                  <span>(Select All)</span>
+                  <span>（全选）</span>
                 </CommandItem>
 
                 {/* Show selected items first, then unselected */}

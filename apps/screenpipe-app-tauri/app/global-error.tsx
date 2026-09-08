@@ -34,13 +34,13 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <body style={{ margin: 0, backgroundColor: "#0a0a0a", color: "#fff", fontFamily: "system-ui, sans-serif" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>
           <div style={{ textAlign: "center", padding: "2rem" }}>
             <h2 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>出现问题</h2>
             <p style={{ fontSize: "0.875rem", color: "#999", marginBottom: "1.5rem" }}>
-              {error.message || "an unexpected error occurred"}
+              {error.message || "发生了意外错误"}
             </p>
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
               <button
@@ -55,7 +55,7 @@ export default function GlobalError({
                   fontSize: "0.875rem",
                 }}
               >
-                try again
+                重试
               </button>
               <button
                 onClick={() => window.location.reload()}
@@ -69,7 +69,7 @@ export default function GlobalError({
                   fontSize: "0.875rem",
                 }}
               >
-                reload
+                重新加载
               </button>
               <button
                 onClick={() => {
@@ -89,11 +89,11 @@ export default function GlobalError({
                   fontSize: "0.875rem",
                 }}
               >
-                get help
+                获取帮助
               </button>
             </div>
             <p style={{ fontSize: "0.75rem", color: "#666", marginTop: "0.75rem" }}>
-              error: {error.message || "unknown"}
+              错误：{error.message || "未知错误"}
             </p>
           </div>
         </div>

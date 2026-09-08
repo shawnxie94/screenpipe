@@ -110,7 +110,7 @@ describe("speaker assign popover", () => {
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: expect.stringContaining("every line from this voice"),
+          description: expect.stringContaining("此说话人的每一行"),
         }),
       ),
     );
@@ -138,7 +138,7 @@ describe("speaker assign popover", () => {
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith(
         expect.objectContaining({
-          description: expect.stringContaining("this line only"),
+          description: expect.stringContaining("仅修改此行"),
         }),
       ),
     );
@@ -155,7 +155,7 @@ describe("speaker assign popover", () => {
 
     // Firing the toast action is what the user clicking "undo" does.
     render(undo);
-    fireEvent.click(screen.getByText("undo"));
+    fireEvent.click(screen.getByText("撤销"));
 
     await waitFor(() =>
       expect(bodiesFor("/speakers/undo-reassign")).toHaveLength(1),
@@ -194,7 +194,7 @@ describe("speaker assign popover", () => {
     expect(undo).toBeTruthy();
 
     render(undo);
-    fireEvent.click(screen.getByText("undo"));
+    fireEvent.click(screen.getByText("撤销"));
 
     await waitFor(() => expect(bodiesFor("/speakers/update")).toHaveLength(1));
     expect(bodiesFor("/speakers/update")[0]).toEqual({ id: 7, name: "" });

@@ -74,7 +74,7 @@ describe("NotificationFeedback", () => {
         "include project names",
       );
     });
-    expect(await screen.findByText("feedback sent")).toBeInTheDocument();
+    expect(await screen.findByText("反馈已发送")).toBeInTheDocument();
     expect(
       screen.queryByRole("group", { name: "通知反馈选项" }),
     ).not.toBeInTheDocument();
@@ -105,7 +105,7 @@ describe("NotificationFeedback", () => {
         undefined,
       );
     });
-    expect(await screen.findByText("feedback sent")).toBeInTheDocument();
+    expect(await screen.findByText("反馈已发送")).toBeInTheDocument();
     expect(
       screen.queryByRole("group", { name: "通知反馈选项" }),
     ).not.toBeInTheDocument();

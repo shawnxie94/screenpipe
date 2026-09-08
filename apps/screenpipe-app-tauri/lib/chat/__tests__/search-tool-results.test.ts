@@ -42,7 +42,7 @@ describe("search tool result formatting", () => {
       },
     ]);
 
-    expect(output).toContain("Found 3 results:");
+    expect(output).toContain("找到 3 条结果：");
     expect(output).toContain("[OCR] Cursor | Editor");
     expect(output).toContain("file_path: /tmp/frame.png");
     expect(output).toContain("[Audio] Mic");
@@ -52,7 +52,7 @@ describe("search tool result formatting", () => {
 
   it("formats empty results", () => {
     expect(formatSearchToolResults([])).toBe(
-      "No results found. Try broader search terms or wider time range.",
+      "未找到结果。请尝试更宽泛的搜索词或更大的时间范围。",
     );
   });
 
@@ -69,16 +69,16 @@ describe("search tool result formatting", () => {
       })),
     );
 
-    expect(output).toBe("Search returned too much data. Try a narrower time range.");
+    expect(output).toBe("搜索返回的数据过多。请缩小时间范围。");
   });
 
   it("formats timeout and generic errors", () => {
     const timeout = new Error("aborted");
     timeout.name = "AbortError";
     expect(formatSearchToolError(timeout)).toBe(
-      "Search timed out. Retry with narrower time range and start_time within last 30-60 minutes.",
+      "搜索超时。请缩小时间范围，并将 start_time 设为最近 30–60 分钟内后重试。",
     );
-    expect(formatSearchToolError(new Error("boom"))).toBe("Search failed: boom");
-    expect(formatSearchToolError("bad")).toBe("Search failed: Unknown error");
+    expect(formatSearchToolError(new Error("boom"))).toBe("搜索失败：boom");
+    expect(formatSearchToolError("bad")).toBe("搜索失败：未知错误");
   });
 });

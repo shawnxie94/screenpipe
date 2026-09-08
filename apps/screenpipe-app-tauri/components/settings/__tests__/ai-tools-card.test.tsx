@@ -92,7 +92,7 @@ describe("AiToolsCard", () => {
           succeeded: [],
           failed: [{
             id: "claude",
-            error: new Error("claude_desktop_config.json is not valid JSON — fix or remove it"),
+            error: new Error("claude_desktop_config.json 不是有效的 JSON——请修复或删除它"),
           }],
         };
       }
@@ -100,7 +100,7 @@ describe("AiToolsCard", () => {
     });
 
     render(<AiToolsCard />);
-    const connectAll = await screen.findByRole("button", { name: /connect all/i });
+    const connectAll = await screen.findByRole("button", { name: /全部连接/ });
     fireEvent.click(connectAll);
 
     await waitFor(() => {
@@ -110,7 +110,7 @@ describe("AiToolsCard", () => {
     expect(libMocks.connectAiToolTargets).toHaveBeenCalledWith(["codex"]);
 
     // Per-tool error is visible, and nothing is stuck in a running state.
-    await screen.findByText(/not valid JSON/);
+    await screen.findByText(/不是有效的 JSON/);
     await waitFor(() => {
       expect(screen.queryByText(/Connecting\.\.\./)).toBeNull();
     });
@@ -123,13 +123,13 @@ describe("AiToolsCard", () => {
     libMocks.disconnectAiTool.mockResolvedValue(undefined);
 
     render(<AiToolsCard />);
-    fireEvent.click(await screen.findByRole("button", { name: /manage/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /管理/ }));
 
-    const disconnectAll = await screen.findByText("Disconnect all…");
+    const disconnectAll = await screen.findByText("全部断开…");
     fireEvent.click(disconnectAll);
     expect(libMocks.disconnectAiTool).not.toHaveBeenCalled(); // first click only arms
 
-    fireEvent.click(await screen.findByText("Click again to confirm"));
+    fireEvent.click(await screen.findByText("再次点击确认"));
     await waitFor(() => {
       expect(libMocks.disconnectAiToolTargets).toHaveBeenCalledWith(["claude"]);
       expect(libMocks.disconnectAiToolTargets).toHaveBeenCalledWith(["codex"]);
@@ -141,8 +141,8 @@ describe("AiToolsCard", () => {
 
     render(<AiToolsCard />);
 
-    expect(await screen.findByText("2 found. Connect them in one click.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /connect all/i }));
+    expect(await screen.findByText("发现 2 个应用，可一键连接。")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /全部连接/ }));
 
     expect(await screen.findByText("Claude")).toBeTruthy();
     expect(screen.queryByText("Claude Desktop")).toBeNull();
@@ -160,7 +160,7 @@ describe("AiToolsCard", () => {
     skillsMocks.areExternalAgentSkillsInstalled.mockResolvedValue(true);
 
     render(<AiToolsCard />);
-    fireEvent.click(await screen.findByRole("button", { name: /manage/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /管理/ }));
     fireEvent.click(await screen.findByRole("button", { name: "移除" }));
 
     await waitFor(() => {
@@ -177,7 +177,7 @@ describe("AiToolsCard", () => {
     });
 
     render(<AiToolsCard />);
-    fireEvent.click(await screen.findByRole("button", { name: /connect all/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /全部连接/ }));
 
     await waitFor(() => expect(libMocks.connectAiToolTargets).toHaveBeenCalled());
     expect(await screen.findByText(/Claude Code config is invalid/)).toBeTruthy();
@@ -188,19 +188,19 @@ describe("AiToolsCard", () => {
     libMocks.isRunnerMcpInstalled.mockResolvedValue(true);
 
     render(<AiToolsCard />);
-    fireEvent.click(await screen.findByRole("button", { name: /manage/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /管理/ }));
 
-    expect(await screen.findByText(/enable Settings > Workspace > Local MCP Servers/i)).toBeTruthy();
+    expect(await screen.findByText(/请在 Runner 中启用/)).toBeTruthy();
   });
 
   it("describes detected AI apps by what they can access", async () => {
     libMocks.detectAiTools.mockResolvedValue(["gemini"]);
 
     render(<AiToolsCard />);
-    fireEvent.click(await screen.findByRole("button", { name: /connect all/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /全部连接/ }));
 
     expect(await screen.findByText("Gemini CLI")).toBeTruthy();
-    expect(screen.getByText("screen and audio history")).toBeTruthy();
+    expect(screen.getByText("屏幕和音频历史")).toBeTruthy();
     expect(screen.queryByText("MCP + skills")).toBeNull();
     await waitFor(() => expect(libMocks.connectAiToolTargets).toHaveBeenCalledWith(["gemini"]));
   });

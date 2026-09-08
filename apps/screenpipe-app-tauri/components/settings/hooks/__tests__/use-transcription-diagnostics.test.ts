@@ -117,7 +117,7 @@ describe("useTranscriptionDiagnostics", () => {
     expect(result.current.txTestResults.endpoint.status).toBe("fail");
     expect(result.current.txTestResults.endpoint.message).toContain("connect ECONNREFUSED");
     expect(result.current.txTestResults.endpoint.message).toContain(
-      "Is the server running at https://stt.example.net:8443?"
+      "请确认服务器是否运行在 https://stt.example.net:8443？"
     );
     expect(result.current.txTestResults.transcribe.status).toBe("skip");
     expect(testOpenaiCompatibleTranscription).not.toHaveBeenCalled();

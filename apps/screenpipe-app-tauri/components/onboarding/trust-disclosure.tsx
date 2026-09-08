@@ -14,8 +14,8 @@ import { commands } from "@/lib/utils/tauri";
  * Shared so the two slides that make this promise cannot drift apart; the
  * locality line already drifted once between login and permissions.
  */
-export const PAUSE_DETAIL = "pause recording anytime from the screenpipe icon";
-export const LOCALITY_DETAIL = "your recordings are stored on this computer";
+export const PAUSE_DETAIL = "随时点击 screenpipe 图标暂停录制";
+export const LOCALITY_DETAIL = "你的录制内容存储在这台电脑上";
 
 /**
  * Collapsed trust summary for the permissions slide.
@@ -104,7 +104,7 @@ export default function TrustDisclosure({
         data-testid="onboarding-trust-summary"
         className="w-full flex items-center justify-center gap-1.5 font-mono text-[10px] text-muted-foreground hover:text-foreground transition-colors"
       >
-        <span>stored on this computer · pause anytime</span>
+        <span>存储在这台电脑上 · 可随时暂停</span>
         {open ? (
           <ChevronUp className="w-2.5 h-2.5" aria-hidden="true" />
         ) : (
@@ -130,16 +130,16 @@ export default function TrustDisclosure({
                 type="button"
                 onClick={reveal}
                 data-testid="onboarding-data-dir-open"
-                aria-label={`open ${dataDir}`}
+                aria-label={`打开 ${dataDir}`}
                 className="shrink-0 border border-border px-2 py-0.5 font-mono text-[10px] text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
               >
-                open
+                打开
               </button>
             </div>
           )}
           {revealFailed && (
             <p className="font-mono text-[10px] text-muted-foreground text-left">
-              couldn&apos;t open the folder. the path is above.
+              无法打开文件夹，路径如上。
             </p>
           )}
           <p

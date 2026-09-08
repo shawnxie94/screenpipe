@@ -25,8 +25,19 @@ import {
   type ChatRichResult,
 } from "@/lib/chat/rich-results";
 import { cn } from "@/lib/utils";
+import { humanizeSchedule } from "@/lib/utils/schedule-format";
 
 const COLLAPSED_CARD_COUNT = 3;
+
+function displaySubtitle(result: ChatRichResult): string | null {
+  if (!result.subtitle) return null;
+  if (result.kind !== "scheduled-task") return result.subtitle;
+  const normalized = result.subtitle.trim().toLowerCase();
+  if (normalized === "every weekday") return "每个工作日";
+  if (normalized === "every day") return "每天";
+  const localized = humanizeSchedule(result.subtitle);
+  return localized === result.subtitle ? result.subtitle : localized;
+}
 
 function ResultKindIcon({ result }: { result: ChatRichResult }) {
   const className = "h-5 w-5";
@@ -56,6 +67,7 @@ export function RichResultCard({
 }) {
   const openable = canOpenChatRichResult(result) && Boolean(onOpen);
   const stateLabel = chatRichResultStateLabel(result.state);
+  const subtitle = displaySubtitle(result);
   return (
     <section
       aria-label={`${chatRichResultKindLabel(result.kind)}: ${result.title}, ${stateLabel}`}
@@ -79,7 +91,7 @@ export function RichResultCard({
         <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
           <span className="shrink-0" aria-hidden="true"><StateIcon result={result} /></span>
           <span className="shrink-0">{stateLabel}</span>
-          {result.subtitle ? <><span aria-hidden="true">·</span><span className="truncate" title={result.subtitle}>{result.subtitle}</span></> : null}
+          {subtitle ? <><span aria-hidden="true">·</span><span className="truncate" title={subtitle}>{subtitle}</span></> : null}
         </div>
       </div>
       <Button
@@ -88,10 +100,10 @@ export function RichResultCard({
         size="sm"
         disabled={!openable}
         onClick={() => void onOpen?.(result)}
-        aria-label={`Open ${result.title}`}
+        aria-label={`打开 ${result.title}`}
         className="shrink-0 bg-background/70"
       >
-        Open
+        打开
       </Button>
     </section>
   );
@@ -123,7 +135,7 @@ export function RichResultCards({
           className="px-1 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           onClick={() => setExpanded((current) => !current)}
         >
-          {expanded ? "Show fewer" : `Show ${hiddenCount} more`}
+          {expanded ? "显示较少" : `再显示 ${hiddenCount} 项`}
         </button>
       ) : null}
     </div>

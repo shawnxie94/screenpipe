@@ -81,7 +81,7 @@ export const PORTABLE_AGENT_EXTENSION_CATALOG: PortableAgentExtensionCatalogItem
   {
     id: "screen-history",
     name: "屏幕历史",
-    summary: "Search, summarize, and query local screen and audio history.",
+    summary: "搜索、总结并查询本地屏幕和音频历史记录。",
     tools: ["activity-summary", "search-content", "query_recordings"],
   },
   {
@@ -268,13 +268,13 @@ function registryPackageToCatalogItem(pkg: NpmSearchPackage): PiExtensionCatalog
     name: packageNameToTitle(name),
     source,
     summary: description,
-    details: "Community package from npm. Review the package, source, and behavior before enabling it.",
+    details: "来自 npm 的社区包。启用前请审查包、源代码和行为。",
     modelFit: "strong-model",
     modelFitLabel: "社区包",
-    modelFitCopy: "Model fit depends on the package. Prefer stronger models for tools that browse, spawn agents, or change files.",
+    modelFitCopy: "模型适配度取决于具体包。对于会浏览网页、启动代理或修改文件的工具，建议使用更强的模型。",
     risk: portable
-      ? "Third-party package. It runs locally in screenpipe and can be used by other AI apps."
-      : "Third-party package. It can run local code inside screenpipe after install.",
+      ? "第三方包。它会在 screenpipe 本地运行，也可以供其他 AI 应用使用。"
+      : "第三方包。安装后，它可以在 screenpipe 中运行本地代码。",
     npmUrl: pkg.links?.npm || `https://www.npmjs.com/package/${name}`,
     sourceUrl: pkg.links?.repository || pkg.links?.homepage,
     tags,

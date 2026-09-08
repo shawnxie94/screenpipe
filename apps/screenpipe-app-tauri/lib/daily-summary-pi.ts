@@ -101,7 +101,7 @@ function terminalAssistantError(
     return null;
   }
   const error = message.errorMessage || message.error;
-  return typeof error === "string" && error.trim() ? error : "AI request failed";
+  return typeof error === "string" && error.trim() ? error : "AI 请求失败";
 }
 
 function finalAssistantError(envelope: AgentEventEnvelope): string | null {
@@ -146,7 +146,7 @@ async function runDailySummaryAttempt(
     settled = true;
     const summary = value.trim();
     if (summary) resolveResponse(summary);
-    else rejectResponse(new Error("AI returned an empty daily summary"));
+    else rejectResponse(new Error("AI 返回了空的每日摘要"));
   };
   const fail = (error: Error) => {
     if (settled) return;
@@ -192,7 +192,7 @@ async function runDailySummaryAttempt(
       // codes out of it to offer the right recovery (upgrade vs retry).
       fail(
         new Error(
-          agentEventErrorText(event, "AI failed to generate the daily summary"),
+          agentEventErrorText(event, "AI 生成每日摘要失败"),
         ),
       );
     }
@@ -219,7 +219,7 @@ async function runDailySummaryAttempt(
           if (started.status !== "ok" || !started.data.running) {
             return started.status === "error"
               ? started
-              : ({ status: "error", error: "AI did not start" } as const);
+              : ({ status: "error", error: "AI 未能启动" } as const);
           }
           return await commands.piPrompt(sessionId, prompt, null, null);
         })();
@@ -245,7 +245,7 @@ export async function runDailySummaryWithPi(
 ): Promise<string> {
   if (options.signal?.aborted) throw abortError();
   if (!options.preset.model?.trim())
-    throw new Error("No AI model is configured");
+    throw new Error("尚未配置 AI 模型");
 
   await mountAgentEventBus();
   const home = await homeDir();

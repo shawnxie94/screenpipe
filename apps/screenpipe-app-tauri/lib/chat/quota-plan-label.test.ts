@@ -7,26 +7,26 @@ import { QUOTA_PLAN_LABELS, quotaPlanLabel } from "./quota-errors";
 
 describe("quotaPlanLabel", () => {
   it("names every plan the gateway can require", () => {
-    expect(quotaPlanLabel("basic")).toBe("Basic");
-    expect(quotaPlanLabel("business")).toBe("Business");
-    expect(quotaPlanLabel("business_max")).toBe("Business Max");
-    expect(quotaPlanLabel("business_ultra")).toBe("Business Ultra");
+    expect(quotaPlanLabel("basic")).toBe("基础版");
+    expect(quotaPlanLabel("business")).toBe("商业版");
+    expect(quotaPlanLabel("business_max")).toBe("商业版 Max");
+    expect(quotaPlanLabel("business_ultra")).toBe("商业版 Ultra");
   });
 
   it("names entitlement ids too, so surfaces stop printing raw ids", () => {
     // usage-section rendered `hosted_ai.plan` with CSS capitalize, producing
     // "Pro plan" and "Pro_max plan" — names no plan has ever had.
-    expect(quotaPlanLabel("pro")).toBe("Business");
-    expect(quotaPlanLabel("pro_max")).toBe("Business Max");
-    expect(quotaPlanLabel("pro_ultra")).toBe("Business Ultra");
-    expect(quotaPlanLabel("standard")).toBe("Basic");
-    expect(quotaPlanLabel("lifetime")).toBe("Lifetime");
-    expect(quotaPlanLabel("free")).toBe("Free");
+    expect(quotaPlanLabel("pro")).toBe("商业版");
+    expect(quotaPlanLabel("pro_max")).toBe("商业版 Max");
+    expect(quotaPlanLabel("pro_ultra")).toBe("商业版 Ultra");
+    expect(quotaPlanLabel("standard")).toBe("基础版");
+    expect(quotaPlanLabel("lifetime")).toBe("终身版");
+    expect(quotaPlanLabel("free")).toBe("免费版");
   });
 
   it("is case and whitespace insensitive", () => {
-    expect(quotaPlanLabel("  Business_Max ")).toBe("Business Max");
-    expect(quotaPlanLabel("PRO")).toBe("Business");
+    expect(quotaPlanLabel("  Business_Max ")).toBe("商业版 Max");
+    expect(quotaPlanLabel("PRO")).toBe("商业版");
   });
 
   it("returns null rather than inventing a name", () => {

@@ -57,8 +57,9 @@ function compatibilityClass(item: PiExtensionCatalogItem): string {
 }
 
 function packageErrorMessage(error: unknown): string {
-  if (typeof error === "string") return error;
-  if (error instanceof Error) return error.message;
+  const message = typeof error === "string" ? error : error instanceof Error ? error.message : "";
+  if (message === "Pi is still working in chat.") return "Pi 当前仍在聊天中工作。";
+  if (message) return message;
   return "更改此工具时出现问题。";
 }
 
@@ -71,12 +72,12 @@ function relativeDate(value?: string): string | null {
   const timestamp = new Date(value).getTime();
   if (!Number.isFinite(timestamp)) return null;
   const elapsedMinutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60_000));
-  if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
+  if (elapsedMinutes < 60) return `${elapsedMinutes} 分钟前`;
   const elapsedHours = Math.floor(elapsedMinutes / 60);
-  if (elapsedHours < 24) return `${elapsedHours}h ago`;
+  if (elapsedHours < 24) return `${elapsedHours} 小时前`;
   const elapsedDays = Math.floor(elapsedHours / 24);
-  if (elapsedDays < 30) return `${elapsedDays}d ago`;
-  return `${Math.floor(elapsedDays / 30)}mo ago`;
+  if (elapsedDays < 30) return `${elapsedDays} 天前`;
+  return `${Math.floor(elapsedDays / 30)} 个月前`;
 }
 
 function PiExtensionRow({
@@ -107,7 +108,7 @@ function PiExtensionRow({
             {enabled && (
               <span className="inline-flex items-center gap-1 border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
                 <CheckCircle2 className="h-3 w-3" />
-                on
+                已启用
               </span>
             )}
             {item.required && (
@@ -170,7 +171,7 @@ function PiExtensionRow({
           onClick={() => openUrl(item.npmUrl)}
           className="ml-auto inline-flex items-center gap-1 underline-offset-4 hover:underline"
         >
-          package <ExternalLink className="h-3 w-3" />
+          软件包 <ExternalLink className="h-3 w-3" />
         </button>
         {item.sourceUrl && (
           <button
@@ -178,7 +179,7 @@ function PiExtensionRow({
             onClick={() => openUrl(item.sourceUrl!)}
             className="inline-flex items-center gap-1 underline-offset-4 hover:underline"
           >
-            code <ExternalLink className="h-3 w-3" />
+            代码 <ExternalLink className="h-3 w-3" />
           </button>
         )}
       </div>
@@ -225,7 +226,7 @@ function PiExtensionRecentCard({
 }) {
   const published = relativeDate(item.publishedAt);
   const packageName = item.source.replace(/^npm:/, "");
-  const action = stale ? "repair" : enabled ? "remove" : "add";
+  const actionLabel = stale ? "修复" : enabled ? "移除" : "添加";
 
   return (
     <article className="flex min-h-[132px] min-w-0 flex-col border border-border bg-card p-3 transition-colors hover:border-foreground/30">
@@ -236,7 +237,7 @@ function PiExtensionRecentCard({
         <button
           type="button"
           onClick={() => openUrl(item.npmUrl)}
-          aria-label={`Open ${item.name} on npm`}
+          aria-label={`在 npm 打开 ${item.name}`}
           className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
         >
           <ExternalLink className="h-3 w-3" />
@@ -263,11 +264,11 @@ function PiExtensionRecentCard({
           size="sm"
           disabled={disabled || busy}
           onClick={() => onToggle(stale || !enabled)}
-          aria-label={`${action.charAt(0).toUpperCase()}${action.slice(1)} ${item.name}`}
+          aria-label={`${actionLabel} ${item.name}`}
           className="h-6 px-2 text-[10px] uppercase tracking-[0.12em]"
         >
           {busy && <Loader2 className="h-3 w-3 animate-spin" />}
-          {action}
+          {actionLabel}
         </Button>
       </div>
     </article>
@@ -291,7 +292,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
     try {
       const res = await commands.piListExtensionPackages();
       if (res.status === "error") {
-        setError(res.error);
+        setError(packageErrorMessage(res.error));
         return;
       }
       setPackages(res.data);
@@ -407,10 +408,11 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
           : await commands.piRemoveExtensionPackage(item.source);
 
         if (res.status === "error") {
-          setError(res.error);
+          const message = packageErrorMessage(res.error);
+          setError(message);
           toast({
             title: "无法更改工具",
-            description: res.error,
+            description: message,
             variant: "destructive",
           });
           return;
@@ -422,7 +424,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
           (pkg) => normalizePiPackageSource(pkg.source) === normalizePiPackageSource(item.source),
         );
         toast({
-          title: checked ? `${item.name} enabled` : `${item.name} disabled`,
+          title: checked ? `已启用 ${item.name}` : `已停用 ${item.name}`,
           description:
             checked && changedPackage?.acpCompatible
               ? "可在新的代理聊天中随时使用。"
@@ -452,10 +454,11 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
       try {
         const res = await commands.piRemoveExtensionPackage(source);
         if (res.status === "error") {
-          setError(res.error);
+          const message = packageErrorMessage(res.error);
+          setError(message);
           toast({
             title: "无法更改工具",
-            description: res.error,
+            description: message,
             variant: "destructive",
           });
           return;
@@ -487,7 +490,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Add new tools for your AI to use.
+            为你的 AI 添加可用工具。
           </p>
           <Button
             variant="ghost"
@@ -504,7 +507,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
       {!loaded ? (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          loading tools...
+          正在加载工具…
         </div>
       ) : (
         <div className="space-y-2">
@@ -531,7 +534,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
                   enabled={item.required || configuredSources.has(normalized)}
                   stale={missingSources.has(normalized)}
                   busy={busySource === item.source}
-                  disabled={changingPackage && busySource !== item.source}
+                  disabled={changingPackage}
                   onToggle={(checked) => togglePackage(item, checked)}
                 />
               );
@@ -565,8 +568,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
         <div className="flex items-start gap-2">
           <ShieldAlert className="mt-0.5 h-4 w-4 text-muted-foreground" />
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Community tools can run code and change how your agents behave. Only add tools you
-            trust.
+            社区工具可以运行代码并改变代理的行为。请只添加你信任的工具。
           </p>
         </div>
       </div>
@@ -594,10 +596,10 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <h4 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                  Recently added
+                  最近添加
                 </h4>
                 <span className="text-[11px] text-muted-foreground">
-                  community
+                  社区
                 </span>
               </div>
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
@@ -610,7 +612,7 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
                       enabled={configuredSources.has(normalized)}
                       stale={missingSources.has(normalized)}
                       busy={busySource === item.source}
-                      disabled={changingPackage && busySource !== item.source}
+                      disabled={changingPackage}
                       onToggle={(checked) => togglePackage(item, checked)}
                     />
                   );
@@ -622,14 +624,14 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <h4 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Community
+                社区
               </h4>
               <span className="text-[11px] text-muted-foreground">
                 {registryLoading
-                  ? "searching..."
+                  ? "正在搜索…"
                   : registryTotal === null
-                    ? "tools"
-                    : `${visibleRegistryItems.length} shown / ${registryTotal.toLocaleString()} found`}
+                    ? "工具"
+                    : `显示 ${visibleRegistryItems.length} 项 / 共找到 ${registryTotal.toLocaleString()} 项`}
               </span>
             </div>
             {registryError && (
@@ -655,20 +657,20 @@ export function PiExtensionsCard({ onChanged }: { onChanged?: () => void }) {
             </div>
             {!registryLoading && !registryError && visibleRegistryItems.length === 0 && (
               <div className="border border-border bg-muted/25 p-3 text-xs text-muted-foreground">
-                No community tools match this search.
+                没有符合搜索条件的社区工具。
               </div>
             )}
             {registryLoading && visibleRegistryItems.length === 0 && (
               <div className="flex items-center gap-2 border border-border bg-muted/25 p-3 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                searching tools...
+                正在搜索工具…
               </div>
             )}
           </div>
 
           {visibleRegistryItems.length === 0 && registryError && (
             <div className="border border-border bg-muted/25 p-3 text-xs text-muted-foreground">
-              Try another search or refresh the catalog.
+              请尝试其他关键词或刷新目录。
             </div>
           )}
         </div>

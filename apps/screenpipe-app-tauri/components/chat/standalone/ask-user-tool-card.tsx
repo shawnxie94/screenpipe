@@ -158,7 +158,7 @@ export function formatAskUserDisplayLabel(parsed: ParsedAskUserToolCall, answers
     .map((question) => answerLabels(question, answers[question.id] ?? { values: [], customText: "" }))
     .find((labels) => labels.length > 0);
   const preview = firstAnswered?.join(", ");
-  return preview ? `Answered Ask user: ${preview}` : "Answered Ask user";
+  return preview ? `已回答用户问题：${preview}` : "已回答用户问题";
 }
 
 function toolResultNeedsManualFollowup(result?: string): boolean {
@@ -241,22 +241,22 @@ export function AskUserToolCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-xs font-mono font-semibold text-foreground">
-            {parsed.title || "Ask user"}
+            {parsed.title || "请用户回答"}
           </div>
           <div className="mt-0.5 text-[11px] text-muted-foreground">
             {submitted
-              ? "Answer sent"
+              ? "回答已发送"
               : toolCall.isRunning
                 ? "Pi 正在等待你的输入"
                 : needsManualFollowup
                   ? "Pi 需要以聊天回复形式获取此信息"
-                  : "Ready to answer"}
+                  : "等待回答"}
           </div>
         </div>
         {submitted ? (
           <span className="inline-flex h-6 items-center gap-1 rounded-md border border-border bg-background px-2 text-[11px] text-muted-foreground">
             <Check className="h-3 w-3" />
-            sent
+            已发送
           </span>
         ) : null}
       </div>
@@ -328,7 +328,7 @@ export function AskUserToolCard({
         ) : activeQuestion.options.length > 0 ? (
           <div className="relative">
             <select
-              aria-label={`Answer ${activeQuestion.label}`}
+              aria-label={`回答：${activeQuestion.label}`}
               data-testid={`ask-user-answer-${activeQuestion.id}`}
               value={activeAnswer.values[0] ?? ""}
               onChange={(event) => {
@@ -364,11 +364,11 @@ export function AskUserToolCard({
         ) : null}
 
         <textarea
-          aria-label={`Custom answer ${activeQuestion.label}`}
+          aria-label={`自定义回答：${activeQuestion.label}`}
           value={activeAnswer.customText}
           onChange={(event) => updateAnswer(activeQuestion.id, { customText: event.target.value })}
           rows={2}
-          placeholder={activeQuestion.options.length > 0 ? "输入你自己的回答或补充细节..." : "Type your answer..."}
+          placeholder={activeQuestion.options.length > 0 ? "输入你自己的回答或补充细节..." : "输入你的回答..."}
           className="min-h-16 w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground/70 focus:border-foreground"
         />
       </div>
@@ -376,7 +376,7 @@ export function AskUserToolCard({
       <div className="mt-3 flex items-center justify-between gap-3">
         <div className="min-w-0 text-[11px] text-muted-foreground">
           {needsManualFollowup
-            ? "Screenpipe will send this as the next chat message."
+            ? "Screenpipe 会将其作为下一条聊天消息发送。"
             : "你的选择会被发送回此聊天。"}
         </div>
         <button
@@ -390,7 +390,7 @@ export function AskUserToolCard({
               : "cursor-not-allowed border border-border bg-background text-muted-foreground",
           )}
         >
-          {submitting ? "Sending..." : "Reply"}
+          {submitting ? "正在发送..." : "回复"}
         </button>
       </div>
     </form>

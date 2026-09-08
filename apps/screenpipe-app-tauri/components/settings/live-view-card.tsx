@@ -90,6 +90,20 @@ function stringValue(value: unknown): string {
     : "";
 }
 
+const UNIT_LABELS: Record<string, string> = {
+  hour: "小时",
+  hours: "小时",
+  minute: "分钟",
+  minutes: "分钟",
+  day: "天",
+  days: "天",
+  percent: "%",
+};
+
+function displayUnit(value: string): string {
+  return UNIT_LABELS[value.toLowerCase()] ?? value;
+}
+
 function LiveViewCardBody({
   slot,
   preview = false,
@@ -113,12 +127,12 @@ function LiveViewCardBody({
         ) : refreshing && slot.binding ? (
           <span className="inline-flex items-center gap-2">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            asking {slot.binding.pipeName} for fresh data
+            正在向 {slot.binding.pipeName} 请求最新数据
           </span>
         ) : slot.binding ? (
-          `${slot.binding.pipeName} has not published this data yet`
+          `${slot.binding.pipeName} 尚未发布此数据`
         ) : (
-          "connect a scheduled task to fill this Block"
+          "连接计划任务以填充此区块"
         )}
       </div>
     );
@@ -136,7 +150,7 @@ function LiveViewCardBody({
           </span>
           {typeof payload.unit === "string" && (
             <span className="text-sm text-muted-foreground">
-              {payload.unit}
+              {displayUnit(payload.unit)}
             </span>
           )}
         </div>
@@ -187,7 +201,7 @@ function LiveViewCardBody({
               data-testid={`live-view-list-${slot.id}-clear`}
               className="flex min-h-20 items-center justify-center px-4 text-center text-xs text-muted-foreground"
             >
-              nothing needs attention
+              当前没有需要处理的事项
             </div>
           )}
           {handledItems.length > 0 && (
@@ -196,7 +210,7 @@ function LiveViewCardBody({
                 data-testid={`live-view-list-${slot.id}-handled-toggle`}
                 className="cursor-pointer px-1 py-2 font-mono text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground"
               >
-                {handledItems.length} handled · show
+                {handledItems.length} 已处理 · 显示
               </summary>
               <div className="divide-y divide-border border-t border-border">
                 {handledItems.map((item, index) => {
@@ -474,7 +488,7 @@ export function LiveViewCard({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={`mark ${slot.title} useful`}
+            aria-label={`标记 ${slot.title} 有用`}
             aria-pressed={feedback === "up"}
             className={`h-7 w-7 rounded-none ${
               feedback === "up" ? "bg-foreground text-background" : ""
@@ -500,7 +514,7 @@ export function LiveViewCard({
                 type="button"
                 variant="ghost"
                 size="icon"
-                aria-label={`mark ${slot.title} not useful`}
+                aria-label={`标记 ${slot.title} 没有帮助`}
                 aria-pressed={feedback === "down"}
                 className={`h-7 w-7 rounded-none ${
                   feedback === "down" ? "bg-foreground text-background" : ""
@@ -529,7 +543,7 @@ export function LiveViewCard({
                 <div>
                   <p className="text-xs font-medium">哪些地方需要改进？</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
-                    Optional. The connected scheduled task will use this next time.
+                    可选。已连接的定时任务下次运行时会使用这条反馈。
                   </p>
                 </div>
                 <Input
@@ -550,7 +564,7 @@ export function LiveViewCard({
                       disabled={feedbackSaving !== null}
                       onClick={() => void saveFeedback(null)}
                     >
-                      clear
+                      清除
                     </Button>
                   ) : (
                     <span />
@@ -564,7 +578,7 @@ export function LiveViewCard({
                     {feedbackSaving === "down" && (
                       <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                     )}
-                    save feedback
+                    保存反馈
                   </Button>
                 </div>
               </form>
@@ -574,7 +588,7 @@ export function LiveViewCard({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={`regenerate ${slot.title}`}
+                aria-label={`重新生成 ${slot.title}`}
             title="重新生成本节"
             className="h-7 w-7 rounded-none"
             disabled={!slot.binding || busy}
@@ -592,7 +606,7 @@ export function LiveViewCard({
                 type="button"
                 variant="ghost"
                 size="icon"
-                aria-label={`edit ${slot.title} with AI`}
+                aria-label={`使用 AI 编辑 ${slot.title}`}
                 title="用 AI 编辑本节"
                 className="h-7 w-7 rounded-none"
                 disabled={busy}
@@ -634,7 +648,7 @@ export function LiveViewCard({
                     {aiEditing && (
                       <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
                     )}
-                    update
+                    更新
                   </Button>
                 </div>
               </form>
@@ -676,7 +690,7 @@ export function LiveViewCard({
             data-testid={`overview-card-updated-${slot.id}`}
             className="ml-auto shrink-0"
           >
-            updated {timeAgo(slot.value.updatedAt)} · artifact #
+            已更新 {timeAgo(slot.value.updatedAt)} · 产物 #
             {slot.value.artifactOutputId} · v
             {slot.value.artifactVersion}
           </span>

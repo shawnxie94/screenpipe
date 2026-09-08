@@ -303,7 +303,7 @@ export function TimelineControls({
 							size="icon"
 							onClick={onTogglePlayPause}
 							className="h-8 w-8 text-foreground hover:bg-foreground hover:text-background transition-colors duration-150"
-							title={isPlaying ? "Pause (Space)" : "Play (Space)"}
+							title={isPlaying ? "暂停（空格）" : "播放（空格）"}
 						>
 							{isPlaying ? (
 								<Pause className="h-4 w-4" />
@@ -338,7 +338,7 @@ export function TimelineControls({
 														? "bg-muted text-muted-foreground/40"
 														: "bg-foreground/10 text-foreground hover:bg-foreground/20"
 												}`}
-												title={`${isMuted ? "Unmute" : "Mute"} ${device.name}`}
+												title={`${isMuted ? "取消静音" : "静音"} ${device.name}`}
 											>
 												{device.isInput ? (
 													<Mic className="h-3 w-3" />
@@ -393,7 +393,7 @@ export function TimelineControls({
 						{chatShortcutDisplay ? (
 							<span className="text-xs text-muted-foreground group-hover:text-background">{chatShortcutDisplay}</span>
 						) : null}
-						<span className="text-xs text-foreground group-hover:text-background">chat</span>
+						<span className="text-xs text-foreground group-hover:text-background">聊天</span>
 					</button>
 				)}
 			</div>

@@ -199,7 +199,7 @@ describe("BrowserSidebar session access", () => {
       });
     });
 
-    expect(screen.getByText("Use your browser login?")).toBeInTheDocument();
+    expect(screen.getByText("使用你的浏览器登录状态？")).toBeInTheDocument();
     expect(screen.getByText("reddit.com")).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.getByTestId("tab-loading-browser")).toHaveTextContent(
@@ -229,7 +229,7 @@ describe("BrowserSidebar session access", () => {
       });
     });
 
-    expect(screen.getByText("Browser login is protected")).toBeInTheDocument();
+    expect(screen.getByText("浏览器登录状态受到保护")).toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.getByTestId("tab-loading-browser")).toHaveTextContent(
       "false",

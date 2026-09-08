@@ -48,7 +48,7 @@ describe("continuousPipeChatPolicy", () => {
       pipeName: "daily-brief",
       state: "off",
       replyDisabledReason:
-        "Continue in one chat is off. Turn it on in Automations settings to reply here.",
+        "单聊天连续对话已关闭。请在定时任务设置中开启后再回复。",
     });
   });
 
@@ -63,7 +63,7 @@ describe("continuousPipeChatPolicy", () => {
       pipeName: "team:daily-brief",
       state: "missing",
       replyDisabledReason:
-        "This scheduled task is no longer installed. Reinstall it to continue this chat.",
+        "此定时任务已不再安装。请重新安装后继续此聊天。",
     });
   });
 

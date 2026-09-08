@@ -78,7 +78,7 @@ describe("summarizeLiveViewFreshness", () => {
   it("says so before any block has data", () => {
     expect(
       summarizeLiveViewFreshness([slot("a", null), slot("b", null)], NOW).label,
-    ).toBe("Waiting for first data from 2 blocks");
+    ).toBe("等待 2 个模块产生首批数据");
   });
 
   it("stays silent on a dashboard with no connected blocks", () => {
@@ -90,7 +90,7 @@ describe("summarizeLiveViewFreshness", () => {
   it("ignores unparseable timestamps instead of reporting a bogus age", () => {
     const summary = summarizeLiveViewFreshness([slot("a", "not-a-date")], NOW);
     expect(summary.filled).toBe(0);
-    expect(summary.label).toBe("Waiting for first data from 1 block");
+    expect(summary.label).toBe("等待 1 个模块产生首批数据");
   });
 
   it("separates the data date from the time a source checked it", () => {

@@ -35,22 +35,22 @@ export function MentionDropdown({
             <div key={category}>
               <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/30 border-b border-border/50">
                 {category === "command"
-                  ? "commands"
+                  ? "命令"
                   : category === "chat"
-                  ? "recent chats"
+                  ? "最近聊天"
                   : category === "skill"
-                    ? "installed skills"
+                    ? "已安装技能"
                     : category === "range"
-                      ? "time ranges"
+                      ? "时间范围"
                   : category === "time"
-                  ? "time"
+                  ? "时间"
                   : category === "content"
-                    ? "content type"
+                    ? "内容类型"
                     : category === "speaker"
-                      ? "speakers"
+                      ? "说话人"
                       : category === "tag"
-                        ? "tags"
-                        : "apps"}
+                        ? "标签"
+                        : "应用"}
               </div>
               {items.map((suggestion) => {
                 const globalIndex = mentions.suggestions.indexOf(suggestion);
@@ -92,7 +92,7 @@ export function MentionDropdown({
         )}
         </div>
         <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-t border-border/50 bg-muted/20">
-          type to filter · ↓/enter to select · esc to clear
+          输入以筛选 · ↓/回车选择 · Esc 清除
         </div>
       </motion.div>
     </AnimatePresence>

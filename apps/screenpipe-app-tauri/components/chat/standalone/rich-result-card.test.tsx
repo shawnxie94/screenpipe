@@ -27,12 +27,12 @@ describe("RichResultCards", () => {
     const created = result("created", 1);
     render(<RichResultCards results={[created]} onOpen={onOpen} />);
 
-    expect(screen.getByText("Created")).toBeTruthy();
+    expect(screen.getByText("已创建")).toBeTruthy();
     expect(screen.getByTestId("chat-rich-result-scheduled-task")).toHaveAttribute(
       "data-state",
       "created",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Open Task 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "打开 Task 1" }));
     expect(onOpen).toHaveBeenCalledWith(created);
   });
 
@@ -40,7 +40,7 @@ describe("RichResultCards", () => {
     "disables Open for %s results",
     (state) => {
       render(<RichResultCards results={[result(state, 1)]} onOpen={vi.fn()} />);
-      expect(screen.getByRole("button", { name: "Open Task 1" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "打开 Task 1" })).toBeDisabled();
     },
   );
 
@@ -58,8 +58,8 @@ describe("RichResultCards", () => {
       />,
     );
     expect(screen.getAllByTestId("chat-rich-result-scheduled-task")).toHaveLength(3);
-    fireEvent.click(screen.getByRole("button", { name: "Show 2 more" }));
+    fireEvent.click(screen.getByRole("button", { name: "再显示 2 项" }));
     expect(screen.getAllByTestId("chat-rich-result-scheduled-task")).toHaveLength(5);
-    expect(screen.getByRole("button", { name: "Show fewer" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "显示较少" })).toBeTruthy();
   });
 });

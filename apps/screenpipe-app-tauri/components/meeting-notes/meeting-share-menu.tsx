@@ -91,12 +91,12 @@ export type MeetingShareAction =
 const RULE_ACTION_CLASS = MEETING_RULE_ACTION_CLASS;
 
 const ACTION_LABEL: Record<MeetingShareAction, string> = {
-  summary: "copy summary",
-  email: "email summary",
-  transcript: "copy transcript",
-  meeting: "copy meeting + transcript",
-  send: "send to an app…",
-  resend: "send again",
+  summary: "复制摘要",
+  email: "通过邮件发送摘要",
+  transcript: "复制转写",
+  meeting: "复制会议和转写",
+  send: "发送到应用…",
+  resend: "再次发送",
 };
 
 const ACTION_ICON: Record<
@@ -243,11 +243,11 @@ export function MeetingShareMenu({
   ];
 
   const groups: MeetingMenuGroup[] = [
-    { label: "copy", items: toItems(clipboardActions) },
+    { label: "复制", items: toItems(clipboardActions) },
     {
-      label: "send",
+      label: "发送",
       items: toItems(sendGroupActions).map((item) =>
-        item.key === "send" ? { ...item, label: "send somewhere else…" } : item,
+          item.key === "send" ? { ...item, label: "发送到其他位置…" } : item,
       ),
     },
     ...moreGroups,
@@ -263,8 +263,8 @@ export function MeetingShareMenu({
         aria-label={ACTION_LABEL[primary]}
         title={
           canShareSummary
-            ? "copy the summary as rich text, without the transcript"
-            : "copy the meeting and its transcript"
+            ? "以富文本复制摘要，不包含转写"
+            : "复制会议和转写内容"
         }
         className={cn(RULE_ACTION_CLASS, "px-4")}
       >
@@ -276,7 +276,7 @@ export function MeetingShareMenu({
         {/* Icon only at rest, so it does not compete with the tabs beside it.
             The word comes back to confirm the copy, which is the moment it
             carries information the icon does not. */}
-        {confirmed && <span className="hidden sm:inline">copied</span>}
+        {confirmed && <span className="hidden sm:inline">已复制</span>}
       </button>
 
       {/* Connected destinations become one compact visual region. At rest the
@@ -298,8 +298,8 @@ export function MeetingShareMenu({
                 type="button"
                 disabled={busy}
                 data-testid={`meeting-send-${suggestion.app}`}
-                aria-label={`review and send to ${suggestion.name}`}
-                title={`${suggestion.name}${suggestion.observed ? " · used during this meeting" : ""}`}
+                aria-label={`审阅并发送到 ${suggestion.name}`}
+                title={`${suggestion.name}${suggestion.observed ? " · 本次会议中使用过" : ""}`}
                 onClick={() => onDestinationSelect(suggestion.destination)}
                 style={{ zIndex: suggestedDestinations.length - index }}
                 className={cn(
@@ -346,8 +346,8 @@ export function MeetingShareMenu({
           onClick={() => onShare("resend")}
           disabled={busy}
           data-testid="meeting-resend-button"
-          aria-label={`send to ${oneTap}`}
-          title={`send this meeting to ${oneTap} now`}
+          aria-label={`发送到 ${oneTap}`}
+          title={`立即将本次会议发送到 ${oneTap}`}
           className={cn(RULE_ACTION_CLASS, "gap-1.5 px-4")}
         >
           {busy ? (

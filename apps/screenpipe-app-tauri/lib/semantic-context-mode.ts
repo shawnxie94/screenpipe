@@ -9,18 +9,18 @@ export const SEMANTIC_CONTEXT_MODE_COPY: Record<
   { label: string; description: string }
 > = {
   memory: {
-    label: "Memory",
+    label: "记忆",
     description:
-      "For finding past work, creating summaries, and running scheduled tasks. This keeps the information sent to AI smaller.",
+      "用于查找过去的工作、创建摘要和运行定时任务，可减少发送给 AI 的信息量。",
   },
   computerUse: {
-    label: "Automation",
+    label: "自动化",
     description:
-      "For AI agents that click and type in apps. This keeps extra details about buttons and fields, so it uses more storage.",
+      "用于让 AI 代理在应用中点击和输入。会保留按钮和字段等额外细节，因此占用更多存储空间。",
   },
   both: {
-    label: "Memory + automation",
+    label: "记忆 + 自动化",
     description:
-      "For finding past work and letting AI agents click and type. Screenpipe records everything once, but this uses the most processing power and storage.",
+      "用于查找过去的工作并让 AI 代理点击和输入。Screenpipe 只录制一次，但此模式消耗最多的处理能力和存储空间。",
   },
 };

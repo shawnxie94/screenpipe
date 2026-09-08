@@ -30,7 +30,7 @@ export function MeetingSummaryTransition({
   onOpenSummary,
 }: MeetingSummaryTransitionProps) {
   const reduceMotion = useReducedMotion();
-  const label = phase === "finalizing" ? "meeting saved" : "writing summary";
+  const label = phase === "finalizing" ? "会议已保存" : "正在撰写摘要";
   const detail =
     phase === "finalizing"
       ? "你的笔记已保存。在摘要开始前完成文字记录。"
@@ -81,7 +81,7 @@ export function MeetingSummaryTransition({
                 className="inline-flex h-8 shrink-0 items-center gap-2 border border-foreground bg-foreground px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-background transition-colors duration-150 hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <Play className="h-3 w-3" aria-hidden="true" />
-                resume recording
+                恢复录制
               </button>
             ) : null}
             {phase === "writing" && onOpenSummary ? (
@@ -91,7 +91,7 @@ export function MeetingSummaryTransition({
                 className="inline-flex h-8 shrink-0 items-center gap-2 border border-foreground bg-foreground px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-background transition-colors duration-150 hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <Sparkles className="h-3 w-3" aria-hidden="true" />
-                view summary
+                查看摘要
               </button>
             ) : null}
             <button
@@ -101,7 +101,7 @@ export function MeetingSummaryTransition({
               className="inline-flex h-8 shrink-0 items-center gap-2 border border-border bg-background px-3 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground transition-colors duration-150 hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <FileText className="h-3 w-3" aria-hidden="true" />
-              {transcriptOpen ? "hide transcript" : "show transcript"}
+              {transcriptOpen ? "隐藏转写" : "显示转写"}
             </button>
           </div>
         </div>

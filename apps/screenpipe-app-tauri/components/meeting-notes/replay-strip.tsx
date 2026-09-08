@@ -497,7 +497,7 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
 
   if (!hasReplayBounds) return null;
 
-  const speakerLabel = activeChunk?.speakerName || (activeChunk?.isInput ? "me" : "speaker");
+  const speakerLabel = activeChunk?.speakerName || (activeChunk?.isInput ? "我" : "发言人");
   // Only a real (positive) audio_chunk_id can be reassigned via
   // /speakers/reassign — audioFilePath is merely for the optional playback
   // preview inside the popover and can legitimately be empty (e.g. a
@@ -542,13 +542,13 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
                 data-testid="replay-active-frame"
                 data-frame-id={activeFrame.frameId}
                 src={appendAuthToken(`${getApiBaseUrl()}/frames/${activeFrame.frameId}`)}
-                alt={`screen at ${formatClock(activeFrame.timestamp)}`}
+                alt={`${formatClock(activeFrame.timestamp)} 的屏幕画面`}
                 className="max-w-full max-h-full object-contain"
                 onError={() => markFrameUnavailable(activeFrame.frameId)}
               />
             ) : (
               <span className="text-[11px] text-muted-foreground p-6">
-                no screen images available during this meeting
+                本次会议期间没有可用的屏幕画面
               </span>
             )}
           </div>
@@ -584,7 +584,7 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
               aria-valuemin={0}
               aria-valuemax={Math.round(durationMs / 1000)}
               aria-valuenow={Math.round((cursorMs - rangeStartMs) / 1000)}
-              aria-valuetext={`${formatReplayElapsed(cursorMs - rangeStartMs)} of ${formatReplayElapsed(durationMs)}`}
+              aria-valuetext={`${formatReplayElapsed(cursorMs - rangeStartMs)}，共 ${formatReplayElapsed(durationMs)}`}
               className="relative flex h-full flex-1 cursor-pointer touch-none items-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white"
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
@@ -604,14 +604,14 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
               data-testid="replay-speed"
               onClick={cyclePlaybackRate}
               disabled={!canPlay}
-              aria-label={`playback speed ${playbackRate}x`}
+              aria-label={`回放速度 ${playbackRate} 倍`}
               className="h-7 min-w-8 border border-white/25 px-1.5 font-mono text-[10px] tabular-nums text-white/80 transition-colors duration-150 hover:border-white hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none"
             >
               {playbackRate}x
             </button>
             <span className="inline-flex shrink-0 items-center gap-1 font-mono text-[9px] uppercase tracking-[0.12em] text-white/65">
               <VolumeX className="h-3 w-3" />
-              silent
+              静音
             </span>
           </div>
         </div>
@@ -671,7 +671,7 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
           aria-valuemin={0}
           aria-valuemax={Math.round(durationMs / 1000)}
           aria-valuenow={Math.round((cursorMs - rangeStartMs) / 1000)}
-          aria-valuetext={`${formatReplayElapsed(cursorMs - rangeStartMs)} of ${formatReplayElapsed(durationMs)}`}
+          aria-valuetext={`${formatReplayElapsed(cursorMs - rangeStartMs)}，共 ${formatReplayElapsed(durationMs)}`}
           className="relative cursor-pointer select-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-foreground"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -734,7 +734,7 @@ export function ReplayStrip({ meetingId, segments, timeRange }: ReplayStripProps
           <span>
             {chunksLoading
               ? "正在加载文字记录…"
-              : `${enrichedChunks.length} segments · ${renderableFrames.length} frames · click or drag to scrub`}
+              : `${enrichedChunks.length} 段 · ${renderableFrames.length} 个画面 · 点击或拖动以调整位置`}
           </span>
           <span>{formatClock(new Date(rangeEndMs).toISOString())}</span>
         </div>

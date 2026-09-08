@@ -67,9 +67,9 @@ describe("StorageSection clear cache", () => {
     mocks.deleteCacheFiles.mockResolvedValue({ status: "ok", data: 1024 });
 
     render(<StorageSection />);
-    fireEvent.click(screen.getByRole("button", { name: /^clear$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^清理$/ }));
 
-    fireEvent.click(await screen.findByRole("button", { name: /delete all/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /全部删除/ }));
 
     await waitFor(() => expect(mocks.deleteCacheFiles).toHaveBeenCalled());
     expect(mocks.clearTimelineCache).toHaveBeenCalledTimes(1);
@@ -80,11 +80,11 @@ describe("StorageSection clear cache", () => {
     mocks.hasCachedData.mockResolvedValue(true);
 
     render(<StorageSection />);
-    fireEvent.click(screen.getByRole("button", { name: /^clear$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^清理$/ }));
 
     await waitFor(() => expect(mocks.clearTimelineCache).toHaveBeenCalledTimes(1));
     expect(mocks.deleteCacheFiles).not.toHaveBeenCalled();
-    expect(mocks.toast).toHaveBeenCalledWith({ title: "cache cleared" });
+      expect(mocks.toast).toHaveBeenCalledWith({ title: "缓存已清除" });
   });
 
   it("leaves the timeline cache alone when nothing is cached", async () => {
@@ -92,10 +92,10 @@ describe("StorageSection clear cache", () => {
     mocks.hasCachedData.mockResolvedValue(false);
 
     render(<StorageSection />);
-    fireEvent.click(screen.getByRole("button", { name: /^clear$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^清理$/ }));
 
     await waitFor(() =>
-      expect(mocks.toast).toHaveBeenCalledWith({ title: "nothing to clean up" }),
+        expect(mocks.toast).toHaveBeenCalledWith({ title: "没有需要清理的内容" }),
     );
     expect(mocks.clearTimelineCache).not.toHaveBeenCalled();
   });
@@ -106,7 +106,7 @@ describe("StorageSection clear cache", () => {
     mocks.clearTimelineCache.mockRejectedValueOnce(new Error("permission denied"));
 
     render(<StorageSection />);
-    fireEvent.click(screen.getByRole("button", { name: /^clear$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^清理$/ }));
 
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith(
@@ -116,6 +116,6 @@ describe("StorageSection clear cache", () => {
         }),
       ),
     );
-    expect(mocks.toast).not.toHaveBeenCalledWith({ title: "cache cleared" });
+      expect(mocks.toast).not.toHaveBeenCalledWith({ title: "缓存已清除" });
   });
 });

@@ -82,7 +82,7 @@ export function InlineChatHistory({
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <History className="h-8 w-8 text-muted-foreground/50 mb-2" />
                   <p className="text-xs text-muted-foreground">
-                    {historySearch ? "No matching conversations" : "No chat history yet"}
+                    {historySearch ? "没有匹配的聊天" : "还没有聊天历史"}
                   </p>
                 </div>
               ) : (
@@ -133,7 +133,7 @@ export function InlineChatHistory({
                               }}
                             >
                               <Pencil className="h-3.5 w-3.5 shrink-0" />
-                              Rename
+                              重命名
                             </button>
                             <div className="my-1 border-t border-border" />
                             <button
@@ -145,7 +145,7 @@ export function InlineChatHistory({
                               }}
                             >
                               <Trash2 className="h-3.5 w-3.5 shrink-0" />
-                              Delete
+                              删除
                             </button>
                           </PopoverContent>
                         </Popover>
@@ -167,7 +167,7 @@ export function InlineChatHistory({
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeletingConvId(null)}>
-              Cancel
+              取消
             </Button>
             <Button
               variant="destructive"
@@ -176,7 +176,7 @@ export function InlineChatHistory({
                 setDeletingConvId(null);
               }}
             >
-              Delete
+              删除
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -203,7 +203,7 @@ export function InlineChatHistory({
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setRenamingConvId(null)}>
-              Cancel
+              取消
             </Button>
             <Button
               onClick={() => {
@@ -211,7 +211,7 @@ export function InlineChatHistory({
                 setRenamingConvId(null);
               }}
             >
-              Save
+              保存
             </Button>
           </DialogFooter>
         </DialogContent>

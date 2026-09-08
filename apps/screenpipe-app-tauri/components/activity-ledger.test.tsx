@@ -794,7 +794,7 @@ describe("activity history helpers", () => {
       ).searchParams.get("app_name"),
     ).toBe("Cursor");
     const preview = await screen.findByTestId("activity-artifact-preview");
-    expect(within(preview).getAllByText("20 min")[0]).toBeVisible();
+    expect(within(preview).getAllByText("20 分钟")[0]).toBeVisible();
     expect(preview.querySelector("img")).toHaveAttribute(
       "src",
       expect.stringContaining("/frames/801/thumbnail"),
@@ -1178,7 +1178,7 @@ describe("activity history helpers", () => {
     const preview = await screen.findByTestId("activity-artifact-preview");
     fireEvent.error(preview.querySelector("img")!);
     expect(
-      within(preview).getAllByText("preview unavailable")[0],
+      within(preview).getAllByText("预览不可用")[0],
     ).toBeVisible();
   });
 
@@ -1792,7 +1792,7 @@ describe("ActivityLedger", () => {
     await generateActivities();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Recording is active, but this range does not have enough activity yet.",
+      "正在录制，但此范围内的活动还不够。请继续工作片刻后重试。",
     );
     expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "重试" })).toBeVisible();
@@ -1923,7 +1923,7 @@ describe("ActivityLedger", () => {
 
     expect(
       await screen.findByText(
-        "You can leave this page. We’ll notify you when your activities are ready.",
+        "你可以离开此页面。活动记录准备好后，我们会通知你。",
       ),
     ).toBeVisible();
 
@@ -1976,12 +1976,12 @@ describe("ActivityLedger", () => {
     );
     expect(
       screen.getByRole("button", {
-        name: "Make skill from Fixed a capture reliability regression",
+        name: "根据 Fixed a capture reliability regression 创建技能",
       }),
     ).toBeVisible();
     expect(
       screen.getByRole("button", {
-        name: "Chat about Fixed a capture reliability regression",
+        name: "围绕 Fixed a capture reliability regression 聊天",
       }),
     ).toBeVisible();
 
@@ -2247,7 +2247,7 @@ describe("ActivityLedger", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Make skill from Unblocked a customer's onboarding",
+        name: "根据 Unblocked a customer's onboarding 创建技能",
       }),
     );
 
@@ -2269,7 +2269,7 @@ describe("ActivityLedger", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Chat about Unblocked a customer's onboarding",
+        name: "围绕 Unblocked a customer's onboarding 聊天",
       }),
     );
 

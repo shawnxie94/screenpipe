@@ -54,11 +54,10 @@ export function LiveViewCreateDashboardDialog({
       >
         <DialogHeader className="border-b border-border px-5 py-4 text-left">
           <DialogTitle className="flex items-center gap-2 text-base">
-            <LayoutDashboard className="h-4 w-4" /> new dashboard
+            <LayoutDashboard className="h-4 w-4" /> 新建仪表盘
           </DialogTitle>
           <DialogDescription>
-            Describe the outcome you want. AI will design the Blocks and connect
-            the best available scheduled tasks for you.
+            描述你想要的结果。AI 会设计区块，并为你连接最合适的计划任务。
           </DialogDescription>
         </DialogHeader>
 
@@ -77,7 +76,7 @@ export function LiveViewCreateDashboardDialog({
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
           <p className="text-xs text-muted-foreground">
-            Prefer to configure every Block yourself?
+            想自己配置每个区块？
           </p>
           <Button
             data-testid="live-view-create-blank"
@@ -88,7 +87,7 @@ export function LiveViewCreateDashboardDialog({
             disabled={busy}
             onClick={onCreateBlank}
           >
-            start with a blank dashboard
+            从空白仪表盘开始
           </Button>
         </div>
       </DialogContent>

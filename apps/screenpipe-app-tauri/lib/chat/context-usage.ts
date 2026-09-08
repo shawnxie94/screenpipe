@@ -40,17 +40,17 @@ export const CONTEXT_CATEGORY_META: Record<
   ContextCategoryId,
   { label: string; color: string }
 > = {
-  system_prompt: { label: "System prompt", color: "#a3a3a3" },
-  tools: { label: "Tool definitions", color: "#8b7cf6" },
-  rules: { label: "Rules", color: "#43b477" },
-  skills: { label: "Skills", color: "#f4b762" },
-  mcp: { label: "MCP & dynamic tools", color: "#b28cab" },
-  subagents: { label: "Subagent definitions", color: "#72a9df" },
+  system_prompt: { label: "系统提示词", color: "#a3a3a3" },
+  tools: { label: "工具定义", color: "#8b7cf6" },
+  rules: { label: "规则", color: "#43b477" },
+  skills: { label: "技能", color: "#f4b762" },
+  mcp: { label: "MCP 和动态工具", color: "#b28cab" },
+  subagents: { label: "子代理定义", color: "#72a9df" },
   summarized_conversation: {
-    label: "Summarized conversation",
+    label: "已摘要的对话",
     color: "#d4a56f",
   },
-  conversation: { label: "Conversation", color: "#df7d79" },
+  conversation: { label: "对话", color: "#df7d79" },
 };
 
 const isNonNegativeNumber = (value: unknown): value is number =>

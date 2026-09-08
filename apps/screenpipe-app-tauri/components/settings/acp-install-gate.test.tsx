@@ -65,12 +65,12 @@ describe("Cursor ACP installation", () => {
         onInstalled={onInstalled}
       />,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /install cursor/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /安装 cursor/i }));
 
     await waitFor(() => expect(installAgent).toHaveBeenCalledWith("cursor"));
     const progress = screen.getByTestId("acp-setup-progress");
-    expect(progress).toHaveTextContent("Installing Cursor");
-    expect(progress).toHaveTextContent("step 1 of 3");
+    expect(progress).toHaveTextContent("正在安装 Cursor");
+    expect(progress).toHaveTextContent("第 1/3 步");
 
     await act(async () =>
       finishInstall?.({
@@ -94,10 +94,10 @@ describe("Cursor ACP installation", () => {
         onBlockedChange={() => {}}
       />,
     );
-    fireEvent.click(await screen.findByRole("button", { name: /install cursor/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /安装 cursor/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("download failed");
-    expect(screen.getByRole("button", { name: /open official installer/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /打开官方安装程序/ })).toBeInTheDocument();
   });
 
   it("uses the website flow when the platform cannot run the installer", async () => {
@@ -114,7 +114,7 @@ describe("Cursor ACP installation", () => {
       />,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: /open official installer/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /打开官方安装程序/ }));
     expect(openUrl).toHaveBeenCalledWith("https://cursor.com/cli");
     expect(installAgent).not.toHaveBeenCalled();
   });

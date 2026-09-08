@@ -129,8 +129,8 @@ export function LiveViewAiComposer({
   const scope: LiveViewGenerationScope = "dashboard";
   const intentLabel =
     intent === "edit-dashboard"
-      ? `agent 将编辑“${currentViewTitle}”`
-      : "agent 将创建一个新仪表盘";
+      ? `代理将编辑“${currentViewTitle}”`
+      : "代理将创建一个新仪表盘";
   const actionLabel = busy ? "停止更新" : "更新实时视图";
 
   const submit = async () => {
@@ -168,7 +168,7 @@ export function LiveViewAiComposer({
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
           <Sparkles className="h-3.5 w-3.5" />
           <p className="text-xs font-medium">
-            What should this Live View show?
+            这个实时视图应该展示什么？
           </p>
         </div>
       )}

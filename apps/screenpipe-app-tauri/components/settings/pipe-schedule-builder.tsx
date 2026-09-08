@@ -133,7 +133,7 @@ export function PipeScheduleBuilder({
         <>
           {/* Repeat */}
           <div className="flex items-center justify-between gap-2">
-            <Label className="text-xs">repeat</Label>
+            <Label className="text-xs">重复</Label>
             <Select
               value={cfg.frequency}
               onValueChange={(v) => update({ frequency: v as Frequency })}
@@ -144,7 +144,7 @@ export function PipeScheduleBuilder({
               <SelectContent>
                 {FREQUENCY_OPTIONS.map((f) => (
                   <SelectItem key={f.value} value={f.value}>
-                    every {f.label.replace(/s$/, "")}
+                    每{f.label === "minutes" ? "分钟" : f.label === "hours" ? "小时" : f.label === "days" ? "天" : f.label === "weeks" ? "周" : "月"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -153,7 +153,7 @@ export function PipeScheduleBuilder({
 
           {/* Every N <unit> */}
           <div className="flex items-center justify-between gap-2">
-            <Label className="text-xs">every</Label>
+            <Label className="text-xs">每隔</Label>
             <div className="flex items-center gap-1.5">
               <Input
                 type="number"
@@ -164,14 +164,16 @@ export function PipeScheduleBuilder({
                 onChange={(e) => update({ interval: Math.max(1, Number(e.target.value) || 1) })}
                 className="h-8 w-16 text-xs"
               />
-              <span className="text-muted-foreground">{cfg.frequency}</span>
+              <span className="text-muted-foreground">
+                {cfg.frequency === "minutes" ? "分钟" : cfg.frequency === "hours" ? "小时" : cfg.frequency === "days" ? "天" : cfg.frequency === "weeks" ? "周" : "月"}
+              </span>
             </div>
           </div>
 
           {/* Weekday pills (weeks) */}
           {cfg.frequency === "weeks" && (
             <div>
-              <Label className="text-xs mb-1 block">on</Label>
+              <Label className="text-xs mb-1 block">于</Label>
               <div className="flex items-center gap-1">
                 {WEEKDAYS.map((d) => {
                   const on = cfg.days_of_week.includes(d.key);
@@ -281,7 +283,7 @@ export function PipeScheduleBuilder({
             />
           </div>
           <div className="flex items-center justify-between gap-2">
-            <Label className="text-xs">ending</Label>
+            <Label className="text-xs">结束方式</Label>
             <Select
               value={endMode}
               onValueChange={(v) => {
@@ -295,7 +297,7 @@ export function PipeScheduleBuilder({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="never">never</SelectItem>
+                <SelectItem value="never">从不</SelectItem>
                 <SelectItem value="on">在日期</SelectItem>
                 <SelectItem value="after">运行 N 次后</SelectItem>
               </SelectContent>
@@ -337,15 +339,15 @@ export function PipeScheduleBuilder({
       <div className="rounded border border-border bg-muted/30 px-2 py-1.5">
         {manual ? (
           <p className="text-[11px]">
-            moves to <span className="text-foreground">manual</span> — runs only when you trigger it
+            转为<span className="text-foreground">手动</span> — 仅在你触发时运行
           </p>
         ) : (
           <>
             <p className="text-[11px]">
-              runs <span className="text-foreground">{summary}</span>
+              运行频率：<span className="text-foreground">{summary}</span>
             </p>
             {nextRun && (
-              <p className="text-[11px] text-muted-foreground">next occurrence: {nextRun}</p>
+              <p className="text-[11px] text-muted-foreground">下一次运行：{nextRun}</p>
             )}
           </>
         )}
@@ -353,10 +355,10 @@ export function PipeScheduleBuilder({
 
       <div className="flex items-center justify-end gap-1.5">
         <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={onCancel}>
-          cancel
+          取消
         </Button>
         <Button size="sm" className="h-8 px-3 text-xs" disabled={weeklyNoDays} onClick={save}>
-          save
+          保存
         </Button>
       </div>
     </div>

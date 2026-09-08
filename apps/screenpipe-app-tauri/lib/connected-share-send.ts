@@ -68,7 +68,7 @@ export async function sendSlackSnapshot(input: {
   const body = await response.json();
   // Slack answers 200 with `ok: false`, so the status alone is not the verdict.
   if (!response.ok || body?.ok === false) {
-    throw new Error(responseError(body, "Slack couldn't send this snapshot."));
+    throw new Error(responseError(body, "Slack 无法发送此快照。"));
   }
   return {
     team: typeof body?.team === "string" ? body.team : undefined,
@@ -76,4 +76,3 @@ export async function sendSlackSnapshot(input: {
     ts: typeof body?.ts === "string" ? body.ts : undefined,
   };
 }
-

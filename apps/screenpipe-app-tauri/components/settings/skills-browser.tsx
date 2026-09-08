@@ -209,10 +209,10 @@ export function SkillsBrowser({
           </div>
           <div className="min-w-0">
             <DialogTitle className="text-sm font-semibold font-sans normal-case">
-              Browse skills
+              浏览技能
             </DialogTitle>
             <p className="text-[11px] text-muted-foreground truncate">
-              curated SKILL.md skills · from Anthropic, OpenAI &amp; the community
+              精选 SKILL.md 技能 · 来自 Anthropic、OpenAI 和社区
             </p>
           </div>
           <DialogClose asChild>
@@ -251,7 +251,7 @@ export function SkillsBrowser({
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-10 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              loading catalog…
+              正在加载目录…
             </div>
           ) : error ? (
             <div className="flex items-start gap-1.5 text-xs rounded-md border border-destructive/40 bg-destructive/5 text-destructive p-3">
@@ -261,7 +261,7 @@ export function SkillsBrowser({
           ) : ranked.length === 0 ? (
             <div className="text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-6 text-center">
               {query.trim() ? (
-                <>no skills match “{query.trim()}”.</>
+                <>没有匹配“{query.trim()}”的技能。</>
               ) : (
                 <>目录中尚无技能。</>
               )}
@@ -271,7 +271,7 @@ export function SkillsBrowser({
           ) : (
             <div className="space-y-1.5">
               <SectionLabel>
-                {personalized ? "Recommended for you" : "Recommended"}
+                {personalized ? "为你推荐" : "推荐"}
               </SectionLabel>
               {ranked.slice(0, RECOMMENDED_COUNT).map(renderRow)}
               {ranked.length > RECOMMENDED_COUNT && (
@@ -285,8 +285,7 @@ export function SkillsBrowser({
         </div>
 
         <div className="px-4 py-2 bg-muted/50 border-t border-border text-[11px] text-muted-foreground">
-          skills are markdown playbooks the agent reads in chat and every scheduled task —
-          review one before relying on it.
+          技能是代理在聊天和每个定时任务中读取的 Markdown 操作手册——使用前请先查看。
         </div>
       </DialogContent>
     </Dialog>
@@ -351,7 +350,7 @@ function SkillRow({
         {installed && !busy ? (
           <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground px-2 py-1">
             <Check className="h-3 w-3" />
-            added
+            已添加
           </span>
         ) : (
           <Button
@@ -360,14 +359,14 @@ function SkillRow({
             className="h-7 text-xs"
             onClick={onInstall}
             disabled={busy}
-            title={installed ? "re-download and refresh this skill" : undefined}
+            title={installed ? "重新下载并刷新此技能" : undefined}
           >
             {busy ? (
               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
             ) : (
               <Download className="h-3 w-3 mr-1" />
             )}
-            {installed ? "Update" : "Install"}
+            {installed ? "更新" : "安装"}
           </Button>
         )}
       </div>

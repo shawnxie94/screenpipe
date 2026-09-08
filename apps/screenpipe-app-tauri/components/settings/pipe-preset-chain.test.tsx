@@ -51,12 +51,12 @@ describe("PipePresetChain", () => {
     expect(screen.getAllByTestId(/pipe-preset-chain-row-/)).toHaveLength(
       MAX_PIPE_PRESET_CHAIN_LENGTH,
     );
-    expect(screen.getByLabelText("first choice model")).toHaveValue("fast");
-    expect(screen.getByLabelText("fallback 1 model")).toHaveValue("reliable");
-    expect(screen.getByLabelText("fallback 2 model")).toHaveValue("local");
-    expect(screen.getByLabelText("fallback 3 model")).toHaveValue("last-resort");
-    expect(screen.getByText("4/4 models")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "add fallback" })).toBeNull();
+    expect(screen.getByLabelText("首选 模型")).toHaveValue("fast");
+    expect(screen.getByLabelText("备用方案 1 模型")).toHaveValue("reliable");
+    expect(screen.getByLabelText("备用方案 2 模型")).toHaveValue("local");
+    expect(screen.getByLabelText("备用方案 3 模型")).toHaveValue("last-resort");
+    expect(screen.getByText("4/4 个模型")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "添加备用方案" })).toBeNull();
   });
 
   it("edits a fallback without dropping the rest of the chain", () => {
@@ -68,7 +68,7 @@ describe("PipePresetChain", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("fallback 2 model"), {
+    fireEvent.change(screen.getByLabelText("备用方案 2 模型"), {
       target: { value: "fast" },
     });
 
@@ -89,7 +89,7 @@ describe("PipePresetChain", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Remove fallback 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "移除备用方案 1" }));
 
     expect(onChange).toHaveBeenCalledWith(["fast", "local"]);
   });
@@ -103,7 +103,7 @@ describe("PipePresetChain", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("first choice model"), {
+    fireEvent.change(screen.getByLabelText("首选 模型"), {
       target: { value: "" },
     });
 
@@ -114,8 +114,8 @@ describe("PipePresetChain", () => {
     const onChange = vi.fn();
     render(<PipePresetChain preset="fast" onChange={onChange} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "add fallback" }));
-    fireEvent.change(screen.getByLabelText("fallback 1 model"), {
+    fireEvent.click(screen.getByRole("button", { name: "添加备用方案" }));
+    fireEvent.change(screen.getByLabelText("备用方案 1 模型"), {
       target: { value: "reliable" },
     });
 

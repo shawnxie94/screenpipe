@@ -169,7 +169,7 @@ export function MermaidDiagram({ chart, className }: MermaidDiagramProps) {
         setError(null);
       } catch (err) {
         console.error("Mermaid render error:", err);
-        setError(err instanceof Error ? err.message : "Failed to render diagram");
+        setError(err instanceof Error ? err.message : "图表渲染失败");
       }
     };
 
@@ -179,7 +179,7 @@ export function MermaidDiagram({ chart, className }: MermaidDiagramProps) {
   if (error) {
     return (
       <div className="border border-destructive/50 bg-destructive/10 p-4 my-2 font-mono text-sm">
-        <p className="text-destructive mb-2">diagram error:</p>
+        <p className="text-destructive mb-2">图表错误：</p>
         <pre className="text-xs overflow-auto">{chart}</pre>
       </div>
     );

@@ -32,21 +32,21 @@ export function todayIso(): string {
 
 /** Weekday pills, Sunday-first like Notion. */
 export const WEEKDAYS: ReadonlyArray<{ key: number; label: string; name: string }> = [
-  { key: 0, label: "Su", name: "Sunday" },
-  { key: 1, label: "Mo", name: "Monday" },
-  { key: 2, label: "Tu", name: "Tuesday" },
-  { key: 3, label: "We", name: "Wednesday" },
-  { key: 4, label: "Th", name: "Thursday" },
-  { key: 5, label: "Fr", name: "Friday" },
-  { key: 6, label: "Sa", name: "Saturday" },
+  { key: 0, label: "日", name: "星期日" },
+  { key: 1, label: "一", name: "星期一" },
+  { key: 2, label: "二", name: "星期二" },
+  { key: 3, label: "三", name: "星期三" },
+  { key: 4, label: "四", name: "星期四" },
+  { key: 5, label: "五", name: "星期五" },
+  { key: 6, label: "六", name: "星期六" },
 ];
 
 export const FREQUENCY_OPTIONS: ReadonlyArray<{ value: Frequency; label: string }> = [
-  { value: "minutes", label: "minutes" },
-  { value: "hours", label: "hours" },
-  { value: "days", label: "days" },
-  { value: "weeks", label: "weeks" },
-  { value: "months", label: "months" },
+  { value: "minutes", label: "分钟" },
+  { value: "hours", label: "小时" },
+  { value: "days", label: "天" },
+  { value: "weeks", label: "周" },
+  { value: "months", label: "月" },
 ];
 
 /** The user's IANA timezone, e.g. "America/New_York". */
@@ -100,16 +100,16 @@ function formatTime12h(hour: number, minute: number): string {
   let ampm: string;
   if (h === 0) {
     h12 = 12;
-    ampm = "AM";
+    ampm = "上午";
   } else if (h < 12) {
     h12 = h;
-    ampm = "AM";
+    ampm = "上午";
   } else if (h === 12) {
     h12 = 12;
-    ampm = "PM";
+    ampm = "下午";
   } else {
     h12 = h - 12;
-    ampm = "PM";
+    ampm = "下午";
   }
   return `${h12}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
@@ -128,11 +128,11 @@ function ordinal(n: number): string {
 export function humanizeWeekdays(days: number[]): string {
   const set = Array.from(new Set(days.filter((d) => d >= 0 && d <= 6))).sort((a, b) => a - b);
   if (set.length === 0) return "—";
-  if (set.length === 7) return "every day";
+  if (set.length === 7) return "每天";
   const key = set.join(",");
-  if (key === "1,2,3,4,5") return "weekdays";
-  if (key === "0,6") return "weekends";
-  const short = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  if (key === "1,2,3,4,5") return "工作日";
+  if (key === "0,6") return "周末";
+  const short = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
   const order = [1, 2, 3, 4, 5, 6, 0];
   return order
     .filter((d) => set.includes(d))
@@ -147,27 +147,27 @@ export function describeScheduleConfig(cfg: ScheduleConfig): string {
   let base: string;
   switch (cfg.frequency) {
     case "minutes":
-      base = n === 1 ? "every minute" : `every ${n} minutes`;
+      base = n === 1 ? "每分钟" : `每 ${n} 分钟`;
       break;
     case "hours":
-      base = n === 1 ? "every hour" : `every ${n} hours`;
+      base = n === 1 ? "每小时" : `每 ${n} 小时`;
       break;
     case "days":
-      base = n === 1 ? `every day at ${time}` : `every ${n} days at ${time}`;
+      base = n === 1 ? `每天 ${time}` : `每 ${n} 天 ${time}`;
       break;
     case "weeks": {
       const dows = cfg.days_of_week ?? [];
       const days = humanizeWeekdays(dows);
-      if (dows.length === 7 && n === 1) base = `every day at ${time}`;
-      else if (n === 1) base = `weekly on ${days} at ${time}`;
-      else base = `every ${n} weeks on ${days} at ${time}`;
+      if (dows.length === 7 && n === 1) base = `每天 ${time}`;
+      else if (n === 1) base = `每周 ${days} ${time}`;
+      else base = `每 ${n} 周 ${days} ${time}`;
       break;
     }
     case "months": {
       const dom = ordinal(Math.min(31, Math.max(1, cfg.day_of_month ?? 1)));
       base = n === 1
-        ? `monthly on the ${dom} at ${time}`
-        : `every ${n} months on the ${dom} at ${time}`;
+        ? `每月 ${dom} ${time}`
+        : `每 ${n} 个月 ${dom} ${time}`;
       break;
     }
   }

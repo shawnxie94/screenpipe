@@ -124,7 +124,7 @@ async function notifySaveFailure(e: unknown): Promise<void> {
   try {
     const { toast } = await import("@/components/ui/use-toast");
     toast({
-      title: "failed to save chat history",
+      title: "保存聊天记录失败",
       description: String(e),
       variant: "destructive",
     });

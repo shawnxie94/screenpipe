@@ -25,7 +25,7 @@ describe("classifyConnectError", () => {
       expect(message.toLowerCase()).not.toContain("econnrefused");
       expect(message).not.toContain('{"error"');
       // and it must invite a retry
-      expect(message).toMatch(/try again/i);
+      expect(message).toMatch(/重试/);
     }
   });
 
@@ -34,7 +34,7 @@ describe("classifyConnectError", () => {
       "unsupported",
     );
     expect(classifyConnectError(claude, "unsupported platform").message).toBe(
-      "not available on this device",
+      "此设备不支持",
     );
   });
 
@@ -59,7 +59,7 @@ describe("classifyConnectError", () => {
         claude,
         "ENOENT: no such file or directory",
       ).message,
-    ).toMatch(/claude's settings/i);
+    ).toMatch(/Claude 的设置/);
   });
 
   it("classifies network failures", () => {
@@ -86,19 +86,19 @@ describe("classifyConnectError", () => {
   it("falls back to a generic, non-technical line for unknown errors", () => {
     const { kind, message } = classifyConnectError(notion, "kaboom 0xdeadbeef");
     expect(kind).toBe("unknown");
-    expect(message).toBe("couldn't connect — try again");
+    expect(message).toBe("无法连接 — 请重试");
   });
 
   it("handles a null/undefined raw message without throwing", () => {
     expect(classifyConnectError(notion, null).kind).toBe("unknown");
     expect(classifyConnectError(notion, undefined).message).toMatch(
-      /try again/i,
+      /重试/,
     );
   });
 
   it("humanizeConnectError returns just the message string", () => {
     expect(humanizeConnectError(claude, "unsupported platform")).toBe(
-      "not available on this device",
+      "此设备不支持",
     );
   });
 });

@@ -137,7 +137,7 @@ describe("live view proposal handoff", () => {
         });
         emit({ type: "agent_end" });
       }),
-    ).rejects.toThrow("without proposing a usable Live View change");
+    ).rejects.toThrow("AI 未能提出可用的实时视图修改");
   });
 
   it("uses the accepted retry after an earlier rejection", async () => {
@@ -175,7 +175,7 @@ describe("live view proposal handoff", () => {
 
   it("fails when the agent finishes without proposing anything", async () => {
     await expect(run(() => emit({ type: "agent_end" }))).rejects.toThrow(
-      "without proposing a usable Live View change",
+      "AI 未能提出可用的实时视图修改",
     );
   });
 
@@ -189,7 +189,7 @@ describe("live view proposal handoff", () => {
           args: { action: "save" },
         });
       }),
-    ).rejects.toThrow("tried to change data before review");
+    ).rejects.toThrow("实时视图编辑器尝试在审核前修改数据");
   });
 
   it("allows the read actions the editor needs to see current values", async () => {

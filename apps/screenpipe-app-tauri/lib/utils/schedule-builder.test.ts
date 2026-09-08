@@ -29,42 +29,42 @@ function cfg(overrides: Partial<ScheduleConfig> = {}): ScheduleConfig {
 
 describe("humanizeWeekdays", () => {
   test("named groups and lists", () => {
-    expect(humanizeWeekdays([1, 2, 3, 4, 5])).toBe("weekdays");
-    expect(humanizeWeekdays([0, 6])).toBe("weekends");
-    expect(humanizeWeekdays([0, 1, 2, 3, 4, 5, 6])).toBe("every day");
-    expect(humanizeWeekdays([1, 3, 5])).toBe("Mon, Wed, Fri");
-    expect(humanizeWeekdays([0, 3])).toBe("Wed, Sun"); // Monday-first
+    expect(humanizeWeekdays([1, 2, 3, 4, 5])).toBe("工作日");
+    expect(humanizeWeekdays([0, 6])).toBe("周末");
+    expect(humanizeWeekdays([0, 1, 2, 3, 4, 5, 6])).toBe("每天");
+    expect(humanizeWeekdays([1, 3, 5])).toBe("周一, 周三, 周五");
+    expect(humanizeWeekdays([0, 3])).toBe("周三, 周日"); // Monday-first
     expect(humanizeWeekdays([])).toBe("—");
   });
 });
 
 describe("describeScheduleConfig (parity with Rust describe_schedule_config)", () => {
   test("minutes / hours", () => {
-    expect(describeScheduleConfig(cfg({ frequency: "minutes", interval: 30 }))).toBe("every 30 minutes");
-    expect(describeScheduleConfig(cfg({ frequency: "minutes", interval: 1 }))).toBe("every minute");
-    expect(describeScheduleConfig(cfg({ frequency: "hours", interval: 2 }))).toBe("every 2 hours");
+    expect(describeScheduleConfig(cfg({ frequency: "minutes", interval: 30 }))).toBe("每 30 分钟");
+    expect(describeScheduleConfig(cfg({ frequency: "minutes", interval: 1 }))).toBe("每分钟");
+    expect(describeScheduleConfig(cfg({ frequency: "hours", interval: 2 }))).toBe("每 2 小时");
   });
 
   test("daily", () => {
     expect(describeScheduleConfig(cfg({ frequency: "days", at_hour: 9, at_minute: 0 }))).toBe(
-      "every day at 9:00 AM"
+      "每天 9:00 上午"
     );
   });
 
   test("weekly", () => {
     expect(
       describeScheduleConfig(cfg({ frequency: "weeks", days_of_week: [1, 2, 3, 4, 5], at_hour: 9, at_minute: 30 }))
-    ).toBe("weekly on weekdays at 9:30 AM");
+    ).toBe("每周 工作日 9:30 上午");
     expect(
       describeScheduleConfig(cfg({ frequency: "weeks", interval: 2, days_of_week: [1, 3], at_hour: 9, at_minute: 30 }))
-    ).toBe("every 2 weeks on Mon, Wed at 9:30 AM");
+    ).toBe("每 2 周 周一, 周三 9:30 上午");
   });
 
   test("weeks config missing days_of_week does not throw (API omits empty arrays)", () => {
     // The backend skips serializing empty Vecs, so days_of_week can be absent.
     const partial = { frequency: "weeks", interval: 1, at_hour: 9, at_minute: 0 } as unknown as ScheduleConfig;
     expect(() => describeScheduleConfig(partial)).not.toThrow();
-    expect(describeScheduleConfig(partial)).toContain("9:00 AM");
+    expect(describeScheduleConfig(partial)).toContain("9:00 上午");
   });
 
   test("monthly with timezone suffix", () => {
@@ -72,7 +72,7 @@ describe("describeScheduleConfig (parity with Rust describe_schedule_config)", (
       describeScheduleConfig(
         cfg({ frequency: "months", day_of_month: 1, at_hour: 18, at_minute: 0, timezone: "America/New_York" })
       )
-    ).toBe("monthly on the 1st at 6:00 PM (America/New_York)");
+    ).toBe("每月 1st 6:00 下午 (America/New_York)");
   });
 });
 

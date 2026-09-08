@@ -183,7 +183,7 @@ export function advanceMeetingChatStream(
     return {
       ...state,
       done: true,
-      error: "stopped — unexpected tool",
+      error: "已停止：遇到了未预期的工具",
       stoppedReason: "unexpected-tool",
     };
   }
@@ -212,7 +212,7 @@ export function advanceMeetingChatStream(
       event.finalError ||
       event.message?.errorMessage ||
       event.message?.error ||
-      "couldn't reach the model";
+      "无法连接到模型";
     return { ...state, done: true, error: String(message) };
   }
 
@@ -238,7 +238,7 @@ export function stopMeetingChatStream(
     error: state.text
       ? null
       : reason === "timeout"
-        ? "timed out"
-        : "stopped",
+        ? "已超时"
+        : "已停止",
   };
 }

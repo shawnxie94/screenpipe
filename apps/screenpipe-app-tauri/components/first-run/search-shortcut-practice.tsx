@@ -232,12 +232,11 @@ export function FirstRunSearchShortcutPractice() {
           <Check className="h-4 w-4" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-xs font-semibold lowercase text-foreground">
-            shortcut learned
+          <p className="font-mono text-xs font-semibold text-foreground">
+            快捷键已记住
           </p>
           <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-            open search from anywhere with {shortcut}. this lesson will not show
-            again.
+            使用 {shortcut} 可从任意位置打开搜索。本提示不会再次显示。
           </p>
         </div>
         <Button
@@ -248,7 +247,7 @@ export function FirstRunSearchShortcutPractice() {
           className="h-7 px-2 text-[9px]"
           onClick={acknowledge}
         >
-          done
+          完成
         </Button>
       </div>
     );
@@ -274,11 +273,11 @@ export function FirstRunSearchShortcutPractice() {
 
   const issueCopy =
     issue === "timeout"
-      ? "nothing happened. check the shortcut or try again."
+      ? "没有发生任何变化，请检查快捷键后重试。"
       : issue === "listener"
-        ? "shortcut practice is unavailable in this window."
+        ? "此窗口无法进行快捷键练习。"
         : issue === "failed"
-          ? "search did not open. check the shortcut and try again."
+          ? "搜索未打开，请检查快捷键后重试。"
           : null;
 
   return (
@@ -290,17 +289,17 @@ export function FirstRunSearchShortcutPractice() {
         <Keyboard className="h-4 w-4" aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="font-mono text-xs font-semibold lowercase text-foreground">
-          find anything from anywhere
+        <p className="font-mono text-xs font-semibold text-foreground">
+          随时随地搜索
         </p>
         <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-          {phase === "waiting" ? "press" : "use"}{" "}
+          {phase === "waiting" ? "按下" : "使用"}{" "}
           <kbd className="border border-border bg-muted/30 px-1.5 py-0.5 font-mono text-[9px] text-foreground">
             {shortcut}
           </kbd>{" "}
           {phase === "waiting"
-            ? "now. screenpipe is waiting for the real shortcut."
-            : "while screenpipe runs in the background."}
+            ? "现在。screenpipe 正在等待真实的快捷键操作。"
+            : "screenpipe 在后台运行时即可使用。"}
         </p>
         {issueCopy ? (
           <div className="mt-1 flex items-center gap-2">
@@ -316,7 +315,7 @@ export function FirstRunSearchShortcutPractice() {
               className="shrink-0 font-mono text-[9px] underline underline-offset-2"
               onClick={() => void openSettingsWindow("shortcuts")}
             >
-              change shortcut
+              更改快捷键
             </button>
           </div>
         ) : null}
@@ -333,10 +332,10 @@ export function FirstRunSearchShortcutPractice() {
             disabled={listenerState !== "ready"}
           >
             {listenerState === "connecting"
-              ? "getting ready"
+              ? "准备中"
               : listenerState === "failed"
-                ? "unavailable"
-                : "try it now"}
+                ? "不可用"
+                : "现在试试"}
           </Button>
         ) : (
           <span
@@ -344,7 +343,7 @@ export function FirstRunSearchShortcutPractice() {
             role="status"
             className="px-2 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground"
           >
-            waiting
+            等待中
           </span>
         )}
         <Button
@@ -355,7 +354,7 @@ export function FirstRunSearchShortcutPractice() {
           className="h-7 px-2 text-[9px]"
           onClick={snooze}
         >
-          not now
+          暂不
         </Button>
       </div>
     </div>

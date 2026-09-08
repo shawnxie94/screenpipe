@@ -142,7 +142,7 @@ export function NotificationsSettings() {
     <div className="space-y-6">
       <div>
         <p className="text-sm text-muted-foreground">
-          控制 screenpipe 向你发送哪些通知。随时暂停、设置勿扰时段、整组关闭，或为单个定时任务做精细调整。
+          控制知迹向你发送哪些通知。随时暂停、设置勿扰时段、整组关闭，或为单个定时任务做精细调整。
         </p>
       </div>
 

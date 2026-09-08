@@ -108,7 +108,7 @@ describe("first-run search shortcut practice", () => {
 
     expect(
       screen.getByTestId("first-run-search-shortcut-complete"),
-    ).toHaveTextContent("shortcut learned");
+    ).toHaveTextContent("快捷键已记住");
     expect(
       JSON.parse(
         window.localStorage.getItem(FIRST_RUN_SEARCH_SHORTCUT_STORAGE_KEY) ||
@@ -129,8 +129,8 @@ describe("first-run search shortcut practice", () => {
 
     expect(
       screen.getByTestId("first-run-search-shortcut-issue"),
-    ).toHaveTextContent("search did not open");
-    fireEvent.click(screen.getByRole("button", { name: "change shortcut" }));
+    ).toHaveTextContent("搜索未打开");
+    fireEvent.click(screen.getByRole("button", { name: "更改快捷键" }));
     expect(mocks.openSettingsWindow).toHaveBeenCalledWith("shortcuts");
   });
 
@@ -167,7 +167,7 @@ describe("first-run search shortcut practice", () => {
     await waitFor(() =>
       expect(
         screen.getByTestId("first-run-search-shortcut-issue"),
-      ).toHaveTextContent("practice is unavailable"),
+      ).toHaveTextContent("此窗口无法进行快捷键练习"),
     );
     expect(
       screen.getByTestId("first-run-search-shortcut-start"),

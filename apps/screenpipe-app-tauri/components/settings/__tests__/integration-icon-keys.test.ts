@@ -36,11 +36,11 @@ describe("INTEGRATION_ICON_KEYS", () => {
 
 describe("isMcpOAuthProviderTileConnected", () => {
   it("treats an enabled MCP provider server as a connected tile", () => {
-    expect(isMcpOAuthProviderTileConnected("linear", false, { linear: true })).toBe(true);
+    expect(isMcpOAuthProviderTileConnected("jira", false, { jira: true })).toBe(true);
   });
 
   it("preserves existing API connections for MCP-backed providers", () => {
-    expect(isMcpOAuthProviderTileConnected("linear", true, { linear: false })).toBe(true);
+    expect(isMcpOAuthProviderTileConnected("jira", true, { jira: false })).toBe(true);
   });
 
   it("does not apply MCP provider state to unrelated connections", () => {

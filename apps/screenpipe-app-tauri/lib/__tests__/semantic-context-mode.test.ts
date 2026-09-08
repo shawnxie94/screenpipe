@@ -9,21 +9,21 @@ describe("semantic context mode copy", () => {
   it("presents memory and automation as the user-facing choices", () => {
     expect(
       Object.values(SEMANTIC_CONTEXT_MODE_COPY).map(({ label }) => label),
-    ).toEqual(["Memory", "Automation", "Memory + automation"]);
+    ).toEqual(["记忆", "自动化", "记忆 + 自动化"]);
   });
 
   it("explains the choices in plain language", () => {
     expect(SEMANTIC_CONTEXT_MODE_COPY.memory.description).toContain(
-      "information sent to AI",
+      "发送给 AI 的信息",
     );
     expect(SEMANTIC_CONTEXT_MODE_COPY.computerUse.description).toContain(
-      "buttons and fields",
+      "按钮和字段",
     );
     expect(SEMANTIC_CONTEXT_MODE_COPY.both.description).toContain(
-      "records everything once",
+      "只录制一次",
     );
     expect(SEMANTIC_CONTEXT_MODE_COPY.both.description).toContain(
-      "most processing power and storage",
+      "最多的处理能力和存储空间",
     );
   });
 });

@@ -75,7 +75,7 @@ export function parseWhatsAppStatus(value: unknown): BackendStatus {
       message:
         typeof reauth.message === "string"
           ? reauth.message
-          : "WhatsApp signed this device out. Pair it again to continue.",
+          : "WhatsApp 已将此设备退出登录。请重新配对后继续。",
     };
   }
 
@@ -86,7 +86,7 @@ export function parseWhatsAppStatus(value: unknown): BackendStatus {
       message:
         typeof error.message === "string" && error.message.length > 0
           ? error.message
-          : "WhatsApp pairing failed.",
+          : "WhatsApp 配对失败。",
     };
   }
 
@@ -135,7 +135,7 @@ export function WhatsAppPanel() {
         setQr(null);
         setInfo(null);
         if (pairingActive) {
-          setMessage("WhatsApp pairing stopped before a QR code was created.");
+          setMessage("WhatsApp 配对在二维码生成前已停止。");
           setStatus("reauth");
         } else {
           setStatus("idle");
@@ -292,7 +292,7 @@ export function WhatsAppPanel() {
     try {
       const response = await localFetch("/connections/whatsapp/disconnect", { method: "POST" });
       if (!response.ok) {
-        throw new Error(await responseError(response, "Failed to disconnect WhatsApp"));
+        throw new Error(await responseError(response, "断开 WhatsApp 连接失败"));
       }
       notifyConnectionsUpdated();
       setStatus("idle");
@@ -300,17 +300,17 @@ export function WhatsAppPanel() {
       setInfo(null);
       setMessage(null);
     } catch (error) {
-      showError(error instanceof Error ? error.message : "Failed to disconnect WhatsApp.");
+      showError(error instanceof Error ? error.message : "断开 WhatsApp 连接失败。");
     }
   };
 
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Connect your personal WhatsApp by scanning a QR code, just like WhatsApp Web.
+        扫描二维码连接你的个人 WhatsApp，操作方式与 WhatsApp Web 类似。
       </p>
       <p className="text-xs text-destructive">
-        ⚠️ WhatsApp may ban accounts using unofficial integrations. Use at your own risk.
+        ⚠️ WhatsApp 可能会封禁使用非官方集成的账号，请自行承担风险。
       </p>
 
       {status === "idle" && (
@@ -323,21 +323,21 @@ export function WhatsAppPanel() {
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground" role="status">
             <Loader2 className="h-3 w-3 animate-spin" />
-            {status === "reconnecting" ? message : "waiting for QR code…"}
+            {status === "reconnecting" ? message : "正在等待二维码…"}
           </div>
           <Button onClick={() => void resetAndPair()} variant="ghost" size="sm" className="h-7 text-xs normal-case font-sans tracking-normal">
-            taking too long? reset and try again
+            等得太久？重置并重试
           </Button>
         </div>
       )}
 
       {status === "pairing" && qr && (
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">scan this QR code with your WhatsApp app:</p>
+          <p className="text-xs text-muted-foreground">请使用 WhatsApp 扫描此二维码：</p>
           <div className="bg-white p-3 rounded-lg inline-block border dark:border-border">
             <Image
               src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qr)}`}
-              alt="WhatsApp QR Code"
+              alt="WhatsApp 二维码"
               width={200}
               height={200}
               unoptimized
@@ -351,11 +351,11 @@ export function WhatsAppPanel() {
       {status === "connected" && info && (
         <div className="space-y-2">
           <div className="p-3 bg-muted border border-border rounded-lg">
-            <p className="text-xs font-medium text-foreground">connected</p>
+            <p className="text-xs font-medium text-foreground">已连接</p>
             <p className="text-xs text-muted-foreground">{info.name} ({info.phone})</p>
           </div>
           <Button onClick={() => void disconnect()} variant="outline" size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            <LogOut className="h-3 w-3" /> disconnect
+            <LogOut className="h-3 w-3" /> 断开连接
           </Button>
         </div>
       )}
@@ -367,14 +367,14 @@ export function WhatsAppPanel() {
             <p>{message}</p>
           </div>
           <Button onClick={() => void resetAndPair()} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            <RotateCcw className="h-3 w-3" /> reset session and pair again
+            <RotateCcw className="h-3 w-3" /> 重置会话并重新配对
           </Button>
         </div>
       )}
 
       {status === "resetting" && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground" role="status">
-          <Loader2 className="h-3 w-3 animate-spin" /> resetting WhatsApp…
+          <Loader2 className="h-3 w-3 animate-spin" /> 正在重置 WhatsApp…
         </div>
       )}
 
@@ -383,10 +383,10 @@ export function WhatsAppPanel() {
           <p className="text-xs text-destructive" role="alert">{message}</p>
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => void beginPairing()} variant="outline" size="sm" className="h-7 text-xs normal-case font-sans tracking-normal">
-              retry
+              重试
             </Button>
             <Button onClick={() => void resetAndPair()} variant="ghost" size="sm" className="h-7 text-xs normal-case font-sans tracking-normal">
-              reset session and retry
+              重置会话并重试
             </Button>
           </div>
         </div>

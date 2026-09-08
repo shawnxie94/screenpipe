@@ -141,15 +141,15 @@ export function meetingLinkFromUrl(
   }
 
   if (host === "meet.google.com") {
-    return { url, host, provider: "google-meet", label: "Join Google Meet" };
+    return { url, host, provider: "google-meet", label: "加入 Google Meet" };
   }
   if (host === "zoom.us" || host.endsWith(".zoom.us")) {
-    return { url, host, provider: "zoom", label: "Join Zoom" };
+    return { url, host, provider: "zoom", label: "加入 Zoom" };
   }
   if (host === "teams.microsoft.com" || host === "teams.live.com") {
-    return { url, host, provider: "teams", label: "Join Teams" };
+    return { url, host, provider: "teams", label: "加入 Teams" };
   }
-  return { url, host, provider: "meeting", label: "Join meeting" };
+  return { url, host, provider: "meeting", label: "加入会议" };
 }
 
 export function calendarEventMeetingLink(

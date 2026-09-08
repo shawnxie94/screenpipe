@@ -47,7 +47,7 @@ describe("pi foreground event helpers", () => {
     ).toBe(true);
     expect(isPiPromptStartTimeout("rate limited")).toBe(false);
     expect(piPromptStartTimeoutMessage()).toBe(
-      "The AI did not start responding, so screenpipe restarted it. Retry your message.",
+      "AI 未开始响应，因此 screenpipe 已将其重启。请重试你的消息。",
     );
   });
 });

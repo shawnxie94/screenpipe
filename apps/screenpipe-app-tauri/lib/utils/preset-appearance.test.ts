@@ -27,7 +27,7 @@ describe("acpAdapterInfo", () => {
 
   it("keeps every adapter's preset name within the allowed characters", () => {
     for (const adapter of ACP_ADAPTERS) {
-      expect(adapter.presetName).toMatch(/^[a-zA-Z0-9\s\-_]+$/);
+      expect(adapter.presetName).toMatch(/^[\p{L}\p{N}\s\-_]+$/u);
       expect(adapter.presetName.toLowerCase().endsWith("copy")).toBe(false);
     }
   });
@@ -129,7 +129,7 @@ describe("generatePresetName", () => {
       "claude code",
     );
     expect(generatePresetName({ provider: "acp", acpAgentId: "custom" }, [])).toBe(
-      "acp agent",
+      "ACP 代理",
     );
     // The acp model mirrors the adapter id and must not leak into the name
     expect(

@@ -203,15 +203,15 @@ async function fetchCalendarPreviewSuggestion(connection: ConnectedIntegration):
       2
     );
     const descriptor = names.length >= 2
-      ? `${joinNames(names)} call briefs`
+        ? `${joinNames(names)} 的会议简报`
       : titles.length > 0
-        ? `${compactSuggestionPart(titles[0], 42)} brief`
-        : "meeting briefs";
-    const day = tomorrowEvents.length > 0 ? "tomorrow's" : "upcoming";
+        ? `${compactSuggestionPart(titles[0], 42)} 简报`
+        : "会议简报";
+    const day = tomorrowEvents.length > 0 ? "明天的" : "即将开始的";
 
     return {
-      text: `Prep ${day} ${descriptor} from ${connection.name}`,
-      preview: titles.length > 0 ? titles.join(", ") : `uses ${connection.name}`,
+      text: `根据 ${connection.name} 准备${day}${descriptor}`,
+      preview: titles.length > 0 ? titles.join("、") : `使用 ${connection.name}`,
       priority: 1,
       connectionIcon: connection.icon || connection.id,
     };
@@ -238,36 +238,36 @@ function suggestionForConnection(connection: ConnectedIntegration): Suggestion |
   const lower = `${id} ${name}`.toLowerCase();
   const base: Pick<Suggestion, "connectionIcon" | "preview" | "priority"> = {
     connectionIcon: connection.icon || connection.id,
-    preview: `uses ${name}`,
+    preview: `使用 ${name}`,
     priority: 2,
   };
 
   if (lower.includes("calendar")) {
-    return { ...base, text: `Prep upcoming meeting briefs from ${name}`, priority: 1 };
+    return { ...base, text: `根据 ${name} 准备即将开始的会议简报`, priority: 1 };
   }
   if (lower.includes("email") || lower.includes("outlook") || lower.includes("microsoft365") || lower.includes("microsoft 365")) {
-    return { ...base, text: `Turn recent ${name} invites into concrete prep notes` };
+    return { ...base, text: `将 ${name} 最近的邀请转为具体准备笔记` };
   }
   if (lower.includes("docs") || lower.includes("sheets") || lower.includes("notion") || lower.includes("obsidian") || lower.includes("logseq")) {
-    return { ...base, text: `Turn recent ${name} files into a prep sheet` };
+    return { ...base, text: `将 ${name} 最近的文件整理成准备清单` };
   }
   if (lower.includes("github") || lower.includes("jira")) {
-    return { ...base, text: `Find open tasks tied to this work in ${name}` };
+    return { ...base, text: `在 ${name} 中查找与当前工作相关的未完成任务` };
   }
   if (lower.includes("hubspot") || lower.includes("zendesk")) {
-    return { ...base, text: `Prep customer call briefs from ${name}` };
+    return { ...base, text: `根据 ${name} 准备客户通话简报` };
   }
   if (lower.includes("zoom")) {
-    return { ...base, text: `Pull recent meeting briefs from ${name}` };
+    return { ...base, text: `从 ${name} 获取最近的会议简报` };
   }
   if (connection.category?.toLowerCase() === "browser" || lower.includes("browser")) {
-    return { ...base, text: `Read the current page with ${name}` };
+    return { ...base, text: `使用 ${name} 读取当前页面` };
   }
   if (lower.includes("quickbooks")) {
-    return { ...base, text: `Summarize recent ${name} data for this work` };
+    return { ...base, text: `总结 ${name} 最近的数据，辅助当前工作` };
   }
 
-  return { ...base, text: `Search ${name} for context on this work` };
+  return { ...base, text: `在 ${name} 中搜索当前工作的相关上下文` };
 }
 
 export function mergeConnectionSuggestions(
@@ -313,14 +313,14 @@ export function mergeConnectionSuggestions(
 
 function setupDescriptionForConnection(connection: ConnectionListItem): string {
   const lower = `${connection.id} ${connection.name} ${connection.category ?? ""}`.toLowerCase();
-  if (lower.includes("email")) return "Bring email into chat";
-  if (lower.includes("slack")) return "Search team threads";
-  if (lower.includes("github")) return "Use repos and issues";
-  if (lower.includes("github") || lower.includes("jira")) return "Track project work";
-  if (lower.includes("calendar")) return "Prep from events";
-  if (lower.includes("notion") || lower.includes("docs") || lower.includes("obsidian")) return "Search your docs";
-  if (lower.includes("browser")) return "Read current pages";
-  return connection.description ? compactSuggestionPart(connection.description, 34) : "Add more context";
+  if (lower.includes("email")) return "将邮件带入聊天";
+  if (lower.includes("slack")) return "搜索团队讨论";
+  if (lower.includes("github")) return "使用代码仓库和问题单";
+  if (lower.includes("github") || lower.includes("jira")) return "跟踪项目工作";
+  if (lower.includes("calendar")) return "根据日历事件准备";
+  if (lower.includes("notion") || lower.includes("docs") || lower.includes("obsidian")) return "搜索你的文档";
+  if (lower.includes("browser")) return "阅读当前页面";
+  return connection.description ? compactSuggestionPart(connection.description, 34) : "补充更多上下文";
 }
 
 export function buildConnectionSetupSuggestions(
@@ -382,7 +382,7 @@ export function buildConnectionSetupSuggestions(
       return {
         suggestion: {
           id: connection.id,
-          title: `Connect ${connection.name || connection.id}`,
+          title: `连接 ${connection.name || connection.id}`,
           description: setupDescriptionForConnection(connection),
           icon: connection.icon || connection.id,
         },

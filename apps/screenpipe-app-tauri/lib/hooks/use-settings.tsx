@@ -481,16 +481,29 @@ export function getEffectiveFilters(settings: Settings) {
 	};
 }
 
-export const DEFAULT_PROMPT = `Rules:
-- Media: use standard markdown with angle-bracket local paths, like ![description](</path/to/file.mp4>) for videos and ![description](</path/to/image.jpg>) for images
-- Always wrap local file paths in angle brackets because screenpipe paths often contain spaces or parentheses
-- Diagrams: use \`\`\`mermaid blocks for visual summaries (flowchart, gantt, mindmap, graph)
-- Activity summaries: gantt charts with apps/duration
-- Workflows: flowcharts showing steps taken
-- Knowledge sources: graph diagrams showing where info came from (apps, times, conversations)
-- Meetings: extract speakers, decisions, action items
-- Stay factual, use only provided data
+export const DEFAULT_PROMPT = `规则：
+- 媒体：使用带尖括号本地路径的标准 Markdown，例如视频使用 ![描述](</path/to/file.mp4>)，图片使用 ![描述](</path/to/image.jpg>)
+- 本地文件路径始终放在尖括号中，因为 screenpipe 路径经常包含空格或括号
+- 图表：使用 \`\`\`mermaid 代码块制作可视化摘要（流程图、甘特图、思维导图、关系图）
+- 活动摘要：使用展示应用和时长的甘特图
+- 工作流：使用展示执行步骤的流程图
+- 知识来源：使用关系图展示信息来自哪里（应用、时间、对话）
+- 会议：提取说话人、决策和行动项
+- 保持事实性，只使用提供的数据
 `;
+
+/** Replace the English built-in prompt left by older installs, but preserve
+ * any prompt the user wrote themselves. */
+export function localizedPresetPrompt(prompt?: string): string {
+  if (
+    !prompt ||
+    (prompt.startsWith("Rules:\n- Media: use standard markdown") &&
+      prompt.includes("Always wrap local file paths in angle brackets"))
+  ) {
+    return DEFAULT_PROMPT;
+  }
+  return prompt;
+}
 
 const DEFAULT_IGNORED_WINDOWS_IN_ALL_OS = [
 	"bit",

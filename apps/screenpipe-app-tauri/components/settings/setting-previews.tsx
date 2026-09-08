@@ -271,8 +271,8 @@ export function NotificationSamplePreview() {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-foreground">screenpipe</span>
-            <span className="text-[10px] text-muted-foreground">now</span>
+            <span className="text-xs font-medium text-foreground">知迹</span>
+            <span className="text-[10px] text-muted-foreground">现在</span>
           </div>
           <p className="truncate text-xs text-muted-foreground">
             音频采集已恢复 — 录制重新健康。

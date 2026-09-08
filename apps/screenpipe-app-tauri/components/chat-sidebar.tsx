@@ -1351,8 +1351,8 @@ export function ChatSidebar({
       !isTerminalPipeExecutionStatus(fullExecution.status)
     ) {
       toast({
-        title: "couldn't load automation run",
-        description: "the execution output is temporarily unavailable",
+        title: "无法加载自动化运行记录",
+        description: "暂时无法获取此次运行的输出",
         variant: "destructive",
       });
       return false;
@@ -1622,8 +1622,8 @@ export function ChatSidebar({
     } catch (error) {
       console.warn("[chat-sidebar] failed to branch conversation:", error);
       toast({
-        title: "couldn't branch chat",
-        description: "the conversation could not be copied. try again.",
+        title: "无法创建聊天分支",
+        description: "无法复制此会话，请重试。",
         variant: "destructive",
       });
     }
@@ -1740,7 +1740,7 @@ export function ChatSidebar({
       });
       if (!validation.ok) {
         toast({
-          title: "Invalid group name",
+          title: "分组名称无效",
           description: validation.message,
           variant: "destructive",
         });
@@ -1866,13 +1866,13 @@ export function ChatSidebar({
                       <DropdownMenuLabel>整理侧边栏</DropdownMenuLabel>
                       <DropdownMenuRadioGroup value={recentLayout} onValueChange={changeRecentLayout}>
                         <DropdownMenuRadioItem data-shortcut="b" aria-keyshortcuts="B" value="source">
-                          By source
+                          按来源
                           <DropdownMenuShortcut className="text-[10px] tracking-normal text-muted-foreground/55">
                             B
                           </DropdownMenuShortcut>
                         </DropdownMenuRadioItem>
                         <DropdownMenuRadioItem data-shortcut="i" aria-keyshortcuts="I" value="list">
-                          In one list
+                          在一个列表中
                           <DropdownMenuShortcut className="text-[10px] tracking-normal text-muted-foreground/55">
                             I
                           </DropdownMenuShortcut>
@@ -1882,13 +1882,13 @@ export function ChatSidebar({
                       <DropdownMenuLabel>聊天排序方式</DropdownMenuLabel>
                       <DropdownMenuRadioGroup value={recentSort} onValueChange={changeRecentSort}>
                         <DropdownMenuRadioItem data-shortcut="p" aria-keyshortcuts="P" value="priority">
-                          Priority
+                          优先级
                           <DropdownMenuShortcut className="text-[10px] tracking-normal text-muted-foreground/55">
                             P
                           </DropdownMenuShortcut>
                         </DropdownMenuRadioItem>
                         <DropdownMenuRadioItem data-shortcut="u" aria-keyshortcuts="U" value="updated">
-                          Last updated
+                          最近更新
                           <DropdownMenuShortcut className="text-[10px] tracking-normal text-muted-foreground/55">
                             U
                           </DropdownMenuShortcut>
@@ -1951,13 +1951,13 @@ export function ChatSidebar({
                       <ContextMenuLabel>整理侧边栏</ContextMenuLabel>
                       <ContextMenuRadioGroup value={recentLayout} onValueChange={changeRecentLayout}>
                         <ContextMenuRadioItem data-shortcut="b" aria-keyshortcuts="B" value="source">
-                          By source
+                          按来源
                           <ContextMenuShortcut className="text-[10px] tracking-normal text-muted-foreground/55">
                             B
                           </ContextMenuShortcut>
                         </ContextMenuRadioItem>
                         <ContextMenuRadioItem data-shortcut="i" aria-keyshortcuts="I" value="list">
-                          In one list
+                          在一个列表中
                           <ContextMenuShortcut className="text-[10px] tracking-normal text-muted-foreground/55">
                             I
                           </ContextMenuShortcut>
@@ -1967,13 +1967,13 @@ export function ChatSidebar({
                       <ContextMenuLabel>聊天排序方式</ContextMenuLabel>
                       <ContextMenuRadioGroup value={recentSort} onValueChange={changeRecentSort}>
                         <ContextMenuRadioItem data-shortcut="p" aria-keyshortcuts="P" value="priority">
-                          Priority
+                          优先级
                           <ContextMenuShortcut className="text-[10px] tracking-normal text-muted-foreground/55">
                             P
                           </ContextMenuShortcut>
                         </ContextMenuRadioItem>
                         <ContextMenuRadioItem data-shortcut="u" aria-keyshortcuts="U" value="updated">
-                          Last updated
+                          最近更新
                           <ContextMenuShortcut className="text-[10px] tracking-normal text-muted-foreground/55">
                             U
                           </ContextMenuShortcut>
@@ -2055,7 +2055,7 @@ export function ChatSidebar({
                   </div>
                 ) : pipeItems.length === 0 ? (
                   <div className="px-2.5 py-2 text-xs sidebar-text-secondary italic">
-                    no automation runs yet
+                    尚无自动化运行记录
                   </div>
                 ) : pipeItems.map((item) => (
                     <PipeGroupRow
@@ -2091,7 +2091,7 @@ export function ChatSidebar({
                     onClick={() => void fetchPipeInventory(true)}
                     disabled={pipeInventoryLoadingMore}
                   >
-                    {pipeInventoryLoadingMore ? "loading…" : "show more automation runs"}
+                    {pipeInventoryLoadingMore ? "正在加载…" : "显示更多自动化运行记录"}
                   </button>
                 )}
               </Section>
@@ -2363,8 +2363,8 @@ export function CollapsedChatSidebarButton({
     return "archived";
   });
   const emptyText = pinned.length === 0
-    ? "no chats yet — click + to start"
-    : "no recent chats";
+    ? "还没有聊天记录 — 点击 + 开始"
+    : "暂无最近聊天";
   const recentsTabLoading = !diskHydrated && recents.length === 0;
   const isLoadingChats =
     !diskHydrated && pinned.length === 0 && recents.length === 0;
@@ -2412,7 +2412,7 @@ export function CollapsedChatSidebarButton({
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <button
-              aria-label="recent chats"
+              aria-label="最近的聊天"
               onClick={() => {
                 setTooltipOpen(false);
                 setSuppressTooltip(true);
@@ -2462,21 +2462,21 @@ export function CollapsedChatSidebarButton({
                 disabled={pinned.length === 0}
                 className="relative h-8 rounded-none bg-transparent px-2 text-[10px] uppercase tracking-wider shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:bottom-0 data-[state=active]:after:h-0.5 data-[state=active]:after:bg-foreground"
               >
-                Pinned
+                置顶
               </TabsTrigger>
               <TabsTrigger
                 value="recents"
                 disabled={recents.length === 0}
                 className="relative h-8 rounded-none bg-transparent px-2 text-[10px] uppercase tracking-wider shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:bottom-0 data-[state=active]:after:h-0.5 data-[state=active]:after:bg-foreground"
               >
-                Recents
+                最近
               </TabsTrigger>
               <TabsTrigger
                 value="archived"
                 disabled={archived.length === 0}
                 className="relative h-8 rounded-none bg-transparent px-2 text-[10px] uppercase tracking-wider shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:left-0 data-[state=active]:after:right-0 data-[state=active]:after:bottom-0 data-[state=active]:after:h-0.5 data-[state=active]:after:bg-foreground"
               >
-                Archived
+                已归档
               </TabsTrigger>
             </TabsList>
 
@@ -2494,7 +2494,7 @@ export function CollapsedChatSidebarButton({
                 </div>
               ) : recents.length === 0 ? (
                 <div className="px-2.5 py-2 text-xs text-muted-foreground/70 italic">
-                  {pinned.length === 0 ? emptyText : "no recent chats"}
+                  {pinned.length === 0 ? emptyText : "暂无最近聊天"}
                 </div>
               ) : (
                 <CompactDrawerList items={recents} currentId={currentId} onSelect={handleSelect} />
@@ -2891,7 +2891,7 @@ function PipeGroupRow({
             </div>
           ) : runsLoaded && item.sessions.length === 0 ? (
             <div className="px-2 py-1.5 text-[11px] sidebar-text-tertiary italic">
-              no visible runs
+              尚无可见运行记录
             </div>
           ) : item.sessions.map((s) => (
             <SidebarChatRow
@@ -2918,7 +2918,7 @@ function PipeGroupRow({
               onClick={onLoadMore}
               disabled={runsLoading}
             >
-              {runsLoading ? "loading…" : "show older runs"}
+              {runsLoading ? "正在加载…" : "显示更早的运行记录"}
             </button>
           )}
         </div>
@@ -3062,7 +3062,7 @@ function RowMenuItems({
         }}
       >
         <Pin className="h-3 w-3 text-muted-foreground" />
-        {session.pinned ? "Unpin" : "Pin"}
+        {session.pinned ? "取消置顶" : "置顶"}
         <P.Shortcut className={shortcutCls}>P</P.Shortcut>
       </P.Item>
       <P.Item
@@ -3089,7 +3089,7 @@ function RowMenuItems({
           }}
         >
           <GitBranch className="h-3 w-3 text-muted-foreground" />
-          Branch in new chat
+          在新聊天中创建分支
           <P.Shortcut className={shortcutCls}>B</P.Shortcut>
         </P.Item>
       )}
@@ -3100,7 +3100,7 @@ function RowMenuItems({
             data-testid={`chat-row-move-to-group-${session.id}`}
           >
             <FolderOpen className="h-3 w-3 text-muted-foreground" />
-            Move to group
+            移动到分组
           </P.SubTrigger>
           <P.SubContent
             className="w-[196px] rounded-none border border-border bg-background p-0 shadow-none overflow-hidden"
@@ -3142,7 +3142,7 @@ function RowMenuItems({
                       onMoveToGroup(session.id, undefined);
                     }}
                   >
-                    Remove from group
+                    移出分组
                   </P.Item>
                 </>
               )}
@@ -3156,7 +3156,7 @@ function RowMenuItems({
                   onNewGroupRequest?.(session.id);
                 }}
               >
-                New group...
+                新建分组...
               </P.Item>
             </div>
           </P.SubContent>
@@ -3172,7 +3172,7 @@ function RowMenuItems({
           }}
         >
           <Archive className="h-3 w-3 text-muted-foreground" />
-          Archive
+          归档
           <P.Shortcut className={shortcutCls}>A</P.Shortcut>
         </P.Item>
       ) : (
@@ -3185,7 +3185,7 @@ function RowMenuItems({
           }}
         >
           <Undo2 className="h-3 w-3 text-muted-foreground" />
-          Unarchive
+          取消归档
           <P.Shortcut className={shortcutCls}>A</P.Shortcut>
         </P.Item>
       )}
@@ -3199,7 +3199,7 @@ function RowMenuItems({
         }}
       >
         <Trash2 className="h-3 w-3 text-destructive" />
-        Delete
+        删除
         <P.Shortcut className={cn(shortcutCls, "text-destructive/60")}>D</P.Shortcut>
       </P.Item>
     </>
@@ -3302,7 +3302,7 @@ export function SidebarChatRow({
         : harness === "screenpipe"
           ? "screenpipe"
           : harness === "terminal"
-            ? "Terminal"
+            ? "终端"
             : null;
   const harnessIcon =
     harness === "github-copilot"
@@ -3357,7 +3357,7 @@ export function SidebarChatRow({
       >
         <span
           className="flex h-5 w-5 shrink-0 items-center justify-center"
-          aria-label={harnessLabel ? `${harnessLabel} harness` : `${sourceLabel} source`}
+          aria-label={harnessLabel ? `${harnessLabel} 运行环境` : `${sourceLabel} 来源`}
           title={harnessLabel ? `${harnessLabel}${sourceLabel ? ` · ${sourceLabel}` : ""}` : sourceLabel ?? undefined}
         >
           {harnessIcon ? (
@@ -3407,7 +3407,7 @@ export function SidebarChatRow({
               />
             ) : showCurrentLabel ? (
               <span className="text-[9px] font-medium uppercase tracking-[0.08em] text-foreground/70">
-                current
+                当前
               </span>
             ) : (
               <RowRightSignal
@@ -3446,7 +3446,7 @@ export function SidebarChatRow({
                     ? "opacity-100 visible"
                     : "opacity-0 invisible group-hover:opacity-100 group-hover:visible"
                 )}
-                aria-label="conversation actions"
+                aria-label="会话操作"
               >
                 <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
@@ -3501,19 +3501,19 @@ function RowRightSignal({
   const { content, label } = ((): { content: React.ReactNode; label: string | null } => {
     if (isError) {
       return {
-        content: <AlertCircle className="h-3 w-3 text-red-500" aria-label="error" />,
-        label: "error",
+        content: <AlertCircle className="h-3 w-3 text-red-500" aria-label="错误" />,
+        label: "错误",
       };
     }
     if (isLive) {
       const live =
-        status === "thinking" ? "thinking" :
-        status === "tool" ? "using tool" :
-        "streaming";
+        status === "thinking" ? "思考中" :
+        status === "tool" ? "正在使用工具" :
+        "生成中";
       return { content: <LiveSignal ariaLabel={live} />, label: live };
     }
     if (queuedCount > 0) {
-      const q = `${queuedCount} queued`;
+      const q = `排队中 ${queuedCount} 条`;
       return { content: <LiveSignal ariaLabel={q} />, label: q };
     }
     if (isUnread) {
@@ -3521,10 +3521,10 @@ function RowRightSignal({
         content: (
           <span
             className="inline-block h-1.5 w-1.5 rounded-full bg-foreground"
-            aria-label="unread"
+            aria-label="未读"
           />
         ),
-        label: "new",
+        label: "新消息",
       };
     }
     if (age) {
@@ -3567,15 +3567,15 @@ function useMinuteTick(enabled = true): number {
 function formatCompactAge(timestamp?: number, now = Date.now()): string | null {
   if (!timestamp || !Number.isFinite(timestamp)) return null;
   const ms = Math.max(0, now - timestamp);
-  if (ms < 60_000) return "now";
+  if (ms < 60_000) return "刚刚";
   const minutes = Math.floor(ms / 60_000);
-  if (minutes < 60) return `${minutes}m`;
+  if (minutes < 60) return `${minutes} 分钟前`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
+  if (hours < 24) return `${hours} 小时前`;
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
+  if (days < 7) return `${days} 天前`;
   const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `${weeks}w`;
-  if (days < 365) return `${Math.max(1, Math.floor(days / 30))}mo`;
-  return `${Math.floor(days / 365)}y`;
+  if (weeks < 5) return `${weeks} 周前`;
+  if (days < 365) return `${Math.max(1, Math.floor(days / 30))} 个月前`;
+  return `${Math.floor(days / 365)} 年前`;
 }

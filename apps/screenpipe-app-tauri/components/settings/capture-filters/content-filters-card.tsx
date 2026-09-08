@@ -245,7 +245,7 @@ export function ContentFiltersCard({
 												defaultValue={advancedIgnored}
 												value={advancedIgnored}
 												onValueChange={(next) => handleAdvancedChange(next, "ignored")}
-												placeholder="e.g. Slack::#hr"
+												placeholder="例如：Slack::#hr"
 												allowCustomValues
 											/>
 										</div>

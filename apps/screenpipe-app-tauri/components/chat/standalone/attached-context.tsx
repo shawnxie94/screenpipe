@@ -65,8 +65,8 @@ export function AttachedContextCard({ context }: { context: AttachedContext }) {
             }}
             onMouseUp={(event) => event.stopPropagation()}
             aria-expanded={expanded}
-            aria-label={expanded ? "hide attached context" : "show attached context"}
-            title={expanded ? "hide attached context" : "show attached context"}
+            aria-label={expanded ? "隐藏附加上下文" : "显示附加上下文"}
+            title={expanded ? "隐藏附加上下文" : "显示附加上下文"}
             className="shrink-0 rounded p-1 text-muted-foreground transition-colors hover:bg-muted-foreground/10 hover:text-foreground"
           >
             {expanded ? (

@@ -148,7 +148,7 @@ export function sourceCitationsFromContentBlocks(contentBlocks: unknown): Source
 
 export function formatSourceCitationsMarkdown(citations: SourceCitation[]): string {
   if (citations.length === 0) return "";
-  const label = citations.length === 1 ? "Source" : "Sources";
+  const label = citations.length === 1 ? "来源" : "来源";
   const rows = citations.map((citation, index) => {
     const title = citation.href
       ? `[${escapeMarkdown(citation.title)}](${citation.href})`
@@ -205,12 +205,12 @@ function sourceCitationsFromToolCall(toolCall: ToolCallLike | undefined): Source
 
   if (toolName === "read") {
     const path = stringArg(args, "path");
-    return path ? [fileCitation(path, "Read")] : [];
+    return path ? [fileCitation(path, "读取文件")] : [];
   }
 
   if (toolName === "write" || toolName === "edit") {
     const path = stringArg(args, "path") ?? stringArg(args, "file_path") ?? stringArg(args, "filePath");
-    const verb = toolName === "write" ? "Wrote" : "Edited";
+    const verb = toolName === "write" ? "写入文件" : "编辑文件";
     return path ? [fileCitation(path, verb)] : [];
   }
 
@@ -221,7 +221,7 @@ function sourceCitationsFromToolCall(toolCall: ToolCallLike | undefined): Source
       {
         id: stableId(["file-search", pattern, path]),
         kind: "file",
-        title: pattern ? `Search: ${truncate(pattern, 60)}` : "Local file search",
+        title: pattern ? `搜索：${truncate(pattern, 60)}` : "本地文件搜索",
         subtitle: path ? shortenPath(path) : undefined,
       },
     ];
@@ -246,8 +246,8 @@ function webSearchCitations(
     return dedupeLinks(urls).slice(0, 6).map((link) => ({
       id: stableId(["web", link.url]),
       kind: "web",
-      title: link.title || hostname(link.url) || "Web source",
-      subtitle: query ? `web search: ${truncate(query, 90)}` : hostname(link.url),
+      title: link.title || hostname(link.url) || "网页来源",
+      subtitle: query ? `网页搜索：${truncate(query, 90)}` : hostname(link.url),
       href: link.url,
     }));
   }
@@ -256,7 +256,7 @@ function webSearchCitations(
     {
       id: stableId(["web-search", query]),
       kind: "web",
-      title: "Web search",
+      title: "网页搜索",
       subtitle: query ? truncate(query, 120) : undefined,
     },
   ];
@@ -272,16 +272,16 @@ function screenpipeToolCitation(args: Record<string, unknown>): SourceCitation {
     stringArg(args, "end_time") ?? stringArg(args, "endTime")
   );
   const parts = [
-    contentType ?? "all content",
-    appName ? `app: ${appName}` : undefined,
-    query ? `query: ${truncate(query, 50)}` : undefined,
+    localizeContentType(contentType),
+    appName ? `应用：${appName}` : undefined,
+    query ? `查询：${truncate(query, 50)}` : undefined,
     range,
   ].filter(Boolean);
 
   return {
     id: stableId(["screenpipe-search-tool", contentType, appName, query, range]),
     kind: "screenpipe",
-    title: "Screenpipe search",
+    title: "screenpipe 搜索",
     subtitle: parts.join("; ") || undefined,
     timestamp: navTimestamp(startTime),
     query: query || undefined,
@@ -300,8 +300,8 @@ function bashCitations(command: string, resultText: string): SourceCitation[] {
     citations.push({
       id: stableId(["web", link.url]),
       kind: "web",
-      title: hostname(link.url) || "Web source",
-      subtitle: "command request",
+      title: hostname(link.url) || "网页来源",
+      subtitle: "命令请求",
       href: link.url,
     });
   }
@@ -311,22 +311,22 @@ function bashCitations(command: string, resultText: string): SourceCitation[] {
     citations.push({
       id: stableId(["web-result", link.url]),
       kind: "web",
-      title: link.title || hostname(link.url) || "Web source",
-      subtitle: "tool result",
+      title: link.title || hostname(link.url) || "网页来源",
+      subtitle: "工具结果",
       href: link.url,
     });
   }
 
   const filePaths = extractFilePathsFromCommand(command);
   for (const path of filePaths) {
-    citations.push(fileCitation(path, "Local file"));
+    citations.push(fileCitation(path, "本地文件"));
   }
 
   if (citations.length === 0 && looksLikeDataCommand(command, resultText)) {
     citations.push({
       id: stableId(["command", command]),
       kind: "command",
-      title: "Command output",
+      title: "命令输出",
       subtitle: truncate(command.replace(/\s+/g, " "), 120),
     });
   }
@@ -363,31 +363,31 @@ function screenpipeKind(path: string): SourceCitationKind {
 }
 
 function screenpipeTitle(path: string): string {
-  if (path === "/search") return "Screenpipe search";
-  if (path === "/activity-summary") return "Activity summary";
-  if (path === "/raw_sql") return "Local database query";
-  if (path === "/memories") return "Screenpipe memories";
-  if (path.startsWith("/connections/perplexity/")) return "Perplexity search";
+  if (path === "/search") return "screenpipe 搜索";
+  if (path === "/activity-summary") return "活动摘要";
+  if (path === "/raw_sql") return "本地数据库查询";
+  if (path === "/memories") return "screenpipe 记忆";
+  if (path.startsWith("/connections/perplexity/")) return "Perplexity 搜索";
   if (path.startsWith("/connections/calendar/")) {
-    return "Google Calendar events";
+    return "Google Calendar 事件";
   }
-  if (path.startsWith("/connections/notion")) return "Notion connection";
-  if (path.startsWith("/connections/obsidian")) return "Obsidian connection";
-  if (path.startsWith("/meetings")) return "Meeting data";
-  if (path.startsWith("/frames")) return "Frame data";
-  if (path.startsWith("/speakers")) return "Speaker data";
-  if (path === "/health") return "Screenpipe health";
-  if (path.startsWith("/connections/")) return `${titleCase(path.split("/")[2] ?? "connector")} connection`;
-  return "Screenpipe API";
+  if (path.startsWith("/connections/notion")) return "Notion 连接";
+  if (path.startsWith("/connections/obsidian")) return "Obsidian 连接";
+  if (path.startsWith("/meetings")) return "会议数据";
+  if (path.startsWith("/frames")) return "画面数据";
+  if (path.startsWith("/speakers")) return "说话人数据";
+  if (path === "/health") return "screenpipe 健康状态";
+  if (path.startsWith("/connections/")) return `${titleCase(path.split("/")[2] ?? "连接器")} 连接`;
+  return "screenpipe API";
 }
 
 function screenpipeSubtitle(path: string, query: string): string | undefined {
   const params = queryParams(query);
   if (path === "/search") {
     const parts = [
-      params.content_type ?? "all content",
-      params.app_name ? `app: ${params.app_name}` : undefined,
-      params.q ? `query: ${truncate(params.q, 50)}` : undefined,
+      localizeContentType(params.content_type),
+      params.app_name ? `应用：${params.app_name}` : undefined,
+      params.q ? `查询：${truncate(params.q, 50)}` : undefined,
       timeRange(params.start_time, params.end_time),
     ].filter(Boolean);
     return parts.join("; ") || undefined;
@@ -398,15 +398,15 @@ function screenpipeSubtitle(path: string, query: string): string | undefined {
   }
 
   if (path === "/raw_sql") {
-    return "local screenpipe data";
+    return "本地 screenpipe 数据";
   }
 
   if (path === "/memories") {
-    return params.q ? `memory query: ${truncate(params.q, 60)}` : limitSubtitle(params.limit);
+    return params.q ? `记忆查询：${truncate(params.q, 60)}` : limitSubtitle(params.limit);
   }
 
   if (path.startsWith("/connections/perplexity/")) {
-    return "external web context via Screenpipe connection";
+    return "通过 screenpipe 连接获取的外部网页上下文";
   }
 
   if (path.startsWith("/connections/calendar/")) {
@@ -414,7 +414,7 @@ function screenpipeSubtitle(path: string, query: string): string | undefined {
   }
 
   if (path.startsWith("/connections/")) {
-    return "external app connection";
+    return "外部应用连接";
   }
 
   if (params.limit) {
@@ -422,6 +422,18 @@ function screenpipeSubtitle(path: string, query: string): string | undefined {
   }
 
   return undefined;
+}
+
+function localizeContentType(value?: string): string {
+  const labels: Record<string, string> = {
+    all: "全部内容",
+    ocr: "文字识别",
+    audio: "音频",
+    input: "输入",
+    accessibility: "辅助功能",
+    screen: "画面",
+  };
+  return value ? (labels[value] ?? value) : "全部内容";
 }
 
 function fileCitation(path: string, verb: string): SourceCitation {

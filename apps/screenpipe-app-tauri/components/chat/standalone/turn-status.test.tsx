@@ -65,7 +65,7 @@ describe("TurnStatus contrast", () => {
     const status = screen.getByTestId("chat-turn-status");
     expect(status).toHaveAttribute("data-liveness", "offline");
     expect(screen.queryByTestId("chat-turn-scan-glyph")).not.toBeInTheDocument();
-    expect(screen.getByText(/offline · message saved/)).toBeInTheDocument();
+    expect(screen.getByText(/离线 · 消息已保存/)).toBeInTheDocument();
   });
 
   it("keeps the scan active during a bounded automatic retry", () => {
@@ -89,7 +89,7 @@ describe("TurnStatus contrast", () => {
       "retrying",
     );
     expect(screen.getByTestId("chat-turn-scan-glyph")).toBeInTheDocument();
-    expect(screen.getByText(/retrying · attempt 2\/3/)).toBeInTheDocument();
+    expect(screen.getByText(/正在重试 · 第 2\/3 次尝试/)).toBeInTheDocument();
   });
 
   it("turns off phosphor when the harness has stopped producing events", () => {
@@ -108,6 +108,6 @@ describe("TurnStatus contrast", () => {
       "stalled",
     );
     expect(screen.queryByTestId("chat-turn-scan-glyph")).not.toBeInTheDocument();
-    expect(screen.getByText(/still working · no update for 30s/)).toBeInTheDocument();
+    expect(screen.getByText(/仍在处理 · 已有 30 秒 没有更新/)).toBeInTheDocument();
   });
 });

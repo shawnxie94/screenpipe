@@ -447,11 +447,11 @@ describe("BrainOverview", () => {
 
     expect(
       await screen.findByTestId("onboarding-live-view-cold-start"),
-    ).toHaveTextContent("starts with your real work");
-    expect(screen.getByText(/10–15 minutes/)).toBeTruthy();
+    ).toHaveTextContent("此实时视图从你的真实工作开始");
+    expect(screen.getByText(/10–15 分钟/)).toBeTruthy();
     expect(screen.queryByTestId("live-view-canvas")).toBeNull();
     expect(
-      screen.queryByText("waiting for daily-summary to publish data"),
+      screen.queryByText("等待 daily-summary 发布数据"),
     ).toBeNull();
   });
 
@@ -474,14 +474,14 @@ describe("BrainOverview", () => {
     render(<BrainOverview />);
 
     expect(
-      await screen.findByText("this dashboard was made for your goal"),
+      await screen.findByText("这个仪表盘是为你的目标创建的"),
     ).toBeTruthy();
     fireEvent.click(
-      screen.getByRole("button", { name: "show me how it fills" }),
+      screen.getByRole("button", { name: "看看它如何填充" }),
     );
-    expect(await screen.findByText("wait for real work")).toBeTruthy();
+    expect(await screen.findByText("等待真实活动")).toBeTruthy();
     fireEvent.click(
-      screen.getByRole("button", { name: "got it, let me work" }),
+      screen.getByRole("button", { name: "明白了，让我开始工作" }),
     );
 
     await waitFor(() =>
@@ -519,7 +519,7 @@ describe("BrainOverview", () => {
     render(<BrainOverview />);
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "finish setup" }),
+      await screen.findByRole("button", { name: "完成设置" }),
     );
     await waitFor(() =>
       expect(mocks.createOnboardingLiveView).toHaveBeenCalledWith(
@@ -543,7 +543,7 @@ describe("BrainOverview", () => {
 
     expect(
       await screen.findByTestId("onboarding-live-view-first-result"),
-    ).toHaveTextContent("your first real result is ready");
+    ).toHaveTextContent("你的第一个真实结果已就绪");
     expect(
       await screen.findByTestId("live-view-canvas", {}, { timeout: 10_000 }),
     ).toBeTruthy();
@@ -569,9 +569,9 @@ describe("BrainOverview", () => {
     expect(await screen.findByText("仪表盘")).toBeTruthy();
     expect(await screen.findByText("How I worked today")).toBeTruthy();
     expect(screen.getByText("4.5")).toBeTruthy();
-    expect(screen.getByText("hours")).toBeTruthy();
+    expect(screen.getByText("小时")).toBeTruthy();
     expect(screen.getByText("计划任务：daily-summary")).toBeTruthy();
-    expect(screen.getByText(/artifact #88 · v2/)).toBeTruthy();
+    expect(screen.getByText(/产物 #88 · v2/)).toBeTruthy();
   });
 
   it("switches between named dashboards without changing either one", async () => {
@@ -649,7 +649,7 @@ describe("BrainOverview", () => {
       "live-view-create-dashboard-dialog",
     );
     expect(
-      within(createDialog).getByText(/Describe the outcome you want/),
+      within(createDialog).getByText(/描述你想要的结果/),
     ).toBeTruthy();
     const aiPrompt = within(createDialog).getByTestId("live-view-ai-prompt");
     expect(aiPrompt).toBeTruthy();
@@ -725,14 +725,14 @@ describe("BrainOverview", () => {
       await screen.findByTestId("overview-unconfigured-blocks"),
     ).toHaveTextContent("1 个区块未连接到计划任务");
     expect(
-      screen.getByTestId("overview-card-source-status-meeting-commitments"),
+      await screen.findByTestId("overview-card-source-status-meeting-commitments"),
     ).toHaveTextContent("未配置");
 
     fireEvent.click(screen.getByTestId("overview-refresh-data"));
 
     expect(
       await screen.findByTestId("live-view-data-status"),
-      ).toHaveTextContent("1 of 2 sections updated · 1 not configured");
+    ).toHaveTextContent("已更新 1 / 2 个区块 · 1 个未配置");
   });
 
   it("shows a persistent error status when a refresh cannot start", async () => {
@@ -772,7 +772,7 @@ describe("BrainOverview", () => {
 
     expect(
       await screen.findByTestId("live-view-data-status"),
-      ).toHaveTextContent("AI usage limit");
+      ).toHaveTextContent("AI 使用额度");
   });
 
   it("keeps primary controls visible and moves setup actions into More", async () => {
@@ -833,7 +833,7 @@ describe("BrainOverview", () => {
     await openDashboardMenu();
     expect(await screen.findByTestId("overview-new-dashboard")).toBeTruthy();
     expect(screen.getByTestId("overview-edit").textContent).toContain(
-      "customize",
+      "自定义",
     );
   });
 
@@ -1071,7 +1071,7 @@ describe("BrainOverview", () => {
     await waitFor(() =>
       expect(
         screen.getByTestId("overview-stalled-sources").textContent,
-      ).toContain("1 source"),
+      ).toContain("1 个数据源仅在刷新时更新"),
     );
 
     fireEvent.click(await screen.findByTestId("overview-refresh-data"));
@@ -1297,7 +1297,7 @@ describe("BrainOverview", () => {
       slots: [],
     });
     expect(await screen.findByTestId("overview-zero-state")).toBeTruthy();
-    expect(screen.getByText("choose an outcome")).toBeTruthy();
+    expect(screen.getByText("选择一个目标")).toBeTruthy();
     expect(screen.getByTestId("live-view-template-daily-memory")).toBeTruthy();
     expect(
       screen.getByPlaceholderText(/展示我的时间分配方式以及本周的变化/),
@@ -1308,18 +1308,18 @@ describe("BrainOverview", () => {
     expect(
       await screen.findByTestId("overview-destination-replace"),
     ).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("use this dashboard")).toBeTruthy();
+    expect(screen.getByText("使用此仪表板")).toBeTruthy();
     expect(screen.getByTestId("overview-apply-template")).toHaveTextContent(
-      "build with agent",
+      "使用代理创建",
     );
-    fireEvent.click(screen.getByText("discard"));
+    fireEvent.click(screen.getByText("放弃"));
     expect(await screen.findByTestId("overview-zero-state")).toBeTruthy();
     fireEvent.click(screen.getByTestId("overview-start-blank"));
     fireEvent.click(screen.getByTestId("overview-add-card"));
-    expect(screen.getByText("Live View name")).toBeTruthy();
-    expect(screen.getByText("Block title")).toBeTruthy();
-    expect(screen.getByText("Block type")).toBeTruthy();
-    expect(screen.getByText("Connected scheduled task")).toBeTruthy();
+    expect(screen.getByText("实时视图名称")).toBeTruthy();
+    expect(screen.getByText("区块标题")).toBeTruthy();
+    expect(screen.getByText("区块类型")).toBeTruthy();
+    expect(screen.getByText("关联的定时任务")).toBeTruthy();
     const cardTitle = screen.getByTestId(/^overview-block-title-/);
     fireEvent.change(cardTitle, {
       target: { value: "Automation opportunities" },
@@ -1361,7 +1361,7 @@ describe("BrainOverview", () => {
     render(<BrainOverview />);
 
     await openDashboardMenu();
-    fireEvent.click(await screen.findByText("delete"));
+    fireEvent.click(await screen.findByText("删除"));
     fireEvent.click(await screen.findByTestId("overview-confirm-delete"));
 
     const emptyState = await screen.findByTestId("brain-overview-empty");
@@ -1436,9 +1436,9 @@ describe("BrainOverview", () => {
     expect(await screen.findByText(generatedView.title)).toBeTruthy();
     expect(screen.getByText(generatedView.note)).toBeTruthy();
     expect(screen.getByTestId("overview-apply-ai")).toHaveTextContent(
-      "create dashboard & load data",
+      "创建仪表板并加载数据",
     );
-    expect(screen.queryByText("add your first Block")).toBeNull();
+    expect(screen.queryByText("添加你的第一个区块")).toBeNull();
     expect(mocks.saveBrainView).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByTestId("overview-apply-ai"));
@@ -1539,8 +1539,8 @@ describe("BrainOverview", () => {
     fireEvent.keyDown(screen.getByTestId("overview-drag-focus-time"), {
       key: "ArrowDown",
     });
-    fireEvent.click(screen.getByRole("button", { name: "Grow Focus time" }));
-    fireEvent.click(screen.getByRole("button", { name: "Edit Focus time" }));
+    fireEvent.click(screen.getByRole("button", { name: "放大 Focus time" }));
+    fireEvent.click(screen.getByRole("button", { name: "编辑 Focus time" }));
     fireEvent.change(screen.getByTestId("overview-block-title-focus-time"), {
       target: { value: "Deep work" },
     });
@@ -1693,7 +1693,7 @@ describe("BrainOverview", () => {
     render(<BrainOverview />);
 
     const useful = await screen.findByRole("button", {
-      name: "mark Focus time useful",
+      name: "标记 Focus time 有用",
     });
     fireEvent.click(useful);
     await waitFor(() =>
@@ -1713,7 +1713,7 @@ describe("BrainOverview", () => {
     });
 
     fireEvent.click(
-      screen.getByRole("button", { name: "regenerate Focus time" }),
+      screen.getByRole("button", { name: "重新生成 Focus time" }),
     );
     await waitFor(() =>
       expect(
@@ -1757,7 +1757,7 @@ describe("BrainOverview", () => {
     render(<BrainOverview />);
 
     const useful = await screen.findByRole("button", {
-      name: "mark Focus time useful",
+      name: "标记 Focus time 有用",
     });
     fireEvent.click(useful);
   });
@@ -1810,7 +1810,7 @@ describe("BrainOverview", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("1 handled · show")).toBeTruthy(),
+      expect(screen.getByText("1 已处理 · 显示")).toBeTruthy(),
     );
     const actionCall = mocks.localFetch.mock.calls.find(([path]) =>
       String(path).endsWith("/actions"),
@@ -1833,7 +1833,7 @@ describe("BrainOverview", () => {
       ).toBe(true),
     );
 
-    fireEvent.click(screen.getByText("1 handled · show"));
+    fireEvent.click(screen.getByText("1 已处理 · 显示"));
     expect(
       await screen.findByRole("button", {
         name: "重新打开：Send the customer recap",
@@ -1866,7 +1866,7 @@ describe("BrainOverview", () => {
     render(<BrainOverview />);
 
     const notUseful = await screen.findByRole("button", {
-      name: "mark Focus time not useful",
+      name: "标记 Focus time 没有帮助",
     });
     fireEvent.click(notUseful);
     fireEvent.change(
@@ -1875,7 +1875,7 @@ describe("BrainOverview", () => {
         target: { value: "exclude meetings" },
       },
     );
-    fireEvent.click(screen.getByRole("button", { name: "save feedback" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存反馈" }));
 
     await waitFor(() =>
       expect(notUseful.getAttribute("aria-pressed")).toBe("true"),
@@ -1907,7 +1907,7 @@ describe("BrainOverview", () => {
     render(<BrainOverview />);
 
     const useful = await screen.findByRole("button", {
-      name: "mark Focus time useful",
+      name: "标记 Focus time 有用",
     });
     fireEvent.click(useful);
   });
@@ -1949,13 +1949,13 @@ describe("BrainOverview", () => {
     render(<BrainOverview />);
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "edit Focus time with AI" }),
+      await screen.findByRole("button", { name: "使用 AI 编辑 Focus time" }),
     );
     fireEvent.change(
       await screen.findByPlaceholderText("例如：改为按项目分组"),
       { target: { value: "group this by project" } },
     );
-    fireEvent.click(screen.getByRole("button", { name: "update" }));
+    fireEvent.click(screen.getByRole("button", { name: "更新" }));
 
     expect(await screen.findByTestId("live-view-ai-review")).toBeTruthy();
     expect(mocks.saveBrainView).not.toHaveBeenCalled();
@@ -2038,7 +2038,7 @@ describe("BrainOverview", () => {
     fireEvent.click(screen.getByTestId("live-view-ai-generate"));
 
     expect(await screen.findByTestId("live-view-ai-review")).toHaveTextContent(
-      "Review 4 proposed Blocks",
+      "审查 4 个 AI 提议的区块",
     );
     expect(screen.queryByTestId("overview-zero-state")).toBeNull();
     expect(await screen.findByTestId("live-view-canvas")).toBeTruthy();
@@ -2233,13 +2233,13 @@ describe("BrainOverview", () => {
     render(<BrainOverview />);
 
     fireEvent.click(
-      await screen.findByRole("button", { name: "edit Focus time with AI" }),
+      await screen.findByRole("button", { name: "使用 AI 编辑 Focus time" }),
     );
     fireEvent.change(
       await screen.findByPlaceholderText("例如：改为按项目分组"),
       { target: { value: "group this by project" } },
     );
-    fireEvent.click(screen.getByRole("button", { name: "update" }));
+    fireEvent.click(screen.getByRole("button", { name: "更新" }));
     fireEvent.click(
       await screen.findByTestId("canvas-proposal-reject-focus-time"),
     );
@@ -2289,7 +2289,7 @@ describe("BrainOverview", () => {
     expect(screen.queryByTestId("overview-mode-canvas")).toBeNull();
     expect(screen.getByTestId("canvas-block-focus-time")).toBeTruthy();
     expect(screen.getByText("计划任务：daily-summary")).toBeTruthy();
-    expect(screen.getByText(/artifact #88 · v2/)).toBeTruthy();
+    expect(screen.getByText(/产物 #88 · v2/)).toBeTruthy();
     await waitFor(() =>
       expect(mocks.saveBrainViewCanvas).toHaveBeenCalledWith(
         expect.objectContaining({

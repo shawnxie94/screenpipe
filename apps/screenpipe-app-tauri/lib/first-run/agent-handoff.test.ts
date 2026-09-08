@@ -237,7 +237,7 @@ describe("HANDOFF_PROMPT", () => {
   });
 
   it("asks about the window the user just watched fill up", () => {
-    expect(HANDOFF_PROMPT).toContain("5 minutes");
+    expect(HANDOFF_PROMPT).toContain("5 分钟");
   });
 
   it("stays short enough to paste by hand", () => {

@@ -51,9 +51,9 @@ type ResizeSession = {
 
 const WIDTHS = [3, 6, 12] as const;
 const WIDTH_LABELS: Record<(typeof WIDTHS)[number], string> = {
-  3: "quarter",
-  6: "half",
-  12: "full",
+  3: "四分之一",
+  6: "一半",
+  12: "完整",
 };
 
 function normalizedSlots(slots: BrainViewSlot[]): BrainViewSlot[] {
@@ -164,7 +164,7 @@ export function LiveViewLayoutEditor({
     }
     const nextSlot: BrainViewSlot = {
       id,
-      title: "New Block",
+      title: "新区块",
       component: "metric.v1",
       width: 6,
       order: slots.length,
@@ -212,15 +212,14 @@ export function LiveViewLayoutEditor({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-6 items-center bg-foreground px-2 font-mono text-[9px] uppercase tracking-wide text-background">
-              editing
+              编辑中
             </span>
             <h2 className="truncate text-base font-semibold tracking-tight">
-              Arrange your Live View
+              调整你的实时视图
             </h2>
           </div>
           <p className="mt-1.5 text-xs text-muted-foreground">
-            Drag Blocks to move them. Use the width controls or side handle to
-            resize.
+            拖动区块即可移动。使用宽度控件或侧边拖柄调整大小。
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
@@ -232,7 +231,7 @@ export function LiveViewLayoutEditor({
             className="h-9 rounded-none px-3"
             onClick={addSlot}
           >
-            <Plus className="mr-1.5 h-3.5 w-3.5" /> add Block
+            <Plus className="mr-1.5 h-3.5 w-3.5" /> 添加区块
           </Button>
           <Button
             type="button"
@@ -242,7 +241,7 @@ export function LiveViewLayoutEditor({
             disabled={saving}
             onClick={onCancel}
           >
-            cancel
+            取消
           </Button>
           <Button
             data-testid="overview-save"
@@ -257,7 +256,7 @@ export function LiveViewLayoutEditor({
             ) : (
               <Check className="mr-1.5 h-3.5 w-3.5" />
             )}
-            done
+            完成
           </Button>
         </div>
       </div>
@@ -275,7 +274,7 @@ export function LiveViewLayoutEditor({
           }`}
         >
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Live View name
+            实时视图名称
           </span>
           <Input
             data-testid="overview-title"
@@ -290,7 +289,7 @@ export function LiveViewLayoutEditor({
         {hasSelectableTimeRange && (
           <label className="space-y-1.5 p-3">
             <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
-              Time window
+              时间范围
             </span>
             <select
               aria-label="模板时间范围"
@@ -317,12 +316,12 @@ export function LiveViewLayoutEditor({
         <section
           data-testid={`overview-block-inspector-${selectedSlot.id}`}
           className="mb-4 border border-foreground bg-muted/20 p-4"
-          aria-label={`Edit ${selectedSlot.title}`}
+          aria-label={`编辑 ${selectedSlot.title}`}
         >
           <div className="mb-3 flex items-start justify-between gap-4">
             <div>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Block settings
+                区块设置
               </p>
               <h3 className="text-sm font-medium">{selectedSlot.title}</h3>
             </div>
@@ -330,7 +329,7 @@ export function LiveViewLayoutEditor({
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="关闭 Block 设置"
+              aria-label="关闭区块设置"
               className="h-8 w-8 rounded-none"
               onClick={() => setSelectedSlotId(null)}
             >
@@ -340,7 +339,7 @@ export function LiveViewLayoutEditor({
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(12rem,1.5fr)_minmax(10rem,1fr)_minmax(10rem,1fr)_8rem]">
             <label className="space-y-1">
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Block title
+                区块标题
               </span>
               <Input
                 data-testid={`overview-block-title-${selectedSlot.id}`}
@@ -357,7 +356,7 @@ export function LiveViewLayoutEditor({
             </label>
             <label className="space-y-1">
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Block type
+                区块类型
               </span>
               <select
                 data-testid={`overview-block-type-${selectedSlot.id}`}
@@ -380,7 +379,7 @@ export function LiveViewLayoutEditor({
             </label>
             <label className="space-y-1">
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Connected scheduled task
+                关联的定时任务
               </span>
               <select
                 data-testid={`overview-pipe-${selectedSlot.id}`}
@@ -406,7 +405,7 @@ export function LiveViewLayoutEditor({
             </label>
             <label className="space-y-1">
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Width
+                宽度
               </span>
               <select
                 data-testid={`overview-block-width-${selectedSlot.id}`}
@@ -426,14 +425,14 @@ export function LiveViewLayoutEditor({
             </label>
             <label className="space-y-1 md:col-span-2 xl:col-span-4">
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                What this Block should show
+                此区块要展示什么
               </span>
               <textarea
                 data-testid={`overview-block-intent-${selectedSlot.id}`}
                 value={selectedSlot.intent ?? ""}
                 maxLength={800}
                 rows={2}
-                placeholder={`For example: Calculate time spent on GTM as a percentage of all active time in the selected period. Use 0 when no GTM activity is observed.`}
+                placeholder={`例如：计算所选时间段内 GTM 占全部活跃时间的比例。如果没有观察到 GTM 活动，则使用 0。`}
                 className="w-full resize-y border border-border bg-background px-3 py-2 text-xs outline-none focus:border-foreground"
                 onChange={(event) =>
                   updateSlot(selectedSlot.id, (slot) => ({
@@ -451,8 +450,7 @@ export function LiveViewLayoutEditor({
                 (component) => component.value === selectedSlot.component,
               )?.schema
             }
-            . The title is display copy. The instruction above is the data
-            contract the connected scheduled task receives on its next run.
+            。标题是显示文案；上面的说明是关联定时任务下次运行时接收的数据约定。
           </p>
         </section>
       )}
@@ -466,7 +464,7 @@ export function LiveViewLayoutEditor({
           <Plus className="h-5 w-5" />
           <span className="text-sm font-medium">添加你的第一个区块</span>
           <span className="text-xs text-muted-foreground">
-            Connect it to a scheduled task now or fill it with AI later.
+            现在关联一个定时任务，或稍后让 AI 填充。
           </span>
         </button>
       ) : (
@@ -503,7 +501,7 @@ export function LiveViewLayoutEditor({
                   <button
                     type="button"
                     data-testid={`overview-drag-${slot.id}`}
-                    aria-label={`Drag ${slot.title}. Use arrow keys to reorder.`}
+                    aria-label={`拖动 ${slot.title}。使用方向键重新排序。`}
                     title="拖动移动"
                     onKeyDown={(event) => {
                       if (
@@ -564,13 +562,13 @@ export function LiveViewLayoutEditor({
                       {slot.title}
                     </p>
                     <p className="font-mono text-[8px] uppercase text-muted-foreground">
-                      {index + 1} of {slots.length} · {WIDTH_LABELS[width]}
+                      第 {index + 1}/{slots.length} 个 · {WIDTH_LABELS[width]}
                     </p>
                   </div>
                   <div className="hidden items-center border border-border bg-background sm:flex">
                     <button
                       type="button"
-                      aria-label={`Shrink ${slot.title}`}
+                      aria-label={`缩小 ${slot.title}`}
                       title="变窄"
                       disabled={!canShrink}
                       onClick={() =>
@@ -588,7 +586,7 @@ export function LiveViewLayoutEditor({
                     </span>
                     <button
                       type="button"
-                      aria-label={`Grow ${slot.title}`}
+                      aria-label={`放大 ${slot.title}`}
                       title="变宽"
                       disabled={!canGrow}
                       onClick={() =>
@@ -604,7 +602,7 @@ export function LiveViewLayoutEditor({
                   </div>
                   <button
                     type="button"
-                    aria-label={`Edit ${slot.title}`}
+                    aria-label={`编辑 ${slot.title}`}
                     title="编辑区块"
                     onClick={() => setSelectedSlotId(slot.id)}
                     className="inline-flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
@@ -613,7 +611,7 @@ export function LiveViewLayoutEditor({
                   </button>
                   <button
                     type="button"
-                    aria-label={`Delete ${slot.title}`}
+                    aria-label={`删除 ${slot.title}`}
                     title="删除区块"
                     onClick={() => {
                       changeSlots(
@@ -633,7 +631,7 @@ export function LiveViewLayoutEditor({
 
                 <button
                   type="button"
-                  aria-label={`Resize ${slot.title}. Use left and right arrow keys.`}
+                  aria-label={`调整 ${slot.title} 大小。使用左右方向键。`}
                   title="拖动调整大小"
                   onKeyDown={(event) => {
                     if (

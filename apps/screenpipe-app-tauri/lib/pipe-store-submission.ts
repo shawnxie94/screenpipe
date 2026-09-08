@@ -18,25 +18,25 @@ export function buildPipeStoreSubmissionMailto({
   const cleanName = pipeName?.trim();
   const cleanSlug = slug?.trim();
   const label = cleanName || cleanSlug;
-  const action = kind === "update" ? "update" : "submission";
+  const action = kind === "update" ? "更新" : "投稿";
   const subject = label
-    ? `Screenpipe Store ${action}: ${label}`
-    : `Screenpipe Store ${action}`;
+    ? `Screenpipe 商店${action}：${label}`
+    : `Screenpipe 商店${action}`;
 
   const body = [
-    "Hi Louis,",
+    "Louis，你好：",
     "",
     kind === "update"
-      ? "I'd like to submit an update to a scheduled task in the Screenpipe Store."
-      : "I'd like to submit a scheduled task to the Screenpipe Store.",
-    cleanName ? `Scheduled task: ${cleanName}` : undefined,
-    cleanSlug ? `Store slug: ${cleanSlug}` : undefined,
+      ? "我想为 Screenpipe 商店中的一个定时任务提交更新。"
+      : "我想向 Screenpipe 商店提交一个定时任务。",
+    cleanName ? `定时任务：${cleanName}` : undefined,
+    cleanSlug ? `商店标识：${cleanSlug}` : undefined,
     "",
-    "Repository or pipe.md link:",
+    "代码仓库或 pipe.md 链接：",
     "",
-    kind === "update" ? "What changed:" : "What it does:",
+    kind === "update" ? "变更内容：" : "功能说明：",
     "",
-    "I have not included API keys, credentials, or private data.",
+    "未包含 API 密钥、凭据或私人数据。",
   ].filter((line): line is string => line !== undefined);
 
   const query = new URLSearchParams({

@@ -173,7 +173,7 @@ describe("useAgentHandoff — performing the handoff", () => {
     });
 
     // The question is already copied, so this is a downgrade, not a failure.
-    expect(result.current.hint).toMatch(/open claude and paste it/i);
+    expect(result.current.hint).toMatch(/打开 Claude 并粘贴/);
   });
 
   it("keeps the in-app summary as recovery when open and copy both fail", async () => {
@@ -187,7 +187,7 @@ describe("useAgentHandoff — performing the handoff", () => {
       await result.current.askAgent(result.current.targets[0]);
     });
 
-    expect(result.current.hint).toMatch(/open the summary instead/i);
+    expect(result.current.hint).toMatch(/打开摘要/);
   });
 
   it("replays Cursor's deeplink after startup before claiming it is prefilled", async () => {

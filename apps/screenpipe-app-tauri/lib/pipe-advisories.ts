@@ -45,18 +45,18 @@ export function buildPipeAdvisories(
   const advisory: PendingAdvisory = {
     id: "pipe:summary",
     title: singleFailure
-      ? `scheduled task "${failures[0].name}" couldn't run`
-      : `${failures.length} scheduled tasks couldn't run`,
+      ? `定时任务“${failures[0].name}”运行失败`
+      : `${failures.length} 个定时任务运行失败`,
     body:
       messages.length === 1
         ? messages[0]
-        : `${messages.length} issues are blocking these background scheduled tasks.`,
+        : `${messages.length} 个问题阻塞了这些后台定时任务。`,
     severity: "warn",
     ...(singleFailure
       ? {}
       : {
           details: {
-            label: `view ${failures.length} affected scheduled tasks`,
+            label: `查看受影响的 ${failures.length} 个定时任务`,
             items: failures.map(({ name, parsed }) =>
               messages.length === 1 ? name : `${name} — ${parsed.message}`,
             ),

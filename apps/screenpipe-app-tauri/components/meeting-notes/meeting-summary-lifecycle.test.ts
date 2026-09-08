@@ -262,8 +262,8 @@ describe("meeting summary lifecycle", () => {
       status: "failed",
       error_type: "daily_limit",
     });
-    expect(copy).toContain("AI usage limit");
-    expect(copy).toContain("Your meeting and transcript are safe");
+    expect(copy).toContain("AI 使用上限");
+    expect(copy).toContain("你的会议和转写内容是安全的");
   });
 });
 
@@ -281,9 +281,9 @@ describe("meetingSummaryFailure", () => {
   it("tells the user rate limits are transient and retryable", () => {
     const failure = meetingSummaryFailure(failed("rate_limited"));
     expect(failure.kind).toBe("rate_limit");
-    expect(failure.title).toBe("AI is temporarily rate-limited");
+    expect(failure.title).toBe("AI 暂时受到频率限制");
     expect(failure.retryable).toBe(true);
-    expect(failure.copy).toContain("rate-limited");
+    expect(failure.copy).toContain("频率限制");
     expect(failure.upgrade).toBeNull();
   });
 
@@ -295,9 +295,9 @@ describe("meetingSummaryFailure", () => {
     ]) {
       const failure = meetingSummaryFailure(failed(errorType));
       expect(failure.retryable).toBe(false);
-      expect(failure.title).toBe("AI usage limit reached");
-      expect(failure.copy).toContain("usage limit");
-      expect(failure.copy).toContain("Your meeting and transcript are safe");
+      expect(failure.title).toBe("已达到 AI 使用上限");
+      expect(failure.copy).toContain("AI 使用上限");
+      expect(failure.copy).toContain("你的会议和转写内容是安全的");
       expect(failure.changeModelRecommended).toBe(true);
     }
   });
@@ -336,7 +336,7 @@ describe("meetingSummaryFailure", () => {
       ),
     );
     expect(failure.kind).toBe("nothing_to_summarize");
-    expect(failure.title).toBe("Nothing to summarize");
+    expect(failure.title).toBe("没有可总结的内容");
     expect(failure.retryable).toBe(false);
     expect(failure.changeModelRecommended).toBe(false);
     expect(failure.upgrade).toBeNull();
@@ -350,17 +350,17 @@ describe("meetingSummaryFailure", () => {
       ),
     );
     expect(failure.kind).toBe("summary_not_saved");
-    expect(failure.title).toBe("Summary didn't save");
+    expect(failure.title).toBe("摘要未保存");
     expect(failure.retryable).toBe(true);
-    expect(failure.copy).toContain("transcript is safe");
+    expect(failure.copy).toContain("转写内容是安全的");
   });
 
   it("suggests switching models when the plan gates the model", () => {
     const failure = meetingSummaryFailure(failed("model_not_allowed"));
     expect(failure.kind).toBe("model_not_allowed");
-    expect(failure.title).toBe("Summary model not included");
+    expect(failure.title).toBe("当前方案不包含摘要模型");
     expect(failure.retryable).toBe(false);
-    expect(failure.copy.toLowerCase()).toContain("model");
+    expect(failure.copy).toContain("模型");
   });
 
   it("explains an AI provider authentication failure", () => {
@@ -368,11 +368,11 @@ describe("meetingSummaryFailure", () => {
       failed("auth_failed", "authentication failed — check API key"),
     );
     expect(failure.kind).toBe("auth_failed");
-    expect(failure.title).toBe("AI provider needs attention");
+    expect(failure.title).toBe("AI 服务需要处理");
     expect(failure.retryable).toBe(false);
-    expect(failure.copy).toContain("AI provider");
-    expect(failure.copy).toContain("API key");
-    expect(failure.copy).toContain("meeting and transcript are safe");
+    expect(failure.copy).toContain("AI 服务");
+    expect(failure.copy).toContain("API 密钥");
+    expect(failure.copy).toContain("会议和转写内容是安全的");
   });
 
   it("classifies from the error message when error_type is missing", () => {
@@ -387,7 +387,7 @@ describe("meetingSummaryFailure", () => {
     expect(failure.retryable).toBe(true);
     expect(failure.changeModelRecommended).toBe(false);
     expect(failure.copy).toBe(
-      "Your meeting and transcript are safe. Retry when you're ready.",
+      "你的会议和转写内容是安全的。准备好后可以重试。",
     );
   });
 });

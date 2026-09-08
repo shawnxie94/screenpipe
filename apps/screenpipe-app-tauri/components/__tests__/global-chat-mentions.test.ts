@@ -80,8 +80,8 @@ describe("global chat mentions", () => {
     );
 
     expect(suggestions).toEqual([
-      { tag: "#firefox", description: "833 frames", category: "tag" },
-      { tag: "#coding", description: "138 frames, 2 memories", category: "tag" },
+      { tag: "#firefox", description: "833 个画面", category: "tag" },
+      { tag: "#coding", description: "138 个画面，2 条记忆", category: "tag" },
     ]);
   });
 
@@ -95,8 +95,8 @@ describe("global chat mentions", () => {
     );
 
     expect(suggestions).toEqual([
-      { tag: "#person:louis", description: "3 memories", category: "tag" },
-      { tag: "#call", description: "2 audio clips", category: "tag" },
+      { tag: "#person:louis", description: "3 条记忆", category: "tag" },
+      { tag: "#call", description: "2 段音频", category: "tag" },
     ]);
   });
 
@@ -221,7 +221,7 @@ describe("global chat mentions", () => {
       {
         tag: "$weekly-report",
         label: "Weekly Report",
-        description: "installed skill",
+        description: "已安装的技能",
         category: "skill",
       },
     ]);
@@ -291,31 +291,31 @@ describe("global chat mentions", () => {
   it.each([
     {
       token: "~7days",
-      label: "past 7 days",
+      label: "过去 7 天",
       start: [2026, 6, 23, 12],
       end: [2026, 6, 30, 12],
     },
     {
       token: "~lastweek",
-      label: "previous week",
+      label: "上周",
       start: [2026, 6, 20, 0],
       end: [2026, 6, 26, 23],
     },
     {
       token: "~lastmonth",
-      label: "previous month",
+      label: "上个月",
       start: [2026, 5, 1, 0],
       end: [2026, 5, 30, 23],
     },
     {
       token: "~april",
-      label: "April 2026",
+      label: "四月 2026",
       start: [2026, 3, 1, 0],
       end: [2026, 3, 30, 23],
     },
     {
       token: "~april2025",
-      label: "April 2025",
+      label: "四月 2025",
       start: [2025, 3, 1, 0],
       end: [2025, 3, 30, 23],
     },

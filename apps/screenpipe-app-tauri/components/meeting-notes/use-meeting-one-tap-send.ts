@@ -95,7 +95,7 @@ export function useMeetingOneTapSend(
   const send = useCallback(async (): Promise<
     { ok: true; detail: string } | { ok: false; error: string }
   > => {
-    if (!remembered || sending) return { ok: false, error: "not ready" };
+    if (!remembered || sending) return { ok: false, error: "尚未准备好" };
     setSending(true);
     try {
       // Emptiness is a property of the sections, not of the rendered text: the
@@ -106,7 +106,7 @@ export function useMeetingOneTapSend(
       const sections = artifact.sections.filter((section) =>
         section.body.trim(),
       );
-      if (sections.length === 0) throw new Error("Nothing to send yet.");
+      if (sections.length === 0) throw new Error("暂无可发送的内容。");
       const body = renderConnectedShareArtifact(
         artifact,
         sections.map((section) => section.id),
@@ -122,11 +122,11 @@ export function useMeetingOneTapSend(
 
       // Deliberately not re-writing the remembered destination: this send did
       // not choose anything, so it has nothing new to teach the preference.
-      return { ok: true, detail: `sent to ${remembered.label}` };
+      return { ok: true, detail: `已发送到 ${remembered.label}` };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error.message : "Couldn't send this.",
+        error: error instanceof Error ? error.message : "无法发送此内容。",
       };
     } finally {
       setSending(false);

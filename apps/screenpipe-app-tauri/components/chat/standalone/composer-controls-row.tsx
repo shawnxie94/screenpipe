@@ -208,17 +208,17 @@ export function ComposerControlsRow({
         )}
         title={
           sendButton.isStopMode
-            ? "stop"
+            ? "停止"
             : sendButton.hasPendingDocs
-              ? "waiting for attachment to finish extracting"
-              : "send"
+              ? "等待附件提取完成"
+              : "发送"
         }
         aria-label={
           sendButton.isStopMode
-            ? "stop reply"
+            ? "停止回复"
             : sendButton.hasPendingDocs
-              ? "send disabled while attachment is extracting"
-              : "send message"
+              ? "附件提取期间无法发送"
+              : "发送消息"
         }
       >
         {sendButton.isStopMode ? (

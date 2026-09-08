@@ -90,10 +90,10 @@ function ContextualSuggestions({
       </div>
 
       <h3 className="mb-0.5 text-sm font-medium text-foreground">
-        Start with what you&apos;ve been doing
+        从你正在做的事情开始
       </h3>
       <p className="mb-4 text-xs text-muted-foreground">
-        Pick a prompt, edit it, then send when it looks right
+        选择一个提示词，编辑后确认无误再发送
       </p>
 
       <div
@@ -156,7 +156,7 @@ function ContextualSuggestions({
           strokeWidth={1.5}
           aria-hidden
         />
-        refresh
+          刷新
       </button>
     </div>
   );

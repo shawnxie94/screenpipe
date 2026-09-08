@@ -131,7 +131,7 @@ describe("AcpPermissionSelector", () => {
 
     fireEvent.click(trigger);
     expect(
-      screen.getByText("how should codex actions be approved?"),
+      screen.getByText("如何批准 Codex 的操作？"),
     ).toBeInTheDocument();
     expect(screen.getByText("请求批准")).toBeInTheDocument();
     expect(screen.getByText("替我批准")).toBeInTheDocument();
@@ -366,16 +366,16 @@ describe("AcpPermissionSelector", () => {
     expect(trigger).toHaveTextContent("请求批准");
     expect(trigger).toHaveAttribute(
       "aria-label",
-      "Claude Code permissions: 请求批准",
+      "Claude Code 权限：请求批准",
     );
 
     fireEvent.click(trigger);
     expect(
-      screen.getByText("how should claude code actions be approved?"),
+      screen.getByText("如何批准 Claude Code 的操作？"),
     ).toBeInTheDocument();
     expect(screen.getByText("批准编辑")).toBeInTheDocument();
-    expect(screen.getByText("Plan only")).toBeInTheDocument();
-    expect(screen.getByText("Don't ask")).toBeInTheDocument();
+    expect(screen.getByText("仅规划")).toBeInTheDocument();
+    expect(screen.getByText("不再询问")).toBeInTheDocument();
     fireEvent.click(
       screen.getByTestId("acp-permission-option-bypassPermissions"),
     );
@@ -439,7 +439,7 @@ describe("AcpPermissionSelector", () => {
     expect(trigger).toHaveTextContent("请求批准");
     expect(trigger).toHaveAttribute(
       "aria-label",
-      "GitHub Copilot permissions: 请求批准",
+      "GitHub Copilot 权限：请求批准",
     );
     fireEvent.click(trigger);
     fireEvent.click(screen.getByTestId("acp-permission-option-true"));
@@ -493,11 +493,11 @@ describe("AcpPermissionSelector", () => {
     render(<AcpPermissionSelector sessionId={SESSION} agentId={agentId} />);
 
     expect(screen.getByTestId("acp-permission-trigger")).toHaveTextContent(
-      "Confirm changes",
+      "确认更改",
     );
     expect(screen.getByTestId("acp-permission-trigger")).toHaveAttribute(
       "aria-label",
-      `${agentName} permissions: Confirm changes`,
+      `${agentName} 权限：确认更改`,
     );
   });
 

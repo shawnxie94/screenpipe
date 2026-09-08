@@ -111,13 +111,13 @@ export function usePiLiveSendControls({
       const result = stopAction.result;
       if (!result.ok && result.status !== "not_running") {
         toast({
-          title: "scheduled task stop failed",
+          title: "停止定时任务失败",
           description: result.error,
           variant: "destructive",
         });
       } else if (result.ok) {
         toast({
-        title: "stopping scheduled task",
+        title: "正在停止定时任务",
           description:
             result.status === "stop_pending"
               ? `${stopAction.pipeName} will stop as soon as the agent subprocess finishes spawning`

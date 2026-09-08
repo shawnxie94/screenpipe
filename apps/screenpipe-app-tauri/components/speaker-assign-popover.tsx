@@ -151,8 +151,8 @@ export function SpeakerAssignPopover({
 						});
 						if (!resp.ok) throw new Error("rename undo failed");
 						toast({
-							title: "undone",
-							description: "the voice is unnamed again",
+							title: "已撤销",
+							description: "说话人已恢复为未命名",
 						});
 						return;
 					}
@@ -167,36 +167,36 @@ export function SpeakerAssignPopover({
 					if (!undoResp.ok) throw new Error("undo failed");
 					const undoResult = await undoResp.json();
 					toast({
-						title: "undone",
-						description: `restored ${undoResult.restored} transcriptions`,
+					title: "已撤销",
+					description: `已恢复 ${undoResult.restored} 条转录`,
 					});
 				};
 
 				toast({
-					title: `assigned to "${trimmedName}"`,
+					title: `已分配给“${trimmedName}”`,
 					description: result.renamed_whole_speaker
-						? `every line from this voice${lines > 1 ? ` (${lines})` : ""} is now ${trimmedName}`
-						: "this line only — the rest of the voice is unchanged",
+						? `此说话人的每一行${lines > 1 ? `（${lines} 行）` : ""}现在都标记为${trimmedName}`
+						: "仅修改此行，其余说话人记录保持不变",
 					action: undoable ? (
 						<ToastAction
-							altText="Undo speaker assignment"
+							altText="撤销说话人分配"
 							onClick={async () => {
 								try {
 									await undo();
 									onAssigned?.(result.new_speaker_id, result.new_speaker_name);
 								} catch {
-									toast({ title: "undo failed", variant: "destructive" });
+									toast({ title: "撤销失败", variant: "destructive" });
 								}
 							}}
 						>
-							undo
+							撤销
 						</ToastAction>
 					) : undefined,
 				});
 			} catch (error) {
 				console.error("Error assigning speaker:", error);
 				toast({
-					title: "Error",
+					title: "错误",
 					description: "说话人分配失败，请重试。",
 					variant: "destructive",
 				});
@@ -222,7 +222,7 @@ export function SpeakerAssignPopover({
 			}
 
 			toast({
-				title: "Marked as noise",
+				title: "已标记为噪音",
 				description: "此音频将在后续处理中被忽略。",
 			});
 
@@ -230,7 +230,7 @@ export function SpeakerAssignPopover({
 		} catch (error) {
 			console.error("Error marking hallucination:", error);
 			toast({
-				title: "Error",
+				title: "错误",
 				description: "标记为噪音失败，请重试。",
 				variant: "destructive",
 			});
@@ -344,7 +344,7 @@ export function SpeakerAssignPopover({
 								onClick={() => setShowAudioPreview(!showAudioPreview)}
 							>
 								<Volume2 className="h-3 w-3 mr-2" />
-								{showAudioPreview ? "Hide audio preview" : "Play audio to confirm"}
+									{showAudioPreview ? "隐藏音频预览" : "播放音频以确认"}
 							</Button>
 
 							{showAudioPreview && (
@@ -366,7 +366,7 @@ export function SpeakerAssignPopover({
 								disabled={isAssigning}
 							>
 								<Ghost className="h-3 w-3 mr-2" />
-								This is just noise (nobody speaking)
+							这只是噪音（没有人在说话）
 							</Button>
 						</div>
 					)}
@@ -375,7 +375,7 @@ export function SpeakerAssignPopover({
 					{isAssigning && (
 						<div className="flex items-center justify-center py-2">
 							<Loader2 className="h-4 w-4 animate-spin mr-2" />
-							<span className="text-sm text-muted-foreground">Assigning...</span>
+							<span className="text-sm text-muted-foreground">正在分配...</span>
 						</div>
 					)}
 				</div>

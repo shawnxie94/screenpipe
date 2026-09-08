@@ -107,7 +107,7 @@ describe("RecentChatSwitcherController", () => {
     render(<RecentChatSwitcherController onActivateConversation={onActivateConversation} />);
 
     fireEvent.keyDown(window, { key: "Tab", ctrlKey: true });
-    expect(screen.getByText("Open chats")).toBeInTheDocument();
+    expect(screen.getByText("已打开的聊天")).toBeInTheDocument();
     expect(screen.queryByText("closed recent")).not.toBeInTheDocument();
     let buttons = screen.getAllByRole("button");
     expect(buttons[1]).toHaveClass("bg-muted/55");
@@ -189,7 +189,7 @@ describe("RecentChatSwitcherController", () => {
     fireEvent.keyDown(window, { key: "Tab", ctrlKey: true, metaKey: true });
     fireEvent.keyUp(window, { key: "Control" });
 
-    expect(screen.queryByText("Open chats")).not.toBeInTheDocument();
+    expect(screen.queryByText("已打开的聊天")).not.toBeInTheDocument();
     expect(onActivateConversation).not.toHaveBeenCalled();
   });
 
@@ -207,7 +207,7 @@ describe("RecentChatSwitcherController", () => {
       });
     });
 
-    expect(screen.getByText("Open chats")).toBeInTheDocument();
+    expect(screen.getByText("已打开的聊天")).toBeInTheDocument();
     const buttons = screen.getAllByRole("button");
     expect(buttons[1]).toHaveClass("bg-muted/55");
 
@@ -235,7 +235,7 @@ describe("RecentChatSwitcherController", () => {
       await Promise.resolve();
     });
     expect(onActivateConversation).toHaveBeenCalledWith("chat-b");
-    expect(screen.queryByText("Open chats")).not.toBeInTheDocument();
+    expect(screen.queryByText("已打开的聊天")).not.toBeInTheDocument();
   });
 
   it("does nothing when fewer than two chat tabs are open", async () => {
@@ -244,8 +244,8 @@ describe("RecentChatSwitcherController", () => {
     render(<RecentChatSwitcherController onActivateConversation={onActivateConversation} />);
 
     fireEvent.keyDown(window, { key: "Tab", ctrlKey: true });
-    expect(screen.queryByText("Open chats")).not.toBeInTheDocument();
-    expect(screen.queryByText("No open chats")).not.toBeInTheDocument();
+    expect(screen.queryByText("已打开的聊天")).not.toBeInTheDocument();
+    expect(screen.queryByText("没有打开的聊天")).not.toBeInTheDocument();
 
     await act(async () => {
       seedOpenTab({ id: "chat-a" });
@@ -256,7 +256,7 @@ describe("RecentChatSwitcherController", () => {
       fireEvent.keyUp(window, { key: "Control" });
     });
 
-    expect(screen.queryByText("Open chats")).not.toBeInTheDocument();
+    expect(screen.queryByText("已打开的聊天")).not.toBeInTheDocument();
     expect(onActivateConversation).not.toHaveBeenCalled();
   });
 });

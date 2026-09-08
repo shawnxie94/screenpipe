@@ -23,7 +23,7 @@ describe("MeetingSummaryTransition", () => {
       />,
     );
 
-    expect(screen.getByRole("status")).toHaveAccessibleName("meeting saved");
+    expect(screen.getByRole("status")).toHaveAccessibleName("会议已保存");
     expect(
       screen.getByText(
         "你的笔记已保存。在摘要开始前完成文字记录。",
@@ -32,9 +32,9 @@ describe("MeetingSummaryTransition", () => {
     expect(
       screen.queryByTestId("meeting-summary-draft-block"),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "show transcript" }));
+    fireEvent.click(screen.getByRole("button", { name: "显示转写" }));
     expect(onTranscriptToggle).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole("button", { name: "resume recording" }));
+    fireEvent.click(screen.getByRole("button", { name: "恢复录制" }));
     expect(onResume).toHaveBeenCalledOnce();
   });
 
@@ -49,7 +49,7 @@ describe("MeetingSummaryTransition", () => {
       />,
     );
 
-    expect(screen.getByRole("status")).toHaveAccessibleName("writing summary");
+    expect(screen.getByRole("status")).toHaveAccessibleName("正在撰写摘要");
     expect(
       screen.getByText(
         "你的笔记和文字记录是安全的。草稿会随书写出现在摘要中。",
@@ -58,13 +58,13 @@ describe("MeetingSummaryTransition", () => {
     expect(
       screen.queryByTestId("meeting-summary-draft-block"),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "view summary" }));
+    fireEvent.click(screen.getByRole("button", { name: "查看摘要" }));
     expect(onOpenSummary).toHaveBeenCalledOnce();
     expect(
-      screen.getByRole("button", { name: "hide transcript" }),
+      screen.getByRole("button", { name: "隐藏转写" }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(
-      screen.queryByRole("button", { name: "resume recording" }),
+      screen.queryByRole("button", { name: "恢复录制" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveClass("mb-7", "border-b", "pb-5");
   });

@@ -122,10 +122,10 @@ describe("pipe install dialog lifecycle", () => {
     await openRegistryInstall();
 
     const install = screen.getByRole("button", {
-      name: "install scheduled task",
+      name: "安装定时任务",
     });
     fireEvent.click(install);
-    expect(await screen.findByText("installing...")).toBeInTheDocument();
+    expect(await screen.findByText("正在安装…")).toBeInTheDocument();
     expect(screen.getByText("审查定时任务访问权限")).toBeInTheDocument();
     expect(cancelled).not.toHaveBeenCalled();
 
@@ -177,7 +177,7 @@ describe("pipe install dialog lifecycle", () => {
 
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "install scheduled task" }),
+      screen.getByRole("button", { name: "安装定时任务" }),
     ).toBeEnabled();
   });
 
@@ -200,7 +200,7 @@ describe("pipe install dialog lifecycle", () => {
     render(<PipeInstallDialog />);
     await openRegistryInstall();
     fireEvent.click(
-      screen.getByRole("button", { name: "install scheduled task" }),
+      screen.getByRole("button", { name: "安装定时任务" }),
     );
 
     await waitFor(() => expect(mocks.setSection).toHaveBeenCalledWith("pipes"));

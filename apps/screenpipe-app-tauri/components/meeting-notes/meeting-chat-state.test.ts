@@ -61,7 +61,7 @@ describe("availability precedence", () => {
       );
       expect(a.enabled).toBe(true);
       expect(a.reason).toBeNull();
-      expect(a.placeholder).toBe("ask about this meeting");
+      expect(a.placeholder).toBe("询问此会议");
     }
   });
 
@@ -95,7 +95,7 @@ describe("availability precedence", () => {
   it("case 11: blocks only when there is no evidence at all", () => {
     const a = resolveMeetingChatAvailability(base({ transcriptTurnCount: 0 }));
     expect(a.reason).toBe("no-transcript");
-    expect(a.placeholder).toBe("nothing recorded yet");
+    expect(a.placeholder).toBe("尚未记录内容");
   });
 
   it("case 11: a written note is enough to ask about", () => {
@@ -181,9 +181,9 @@ describe("availability precedence", () => {
 describe("suggestions", () => {
   it("case 41: an empty thread offers a way in", () => {
     expect(resolveMeetingChatSuggestions(base(), false)).toEqual([
-      "what did i commit to?",
-      "draft the follow-up email",
-      "what was left unanswered?",
+      "我承诺了什么？",
+      "起草后续邮件",
+      "哪些问题还没有答案？",
     ]);
   });
 
@@ -193,7 +193,7 @@ describe("suggestions", () => {
 
   it("case 15/24: a live meeting asks about the meeting so far", () => {
     expect(resolveMeetingChatSuggestions(base({ isLive: true }), false)).toContain(
-      "what did i miss?",
+      "我错过了什么？",
     );
   });
 
@@ -210,7 +210,7 @@ describe("suggestions", () => {
       base({ summaryLifecycle: { kind: "failed", execution: genericFailure } }),
       false,
     );
-    expect(suggestions[0]).toBe("why did this fail?");
+    expect(suggestions[0]).toBe("为什么失败了？");
   });
 
   it("case 6: a model-access failure offers nothing, because a turn hits the same wall", () => {

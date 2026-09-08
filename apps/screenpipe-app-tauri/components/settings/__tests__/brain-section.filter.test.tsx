@@ -278,14 +278,14 @@ describe("BrainSection type filter", () => {
     await waitFor(() => {
       expect(screen.getByTestId("brain-view-switcher")).toHaveAttribute(
         "aria-label",
-        "switch Brain view, current: Memories",
+        "切换知识库视图，当前：记忆",
       );
     });
 
     openBrainViewMenu();
-    expect(screen.getByTestId("brain-filter-overview")).toHaveTextContent("Live Views3");
-    expect(screen.getByTestId("brain-filter-memories")).toHaveTextContent("Memories8");
-    expect(screen.getByTestId("brain-filter-artifacts")).toHaveTextContent("Artifacts5");
+    expect(screen.getByTestId("brain-filter-overview")).toHaveTextContent("实时视图3");
+    expect(screen.getByTestId("brain-filter-memories")).toHaveTextContent("记忆8");
+    expect(screen.getByTestId("brain-filter-artifacts")).toHaveTextContent("产物5");
   });
 
   it("shows memories by default", async () => {
@@ -294,7 +294,7 @@ describe("BrainSection type filter", () => {
     expect(artifactRows().length).toBe(0);
     expect(screen.getByTestId("brain-view-switcher")).toHaveAttribute(
       "aria-label",
-      "switch Brain view, current: Memories",
+      "切换知识库视图，当前：记忆",
     );
   });
 
@@ -306,28 +306,28 @@ describe("BrainSection type filter", () => {
     await waitFor(() => expect(artifactRows().length).toBe(5));
     expect(screen.getByTestId("brain-view-switcher")).toHaveAttribute(
       "aria-label",
-      "switch Brain view, current: Artifacts",
+      "切换知识库视图，当前：产物",
     );
 
     selectBrainView("overview");
     await waitFor(() =>
       expect(screen.getByTestId("brain-view-switcher")).toHaveAttribute(
         "aria-label",
-        "switch Brain view, current: Live Views",
+        "切换知识库视图，当前：实时视图",
       ),
     );
     const dashboardRow = screen.getByTestId("overview-dashboard-row");
     const overviewSwitcher = within(dashboardRow).getByTestId(
       "brain-view-switcher",
     );
-    expect(overviewSwitcher).not.toHaveTextContent("Live Views");
+    expect(overviewSwitcher).not.toHaveTextContent("实时视图");
     expect(overviewSwitcher.querySelector("svg")).not.toBeNull();
 
     selectBrainView("memories");
     await waitFor(() => expect(memoryRows().length).toBe(8));
     expect(screen.getByTestId("brain-view-switcher")).toHaveAttribute(
       "aria-label",
-      "switch Brain view, current: Memories",
+      "切换知识库视图，当前：记忆",
     );
   });
 
@@ -340,10 +340,10 @@ describe("BrainSection type filter", () => {
       render(<BrainSection />);
 
       await waitFor(() => {
-        expect(screen.getByText(/memories haven't updated in/i)).toBeTruthy();
+        expect(screen.getByText(/记忆已有 .* 天未更新/)).toBeTruthy();
         expect(
           screen.getByText(
-            /check that a memory-writing scheduled task is installed and enabled/i,
+            /请确认记忆写入定时任务已安装并启用/,
           ),
         ).toBeTruthy();
       });
@@ -378,12 +378,12 @@ describe("BrainSection type filter", () => {
     render(<BrainSection />);
     await waitFor(() => expect(memoryRows().length).toBe(8));
 
-    fireEvent.click(screen.getByRole("button", { name: /filter by/i }));
+    fireEvent.click(screen.getByRole("button", { name: /筛选/ }));
     await waitFor(() => expect(screen.getByRole("button", { name: "visa" })).toBeTruthy());
-    expect(screen.getByText("People")).toBeTruthy();
+    expect(screen.getByText("人员")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Ansh" })).toBeTruthy();
-    expect(screen.getByText("Sources")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Meeting 38" })).toBeTruthy();
+    expect(screen.getByText("来源")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "会议 38" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "visa" }));
     fireEvent.click(screen.getByRole("button", { name: "travel" }));
 
@@ -442,7 +442,7 @@ describe("BrainSection type filter", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('no artifacts matching "yoo" in title or content'),
+        screen.getByText('标题或内容中没有匹配“yoo”的产物'),
       ).toBeTruthy();
     });
   });
@@ -461,7 +461,7 @@ describe("BrainSection type filter", () => {
     expect(screen.getByText("加载产物失败")).toBeTruthy();
     expect(screen.getByText("HTTP 500")).toBeTruthy();
     expect(
-      screen.queryByText("no artifacts yet. create a chat note or run a pipe."),
+      screen.queryByText("还没有产物"),
     ).toBeNull();
   });
 
@@ -474,7 +474,7 @@ describe("BrainSection type filter", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('no memories matching "yoo"')).toBeTruthy();
+      expect(screen.getByText('没有匹配“yoo”的记忆')).toBeTruthy();
     });
   });
 
@@ -528,13 +528,13 @@ describe("BrainSection type filter", () => {
         "locating",
       );
     });
-    expect(screen.getByText("opening result")).toBeTruthy();
+    expect(screen.getByText("正在打开结果")).toBeTruthy();
 
     act(() => releaseRequest());
     await waitFor(() => expect(screen.getByTestId("brain-detail-panel")).toBeTruthy());
     expect(screen.getByTestId("brain-view-switcher")).toHaveAttribute(
       "title",
-      "switch Brain view, current: Artifacts",
+      "切换知识库视图，当前：产物",
     );
     expect(artifactRows().length).toBe(5);
   });
@@ -554,7 +554,7 @@ describe("BrainSection type filter", () => {
         "missing",
       );
     });
-    expect(screen.getByText("result unavailable")).toBeTruthy();
+    expect(screen.getByText("结果不可用")).toBeTruthy();
     expect(screen.queryByTestId("brain-artifact-request-viewer")).toBeNull();
     expect(localFetch).toHaveBeenCalledWith(
       "/artifacts?limit=1&offset=0&id=999999",
@@ -577,7 +577,7 @@ describe("BrainSection type filter", () => {
         "error",
       );
     });
-    expect(screen.getByText("couldn't load result")).toBeTruthy();
+    expect(screen.getByText("无法加载结果")).toBeTruthy();
     expect(screen.getByTestId("brain-artifact-request-viewer")).toBeTruthy();
 
     artifactFetchError = false;
@@ -616,7 +616,7 @@ describe("BrainSection type filter", () => {
     fireEvent.click(screen.getByTestId("brain-item-artifact-100"));
 
     openDetailMenu();
-    fireEvent.click(await screen.findByText("go to chat"));
+    fireEvent.click(await screen.findByText("前往聊天"));
 
     expect(emit).toHaveBeenCalledWith("chat-load-conversation", {
       conversationId: "chat-b",

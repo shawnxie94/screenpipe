@@ -30,7 +30,7 @@ describe("MessageContent rich results", () => {
     expect(screen.getByText("Scheduled. I’ll check again in five minutes.")).toBeTruthy();
     expect(screen.getByText("Recheck deployment")).toBeTruthy();
     expect(container.textContent).not.toContain("::screenpipe-result");
-    fireEvent.click(screen.getByRole("button", { name: "Open Recheck deployment" }));
+    fireEvent.click(screen.getByRole("button", { name: "打开 Recheck deployment" }));
     expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: "recheck-deployment" }));
   });
 

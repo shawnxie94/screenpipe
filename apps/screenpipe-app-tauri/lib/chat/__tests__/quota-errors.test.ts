@@ -74,19 +74,19 @@ describe("classifyQuotaError", () => {
 describe("hosted busy messages", () => {
   it("explains automatic retry and queued follow-ups without model-switch advice", () => {
     const message = buildHostedBusyMessage();
-    expect(message).toContain("Retrying automatically");
-    expect(message).toContain("will be queued");
-    expect(message).not.toContain("switch");
+    expect(message).toContain("正在自动重试");
+    expect(message).toContain("新消息会排队等待");
+    expect(message).not.toContain("切换");
   });
 
   it("shows the retry delay and attempt", () => {
     expect(buildHostedBusyRetryMessage(2, 3, 2_100)).toContain(
-      "Retrying in 3s… (2/3)",
+      "将在 3 秒后重试……（2/3）",
     );
   });
 
   it("uses truthful terminal copy", () => {
-    expect(buildHostedBusyFinalMessage()).toContain("could not start");
+    expect(buildHostedBusyFinalMessage()).toContain("无法开始此回复");
   });
 });
 
@@ -95,9 +95,7 @@ describe("buildDailyLimitMessage", () => {
     const message = buildDailyLimitMessage(
       '{"error":{"code":"hosted_ai_allowance_exceeded"},"allowance":{"lane":"auto","plan":"basic","managed_by":"cloudflare"}}',
     );
-    expect(message).toBe(
-      "Your AI usage limit is reached. Switch to Auto.",
-    );
+    expect(message).toBe("已达到 AI 使用上限。请切换到“自动”。");
     expect(message).not.toContain("explicit");
     expect(message).not.toMatch(/\$\d/);
   });
@@ -106,9 +104,7 @@ describe("buildDailyLimitMessage", () => {
     const message = buildDailyLimitMessage(
       '{"error":{"code":"hosted_ai_allowance_exceeded"},"allowance":{"lane":"explicit","plan":"business","managed_by":"cloudflare"},"required_plan":"business_max","upgrade_url":"https://screenpipe.com/account/billing?target_plan=pro_max&interval=month"}',
     );
-    expect(message).toBe(
-      "Your AI usage limit is reached. Switch to Auto or upgrade.",
-    );
+    expect(message).toBe("已达到 AI 使用上限。请切换到“自动”或进行升级。");
     expect(message).not.toContain("explicit");
   });
 
@@ -121,8 +117,8 @@ describe("buildDailyLimitMessage", () => {
 
   it("shows the daily free message wall without immediate retry copy", () => {
     const message = buildDailyLimitMessage("free_chat_limit_exceeded");
-    expect(message).toContain("2 free AI messages");
-    expect(message).toContain("tomorrow");
+    expect(message).toContain("2 条免费 AI 消息");
+    expect(message).toContain("明天");
     expect(message).toContain("Claude");
     expect(message).toContain("Codex");
   });
@@ -130,22 +126,22 @@ describe("buildDailyLimitMessage", () => {
   it("shows the per-message tool-loop boundary", () => {
     expect(
       buildDailyLimitMessage("free_chat_turn_request_limit_exceeded"),
-    ).toContain("8-step agent limit");
+    ).toContain("代理 8 步上限");
   });
 
   it("returns the rate-limited copy when the string mentions a rate limit", () => {
     expect(buildDailyLimitMessage("rate limit hit")).toContain(
-      "temporarily rate-limited",
+      "暂时受到频率限制",
     );
     expect(buildDailyLimitMessage("Rate limit hit")).toContain(
-      "temporarily rate-limited",
+      "暂时受到频率限制",
     );
   });
 
   it("returns concise account-budget copy for cost-limit errors", () => {
     const msg = buildDailyLimitMessage("daily_cost_limit_exceeded");
-    expect(msg).toContain("usage limit");
-    expect(msg).toContain("Background scheduled tasks share this budget");
+    expect(msg).toContain("使用额度");
+    expect(msg).toContain("后台计划任务也会共用此额度");
     // must not leak a raw dollar cap
     expect(msg).not.toMatch(/\$\d/);
   });
@@ -160,7 +156,7 @@ describe("buildDailyLimitMessage", () => {
       }),
     });
     const message = buildDailyLimitMessage(error);
-    expect(message).toContain("Choose a recovery option below");
+    expect(message).toContain("请在下方选择恢复选项");
     expect(message).not.toContain("Upgrade to Business");
     expect(parseQuotaUpgradeAction(error)).toEqual({
       requiredPlan: "business",
@@ -246,7 +242,7 @@ describe("buildDailyLimitMessage", () => {
     });
     expect(parseQuotaUpgradeAction(error)?.requiredPlan).toBe("business_max");
     expect(buildDailyLimitMessage(error)).toBe(
-      "Your AI usage limit is reached. Switch to Auto or upgrade.",
+      "已达到 AI 使用上限。请切换到“自动”或进行升级。",
     );
   });
 
@@ -261,7 +257,7 @@ describe("buildDailyLimitMessage", () => {
         upgrade_url: "https://screenpipe.com/account/billing",
       });
       expect(parseQuotaUpgradeAction(error)?.requiredPlan).toBe("business");
-      expect(buildDailyLimitMessage(error)).toContain("recovery option below");
+      expect(buildDailyLimitMessage(error)).toContain("请在下方选择恢复选项");
     }
   });
 
@@ -275,7 +271,7 @@ describe("buildDailyLimitMessage", () => {
           "https://screenpipe.com/account/billing?target_plan=pro_max&interval=month",
       });
       expect(parseQuotaUpgradeAction(error)?.requiredPlan).toBe("business_max");
-      expect(buildDailyLimitMessage(error)).toContain("recovery option below");
+      expect(buildDailyLimitMessage(error)).toContain("请在下方选择恢复选项");
     },
   );
 
@@ -295,24 +291,24 @@ describe("buildDailyLimitMessage", () => {
 
   it("tailors copy by tier", () => {
     expect(buildDailyLimitMessage('{"tier":"subscribed"}')).toContain(
-      "daily model limit",
+      "每日模型上限",
     );
     expect(buildDailyLimitMessage('{"tier":"business_max"}')).toContain(
-      "daily model limit",
+      "每日模型上限",
     );
     expect(buildDailyLimitMessage('{"tier":"business_ultra"}')).toContain(
-      "daily model limit",
+      "每日模型上限",
     );
     expect(buildDailyLimitMessage('{"tier":"logged_in"}')).toContain(
-      "upgrade to Business",
+      "升级到商业版",
     );
     expect(buildDailyLimitMessage('{"tier":"anonymous"}')).toContain(
-      "Sign in for more",
+      "登录以获得更多次数",
     );
   });
 
   it("falls back to a generic message for unknown shapes", () => {
-    expect(buildDailyLimitMessage("???")).toContain("included model queries");
+    expect(buildDailyLimitMessage("???")).toContain("包含的模型查询次数");
   });
 });
 
@@ -320,12 +316,12 @@ describe("buildRateLimitMessage", () => {
   it("includes the wait time when the error says 'wait N seconds' and it's per-minute", () => {
     expect(
       buildRateLimitMessage("rate limit exceeded, wait 30 seconds"),
-    ).toContain("30 seconds");
+    ).toContain("30 秒");
   });
 
   it("uses a generic message when no per-minute signal is present", () => {
     expect(buildRateLimitMessage("some 429 thing")).toContain(
-      "switch to a different model",
+      "切换到其他模型",
     );
   });
 });
@@ -365,7 +361,7 @@ describe("presentQuotaError", () => {
     // Chat's "Choose a recovery option below." assumes the chat recovery
     // panel; these surfaces render their own actions next to the copy.
     expect(presented.message).not.toContain("below");
-    expect(presented.message.toLowerCase()).toContain("usage limit");
+    expect(presented.message).toContain("AI 使用上限");
     expect(presented.upgrade).toEqual({
       requiredPlan: "business",
       upgradeUrl: "https://screenpi.pe/account/billing",
@@ -379,7 +375,7 @@ describe("presentQuotaError", () => {
     );
     expect(presented.kind).toBe("daily");
     expect(presented.message).toBe(
-      "Your AI usage limit is reached. Switch to Auto.",
+      "已达到 AI 使用上限。请切换到“自动”。",
     );
     expect(presented.message).not.toContain("explicit");
   });
@@ -389,7 +385,7 @@ describe("presentQuotaError", () => {
       "rate limit exceeded. Please wait 12 seconds.",
     );
     expect(presented.kind).toBe("rate");
-    expect(presented.message).toContain("12 seconds");
+    expect(presented.message).toContain("12 秒");
     expect(presented.upgrade).toBeNull();
   });
 
@@ -412,7 +408,7 @@ describe("presentQuotaError", () => {
     const msg = buildDailyLimitMessage(error);
     expect(msg).not.toContain("few seconds");
     expect(msg).not.toContain("temporarily rate-limited");
-    expect(msg).toContain("this month");
+    expect(msg).toContain("本月");
   });
 
   it("never promises a reset for a trial allowance that does not refill", () => {
@@ -421,8 +417,8 @@ describe("presentQuotaError", () => {
       resets_at: null,
     });
     const msg = buildDailyLimitMessage(error);
-    expect(msg).toContain("doesn't refill");
-    expect(msg).not.toMatch(/resets (at|on|tomorrow)/);
+    expect(msg).toContain("试用期间不会补充");
+    expect(msg).not.toContain("重置");
     expect(msg).not.toContain("few seconds");
   });
 
@@ -431,20 +427,20 @@ describe("presentQuotaError", () => {
     const msg = buildDailyLimitMessage(
       JSON.stringify({ error: "daily_cost_limit_exceeded", resets_at: soon }),
     );
-    expect(msg).toMatch(/It resets at /);
+    expect(msg).toMatch(/在 /);
   });
 
   it("falls back to a vague window when resets_at is unparseable", () => {
     const msg = buildDailyLimitMessage(
       JSON.stringify({ error: "daily_cost_limit_exceeded", resets_at: "not-a-date" }),
     );
-    expect(msg).toContain("It resets tomorrow");
+    expect(msg).toContain("明天重置");
     expect(msg).not.toContain("Invalid Date");
   });
 
   it("still treats a genuine provider rate limit as transient", () => {
     const msg = buildDailyLimitMessage("429 rate_limit from upstream provider");
-    expect(msg).toContain("temporarily rate-limited");
+    expect(msg).toContain("暂时受到频率限制");
   });
 
 });
@@ -471,17 +467,17 @@ describe("buildModelNotAllowedMessage", () => {
 
   it("names the rejected model and the ways out", () => {
     const msg = buildModelNotAllowedMessage(GATEWAY_403);
-    expect(msg).toContain('"codex-acp" is not available');
-    expect(msg).toContain("Choose another model");
+    expect(msg).toContain("“codex-acp” 无法通过所选服务商使用");
+    expect(msg).toContain("请选择其他模型");
   });
 
   it("survives an escaped body and a body with no model name", () => {
     expect(buildModelNotAllowedMessage(JSON.stringify(`403 ${GATEWAY_403}`))).toContain(
-      '"codex-acp" is not available',
+      "“codex-acp” 无法通过所选服务商使用",
     );
     expect(
       buildModelNotAllowedMessage('{"error":"model_not_allowed"}'),
-    ).toContain("This model is not available");
+    ).toContain("此模型 无法通过所选服务商使用");
   });
 
   it("offers the upgrade only when the gateway supplies a validated one", () => {
@@ -494,7 +490,7 @@ describe("buildModelNotAllowedMessage", () => {
       }),
     );
     expect(msg).toBe(
-      "This model needs the Business plan. Switch to Auto to keep going, or upgrade.",
+      "此模型需要商业版方案。请切换到“自动”继续，或进行升级。",
     );
   });
 
@@ -513,7 +509,7 @@ describe("buildModelNotAllowedMessage", () => {
     const msg = buildModelNotAllowedMessage(
       `{"message":"Model \\"${"x".repeat(500)}\\" is not available"}`,
     );
-    expect(msg).toContain("This model is not available");
+    expect(msg).toContain("此模型 无法通过所选服务商使用");
     expect(msg.length).toBeLessThan(300);
   });
 });

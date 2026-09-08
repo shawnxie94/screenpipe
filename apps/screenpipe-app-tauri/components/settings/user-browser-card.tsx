@@ -68,25 +68,25 @@ export function UserBrowserCard() {
         return (
           <span className="px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full inline-flex items-center gap-1">
             <Loader2 className="h-3 w-3 animate-spin" />
-            checking
+            检查中
           </span>
         );
       case "connected":
         return (
           <span className="px-2 py-0.5 text-xs font-medium bg-green-500/10 text-green-600 dark:text-green-400 rounded-full">
-            connected
+            已连接
           </span>
         );
       case "disconnected":
         return (
           <span className="px-2 py-0.5 text-xs font-medium bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-full">
-            extension not installed or not running
+            扩展未安装或未运行
           </span>
         );
       case "error":
         return (
           <span className="px-2 py-0.5 text-xs font-medium bg-red-500/10 text-red-600 dark:text-red-400 rounded-full">
-            unreachable
+            无法访问
           </span>
         );
     }
@@ -117,15 +117,14 @@ export function UserBrowserCard() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-sm font-semibold text-foreground">
-                Your Browser (extension)
+                你的浏览器（扩展）
               </h3>
               {badge}
             </div>
 
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              Lets agents use your real Chrome / Arc / Edge when browser
-              context is needed. Install the extension, then approve the
-              connection in Screenpipe. No API token copy/paste.
+              让代理在需要浏览器上下文时使用你实际打开的 Chrome / Arc / Edge。
+              安装扩展后，在 screenpipe 中批准连接。无需复制粘贴 API 令牌。
             </p>
 
             {status.kind !== "connected" ? (
@@ -138,20 +137,19 @@ export function UserBrowserCard() {
                   } catch {
                     try { await commands.copyTextToClipboard(CHROME_WEBSTORE_URL); } catch { /* clipboard may be denied */ }
                     toast({
-                      title: "couldn't open your browser",
-                      description: `link copied — paste in Chrome: ${CHROME_WEBSTORE_URL}`,
+                      title: "无法打开浏览器",
+                      description: `链接已复制，请粘贴到 Chrome：${CHROME_WEBSTORE_URL}`,
                     });
                   }
                 }}
                 className="text-xs"
               >
                 <ExternalLink className="h-3 w-3 mr-1.5" />
-                Install or reconnect extension
+                安装或重新连接扩展
               </Button>
             ) : (
               <p className="text-xs text-muted-foreground">
-                The extension is connected. Screenpipe can use your open tabs
-                when you ask an agent to work in the browser.
+                扩展已连接。当你让代理在浏览器中工作时，screenpipe 可以使用你打开的标签页。
               </p>
             )}
           </div>

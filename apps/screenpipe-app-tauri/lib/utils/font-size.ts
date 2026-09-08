@@ -7,10 +7,10 @@ export type FontSize = "14px" | "16px" | "18px" | "20px";
 export const FONT_SIZE_DEFAULT: FontSize = "16px";
 
 export const FONT_SIZE_OPTIONS: ReadonlyArray<{ value: FontSize; label: string }> = [
-  { value: "14px", label: "Small" },
-  { value: "16px", label: "Medium" },
-  { value: "18px", label: "Large" },
-  { value: "20px", label: "X-Large" },
+  { value: "14px", label: "小" },
+  { value: "16px", label: "中" },
+  { value: "18px", label: "大" },
+  { value: "20px", label: "特大" },
 ] as const;
 
 const STORAGE_KEY = "screenpipe-font-size";

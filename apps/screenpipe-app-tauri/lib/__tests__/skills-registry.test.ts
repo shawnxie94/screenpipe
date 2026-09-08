@@ -30,12 +30,12 @@ describe("sourceLabel", () => {
     expect(sourceLabel("anthropic")).toBe("Anthropic");
     expect(sourceLabel("openai")).toBe("OpenAI");
     expect(sourceLabel("screenpipe")).toBe("Screenpipe");
-    expect(sourceLabel("COMMUNITY")).toBe("Community");
+    expect(sourceLabel("COMMUNITY")).toBe("社区");
   });
   it("title-cases unknown sources and defaults empty to Community", () => {
     expect(sourceLabel("acme")).toBe("Acme");
-    expect(sourceLabel("")).toBe("Community");
-    expect(sourceLabel("  ")).toBe("Community");
+    expect(sourceLabel("")).toBe("社区");
+    expect(sourceLabel("  ")).toBe("社区");
   });
 });
 

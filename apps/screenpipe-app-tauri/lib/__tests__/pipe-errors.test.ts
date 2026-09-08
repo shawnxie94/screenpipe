@@ -33,7 +33,7 @@ describe("parsePipeError", () => {
       })}`,
     );
     expect(r.type).toBe("daily_limit");
-    expect(r.message).toBe("You've hit today's AI usage limit.");
+    expect(r.message).toBe("已达到每日 AI 使用上限");
   });
 
   it("classifies credits_exhausted", () => {
@@ -55,13 +55,13 @@ describe("parsePipeError", () => {
       })}`,
     );
     expect(r.type).toBe("quota_exhausted");
-    expect(r.message).toContain("current quota");
+    expect(r.message).toContain("服务商配额");
   });
 
   it("classifies model_not_allowed (new) with a friendly upgrade message", () => {
     const r = parsePipeError(stderr(403, { error: "model_not_allowed", tier: "logged_in" }));
     expect(r.type).toBe("model_not_allowed");
-    expect(r.message.toLowerCase()).toContain("business");
+    expect(r.message).toContain("商业版");
   });
 
   it("classifies rate limit as rate_limit", () => {
@@ -71,7 +71,7 @@ describe("parsePipeError", () => {
   it("classifies Pi's content-filter finish reason as a safety refusal", () => {
     const r = parsePipeError("Error: Provider finish_reason: content_filter");
     expect(r.type).toBe("safety_refusal");
-    expect(r.message).toBe("AI provider declined this scheduled task under its safety policy");
+    expect(r.message).toBe("AI 服务商根据安全策略拒绝了此计划任务");
   });
 
   it("classifies a structured provider safety refusal", () => {
@@ -82,7 +82,7 @@ describe("parsePipeError", () => {
       },
     }));
     expect(r.type).toBe("safety_refusal");
-    expect(r.message).toBe("Request blocked by provider safety policy");
+    expect(r.message).toBe("AI 服务商根据安全策略拒绝了此计划任务");
   });
 
   it("keeps a transient rate limit that merely mentions quota/billing as rate_limit", () => {

@@ -19,6 +19,7 @@ import { homeDir, join } from "@tauri-apps/api/path";
 import { Button } from "../ui/button";
 import {
   DEFAULT_PROMPT,
+  localizedPresetPrompt,
   useSettings,
 } from "@/lib/hooks/use-settings";
 import { testAiPresetConnection } from "@/lib/utils/ai-preset-connection";
@@ -143,7 +144,7 @@ const formatPresetName = (name: string): string => {
   // Check if the name looks like a UUID (8-4-4-4-12 format)
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (uuidRegex.test(name)) {
-    return `Preset ${name.slice(0, 8)}...`;
+    return `预设 ${name.slice(0, 8)}…`;
   }
   return name;
 };
@@ -388,7 +389,7 @@ const AISection = ({
       if (!settings.aiPresets.length) {
         const defaultPreset = {
           ...presetToSave,
-          prompt: settingsPreset?.prompt || DEFAULT_PROMPT,
+          prompt: localizedPresetPrompt(settingsPreset?.prompt),
           maxContextChars: settingsPreset?.maxContextChars || 512000,
           defaultPreset: true,
         } as AIPreset;
@@ -412,7 +413,7 @@ const AISection = ({
           if (p.id === preset.id) {
             return {
               ...presetToSave,
-              prompt: settingsPreset?.prompt || DEFAULT_PROMPT,
+              prompt: localizedPresetPrompt(settingsPreset?.prompt),
               maxContextChars: settingsPreset?.maxContextChars || 512000,
               defaultPreset: p.defaultPreset,
             } as AIPreset;
@@ -432,7 +433,7 @@ const AISection = ({
         // Handle create case (new preset or duplicate)
         const newPreset = {
           ...presetToSave,
-          prompt: settingsPreset?.prompt || DEFAULT_PROMPT,
+          prompt: localizedPresetPrompt(settingsPreset?.prompt),
           maxContextChars: settingsPreset?.maxContextChars || 512000,
           defaultPreset: false,
         } as AIPreset;
@@ -704,7 +705,7 @@ const AISection = ({
               const order = ["endpoint", "auth", "models", "chat"];
               return order.indexOf(k) > order.indexOf(failStep);
             })
-            .map((k) => [k, { status: "skip", message: "Skipped" }])
+            .map((k) => [k, { status: "skip", message: "已跳过" }])
         ),
       }));
       setTestStatus("done");
@@ -1368,7 +1369,7 @@ const AISection = ({
                             description: "点击下方“创建预设”以保存并开始使用。",
                           });
                         } else if (res.status === "error") {
-                          const msg = String(res.error || "unknown error");
+                          const msg = String(res.error || "未知错误");
                           console.error("chatgpt oauth failed:", msg);
                           toast({
                             title: "ChatGPT 登录失败",
@@ -1582,15 +1583,15 @@ const AISection = ({
           {settingsPreset?.provider === "native-ollama" && (
             <div className="text-xs text-muted-foreground space-y-1">
               <p>
-                <span className="font-medium">recommended:</span>{" "}
+                <span className="font-medium">推荐：</span>{" "}
                 <code className="bg-secondary/50 px-1 rounded">qwen3.5:9b</code>{" "}
                 <code className="bg-secondary/50 px-1 rounded">glm-4.7:9b</code>{" "}
                 <code className="bg-secondary/50 px-1 rounded">qwen3.5:4b</code>{" "}
-                (all support tool calling)
+                （均支持工具调用）
               </p>
               <p>
                 GPU 强烈建议使用。没有独立 GPU 时，本地模型会非常慢，计划任务可能会超时。
-                for best results consider screenpipe cloud or groq as custom provider.
+                如需更好的效果，可将 Screenpipe Cloud 或 Groq 配置为自定义服务商。
               </p>
             </div>
           )}
@@ -1601,7 +1602,7 @@ const AISection = ({
       <ValidatedTextarea
         id="customPrompt"
         label="自定义提示词"
-        value={settingsPreset?.prompt || DEFAULT_PROMPT}
+        value={localizedPresetPrompt(settingsPreset?.prompt)}
         onChange={handleCustomPromptChange}
         validation={(value) => {
           if (value.length < 10) {
@@ -1637,7 +1638,7 @@ const AISection = ({
                 {!resolvedModelLimits?.contextWindow && (
                   <div>
                     <Label htmlFor="maxContextTokens" className="text-sm font-medium">
-                      Model Context Tokens
+                      模型上下文令牌数
                     </Label>
                     <p className="text-xs text-muted-foreground mb-2">
                       仅当提供商未公布该模型的上下文窗口时需要填写。
@@ -1661,7 +1662,7 @@ const AISection = ({
                 {!resolvedModelLimits?.maxOutputTokens && (
                   <div>
                     <Label htmlFor="maxTokens" className="text-sm font-medium">
-                      Max Output Tokens
+                      最大输出令牌数
                     </Label>
                     <p className="text-xs text-muted-foreground mb-2">
                       仅当提供商未公布该模型的最大输出时需要填写。
@@ -2194,20 +2195,20 @@ useEffect(() => {
     return (
       <div className="space-y-5">
         <p className="text-muted-foreground text-sm mb-4">
-          Configure AI models and preferences
+          配置 AI 模型和偏好
         </p>
 
         <div className="w-full h-[400px] flex flex-col items-center justify-center space-y-4">
           <Settings2 className="w-12 h-12 text-muted-foreground" />
           <h2 className="text-xl font-medium text-muted-foreground">
-            No AI presets yet
+            还没有 AI 预设
           </h2>
           <p className="text-sm text-muted-foreground text-center max-w-md">
-            Create your first AI preset to get started with intelligent features. Presets allow you to quickly switch between different AI configurations.
+            创建第一个 AI 预设，开始使用智能功能。你可以通过预设快速切换不同的 AI 配置。
           </p>
           <Button onClick={() => setCreatePresentDialog(true)} size="lg">
             <Plus className="w-4 h-4 mr-2" />
-            Create Your First Preset
+            创建第一个预设
           </Button>
         </div>
       </div>

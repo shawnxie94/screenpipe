@@ -101,17 +101,17 @@ describe("formatAppEntityMeta", () => {
 	it("reports recency so a keyword-free browse looks worth opening", () => {
 		const meta = formatAppEntityMeta(app("Signal", 1204, "2026-08-01T10:00:00.000Z"));
 
-		expect(meta).toContain("1,204 frames");
-		expect(meta).toContain("last seen");
+  expect(meta).toContain("1,204 个画面");
+  expect(meta).toContain("最近记录于");
 	});
 
 	it("omits recency when the timestamp is unusable", () => {
-		expect(formatAppEntityMeta(app("Signal", 2, ""))).toBe("2 frames");
-		expect(formatAppEntityMeta(app("Signal", 2, "not-a-date"))).toBe("2 frames");
+  expect(formatAppEntityMeta(app("Signal", 2, ""))).toBe("2 个画面");
+  expect(formatAppEntityMeta(app("Signal", 2, "not-a-date"))).toBe("2 个画面");
 	});
 
 	it("singularises a lone frame", () => {
-		expect(formatAppEntityMeta(app("Signal", 1, ""))).toBe("1 frame");
+  expect(formatAppEntityMeta(app("Signal", 1, ""))).toBe("1 个画面");
 	});
 });
 

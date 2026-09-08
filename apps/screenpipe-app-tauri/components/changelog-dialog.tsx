@@ -116,19 +116,19 @@ export const ChangelogDialog: React.FC = () => {
     <Dialog open={showChangelogDialog} onOpenChange={onClose}>
       <DialogContent className="w-11/12 max-w-3xl p-0 h-[80vh] overflow-hidden flex flex-col">
         <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
-          <h1 className="text-xl font-semibold">changelog</h1>
+          <h1 className="text-xl font-semibold">更新日志</h1>
           <a
             href={screenpipeWebUrl("/changelog", "https://screenpipe.com")}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            view all <ExternalLink className="w-3 h-3" />
+            查看全部 <ExternalLink className="w-3 h-3" />
           </a>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {loading ? (
-            <div className="text-sm text-muted-foreground font-mono">loading…</div>
+            <div className="text-sm text-muted-foreground font-mono">正在加载…</div>
           ) : entries && entries.length > 0 ? (
             <div className="space-y-8">
               {entries.map((entry) => (
@@ -199,7 +199,7 @@ export const ChangelogDialog: React.FC = () => {
             </div>
           ) : (
             <div className="text-sm text-muted-foreground font-mono">
-              couldn&apos;t reach the changelog. try again later or visit{" "}
+              无法获取更新日志。请稍后重试，或访问{" "}
               <a
                 href={screenpipeWebUrl("/changelog", "https://screenpipe.com")}
                 target="_blank"

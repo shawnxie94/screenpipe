@@ -78,7 +78,7 @@ export interface MeetingChatAvailability {
   reason: MeetingChatDisabledReason | null;
 }
 
-const REST_PLACEHOLDER = "ask about this meeting";
+const REST_PLACEHOLDER = "询问此会议";
 
 /**
  * Summary failures that mean the model itself is out of reach, so a chat turn
@@ -120,14 +120,14 @@ export function resolveMeetingChatAvailability(
   // inconsistent: a live meeting, where the transcript is actively growing,
   // stayed askable.
   if (c.refreshingAfterRetranscription) {
-    return { enabled: false, placeholder: "refreshing…", reason: "refreshing" };
+    return { enabled: false, placeholder: "正在刷新转写…", reason: "refreshing" };
   }
   // Case 11: nothing to ask about at all. Mirrors Granola's empty-transcript
   // copy, but only when there is no written context either.
   if (c.transcriptTurnCount === 0 && !c.hasWrittenContext) {
     return {
       enabled: false,
-      placeholder: "nothing recorded yet",
+      placeholder: "尚未记录内容",
       reason: "no-transcript",
     };
   }
@@ -135,42 +135,42 @@ export function resolveMeetingChatAvailability(
   if (!c.hasPreset) {
     return {
       enabled: false,
-      placeholder: "set up ai in settings",
+      placeholder: "请先在设置中配置 AI",
       reason: "no-preset",
     };
   }
   // Case 71.
   if (c.quotaExhausted) {
-    return { enabled: false, placeholder: "ai limit reached", reason: "quota" };
+    return { enabled: false, placeholder: "已达到 AI 使用上限", reason: "quota" };
   }
   return { enabled: true, placeholder: REST_PLACEHOLDER, reason: null };
 }
 
 const LIVE_SUGGESTIONS = [
-  "what did i miss?",
-  "who has spoken most?",
-  "what was just decided?",
+  "我错过了什么？",
+  "谁发言最多？",
+  "刚刚决定了什么？",
 ];
 const SETTLED_SUGGESTIONS = [
-  "what did i commit to?",
-  "draft the follow-up email",
-  "what was left unanswered?",
+  "我承诺了什么？",
+  "起草后续邮件",
+  "哪些问题还没有答案？",
 ];
 const FAILED_SUGGESTIONS = [
-  "why did this fail?",
-  "summarize what you can",
-  "what did i commit to?",
+  "为什么失败了？",
+  "尽可能总结一下",
+  "我承诺了什么？",
 ];
 /**
  * Case 7: with no summary yet, the shortcut into the existing summary path is
  * the most useful thing on offer, so it leads. The panel routes this one label
  * to `onRunSummary` rather than sending a chat turn.
  */
-export const SUMMARY_SUGGESTION = "summarize this";
+export const SUMMARY_SUGGESTION = "总结这次会议";
 const IDLE_SUGGESTIONS = [
   SUMMARY_SUGGESTION,
-  "what did i commit to?",
-  "what was left unanswered?",
+  "我承诺了什么？",
+  "哪些问题还没有答案？",
 ];
 
 /**

@@ -95,7 +95,7 @@ export function BrowserUrlCard({ onStatusChange }: BrowserUrlCardProps) {
           <div className="flex-shrink-0">
             <img
               src="/images/browser-url.svg"
-              alt="Browser URL"
+              alt="浏览器 URL"
               className="w-10 h-10 rounded-lg"
             />
           </div>
@@ -103,28 +103,26 @@ export function BrowserUrlCard({ onStatusChange }: BrowserUrlCardProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-sm font-semibold text-foreground">
-                Browser URL Capture
+                浏览器 URL 采集
               </h3>
               <span className="px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full">
                 macOS
               </span>
               {allGranted && (
                 <span className="px-2 py-0.5 text-xs font-medium bg-green-500/10 text-green-600 rounded-full">
-                  all enabled
+                  全部已启用
                 </span>
               )}
             </div>
 
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              screenpipe needs Automation permission to capture URLs from
-              Chromium-based browsers. Safari works via Accessibility (already
-              enabled).
+              screenpipe 需要“自动化”权限才能从 Chromium 浏览器采集 URL。Safari 通过“辅助功能”工作（已启用）。
             </p>
 
             {loading ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                checking browser permissions...
+                正在检查浏览器权限…
               </div>
             ) : browsers.length > 0 ? (
               <div className="space-y-3">
@@ -143,8 +141,8 @@ export function BrowserUrlCard({ onStatusChange }: BrowserUrlCardProps) {
                         <Check className="h-3 w-3" />
                       )}
                       {hasPromptableBrowser
-                        ? "request automation permission"
-                        : "open automation settings"}
+                        ? "请求自动化权限"
+                        : "打开自动化设置"}
                     </Button>
                   </div>
                 )}
@@ -166,13 +164,13 @@ export function BrowserUrlCard({ onStatusChange }: BrowserUrlCardProps) {
                         <span className="text-xs font-medium">{b.name}</span>
                         {!b.running && b.status !== "granted" && (
                           <span className="text-[10px] text-muted-foreground">
-                            (not running)
+                            （未运行）
                           </span>
                         )}
                       </div>
 
                       {b.status === "granted" ? (
-                        <span className="text-[10px] text-green-600">enabled</span>
+                        <span className="text-[10px] text-green-600">已启用</span>
                       ) : b.status === "denied" ? (
                         <Button
                           variant="ghost"
@@ -183,7 +181,7 @@ export function BrowserUrlCard({ onStatusChange }: BrowserUrlCardProps) {
                           }
                         >
                           <ExternalLink className="h-3 w-3 mr-1" />
-                          open settings
+                          打开设置
                         </Button>
                       ) : b.running ? (
                         <Button
@@ -192,11 +190,11 @@ export function BrowserUrlCard({ onStatusChange }: BrowserUrlCardProps) {
                           className="h-6 text-[10px] px-2"
                           onClick={() => handleEnable(b.name)}
                         >
-                          enable
+                          启用
                         </Button>
                       ) : (
                         <span className="text-[10px] text-muted-foreground">
-                          open browser first
+                          请先打开浏览器
                         </span>
                       )}
                     </div>
@@ -207,8 +205,8 @@ export function BrowserUrlCard({ onStatusChange }: BrowserUrlCardProps) {
               <div className="space-y-2 rounded-lg border border-dashed border-border p-3">
                 <p className="text-xs text-muted-foreground">
                   {loadingError
-                    ? "couldn't read browser automation status. try requesting permission, then refresh."
-                    : "no supported Chromium browser was detected. open Chrome, Arc, Brave, Edge, or another Chromium browser, then refresh."}
+                    ? "无法读取浏览器自动化状态。请先请求权限，然后刷新。"
+                    : "未检测到受支持的 Chromium 浏览器。请打开 Chrome、Arc、Brave、Edge 或其他 Chromium 浏览器，然后刷新。"}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -223,7 +221,7 @@ export function BrowserUrlCard({ onStatusChange }: BrowserUrlCardProps) {
                     ) : (
                       <Check className="h-3 w-3" />
                     )}
-                    request automation permission
+                    请求自动化权限
                   </Button>
                   <Button
                     variant="ghost"
@@ -232,7 +230,7 @@ export function BrowserUrlCard({ onStatusChange }: BrowserUrlCardProps) {
                     onClick={() => commands.openPermissionSettings("automation")}
                   >
                     <ExternalLink className="h-3 w-3" />
-                    open settings
+                    打开设置
                   </Button>
                 </div>
               </div>
@@ -243,7 +241,7 @@ export function BrowserUrlCard({ onStatusChange }: BrowserUrlCardProps) {
               className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
             >
               <RefreshCw className="h-3 w-3" />
-              refresh status
+              刷新状态
             </button>
           </div>
         </div>

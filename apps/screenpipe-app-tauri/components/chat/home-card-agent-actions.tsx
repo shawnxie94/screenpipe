@@ -173,10 +173,10 @@ export function HomeCardAgentActions({
           onCloseAutoFocus={(event) => event.preventDefault()}
         >
           <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium">
-            start with agent
+            使用代理开始
           </DropdownMenuLabel>
           <p className="px-2 pb-2 text-[11px] leading-snug text-muted-foreground">
-            The agent runs inside Screenpipe with your recorded context.
+            代理会在 Screenpipe 中运行，并使用你已记录的上下文。
           </p>
           <DropdownMenuSeparator />
           {HOME_CARD_AGENTS.map((agentId) => {
@@ -215,12 +215,11 @@ export function HomeCardAgentActions({
         <AlertDialogContent data-testid="home-card-acp-setup-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              set up {setupInfo?.name ?? "this agent"}
+              配置 {setupInfo?.name ?? "此代理"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Add a {setupInfo?.name ?? "coding agent"} ACP preset first.
-              Screenpipe will install or connect the agent, handle sign-in, and
-              keep the chat here.
+              请先添加 {setupInfo?.name ?? "代码代理"} 的 ACP 预设。Screenpipe
+              会安装或连接该代理、处理登录，并将聊天保留在这里。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -231,7 +230,7 @@ export function HomeCardAgentActions({
                 setSetupAgent(null);
               }}
             >
-              open AI presets
+              打开 AI 预设
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -132,8 +132,8 @@ export function useChatAttachments({
     const ext = extFromName(name);
     if (!isSupportedDocExt(ext)) {
       toast({
-        title: "unsupported file",
-        description: `can't read .${ext || "?"} files`,
+        title: "不支持的文件",
+        description: `无法读取 .${ext || "?"} 文件`,
         variant: "destructive",
       });
       return;
@@ -153,8 +153,8 @@ export function useChatAttachments({
       const doc = await extractDocument(name, bytes);
       if (!doc.text.trim()) {
         toast({
-          title: "no text found",
-          description: `${name} looks empty or has no extractable text`,
+          title: "未找到文字",
+          description: `${name} 为空或没有可提取的文字`,
           variant: "destructive",
         });
         return;
@@ -165,7 +165,7 @@ export function useChatAttachments({
     } catch (err) {
       console.error("failed to extract attached doc:", err);
       toast({
-        title: "couldn't read file",
+        title: "无法读取文件",
         description: err instanceof Error ? err.message : String(err),
         variant: "destructive",
       });

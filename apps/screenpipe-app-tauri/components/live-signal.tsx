@@ -12,7 +12,7 @@ import { useInterval } from "@/lib/hooks/use-interval";
 // a mid-cycle live row is indistinguishable from an unread one.
 const LIVE_FRAMES = ["▘", "▀", "▛", "▜", "▐", "▝", "·"] as const;
 
-export function LiveSignal({ ariaLabel = "loading" }: { ariaLabel?: string }) {
+export function LiveSignal({ ariaLabel = "加载中" }: { ariaLabel?: string }) {
   const [frame, setFrame] = useState(0);
   useInterval(() => setFrame((f) => (f + 1) % LIVE_FRAMES.length), 140);
   return (

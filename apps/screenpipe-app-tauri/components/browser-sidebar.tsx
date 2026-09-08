@@ -1192,7 +1192,7 @@ export function BrowserSidebar({
           items: [
             {
               id: "browser-cookie-toggle",
-              text: "Use browser login",
+              text: "使用浏览器登录状态",
               checked: granted,
               action: () => {
                 if (granted) {
@@ -1204,7 +1204,7 @@ export function BrowserSidebar({
             },
             {
               id: "browser-cookie-retry",
-              text: "Retry page",
+              text: "重试页面",
               enabled: Boolean(currentUrl),
               action: () => {
                 void retryWithCookies();
@@ -1212,7 +1212,7 @@ export function BrowserSidebar({
             },
             {
               id: "browser-clear-data",
-              text: "Clear browser data",
+              text: "清除浏览器数据",
               action: () => {
                 void clearBrowserData();
               },
@@ -1369,7 +1369,7 @@ export function BrowserSidebar({
     const tab: LiveBrowserTab = {
       id: tabId,
       url,
-      title: "new tab",
+      title: "新标签页",
       loading: true,
       owner,
       navigationId: null,
@@ -1697,8 +1697,8 @@ export function BrowserSidebar({
                         <div className="min-w-0">
                           <div className="text-sm font-medium text-foreground">
                             {sessionAccessRequest.alreadyGranted
-                              ? "macOS may ask for access"
-                              : "Use your browser login?"}
+                              ? "macOS 可能会请求访问权限"
+                              : "使用你的浏览器登录状态？"}
                           </div>
                           <div className="mt-1 break-all text-xs text-muted-foreground">
                             {sessionAccessRequest.host}
@@ -1707,13 +1707,12 @@ export function BrowserSidebar({
                       </div>
                       <p className="text-xs leading-5 text-muted-foreground">
                         {sessionAccessRequest.alreadyGranted
-                          ? "Screenpipe is about to copy browser session cookies. macOS may ask for browser Safe Storage access next."
-                          : "Screenpipe can use your browser sessions so the agent opens sites already signed in. This applies to all sites. It does not read saved passwords."}
+                          ? "Screenpipe 即将复制浏览器会话 Cookie。接下来 macOS 可能会请求访问浏览器安全存储。"
+                          : "Screenpipe 可以使用你的浏览器会话，让代理打开已登录的网站。这适用于所有网站，但不会读取已保存的密码。"}
                       </p>
                       {isMac && !sessionAccessRequest.alreadyGranted && (
                         <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                          If you allow it, macOS may ask for access to browser
-                          safe storage next.
+                          如果允许，macOS 接下来可能会请求访问浏览器安全存储。
                         </p>
                       )}
                       <div className="mt-4 flex flex-col gap-2">
@@ -1725,11 +1724,11 @@ export function BrowserSidebar({
                         >
                           {sessionAccessAnswer === "allow"
                             ? isMac
-                              ? "Waiting for macOS…"
-                              : "Applying…"
+                              ? "等待 macOS…"
+                              : "应用中…"
                             : sessionAccessRequest.alreadyGranted
-                              ? "Continue"
-                              : "Use browser session"}
+                              ? "继续"
+                              : "使用浏览器会话"}
                         </Button>
                         <Button
                           size="sm"
@@ -1738,7 +1737,7 @@ export function BrowserSidebar({
                           onClick={() => answerSessionAccess(false)}
                           className="w-full"
                         >
-                          Continue logged out
+                          保持退出状态继续
                         </Button>
                       </div>
                     </div>
@@ -1753,7 +1752,7 @@ export function BrowserSidebar({
                         </div>
                         <div className="min-w-0">
                           <div className="text-sm font-medium text-foreground">
-                            Browser login is protected
+                            浏览器登录状态受到保护
                           </div>
                           <div className="mt-1 break-all text-xs text-muted-foreground">
                             {v20CookieBlock.host}
@@ -1765,36 +1764,28 @@ export function BrowserSidebar({
                           <p className="text-xs leading-5 text-muted-foreground">
                             {v20CookieBlock.sources.length > 0
                               ? v20CookieBlock.sources.join(", ")
-                              : "Your browser"}{" "}
-                            is running and holds an exclusive lock on its cookie
-                            database. Screenpipe cannot read it while the
-                            browser is open.
+                              : "你的浏览器"} 正在运行，并独占锁定其 Cookie 数据库。浏览器打开时，Screenpipe 无法读取它。
                           </p>
                           <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                            Connect the Screenpipe Browser Bridge extension to
-                            share this login directly — no passwords, no closing
-                            your browser.
+                            连接 Screenpipe Browser Bridge 扩展即可直接共享此登录状态——无需密码，也无需关闭浏览器。
                           </p>
                         </>
                       ) : (
                         <>
                           <p className="text-xs leading-5 text-muted-foreground">
-                            Chrome or Edge has matching session cookies, but
-                            Windows app-bound encryption prevents Screenpipe
-                            from reusing them directly.
+                            Chrome 或 Edge 中存在匹配的会话 Cookie，但 Windows 应用绑定加密阻止 Screenpipe 直接复用它们。
                           </p>
                           <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                            Connect the Screenpipe Browser Bridge extension to
-                            reuse this login without sharing passwords.
+                            连接 Screenpipe Browser Bridge 扩展即可复用此登录状态，无需共享密码。
                           </p>
                           <div className="mt-3 text-[11px] leading-4 text-muted-foreground">
-                            Found{" "}
+                            找到{" "}
                             {v20CookieBlock.v20Count || v20CookieBlock.rows}{" "}
-                            protected cookies
+                            个受保护的 Cookie
                             {v20CookieBlock.sources.length > 0
                               ? ` in ${v20CookieBlock.sources.join(", ")}`
                               : ""}
-                            .
+                            。
                           </div>
                         </>
                       )}
@@ -1802,7 +1793,7 @@ export function BrowserSidebar({
                         {extensionConnected ? (
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                             <Loader2 className="h-3 w-3 animate-spin" />
-                            Extension connected — retrying…
+                            扩展已连接——正在重试…
                           </div>
                         ) : (
                           <Button
@@ -1813,7 +1804,7 @@ export function BrowserSidebar({
                             className="w-full"
                           >
                             <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                            Connect extension
+                            连接扩展
                           </Button>
                         )}
                         <Button
@@ -1822,7 +1813,7 @@ export function BrowserSidebar({
                           onClick={() => setV20CookieBlock(null)}
                           className="w-full"
                         >
-                          Continue without signing in
+                          不登录继续
                         </Button>
                       </div>
                     </div>

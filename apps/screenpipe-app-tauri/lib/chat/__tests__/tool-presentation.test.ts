@@ -68,12 +68,12 @@ describe("sqlTables / sqlVerb", () => {
     expect(sqlTables("SELECT * FROM a JOIN b")).toEqual(["a", "b"]);
   });
   it("classifies the SQL verb", () => {
-    expect(sqlVerb("SELECT COUNT(*) FROM x")).toBe("Counted");
-    expect(sqlVerb("SELECT * FROM x")).toBe("Queried");
-    expect(sqlVerb("WITH t AS (...) SELECT")).toBe("Queried");
-    expect(sqlVerb("INSERT INTO x")).toBe("Inserted into");
-    expect(sqlVerb("UPDATE x")).toBe("Updated");
-    expect(sqlVerb("DELETE FROM x")).toBe("Deleted from");
+    expect(sqlVerb("SELECT COUNT(*) FROM x")).toBe("统计了");
+    expect(sqlVerb("SELECT * FROM x")).toBe("查询了");
+    expect(sqlVerb("WITH t AS (...) SELECT")).toBe("查询了");
+    expect(sqlVerb("INSERT INTO x")).toBe("插入到");
+    expect(sqlVerb("UPDATE x")).toBe("更新了");
+    expect(sqlVerb("DELETE FROM x")).toBe("删除了");
     expect(sqlVerb("PRAGMA foo")).toBe("在…上运行了 SQL");
   });
 });
@@ -102,13 +102,13 @@ describe("parseSearchCommand", () => {
 describe("classifyCurl", () => {
   it("labels a /search call", () => {
     expect(classifyCurl(`curl '${LOCAL}/search?app_name=Slack&q=standup'`)?.label).toBe(
-      'Searched Slack "standup"',
+      '搜索了 Slack "standup"',
     );
   });
   it("labels a raw_sql call by verb + table", () => {
     expect(
       classifyCurl(`curl -X POST '${LOCAL}/raw_sql' -d '{"query":"SELECT * FROM frames"}'`)?.label,
-    ).toBe("Queried frames");
+    ).toBe("查询了 frames");
   });
   it("labels activity-summary", () => {
     expect(classifyCurl(`curl ${LOCAL}/activity-summary`)?.label).toBe("活动摘要");
@@ -120,7 +120,7 @@ describe("classifyCurl", () => {
   });
   it("labels an external fetch by domain", () => {
     const out = classifyCurl("curl https://example.com/page");
-    expect(out?.label).toBe("Fetched example.com");
+    expect(out?.label).toBe("获取了 example.com");
     expect(out?.webTarget?.domain).toBe("example.com");
   });
   it("returns null for empty input", () => {
@@ -133,25 +133,25 @@ describe("classifyCurl", () => {
 
 describe("endpointFamily", () => {
   it("maps known paths to a family chip", () => {
-    expect(endpointFamily("/search")).toBe("Screen search");
-    expect(endpointFamily("/raw_sql")).toBe("Database");
-    expect(endpointFamily("/activity-summary")).toBe("Activity");
-    expect(endpointFamily("/memories/5")).toBe("Memory");
-    expect(endpointFamily("/connections/google-calendar/events")).toBe("Calendar");
+    expect(endpointFamily("/search")).toBe("屏幕搜索");
+    expect(endpointFamily("/raw_sql")).toBe("数据库");
+    expect(endpointFamily("/activity-summary")).toBe("活动");
+    expect(endpointFamily("/memories/5")).toBe("记忆");
+    expect(endpointFamily("/connections/google-calendar/events")).toBe("日历");
     expect(endpointFamily("/connections/slack/x")).toBe("Slack");
-    expect(endpointFamily("/pipes")).toBe("Scheduled tasks");
+    expect(endpointFamily("/pipes")).toBe("定时任务");
     expect(endpointFamily("/anything-else")).toBe("Screenpipe");
   });
 });
 
 describe("summarizeToolResult", () => {
   it("summarizes an array result as a count", () => {
-    expect(summarizeToolResult("[1,2,3]", "/search")).toBe("3 results returned");
-    expect(summarizeToolResult("[]", "/search")).toBe("No results returned");
+    expect(summarizeToolResult("[1,2,3]", "/search")).toBe("返回了 3 条结果");
+    expect(summarizeToolResult("[]", "/search")).toBe("未返回结果");
   });
   it("uses pagination total for {data:[...]}", () => {
     expect(summarizeToolResult('{"data":[1],"pagination":{"total":42}}', "/meetings")).toBe(
-      "42 meetings found",
+      "找到 42 场会议",
     );
   });
   it("truncates non-JSON results", () => {
@@ -197,8 +197,8 @@ describe("presentToolActivity", () => {
     });
 
     expect(python).toEqual({
-      runningLabel: "Analyzing information",
-      completedLabel: "Analyzed information",
+      runningLabel: "正在分析信息",
+      completedLabel: "已分析信息",
       icon: "thinking",
     });
     expect(javascript).toEqual(python);
@@ -212,8 +212,8 @@ describe("presentToolActivity", () => {
     });
 
     expect(presentation).toEqual({
-      runningLabel: "Checking the work",
-      completedLabel: "Checked the work",
+      runningLabel: "正在检查工作结果",
+      completedLabel: "已检查工作结果",
       icon: "test",
     });
     expect(JSON.stringify(presentation)).not.toContain("secret-regression-file");
@@ -226,8 +226,8 @@ describe("presentToolActivity", () => {
         args: { command: `curl '${LOCAL}/search?app_name=Slack&q=private-query'` },
       }),
     ).toEqual({
-      runningLabel: "Searching Slack",
-      completedLabel: "Searched Slack",
+      runningLabel: "正在搜索 Slack",
+      completedLabel: "已搜索 Slack",
       icon: "search",
     });
 
@@ -237,8 +237,8 @@ describe("presentToolActivity", () => {
         args: { command: `curl -X POST '${LOCAL}/raw_sql' -d '{"query":"SELECT * FROM frames"}'` },
       }),
     ).toEqual({
-      runningLabel: "Reviewing your information",
-      completedLabel: "Reviewed your information",
+      runningLabel: "正在查看你的信息",
+      completedLabel: "已查看你的信息",
       icon: "database",
     });
   });
@@ -250,8 +250,8 @@ describe("presentToolActivity", () => {
       args: { command: "mystery-binary --token SUPER_SECRET_VALUE" },
     });
     expect(command).toEqual({
-      runningLabel: "Working on your request",
-      completedLabel: "Completed a background step",
+      runningLabel: "正在处理你的请求",
+      completedLabel: "后台步骤已完成",
       icon: "work",
     });
 
@@ -262,8 +262,8 @@ describe("presentToolActivity", () => {
       args: { payload: "SUPER_SECRET_VALUE" },
     });
     expect(tool).toEqual({
-      runningLabel: "Working on your request",
-      completedLabel: "Completed a background step",
+      runningLabel: "正在处理你的请求",
+      completedLabel: "后台步骤已完成",
       icon: "work",
     });
 
@@ -291,8 +291,8 @@ describe("presentToolActivity", () => {
         args: { path: "/private/customer/path/SKILL.md" },
       }),
     ).toEqual({
-      runningLabel: "Loading a skill",
-      completedLabel: "Loaded a skill",
+      runningLabel: "正在加载技能",
+      completedLabel: "已加载技能",
       icon: "skill",
     });
     expect(
@@ -301,8 +301,8 @@ describe("presentToolActivity", () => {
         args: { path: "/private/customer/path/report.ts" },
       }),
     ).toEqual({
-      runningLabel: "Updating files",
-      completedLabel: "Updated files",
+      runningLabel: "正在更新文件",
+      completedLabel: "已更新文件",
       icon: "edit",
     });
   });
@@ -318,13 +318,13 @@ describe("presentToolActivity", () => {
     });
 
     expect(read).toEqual({
-      runningLabel: "Loading PDF skill",
-      completedLabel: "Loaded PDF skill",
+      runningLabel: "正在加载PDF 技能",
+      completedLabel: "已加载PDF 技能",
       icon: "skill",
     });
     expect(command).toEqual({
-      runningLabel: "Loading app UX research skill",
-      completedLabel: "Loaded app UX research skill",
+      runningLabel: "正在加载app UX research 技能",
+      completedLabel: "已加载app UX research 技能",
       icon: "skill",
     });
     expect(JSON.stringify([read, command])).not.toContain("/Users/private");
@@ -344,7 +344,7 @@ describe("presentToolActivityStatus", () => {
         ],
         true,
       ),
-    ).toBe("Loaded a skill");
+    ).toBe("已加载技能");
 
     expect(
       presentToolActivityStatus(
@@ -362,7 +362,7 @@ describe("presentToolActivityStatus", () => {
         ],
         true,
       ),
-    ).toBe("Analyzed information");
+    ).toBe("已分析信息");
   });
 
   it("switches to the current phase as soon as the next tool starts", () => {
@@ -382,12 +382,12 @@ describe("presentToolActivityStatus", () => {
         ],
         true,
       ),
-    ).toBe("Analyzing information");
+    ).toBe("正在分析信息");
   });
 
   it("uses the preparation label only before any tool activity exists", () => {
-    expect(presentToolActivityStatus([], true)).toBe("Preparing your answer");
-    expect(presentToolActivityStatus([], false)).toBe("Working on your request");
+    expect(presentToolActivityStatus([], true)).toBe("正在准备答案");
+    expect(presentToolActivityStatus([], false)).toBe("正在处理你的请求");
   });
 });
 
@@ -434,10 +434,10 @@ describe("presentToolActivity — ACP tool calls", () => {
   it("labels screenpipe MCP tools like their curl equivalents", () => {
     expect(
       presentToolActivity({ toolName: "mcp__screenpipe__activity-summary", args: {} }).completedLabel,
-    ).toBe("Reviewed your activity");
+    ).toBe("已查看你的活动");
     expect(
       presentToolActivity({ toolName: "mcp__screenpipe__list-pipes", args: {} }).completedLabel,
-    ).toBe("Checked available automations");
+    ).toBe("已检查可用的自动化任务");
   });
 
   it("describes Claude recording queries as a user-facing search", () => {
@@ -449,8 +449,8 @@ describe("presentToolActivity — ACP tool calls", () => {
         args: {},
       }),
     ).toMatchObject({
-      runningLabel: "Searching recordings",
-      completedLabel: "Searched recordings",
+      runningLabel: "正在搜索记录",
+      completedLabel: "已搜索记录",
       icon: "search",
     });
   });
@@ -458,19 +458,19 @@ describe("presentToolActivity — ACP tool calls", () => {
   it("falls back to the ACP kind for native tools whose title isn't a known name", () => {
     expect(
       presentToolActivity({ toolName: "Read /repo/a.ts", kind: "read", args: {} }).completedLabel,
-    ).toBe("Reviewed a file");
+    ).toBe("已查看文件");
     expect(
       presentToolActivity({ toolName: "Edit config", kind: "edit", args: {} }).completedLabel,
-    ).toBe("Updated files");
+    ).toBe("已更新文件");
     expect(
       presentToolActivity({ toolName: "Fetch docs", kind: "fetch", args: {} }).completedLabel,
-    ).toBe("Fetched content");
+    ).toBe("已获取内容");
   });
 
   it("detects a skill read via kind", () => {
     expect(
       presentToolActivity({ toolName: "Read", kind: "read", args: { path: "/x/SKILL.md" } }).completedLabel,
-    ).toBe("Loaded a skill");
+    ).toBe("已加载技能");
   });
 
   it("humanizes an unknown tool name instead of a generic step", () => {
@@ -481,7 +481,7 @@ describe("presentToolActivity — ACP tool calls", () => {
 
   it("still uses the generic label when there is nothing to go on", () => {
     expect(presentToolActivity({ toolName: "tool", args: {} }).completedLabel).toBe(
-      "Completed a background step",
+      "后台步骤已完成",
     );
   });
 
@@ -489,15 +489,15 @@ describe("presentToolActivity — ACP tool calls", () => {
     expect(
       presentToolActivity({ toolName: "MCP: tool", agentId: "cursor", args: {} }),
     ).toMatchObject({
-      runningLabel: "Using a Cursor tool",
-      completedLabel: "Used a Cursor tool",
+      runningLabel: "正在使用 Cursor 工具",
+      completedLabel: "已使用 Cursor 工具",
     });
     expect(
       presentToolActivity({ toolName: "MCP: tool", agentId: "pi-acp", args: {} }).completedLabel,
-    ).toBe("Used a Pi tool");
+    ).toBe("已使用 Pi 工具");
     expect(
       presentToolActivity({ toolName: "MCP: tool", agentId: "custom", args: {} }).completedLabel,
-    ).toBe("Used an ACP tool");
+    ).toBe("已使用 ACP 工具");
   });
 });
 
@@ -513,7 +513,7 @@ describe("MCP server startup diagnostics", () => {
         args: {},
         isError: true,
       }).completedLabel,
-    ).toBe("Notion MCP server failed to start");
+    ).toBe("Notion MCP 服务器启动失败");
   });
 
   it("keeps two failing servers distinguishable", () => {
@@ -529,13 +529,13 @@ describe("MCP server startup diagnostics", () => {
   it("does not call a server that started fine a failure", () => {
     expect(
       presentToolActivity({ toolName: "mcp__linear__startup", args: {} }).completedLabel,
-    ).toBe("Started the linear MCP server");
+    ).toBe("已启动 linear MCP 服务器");
   });
 
   it("labels the in-flight state as startup, not generic work", () => {
     expect(
       presentToolActivity({ toolName: "mcp__dropboxmcp__startup", args: {} }).runningLabel,
-    ).toBe("Starting the dropboxmcp MCP server");
+    ).toBe("正在启动 dropboxmcp MCP 服务器");
   });
 
   // Only the exact `__startup` suffix is a diagnostic; a real MCP tool that

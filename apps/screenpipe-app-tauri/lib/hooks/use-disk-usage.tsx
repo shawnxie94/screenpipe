@@ -74,7 +74,7 @@ export function useDiskUsage() {
       console.error("Failed to fetch disk usage:", err);
 
       // Provide more user-friendly error messages
-      let errorMessage = "Unknown error occurred";
+      let errorMessage = "发生未知错误";
       if (typeof err === "string") {
         errorMessage = err;
       } else if (err instanceof Error) {

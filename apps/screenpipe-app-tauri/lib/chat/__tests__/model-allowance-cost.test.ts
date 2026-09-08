@@ -76,31 +76,31 @@ describe("modelAllowanceNotice", () => {
 describe("presetAllowanceExemption", () => {
   it("explains that an ACP agent is billed through its own account", () => {
     expect(presetAllowanceExemption({ provider: "acp" })).toBe(
-      "this agent uses its own configured account.",
+      "此代理使用自己配置的账户。",
     );
   });
 
   it("explains that a local model costs nothing", () => {
     expect(presetAllowanceExemption({ provider: "native-ollama" })).toBe(
-      "this model runs on your machine, so it costs nothing.",
+      "此模型运行在你的设备上，因此不会产生费用。",
     );
   });
 
   it("names the provider a BYOK key belongs to", () => {
     expect(presetAllowanceExemption({ provider: "openai" })).toBe(
-      "this preset uses your own OpenAI key.",
+      "此预设使用你自己的 OpenAI 密钥。",
     );
     expect(presetAllowanceExemption({ provider: "anthropic" })).toBe(
-      "this preset uses your own Anthropic key.",
+      "此预设使用你自己的 Anthropic 密钥。",
     );
   });
 
   it("still explains itself for an unknown or missing preset", () => {
     expect(presetAllowanceExemption({ provider: "mystery" })).toBe(
-      "this preset uses a local or user-configured provider.",
+      "此预设使用本地服务商或你自行配置的服务商。",
     );
     expect(presetAllowanceExemption(null)).toBe(
-      "this preset uses a local or user-configured provider.",
+      "此预设使用本地服务商或你自行配置的服务商。",
     );
   });
 });

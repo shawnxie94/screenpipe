@@ -16,10 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Clock, Zap } from "lucide-react";
 
 const SCHEDULE_OPTIONS = [
-  { label: "Every morning (9 AM)", value: "every day at 9am" },
-  { label: "Every evening (6 PM)", value: "every day at 6pm" },
-  { label: "Every hour", value: "every 1h" },
-  { label: "Every Monday (9 AM)", value: "every monday at 9am" },
+  { label: "每天早上（9 点）", value: "every day at 9am" },
+  { label: "每天晚上（6 点）", value: "every day at 6pm" },
+  { label: "每小时", value: "every 1h" },
+  { label: "每周一（9 点）", value: "every monday at 9am" },
 ];
 
 // Pipe creation context — mirrors the PIPE_CREATION_PROMPT in pipes-section.tsx
@@ -130,18 +130,18 @@ export function SchedulePromptDialog({
 
     // Build a complete pipe creation message with full context (same pattern as pipes-section.tsx)
     const userRequest = [
-      `Create a pipe called "${name}" with schedule: ${schedule}`,
+      `创建一个名为“${name}”的定时任务，计划为：${schedule}`,
       ``,
-      `The pipe should run this prompt against my screenpipe data:`,
+      `定时任务应使用以下提示词处理我的 screenpipe 数据：`,
       ``,
       originalPrompt.slice(0, 2000),
       ``,
-      `Send the output as a desktop notification.`,
+      `将输出作为桌面通知发送。`,
     ].join("\n");
 
     const message = `${PIPE_CONTEXT}\n\n${userRequest}`;
 
-    onSchedule(message, `Creating scheduled task: ${name}`);
+    onSchedule(message, `创建定时任务：${name}`);
     onClose();
     setPipeName("");
     setShowCustom(false);
@@ -153,10 +153,10 @@ export function SchedulePromptDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="w-4 h-4" />
-            Schedule task
+            创建定时任务
           </DialogTitle>
           <DialogDescription>
-            Run this prompt automatically on a schedule
+            按计划自动运行这条提示词
           </DialogDescription>
         </DialogHeader>
 
@@ -164,7 +164,7 @@ export function SchedulePromptDialog({
           {/* Preview */}
           <div className="p-2.5 rounded-lg bg-muted/30 border border-border/30">
             <div className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium mb-1">
-              prompt preview
+              提示词预览
             </div>
             <div className="text-[11px] text-muted-foreground line-clamp-3">
               {originalPrompt.slice(0, 200)}
@@ -175,12 +175,12 @@ export function SchedulePromptDialog({
           {/* Name */}
           <div>
             <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
-              Task name
+              任务名称
             </label>
             <Input
               value={pipeName}
               onChange={(e) => setPipeName(e.target.value)}
-              placeholder="e.g. daily-recap, standup-notes"
+              placeholder="例如：daily-recap、standup-notes"
               className="h-9 text-[12px]"
             />
           </div>
@@ -188,7 +188,7 @@ export function SchedulePromptDialog({
           {/* Schedule */}
           <div>
             <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
-              Schedule
+              运行计划
             </label>
             <div className="space-y-1">
               {SCHEDULE_OPTIONS.map((opt) => (
@@ -215,13 +215,13 @@ export function SchedulePromptDialog({
                     : "hover:bg-muted/50 text-muted-foreground border border-transparent"
                 }`}
               >
-                Custom cron...
+                自定义 Cron...
               </button>
               {showCustom && (
                 <Input
                   value={customCron}
                   onChange={(e) => setCustomCron(e.target.value)}
-                  placeholder="e.g. 0 */2 * * * (every 2 hours)"
+                  placeholder="例如：0 */2 * * *（每 2 小时一次）"
                   className="h-8 text-[11px] mt-1"
                   autoFocus
                 />
@@ -233,11 +233,11 @@ export function SchedulePromptDialog({
         {/* Actions */}
         <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-border/30">
           <Button size="sm" variant="outline" onClick={onClose} className="h-8 text-[11px]">
-            Cancel
+            取消
           </Button>
           <Button size="sm" onClick={handleCreate} className="h-8 text-[11px] gap-1.5">
             <Zap className="w-3 h-3" />
-            Create scheduled task
+            创建定时任务
           </Button>
         </div>
       </DialogContent>

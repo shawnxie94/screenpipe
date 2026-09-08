@@ -93,7 +93,7 @@ describe("HomeStarterSurface", () => {
   it("refreshes from the contextual surface", () => {
     const { onRefresh } = renderSurface();
 
-    fireEvent.click(screen.getByRole("button", { name: "refresh" }));
+    fireEvent.click(screen.getByRole("button", { name: "刷新" }));
     expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 });

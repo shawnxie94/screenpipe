@@ -399,7 +399,7 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 			);
 
 			if (!response.ok) {
-				throw new Error("Search request failed");
+				throw new Error("搜索请求失败");
 			}
 
 			const rawGroups: SearchMatchGroup[] = await response.json();
@@ -475,7 +475,7 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 				if (isInitialSearch) {
 				}
 				set({
-					error: error instanceof Error ? error.message : "Search failed",
+                    error: error instanceof Error ? error.message : "搜索失败",
 					isSearching: false,
 					currentAbortController: null,
 				});

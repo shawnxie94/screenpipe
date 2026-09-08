@@ -78,7 +78,7 @@ async function pollMcpOAuthStatus(serverId: string, timeoutMs = 120_000, signal?
 
 async function connectMcpProvider(connectionId: string, signal?: AbortSignal): Promise<InlineConnectStatus> {
   const provider = MCP_OAUTH_PROVIDERS.find((item) => item.id === connectionId);
-  if (!provider) return { status: "unsupported", reason: "not an inline MCP OAuth provider" };
+  if (!provider) return { status: "unsupported", reason: "不是可直接连接的 MCP OAuth 服务" };
 
   const existingId = await findMcpServerIdByUrl(provider.url);
   const targetId = existingId ?? mcpRandomId();
@@ -100,7 +100,7 @@ async function connectMcpProvider(connectionId: string, signal?: AbortSignal): P
   });
   const body = await res.json();
   if (!res.ok) {
-    return { status: "error", reason: body?.error ?? `sign-in failed (HTTP ${res.status})` };
+    return { status: "error", reason: body?.error ?? `登录失败（HTTP ${res.status}）` };
   }
 
   await openUrl(body.data.auth_url);
@@ -109,7 +109,7 @@ async function connectMcpProvider(connectionId: string, signal?: AbortSignal): P
     connected = await pollMcpOAuthStatus(targetId, 120_000, signal);
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      return { status: "error", reason: "sign-in was cancelled" };
+      return { status: "error", reason: "登录已取消" };
     }
     throw error;
   }
@@ -117,7 +117,7 @@ async function connectMcpProvider(connectionId: string, signal?: AbortSignal): P
     return {
       status: "error",
       reason:
-        "sign-in was not completed — if your browser blocks http://localhost (e.g. Safari HTTPS-Only mode), click \"Open screenpipe\" on the confirmation page",
+        "登录未完成——如果浏览器阻止了 http://localhost（例如 Safari 的“仅 HTTPS”模式），请点击确认页面上的“打开 screenpipe”",
     };
   }
   await foregroundAfterOAuth();
@@ -127,5 +127,5 @@ async function connectMcpProvider(connectionId: string, signal?: AbortSignal): P
 
 export async function connectInlineConnection(connection: ConnectionListItem, signal?: AbortSignal): Promise<InlineConnectStatus> {
   if (MCP_OAUTH_PROVIDERS.some((provider) => provider.id === connection.id)) return connectMcpProvider(connection.id, signal);
-  return { status: "unsupported", reason: `${connection.name} is not a one-click connection` };
+  return { status: "unsupported", reason: `${connection.name} 不支持一键连接` };
 }

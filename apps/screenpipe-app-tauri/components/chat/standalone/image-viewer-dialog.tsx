@@ -26,7 +26,7 @@ export function ImageViewerDialog({ imageViewer, onChange }: ImageViewerDialogPr
           <>
             <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 shrink-0">
               <span className="text-sm font-medium text-muted-foreground">
-                {imageViewer.index + 1}/{imageViewer.images.length} Attached image {imageViewer.index + 1}
+                {imageViewer.index + 1}/{imageViewer.images.length} 个附件图片中的第 {imageViewer.index + 1} 张
               </span>
               <button
                 type="button"
@@ -41,7 +41,7 @@ export function ImageViewerDialog({ imageViewer, onChange }: ImageViewerDialogPr
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={imageViewer.images[imageViewer.index]}
-                alt={`Attached image ${imageViewer.index + 1}`}
+                alt={`附件图片 ${imageViewer.index + 1}`}
                 className="max-w-full max-h-full object-contain rounded-lg"
               />
             </div>

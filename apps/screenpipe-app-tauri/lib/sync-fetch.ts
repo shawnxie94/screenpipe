@@ -26,7 +26,7 @@ export async function syncFetchOrThrow(
   const response = await localFetch(path, init);
   if (response.ok) return response;
 
-  let message = `sync failed (${response.status})`;
+  let message = `同步失败（${response.status}）`;
   try {
     const body = await response.clone().json();
     if (body && typeof body.error === "string" && body.error.trim()) {

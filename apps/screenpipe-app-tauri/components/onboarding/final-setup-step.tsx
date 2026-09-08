@@ -142,17 +142,17 @@ function PipeRow({
 }) {
   const complete = state === "enabled";
   const status = complete
-    ? "on"
+    ? "已开启"
     : state === "disabled"
-      ? "off"
-      : "ready to set up";
+      ? "已关闭"
+      : "准备设置";
   const actionLabel = busy
-    ? "setting up"
+    ? "设置中"
     : complete
-      ? "on"
+      ? "已开启"
       : state === "disabled"
-        ? "turn on"
-        : "set up";
+        ? "开启"
+        : "设置";
 
   return (
     <article
@@ -293,7 +293,7 @@ export default function FinalSetupStep({
       if (!(
         setupError instanceof DOMException && setupError.name === "AbortError"
       )) {
-        setError("Screenpipe couldn't finish this setup. try again.");
+        setError("Screenpipe 无法完成此设置，请重试。");
       }
     } finally {
       if (pipeSetupAbortRef.current === controller) {
@@ -309,10 +309,10 @@ export default function FinalSetupStep({
     <div className="mx-auto w-full" data-testid="onboarding-final-setup">
       <div className="border-t border-border px-4 pb-3 pt-4">
         <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
-          optional setup
+          可选设置
         </p>
         <h2 className="mt-1 font-mono text-sm font-semibold lowercase text-foreground">
-          connect your work
+          连接你的工作
         </h2>
         <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
           各功能可单独选择，稍后均可更改。
@@ -363,8 +363,7 @@ export default function FinalSetupStep({
 
       <div className="mt-4 flex items-center justify-between gap-4 border-t border-border pt-4">
         <p className="max-w-xs text-[10px] leading-relaxed text-muted-foreground">
-          setup is optional. you can change it later from Settings and
-          Connections.
+          设置是可选的，稍后可在“设置”和“连接”中更改。
         </p>
         <Button
           type="button"
@@ -372,7 +371,7 @@ export default function FinalSetupStep({
           className="h-8 shrink-0 px-4 text-[10px] uppercase tracking-wide"
           onClick={() => void handleNextSlide()}
         >
-          continue
+          继续
         </Button>
       </div>
     </div>

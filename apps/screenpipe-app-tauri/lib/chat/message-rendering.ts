@@ -6,28 +6,28 @@ import type { Message } from "@/lib/chat/types";
 
 export function formatDurationParts(durationMs: number): string {
   const totalSeconds = Math.max(1, Math.floor(durationMs / 1000));
-  if (totalSeconds < 60) return `${totalSeconds}s`;
+  if (totalSeconds < 60) return `${totalSeconds} 秒`;
 
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  const minutePart = `${minutes} min`;
+  const minutePart = `${minutes} 分钟`;
   if (seconds === 0) return minutePart;
-  return `${minutePart} ${seconds} sec`;
+  return `${minutePart} ${seconds} 秒`;
 }
 
 export function formatWorkDuration(durationMs: number): string {
-  if (!durationMs || durationMs <= 0) return "Worked";
-  return `Worked for ${formatDurationParts(durationMs)}`;
+  if (!durationMs || durationMs <= 0) return "已处理";
+  return `处理耗时 ${formatDurationParts(durationMs)}`;
 }
 
 export function formatStoppedWorkDuration(durationMs?: number): string {
-  if (!durationMs || durationMs <= 0) return "You stopped";
-  return `You stopped after ${formatDurationParts(durationMs)}`;
+  if (!durationMs || durationMs <= 0) return "你已停止";
+  return `你已停止，处理耗时 ${formatDurationParts(durationMs)}`;
 }
 
 export function getMessageIntentLabel(message: Message): string | null {
   if (message.role === "assistant" && (message.intent === "steer" || message.steeredResponse)) {
-    return "Steered conversation";
+    return "已引导对话";
   }
   return null;
 }
@@ -242,7 +242,7 @@ export function collapsedSteerWorkDuration(item: Extract<ChatRenderItem, { type:
   const timestamps = item.segmentMessages
     .map((message) => message.timestamp)
     .filter((timestamp) => Number.isFinite(timestamp));
-  if (timestamps.length < 2) return userStopped ? "You stopped" : "Worked";
+  if (timestamps.length < 2) return userStopped ? "你已停止" : "已完成";
   const durationMs = Math.max(...timestamps) - Math.min(...timestamps);
   return userStopped ? formatStoppedWorkDuration(durationMs) : formatWorkDuration(durationMs);
 }

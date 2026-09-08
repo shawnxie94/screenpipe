@@ -104,7 +104,7 @@ export const MediaComponent = memo(function MediaComponent({
       try {
         const sanitizedPath = sanitizeFilePath(filePath);
         if (!sanitizedPath) {
-          throw new Error("Invalid file path");
+          throw new Error("文件路径无效");
         }
 
         const isAudioFile = isAudioMediaPath(sanitizedPath);
@@ -138,7 +138,7 @@ export const MediaComponent = memo(function MediaComponent({
       } catch (error) {
         if (isCancelled) return;
 
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        const errorMessage = error instanceof Error ? error.message : "未知错误";
         console.warn(`Failed to load media (attempt ${attempt + 1}):`, errorMessage);
 
         // Retry with exponential backoff for transient errors
@@ -151,7 +151,7 @@ export const MediaComponent = memo(function MediaComponent({
             }
           }, delay);
         } else {
-          setError(`Failed to load media: ${errorMessage}`);
+          setError(`媒体加载失败：${errorMessage}`);
           setRetryCount(0);
         }
       }
@@ -243,7 +243,7 @@ export const MediaComponent = memo(function MediaComponent({
         <div className="relative z-10 bg-muted p-4 rounded-md min-h-[84px] flex items-center">
           <audio ref={(el) => { mediaElementRef.current = el; }} controls className="w-full pointer-events-auto">
             <source src={mediaSrc} type={mimeType || "audio/mpeg"} />
-            Your browser does not support the audio element.
+            当前浏览器不支持音频播放。
           </audio>
         </div>
       ) : (
@@ -252,7 +252,7 @@ export const MediaComponent = memo(function MediaComponent({
             <source src={mediaSrc} type='video/mp4; codecs="hvc1"' />
             <source src={mediaSrc} type='video/mp4; codecs="hvec"' />
             <source src={mediaSrc} type="video/mp4" />
-            Your browser does not support the video tag.
+            当前浏览器不支持视频播放。
           </video>
         </div>
       )}

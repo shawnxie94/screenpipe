@@ -169,12 +169,12 @@ export function usePiSessionLifecycle({
   const canChat = hasPresets && hasValidModel;
 
   const disabledReason = (() => {
-    if (!hasPresets) return "No AI presets configured";
-    if (!activePreset) return "No preset selected";
+    if (!hasPresets) return "尚未配置 AI 预设";
+    if (!activePreset) return "未选择预设";
     if (!hasValidModel) {
       return activePreset.provider === "acp"
-        ? `No agent selected in "${activePreset.id}" preset`
-        : `No model selected in "${activePreset.id}" preset`;
+        ? `预设“${activePreset.id}”中未选择代理`
+        : `预设“${activePreset.id}”中未选择模型`;
     }
     return null;
   })();
@@ -371,7 +371,7 @@ export function usePiSessionLifecycle({
   const handlePiRestart = useCallback((preset: AIPreset) => {
     if (isStreamingRef.current) {
       pendingPresetRef.current = preset;
-      toast({ title: "model will switch after this response finishes" });
+      toast({ title: "当前回复结束后将切换模型" });
       return;
     }
 

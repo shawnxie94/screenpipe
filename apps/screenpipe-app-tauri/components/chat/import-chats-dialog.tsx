@@ -94,11 +94,11 @@ export function ImportChatsDialog({
       const completed = result.imported + result.updated;
       toast({
         title: completed > 0 ? "聊天导入完成" : "未导入聊天",
-        description: [
-          result.imported > 0 ? `${result.imported} new` : "",
-          result.updated > 0 ? `${result.updated} updated` : "",
-          result.skipped > 0 ? `${result.skipped} skipped` : "",
-          result.failed > 0 ? `${result.failed} failed` : "",
+          description: [
+          result.imported > 0 ? `新增 ${result.imported}` : "",
+          result.updated > 0 ? `更新 ${result.updated}` : "",
+          result.skipped > 0 ? `跳过 ${result.skipped}` : "",
+          result.failed > 0 ? `失败 ${result.failed}` : "",
         ].filter(Boolean).join(" · ") || "未找到可见的对话。",
         ...(result.failed > 0 && completed === 0 ? { variant: "destructive" as const } : {}),
       });
@@ -106,7 +106,7 @@ export function ImportChatsDialog({
       onOpenChange(false);
     } catch (error) {
       toast({
-        title: "chat import failed",
+        title: "聊天导入失败",
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -121,7 +121,7 @@ export function ImportChatsDialog({
         <DialogHeader>
           <DialogTitle className="lowercase">导入聊天</DialogTitle>
           <DialogDescription>
-            Copy local conversations from the past {EXTERNAL_CHAT_LOOKBACK_DAYS} days into screenpipe. Source files stay unchanged and nothing is uploaded.
+            将过去 {EXTERNAL_CHAT_LOOKBACK_DAYS} 天的本地聊天复制到 screenpipe。源文件保持不变，也不会上传任何内容。
           </DialogDescription>
         </DialogHeader>
 
@@ -129,21 +129,21 @@ export function ImportChatsDialog({
           {loading ? (
             <div className="flex items-center gap-2 px-3 py-5 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              checking the past {EXTERNAL_CHAT_LOOKBACK_DAYS} days
+              正在检查过去 {EXTERNAL_CHAT_LOOKBACK_DAYS} 天的聊天
             </div>
           ) : scanError ? (
             <div className="px-3 py-4 text-sm text-destructive">
-              Could not read local chat history: {scanError}
+              无法读取本地聊天历史：{scanError}
             </div>
           ) : scan?.sources.map((source) => {
             const count = source.candidates.length;
             const checked = selected.has(source.source);
             const details = [
               source.omittedByLimit > 0
-                ? `showing the ${count} most recent from the past ${scan.lookbackDays} days`
-                : `${count} conversation${count === 1 ? "" : "s"} from the past ${scan.lookbackDays} days`,
+                ? `显示过去 ${scan.lookbackDays} 天中最近的 ${count} 条`
+                : `过去 ${scan.lookbackDays} 天中的 ${count} 条聊天`,
               source.skippedTooLarge > 0
-                ? `${source.skippedTooLarge} oversized file${source.skippedTooLarge === 1 ? "" : "s"} skipped`
+                ? `已跳过 ${source.skippedTooLarge} 个过大的文件`
                 : "",
             ].filter(Boolean).join(" · ");
             return (
@@ -155,7 +155,7 @@ export function ImportChatsDialog({
                   checked={checked}
                   disabled={count === 0 || importing}
                   onCheckedChange={() => toggleSource(source.source)}
-                  aria-label={`Import ${source.label} chats`}
+                  aria-label={`导入 ${source.label} 的聊天`}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm text-foreground">{source.label}</span>
@@ -167,7 +167,7 @@ export function ImportChatsDialog({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Imported chats can be continued in screenpipe. Re-importing updates the same local copies without duplicating them.
+          导入的聊天可以在 screenpipe 中继续。再次导入会更新同一本地副本，不会重复创建。
         </p>
 
         <DialogFooter>
@@ -178,7 +178,7 @@ export function ImportChatsDialog({
             disabled={importing}
             onClick={() => onOpenChange(false)}
           >
-            cancel
+            取消
           </Button>
           <Button
             type="button"
@@ -191,7 +191,7 @@ export function ImportChatsDialog({
             ) : (
               <Download className="h-4 w-4" />
             )}
-            import {selectedCandidates.length || ""}
+            导入 {selectedCandidates.length || ""} 条
           </Button>
         </DialogFooter>
       </DialogContent>

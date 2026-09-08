@@ -118,7 +118,7 @@ export function ChatResponseFeedback({
           align="end"
           side="top"
         >
-          <p className="mb-2 text-xs font-medium">what went wrong?</p>
+          <p className="mb-2 text-xs font-medium">哪里出了问题？</p>
           <div className="grid grid-cols-2 gap-1.5">
             {CHAT_RESPONSE_FEEDBACK_REASONS.map((option) => (
               <button
@@ -140,11 +140,11 @@ export function ChatResponseFeedback({
             className="mt-2 min-h-4 text-[10px] text-muted-foreground"
             role={saveState === "error" ? "alert" : "status"}
           >
-            {saveState === "saving" && "saving locally…"}
+            {saveState === "saving" && "正在本地保存…"}
             {(saveState === "idle" || saveState === "saved") &&
-              "local by default · no chat text shared"}
+              "默认保存在本地 · 不会分享聊天内容"}
             {saveState === "error" &&
-              "local save failed · choose a reason to retry"}
+              "本地保存失败 · 选择原因后重试"}
           </p>
         </PopoverContent>
       </Popover>

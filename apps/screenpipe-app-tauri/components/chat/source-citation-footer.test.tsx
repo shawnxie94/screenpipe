@@ -37,7 +37,7 @@ describe("SourceCitationFooter", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /2 sources/i }));
+    fireEvent.click(screen.getByRole("button", { name: /2 个来源/ }));
 
     const duplicateKeyErrors = errorSpy.mock.calls.filter((call) =>
       String(call[0]).includes("Encountered two children with the same key")
@@ -59,7 +59,7 @@ describe("SourceCitationFooter", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /1 source/i }));
+    fireEvent.click(screen.getByRole("button", { name: /1 个来源/ }));
 
     expect(container.querySelector('img[src="/images/perplexity.svg"]')).toBeTruthy();
   });
@@ -83,7 +83,7 @@ describe("SourceCitationFooter", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /2 sources/i }));
+    fireEvent.click(screen.getByRole("button", { name: /2 个来源/ }));
 
     expect(container.querySelector('img[src="/images/google-calendar.svg"]')).toBeTruthy();
     expect(container.querySelector('img[src="/images/screenpipe.png"]')).toBeTruthy();
@@ -107,7 +107,7 @@ describe("SourceCitationFooter", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /1 source/i }));
+    fireEvent.click(screen.getByRole("button", { name: /1 个来源/ }));
 
     const fileCard = screen.getByTestId("source-citation-file");
     fireEvent.click(fileCard);
@@ -131,7 +131,7 @@ describe("SourceCitationFooter", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /1 source/i }));
+    fireEvent.click(screen.getByRole("button", { name: /1 个来源/ }));
 
     // Without an onOpenFile handler the row stays a plain, unclickable card.
     expect(screen.queryByTestId("source-citation-file")).toBeNull();

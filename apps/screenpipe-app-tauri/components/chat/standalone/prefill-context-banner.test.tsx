@@ -25,9 +25,9 @@ describe("PrefillContextBanner", () => {
       />,
     );
 
-    expect(screen.getByText(/frozen Screenpipe snapshot/i)).toBeInTheDocument();
+    expect(screen.getByText(/已冻结的 screenpipe 快照/i)).toBeInTheDocument();
     expect(
-      screen.getByText("Weekly product pulse · Live View · reviewed copy"),
+      screen.getByText("Weekly product pulse · 实时视图 · 已审阅内容"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/screenpipe_share_context/)).toBeNull();
   });
@@ -45,7 +45,7 @@ describe("PrefillContextBanner", () => {
       />,
     );
 
-    expect(screen.getByText(/context from search/i)).toBeInTheDocument();
+    expect(screen.getByText("来自搜索")).toBeInTheDocument();
     expect(screen.getByText("selected search result")).toBeInTheDocument();
   });
 });

@@ -45,12 +45,12 @@ describe("TimelineChoice", () => {
     const handleNextSlide = vi.fn();
     render(<TimelineChoice handleNextSlide={handleNextSlide} />);
 
-    const onButton = screen.getByRole("button", { name: /timeline on/i });
-    const offButton = screen.getByRole("button", { name: /keep it off/i });
-    expect(onButton).toHaveTextContent(/recommended/i);
-    expect(offButton).not.toHaveTextContent(/recommended/i);
+    const onButton = screen.getByRole("button", { name: /开启时间线/ });
+    const offButton = screen.getByRole("button", { name: /保持关闭/ });
+    expect(onButton).toHaveTextContent(/推荐/);
+    expect(offButton).not.toHaveTextContent(/推荐/);
     expect(
-      screen.queryByText(/timeline may slow down this device/i),
+      screen.queryByText(/时间线可能会拖慢这台设备/),
     ).not.toBeInTheDocument();
 
     await act(async () => {
@@ -69,10 +69,10 @@ describe("TimelineChoice", () => {
     render(<TimelineChoice handleNextSlide={vi.fn()} />);
 
     expect(
-      screen.getByRole("button", { name: /timeline on/i }),
-    ).toHaveTextContent(/recommended/i);
+      screen.getByRole("button", { name: /开启时间线/ }),
+    ).toHaveTextContent(/推荐/);
     expect(
-      screen.queryByText(/timeline may slow down this device/i),
+      screen.queryByText(/时间线可能会拖慢这台设备/),
     ).not.toBeInTheDocument();
   });
 
@@ -81,17 +81,17 @@ describe("TimelineChoice", () => {
     const handleNextSlide = vi.fn();
     render(<TimelineChoice handleNextSlide={handleNextSlide} />);
 
-    const offButton = screen.getByRole("button", { name: /keep it off/i });
-    expect(offButton).toHaveTextContent(/recommended/i);
+    const offButton = screen.getByRole("button", { name: /保持关闭/ });
+    expect(offButton).toHaveTextContent(/推荐/);
     expect(
-      screen.getByRole("button", { name: /timeline on/i }),
-    ).not.toHaveTextContent(/recommended/i);
+      screen.getByRole("button", { name: /开启时间线/ }),
+    ).not.toHaveTextContent(/推荐/);
     expect(
-      screen.getByText(/timeline may slow down this device/i),
+      screen.getByText(/时间线可能会拖慢这台设备/),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/text exposed by your apps stays searchable/i),
-    ).toHaveTextContent(/screenshots and image-only text won't be captured/i);
+      screen.getByText(/应用暴露的文字仍可搜索/),
+    ).toHaveTextContent(/不会捕捉屏幕截图和仅存在于图片中的文字/);
 
     await act(async () => {
       fireEvent.click(offButton);
@@ -113,7 +113,7 @@ describe("TimelineChoice", () => {
     render(<TimelineChoice handleNextSlide={handleNextSlide} />);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /timeline on/i }));
+      fireEvent.click(screen.getByRole("button", { name: /开启时间线/ }));
     });
 
     expect(mocks.updateSettings).toHaveBeenCalledWith({
@@ -132,12 +132,12 @@ describe("TimelineChoice", () => {
     render(<TimelineChoice handleNextSlide={handleNextSlide} />);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /keep it off/i }));
+      fireEvent.click(screen.getByRole("button", { name: /保持关闭/ }));
     });
 
     expect(handleNextSlide).not.toHaveBeenCalled();
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /couldn't save that choice/i,
+      /无法保存此选择/,
     );
   });
 
@@ -147,7 +147,7 @@ describe("TimelineChoice", () => {
     const handleNextSlide = vi.fn();
     render(<TimelineChoice handleNextSlide={handleNextSlide} />);
 
-    const offButton = screen.getByRole("button", { name: /keep it off/i });
+    const offButton = screen.getByRole("button", { name: /保持关闭/ });
     await act(async () => {
       fireEvent.click(offButton);
     });
@@ -176,8 +176,8 @@ describe("TimelineChoice", () => {
     );
     render(<TimelineChoice handleNextSlide={vi.fn()} />);
 
-    const onButton = screen.getByRole("button", { name: /timeline on/i });
-    const offButton = screen.getByRole("button", { name: /keep it off/i });
+    const onButton = screen.getByRole("button", { name: /开启时间线/ });
+    const offButton = screen.getByRole("button", { name: /保持关闭/ });
 
     await act(async () => {
       fireEvent.click(offButton);
@@ -203,8 +203,8 @@ describe("TimelineChoice", () => {
     render(<TimelineChoice handleNextSlide={handleNextSlide} />);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /timeline on/i }));
-      fireEvent.click(screen.getByRole("button", { name: /keep it off/i }));
+      fireEvent.click(screen.getByRole("button", { name: /开启时间线/ }));
+      fireEvent.click(screen.getByRole("button", { name: /保持关闭/ }));
     });
 
     expect(mocks.updateSettings).toHaveBeenCalledTimes(1);
@@ -222,15 +222,15 @@ describe("TimelineChoice", () => {
   it("states the capture bounds next to the capture cost", () => {
     render(<TimelineChoice handleNextSlide={vi.fn()} />);
 
-    const bounds = screen.getByText(/skips incognito windows/i);
+    const bounds = screen.getByText(/跳过隐私窗口/);
     expect(bounds).toBeInTheDocument();
-    expect(bounds).toHaveTextContent("you can exclude any app in settings");
+    expect(bounds).toHaveTextContent("也可在设置中排除任意应用");
   });
 
   it("keeps the bounds visible on the low-tier path where off is recommended", () => {
     mocks.settings.deviceTier = "low";
     render(<TimelineChoice handleNextSlide={vi.fn()} />);
 
-    expect(screen.getByText(/skips incognito windows/i)).toBeInTheDocument();
+    expect(screen.getByText(/跳过隐私窗口/)).toBeInTheDocument();
   });
 });

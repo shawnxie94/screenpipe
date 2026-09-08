@@ -149,7 +149,7 @@ const LiveViewCanvas = dynamic(
         data-testid="live-view-canvas-loading"
         className="flex min-h-[480px] items-center justify-center border border-border font-mono text-[10px] uppercase tracking-wide text-muted-foreground"
       >
-        loading process map
+        正在加载流程图
       </div>
     ),
   },
@@ -765,7 +765,7 @@ export function BrainOverview({
           if (canvasSaveErrorsRef.current.get(viewId) !== result.error) {
             canvasSaveErrorsRef.current.set(viewId, result.error);
             toast({
-              title: "canvas changes were not saved",
+              title: "画布改动未保存",
               description: result.error,
               variant: "destructive",
             });
@@ -935,7 +935,7 @@ export function BrainOverview({
           setError(
             loadError instanceof Error
               ? loadError.message
-              : "failed to load Live Views",
+              : "加载实时视图失败",
           );
         }
       } finally {
@@ -1331,7 +1331,7 @@ export function BrainOverview({
       onboardingRetrying
     ) {
       toast({
-        title: "setup could not resume",
+        title: "设置流程无法恢复",
         description:
           "请改为直接从库中创建或自定义此实时视图。",
         variant: "destructive",
@@ -1354,7 +1354,7 @@ export function BrainOverview({
     } catch (retryError) {
       setActivationVersion((version) => version + 1);
       toast({
-        title: "setup still needs attention",
+        title: "设置流程仍需处理",
         description:
           retryError instanceof Error
             ? retryError.message
@@ -1412,7 +1412,7 @@ export function BrainOverview({
                 ...current,
                 status: "partial",
                 filled,
-                message: `${filled} of ${current.total} sections updated · ${current.unconfiguredCount} not configured`,
+                message: `已更新 ${filled} / ${current.total} 个区块 · ${current.unconfiguredCount} 个未配置`,
                 blockedReason: "unconfigured_blocks",
               };
             }
@@ -1684,7 +1684,7 @@ export function BrainOverview({
             proposals[0].id,
         );
       }
-      setBuilderFeedback({ tone: "success", label: "changes ready to review" });
+      setBuilderFeedback({ tone: "success", label: "改动已准备好，可供审核" });
       builderFeedbackTimerRef.current = window.setTimeout(
         () => setBuilderFeedback(null),
         2_500,
@@ -1710,12 +1710,12 @@ export function BrainOverview({
         tone: "error",
         label:
           quota.kind === "daily"
-            ? "AI usage limit reached"
-            : "could not update · try again",
+            ? "已达到 AI 使用上限"
+            : "无法更新 · 请重试",
         detail: failureDetail,
       });
       toast({
-        title: "could not update the Live View",
+        title: "无法更新实时视图",
         description: failureDetail,
         variant: "destructive",
       });
@@ -1817,7 +1817,7 @@ export function BrainOverview({
       return true;
     } catch (feedbackError) {
       toast({
-        title: "failed to save feedback",
+        title: "保存反馈失败",
         description:
           feedbackError instanceof Error
             ? feedbackError.message
@@ -1858,7 +1858,7 @@ export function BrainOverview({
       return true;
     } catch (actionError) {
       toast({
-        title: "could not update this item",
+        title: "无法更新此项目",
         description:
           actionError instanceof Error
             ? actionError.message
@@ -1885,7 +1885,7 @@ export function BrainOverview({
       });
     } catch (handoffError) {
       toast({
-        title: "could not open the handoff",
+        title: "无法打开交接内容",
         description:
           handoffError instanceof Error
             ? handoffError.message
@@ -1901,7 +1901,7 @@ export function BrainOverview({
   ): Promise<boolean> => {
     if (!view || !selectedAiPreset) {
       toast({
-        title: "choose an AI model first",
+        title: "请先选择 AI 模型",
         description: "在设置中添加 AI 预设后再试。",
         variant: "destructive",
       });
@@ -2003,10 +2003,10 @@ export function BrainOverview({
       if (changedSlots.length > 0) {
         void refreshConnectedPipes(result.data, changedSlots, "card_ai_edit");
       }
-      toast({ title: "accepted changes applied" });
+      toast({ title: "已应用接受的更改" });
     } catch (applyError) {
       toast({
-        title: "could not apply accepted changes",
+        title: "无法应用已接受的改动",
         description:
           applyError instanceof Error ? applyError.message : String(applyError),
         variant: "destructive",
@@ -2103,7 +2103,7 @@ export function BrainOverview({
       }
     } catch (saveError) {
       toast({
-        title: "failed to save Live View",
+        title: "保存实时视图失败",
         description:
           saveError instanceof Error ? saveError.message : String(saveError),
         variant: "destructive",
@@ -2171,7 +2171,7 @@ export function BrainOverview({
       toast({ title: `renamed to ${result.data.title}` });
     } catch (renameError) {
       toast({
-        title: "could not rename dashboard",
+        title: "无法重命名仪表盘",
         description:
           renameError instanceof Error
             ? renameError.message
@@ -2224,7 +2224,7 @@ export function BrainOverview({
         if (canvasResult.status === "error") {
           await commands.deleteBrainView(result.data.id);
           throw new Error(
-            `The copy was rolled back because its canvas could not be saved: ${canvasResult.error}`,
+            `复制的仪表盘已回滚，因为无法保存画布：${canvasResult.error}`,
           );
         }
         canvasServerRevisionsRef.current.set(
@@ -2234,7 +2234,7 @@ export function BrainOverview({
       }
       clearTransientState();
       setView(result.data);
-      toast({ title: `${result.data.title} created` });
+      toast({ title: `${result.data.title} 已创建` });
       void refreshConnectedPipes(
         result.data,
         undefined,
@@ -2242,7 +2242,7 @@ export function BrainOverview({
       );
     } catch (duplicateError) {
       toast({
-        title: "could not duplicate dashboard",
+        title: "无法复制仪表盘",
         description:
           duplicateError instanceof Error
             ? duplicateError.message
@@ -2271,10 +2271,10 @@ export function BrainOverview({
       setView(next);
       rememberSelectedLiveViewDashboard(next?.id ?? null);
       removeOnboardingLiveViewActivation(deletingId);
-      toast({ title: "dashboard deleted" });
+      toast({ title: "仪表盘已删除" });
     } catch (deleteError) {
       toast({
-        title: "could not delete dashboard",
+        title: "无法删除仪表盘",
         description:
           deleteError instanceof Error
             ? deleteError.message
@@ -2308,11 +2308,11 @@ export function BrainOverview({
       );
       setUndoView(null);
       setUndoRevision(null);
-      toast({ title: "previous dashboard restored" });
+      toast({ title: "已恢复之前的仪表盘" });
       void refreshConnectedPipes(result.data, undefined, "undo");
     } catch (restoreError) {
       toast({
-        title: "could not restore the previous dashboard",
+        title: "无法恢复上一个仪表盘",
         description:
           restoreError instanceof Error
             ? restoreError.message
@@ -2358,7 +2358,7 @@ export function BrainOverview({
       )
     ) {
       toast({
-        title: "this dashboard uses a fixed period",
+        title: "此仪表盘使用固定时间段",
         description:
           "选择其他仪表盘或模板以查看不同的时间段。",
         variant: "destructive",
@@ -2386,7 +2386,7 @@ export function BrainOverview({
       void refreshConnectedPipes(result.data, undefined, "time_range");
     } catch (rangeError) {
       toast({
-        title: "could not change the time range",
+        title: "无法更改时间范围",
         description:
           rangeError instanceof Error ? rangeError.message : String(rangeError),
         variant: "destructive",
@@ -2400,7 +2400,7 @@ export function BrainOverview({
   if (loading) {
     return (
       <div className="flex min-h-64 items-center justify-center text-sm text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> loading Live Views
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 正在加载实时视图
       </div>
     );
   }
@@ -2419,7 +2419,7 @@ export function BrainOverview({
           className="rounded-none"
           onClick={() => void load()}
         >
-          retry
+          重试
         </Button>
       </div>
     );
@@ -2437,7 +2437,7 @@ export function BrainOverview({
         >
           <div className="mb-7 max-w-2xl">
             <p className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
-              choose an outcome
+              选择一个目标
             </p>
             <h2 className="mt-2 text-xl font-semibold tracking-tight">
               你想让 screenpipe 为你持续更新什么？
@@ -2454,7 +2454,7 @@ export function BrainOverview({
           )}
           <div className="mt-8 border-t border-border pt-6">
             <p className="mb-3 text-xs font-medium">
-              Or describe the view you want
+              或描述你想要的视图
             </p>
             <LiveViewAiComposer
               busy={builderFeedback?.tone === "working"}
@@ -2470,7 +2470,7 @@ export function BrainOverview({
               className="mt-4 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               onClick={beginManualCreate}
             >
-              or start with a blank canvas
+              或从空白画布开始
             </button>
           </div>
         </div>
@@ -2519,7 +2519,7 @@ export function BrainOverview({
           <div className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
             <div>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                {templatePreview ? "模板预览" : "AI draft"}
+                {templatePreview ? "模板预览" : "AI 草稿"}
               </p>
               <h2 className="text-lg font-semibold tracking-tight">
                 {draft.title}
@@ -2541,7 +2541,7 @@ export function BrainOverview({
                   setAiNote(null);
                 }}
               >
-                discard
+                放弃
               </Button>
               {!templatePreview && (
                 <Button
@@ -2555,7 +2555,7 @@ export function BrainOverview({
                     setEditing(true);
                   }}
                 >
-                  edit manually
+                  手动编辑
                 </Button>
               )}
               <Button
@@ -2581,11 +2581,11 @@ export function BrainOverview({
                 )}
                 {replacingDashboard
                   ? templatePreview
-                    ? "replace with agent"
-                    : "replace current dashboard"
+                    ? "使用代理替换"
+                    : "替换当前仪表板"
                   : templatePreview
-                    ? "build with agent"
-                    : "create dashboard & load data"}
+                    ? "使用代理创建"
+                    : "创建仪表板并加载数据"}
               </Button>
             </div>
           </div>
@@ -2604,7 +2604,7 @@ export function BrainOverview({
                   htmlFor="preview-dashboard-name"
                   className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
                 >
-                  Dashboard name
+                  仪表板名称
                 </label>
                 <Input
                   id="preview-dashboard-name"
@@ -2621,7 +2621,7 @@ export function BrainOverview({
                     <p>{templateReadiness?.explanation}</p>
                     <details className="mt-1 text-[11px]">
                       <summary className="cursor-pointer select-none hover:text-foreground">
-                        template starting points
+                        模板起点
                       </summary>
                       <p className="mt-1 font-mono">
                         {templatePreview.pipes
@@ -2629,8 +2629,7 @@ export function BrainOverview({
                           .join(", ")}
                       </p>
                       <p className="mt-1">
-                        The agent decides which existing or new Pipes fit after
-                        checking a small relevant sample of your data.
+                        代理会检查一小部分相关数据，然后决定使用哪些已有或新建的 Pipe。
                       </p>
                     </details>
                   </div>
@@ -2654,7 +2653,7 @@ export function BrainOverview({
                     onClick={() => setPreviewDestination("new")}
                   >
                     <span className="block text-xs font-medium">
-                      create new
+                      新建
                     </span>
                     <span className="mt-1 block text-[11px] text-muted-foreground">
                       {dashboardLimitReached
@@ -2675,20 +2674,19 @@ export function BrainOverview({
                   >
                     <span className="block text-xs font-medium">
                       {replacingBlankStarter
-                        ? "use this dashboard"
-                        : "replace current"}
+                        ? "使用此仪表板"
+                        : "替换当前仪表板"}
                     </span>
                     <span className="mt-1 block text-[11px] text-muted-foreground">
                       {replacingBlankStarter
-                        ? "turn the empty starter into this view"
-                        : "confirmation required"}
+                        ? "将空白起始仪表板变为此视图"
+                        : "需要确认"}
                     </span>
                   </button>
                 </div>
               ) : (
                 <div className="border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                  This creates a new dashboard with {previewSlots.length}{" "}
-                  sections.
+                  这将创建一个包含 {previewSlots.length} 个区块的新仪表板。
                 </div>
               )}
             </div>
@@ -2699,9 +2697,7 @@ export function BrainOverview({
               data-testid="overview-replacement-warning"
               className="mb-5 border border-destructive/60 bg-destructive/5 px-4 py-3 text-xs"
             >
-              This will replace {view?.slots.length ?? 0} sections in “
-              {view?.title}” with {previewSlots.length}. The previous layout
-              remains available through Undo.
+              这将把“{view?.title}”中的 {view?.slots.length ?? 0} 个区块替换为 {previewSlots.length} 个。之前的布局仍可通过撤销恢复。
             </div>
           )}
 
@@ -2710,8 +2706,7 @@ export function BrainOverview({
               data-testid="overview-dashboard-limit-warning"
               className="mb-5 border border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground"
             >
-              You already have {MAX_DASHBOARDS} dashboards. Replace the current
-              dashboard, or delete one before creating another.
+              你已经有 {MAX_DASHBOARDS} 个仪表板。请替换当前仪表板，或先删除一个再创建新的。
             </div>
           )}
 
@@ -2746,7 +2741,7 @@ export function BrainOverview({
                 disabled={saving}
                 onClick={() => void applyPreview()}
               >
-                replace dashboard
+                替换仪表板
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -2790,9 +2785,7 @@ export function BrainOverview({
     stalledSources.paused.length + stalledSources.manual.length;
   const stalledSourceLabel =
     stalledSourceCount > 0
-      ? `${stalledSourceCount} source${
-          stalledSourceCount === 1 ? "" : "s"
-        } only update on refresh`
+      ? `${stalledSourceCount} 个数据源仅在刷新时更新`
       : null;
   const latestUpdate =
     [freshness.label, stalledSourceLabel]
@@ -2906,7 +2899,7 @@ export function BrainOverview({
                   data-testid="overview-time-range"
                   aria-label={
                     latestUpdate
-                      ? `Live View time range. ${latestUpdate}`
+                      ? `实时视图时间范围。${latestUpdate}`
                       : "实时视图时间范围"
                   }
                   title={latestUpdate ?? undefined}
@@ -2950,7 +2943,7 @@ export function BrainOverview({
                 disabled={dashboardBusy}
                 onClick={() => setShareOpen(true)}
               >
-                <Send className="mr-1.5 h-3.5 w-3.5" /> send
+                <Send className="mr-1.5 h-3.5 w-3.5" /> 分享
               </Button>
             )}
           </div>
@@ -3029,7 +3022,7 @@ export function BrainOverview({
         )}
         {canvasSaving && (
           <p className="sr-only" role="status">
-            saving canvas
+            正在保存画布
           </p>
         )}
         {templateGalleryOpen && !onboardingColdStart && (
@@ -3056,8 +3049,7 @@ export function BrainOverview({
             className="mb-3 flex flex-wrap items-center gap-2 border border-amber-500/60 bg-amber-500/5 px-3 py-2 text-xs"
           >
             <span className="font-medium">
-              Review {aiBlockProposals.length} proposed Block
-              {aiBlockProposals.length === 1 ? "" : "s"}
+              审查 {aiBlockProposals.length} 个 AI 提议的区块
             </span>
             <span className="text-muted-foreground">
               {
@@ -3065,13 +3057,13 @@ export function BrainOverview({
                   (proposal) => proposal.status === "accepted",
                 ).length
               }{" "}
-              accepted ·{" "}
+              个已接受 ·{" "}
               {
                 aiBlockProposals.filter(
                   (proposal) => proposal.status === "rejected",
                 ).length
               }{" "}
-              rejected
+              个已拒绝
             </span>
             <div className="ml-auto flex flex-wrap items-center gap-1">
               <Button
@@ -3083,7 +3075,7 @@ export function BrainOverview({
                 title="接受并保存所有提议的更改"
                 onClick={() => void acceptAllAiProposals()}
               >
-                <Check className="mr-1 h-3 w-3" /> accept all
+                <Check className="mr-1 h-3 w-3" /> 全部接受
               </Button>
               <Button
                 data-testid="live-view-ai-reject-all"
@@ -3094,7 +3086,7 @@ export function BrainOverview({
                 title="拒绝并丢弃所有提议的更改"
                 onClick={discardAiProposals}
               >
-                <X className="mr-1 h-3 w-3" /> reject all
+                <X className="mr-1 h-3 w-3" /> 全部拒绝
               </Button>
               <Button
                 data-testid="live-view-ai-apply-accepted"
@@ -3108,7 +3100,7 @@ export function BrainOverview({
                 }
                 onClick={() => void applyAcceptedAiProposals()}
               >
-                apply accepted
+                应用已接受的更改
               </Button>
               <Button
                 data-testid="live-view-ai-discard"
@@ -3169,15 +3161,13 @@ export function BrainOverview({
             <div className="mx-auto w-full max-w-5xl px-6 pb-32 pt-8">
               <div className="mb-7 max-w-2xl">
                 <p className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
-                  choose an outcome
+                  选择一个目标
                 </p>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight">
                   你想让 screenpipe 为你持续更新什么？
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Start with a template, describe the result you want, or build
-                  the Blocks yourself. Nothing is current until a source
-                  publishes evidence for the selected time range.
+                  从模板开始，描述你想要的结果，或自行构建区块。在数据源为所选时间范围提供证据之前，这里不会显示当前结果。
                 </p>
               </div>
               {templateKits.length > 0 && (
@@ -3189,7 +3179,7 @@ export function BrainOverview({
               )}
               <div className="mt-8 border-t border-border pt-6">
                 <p className="mb-3 text-xs font-medium">
-                  Or describe the view you want
+                  或描述你想要的视图
                 </p>
                 <LiveViewAiComposer
                   busy={builderFeedback?.tone === "working"}
@@ -3206,7 +3196,7 @@ export function BrainOverview({
                   className="mt-4 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                   onClick={beginEdit}
                 >
-                  or start with a blank canvas
+                  或从空白画布开始
                 </button>
               </div>
             </div>
@@ -3216,7 +3206,7 @@ export function BrainOverview({
             data-testid="live-view-canvas-applying"
             className="flex min-h-0 flex-1 items-center justify-center border border-border font-mono text-[10px] uppercase tracking-wide text-muted-foreground"
           >
-            applying changes
+            正在应用更改
           </div>
         ) : canvasReady && canvasDocument ? (
           <LiveViewCanvas
@@ -3246,7 +3236,7 @@ export function BrainOverview({
             data-testid="live-view-canvas-loading"
             className="flex min-h-0 flex-1 items-center justify-center border border-border font-mono text-[10px] uppercase tracking-wide text-muted-foreground"
           >
-            loading process map
+            正在加载流程图
           </div>
         ) : null}
       </div>

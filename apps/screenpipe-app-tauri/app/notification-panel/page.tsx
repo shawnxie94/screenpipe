@@ -203,7 +203,7 @@ export default function NotificationPanelPage() {
               }
             } else {
               setRestartState("error");
-              setRestartError("server did not respond after restart");
+              setRestartError("服务器重启后未响应");
             }
           } catch (e) {
             setRestartState("error");
@@ -484,7 +484,7 @@ export default function NotificationPanelPage() {
               height={14}
               style={{ borderRadius: "3px" }}
             />
-            screenpipe
+            知迹
           </span>
           <button
             onClick={() => hide("explicit")}
@@ -643,7 +643,7 @@ export default function NotificationPanelPage() {
                   fontWeight: 500,
                 }}
               >
-                restarting...
+                正在重启…
               </span>
             ) : restartState === "success" ? (
               <span
@@ -654,7 +654,7 @@ export default function NotificationPanelPage() {
                   fontWeight: 500,
                 }}
               >
-                restarted successfully
+                已成功重启
               </span>
             ) : restartState === "error" ? (
               <span
@@ -665,7 +665,7 @@ export default function NotificationPanelPage() {
                   fontWeight: 500,
                 }}
               >
-                restart failed{restartError ? `: ${restartError}` : ""}
+                重启失败{restartError ? `：${restartError}` : ""}
               </span>
             ) : (
               payload.actions.map((action, index) => {
@@ -673,13 +673,13 @@ export default function NotificationPanelPage() {
                   action.label ||
                   (action.type === "copy"
                     ? copied
-                      ? "copied"
-                      : "copy"
+                      ? "已复制"
+                      : "复制"
                     : undefined) ||
-                  (action.type === "source" ? "source" : undefined) ||
+                  (action.type === "source" ? "来源" : undefined) ||
                   action.action ||
                   action.type ||
-                  "action";
+                  "操作";
                 return (
                   <NotificationActionButton
                     key={action.id || action.action || action.type || index}
@@ -777,7 +777,7 @@ export default function NotificationPanelPage() {
                 await commands.showWindow({ Home: { page: null } });
               } catch {}
             }}
-            title="manage notification settings"
+            title="管理通知设置"
             style={{
               display: "inline-flex",
               alignItems: "center",

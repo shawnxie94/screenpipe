@@ -20,7 +20,7 @@ const resources = [
   ["文档", "https://docs.screenpi.pe"],
   ["视频教程", "https://www.youtube.com/@screen_pipe/videos"],
   ["功能建议", "https://screenpipe.com/ideas"],
-  ["GitHub issues", "https://github.com/screenpipe/screenpipe/issues"],
+  ["GitHub 问题反馈", "https://github.com/screenpipe/screenpipe/issues"],
   ["Discord", "https://discord.com/invite/screenpipe"],
   ["更新日志", "https://screenpipe.com/changelog"],
 ] as const;

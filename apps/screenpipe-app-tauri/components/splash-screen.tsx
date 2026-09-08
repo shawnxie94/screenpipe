@@ -21,7 +21,7 @@ const SplashScreen: React.FC = () => {
         >
           <motion.img
             src="/128x128.png"
-            alt="screenpipe Logo"
+            alt="知迹标志"
             className="w-24 h-24"
             animate={{ 
               scale: [1, 1.05, 1],
@@ -59,10 +59,10 @@ const SplashScreen: React.FC = () => {
           className="text-center"
         >
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            screenpipe
+            知迹
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Your AI-powered digital memory
+            把工作经历，沉淀为自己的知识。
           </p>
         </motion.div>
 

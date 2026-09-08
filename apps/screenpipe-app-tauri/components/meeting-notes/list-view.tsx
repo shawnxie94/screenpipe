@@ -127,7 +127,7 @@ export function ListView({
         {errorText && (
           <div className="mb-8 border border-border px-4 py-3 flex items-center justify-between gap-3">
             <div className="text-xs">
-              <div className="text-foreground">couldn't load meetings</div>
+              <div className="text-foreground">无法加载会议</div>
               <div className="text-muted-foreground mt-0.5 break-all">
                 {errorText}
               </div>
@@ -138,7 +138,7 @@ export function ListView({
               onClick={onRetry}
               className="shrink-0 normal-case tracking-normal"
             >
-              retry
+              重试
             </Button>
           </div>
         )}
@@ -160,12 +160,12 @@ export function ListView({
           isSearchActive ? (
             <p className="text-sm text-muted-foreground py-8">
               {searching
-                ? "searching…"
-                : `no meetings match "${searchInput.trim()}"`}
+                ? "正在搜索…"
+                : `没有匹配“${searchInput.trim()}”的会议`}
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No past meetings yet. Click an upcoming event above to start one.
+              还没有历史会议。点击上方的即将到来事件即可开始会议。
             </p>
           )
         ) : (
@@ -191,11 +191,11 @@ export function ListView({
                 {loadingMore ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : null}
-                show more
+                显示更多
               </Button>
             ) : (
               <span className="text-[11px] text-muted-foreground/60 uppercase tracking-[0.18em]">
-                end
+                已到末尾
               </span>
             )}
           </div>
@@ -300,7 +300,7 @@ function RecordingStrip({
 }) {
   const title = meeting.title?.trim() || "未命名会议";
   const duration = formatDuration(meeting.meeting_start, meeting.meeting_end);
-  const statusLabel = captureState?.shortLabel ?? "recording";
+  const statusLabel = captureState?.shortLabel ?? "录制中";
   const degraded = captureState?.severity === "warning";
   const waiting = captureState?.severity === "waiting";
   return (
@@ -341,10 +341,10 @@ function RecordingStrip({
         size="sm"
         onClick={onOpen}
         className="gap-1.5 h-8 px-2 normal-case tracking-normal shrink-0"
-        title="open notes"
+        title="打开笔记"
       >
         <ArrowUpRight className="h-3.5 w-3.5" />
-        open
+        打开
       </Button>
       <Button
         variant="outline"
@@ -358,7 +358,7 @@ function RecordingStrip({
         ) : (
           <Square className="h-3.5 w-3.5" />
         )}
-        stop
+        停止
       </Button>
     </div>
   );
@@ -376,9 +376,8 @@ function ListEmpty({
       <Phone className="inline-block h-6 w-6 text-muted-foreground/40 mb-4" />
       <h2 className="text-lg font-medium mb-2">还没有会议</h2>
       <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-        Join a Zoom, Meet, or Teams call and screenpipe will detect it
-        automatically. Or start one manually to take notes against any
-        conversation.
+        加入 Zoom、Meet 或 Teams 通话，screenpipe 会自动检测。你也可以手动开始，
+        为任意对话记录笔记。
       </p>
       <Button
         variant="outline"

@@ -10,8 +10,7 @@ import {
 
 const DAILY_LIMIT = JSON.stringify({
   error: "daily_cost_limit_exceeded",
-  message:
-    "You've used your daily AI allowance. Background scheduled tasks share this allowance.",
+  message: "已达到每日 AI 使用上限",
 });
 
 function failingPipe(name: string, lastError = DAILY_LIMIT): PipeAdvisoryRow {
@@ -34,10 +33,9 @@ describe("buildPipeAdvisories", () => {
     expect(advisories).toHaveLength(1);
     expect(advisories[0]).toMatchObject({
       id: "pipe:summary",
-      title: "27 scheduled tasks couldn't run",
-      body:
-        "You've used your daily AI allowance. Background scheduled tasks share this allowance.",
-      details: { label: "view 27 affected scheduled tasks" },
+      title: "27 个定时任务运行失败",
+      body: "已达到每日 AI 使用上限",
+      details: { label: "查看受影响的 27 个定时任务" },
     });
     expect(advisories[0].details?.items).toHaveLength(27);
   });
@@ -48,9 +46,8 @@ describe("buildPipeAdvisories", () => {
     expect(advisories).toEqual([
       {
         id: "pipe:summary",
-        title: 'scheduled task "meeting-prep" couldn\'t run',
-        body:
-          "You've used your daily AI allowance. Background scheduled tasks share this allowance.",
+        title: '定时任务“meeting-prep”运行失败',
+        body: "已达到每日 AI 使用上限",
         severity: "warn",
       },
     ]);
@@ -70,11 +67,11 @@ describe("buildPipeAdvisories", () => {
 
     const [advisory] = buildPipeAdvisories(rows);
 
-    expect(advisory.title).toBe("2 scheduled tasks couldn't run");
-    expect(advisory.body).toBe("2 issues are blocking these background scheduled tasks.");
+    expect(advisory.title).toBe("2 个定时任务运行失败");
+    expect(advisory.body).toBe("2 个问题阻塞了这些后台定时任务。");
     expect(advisory.details?.items).toEqual([
-      `meeting-prep — You've used your daily AI allowance. Background scheduled tasks share this allowance.`,
-      "support-triage — uses a model that needs business — switch to a free model (auto) or upgrade",
+      "meeting-prep — 已达到每日 AI 使用上限",
+      "support-triage — 使用了需要商业版权限的模型——请切换到免费模型（自动），或进行升级",
     ]);
     expect(advisory.action).toBeUndefined();
   });

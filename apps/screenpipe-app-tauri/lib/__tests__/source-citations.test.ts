@@ -65,9 +65,9 @@ describe("source citations", () => {
 
     expect(citations).toHaveLength(1);
     expect(citations[0].kind).toBe("screenpipe");
-    expect(citations[0].title).toBe("Screenpipe search");
-    expect(citations[0].subtitle).toContain("audio");
-    expect(citations[0].subtitle).toContain("query: pricing");
+    expect(citations[0].title).toBe("screenpipe 搜索");
+    expect(citations[0].subtitle).toContain("音频");
+    expect(citations[0].subtitle).toContain("查询：pricing");
   });
 
   it("names connector calls instead of collapsing them to generic screenpipe api", () => {
@@ -91,8 +91,8 @@ describe("source citations", () => {
     expect(citations).toHaveLength(1);
     expect(citations[0]).toMatchObject({
       kind: "connector",
-      title: "Perplexity search",
-      subtitle: "external web context via Screenpipe connection",
+      title: "Perplexity 搜索",
+      subtitle: "通过 screenpipe 连接获取的外部网页上下文",
     });
   });
 
@@ -117,8 +117,8 @@ describe("source citations", () => {
     expect(citations).toHaveLength(1);
     expect(citations[0]).toMatchObject({
       kind: "memory",
-      title: "Screenpipe memories",
-      subtitle: "memory query: Jill Benaglio",
+      title: "screenpipe 记忆",
+      subtitle: "记忆查询：Jill Benaglio",
     });
   });
 
@@ -147,7 +147,7 @@ describe("source citations", () => {
     expect(citations).toHaveLength(2);
     expect(citations[0]).toMatchObject({
       kind: "connector",
-      title: "Perplexity search",
+      title: "Perplexity 搜索",
     });
     expect(citations[1]).toMatchObject({
       kind: "web",
@@ -182,7 +182,7 @@ describe("source citations", () => {
 
     expect(citations.map((citation) => citation.kind)).toEqual(["memory", "file"]);
     expect(citations[0].title).toBe("MEMORY.md");
-    expect(citations[1].title).toBe("Read: standalone-chat.tsx");
+    expect(citations[1].title).toBe("读取文件: standalone-chat.tsx");
   });
 
   it("carries the absolute path on file/memory citations so the footer can open a preview", () => {
@@ -242,7 +242,7 @@ describe("source citations", () => {
     expect(citations).toHaveLength(1);
     expect(citations[0]).toMatchObject({
       kind: "pipe",
-      title: "Read: pipe.ts",
+      title: "读取文件: pipe.ts",
     });
   });
 
@@ -262,7 +262,7 @@ describe("source citations", () => {
     });
 
     expect(citations).toHaveLength(1);
-    expect(citations[0].title).toBe("Local file: standalone-chat.tsx");
+    expect(citations[0].title).toBe("本地文件: standalone-chat.tsx");
   });
 
   // legacy name from sessions recorded before the sp_ rename
@@ -345,11 +345,11 @@ describe("source citations", () => {
     expect(citations).toHaveLength(1);
     expect(citations[0]).toMatchObject({
       kind: "screenpipe",
-      title: "Screenpipe search",
+      title: "screenpipe 搜索",
     });
-    expect(citations[0].subtitle).toContain("ocr");
-    expect(citations[0].subtitle).toContain("app: Slack");
-    expect(citations[0].subtitle).toContain("query: roadmap");
+    expect(citations[0].subtitle).toContain("文字识别");
+    expect(citations[0].subtitle).toContain("应用：Slack");
+    expect(citations[0].subtitle).toContain("查询：roadmap");
   });
 
   it("anchors screenpipe_search tool citations to the capture moment", () => {
@@ -549,9 +549,9 @@ describe("source citations", () => {
     });
 
     const titles = citations.map((c) => c.title);
-    expect(titles).toContain("Local file: sync.ts");
-    expect(titles).not.toContain("Local file: chat.db");
-    expect(titles).not.toContain("Local file: telegram-pairing.json");
+    expect(titles).toContain("本地文件: sync.ts");
+    expect(titles).not.toContain("本地文件: chat.db");
+    expect(titles).not.toContain("本地文件: telegram-pairing.json");
     expect(titles).not.toContain("Local file: null");
     expect(titles).not.toContain("Local file: undefined");
   });
@@ -594,8 +594,8 @@ describe("source citations", () => {
     ]);
 
     expect(aggregated.map((c) => c.title)).toEqual([
-      "Read: state.json",
-      "Wrote: sync.ts",
+      "读取文件: state.json",
+      "写入文件: sync.ts",
     ]);
   });
 
@@ -636,8 +636,8 @@ describe("source citations", () => {
       expect([...plan.deferredMessageIds]).toEqual(["a1", "a2", "a3"]);
       expect(plan.aggregatedAfter.has("a3")).toBe(true);
       expect(plan.aggregatedAfter.get("a3")?.map((c) => c.title)).toEqual([
-        "Read: state.json",
-        "Read: script.ts",
+        "读取文件: state.json",
+        "读取文件: script.ts",
       ]);
     });
 
@@ -652,8 +652,8 @@ describe("source citations", () => {
       ]);
       expect(plan.aggregatedAfter.has("a2")).toBe(true);
       expect(plan.aggregatedAfter.has("b2")).toBe(true);
-      expect(plan.aggregatedAfter.get("a2")?.map((c) => c.title)).toEqual(["Read: a.ts"]);
-      expect(plan.aggregatedAfter.get("b2")?.map((c) => c.title)).toEqual(["Read: b.ts"]);
+      expect(plan.aggregatedAfter.get("a2")?.map((c) => c.title)).toEqual(["读取文件: a.ts"]);
+      expect(plan.aggregatedAfter.get("b2")?.map((c) => c.title)).toEqual(["读取文件: b.ts"]);
     });
 
     it("forceAggregate folds even single-step turns (pipe sessions)", () => {
@@ -663,7 +663,7 @@ describe("source citations", () => {
       );
       expect(plan.deferredMessageIds.has("a1")).toBe(true);
       expect(plan.aggregatedAfter.get("a1")?.map((c) => c.title)).toEqual([
-        "Read: once.ts",
+        "读取文件: once.ts",
       ]);
     });
 
@@ -694,7 +694,7 @@ describe("source citations", () => {
       },
     ]);
 
-    expect(markdown).toContain("**Source:**");
+    expect(markdown).toContain("**来源:**");
     expect(markdown).toContain("[Docs](https://docs.screenpi.pe/)");
     expect(markdown).toContain("web search");
   });

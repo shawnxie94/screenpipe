@@ -66,13 +66,13 @@ describe("MarkdownCodeBlock", () => {
     render(<MarkdownCodeBlock value="const x = 1;" language="ts" />);
     expect(screen.getByText("const x = 1;")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /copy code/i }),
+      screen.getByRole("button", { name: "复制代码" }),
     ).toBeInTheDocument();
   });
 
   it("copies the raw value to the clipboard when the copy button is clicked", () => {
     render(<MarkdownCodeBlock value="echo hi" language="bash" />);
-    fireEvent.click(screen.getByRole("button", { name: /copy code/i }));
+    fireEvent.click(screen.getByRole("button", { name: "复制代码" }));
     expect(copyToClipboard).toHaveBeenCalledWith("echo hi");
   });
 

@@ -84,7 +84,7 @@ export function buildOllamaConnectionMessage(model?: string | null): string {
 }
 
 export function buildOllamaModelMissingMessage(model: string): string {
-  return `Ollama model "${model}" is not installed. Run \`ollama pull ${model}\`, or switch your AI preset to a model from \`ollama list\`.`;
+  return `Ollama 模型“${model}”尚未安装。请运行 \`ollama pull ${model}\`，或将 AI 预设切换到 \`ollama list\` 中的模型。`;
 }
 
 function isConnectionLikeError(errorStr: string): boolean {
@@ -116,7 +116,7 @@ function isConnectionLikeError(errorStr: string): boolean {
 
 export function buildRemoteConnectionMessage(provider?: string | null): string {
   const named = provider && provider !== "custom" ? ` (${provider})` : "";
-  return `Can't reach the AI provider${named}. Check your internet connection and try again.`;
+  return `无法连接 AI 服务商${named}。请检查网络连接后重试。`;
 }
 
 function isContextOverflowError(errorStr: string): boolean {
@@ -147,9 +147,9 @@ export function buildContextOverflowMessage(errorStr = ""): string {
   const { requested, available } = parseContextTokenCounts(errorStr);
   if (requested && available) {
     if (available < MIN_AGENT_CONTEXT_TOKENS) {
-      return `This provider exposes ${tokenFormatter.format(available)} context tokens, but Screenpipe's agent request already needs ${tokenFormatter.format(requested)}. Increase the provider's context window (for example, Ollama num_ctx) to at least ${tokenFormatter.format(MIN_AGENT_CONTEXT_TOKENS)}, or choose a larger-context model, then retry in a new chat.`;
+      return `此服务商提供 ${tokenFormatter.format(available)} 个上下文 token，但 screenpipe 代理请求已需要 ${tokenFormatter.format(requested)} 个。请将服务商上下文窗口（例如 Ollama 的 num_ctx）增加到至少 ${tokenFormatter.format(MIN_AGENT_CONTEXT_TOKENS)}，或选择上下文更大的模型，然后在新聊天中重试。`;
     }
-    return `This provider accepts ${tokenFormatter.format(available)} context tokens, but the request used ${tokenFormatter.format(requested)}. Set Settings → AI → Advanced → model context tokens to ${tokenFormatter.format(available)}, then start a new chat and retry.`;
+    return `此服务商支持 ${tokenFormatter.format(available)} 个上下文 token，但此次请求使用了 ${tokenFormatter.format(requested)} 个。请将“设置 → AI → 高级 → 模型上下文 token”设为 ${tokenFormatter.format(available)}，然后开始新聊天并重试。`;
   }
   return "此聊天对所选模型来说太长了。请将 设置 → AI → 高级 → 模型上下文令牌 与提供商的上下文窗口匹配。开新聊天或移除大型附件/截图后重试。";
 }
@@ -188,7 +188,7 @@ export function buildAgentRefusalMessage(
   agentName?: string | null,
 ): { message: string; retryable: boolean } | null {
   const normalized = errorStr.toLowerCase();
-  const agent = agentName?.trim() || "This agent";
+  const agent = agentName?.trim() || "此代理";
 
   const mentionsPermission =
     normalized.includes("not authorized") ||
@@ -213,7 +213,7 @@ export function buildAgentRefusalMessage(
       // Retrying resends the same refused request, and re-authenticating with
       // the same account cannot change the answer.
       retryable: false,
-      message: `${agent} signed in fine, but its own service refused this account: it needs a plan or organization policy you don't have. Signing in again won't change that — this is an account or provider policy, not a local Screenpipe error.\n\nChoose a different configured provider, or ask whoever administers the account to enable this one.`,
+      message: `${agent} 已成功登录，但其服务拒绝了此账户：当前账户缺少所需方案或组织策略。重新登录不会改变结果——这是账户或服务商策略问题，不是本地 screenpipe 错误。\n\n请选择其他已配置的服务商，或联系账户管理员启用此服务。`,
     };
   }
 
@@ -234,7 +234,7 @@ export function buildAgentRefusalMessage(
   if (mentionsCredential) {
     return {
       retryable: false,
-      message: `${agent}'s sign-in expired mid-conversation, so it stopped rather than losing your turn. Nothing is lost — re-authenticate from the agent control next to the composer, then send again.`,
+      message: `${agent} 的登录状态在对话中途过期，因此已停止处理，避免丢失本轮消息。内容没有丢失——请通过输入框旁的代理控件重新认证，然后再次发送。`,
     };
   }
 
@@ -268,7 +268,7 @@ function buildGenericProviderErrorMessage(
     if (normalized.includes("not found")) {
       return model
         ? buildOllamaModelMissingMessage(model)
-        : "The selected Ollama model was not found. Check your AI preset in settings.";
+        : "未找到所选 Ollama 模型。请检查设置中的 AI 预设。";
     }
     if (isConnectionLikeError(errorStr)) {
       return buildOllamaConnectionMessage(model);
@@ -277,11 +277,11 @@ function buildGenericProviderErrorMessage(
   }
 
   if (normalized.includes("codex error: the usage limit has been reached")) {
-    return "The AI provider usage limit has been reached. Wait for it to reset, or switch your AI preset or provider.";
+    return "已达到 AI 服务商使用上限。请等待额度重置，或切换 AI 预设/服务商。";
   }
 
   if (provider === "custom" && errorStr === "400 status code (no body)") {
-    return "The custom AI provider rejected the request. Verify the endpoint, model, and API key in Settings → AI.";
+    return "自定义 AI 服务商拒绝了请求。请在“设置 → AI”中检查端点、模型和 API 密钥。";
   }
 
   if (
@@ -292,7 +292,7 @@ function buildGenericProviderErrorMessage(
       normalized.includes("forbidden") ||
       normalized.includes("request was blocked"))
   ) {
-    return "The custom AI provider rejected the request. Check the API key and Custom URL in Settings → AI, including any required API path such as /v1, then run Test Connection.";
+    return "自定义 AI 服务商拒绝了请求。请在“设置 → AI”中检查 API 密钥和自定义 URL（包括 /v1 等必要路径），然后运行“测试连接”。";
   }
 
   // Hosted/remote providers: a connection-like failure means we never reached
@@ -342,10 +342,10 @@ export function buildProviderErrorPresentation(
     isNativeOllamaProvider(preset?.provider) &&
     errorStr.toLowerCase().includes("does not support tools")
   ) {
-    const model = preset?.model?.trim() || "the selected model";
+    const model = preset?.model?.trim() || "所选模型";
     return {
       kind: "provider",
-      message: `Ollama model "${model}" does not support tools. Switch your AI preset to an Ollama model that supports tools.`,
+      message: `Ollama 模型“${model}”不支持工具。请将 AI 预设切换到支持工具的 Ollama 模型。`,
       retryable: false,
     };
   }
@@ -364,7 +364,7 @@ export function buildNoResponseMessage(preset?: ProviderLike | null): string {
   if (isNativeOllamaProvider(preset?.provider)) {
     return buildOllamaConnectionMessage(preset?.model);
   }
-  return "No response from model — try again or check your AI preset in settings.";
+  return "模型没有响应——请重试，或检查设置中的 AI 预设。";
 }
 
 export async function preflightChatProvider(

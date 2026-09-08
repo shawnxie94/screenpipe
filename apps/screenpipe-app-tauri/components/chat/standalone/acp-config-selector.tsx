@@ -74,6 +74,45 @@ function trimUnbalancedClosingParens(value: string): string {
   return result;
 }
 
+function localizeAcpLabel(value: string): string {
+  const exact: Record<string, string> = {
+    model: "模型",
+    mode: "模式",
+    plan: "计划",
+    edit: "编辑",
+    ask: "询问",
+    agent: "代理",
+    "agent (full access)": "代理（完全访问）",
+    "read-only": "只读",
+    "allow all": "全部允许",
+    "thinking level": "思考级别",
+    "reasoning effort": "思考强度",
+    effort: "强度",
+    standard: "标准",
+    deep: "深度",
+    high: "高",
+    medium: "中",
+    low: "低",
+  };
+  return (
+    exact[value.trim().toLowerCase()] ??
+    value
+      .replace(/\bDefault\s*\(recommended\)/gi, "默认（推荐）")
+      .replace(/\bAuto\s*\(recommended\)/gi, "自动（推荐）")
+      .replace(/\brecommended\b/gi, "推荐")
+      .replace(/^Agent configuration$/i, "代理配置")
+  );
+}
+
+function localizeAcpDescription(value: string | null | undefined): string | null {
+  if (!value) return value ?? null;
+  return value
+    .replace(/\bUse the default model\b/gi, "使用默认模型")
+    .replace(/\bcurrently\b/gi, "当前")
+    .replace(/\bcontext\b/gi, "上下文")
+    .replace(/\brecommended\b/gi, "推荐");
+}
+
 /** Some adapters intentionally expose a stable alias such as `default`, then
  *  name its live resolution in the option description. Prefer that
  *  adapter-owned resolution over a hardcoded provider matrix, which would be
@@ -221,13 +260,16 @@ export function AcpConfigSelector({
     (modelOption && acpConfigValueLabel(modelOption, modelValue)) ||
     visibleModeOption?.values.find((value) => value.value === visibleModeValue)
       ?.name ||
-    modes?.availableModes.find((mode) => mode.value === selectedModeId)?.name ||
+    localizeAcpLabel(
+      modes?.availableModes.find((mode) => mode.value === selectedModeId)?.name ||
+        "",
+    ) ||
     fallbackLabel;
   const resolvedAliasHint =
     modelOption &&
     advertisedModelValue &&
     advertisedModelValue.name !== triggerLabel
-      ? `${advertisedModelValue.name} currently resolves to ${triggerLabel}.`
+      ? `${localizeAcpLabel(advertisedModelValue.name)} 当前解析为 ${triggerLabel}。`
       : undefined;
   // Re-authenticate is offered for every ACP agent (as Zed does): it re-runs the
   // agent's own auth flow, which re-shows whatever sign-in methods it has.
@@ -240,7 +282,7 @@ export function AcpConfigSelector({
     try {
       await action();
     } catch (error) {
-      toast.error(`could not change ${label.toLowerCase()}`, {
+      toast.error(`无法修改${label}`, {
         description: String(error),
       });
     } finally {
@@ -280,10 +322,10 @@ export function AcpConfigSelector({
       label={triggerLabel}
       title={
         modelOption
-          ? `Model: ${triggerLabel}${advertisedModelValue?.name && advertisedModelValue.name !== triggerLabel ? ` · ${advertisedModelValue.name}` : ""}`
-          : `Agent configuration${triggerLabel === "config" ? "" : `: ${triggerLabel}`}`
+          ? `模型：${triggerLabel}${advertisedModelValue?.name && advertisedModelValue.name !== triggerLabel ? ` · ${localizeAcpLabel(advertisedModelValue.name)}` : ""}`
+          : `代理配置${triggerLabel === "config" ? "" : `：${triggerLabel}`}`
       }
-      ariaLabel={modelOption ? `Model: ${triggerLabel}` : "Agent configuration"}
+      ariaLabel={modelOption ? `模型：${triggerLabel}` : "代理配置"}
       triggerTestId="acp-config-trigger"
       contentTestId="acp-config-popover"
       triggerIcon={triggerLabel === "config" ? SlidersHorizontal : undefined}
@@ -296,7 +338,10 @@ export function AcpConfigSelector({
           label="模式"
           value={selectedModeId ?? modes.currentModeId}
           disabled={pendingId === "__mode"}
-          options={modes.availableModes}
+          options={modes.availableModes.map((mode) => ({
+            ...mode,
+            name: localizeAcpLabel(mode.name),
+          }))}
           onValueChange={(modeId) =>
             applyChange(
               "__mode",
@@ -328,7 +373,7 @@ export function AcpConfigSelector({
         return isEffortOption(option) ? (
           <ComposerEffortSlider
             key={option.id}
-            label={option.name}
+            label={localizeAcpLabel(option.name)}
             testId="acp-effort-slider"
             value={selectedValue(option)}
             disabled={pendingId === option.id}
@@ -338,12 +383,16 @@ export function AcpConfigSelector({
         ) : (
           <ComposerSettingsSelect
             key={option.id}
-            label={option.name}
+            label={localizeAcpLabel(option.name)}
             value={selectedValue(option)}
             disabled={pendingId === option.id}
-            title={option.description || option.name}
+            title={localizeAcpDescription(option.description) || localizeAcpLabel(option.name)}
             hint={option === modelOption ? resolvedAliasHint : undefined}
-            options={option.values}
+            options={option.values.map((value) => ({
+              ...value,
+              name: localizeAcpLabel(value.name),
+              description: localizeAcpDescription(value.description),
+            }))}
             onValueChange={apply}
           />
         );
@@ -351,13 +400,13 @@ export function AcpConfigSelector({
         {toggles.map((option) => (
           <div
             key={option.id}
-            title={option.description || option.name}
+            title={localizeAcpDescription(option.description) || localizeAcpLabel(option.name)}
             className={cn(
               "flex items-center justify-between gap-2 text-xs text-foreground",
               pendingId === option.id && "opacity-50",
             )}
           >
-            <span className="truncate">{option.name}</span>
+            <span className="truncate">{localizeAcpLabel(option.name)}</span>
             <Switch
               checked={
                 liveHasChoices
@@ -367,7 +416,7 @@ export function AcpConfigSelector({
                     : option.currentValue === true
               }
               disabled={pendingId === option.id}
-              aria-label={option.name}
+              aria-label={localizeAcpLabel(option.name)}
               onCheckedChange={(next) => {
                 applyChange(
                   option.id,
@@ -405,7 +454,7 @@ export function AcpConfigSelector({
             )}
           >
             {reauthPending && <Loader2 className="h-3 w-3 animate-spin" aria-hidden />}
-            {reauthPending ? "signing out…" : "re-authenticate"}
+            {reauthPending ? "正在退出…" : "重新认证"}
           </button>
         )}
     </ComposerSettingsPopover>

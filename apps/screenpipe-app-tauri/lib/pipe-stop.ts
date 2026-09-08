@@ -31,7 +31,7 @@ export async function requestPipeStop(
     return {
       ok: false,
       status: "failed",
-      error: error instanceof Error ? error.message : "failed to reach the scheduled task stop endpoint",
+      error: error instanceof Error ? error.message : "无法访问定时任务停止接口",
     };
   }
 
@@ -46,7 +46,7 @@ export async function requestPipeStop(
     return {
       ok: false,
       status: "failed",
-      error: data?.error || `failed to stop scheduled task "${pipeName}"`,
+      error: data?.error || `停止定时任务“${pipeName}”失败`,
     };
   }
 
@@ -66,6 +66,6 @@ export async function requestPipeStop(
   return {
     ok: false,
     status: "failed",
-    error: `unexpected stop response for scheduled task "${pipeName}"`,
+    error: `定时任务“${pipeName}”返回了无法识别的停止响应`,
   };
 }

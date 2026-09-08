@@ -1151,7 +1151,7 @@ export function NoteView({
       toast({
         title: "请先结束会议",
         description:
-          "batch retranscribe runs on the saved audio after a meeting ends.",
+          "批量重新转写会在会议结束后基于已保存的音频运行。",
       });
       return;
     }
@@ -1239,7 +1239,7 @@ export function NoteView({
       toast({
         title: "请先结束会议",
         description:
-          "mp4 export runs on the saved frames and audio after a meeting ends.",
+        "MP4 导出会在会议结束后基于已保存的画面和音频运行。",
       });
       return;
     }
@@ -1274,7 +1274,7 @@ export function NoteView({
     toast({
       title: "正在导出 MP4…",
       description:
-        "stitching frames and audio — this can take a minute for long meetings.",
+        "正在拼接画面和音频——较长的会议可能需要几分钟。",
     });
     let jobId: string | null = null;
     let unlisten: (() => void) | null = null;
@@ -1298,9 +1298,9 @@ export function NoteView({
           toast({
             title: "MP4 已导出",
             description: [
-              `${summary?.frame_count ?? 0} frames`,
-              `${summary?.audio_chunk_count ?? 0} audio chunks`,
-              sizeMb ? `${sizeMb} mb` : null,
+              `${summary?.frame_count ?? 0} 个画面`,
+              `${summary?.audio_chunk_count ?? 0} 个音频片段`,
+              sizeMb ? `${sizeMb} MB` : null,
             ]
               .filter(Boolean)
               .join(" · "),
@@ -1438,7 +1438,7 @@ export function NoteView({
     } catch (err) {
       console.error("failed to copy meeting summary", err);
       toast({
-        title: "couldn't copy summary",
+        title: "无法复制摘要",
         description: String(err),
         variant: "destructive",
       });
@@ -1455,7 +1455,7 @@ export function NoteView({
     } catch (err) {
       console.error("failed to open email draft", err);
       toast({
-        title: "couldn't open your email app",
+        title: "无法打开邮件应用",
         description: String(err),
         variant: "destructive",
       });
@@ -1472,7 +1472,7 @@ export function NoteView({
       onBack();
     } catch (err) {
       toast({
-        title: "couldn't delete meeting",
+        title: "无法删除会议",
         description: String(err),
         variant: "destructive",
       });
@@ -1527,7 +1527,7 @@ export function NoteView({
       await updateSettings({ languages });
     } catch (err) {
       toast({
-        title: "couldn't update language",
+        title: "无法更新语言",
         description: String(err),
         variant: "destructive",
       });
@@ -1598,12 +1598,12 @@ export function NoteView({
         );
       }
       toast({
-        title: "microphone capture resumed",
+        title: "麦克风采集已恢复",
         description: "检测到语音后即开始文字记录。",
       });
     } catch (err) {
       toast({
-        title: "couldn't resume microphone",
+        title: "无法恢复麦克风采集",
         description: String(err),
         variant: "destructive",
       });
@@ -1618,7 +1618,7 @@ export function NoteView({
       setDismissedJoinUrl(link.url);
     } catch (err) {
       toast({
-        title: "couldn't open meeting",
+        title: "无法打开会议",
         description: String(err),
         variant: "destructive",
       });
@@ -1632,37 +1632,37 @@ export function NoteView({
   const summaryStatus = (() => {
     if (isLive) {
       return {
-        title: captureState?.label ?? "recording meeting",
-        detail: "notes and transcript save automatically",
+        title: captureState?.label ?? "正在录制会议",
+        detail: "笔记和转写会自动保存",
       };
     }
     if (resuming) {
       return {
-        title: "resuming meeting",
-        detail: "reopening this note for live capture",
+        title: "正在恢复会议",
+        detail: "正在重新打开此笔记以进行实时采集",
       };
     }
     if (summaryPresentation.transitionPhase === "finalizing") {
       return {
-        title: "meeting saved",
+        title: "会议已保存",
         detail:
-          "finishing the transcript before summary · you can safely leave",
+          "正在完成转写，然后生成摘要；你可以放心离开",
       };
     }
     if (summaryWorking) {
       return {
         title: retranscriptionSummaryRefreshWorking
-          ? "refreshing summary"
-          : "summarizing meeting",
+          ? "正在刷新摘要"
+          : "正在生成会议摘要",
         detail: retranscriptionSummaryRefreshWorking
-          ? "using the refreshed transcript · it appears here live"
-          : "you can leave · it appears here live and saves when finished",
+          ? "正在使用更新后的转写，结果会实时显示在这里"
+          : "你可以离开，结果会实时显示在这里并在完成后保存",
       };
     }
     if (visibleSummaryLifecycle.kind === "completed") {
       return {
-        title: "summary ready",
-        detail: "saved to this meeting note",
+        title: "摘要已就绪",
+        detail: "已保存到此会议笔记",
       };
     }
     if (visibleSummaryLifecycle.kind === "failed") {
@@ -1672,17 +1672,17 @@ export function NoteView({
         // needs to fix — keep "needs attention" for actionable failures only.
         title:
           failure.kind === "nothing_to_summarize"
-            ? "nothing to summarize"
-            : "summary needs attention",
+            ? "没有可生成摘要的内容"
+            : "摘要需要处理",
         detail: failure.copy,
       };
     }
     return {
-      title: "meeting saved",
+      title: "会议已保存",
       detail:
         autoSummaryEnabled === false
-          ? "automatic summary is off"
-          : "notes and transcript saved locally",
+          ? "自动摘要已关闭"
+          : "笔记和转写已保存到本地",
     };
   })();
   const summaryFailure =
@@ -1710,34 +1710,34 @@ export function NoteView({
   // that can appear while not live, so it has to keep the bar alive.
   const footerVisible = footerHasNews || (!isLive && Boolean(inactivityPrompt));
   const transcriptActionLabel = transcriptOpen
-    ? "hide transcript"
-    : "show transcript";
+    ? "隐藏转写"
+    : "显示转写";
   const summaryActionLabel = summaryWorking
     ? retranscriptionSummaryRefreshWorking
-      ? "refreshing summary after retranscription"
-      : "summarizing meeting"
+      ? "重新转写后正在刷新摘要"
+      : "正在生成会议摘要"
     : !canSummarizeMeeting
-      ? "summary unavailable"
+      ? "摘要不可用"
       : visibleSummaryLifecycle.kind === "completed" ||
           (transcriptRefreshRequested !== null &&
             (transcriptRefreshRequested === false ||
               autoSummaryEnabled !== true))
-        ? "summarize again"
+        ? "再次生成摘要"
         : visibleSummaryLifecycle.kind === "failed"
-          ? "retry summary"
-          : "summarize meeting";
+          ? "重试生成摘要"
+          : "生成会议摘要";
   const stopActionLabel =
     stopping || savingBeforeStop
-      ? "stopping meeting"
+      ? "正在停止会议"
       : autoSummaryEnabled === true
-        ? "stop and summarize"
-        : "stop meeting";
+        ? "停止并生成摘要"
+        : "停止会议";
   const stopButtonLabel =
     stopping || savingBeforeStop
-      ? "stopping…"
+      ? "正在停止…"
       : autoSummaryEnabled === true
-        ? "stop & summarize"
-        : "stop";
+        ? "停止并生成摘要"
+        : "停止";
   const summaryTransitionPhase = summaryPresentation.transitionPhase;
   // Share only what is finished and on disk. A half-streamed summary would put
   // a truncated one in someone's inbox.
@@ -2006,7 +2006,7 @@ export function NoteView({
   const summaryMenuItems: MeetingMenuGroup["items"] = [
     {
       key: "summary-model",
-      label: "summary model",
+      label: "摘要模型",
       icon: Sparkles,
       disabled:
         !summaryPresetReady ||
@@ -2014,9 +2014,9 @@ export function NoteView({
         summaryPresets.length === 0,
       submenu: {
         selectedKey: summaryPresetId,
-        selectedLabel: summaryPresetReady
-          ? summaryPresetModelLabel(summaryPreset) || "select"
-          : "loading…",
+          selectedLabel: summaryPresetReady
+          ? summaryPresetModelLabel(summaryPreset) || "请选择"
+          : "正在加载…",
         options: summaryPresets.map((preset) => ({
           key: preset.id,
           label: preset.id,
@@ -2041,37 +2041,37 @@ export function NoteView({
     });
   }
   const meetingMenuGroups: MeetingMenuGroup[] = [
-    { label: "summary", items: summaryMenuItems },
+    { label: "摘要", items: summaryMenuItems },
     ...(isLive || resuming
       ? []
       : [
           {
-            label: "meeting",
+            label: "会议",
             items: [
               {
                 key: "resume",
-                label: resuming ? "resuming meeting" : "resume meeting",
+                label: resuming ? "正在恢复会议" : "恢复会议",
                 icon: resuming ? Loader2 : Play,
                 onSelect: () => void onResume(),
                 disabled: resuming,
               },
               {
                 key: "retranscribe",
-                label: "retranscribe saved audio",
+                label: "重新转写已保存音频",
                 icon: retranscribing ? Loader2 : AudioLines,
                 onSelect: () => setConfirmingAction("retranscribe"),
                 disabled: retranscribing || summaryWorking,
               },
               {
                 key: "export",
-                label: "export to mp4",
+                label: "导出为 MP4",
                 icon: exporting ? Loader2 : Download,
                 onSelect: () => void handleExport(),
                 disabled: exporting,
               },
               {
                 key: "delete",
-                label: "delete meeting",
+                label: "删除会议",
                 icon: Trash2,
                 onSelect: () => setConfirmingAction("delete"),
                 destructive: true,
@@ -2095,14 +2095,13 @@ export function NoteView({
           <AlertDialogHeader>
             <AlertDialogTitle>重新转写会议</AlertDialogTitle>
             <AlertDialogDescription>
-              rebuild the transcript from saved audio. this replaces the current
-              transcript and refreshes the summary when automatic summary is on.
+              根据已保存的音频重新生成转写。这会替换当前转写；开启自动摘要后，也会刷新摘要。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={() => void handleRetranscribe()}>
-              retranscribe
+              重新转写
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2110,17 +2109,15 @@ export function NoteView({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>删除会议</AlertDialogTitle>
-            <AlertDialogDescription>
-              your notes and transcript will be permanently deleted.
-            </AlertDialogDescription>
+            <AlertDialogDescription>你的笔记和转写内容将被永久删除。</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => void handleDelete()}
             >
-              delete
+              删除
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -2144,7 +2141,7 @@ export function NoteView({
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background/60">
           <div className="border border-foreground bg-foreground px-12 py-10 text-background">
             <span className="text-sm font-medium tracking-tight">
-              drop image to add to note
+              拖入图片以添加到笔记
             </span>
           </div>
         </div>
@@ -2239,9 +2236,9 @@ export function NoteView({
               <button
                 type="button"
                 data-testid="meeting-chat-toggle"
-                aria-label="ask about this meeting"
+                aria-label="询问这场会议"
                 aria-pressed={chatOpen}
-                title="ask about this meeting"
+                title="询问这场会议"
                 onClick={() => {
                   setChatOpen((open) => {
                     if (!open) {
@@ -2331,7 +2328,7 @@ export function NoteView({
               value={note}
               onChange={setNote}
               placeholder={
-                'write what matters — it helps focus the summary · "/" for blocks'
+                '写下重要内容，帮助聚焦摘要；输入“/”插入内容块'
               }
               readOnly={summaryWorking}
               summaryRevealKey={summaryRevealKey}
@@ -2389,7 +2386,7 @@ export function NoteView({
                           selectedId: summaryPresetId,
                           selectedLabel: summaryPreset
                             ? `${summaryPreset.id} · ${summaryPreset.model}`
-                            : "no summary model selected",
+                            : "未选择摘要模型",
                           saving: summaryPresetSaving,
                           options: summaryPresets
                             .filter((preset) => preset.id !== summaryPresetId)
@@ -2626,7 +2623,7 @@ export function NoteView({
         </div>
         {isLive && (
           <div className="px-4 pb-1 text-center text-[10px] leading-none text-muted-foreground/60">
-            Always get consent when transcribing others.
+            转写他人语音前请务必征得同意。
           </div>
         )}
       </footer>
@@ -2726,7 +2723,7 @@ function AudioHealthButton({
                 <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-foreground" />
               )}
             </span>
-            audio settings
+            音频设置
           </div>
           <button
             type="button"
@@ -2785,7 +2782,7 @@ function AudioHealthButton({
         <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-2.5">
           <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
             <Languages className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">language</span>
+            <span className="truncate">语言</span>
           </div>
           <div className="inline-flex shrink-0 border border-border">
             <button
@@ -2811,7 +2808,7 @@ function AudioHealthButton({
                   : "text-muted-foreground",
               )}
             >
-              <span>auto</span>
+              <span>自动</span>
               {!englishOnly && <Check className="h-3 w-3" />}
             </button>
           </div>
@@ -2832,7 +2829,7 @@ function JoinMeetingSuggestion({
   onJoin: () => void;
   onDismiss: () => void;
 }) {
-  const label = mapped ? link.label : "nearby calendar event — join the call?";
+  const label = mapped ? link.label : "附近的日历事件——加入通话？";
   return (
     <div className="mb-3 flex justify-center">
       <div className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-muted px-1 py-1 shadow-sm">
@@ -3041,7 +3038,7 @@ function SaveIndicator({ state }: { state: SaveState }) {
     return (
       <span className="flex items-center gap-1.5">
         <Loader2 className="h-3 w-3 animate-spin" />
-        saving…
+        正在保存…
       </span>
     );
   }
@@ -3049,12 +3046,12 @@ function SaveIndicator({ state }: { state: SaveState }) {
     return (
       <span className="flex items-center gap-1.5">
         <Check className="h-3 w-3" />
-        saved · {formatClock(new Date(state.at).toISOString())}
+        已保存 · {formatClock(new Date(state.at).toISOString())}
       </span>
     );
   }
   if (state.kind === "error") {
-    return <span className="text-destructive">offline — will retry</span>;
+    return <span className="text-destructive">离线——将自动重试</span>;
   }
   return <span aria-hidden>&nbsp;</span>;
 }
@@ -3256,7 +3253,7 @@ function audioDeviceLabel({
     return devices.map((device) => device.name).join(", ");
   }
   if (selectedDevices.length > 0) return selectedDevices.join(", ");
-  return useSystemDefault ? fallback : "none selected";
+  return useSystemDefault ? fallback : "未选择";
 }
 
 function providerLabel(
@@ -3267,24 +3264,24 @@ function providerLabel(
     case "selected-engine":
       return transcriptionEngineLabel(selectedEngine);
     case "deepgram-live":
-      return "deepgram live";
+      return "Deepgram 实时转写";
     default:
-      return "disabled";
+      return "关闭";
   }
 }
 
 function transcriptionEngineLabel(engine: string) {
   switch (engine) {
     case "deepgram":
-      return "deepgram";
+      return "Deepgram";
     case "whisper-large-v3-turbo":
-      return "whisper turbo";
+      return "Whisper Turbo";
     case "whisper-large-v3-turbo-quantized":
-      return "whisper turbo fast";
+      return "Whisper Turbo（快速）";
     case "openai-compatible":
-      return "openai compatible";
+      return "OpenAI 兼容模式";
     case "disabled":
-      return "off";
+      return "关闭";
     default:
       return engine.replace(/-/g, " ");
   }

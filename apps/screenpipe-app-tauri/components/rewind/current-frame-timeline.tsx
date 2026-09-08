@@ -447,21 +447,21 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 							</div>
 							<div className="text-center space-y-3">
 								<h3 className="text-xl font-mono font-semibold text-foreground uppercase tracking-wide">
-									No Frame Selected
+																												未选择画面
 								</h3>
 								<p className="text-sm font-mono text-muted-foreground leading-relaxed">
-									Select a point on the timeline to view a recorded frame.
+																												选择时间线上的一个时刻以查看录制画面。
 								</p>
 							</div>
 							{onNavigate && (
 								<div className="mt-8 flex gap-2">
 									<button onClick={() => onNavigate("prev")} disabled={!canNavigatePrev}
 										className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-background hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed border border-border text-foreground text-sm font-mono uppercase transition-colors">
-										<ChevronLeft className="w-4 h-4" /> Previous
+																												<ChevronLeft className="w-4 h-4" /> 上一个
 									</button>
 									<button onClick={() => onNavigate("next")} disabled={!canNavigateNext}
 										className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-background hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed border border-border text-foreground text-sm font-mono uppercase transition-colors">
-										Next <ChevronRight className="w-4 h-4" />
+																												下一个 <ChevronRight className="w-4 h-4" />
 									</button>
 								</div>
 							)}
@@ -494,11 +494,11 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 									)}
 								</div>
 								<h3 className="text-lg font-mono font-semibold uppercase tracking-wide">
-									Screenshot paused
+																																																画面已暂停
 								</h3>
 								<p className="text-sm font-mono leading-relaxed text-white/65">
-									screenpipe saved activity for this moment, but no image was saved.
-									This usually happens during low-battery or privacy pause modes.
+									screenpipe 保存了这一时刻的活动，但没有保存画面。
+									这通常发生在低电量或隐私暂停模式下。
 								</p>
 							</div>
 						</div>
@@ -513,7 +513,7 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 									className="flex items-center justify-center gap-2 border border-white/20 bg-white/10 px-3 py-2 text-xs font-mono uppercase tracking-wide text-white/80 transition-colors hover:bg-white/20"
 								>
 									<Copy className="h-3.5 w-3.5" />
-									Copy text
+																																																				复制文字
 								</button>
 							)}
 							{onNavigate && (
@@ -617,7 +617,7 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 							copyDeeplinkAction();
 							setContextMenuOpen(false);
 						}}
-						title="Copy screenpipe://frame/N link"
+						title="复制 screenpipe://frame/N 链接"
 					>
 						<Link2 className="w-4 h-4 shrink-0" />
 						copy deeplink
@@ -682,7 +682,7 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 					src={snapshotAssetUrl}
 					className="absolute inset-0 w-full h-full object-contain"
 					style={{ zIndex: 2 }}
-					alt="Current frame"
+					alt="当前画面"
 					draggable={false}
 				/>
 			)}
@@ -694,7 +694,7 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 					src={displayedFallbackUrl}
 					className="absolute inset-0 w-full h-full object-contain"
 					style={{ zIndex: 2 }}
-					alt="Current frame"
+					alt="当前画面"
 					draggable={false}
 				/>
 			)}

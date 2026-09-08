@@ -69,7 +69,7 @@ describe("composer settings control", () => {
     const pi = screen.getByTestId("thinking-level-trigger");
     expect(pi).toHaveClass("w-7");
     expect(pi.querySelector("svg")).not.toBeNull();
-    expect(pi).toHaveAccessibleName("Thinking level: Medium");
+    expect(pi).toHaveAccessibleName("思考级别：中");
   });
 
   it("can embed Pi effort without rendering a second trigger", () => {
@@ -86,7 +86,7 @@ describe("composer settings control", () => {
     cleanup();
 
     render(<ThinkingLevelSelector sessionId={SESSION} />);
-    expect(screen.getByTestId("thinking-level-trigger")).toHaveTextContent("Medium");
+    expect(screen.getByTestId("thinking-level-trigger")).toHaveTextContent("中");
   });
 
   it("keeps ACP effort with its model and gives both providers the same dial", () => {
@@ -135,14 +135,14 @@ describe("composer settings control", () => {
     fireEvent.click(screen.getByTestId("thinking-level-trigger"));
     const piSlider = screen.getByTestId("thinking-level-slider");
     expect(piSlider).toHaveAttribute("role", "slider");
-    expect(screen.getByTestId("thinking-level-slider-value")).toHaveTextContent("Medium");
+    expect(screen.getByTestId("thinking-level-slider-value")).toHaveTextContent("中");
   });
 
   it("keeps a model list as a list, not a scale", () => {
     renderAcp();
     fireEvent.click(screen.getByTestId("acp-config-trigger"));
     expect(screen.queryByTestId("acp-effort-slider")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Model").tagName).toBe("SELECT");
+    expect(screen.getByLabelText("模型").tagName).toBe("SELECT");
   });
 
   it("keeps the test ids other specs select on", () => {

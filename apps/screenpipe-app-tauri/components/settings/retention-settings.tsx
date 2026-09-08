@@ -212,7 +212,7 @@ export function RetentionSettings({
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `request failed (${res.status})`);
+      throw new Error(err.error || `请求失败（${res.status}）`);
     }
   };
 
@@ -300,7 +300,7 @@ export function RetentionSettings({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `request failed (${res.status})`);
+        throw new Error(err.error || `请求失败（${res.status}）`);
       }
       const r = await res.json();
       const total =
@@ -332,7 +332,7 @@ export function RetentionSettings({
       const res = await localFetch("/data/compact", { method: "POST" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `request failed (${res.status})`);
+        throw new Error(err.error || `请求失败（${res.status}）`);
       }
       const r = await res.json();
       const reclaimed = r.bytes_reclaimed || 0;

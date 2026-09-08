@@ -133,13 +133,13 @@ export function AcpSignInDialog({
 
   const isCli = request?.kind === "cli";
   const hasCommand = isCli && Boolean(request.command?.trim());
-  const title = `sign in to ${agentName}`;
+  const title = `登录 ${agentName}`;
   const description = isCli
     ? hasCommand
-      ? `${agentName} opens its secure login in your browser and keeps the credential.`
-      : `${agentName} needs to be set up to continue.`
+      ? `${agentName} 会在浏览器中打开安全登录页面，并保留凭据。`
+      : `${agentName} 需要完成配置才能继续。`
     : request?.kind === "methods"
-      ? "choose how to sign in."
+      ? "选择登录方式。"
       : "";
 
   const respond = async (optionId?: string, id?: string) => {
@@ -184,7 +184,7 @@ export function AcpSignInDialog({
             <DialogTitle className="min-w-0 break-words leading-tight">{title}</DialogTitle>
           </div>
           <DialogDescription className="pt-0.5">
-            {state === "error" ? "that didn't work. please try again." : description}
+            {state === "error" ? "操作未成功，请重试。" : description}
           </DialogDescription>
         </DialogHeader>
 
@@ -228,7 +228,7 @@ export function AcpSignInDialog({
                 ) : (
                   <LogIn className="mr-1.5 h-3.5 w-3.5 shrink-0" aria-hidden />
                 )}
-                {busy ? "signing in…" : `sign in with ${agentName}`}
+                {busy ? "登录中…" : `使用 ${agentName} 登录`}
               </Button>
               <Button
                 variant="outline"
@@ -237,7 +237,7 @@ export function AcpSignInDialog({
                 onClick={onSwitchToDefault}
                 className="h-auto min-h-8 w-full whitespace-normal py-1.5 leading-tight"
               >
-                switch to {defaultPresetLabel}
+                切换到 {defaultPresetLabel}
               </Button>
             </>
           ) : request?.kind === "methods" ? (
@@ -270,7 +270,7 @@ export function AcpSignInDialog({
                     )}
                     <span className="min-w-0 flex-1">
                       <span className="block text-xs font-semibold">
-                        {isPending ? "signing in…" : method.title}
+                        {isPending ? "登录中…" : method.title}
                       </span>
                       {method.sub && !isPending && (
                         <span
@@ -292,7 +292,7 @@ export function AcpSignInDialog({
                 onClick={onDismiss}
                 className="h-auto min-h-8 w-full py-1.5"
               >
-                {state === "waiting" ? "cancel" : "暂不"}
+                {state === "waiting" ? "取消" : "暂不"}
               </Button>
             </>
           ) : null}

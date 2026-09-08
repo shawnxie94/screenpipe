@@ -112,14 +112,14 @@ describe("ChatResponseFeedback", () => {
     fireEvent.click(goodButton);
     fireEvent.click(badButton);
     expect(
-      await screen.findByText("local by default · no chat text shared"),
+      await screen.findByText("默认保存在本地 · 不会分享聊天内容"),
     ).toBeInTheDocument();
 
     expect(goodButton).toHaveAttribute("aria-pressed", "false");
     expect(badButton).toHaveAttribute("aria-pressed", "true");
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() =>
-      expect(screen.queryByText("what went wrong?")).not.toBeInTheDocument(),
+      expect(screen.queryByText("哪里出了问题？")).not.toBeInTheDocument(),
     );
   });
 
@@ -139,11 +139,11 @@ describe("ChatResponseFeedback", () => {
     const badButton = screen.getByRole("button", { name: "糟糕的回复" });
     fireEvent.click(badButton);
 
-    expect(await screen.findByText("what went wrong?")).toBeInTheDocument();
+    expect(await screen.findByText("哪里出了问题？")).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "didn't use tools" })).not.toBeDisabled(),
+      expect(screen.getByRole("button", { name: "没有使用工具" })).not.toBeDisabled(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "didn't use tools" }));
+    fireEvent.click(screen.getByRole("button", { name: "没有使用工具" }));
 
     await waitFor(() =>
       expect(submitFeedbackMock).toHaveBeenLastCalledWith(
@@ -158,11 +158,11 @@ describe("ChatResponseFeedback", () => {
       ),
     );
     expect(
-      await screen.findByText("local by default · no chat text shared"),
+      await screen.findByText("默认保存在本地 · 不会分享聊天内容"),
     ).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() =>
-      expect(screen.queryByText("what went wrong?")).not.toBeInTheDocument(),
+      expect(screen.queryByText("哪里出了问题？")).not.toBeInTheDocument(),
     );
   });
 
@@ -185,16 +185,16 @@ describe("ChatResponseFeedback", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "糟糕的回复" }));
-    const reasonButton = await screen.findByRole("button", { name: "incorrect" });
+    const reasonButton = await screen.findByRole("button", { name: "回答不正确" });
     await waitFor(() => expect(reasonButton).not.toBeDisabled());
     fireEvent.click(reasonButton);
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "local save failed · choose a reason to retry",
+      "本地保存失败 · 选择原因后重试",
     );
 
     fireEvent.click(reasonButton);
     expect(
-      await screen.findByText("local by default · no chat text shared"),
+      await screen.findByText("默认保存在本地 · 不会分享聊天内容"),
     ).toBeInTheDocument();
     expect(submitFeedbackMock).toHaveBeenCalledTimes(3);
     consoleError.mockRestore();

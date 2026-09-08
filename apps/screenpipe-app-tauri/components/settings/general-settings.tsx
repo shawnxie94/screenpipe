@@ -32,9 +32,9 @@ import {
 
 /** Settings search index for this section. Co-located with the component so adding a field here means updating one file. See `SettingsField` in `./settings-search` for the schema. */
 export const searchIndex: SettingsField[] = [
-  { label: "Auto-start", keywords: ["autostart", "launch", "startup"] },
-  { label: "Reset Onboarding", keywords: ["setup"] },
-  { label: "Your goal", keywords: ["onboarding", "purpose", "personalization"] },
+  { label: "开机自启", keywords: ["autostart", "launch", "startup"] },
+  { label: "重置引导流程", keywords: ["setup", "onboarding"] },
+  { label: "你的目标", keywords: ["onboarding", "purpose", "personalization"] },
 ];
 
 export default function GeneralSettings() {
@@ -105,7 +105,7 @@ export default function GeneralSettings() {
   return (
     <div className="space-y-5" data-testid="section-settings-general">
       <p className="text-muted-foreground text-sm mb-4">
-        Startup and general options
+        开机启动与通用选项
       </p>
 
       <div className="space-y-2">
@@ -140,7 +140,7 @@ export default function GeneralSettings() {
               <div>
                 <h3 className="text-sm font-medium text-foreground">你的目标</h3>
                 <p className="text-xs text-muted-foreground">
-                  What you want screenpipe to help you accomplish
+                  你希望 screenpipe 协助你完成的目标
                 </p>
               </div>
             </div>
@@ -183,7 +183,7 @@ export default function GeneralSettings() {
               disabled={isResettingOnboarding}
               onClick={() => void handleResetOnboarding()}
             >
-              {isResettingOnboarding ? "resetting..." : "reset"}
+              {isResettingOnboarding ? "重置中..." : "重置"}
             </Button>
           </div>
         </CardContent>

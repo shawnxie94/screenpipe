@@ -854,7 +854,7 @@ function HomeContent() {
           // ignore resync failures; websocket remains source of truth
         }
         throw new Error(
-          `stop meeting failed: HTTP ${res.status}${bodyText ? ` — ${bodyText}` : ""}`,
+          `停止会议失败：HTTP ${res.status}${bodyText ? ` — ${bodyText}` : ""}`,
         );
       } else {
         // No meeting active — start a manual one (optionally seeded from a
@@ -886,7 +886,7 @@ function HomeContent() {
         }
         const bodyText = await res.text().catch(() => "");
         throw new Error(
-          `start meeting failed: HTTP ${res.status}${bodyText ? ` — ${bodyText}` : ""}`,
+          `开始会议失败：HTTP ${res.status}${bodyText ? ` — ${bodyText}` : ""}`,
         );
       }
     } catch (e) {
@@ -1047,8 +1047,8 @@ function HomeContent() {
       default:
         return (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <img src="/128x128.png" alt="screenpipe" className="w-16 h-16 opacity-30 mb-4" />
-            <p className="text-sm font-mono">screenpipe</p>
+            <img src="/128x128.png" alt="知迹" className="w-16 h-16 opacity-30 mb-4" />
+            <p className="text-sm font-mono">知迹</p>
           </div>
         );
     }
@@ -1263,7 +1263,7 @@ function HomeContent() {
               <TooltipTrigger asChild>
                 <button
                   onClick={toggleSidebar}
-                  aria-label={sidebarCollapsed ? "expand sidebar" : "collapse sidebar"}
+                  aria-label={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
                   className={cn(
                     "p-1 rounded-md transition-colors",
                     sidebarCollapsed && activeSection === "timeline"
@@ -1278,7 +1278,7 @@ function HomeContent() {
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">
                 <span className="flex items-center gap-2">
-                  {sidebarCollapsed ? "expand sidebar" : "collapse sidebar"}
+                  {sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
                   <ShortcutKeycap>
                     {inAppShortcutLabel("toggle_sidebar", isMac)}
                   </ShortcutKeycap>
@@ -1304,7 +1304,7 @@ function HomeContent() {
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
                   <span className="flex items-center gap-2">
-                    search
+                    搜索
                     {!settings.disabledShortcuts.includes("searchShortcut") &&
                     settings.searchShortcut ? (
                     <ShortcutKeycap>
@@ -1343,7 +1343,7 @@ function HomeContent() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => setActiveSection("meetings")}
-                    aria-label={meetingState.active ? "meetings — recording" : "meetings"}
+                    aria-label={meetingState.active ? "会议 — 录制中" : "会议"}
                     aria-current={activeSection === "meetings" ? "page" : undefined}
                     data-testid="nav-meetings"
                     className={cn(
@@ -1370,7 +1370,7 @@ function HomeContent() {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
-                  {meetingState.active ? "meetings — recording" : "meetings"}
+                  {meetingState.active ? "会议 — 录制中" : "会议"}
                 </TooltipContent>
               </Tooltip>
             )}
@@ -1579,7 +1579,7 @@ function HomeContent() {
                   type="button"
                   onClick={returnToActivity}
                   aria-label="返回活动"
-                  title="back to activity"
+                        title="返回活动"
                   className="absolute left-4 top-11 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-lg shadow-black/10 backdrop-blur-sm transition-colors hover:border-foreground hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-offset-2"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -1602,7 +1602,7 @@ function HomeContent() {
 export default function HomePage() {
   return (
     <Suspense fallback={<div className="flex-1 min-w-0 h-full bg-background flex items-center justify-center">
-      <div className="text-muted-foreground">Loading...</div>
+      <div className="text-muted-foreground">加载中...</div>
     </div>}>
       <HomeContent />
     </Suspense>

@@ -602,7 +602,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 				const currentFrames = get().frames;
 				if (currentFrames.length === 0) {
 					set({
-						error: "Failed to parse server response",
+						error: "无法解析服务器响应",
 						isLoading: false,
 					});
 				}
@@ -645,8 +645,8 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 				// Max retries exceeded - but still don't block if we have frames
 				if (currentFrames.length === 0) {
 					set({
-						error:
-							"Timeline WebSocket failed after retries. Check devtools onclose code/reason and terminal for `api auth: rejected WebSocket upgrade`.",
+							error:
+								"时间线连接多次重试后仍然失败，请检查开发者工具中的关闭代码/原因，以及终端里的 API 鉴权错误。",
 						isLoading: false,
 						isConnected: false,
 					});
@@ -786,7 +786,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 							return {
 								sentRequests: newSentRequests,
 								message: requestRetryCount > 2
-									? "Loading history... server is warming up"
+									? "正在加载历史记录…服务器正在启动"
 									: null,
 							};
 						});
@@ -805,7 +805,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 				console.error("[fetchTimeRange] WebSocket not open after 5 retries, giving up");
 				set({
 					isLoading: false,
-					message: "Connection lost — please try again",
+									message: "连接已断开 — 请重试",
 				});
 			}
 		};

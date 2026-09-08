@@ -144,7 +144,7 @@ export function SkillsCard({ onChanged }: { onChanged?: () => void }) {
         disabled={!loaded}
       >
         <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-        Browse all skills
+        浏览全部技能
       </Button>
 
       <SkillsBrowser
@@ -165,7 +165,7 @@ export function SkillsCard({ onChanged }: { onChanged?: () => void }) {
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-medium text-foreground">
-            Imported{imported.length ? ` (${imported.length})` : ""}
+            已导入{imported.length ? `（${imported.length}）` : ""}
           </h4>
           <Button
             variant="ghost"
@@ -200,7 +200,7 @@ export function SkillsCard({ onChanged }: { onChanged?: () => void }) {
                   onClick={() => remove(s.name)}
                   disabled={busyKey === s.name}
                   className="h-6 px-2 text-muted-foreground hover:text-destructive shrink-0"
-                  aria-label={`Remove ${s.name}`}
+                  aria-label={`移除 ${s.name}`}
                 >
                   {busyKey === s.name ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -213,19 +213,19 @@ export function SkillsCard({ onChanged }: { onChanged?: () => void }) {
           </div>
         ) : loaded ? (
           <div className="text-[11px] text-muted-foreground bg-muted/30 rounded-md px-2.5 py-2">
-            No skills imported yet. Add one from your device below.
+            尚未导入技能。请从下方设备中的技能添加。
           </div>
         ) : (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" /> loading…
+            <Loader2 className="h-3 w-3 animate-spin" /> 加载中…
           </div>
         )}
       </div>
 
-      {/* Found on device + add-from-folder card */}
+      {/* 此设备上的技能与从文件夹添加 */}
       <div className="space-y-1.5">
         <h4 className="text-xs font-medium text-foreground">
-          Found on this device
+          此设备上的技能
         </h4>
         <div className="grid grid-cols-2 gap-2">
           {importable.map((s) => (
@@ -267,18 +267,18 @@ export function SkillsCard({ onChanged }: { onChanged?: () => void }) {
             <FolderPlus className="h-4 w-4 text-muted-foreground" />
             <span className="text-xs font-medium">从文件夹添加…</span>
             <span className="text-[10px] text-muted-foreground">
-              any folder with a SKILL.md
+              包含 SKILL.md 的任意文件夹
             </span>
           </button>
         </div>
 
         {loaded && importable.length === 0 && (
           <p className="text-[11px] text-muted-foreground">
-            No new skills found in{" "}
+            在{" "}
             <code className="text-[10px] bg-muted px-1 rounded">
               ~/.claude/skills
             </code>
-            . Use “Add from folder…” to import from anywhere.
+            中没有找到新技能。你可以使用“从文件夹添加…”从任意位置导入。
           </p>
         )}
       </div>

@@ -22,16 +22,16 @@ export function parseHumanSchedule(schedule: string): { dow: string; hour: numbe
 
 /** Format a 24h hour as "9 AM", "12 PM", etc. */
 function formatHour(h: number): string {
-  if (h === 0) return "12 AM";
-  if (h < 12) return `${h} AM`;
-  if (h === 12) return "12 PM";
-  return `${h - 12} PM`;
+  if (h === 0) return "12 上午";
+  if (h < 12) return `${h} 上午`;
+  if (h === 12) return "12 下午";
+  return `${h - 12} 下午`;
 }
 
 /** Format a 24h time as "9 AM" on the hour, else "9:30 AM". */
 function formatTime(h: number, m: number): string {
   if (!m) return formatHour(h);
-  const suffix = h < 12 ? "AM" : "PM";
+  const suffix = h < 12 ? "上午" : "下午";
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
 }
@@ -51,17 +51,17 @@ export function humanizeDow(dow: string): string {
     }
   }
   if (set.size === 0) return dow;
-  if (set.size === 7) return "daily";
-  const short = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  if (set.size === 7) return "每天";
+  const short = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
   const weekdays = new Set([1, 2, 3, 4, 5]);
   const weekend = new Set([0, 6]);
   const eq = (a: Set<number>, b: Set<number>) => a.size === b.size && [...a].every((x) => b.has(x));
-  if (eq(set, weekdays)) return "weekdays";
-  if (eq(set, weekend)) return "weekends";
+  if (eq(set, weekdays)) return "工作日";
+  if (eq(set, weekend)) return "周末";
   // "every day except X" when only one day is off
   if (set.size === 6) {
     const missing = [0, 1, 2, 3, 4, 5, 6].find((d) => !set.has(d))!;
-    return `except ${short[missing]}`;
+    return `除${short[missing]}外`;
   }
   // otherwise list days Mon-first for readability
   const order = [1, 2, 3, 4, 5, 6, 0];
@@ -86,33 +86,33 @@ export function formatNextRun(
   if (Number.isNaN(target)) return null;
 
   const minutes = Math.ceil((target - now.getTime()) / 60_000);
-  if (minutes <= 0) return "due now";
-  if (minutes < 60) return `in ${minutes}m`;
+  if (minutes <= 0) return "即将运行";
+  if (minutes < 60) return `${minutes} 分钟后`;
   const hours = Math.ceil(minutes / 60);
-  if (hours < 24) return `in ${hours}h`;
+  if (hours < 24) return `${hours} 小时后`;
   const days = Math.ceil(hours / 24);
-  if (days < 7) return `in ${days}d`;
-  return `in ${Math.ceil(days / 7)}w`;
+  if (days < 7) return `${days} 天后`;
+  return `${Math.ceil(days / 7)} 周后`;
 }
 
 /** Convert a raw schedule string to a short human-readable label. */
 export function humanizeSchedule(schedule: string | undefined): string {
-  if (!schedule || schedule === "manual") return "manual";
+  if (!schedule || schedule === "manual") return "手动";
   // Simple "every Xm/h/d" patterns
   const everyMatch = schedule.match(/^every\s+(\d+)\s*(m|h|d|s)/i);
   if (everyMatch) {
     const n = parseInt(everyMatch[1]);
     const unit = everyMatch[2].toLowerCase();
-    if (unit === "m") return n < 60 ? `${n}min` : `${n / 60}h`;
-    if (unit === "h") return `${n}h`;
-    if (unit === "d") return `${n}d`;
+    if (unit === "m") return n < 60 ? `每 ${n} 分钟` : `每 ${n / 60} 小时`;
+    if (unit === "h") return `每 ${n} 小时`;
+    if (unit === "d") return `每 ${n} 天`;
     return schedule;
   }
   // "every day at Xpm/am" or "every monday at 9am"
   const human = parseHumanSchedule(schedule);
   if (human) {
     const timeStr = formatHour(human.hour);
-    if (human.dow === "*") return `daily · ${timeStr}`;
+    if (human.dow === "*") return `每天 · ${timeStr}`;
     const dayLabel = humanizeDow(human.dow);
     return dayLabel ? `${timeStr} · ${dayLabel}` : timeStr;
   }
@@ -122,19 +122,19 @@ export function humanizeSchedule(schedule: string | undefined): string {
     const [min, hour, dom, mon, dow] = parts;
     // */N * * * * → every Nmin
     if (min.startsWith("*/") && hour === "*" && dom === "*" && mon === "*" && dow === "*") {
-      return `${min.slice(2)}min`;
+      return `每 ${min.slice(2)} 分钟`;
     }
     // 0 */N * * * → every Nh
     if (min === "0" && hour.startsWith("*/") && dom === "*" && mon === "*" && dow === "*") {
-      return `${hour.slice(2)}h`;
+      return `每 ${hour.slice(2)} 小时`;
     }
     // */N with hour range → e.g. "30min, 3pm-11pm"
     if (min.startsWith("*/") && hour !== "*") {
-      const interval = `${min.slice(2)}min`;
+      const interval = `每 ${min.slice(2)} 分钟`;
       // Try to humanize hour range
       const humanHours = hour.replace(/(\d+)/g, (_, h: string) => {
         const n = parseInt(h);
-        return n === 0 ? "12am" : n < 12 ? `${n}am` : n === 12 ? "12pm" : `${n - 12}pm`;
+        return n === 0 ? "12 上午" : n < 12 ? `${n} 上午` : n === 12 ? "12 下午" : `${n - 12} 下午`;
       }).replace("-", "–");
       let label = `${interval} · ${humanHours}`;
       // Add day info if not every day
@@ -149,7 +149,7 @@ export function humanizeSchedule(schedule: string | undefined): string {
     // raw-string fallback, so rows rendered "0 * * * *" verbatim.
     if (/^\d+$/.test(min) && hour === "*" && dom === "*" && mon === "*") {
       const m = parseInt(min);
-      const base = m === 0 ? "hourly" : `hourly · :${String(m).padStart(2, "0")}`;
+      const base = m === 0 ? "每小时" : `每小时 · :${String(m).padStart(2, "0")}`;
       if (dow === "*") return base;
       const dayLabel = humanizeDow(dow);
       return dayLabel ? `${base} · ${dayLabel}` : base;
@@ -158,15 +158,15 @@ export function humanizeSchedule(schedule: string | undefined): string {
     // Minutes were previously required to be 0, so "30 17 * * *" leaked raw.
     if (/^\d+$/.test(min) && /^\d+$/.test(hour) && dom === "*" && mon === "*") {
       const timeStr = formatTime(parseInt(hour), parseInt(min));
-      if (dow === "*") return `daily · ${timeStr}`;
+      if (dow === "*") return `每天 · ${timeStr}`;
       const dayLabel = humanizeDow(dow);
       return dayLabel ? `${timeStr} · ${dayLabel}` : timeStr;
     }
     // */N or 0 */N with day restriction
     if (dow !== "*") {
       let interval = "";
-      if (min.startsWith("*/")) interval = `${min.slice(2)}min`;
-      else if (min === "0" && hour.startsWith("*/")) interval = `${hour.slice(2)}h`;
+      if (min.startsWith("*/")) interval = `每 ${min.slice(2)} 分钟`;
+      else if (min === "0" && hour.startsWith("*/")) interval = `每 ${hour.slice(2)} 小时`;
       if (interval) {
         const dayLabel = humanizeDow(dow);
         return dayLabel ? `${interval} · ${dayLabel}` : interval;

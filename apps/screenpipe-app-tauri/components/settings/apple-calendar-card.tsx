@@ -212,7 +212,7 @@ export function AppleCalendarCard({
                       ) : (
                         <RefreshCw className="h-3 w-3" />
                       )}
-                      Refresh
+                      刷新
                     </Button>
                   ) : (
                     <Button
@@ -226,7 +226,7 @@ export function AppleCalendarCard({
                       ) : (
                         <Check className="h-3 w-3" />
                       )}
-                      Connect
+                      连接
                     </Button>
                   )}
                   <Button
@@ -241,7 +241,7 @@ export function AppleCalendarCard({
                     ) : (
                       <RotateCcw className="h-3 w-3" />
                     )}
-                    Revoke permission
+                    撤销权限
                   </Button>
                 </div>
 
@@ -249,13 +249,13 @@ export function AppleCalendarCard({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-foreground">
-                        upcoming events
+                        即将到来的事件
                       </span>
                     </div>
                     {isLoadingEvents ? (
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        loading events...
+                        正在加载事件…
                       </div>
                     ) : upcomingEvents.length > 0 ? (
                       <div className="space-y-1.5">
@@ -272,7 +272,7 @@ export function AppleCalendarCard({
                                 </span>
                                 {isHappeningNow(event.start, event.end) && (
                                   <span className="text-[10px] bg-foreground text-background px-1 rounded">
-                                    now
+                                    现在
                                   </span>
                                 )}
                               </div>
@@ -283,7 +283,7 @@ export function AppleCalendarCard({
                               {event.attendees.length > 0 && (
                                 <div className="flex items-center gap-1 text-muted-foreground mt-0.5">
                                   <Users className="h-3 w-3" />
-                                  {event.attendees.length} attendees
+                                  {event.attendees.length} 位参与者
                                 </div>
                               )}
                             </div>
@@ -292,7 +292,7 @@ export function AppleCalendarCard({
                       </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        No meetings found in the next 24 hours.
+                        接下来 24 小时内没有找到会议。
                       </p>
                     )}
                   </div>
@@ -301,7 +301,7 @@ export function AppleCalendarCard({
             ) : (
               <div className="flex items-start gap-2 text-xs text-muted-foreground">
                 <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                Apple Calendar is unavailable on this system.
+                此系统无法使用 Apple 日历。
               </div>
             )}
 
@@ -312,7 +312,7 @@ export function AppleCalendarCard({
         {!connected && (
           <p className="mt-4 text-xs text-muted-foreground">
             {busy === "connect"
-              ? "Waiting for macOS approval…"
+              ? "等待 macOS 授权…"
               : hasAttemptedConnect
                 ? "如果提示未出现，请撤销权限并重新连接。"
                 : "点击连接并批准 macOS 日历提示。"}

@@ -22,11 +22,11 @@ describe("ACP preset setup progress", () => {
     const progress = screen.getByTestId("acp-setup-progress");
     expect(progress).toHaveAttribute("data-current-step", "2");
     expect(progress).toHaveAttribute("data-total-steps", "3");
-    expect(progress).toHaveTextContent("Starting Claude Code");
-    expect(progress).toHaveTextContent("Download");
-    expect(progress).toHaveTextContent("Start");
-    expect(progress).toHaveTextContent("Connect");
-    expect(progress).toHaveTextContent("step 2 of 3");
+    expect(progress).toHaveTextContent("正在启动 Claude Code");
+    expect(progress).toHaveTextContent("下载");
+    expect(progress).toHaveTextContent("启动");
+    expect(progress).toHaveTextContent("连接");
+    expect(progress).toHaveTextContent("第 2/3 步");
     expect(progress).not.toHaveTextContent("%");
   });
 
@@ -42,8 +42,8 @@ describe("ACP preset setup progress", () => {
     const progress = screen.getByTestId("acp-setup-progress");
     expect(progress).toHaveAttribute("data-current-step", "2");
     expect(progress).toHaveAttribute("data-total-steps", "2");
-    expect(progress).not.toHaveTextContent("Download");
-    expect(progress).toHaveTextContent("Connecting GitHub Copilot");
+    expect(progress).not.toHaveTextContent("下载");
+    expect(progress).toHaveTextContent("正在连接 GitHub Copilot");
   });
 
   it("names binary installation as install while preserving the shared track", () => {
@@ -57,8 +57,8 @@ describe("ACP preset setup progress", () => {
     );
 
     const progress = screen.getByTestId("acp-setup-progress");
-    expect(progress).toHaveTextContent("Installing Cursor");
-    expect(progress).toHaveTextContent("Install");
-    expect(progress).toHaveTextContent("step 1 of 3");
+    expect(progress).toHaveTextContent("正在安装 Cursor");
+    expect(progress).toHaveTextContent("安装");
+    expect(progress).toHaveTextContent("第 1/3 步");
   });
 });

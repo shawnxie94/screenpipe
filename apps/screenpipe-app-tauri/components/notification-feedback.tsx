@@ -101,7 +101,7 @@ export function NotificationFeedback({
                 color: "hsl(var(--muted-foreground))",
               }}
             >
-              feedback sent
+              反馈已发送
             </div>
           ) : (
             <>
@@ -120,7 +120,7 @@ export function NotificationFeedback({
                   disabled={saveState === "saving"}
                   aria-label="有用的通知"
                   aria-pressed={rating === "up"}
-                  title="useful"
+                  title="有用"
                   style={iconButtonStyle(rating === "up")}
                 >
                   <ThumbsUp size={9} strokeWidth={1.8} />
@@ -131,7 +131,7 @@ export function NotificationFeedback({
                   disabled={saveState === "saving"}
                   aria-label="无用的通知"
                   aria-pressed={rating === "down"}
-                  title="not useful"
+                  title="无用"
                   style={iconButtonStyle(rating === "down")}
                 >
                   <ThumbsDown size={9} strokeWidth={1.8} />
@@ -170,7 +170,7 @@ export function NotificationFeedback({
                     type="submit"
                     disabled={!correction.trim() || saveState === "saving"}
                     aria-label="发送反馈"
-                    title="send feedback"
+                    title="发送反馈"
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -202,7 +202,7 @@ export function NotificationFeedback({
                     color: "hsl(var(--muted-foreground))",
                   }}
                 >
-                  could not save — try again
+                  无法保存，请重试
                 </div>
               )}
             </>

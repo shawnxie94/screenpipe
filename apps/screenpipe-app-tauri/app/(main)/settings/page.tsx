@@ -180,7 +180,7 @@ function SettingsContent() {
 
   type NavItem = { id: string; label: string; icon: React.ReactNode };
   const allItems: NavItem[] = navGroups.flatMap((g) => g.items as NavItem[]);
-  const currentLabel = allItems.find((s) => s.id === section)?.label ?? "Settings";
+  const currentLabel = allItems.find((s) => s.id === section)?.label ?? "设置";
 
   // Search state. Overlay pattern (Claude-style): full nav stays rendered;
   // results float in a popover under the input. activeIndex tracks the
@@ -436,7 +436,7 @@ export default function SettingsPage() {
       <ExperimentalShortcutGuide />
       <Suspense fallback={
         <div className="flex-1 min-w-0 h-full bg-background flex items-center justify-center">
-          <div className="text-muted-foreground text-sm">Loading...</div>
+          <div className="text-muted-foreground text-sm">加载中...</div>
         </div>
       }>
         <SettingsContent />

@@ -206,7 +206,7 @@ export function mapRegistryEntryToDraft(
       },
       headers,
       authHint: needsAuth
-        ? "this server needs auth — use Connect to sign in, or paste a token under manual authentication"
+        ? "此服务需要身份验证——请使用“连接”登录，或在手动身份验证中粘贴令牌"
         : undefined,
     };
   }
@@ -230,9 +230,9 @@ export function mapRegistryEntryToDraft(
       },
       headers: [],
       authHint:
-        "runs as a local process — make sure its runtime (" +
-        (pkg.runtimeHint || pkg.registryType || "the listed tool") +
-        ") is installed",
+        "作为本地进程运行——请确认已安装运行环境（" +
+        (pkg.runtimeHint || pkg.registryType || "列表中的工具") +
+        "）",
     };
   }
 
@@ -258,14 +258,14 @@ export const RECOMMENDED_SERVERS: RegistryServer[] = [
   {
     name: "com.notion/mcp",
     title: "Notion",
-    description: "Search, read and write Notion pages and databases. OAuth sign-in.",
+    description: "搜索、读取和写入 Notion 页面与数据库，支持 OAuth 登录。",
     repository: { url: "https://github.com/makenotion/notion-mcp-server" },
     remotes: [{ type: "streamable-http", url: "https://mcp.notion.com/mcp" }],
   },
   {
     name: "com.figma.mcp/mcp",
     title: "Figma",
-    description: "Read Figma files, frames and design context for your designs.",
+    description: "读取 Figma 文件、画面和设计上下文。",
     repository: { url: "https://help.figma.com/hc/en-us/articles/32132100833559" },
     remotes: [{ type: "streamable-http", url: "https://mcp.figma.com/mcp" }],
   },

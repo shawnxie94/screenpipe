@@ -317,7 +317,7 @@ export function usePiSteeringTransport(
         pendingSteerBatchRef.current = [...batch, ...pendingSteerBatchRef.current];
         setIsLoading(false);
         setIsStreaming(false);
-        toast({ title: "failed to send steered message", description: result.error, variant: "destructive" });
+        toast({ title: "发送引导消息失败", description: result.error, variant: "destructive" });
       } else {
         // This redirect is internal steering, not a user stop. ACP adapters
         // inject into the open assistant stream and do not echo a second user
@@ -348,7 +348,7 @@ export function usePiSteeringTransport(
       setIsLoading(false);
       setIsStreaming(false);
       const description = e instanceof Error ? e.message : String(e);
-      toast({ title: "failed to send steered message", description, variant: "destructive" });
+      toast({ title: "发送引导消息失败", description, variant: "destructive" });
     } finally {
       pendingSteerFlushInFlightRef.current = false;
     }
@@ -549,7 +549,7 @@ export function usePiSteeringTransport(
         );
         restoreQueuedDisplay(currentQueueSessionId, prompt.id, queuedDisplay);
         setAssistantInterruptedState(interruptedAssistantBeforeSteer, false);
-        toast({ title: "failed to steer queued message", description: result.error, variant: "destructive" });
+        toast({ title: "引导排队消息失败", description: result.error, variant: "destructive" });
         return;
       }
       if (!result.data) {
@@ -569,8 +569,8 @@ export function usePiSteeringTransport(
         restoreQueuedDisplay(currentQueueSessionId, prompt.id, queuedDisplay);
         setAssistantInterruptedState(interruptedAssistantBeforeSteer, false);
         toast({
-          title: "message already started",
-          description: "That follow-up has moved out of the queue.",
+          title: "消息已经开始处理",
+          description: "这条后续消息已离开队列。",
         });
         return;
       }
@@ -594,7 +594,7 @@ export function usePiSteeringTransport(
       restoreQueuedDisplay(currentQueueSessionId, prompt.id, queuedDisplay);
       setAssistantInterruptedState(interruptedAssistantBeforeSteer, false);
       toast({
-        title: "failed to steer queued message",
+        title: "引导排队消息失败",
         description: e instanceof Error ? e.message : String(e),
         variant: "destructive",
       });

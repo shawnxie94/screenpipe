@@ -25,7 +25,7 @@ export function FeedbackSection() {
   return (
     <div className="space-y-5" data-testid="section-help">
       <p className="text-muted-foreground text-sm mb-4">
-        Get support, send logs, or suggest features
+        获取帮助、发送日志或提出功能建议
       </p>
 
       <div className="space-y-2">
@@ -38,7 +38,7 @@ export function FeedbackSection() {
           <div className="relative shrink-0">
             <img
               src="/tutorial-thumbnail.jpg"
-              alt="screenpipe tutorial"
+              alt="screenpipe 使用指南"
               className="w-[124px] h-[70px] object-cover border border-border"
             />
             <span className="absolute inset-0 flex items-center justify-center">
@@ -51,15 +51,15 @@ export function FeedbackSection() {
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-medium text-foreground">开始使用</h3>
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground border border-border px-1 py-px">
-                11 min
+                11 分钟
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              the complete screenpipe tutorial, setup to scheduled tasks
+              从安装设置到定时任务的完整 screenpipe 使用指南
             </p>
           </div>
           <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-150 shrink-0">
-            watch →
+            查看 →
           </span>
         </button>
 
@@ -78,7 +78,7 @@ export function FeedbackSection() {
               </div>
             </div>
             <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-150 shrink-0">
-              take survey →
+              填写问卷 →
             </span>
           </div>
         </button>
@@ -93,7 +93,7 @@ export function FeedbackSection() {
               <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground">文档</h3>
-                <p className="text-xs text-muted-foreground">guides, API reference, integrations</p>
+                <p className="text-xs text-muted-foreground">指南、API 参考和集成</p>
               </div>
             </div>
             <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-150">
@@ -116,7 +116,7 @@ export function FeedbackSection() {
               </div>
             </div>
             <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-150">
-              youtube →
+              YouTube →
             </span>
           </div>
         </button>
@@ -149,12 +149,12 @@ export function FeedbackSection() {
             <div className="flex items-center gap-2.5">
               <Github className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
-                <h3 className="text-sm font-medium text-foreground">GitHub issues</h3>
-                <p className="text-xs text-muted-foreground">bugs & technical issues</p>
+                <h3 className="text-sm font-medium text-foreground">GitHub 问题反馈</h3>
+                <p className="text-xs text-muted-foreground">缺陷与技术问题</p>
               </div>
             </div>
             <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-150">
-              open →
+              打开 →
             </span>
           </div>
         </button>
@@ -174,7 +174,7 @@ export function FeedbackSection() {
               </div>
             </div>
             <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-150">
-              join →
+              加入 →
             </span>
           </div>
         </button>
@@ -189,7 +189,7 @@ export function FeedbackSection() {
               <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-foreground">更新日志</h3>
-                <p className="text-xs text-muted-foreground">what&apos;s new in each version</p>
+                <p className="text-xs text-muted-foreground">查看每个版本的新变化</p>
               </div>
             </div>
             <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors duration-150">

@@ -29,10 +29,10 @@ const isLowTier = (tier: string | null | undefined) =>
 
 // Each "frame" is a skeleton layout of a different app the user was in.
 const MOCK_FRAMES = [
-  { label: "now · your editor", bars: [85, 60, 72, 40, 65] },
-  { label: "-2m · browser", bars: [50, 90, 45, 78, 30] },
-  { label: "-10m · a meeting", bars: [70, 35, 88, 55, 62] },
-  { label: "-1h · slack", bars: [40, 75, 52, 85, 48] },
+  { label: "现在 · 编辑器", bars: [85, 60, 72, 40, 65] },
+  { label: "-2 分钟 · 浏览器", bars: [50, 90, 45, 78, 30] },
+  { label: "-10 分钟 · 会议", bars: [70, 35, 88, 55, 62] },
+  { label: "-1 小时 · Slack", bars: [40, 75, 52, 85, 48] },
 ];
 
 const FRAME_MS = 1800;
@@ -126,11 +126,11 @@ function TimelinePreview() {
 const COSTS = [
   {
     icon: Camera,
-    text: "takes periodic screenshots as you work",
+    text: "工作时定期截取屏幕画面",
   },
   {
     icon: HardDrive,
-    text: "uses memory, cpu and disk",
+    text: "会占用内存、CPU 和磁盘空间",
   },
   // The bounds, stated where the user is actually deciding. Both controls
   // already ship in Settings → Privacy — `ignoreIncognitoWindows` defaults to
@@ -139,7 +139,7 @@ const COSTS = [
   // one moment the user is choosing whether to allow it.
   {
     icon: EyeOff,
-    text: "skips incognito windows. you can exclude any app in settings.",
+    text: "跳过隐私窗口，也可在设置中排除任意应用。",
     testId: "timeline-capture-bounds",
   },
 ];
@@ -188,7 +188,7 @@ export default function TimelineChoice({
       });
     } catch (e) {
       console.error("failed to save timeline choice:", e);
-      setError("couldn't save that choice. check disk space and try again.");
+      setError("无法保存此选择，请检查磁盘空间后重试。");
       inFlight.current = false;
       setPending(null);
       return;
@@ -201,7 +201,7 @@ export default function TimelineChoice({
   const recommendedTag = (
     <span className="flex items-center gap-1 font-mono text-[9px] normal-case tracking-normal opacity-70">
       <Check className="w-2.5 h-2.5" strokeWidth={2.5} />
-      recommended
+      推荐
     </span>
   );
   const subtext = (text: string) => (
@@ -225,10 +225,10 @@ export default function TimelineChoice({
         transition={{ delay: 0.1 }}
       >
         <h2 className="font-mono text-base font-bold lowercase">
-          meet the timeline
+          认识时间线
         </h2>
         <p className="font-mono text-[10px] text-muted-foreground/60 mt-1 max-w-[320px]">
-          rewind what you&apos;ve seen on screen
+          回看你在屏幕上看过的内容
         </p>
       </motion.div>
 
@@ -271,12 +271,11 @@ export default function TimelineChoice({
           transition={{ delay: 0.3 }}
         >
           <p className="font-mono text-[10px] text-amber-500/90 font-semibold lowercase">
-            timeline may slow down this device
+            时间线可能会拖慢这台设备
           </p>
           <p className="font-mono text-[10px] text-muted-foreground/70 mt-1 leading-snug">
-            keeping it off saves memory, cpu and disk. text exposed by your apps
-            stays searchable; screenshots and image-only text won&apos;t be
-            captured.
+            关闭后可节省内存、CPU 和磁盘空间。应用暴露的文字仍可搜索，
+            但不会捕捉屏幕截图和仅存在于图片中的文字。
           </p>
         </motion.div>
       )}
@@ -311,9 +310,9 @@ export default function TimelineChoice({
         >
           <span className="flex items-center gap-1.5">
             {pending === true && <Loader className="w-3 h-3 animate-spin" />}
-            timeline on
+            开启时间线
           </span>
-          {recommendEnabled ? recommendedTag : subtext("visual rewind")}
+          {recommendEnabled ? recommendedTag : subtext("可视化回看")}
         </button>
         <button
           onClick={() => choose(false)}
@@ -326,11 +325,11 @@ export default function TimelineChoice({
         >
           <span className="flex items-center gap-1.5">
             {pending === false && <Loader className="w-3 h-3 animate-spin" />}
-            keep it off
+            保持关闭
           </span>
           {!recommendEnabled
             ? recommendedTag
-            : subtext("saves ram, cpu & disk")}
+            : subtext("节省内存、CPU 和磁盘空间")}
         </button>
       </motion.div>
 
@@ -340,7 +339,7 @@ export default function TimelineChoice({
         animate={{ opacity: 1 }}
         transition={{ delay: 0.45 }}
       >
-        not a forever choice — change it anytime in settings
+        这不是永久选择 — 可随时在设置中更改
       </motion.p>
     </motion.div>
   );

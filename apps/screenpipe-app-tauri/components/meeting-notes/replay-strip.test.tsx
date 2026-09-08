@@ -179,7 +179,7 @@ describe("ReplayStrip", () => {
 
     await waitFor(() => {
       expect(frameImageSources(container)).toEqual([]);
-      expect(screen.getByText(/no screen images available/i)).toBeInTheDocument();
+      expect(screen.getByText(/本次会议期间没有可用的屏幕画面/)).toBeInTheDocument();
     });
   });
 
@@ -205,7 +205,7 @@ describe("ReplayStrip", () => {
       ),
     );
     expect(screen.getByRole("button", { name: "播放静音回放" })).toBeEnabled();
-    expect(screen.getByText("silent")).toBeInTheDocument();
+    expect(screen.getByText("静音")).toBeInTheDocument();
     expect(container.querySelector("audio, video")).toBeNull();
   });
 
@@ -262,7 +262,7 @@ describe("ReplayStrip", () => {
       "1",
     );
     expect(
-      screen.queryByText(/no screen images available/i),
+      screen.queryByText(/本次会议期间没有可用的屏幕画面/),
     ).not.toBeInTheDocument();
   });
 

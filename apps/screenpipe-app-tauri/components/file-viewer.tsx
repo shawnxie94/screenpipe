@@ -115,12 +115,12 @@ function ErrorState({ message, path }: { message: string; path: string }) {
   return (
     <div className="font-mono text-[12px] text-foreground/70 max-w-prose">
       <div className="uppercase tracking-wider text-[10px] mb-2 text-foreground/40">
-        couldn&apos;t open file
+        无法打开文件
       </div>
       <pre className="whitespace-pre-wrap break-words mb-4">{message}</pre>
       {path && (
         <div className="text-foreground/40 break-all" title={path}>
-          <span className="opacity-60">looked in: </span>
+          <span className="opacity-60">搜索位置：</span>
           {viewerPathBreadcrumb(path)}
         </div>
       )}
@@ -156,7 +156,7 @@ function ImageView({ src, name }: { src: string; name: string }) {
       </div>
       {dims && (
         <div className="font-mono text-[10px] tracking-wider uppercase text-foreground/40">
-          {dims.w} × {dims.h} · click to {fit === "fit" ? "zoom" : "fit"}
+          {dims.w} × {dims.h} · 点击以{fit === "fit" ? "放大" : "适应"}
         </div>
       )}
     </div>
@@ -303,17 +303,16 @@ export function ViewerFileContent({
       {content?.kind === "binary" && (
         <div className="font-mono text-[12px] text-foreground/70 max-w-prose">
           <div className="uppercase tracking-wider text-[10px] mb-2 text-foreground/40">
-            binary file · {formatViewerBytes(content.total_bytes)}
+            二进制文件 · {formatViewerBytes(content.total_bytes)}
           </div>
           <p className="mb-4 text-foreground/60">
-            this file isn&apos;t safe to render as text. open it in your
-            system&apos;s default app to view it properly.
+            此文件不适合按文本渲染。请使用系统默认应用打开，以便正确查看。
           </p>
           <button
             onClick={() => void commands.openNotePath(path)}
             className="px-3 py-1 text-[10px] tracking-wider uppercase font-mono border border-border bg-foreground/[0.06] hover:bg-foreground hover:text-background transition-colors"
           >
-            open in default app
+            使用默认应用打开
           </button>
         </div>
       )}
@@ -321,21 +320,21 @@ export function ViewerFileContent({
       {content?.kind === "text" && content.truncated && (
         <div className="font-mono text-[10px] tracking-wide uppercase text-foreground/50 mb-3 px-3 py-1 border border-border bg-foreground/[0.04] flex items-center justify-between gap-3">
           <span>
-            showing first {formatViewerBytes(MAX_VIEWER_PREVIEW_BYTES)} · file is{" "}
+            显示前 {formatViewerBytes(MAX_VIEWER_PREVIEW_BYTES)} · 文件共{" "}
             {formatViewerBytes(content.total_bytes)}
           </span>
           <button
             onClick={() => void commands.openNotePath(path)}
             className="underline opacity-80 hover:opacity-100"
           >
-            open full file ↗
+            打开完整文件 ↗
           </button>
         </div>
       )}
 
       {content?.kind === "text" && content.text === "" && (
         <div className="font-mono text-[12px] text-foreground/40 italic">
-          (empty file)
+          （空文件）
         </div>
       )}
 
@@ -390,14 +389,14 @@ export function ViewerFileContent({
         >
           <div className="shrink-0 font-mono text-[10px] tracking-wide uppercase text-foreground/50 px-3 py-1 border border-border bg-foreground/[0.04] flex items-center justify-between gap-3">
             <span>
-              html document · sandboxed{showRendered ? " · rendered" : " · source"}
+              HTML 文档 · 沙箱{showRendered ? " · 已渲染" : " · 源代码"}
             </span>
             <button
               data-testid="html-render-toggle"
               onClick={() => setShowRendered((v) => !v)}
               className="underline opacity-80 hover:opacity-100"
             >
-              {showRendered ? "view source" : "preview rendered ↗"}
+              {showRendered ? "查看源代码" : "预览渲染结果 ↗"}
             </button>
           </div>
           {showRendered ? (

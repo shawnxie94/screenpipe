@@ -24,19 +24,19 @@ function formatUiEvent(ev: UiEventSummary): { icon: string; label: string } | nu
 	const truncate = (s: string, max = 40) => s.length > max ? s.slice(0, max) + "\u2026" : s;
 	switch (ev.event_type) {
 		case "text":
-			return { icon: "\u2328", label: ev.text_content ? `typed "${truncate(ev.text_content)}"` : "typed" };
+			return { icon: "\u2328", label: ev.text_content ? `输入了“${truncate(ev.text_content)}”` : "输入" };
 		case "clipboard":
 			return { icon: "\ud83d\udccb", label: ev.text_content ? `复制 "${truncate(ev.text_content)}"` : "复制" };
 		case "click":
-			return { icon: "\ud83d\uddb1", label: `clicked "${truncate(ev.text_content || "element")}"` };
+			return { icon: "\ud83d\uddb1", label: `点击了“${truncate(ev.text_content || "元素")}”` };
 		case "app_switch":
-			return { icon: "\u21d4", label: `switched to ${ev.app_name || "app"}` };
+			return { icon: "\u21d4", label: `切换到 ${ev.app_name || "应用"}` };
 		case "key":
-			return { icon: "\u2303", label: ev.text_content ? `pressed ${truncate(ev.text_content)}` : "key press" };
+			return { icon: "\u2303", label: ev.text_content ? `按下 ${truncate(ev.text_content)}` : "按键" };
 		case "scroll":
-			return { icon: "\u21f3", label: `scrolled${ev.window_title ? ` in ${truncate(ev.window_title)}` : ""}` };
+			return { icon: "\u21f3", label: `滚动${ev.window_title ? `了 ${truncate(ev.window_title)}` : ""}` };
 		case "window_focus":
-			return { icon: "\ud83d\udd32", label: `focused ${ev.window_title ? truncate(ev.window_title) : ev.app_name || "window"}` };
+			return { icon: "\ud83d\udd32", label: `聚焦于 ${ev.window_title ? truncate(ev.window_title) : ev.app_name || "窗口"}` };
 		default:
 			return null;
 	}
@@ -278,7 +278,7 @@ export function AppContextPopover({
 					<div className="space-y-1">
 						<div className="flex items-center gap-1.5 text-muted-foreground">
 							<AppWindow className="w-3 h-3 flex-shrink-0" />
-							<span>{data.uniqueWindows} window{data.uniqueWindows !== 1 ? "s" : ""}</span>
+							<span>{data.uniqueWindows} 个窗口</span>
 						</div>
 						<div className="pl-4 space-y-0.5">
 							{data.topWindows.map((w, i) => (
@@ -337,7 +337,7 @@ export function AppContextPopover({
 					<div className="space-y-1">
 						<div className="flex items-center gap-1.5 text-muted-foreground">
 							<MousePointerClick className="w-3 h-3 flex-shrink-0" />
-							<span>{formattedUiEvents.length} action{formattedUiEvents.length !== 1 ? "s" : ""}</span>
+							<span>{formattedUiEvents.length} 个操作</span>
 						</div>
 						<div className="pl-4 space-y-0.5">
 							{formattedUiEvents.slice(0, 5).map((ev, i) => (
@@ -360,7 +360,7 @@ export function AppContextPopover({
 					<div className="space-y-1">
 						<div className="flex items-center gap-1.5 text-muted-foreground">
 							<Mic className="w-3 h-3 flex-shrink-0" />
-							<span>{audioTranscripts.length} transcript{audioTranscripts.length !== 1 ? "s" : ""}</span>
+							<span>{audioTranscripts.length} 段转写</span>
 						</div>
 						<div className="pl-4 space-y-1">
 							{audioTranscripts.slice(0, 3).map((t, i) => (

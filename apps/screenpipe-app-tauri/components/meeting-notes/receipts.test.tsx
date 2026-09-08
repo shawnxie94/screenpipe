@@ -68,7 +68,7 @@ describe("Receipts", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Ask screenpipe about Arc, Customer onboarding notes",
+        name: "询问 screenpipe 关于 Arc、Customer onboarding notes 的信息",
       }),
     );
 
@@ -113,14 +113,14 @@ describe("Receipts", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Ask screenpipe about Arc, Customer onboarding notes",
+        name: "询问 screenpipe 关于 Arc、Customer onboarding notes 的信息",
       }),
     );
 
     await waitFor(() =>
       expect(mocks.toast).toHaveBeenCalledWith({
-        title: "couldn't open chat",
-        description: "try again in a moment.",
+        title: "无法打开聊天",
+        description: "请稍后重试。",
         variant: "destructive",
       }),
     );

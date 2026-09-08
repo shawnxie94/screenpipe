@@ -43,6 +43,14 @@ import { Input } from "@/components/ui/input";
 import { MAX_DASHBOARDS } from "@/lib/live-views/constants";
 import type { BrainViewDefinition } from "@/lib/utils/tauri";
 
+function displayDashboardTitle(view: BrainViewDefinition): string {
+  // Older installs persisted the starter dashboard in English. Localize only
+  // that untouched default; user-renamed dashboards must remain unchanged.
+  return view.id === "my-dashboard" && view.title === "My dashboard"
+    ? "我的仪表盘"
+    : view.title;
+}
+
 export function LiveViewDashboardSwitcher({
   views,
   current,
@@ -70,10 +78,10 @@ export function LiveViewDashboardSwitcher({
 }) {
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [renameTitle, setRenameTitle] = useState(current.title);
+  const [renameTitle, setRenameTitle] = useState(displayDashboardTitle(current));
 
   useEffect(() => {
-    if (!renameOpen) setRenameTitle(current.title);
+    if (!renameOpen) setRenameTitle(displayDashboardTitle(current));
   }, [current.title, renameOpen]);
 
   const trimmedRename = renameTitle.trim();
@@ -100,7 +108,7 @@ export function LiveViewDashboardSwitcher({
           >
             {views.map((view) => (
               <option key={view.id} value={view.id}>
-                {view.title}
+                {displayDashboardTitle(view)}
               </option>
             ))}
           </select>
@@ -125,7 +133,7 @@ export function LiveViewDashboardSwitcher({
                 disabled={views.length >= MAX_DASHBOARDS}
                 onSelect={onCreate}
               >
-                <Plus className="mr-2 h-3.5 w-3.5" /> new dashboard
+                <Plus className="mr-2 h-3.5 w-3.5" /> 新建仪表盘
               </DropdownMenuItem>
               {onCustomize && (
                 <DropdownMenuItem
@@ -133,7 +141,7 @@ export function LiveViewDashboardSwitcher({
                   onSelect={onCustomize}
                 >
                   <SlidersHorizontal className="mr-2 h-3.5 w-3.5" />
-                  customize
+                  自定义
                 </DropdownMenuItem>
               )}
               {onOpenTemplates && (
@@ -141,22 +149,22 @@ export function LiveViewDashboardSwitcher({
                   data-testid="overview-templates"
                   onSelect={onOpenTemplates}
                 >
-                  <LayoutTemplate className="mr-2 h-3.5 w-3.5" /> templates
+                <LayoutTemplate className="mr-2 h-3.5 w-3.5" /> 模板
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => setRenameOpen(true)}>
-                <Pencil className="mr-2 h-3.5 w-3.5" /> rename
+                <Pencil className="mr-2 h-3.5 w-3.5" /> 重命名
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => void onDuplicate()}>
-                <Copy className="mr-2 h-3.5 w-3.5" /> duplicate
+                <Copy className="mr-2 h-3.5 w-3.5" /> 复制
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onSelect={() => setDeleteOpen(true)}
               >
-                <Trash2 className="mr-2 h-3.5 w-3.5" /> delete
+                <Trash2 className="mr-2 h-3.5 w-3.5" /> 删除
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -171,7 +179,7 @@ export function LiveViewDashboardSwitcher({
           <DialogHeader>
             <DialogTitle>重命名仪表盘</DialogTitle>
             <DialogDescription>
-              Use a name that makes this dashboard easy to recognize.
+              使用一个便于识别此仪表盘的名称。
             </DialogDescription>
           </DialogHeader>
           <Input
@@ -193,7 +201,7 @@ export function LiveViewDashboardSwitcher({
               variant="outline"
               onClick={() => setRenameOpen(false)}
             >
-              cancel
+              取消
             </Button>
             <Button
               data-testid="overview-confirm-rename"
@@ -204,7 +212,7 @@ export function LiveViewDashboardSwitcher({
                 setRenameOpen(false);
               }}
             >
-              rename
+              重命名
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -213,10 +221,9 @@ export function LiveViewDashboardSwitcher({
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent className="rounded-none">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{current.title}”?</AlertDialogTitle>
+            <AlertDialogTitle>删除“{displayDashboardTitle(current)}”？</AlertDialogTitle>
             <AlertDialogDescription>
-              This removes the dashboard and its layout. Other dashboards and
-              Scheduled task artifacts stay available.
+              这会删除仪表盘及其布局。其他仪表盘和计划任务产物仍会保留。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -227,7 +234,7 @@ export function LiveViewDashboardSwitcher({
               disabled={busy}
               onClick={() => void onDelete()}
             >
-              delete dashboard
+              删除仪表盘
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

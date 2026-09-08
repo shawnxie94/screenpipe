@@ -149,13 +149,13 @@ function ControlledSelector() {
 
 async function createChatGptPreset() {
   fireEvent.click(screen.getByRole("combobox"));
-  fireEvent.click(await screen.findByText("create new preset"));
+  fireEvent.click(await screen.findByText("创建新预设"));
   fireEvent.click(screen.getByRole("button", { name: /高级/ }));
-  fireEvent.click(screen.getByRole("button", { name: "chatgpt" }));
-  fireEvent.change(screen.getByLabelText("name"), {
+  fireEvent.click(screen.getByRole("button", { name: "ChatGPT" }));
+  fireEvent.change(screen.getByLabelText("名称"), {
     target: { value: "new chat preset" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "continue" }));
+  fireEvent.click(screen.getByRole("button", { name: "继续" }));
 }
 
 describe("AIPresetsSelector controlled preset creation", () => {
@@ -175,19 +175,19 @@ describe("AIPresetsSelector controlled preset creation", () => {
     render(<AIPresetsSelector compact showModelOnly />);
 
     fireEvent.click(screen.getByRole("combobox"));
-    fireEvent.click(await screen.findByText("create new preset"));
+    fireEvent.click(await screen.findByText("创建新预设"));
 
     expect(
-      screen.getByRole("heading", { name: "choose your ai" }),
+      screen.getByRole("heading", { name: "选择 AI" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pi" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Codex" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Claude Code" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "chatgpt" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "claude API" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "ollama" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ChatGPT" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Claude API" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ollama" })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "coding agent" }),
     ).not.toBeInTheDocument();
@@ -197,10 +197,10 @@ describe("AIPresetsSelector controlled preset creation", () => {
     expect(
       screen.queryByRole("button", { name: "使用命令" }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("name")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("名称")).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/api key/i)).not.toBeInTheDocument();
-    expect(screen.getByText("choose one to continue")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "continue" })).toBeDisabled();
+    expect(screen.getByText("选择一个以继续")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "继续" })).toBeDisabled();
 
     const dialog = screen.getByRole("dialog", { name: "新建预设" });
     const primaryChoices = new Set([
@@ -224,10 +224,10 @@ describe("AIPresetsSelector controlled preset creation", () => {
     ]);
 
     fireEvent.click(screen.getByRole("button", { name: "Pi" }));
-    expect(screen.queryByText("how this works")).not.toBeInTheDocument();
+    expect(screen.queryByText("工作原理")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Codex" }));
-    const nameInput = screen.getByLabelText("name");
+    const nameInput = screen.getByLabelText("名称");
     expect(nameInput).toBeEnabled();
     fireEvent.change(nameInput, { target: { value: "my claude preset" } });
     expect(nameInput).toHaveValue("my claude preset");
@@ -235,10 +235,10 @@ describe("AIPresetsSelector controlled preset creation", () => {
     fireEvent.click(screen.getByRole("button", { name: /高级/ }));
 
     expect(screen.getByText("直接使用模型")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "chatgpt" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "claude API" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "ChatGPT" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Claude API" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "ollama" }).querySelector("img"),
+      screen.getByRole("button", { name: "Ollama" }).querySelector("img"),
     ).toHaveAttribute("src", "/images/ollama.png");
     expect(
       screen.getByRole("button", { name: "使用 API 密钥" }),
@@ -264,7 +264,7 @@ describe("AIPresetsSelector controlled preset creation", () => {
         }),
       );
     });
-    expect(screen.queryByRole("button", { name: "continue" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "继续" })).not.toBeInTheDocument();
     expect(screen.getByRole("combobox")).toHaveTextContent("gpt-5.6-terra");
   });
 
@@ -317,7 +317,7 @@ describe("AIPresetsSelector controlled preset creation", () => {
     render(<AIPresetsSelector compact showModelOnly providerIconOnly />);
 
     const trigger = screen.getByRole("combobox", {
-      name: "AI provider: Claude Code. Change provider",
+      name: "AI 提供商：Claude Code。更改提供商",
     });
     expect(trigger).not.toHaveTextContent("Claude Code");
     expect(trigger).not.toHaveTextContent("claude-acp");
@@ -456,7 +456,7 @@ describe("AIPresetsSelector preset deletion", () => {
     render(<AIPresetsSelector compact showModelOnly />);
 
     fireEvent.click(screen.getByRole("combobox"));
-    fireEvent.click(screen.getByRole("button", { name: "Delete original" }));
+    fireEvent.click(screen.getByRole("button", { name: "删除 original" }));
 
     expect(mocks.updateSettings).toHaveBeenCalledWith({
       aiPresets: [{ ...localPreset, defaultPreset: true }],
@@ -473,7 +473,7 @@ describe("AIPresetsSelector preset deletion", () => {
     fireEvent.click(screen.getByRole("combobox"));
 
     expect(
-      screen.queryByRole("button", { name: "Delete original" }),
+      screen.queryByRole("button", { name: "删除 original" }),
     ).not.toBeInTheDocument();
   });
 });

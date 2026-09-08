@@ -38,7 +38,7 @@ export function PipeStoreSubmissionDialog({
         <DialogHeader>
           <DialogTitle>提交你的定时任务</DialogTitle>
           <DialogDescription>
-            Store publishing is curated
+            商店发布需要审核
           </DialogDescription>
         </DialogHeader>
 
@@ -49,15 +49,13 @@ export function PipeStoreSubmissionDialog({
               email {PIPE_STORE_SUBMISSION_EMAIL}
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              We review every scheduled task before it appears in the Store. Send a
-              repository or pipe.md link and a short description of what it
-              does.
+              每个定时任务都需要经过审核后才会出现在商店中。请发送代码仓库或 pipe.md 链接，并简要说明它的用途。
             </p>
           </div>
 
           {defaultPipe ? (
             <div className="text-xs text-muted-foreground">
-              selected scheduled task: <span className="font-medium text-foreground">{defaultPipe}</span>
+              已选择的定时任务：<span className="font-medium text-foreground">{defaultPipe}</span>
             </div>
           ) : null}
 
@@ -74,16 +72,16 @@ export function PipeStoreSubmissionDialog({
             onClick={() => onOpenChange(false)}
             className="text-xs"
           >
-            NOT NOW
+            暂不
           </Button>
           <Button
             size="sm"
             className="text-xs"
-            aria-label={`Email ${PIPE_STORE_SUBMISSION_EMAIL} about a Screenpipe Store submission`}
+            aria-label={`向 ${PIPE_STORE_SUBMISSION_EMAIL} 发送 Screenpipe 商店投稿邮件`}
             onClick={() => void openUrl(contactHref)}
           >
             <Mail className="h-3.5 w-3.5 mr-1.5" />
-            EMAIL LOUIS
+            邮件联系 Louis
           </Button>
         </DialogFooter>
       </DialogContent>

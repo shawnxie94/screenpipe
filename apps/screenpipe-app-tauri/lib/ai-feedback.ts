@@ -26,7 +26,7 @@ async function requireSavedFeedback(response: Response, label: string): Promise<
     // Keep the status as the useful fallback when the body is unavailable.
   }
   throw new Error(
-    `failed to save ${label} feedback (${response.status})${detail ? `: ${detail}` : ""}`,
+    `保存${label}反馈失败（${response.status}）${detail ? `：${detail}` : ""}`,
   );
 }
 

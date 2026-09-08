@@ -127,8 +127,8 @@ function platformNativeCalendarLabel({
 
 function formatList(labels: string[]): string {
   if (labels.length <= 1) return labels[0] ?? "";
-  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
-  return `${labels.slice(0, -1).join(", ")}, and ${
+  if (labels.length === 2) return `${labels[0]}和${labels[1]}`;
+  return `${labels.slice(0, -1).join("、")}和${
     labels[labels.length - 1]
   }`;
 }

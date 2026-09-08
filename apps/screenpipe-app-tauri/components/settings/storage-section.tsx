@@ -107,8 +107,8 @@ export function StorageSection() {
     } catch (error) {
       console.error("failed to restart screenpipe:", error);
       toast({
-        title: "restart failed",
-        description: "please restart screenpipe manually for the change to apply",
+        title: "重启失败",
+        description: "请手动重启 screenpipe 以应用更改",
         variant: "destructive",
         duration: 5000,
       });
@@ -120,10 +120,10 @@ export function StorageSection() {
   return (
     <div className="space-y-5" data-testid="section-settings-storage">
       <p className="text-muted-foreground text-sm mb-4">
-        Local disk usage and storage controls
+        本地磁盘用量与存储控制
       </p>
 
-      {/* Data Directory */}
+      {/* 数据目录 */}
       <Card className="border-border bg-card">
           <CardContent className="px-3 py-2.5">
             <div className="flex items-center justify-between">
@@ -131,7 +131,7 @@ export function StorageSection() {
                 <Folder className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div>
                   <h3 className="text-sm font-medium text-foreground">
-                    Data Directory
+                    数据目录
                   </h3>
                   <p className="text-xs text-muted-foreground truncate max-w-[250px]">
                     {!settings.dataDir || settings.dataDir === "default"
@@ -139,7 +139,7 @@ export function StorageSection() {
                       : settings.dataDir}
                   </p>
                   <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                    changing directory starts fresh recordings
+                    更换目录后将从新的位置开始录制
                   </p>
                 </div>
               </div>
@@ -153,7 +153,7 @@ export function StorageSection() {
                       onClick={handleDataDirReset}
                       className="h-7 text-xs shrink-0"
                     >
-                      Reset
+                      重置
                     </Button>
                   )}
                 <Button
@@ -162,7 +162,7 @@ export function StorageSection() {
                   onClick={handleDataDirChange}
                   className="h-7 text-xs shrink-0"
                 >
-                  Change
+                  更改
                 </Button>
               </div>
             </div>
@@ -178,7 +178,7 @@ export function StorageSection() {
               <div>
                 <h3 className="text-sm font-medium text-foreground">清除缓存</h3>
                 <p className="text-xs text-muted-foreground">
-                  Remove AI agent cache, old logs, and recovery artifacts
+                  删除 AI Agent 缓存、旧日志和恢复文件
                 </p>
               </div>
             </div>
@@ -194,9 +194,9 @@ export function StorageSection() {
                   if (result.data.length === 0) {
                     if (await hasCachedData()) {
                       await clearTimelineCache();
-                      toast({ title: "cache cleared" });
+                      toast({ title: "缓存已清除" });
                     } else {
-                      toast({ title: "nothing to clean up" });
+                      toast({ title: "没有需要清理的内容" });
                     }
                     return;
                   }
@@ -207,7 +207,7 @@ export function StorageSection() {
                 }
               }}
             >
-              {isClearing ? "clearing..." : "clear"}
+              {isClearing ? "清理中..." : "清理"}
             </Button>
           </div>
         </CardContent>
@@ -219,7 +219,7 @@ export function StorageSection() {
             <AlertDialogTitle>清理缓存？</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2">
-                <p>the following files will be deleted ({formatBytes(cacheFiles.reduce((s, f) => s + Number(f.size_bytes), 0))} total):</p>
+                <p>以下文件将被删除（共 {formatBytes(cacheFiles.reduce((s, f) => s + Number(f.size_bytes), 0))}）：</p>
                 <ul className="text-xs space-y-1 max-h-48 overflow-y-auto">
                   {cacheFiles.map((f) => (
                     <li key={f.path} className="flex justify-between gap-2">
@@ -229,7 +229,7 @@ export function StorageSection() {
                   ))}
                 </ul>
                 <p className="text-xs text-muted-foreground">
-                  AI agent will reinstall automatically on next use.
+                  AI Agent 会在下次使用时自动重新安装。
                 </p>
               </div>
             </AlertDialogDescription>
@@ -246,8 +246,8 @@ export function StorageSection() {
                   if (result.status === "error") throw new Error(result.error);
                   await clearTimelineCache();
                   toast({
-                    title: "cache cleared",
-                    description: `freed ${formatBytes(Number(result.data))}`,
+                    title: "缓存已清除",
+                    description: `已释放 ${formatBytes(Number(result.data))}`,
                   });
                 } catch (e: any) {
                   toast({ title: "清理缓存失败", description: e?.toString(), variant: "destructive" });
@@ -257,7 +257,7 @@ export function StorageSection() {
                 }
               }}
             >
-              delete all
+              全部删除
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -269,7 +269,7 @@ export function StorageSection() {
         visible={dataDirChanged}
         onApply={handleApplyRestart}
         isUpdating={isRestarting}
-        message="data directory changed. restart to apply."
+        message="数据目录已更改，请重启以应用更改。"
       />
     </div>
   );

@@ -57,7 +57,7 @@ describe("parseChartSpec — bar", () => {
       CHART_LIMITS.barItems,
     );
     expect(spec?.truncatedNote).toBe(
-      `showing first ${CHART_LIMITS.barItems} of ${CHART_LIMITS.barItems + 5} points`,
+      `显示前 ${CHART_LIMITS.barItems} 项（共 ${CHART_LIMITS.barItems + 5} 条数据）`,
     );
   });
 

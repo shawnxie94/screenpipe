@@ -426,7 +426,7 @@ function groupBySpeaker(chunks: MeetingAudioChunk[]): SpeakerBlock[] {
     if (!text) continue;
     const ts = timestampMs(c.timestamp);
     if (ts <= 0) continue;
-    const speakerName = c.speakerName || (c.isInput ? "me" : "speaker");
+    const speakerName = c.speakerName || (c.isInput ? "我" : "说话人");
     const speakerId = c.speakerId;
     const speakerKey =
       speakerId != null
@@ -975,13 +975,22 @@ export function TranscriptPanel({
   const transcriptState = showRecoveryBanner
     ? "recovering"
     : !isLive
-      ? "saved transcript"
+      ? "已保存的转写"
       : visibleLiveBlocks.length > 0 || liveStatus?.active
-        ? "live transcript"
-        : captureState?.shortLabel || "listening";
+        ? "实时转写"
+      : captureState?.shortLabel || "监听中";
+  const transcriptStateLabel = transcriptState === "recovering"
+    ? "恢复中"
+    : transcriptState === "已保存的转写"
+      ? "转录已保存"
+    : transcriptState === "实时转写"
+        ? "实时转录"
+          : transcriptState === "监听中"
+          ? "监听中"
+          : transcriptState;
   const transcriptStateDetail =
     displayBlocks.length > 0
-      ? `${displayBlocks.length} turn${displayBlocks.length === 1 ? "" : "s"}`
+      ? `${displayBlocks.length} 段`
       : null;
   // As a tab surface the transcript sits under the meeting title, chips and
   // tabs, so it must ride the same centered shell — otherwise every turn hugs
@@ -1037,7 +1046,7 @@ export function TranscriptPanel({
             aria-orientation="horizontal"
             aria-label="调整转录面板大小"
             tabIndex={0}
-            title="drag to resize · double-click to reset"
+            title="拖动调整大小 · 双击重置"
             onPointerDown={handleResizeStart}
             onDoubleClick={handleResizeReset}
             onKeyDown={handleResizeKeyDown}
@@ -1071,7 +1080,7 @@ export function TranscriptPanel({
                 <span
                   className="inline-flex min-w-0 items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-foreground"
                   role="status"
-                  aria-label={`文字记录状态: ${transcriptState}`}
+                  aria-label={`文字记录状态：${transcriptStateLabel}`}
                   data-testid="transcript-stream-status"
                 >
                   <span
@@ -1088,7 +1097,7 @@ export function TranscriptPanel({
                         "animate-pulse motion-reduce:animate-none",
                     )}
                   />
-                  <span className="truncate">{transcriptState}</span>
+                  <span className="truncate">{transcriptStateLabel}</span>
                 </span>
                 {transcriptStateDetail && (
                   <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
@@ -1100,7 +1109,7 @@ export function TranscriptPanel({
             {query.trim() && (
               <span
                 className="shrink-0 text-[10px] tabular-nums text-muted-foreground"
-                title="matching segments"
+                title="匹配的片段"
               >
                 {filteredBlocks.length}/{displayBlocks.length}
               </span>
@@ -1124,11 +1133,11 @@ export function TranscriptPanel({
                   )}
                   title={
                     searchOpen
-                      ? "hide search"
-                      : `search transcript (${isMac ? "⌘F" : "Ctrl+F"})`
+                      ? "隐藏搜索"
+                      : `搜索转录（${isMac ? "⌘F" : "Ctrl+F"}）`
                   }
                   aria-label={
-                    searchOpen ? "hide transcript search" : "search transcript"
+                    searchOpen ? "隐藏转录搜索" : "搜索转录"
                   }
                   aria-pressed={searchOpen}
                 >
@@ -1144,7 +1153,7 @@ export function TranscriptPanel({
                   size="sm"
                   onClick={onClose}
                   className="h-7 w-7 p-0"
-                  title="close transcript"
+                  title="关闭转录"
                   aria-label="关闭转录"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -1176,7 +1185,7 @@ export function TranscriptPanel({
             {loading && !loaded && (
               <div className="flex items-center justify-center py-8 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />
-                loading transcript…
+                正在加载转录…
               </div>
             )}
 
@@ -1228,7 +1237,7 @@ export function TranscriptPanel({
               size="sm"
               onClick={() => scrollToLatest()}
               className="absolute bottom-3 right-3 h-8 w-8 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur hover:bg-accent"
-              title="follow live transcript"
+              title="跟随实时转写"
               aria-label="跟随实时转录"
             >
               <ArrowDown className="h-3.5 w-3.5" />
@@ -1330,8 +1339,8 @@ export const SpeakerParagraph = React.memo(function SpeakerParagraph({
                 )}
                 title={
                   block.speakerId != null
-                    ? `speaker #${block.speakerId} — click to rename or reassign`
-                    : "click to assign a speaker"
+                    ? `说话人 #${block.speakerId} — 点击重命名或重新分配`
+                    : "点击分配说话人"
                 }
               >
                 <User className="h-3 w-3 text-muted-foreground/70 self-center" />
@@ -1384,7 +1393,7 @@ export const SpeakerParagraph = React.memo(function SpeakerParagraph({
         {!block.final && (
           <span
             className="absolute -right-1 -top-1 flex h-3 w-3 items-center justify-center rounded-full bg-background shadow-sm ring-1 ring-border"
-            title="transcribing partial text"
+            title="正在转写部分文本"
             aria-label="正在转写部分文本"
           >
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground motion-reduce:animate-none" />
@@ -1401,8 +1410,8 @@ export const SpeakerParagraph = React.memo(function SpeakerParagraph({
                 ? "opacity-100"
                 : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
             )}
-            title={showPlayer ? "hide audio" : "play this segment's audio"}
-            aria-label={showPlayer ? "hide audio" : "play this segment's audio"}
+            title={showPlayer ? "隐藏音频" : "播放此片段的音频"}
+            aria-label={showPlayer ? "隐藏音频" : "播放此片段的音频"}
             aria-expanded={showPlayer}
           >
             {showPlayer ? (

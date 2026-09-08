@@ -148,22 +148,21 @@ export function IcsCalendarCard() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-sm font-semibold text-foreground">
-                ICS Calendars
+                ICS 日历
               </h3>
               <span className="px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full inline-flex items-center gap-1">
                 <Link2 className="h-2.5 w-2.5" />
-                subscription
+                订阅
               </span>
               {entries.length > 0 && (
                 <span className="px-2 py-0.5 text-xs font-medium bg-foreground text-background rounded-full">
-                  connected
+                  已连接
                 </span>
               )}
             </div>
 
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              Subscribe to any calendar feed by pasting its ICS/webcal URL.
-              Works with Outlook, Google, Apple, Exchange. Read-only.
+              粘贴 ICS/webcal 地址即可订阅任意日历源。支持 Outlook、Google、Apple 和 Exchange，仅供读取。
             </p>
 
             {/* Existing entries */}
@@ -204,7 +203,7 @@ export function IcsCalendarCard() {
             <div className="space-y-2">
               <div className="flex gap-2">
                 <Input
-                  placeholder="https:// or webcal:// URL"
+                  placeholder="https:// 或 webcal:// 地址"
                   value={newUrl}
                   onChange={(e) => {
                     setNewUrl(e.target.value);
@@ -229,7 +228,7 @@ export function IcsCalendarCard() {
                   ) : (
                     <Plus className="h-3 w-3" />
                   )}
-                  Add
+                  添加
                 </Button>
               </div>
               {testError && (
@@ -244,7 +243,7 @@ export function IcsCalendarCard() {
           <div className="px-4 pb-3 pt-1 border-t border-border">
             <div className="flex items-center justify-between mt-2 mb-2">
               <span className="text-xs font-medium text-muted-foreground">
-                upcoming events (next 8h)
+                即将到来的事件（未来 8 小时）
               </span>
               <Button
                 variant="ghost"
@@ -262,10 +261,10 @@ export function IcsCalendarCard() {
             </div>
 
             {isLoadingEvents && upcomingEvents.length === 0 ? (
-              <p className="text-xs text-muted-foreground">loading...</p>
+              <p className="text-xs text-muted-foreground">正在加载...</p>
             ) : upcomingEvents.length === 0 ? (
               <p className="text-xs text-muted-foreground">
-                no upcoming events in the next 8 hours
+                未来 8 小时内没有即将到来的事件
               </p>
             ) : (
               <div className="space-y-1.5">
@@ -300,7 +299,7 @@ export function IcsCalendarCard() {
                           {event.title}
                           {now && (
                             <span className="ml-1.5 text-[10px] font-medium text-muted-foreground">
-                              NOW
+                  当前
                             </span>
                           )}
                         </span>
@@ -329,11 +328,11 @@ export function IcsCalendarCard() {
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span>
               {enabledCount > 0
-                ? `${enabledCount} feed${enabledCount !== 1 ? "s" : ""} active, polls every 10m`
+                ? `${enabledCount} 个日历源已启用，每 10 分钟轮询一次`
                 : "粘贴 ICS/webcal URL 以订阅日历源"}
             </span>
             <span className="ml-auto">
-              {entries.length > 0 ? "● connected" : "○ not connected"}
+              {entries.length > 0 ? "● 已连接" : "○ 未连接"}
             </span>
           </div>
         </div>

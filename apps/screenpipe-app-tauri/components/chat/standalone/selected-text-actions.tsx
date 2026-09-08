@@ -219,7 +219,7 @@ export function SelectedTextActions({
         className="whitespace-nowrap px-3 py-2 font-medium uppercase tracking-wide text-foreground transition-colors duration-150 hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none"
         onClick={() => runAction(onAddToChat)}
       >
-        add to chat
+        添加到聊天
       </button>
       {onAskInSideChat ? (
         <button
@@ -227,7 +227,7 @@ export function SelectedTextActions({
           className="whitespace-nowrap border-l border-border px-3 py-2 font-medium uppercase tracking-wide text-foreground transition-colors duration-150 hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring motion-reduce:transition-none"
           onClick={() => runAction(onAskInSideChat)}
         >
-          ask in side chat
+          在侧边聊天中提问
         </button>
       ) : null}
     </div>,

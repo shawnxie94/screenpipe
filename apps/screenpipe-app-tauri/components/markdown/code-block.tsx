@@ -201,11 +201,11 @@ export const MarkdownCodeBlock = React.memo(function MarkdownCodeBlock({
           "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
           "hover:text-foreground focus-visible:pointer-events-auto focus-visible:opacity-100",
         )}
-        aria-label={copied ? "Copied code" : "Copy code"}
-        title={copied ? "Copied" : "Copy"}
+        aria-label={copied ? "代码已复制" : "复制代码"}
+        title={copied ? "已复制" : "复制"}
       >
         {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-        <span>{copied ? "Copied" : "Copy"}</span>
+        <span>{copied ? "已复制" : "复制"}</span>
       </button>
       <div className="overflow-x-auto">
         {settled ? (

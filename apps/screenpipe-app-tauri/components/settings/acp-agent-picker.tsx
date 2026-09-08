@@ -112,13 +112,12 @@ export function AcpAgentPicker({
       {showAgentChoices && (
         <>
           {compact ? (
-            <Label className="text-xs">agent</Label>
+            <Label className="text-xs">代理</Label>
           ) : (
             <div className="space-y-1">
               <Label htmlFor="acpAgent">代理</Label>
               <p className="text-xs text-muted-foreground">
-                Choose the coding agent Screenpipe should run. It runs as its own
-                program with its own account — see the split below.
+                选择 Screenpipe 要运行的编码代理。它会作为独立程序运行，并使用自己的账户；详见下方权限边界。
               </p>
             </div>
           )}
@@ -129,7 +128,7 @@ export function AcpAgentPicker({
           <div
             {...(compact ? {} : { id: "acpAgent" })}
             role="listbox"
-            aria-label={compact ? "agent" : "Agent"}
+            aria-label="代理"
             className={cn("grid", compact ? "grid-cols-2 gap-1.5" : "grid-cols-2 gap-2 sm:grid-cols-3")}
           >
             {adapters.map((adapter) => {
@@ -211,7 +210,7 @@ export function AcpAgentPicker({
         (compact ? (
           <div className="space-y-1">
             <Label htmlFor="acpCommandQuick" className="text-xs">
-              agent command
+              代理命令
             </Label>
             <Input
               id="acpCommandQuick"
@@ -224,7 +223,7 @@ export function AcpAgentPicker({
               autoCapitalize="off"
             />
             <Label htmlFor="acpArgsQuick" className="text-xs">
-              startup options
+              启动选项
             </Label>
             <Input
               id="acpArgsQuick"
@@ -237,14 +236,14 @@ export function AcpAgentPicker({
               autoCapitalize="off"
             />
             <p className="text-[10px] text-muted-foreground">
-              environment variables and per-line options live in settings → ai presets
+              环境变量和逐行选项位于“设置 → AI 预设”中
             </p>
           </div>
         ) : (
           <div className="space-y-4 border-t pt-4">
             <div className="space-y-2">
               <Label htmlFor="acpCommand" className="flex items-center gap-1">
-                Agent command <span className="text-destructive">*</span>
+                代理命令 <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="acpCommand"
@@ -255,7 +254,7 @@ export function AcpAgentPicker({
                 autoCorrect="off"
               />
               <p className="text-xs text-muted-foreground">
-                This command must start an ACP-compatible agent on this computer.
+                此命令必须在这台电脑上启动兼容 ACP 的代理。
               </p>
             </div>
             <div className="space-y-2">
@@ -268,7 +267,7 @@ export function AcpAgentPicker({
                     args: e.target.value.split("\n").map((arg) => arg.trim()).filter(Boolean),
                   })
                 }
-                placeholder={"One option per line\n--acp"}
+                placeholder={"每行一个选项\n--acp"}
                 className="min-h-[80px] font-mono text-xs"
                 spellCheck={false}
               />
@@ -284,14 +283,13 @@ export function AcpAgentPicker({
             id="acpEnv"
             value={Object.keys(agent?.env || {}).join("\n")}
             onChange={(e) => merge({ env: inheritedEnvFromText(e.target.value) })}
-            placeholder={"Optional variable names, one per line\nOPENAI_API_KEY"}
+            placeholder={"可选变量名，每行一个\nOPENAI_API_KEY"}
             className="min-h-[80px] font-mono text-xs"
             spellCheck={false}
           />
           <p className="text-xs text-muted-foreground">
-            Only variable names are saved. Their values are inherited at launch and never stored
-            in this preset. ACP adapters run locally with your account permissions, so use agents
-            you trust.
+            只保存变量名。变量值会在启动时继承，不会存储在此预设中。
+            ACP 适配器会使用你的账户权限在本地运行，请只使用可信代理。
           </p>
         </div>
       )}

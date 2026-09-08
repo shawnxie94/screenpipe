@@ -44,14 +44,14 @@ export const KIND_ICON: Record<SourceCitationKind, React.ComponentType<{ classNa
 };
 
 const KIND_LABEL: Record<SourceCitationKind, string> = {
-  screenpipe: "screen",
-  database: "db",
-  connector: "app",
-  web: "web",
-  file: "file",
-  memory: "memory",
-  pipe: "scheduled task",
-  command: "cmd",
+  screenpipe: "屏幕",
+  database: "数据库",
+  connector: "应用",
+  web: "网页",
+  file: "文件",
+  memory: "记忆",
+  pipe: "定时任务",
+  command: "命令",
 };
 
 const CONNECTION_SOURCE_ICON_PATHS: Array<[string, string]> = [
@@ -105,7 +105,7 @@ export function SourceCitationFooter({ citations, className, onOpenFile }: Sourc
     .map((citation) => citation.title)
     .join(", ");
   const hiddenCount = Math.max(0, citations.length - 2);
-  const label = `${citations.length} source${citations.length === 1 ? "" : "s"}`;
+  const label = `${citations.length} 个来源`;
 
   return (
     <div className={cn("mt-3 border-t border-border/40 pt-2 text-xs", className)}>
@@ -210,11 +210,11 @@ function SourceCitationRow({
       data-testid={canPreview ? "source-citation-file" : undefined}
       title={
         canSearch
-          ? "open in search"
+          ? "在搜索中打开"
           : canJump
-            ? "open in timeline"
+            ? "在时间线中打开"
             : canPreview
-              ? "open in preview"
+              ? "在预览中打开"
               : undefined
       }
       onClick={() => {

@@ -105,7 +105,7 @@ export function PostInstallConnectionsModal({
               configured: !!server?.enabled,
               loading: false,
               kind: "mcp",
-              displayName: server?.name || (mcpStatusUnavailable ? "custom MCP server" : "deleted MCP server"),
+              displayName: server?.name || (mcpStatusUnavailable ? "自定义 MCP 服务器" : "已删除的 MCP 服务器"),
               instanceName: null,
               serverId,
               missingReason: server
@@ -225,18 +225,17 @@ export function PostInstallConnectionsModal({
       <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-sm">
-            set up connections for &quot;{pipeName}&quot;
+            为“{pipeName}”配置连接
           </DialogTitle>
           <DialogDescription className="text-xs">
-            this scheduled task requires the following connections to work properly.
-            configure them now or skip and set them up later in settings.
+            此计划任务需要以下连接才能正常运行。现在配置，或跳过并稍后在设置中完成配置。
           </DialogDescription>
         </DialogHeader>
 
         {loading ? (
           <div className="flex items-center gap-2 py-6 justify-center text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
-            loading connections...
+            正在加载连接…
           </div>
         ) : (
           <div className="space-y-2 my-2">
@@ -246,14 +245,14 @@ export function PostInstallConnectionsModal({
               const integration = status?.integration;
               const isMcp = status?.kind === "mcp";
               const statusLabel = status?.configured
-                ? "configured"
+                      ? "已配置"
                 : status?.missingReason === "deleted_mcp"
-                  ? "deleted"
+                  ? "已删除"
                   : status?.missingReason === "disabled_mcp"
-                    ? "disabled"
+                    ? "已停用"
                     : status?.missingReason === "unknown_mcp"
-                      ? "unknown"
-                      : "not configured";
+                      ? "未知"
+                      : "未配置";
 
               return (
                 <div
@@ -318,8 +317,7 @@ export function PostInstallConnectionsModal({
                       {status?.missingReason === "deleted_mcp" ? (
                         <>
                           <p className="text-xs text-muted-foreground">
-                            this MCP server was deleted or is no longer available.
-                            remove it from this scheduled task or add a new MCP server from the dropdown.
+                            此 MCP 服务器已删除或不再可用。请将其从此计划任务中移除，或从下拉菜单添加新的 MCP 服务器。
                           </p>
                           {status.serverId && (
                             <p className="text-[10px] text-muted-foreground font-mono">
@@ -329,17 +327,15 @@ export function PostInstallConnectionsModal({
                         </>
                       ) : status?.missingReason === "disabled_mcp" ? (
                         <p className="text-xs text-muted-foreground">
-                          this MCP server is disabled. enable it in custom MCP
-                          settings or remove it from this scheduled task.
+                          此 MCP 服务器已停用。请在自定义 MCP 设置中启用它，或将其从此计划任务中移除。
                         </p>
                       ) : status?.missingReason === "unknown_mcp" ? (
                         <p className="text-xs text-muted-foreground">
-                          MCP server status could not be loaded. try again or
-                          manage custom MCP servers in settings.
+                          无法加载 MCP 服务器状态。请重试，或前往设置管理自定义 MCP 服务器。
                         </p>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          custom MCP servers are configured once, then selected by scheduled tasks.
+                          自定义 MCP 服务器只需配置一次，之后即可由计划任务选择使用。
                         </p>
                       )}
                       <div className="flex flex-wrap gap-2">
@@ -354,10 +350,10 @@ export function PostInstallConnectionsModal({
                             {removingConnection === connId ? (
                               <>
                                 <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                removing...
+                                正在移除…
                               </>
                             ) : (
-                              "remove from scheduled task"
+                              "从计划任务中移除"
                             )}
                           </Button>
                         )}
@@ -368,7 +364,7 @@ export function PostInstallConnectionsModal({
                           onClick={openCustomMcpSettings}
                         >
                           <ExternalLink className="h-3 w-3" />
-                          manage MCP servers
+                          管理 MCP 服务器
                         </Button>
                       </div>
                     </div>
@@ -377,8 +373,7 @@ export function PostInstallConnectionsModal({
                   {isExpanded && integration && integration.fields.length === 0 && (
                     <div className="px-3 pb-3 border-t border-border pt-3">
                       <p className="text-xs text-muted-foreground">
-                        connect {integration.name} in{" "}
-                        <strong>设置 &gt; 连接</strong> 然后回到这里。
+                        请在<strong>设置 &gt; 连接</strong>中连接 {integration.name}，然后回到这里。
                       </p>
                     </div>
                   )}
@@ -386,9 +381,7 @@ export function PostInstallConnectionsModal({
                   {isExpanded && !integration && !isMcp && (
                     <div className="px-3 pb-3 border-t border-border pt-3">
                       <p className="text-xs text-muted-foreground">
-                        connection &quot;{connId}&quot; is not available. it
-                        may need to be configured manually in settings &gt;
-                        connections.
+                        连接“{connId}”不可用。可能需要前往设置 &gt; 连接手动配置。
                       </p>
                     </div>
                   )}
@@ -405,7 +398,7 @@ export function PostInstallConnectionsModal({
             className="text-xs"
             onClick={() => onOpenChange(false)}
           >
-            skip
+            跳过
           </Button>
           <Button
             size="sm"
@@ -413,7 +406,7 @@ export function PostInstallConnectionsModal({
             onClick={() => onOpenChange(false)}
             disabled={!allConfigured && false}
           >
-            {allConfigured ? "done" : "done"}
+            完成
           </Button>
         </DialogFooter>
       </DialogContent>

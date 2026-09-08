@@ -89,16 +89,16 @@ function formatUiEvent(ev: UiEventSummary): { icon: string; label: string; conte
 	switch (ev.event_type) {
 		case "text":
 			return ev.text_content
-				? { icon: "\u2328", label: `typed "${truncate(ev.text_content)}"`, context: ev.app_name }
+				? { icon: "\u2328", label: `输入了“${truncate(ev.text_content)}”`, context: ev.app_name }
 				: null;
 		case "clipboard":
 			return ev.text_content
-				? { icon: "\ud83d\udccb", label: `copied "${truncate(ev.text_content)}"`, context: ev.app_name }
+				? { icon: "\ud83d\udccb", label: `复制了“${truncate(ev.text_content)}”`, context: ev.app_name }
 				: null;
 		case "click":
-			return { icon: "\ud83d\uddb1", label: `clicked "${truncate(ev.text_content || "element")}"`, context: ev.app_name };
+			return { icon: "\ud83d\uddb1", label: `点击了“${truncate(ev.text_content || "元素")}”`, context: ev.app_name };
 		case "app_switch":
-			return { icon: "\u21d4", label: `switched to ${ev.app_name || "app"}`, context: null };
+			return { icon: "\u21d4", label: `切换到 ${ev.app_name || "应用"}`, context: null };
 		default:
 			return null; // skip key, scroll, window_focus, move etc.
 	}
@@ -1534,7 +1534,7 @@ export const TimelineSlider = ({
 						"bg-background/80 backdrop-blur-sm border border-border hover:bg-accent",
 					)}
 					onClick={() => setFiltersCollapsed((prev) => !prev)}
-					title={filtersCollapsed ? "Show filters" : "Hide filters"}
+					title={filtersCollapsed ? "显示筛选条件" : "隐藏筛选条件"}
 				>
 					{filtersCollapsed ? (
 						<PanelBottomOpen className="w-3.5 h-3.5 text-foreground/70" />
@@ -1965,7 +1965,7 @@ export const TimelineSlider = ({
 																src={getFrameThumbnailSources(frameId).src}
 																srcSet={getFrameThumbnailSources(frameId).srcSet}
 																sizes="256px"
-																alt="frame preview"
+										alt="画面预览"
 																className="w-full h-full object-cover select-none"
 																loading="lazy"
 																decoding="async"

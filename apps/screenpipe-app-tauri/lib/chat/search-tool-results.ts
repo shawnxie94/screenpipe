@@ -29,7 +29,7 @@ function truncateSearchText(text: string | undefined) {
 
 export function formatSearchToolResults(searchResults: SearchToolResult[]) {
   if (searchResults.length === 0) {
-    return "No results found. Try broader search terms or wider time range.";
+    return "未找到结果。请尝试更宽泛的搜索词或更大的时间范围。";
   }
 
   const formatted = searchResults.map((result) => {
@@ -53,15 +53,15 @@ export function formatSearchToolResults(searchResults: SearchToolResult[]) {
 
   const result = formatted.join("\n---\n");
   if (result.length > MAX_RESPONSE_CHARS) {
-    return "Search returned too much data. Try a narrower time range.";
+    return "搜索返回的数据过多。请缩小时间范围。";
   }
 
-  return `Found ${searchResults.length} results:\n\n${result}`;
+  return `找到 ${searchResults.length} 条结果：\n\n${result}`;
 }
 
 export function formatSearchToolError(error: unknown) {
   if (error instanceof Error && error.name === "AbortError") {
-    return "Search timed out. Retry with narrower time range and start_time within last 30-60 minutes.";
+    return "搜索超时。请缩小时间范围，并将 start_time 设为最近 30–60 分钟内后重试。";
   }
-  return `Search failed: ${error instanceof Error ? error.message : "Unknown error"}`;
+  return `搜索失败：${error instanceof Error ? error.message : "未知错误"}`;
 }

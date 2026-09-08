@@ -70,7 +70,7 @@ export function ComposerWorktreeToggle({
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                worktree
+                工作树
               </p>
               <p className="mt-1 select-text break-all font-mono text-[10px]">
                 {workspace.worktreePath}
@@ -78,13 +78,11 @@ export function ComposerWorktreeToggle({
             </div>
             {workspace.sourceDirty && (
               <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                the source repo had uncommitted changes. this worktree started
-                from HEAD; those changes were left untouched.
+                源仓库存在未提交的更改。此工作树从 HEAD 创建，这些更改保持不变。
               </p>
             )}
             <p className="text-[10px] text-muted-foreground">
-              kept with this conversation. screenpipe never removes it
-              automatically.
+              此工作树会随当前聊天保留，screenpipe 不会自动删除。
             </p>
           </PopoverContent>
         </Popover>
@@ -95,7 +93,7 @@ export function ComposerWorktreeToggle({
             <button
               type="button"
               className="inline-flex h-6 shrink-0 items-center gap-1 rounded-sm border border-destructive/30 px-1.5 text-[10px] font-medium text-destructive transition-colors duration-150 hover:bg-destructive/5 focus-visible:ring-1 focus-visible:ring-destructive focus-visible:ring-offset-1 motion-reduce:transition-none"
-              aria-label="worktree 设置失败"
+              aria-label="工作树设置失败"
             >
               <CircleAlert className="h-3 w-3" />
               <span>设置失败</span>
@@ -107,12 +105,12 @@ export function ComposerWorktreeToggle({
             side="top"
             sideOffset={6}
           >
-            <p className="text-xs font-medium">worktree 设置失败</p>
+            <p className="text-xs font-medium">工作树设置失败</p>
             <p className="break-words text-[11px] text-muted-foreground">
               {error}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              send again to continue without an 隔离工作树.
+              再次发送即可不使用隔离工作树继续。
             </p>
           </PopoverContent>
         </Popover>

@@ -157,7 +157,7 @@ describe("mapRegistryEntryToDraft", () => {
     // Header NAME surfaced, template value dropped.
     expect(draft.headers).toEqual([{ name: "Authorization", value: "" }]);
     expect(draft.server.header_names).toEqual(["Authorization"]);
-    expect(draft.authHint).toContain("auth");
+    expect(draft.authHint).toContain("身份验证");
   });
 
   it("maps a stdio package into a spawn command", () => {
@@ -240,10 +240,10 @@ describe("RECOMMENDED_SERVERS", () => {
     }
   });
 
-  it("maps Linear to its streamable-http MCP endpoint", () => {
-    const linear = RECOMMENDED_SERVERS.find((s) => s.title === "Linear")!;
-    const draft = mapRegistryEntryToDraft(linear, () => "id", () => 0)!;
-    expect(draft.server.url).toBe("https://mcp.linear.app/mcp");
+  it("maps Figma to its streamable-http MCP endpoint", () => {
+    const figma = RECOMMENDED_SERVERS.find((s) => s.title === "Figma")!;
+    const draft = mapRegistryEntryToDraft(figma, () => "id", () => 0)!;
+    expect(draft.server.url).toBe("https://mcp.figma.com/mcp");
     expect(draft.server.transport).toBe("http");
   });
 });

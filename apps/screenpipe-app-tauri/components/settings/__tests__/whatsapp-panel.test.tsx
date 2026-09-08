@@ -55,7 +55,7 @@ describe("WhatsAppPanel", () => {
     render(<WhatsAppPanel />);
 
     expect(await screen.findByText("WhatsApp signed this device out.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /reset session and pair again/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /重置会话并重新配对/ })).toBeTruthy();
     expect(screen.queryByText(/waiting for QR code/i)).toBeNull();
   });
 
@@ -66,9 +66,9 @@ describe("WhatsAppPanel", () => {
     mockedFetch.mockResolvedValueOnce(response({ status: { qr_ready: { qr: "fresh-qr" } } }));
     render(<WhatsAppPanel />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /reset session and pair again/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /重置会话并重新配对/ }));
 
-    await waitFor(() => expect(screen.getByAltText("WhatsApp QR Code")).toBeTruthy());
+    await waitFor(() => expect(screen.getByAltText("WhatsApp 二维码")).toBeTruthy());
     expect(mockedFetch.mock.calls[1]).toEqual(["/connections/whatsapp/disconnect", { method: "POST" }]);
     expect(mockedFetch.mock.calls[2]?.[0]).toBe("/connections/whatsapp/pair");
   });
@@ -84,7 +84,7 @@ describe("WhatsAppPanel", () => {
     });
 
     expect(screen.getByRole("alert").textContent).toContain("local server unavailable");
-    expect(screen.getByRole("button", { name: "retry" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "重试" })).toBeTruthy();
   }, 8_000);
 
   it("times out a pairing attempt that never produces a QR code", async () => {
@@ -107,12 +107,12 @@ describe("WhatsAppPanel", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(100);
     });
-    expect(screen.getByAltText("WhatsApp QR Code")).toBeTruthy();
+    expect(screen.getByAltText("WhatsApp 二维码")).toBeTruthy();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(WHATSAPP_PAIRING_TIMEOUT_MS + 2_000);
     });
-    expect(screen.getByAltText("WhatsApp QR Code")).toBeTruthy();
+    expect(screen.getByAltText("WhatsApp 二维码")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 

@@ -52,7 +52,7 @@ describe("syncFetchOrThrow", () => {
 
     await expect(
       syncFetchOrThrow("/sync/pipes/push", { method: "POST" })
-    ).rejects.toThrow("sync failed (400)");
+    ).rejects.toThrow("同步失败（400）");
   });
 
   it("falls back to a status message when JSON has no usable error field", async () => {
@@ -60,7 +60,7 @@ describe("syncFetchOrThrow", () => {
 
     await expect(
       syncFetchOrThrow("/sync/pipes/push", { method: "POST" })
-    ).rejects.toThrow("sync failed (500)");
+    ).rejects.toThrow("同步失败（500）");
   });
 
   it("resolves with the response on a real success (regression guard)", async () => {

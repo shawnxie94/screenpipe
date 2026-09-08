@@ -132,7 +132,7 @@ export function rememberedSendLabel(
   remembered: RememberedShare | null,
 ): string {
   const app = remembered ? DESTINATION_APP[remembered.destination] : undefined;
-  return app ? `send to ${app}…` : "send to an app…";
+  return app ? `发送到 ${app}…` : "发送到应用…";
 }
 
 /**

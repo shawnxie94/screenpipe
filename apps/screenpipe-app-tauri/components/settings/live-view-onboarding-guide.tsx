@@ -73,11 +73,11 @@ export function LiveViewOnboardingGuide({
     return (
       <FocusedSpotlight
         targetSelector='[data-onboarding-guide-target="dashboard"]'
-        eyebrow="your first Live View"
-        step="1 of 3"
-        title="this dashboard was made for your goal"
-        description="Screenpipe created this Live View for the goal you chose. It fills with your real activity."
-        primaryLabel="show me how it fills"
+        eyebrow="你的第一个实时视图"
+        step="第 1 步，共 3 步"
+        title="这个仪表盘是为你的目标创建的"
+        description="Screenpipe 已根据你选择的目标创建这个实时视图，它会填充你的真实活动。"
+        primaryLabel="看看它如何填充"
         onPrimary={() => moveTo("waiting")}
         onDismiss={dismiss}
       />
@@ -90,24 +90,24 @@ export function LiveViewOnboardingGuide({
       ? "设置未完成即已暂停。你的仪表盘是安全的。请在这里完成，而不是重新开始。"
       : hasResult
         ? "你的第一个结果已就绪。接下来打开它，检查是否与你实际做的事情相符。"
-        : "This shows what is ready and what Screenpipe still needs before your first result appears. You can leave this page while it works.";
+        : "这里会显示哪些内容已就绪，以及 Screenpipe 在出现第一个结果前还需要什么。处理期间你可以离开此页面。";
     return (
       <FocusedSpotlight
         targetSelector='[data-onboarding-guide-target="activation"]'
-        eyebrow="how it updates"
-        step="2 of 3"
+        eyebrow="它如何更新"
+        step="第 2 步，共 3 步"
         title={
-          needsRetry ? "finish the interrupted setup" : "wait for real work"
+          needsRetry ? "完成中断的设置" : "等待真实活动"
         }
         description={description}
         primaryLabel={
           needsRetry
             ? retrying
-              ? "finishing setup..."
-              : "finish setup"
+              ? "正在完成设置…"
+              : "完成设置"
             : hasResult
-              ? "show my first result"
-              : "got it, let me work"
+              ? "显示我的第一个结果"
+              : "明白了，让我开始工作"
         }
         busy={retrying}
         onPrimary={needsRetry ? onRetry : () => moveTo("result")}
@@ -119,11 +119,11 @@ export function LiveViewOnboardingGuide({
   return (
     <FocusedSpotlight
       targetSelector='[data-testid="live-view-canvas"]'
-      eyebrow="your first result"
-      step="3 of 3"
-      title="check it and help it improve"
-      description="Open the result, check it against your work, and use thumbs up or down. Your feedback helps future updates improve."
-      primaryLabel="I found my first result"
+      eyebrow="你的第一个结果"
+      step="第 3 步，共 3 步"
+      title="检查结果并帮助它改进"
+      description="打开结果，与你的实际工作对照，并点击赞成或反对。你的反馈会帮助后续更新变得更好。"
+      primaryLabel="我找到了第一个结果"
       onPrimary={onComplete}
       onDismiss={dismiss}
     />

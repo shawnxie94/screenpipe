@@ -134,8 +134,8 @@ export function buildPaletteEntries(
   const entries: PaletteEntry[] = [
     {
       id: "open_search",
-      label: "search everything you've seen",
-      keywords: "find history recall rewind",
+      label: "搜索所有看过的内容",
+      keywords: "搜索 查找 历史 回忆 回看 search find history recall rewind",
       group: "actions",
       hint: globalShortcutHint(settings, "searchShortcut", isMac),
       icon: Search,
@@ -146,8 +146,8 @@ export function buildPaletteEntries(
       : [
           {
             id: "open_timeline_overlay" as const,
-            label: "open timeline overlay",
-            keywords: "rewind replay screen",
+            label: "打开时间线浮层",
+            keywords: "时间线 回看 屏幕 rewind replay screen",
             group: "actions" as const,
             hint: globalShortcutHint(settings, "showScreenpipeShortcut", isMac),
             icon: MonitorPlay,
@@ -157,7 +157,7 @@ export function buildPaletteEntries(
     {
       id: "new_chat",
       label: "新聊天",
-      keywords: "compose ask ai conversation",
+      keywords: "新建聊天 提问 AI 对话 compose ask ai conversation",
       group: "actions",
       hint: inAppShortcutLabel("new_chat", isMac),
       icon: Plus,
@@ -165,8 +165,8 @@ export function buildPaletteEntries(
     },
     {
       id: "pause_recording",
-      label: "pause recording",
-      keywords: "stop capture privacy",
+      label: "暂停录制",
+      keywords: "暂停采集 隐私 pause recording stop capture privacy",
       group: "actions",
       hint: globalShortcutHint(settings, "stopRecordingShortcut", isMac),
       icon: Pause,
@@ -174,8 +174,8 @@ export function buildPaletteEntries(
     },
     {
       id: "resume_recording",
-      label: "resume recording",
-      keywords: "start capture record",
+      label: "恢复录制",
+      keywords: "恢复采集 开始录制 resume recording start capture record",
       group: "actions",
       hint: globalShortcutHint(settings, "startRecordingShortcut", isMac),
       icon: Play,
@@ -185,8 +185,8 @@ export function buildPaletteEntries(
       ? [
           {
             id: "next_recent_chat" as const,
-            label: "next chat tab",
-            keywords: "conversation previous recent mru cycle tab worktree",
+            label: "下一个聊天标签",
+            keywords: "下一个聊天标签 对话 最近 聊天 tab conversation recent mru cycle worktree",
             group: "navigation" as const,
             hint: inAppShortcutLabel("next_recent_chat", isMac),
             icon: History,
@@ -194,8 +194,8 @@ export function buildPaletteEntries(
           },
           {
             id: "previous_recent_chat" as const,
-            label: "previous chat tab",
-            keywords: "conversation previous recent mru reverse tab worktree",
+            label: "上一个聊天标签",
+            keywords: "上一个聊天标签 对话 最近 聊天 tab conversation recent mru reverse worktree",
             group: "navigation" as const,
             hint: inAppShortcutLabel("previous_recent_chat", isMac),
             icon: History,
@@ -214,8 +214,8 @@ export function buildPaletteEntries(
     })),
     {
       id: "toggle_sidebar",
-      label: "toggle sidebar",
-      keywords: "collapse expand panel",
+      label: "切换侧边栏",
+      keywords: "展开 收起 侧边栏 面板 collapse expand sidebar panel",
       group: "settings",
       hint: inAppShortcutLabel("toggle_sidebar", isMac),
       icon: PanelLeft,
@@ -223,8 +223,8 @@ export function buildPaletteEntries(
     },
     {
       id: "open_settings",
-      label: "open settings",
-      keywords: "preferences configuration",
+      label: "打开设置",
+      keywords: "偏好 配置 设置 preferences configuration",
       group: "settings",
       hint: "",
       icon: SettingsIcon,
@@ -235,8 +235,8 @@ export function buildPaletteEntries(
       ? [
           {
             id: "open_shortcut_guide" as const,
-            label: "keyboard shortcut guide",
-            keywords: "hotkeys keybindings reference help",
+            label: "快捷键指南",
+            keywords: "快捷键 按键绑定 参考 帮助 hotkeys keybindings reference help",
             group: "settings" as const,
             hint: inAppShortcutLabel("shortcut_guide", isMac),
             icon: Keyboard,
@@ -246,8 +246,8 @@ export function buildPaletteEntries(
       : []),
     {
       id: "open_shortcut_settings",
-      label: "edit global shortcuts",
-      keywords: "hotkeys keybindings rebind settings",
+      label: "编辑全局快捷键",
+      keywords: "快捷键 按键绑定 修改 设置 hotkeys keybindings rebind settings",
       group: "settings",
       hint: "",
       icon: Keyboard,
@@ -263,6 +263,13 @@ const GROUP_ORDER: PaletteEntry["group"][] = [
   "go to",
   "settings",
 ];
+
+const GROUP_LABELS: Record<PaletteEntry["group"], string> = {
+  actions: "操作",
+  navigation: "导航",
+  "go to": "前往",
+  settings: "设置",
+};
 
 interface CommandPaletteProps {
   deps: CommandPaletteDeps;
@@ -325,7 +332,7 @@ export function CommandPalette({
           return (
             <React.Fragment key={group}>
               {groupIndex > 0 && <CommandSeparator />}
-              <CommandGroup heading={group}>
+              <CommandGroup heading={GROUP_LABELS[group]}>
                 {items.map((entry) => {
                   const Icon = entry.icon;
                   return (

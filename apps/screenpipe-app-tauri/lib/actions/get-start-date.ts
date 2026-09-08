@@ -55,7 +55,7 @@ export async function getStartDate() {
 
 		if (!videoData.ok || !audioData.ok) {
 			return {
-				error: "error occurred while getting data",
+				error: "获取数据时发生错误",
 				video: await videoData.json(),
 				audio: await audioData.json(),
 				query: {
@@ -73,13 +73,13 @@ export async function getStartDate() {
 			.filter((date) => !Number.isNaN(date.getTime()));
 
 		if (timestamps.length === 0) {
-			return { error: "no timeline data found" };
+			return { error: "未找到时间线数据" };
 		}
 
 		return new Date(Math.min(...timestamps.map((date) => date.getTime())));
 	} catch (e) {
 		return {
-			error: "an error occurred",
+			error: "发生错误",
 		};
 	}
 }

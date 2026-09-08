@@ -457,7 +457,7 @@ describe("LiveViewCanvas", () => {
     expect(screen.getByTestId("canvas-block-focus-time")).toBeTruthy();
     expect(screen.getByTestId("rf__wrapper")).toBeTruthy();
     expect(screen.getByText("4.5")).toBeTruthy();
-    expect(screen.getByText("hours")).toBeTruthy();
+    expect(screen.getByText("小时")).toBeTruthy();
     expect(screen.getByText("Canvas review")).toBeTruthy();
     expect(
       screen.getByLabelText(
@@ -471,8 +471,8 @@ describe("LiveViewCanvas", () => {
 
     const toggle = screen.getByTestId("canvas-tools-toggle");
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(toggle.getAttribute("aria-label")).toContain("select tool active");
-    expect(toggle.getAttribute("title")).toContain("select active");
+    expect(toggle.getAttribute("aria-label")).toContain("打开画布工具，当前激活：选择");
+    expect(toggle.getAttribute("title")).toContain("打开画布工具 · 当前：选择");
     expect(toggle.textContent).toBe("");
     expect(toggle.className).toContain("w-8");
     expect(screen.queryByTestId("canvas-tools-panel")).toBeNull();
@@ -487,7 +487,7 @@ describe("LiveViewCanvas", () => {
     expect(screen.queryByTestId("canvas-tools-panel")).toBeNull();
     expect(
       screen.getByTestId("canvas-tools-toggle").getAttribute("aria-label"),
-    ).toContain("pan tool active");
+    ).toContain("打开画布工具，当前激活：平移");
     expect(screen.getByTestId("canvas-interaction-hint")).toBeTruthy();
 
     openCanvasTools();

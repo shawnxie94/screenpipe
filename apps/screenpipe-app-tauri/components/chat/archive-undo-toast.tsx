@@ -67,13 +67,13 @@ export function showChatArchiveUndoToast({
   };
 
   const toastHandle = toast({
-    title: count === 1 ? "chat archived" : `${count} chats archived`,
+    title: count === 1 ? "聊天已归档" : `${count} 个聊天已归档`,
     duration: ARCHIVE_UNDO_WINDOW_MS,
     className:
       "w-auto min-w-0 max-w-[calc(100vw-2rem)] gap-3 space-x-0 border-border/70 bg-background/95 p-2.5 pr-8 shadow-sm",
     action: (
       <ToastAction
-        altText="undo archived chat"
+        altText="撤销聊天归档"
         aria-keyshortcuts="Meta+Z Control+Z"
         className="h-6 gap-1.5 rounded-sm px-2 text-[11px] uppercase tracking-wide"
         onClick={() => void undo()}

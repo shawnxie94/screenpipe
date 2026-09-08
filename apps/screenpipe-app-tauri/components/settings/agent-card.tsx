@@ -189,14 +189,13 @@ function McpSection({ name, mcp }: { name: string; mcp: AgentCardProps["mcp"] })
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Register screenpipe as an MCP server in {name}. Best when {name} runs on the
-        same machine as screenpipe.
+        在 {name} 中将 screenpipe 注册为 MCP 服务。{name} 与知迹运行在同一台设备上时效果最佳。
       </p>
       <p className="text-xs text-muted-foreground">
-        1. Open <code className="bg-muted px-1 rounded">{mcp.configPath}</code>
+        1. 打开 <code className="bg-muted px-1 rounded">{mcp.configPath}</code>
       </p>
       <p className="text-xs text-muted-foreground">
-        2. Merge this {mcp.format.toUpperCase()} block (preserve indentation):
+        2. 合并以下 {mcp.format.toUpperCase()} 配置块（保留缩进）：
       </p>
       <div className="relative group">
         <pre className="bg-muted border border-border rounded-lg p-3 pr-10 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">
@@ -213,7 +212,7 @@ function McpSection({ name, mcp }: { name: string; mcp: AgentCardProps["mcp"] })
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        3. Restart {name}. Try: &quot;what did I do in the last 5 minutes?&quot;
+        3. 重启 {name}。可以试试：“我过去 5 分钟做了什么？”
       </p>
     </div>
   );
@@ -231,8 +230,7 @@ function SkillSection({ name, skills }: { name: string; skills: SkillVariant[] }
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Drop a screenpipe SKILL.md into {name}&apos;s skills directory and {name} loads it
-        as a new skill. {skills.length > 1 ? "Install either — or both." : ""}
+        将 screenpipe SKILL.md 放入 {name} 的技能目录，{name} 就会将其加载为新技能。{skills.length > 1 ? "可选择安装其中一个或全部。" : ""}
       </p>
 
       {skills.length > 1 && (
@@ -326,13 +324,13 @@ function SkillVariantBody({ name, variant }: { name: string; variant: SkillVaria
       {/* Path 1: agent on same machine — install via CLI or save to Downloads + manual move */}
       <div className="space-y-2">
         <p className="text-[11px] font-mono uppercase tracking-wider text-foreground/50">
-          if {name} runs on this machine
+          如果 {name} 运行在本机
         </p>
 
         {variant.cliInstall && (
           <div className="space-y-1.5">
             <p className="text-xs text-muted-foreground">
-              One-liner install:
+              一键安装命令：
             </p>
             <div className="relative group">
               <pre className="bg-muted border border-border rounded-lg p-3 pr-10 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">
@@ -371,19 +369,19 @@ function SkillVariantBody({ name, variant }: { name: string; variant: SkillVaria
           {savedPath && (
             <Button variant="ghost" size="sm" onClick={revealSaved} className="text-xs h-7">
               <ExternalLink className="h-3 w-3 mr-1.5" />
-              show in Finder
+              在访达中显示
             </Button>
           )}
           <Button variant="ghost" size="sm" onClick={copyMd} className="text-xs h-7">
             {copied ? <Check className="h-3 w-3 mr-1.5" /> : <Copy className="h-3 w-3 mr-1.5" />}
-            Copy file contents
+            复制文件内容
           </Button>
         </div>
 
         {savedPath && (
           <p className="text-xs text-muted-foreground">
-            saved to <code className="bg-muted px-1 rounded">{savedPath}</code> — move to{" "}
-            <code className="bg-muted px-1 rounded">{variant.localPath}</code> and restart {name}.
+            已保存到 <code className="bg-muted px-1 rounded">{savedPath}</code>。请将其移动到{" "}
+            <code className="bg-muted px-1 rounded">{variant.localPath}</code>，然后重启 {name}。
           </p>
         )}
         {saveError && <p className="text-xs text-destructive">{saveError}</p>}
@@ -392,14 +390,13 @@ function SkillVariantBody({ name, variant }: { name: string; variant: SkillVaria
       {/* Path 2: agent on remote machine */}
       <div className="space-y-1.5 pt-2 border-t border-border">
         <p className="text-[11px] font-mono uppercase tracking-wider text-foreground/50">
-          if {name} runs on a remote machine
+          如果 {name} 运行在远程设备上
         </p>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Copy the SKILL.md contents above and paste them into{" "}
-          <code className="bg-muted px-1 rounded">{variant.localPath}</code> on the remote
-          host. To let {name} reach the screenpipe data on <em>本机</em>, use the{" "}
-          <strong>同步（远程）</strong> tab to push it over, or point any{" "}
-          <code>localhost:3030</code> calls at this machine&apos;s IP/Tailscale name.
+          复制上方 SKILL.md 的内容，并粘贴到远程设备的{" "}
+          <code className="bg-muted px-1 rounded">{variant.localPath}</code>。
+          若要让 {name} 访问<em>本机</em>的知迹数据，请使用{" "}
+          <strong>同步（远程）</strong>标签推送过去，或将 <code>localhost:3030</code> 调用指向本机 IP 或 Tailscale 名称。
         </p>
       </div>
     </div>
@@ -582,7 +579,7 @@ function RemoteSyncSection({
         try { localStorage?.setItem(lastSyncKey, now); } catch {}
         setSyncError(null);
       } else {
-        setSyncError(result.error || "sync failed");
+        setSyncError(result.error || "同步失败");
       }
     } catch (e) {
       if (syncCancelledRef.current) return;
@@ -639,16 +636,15 @@ function RemoteSyncSection({
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Push your <code className="bg-muted px-1 rounded">~/.screenpipe</code> over
-        SFTP to the host where {agentName} runs. Use this when {agentName} lives on
-        a VPS, home server, or another machine.
+        通过 SFTP 将你的 <code className="bg-muted px-1 rounded">~/.screenpipe</code> 发送到运行
+        {agentName} 的主机。当 {agentName} 运行在 VPS、家庭服务器或其他机器上时，可以使用此功能。
       </p>
 
       {!isConfigured ? (
         <div className="space-y-2">
           {discoveredHosts.length > 0 && (
             <>
-              <p className="text-xs text-muted-foreground">pick a server:</p>
+          <p className="text-xs text-muted-foreground">选择服务器：</p>
               <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto">
                 {discoveredHosts
                   .sort(
@@ -807,18 +803,18 @@ function RemoteSyncSection({
             size="sm"
             className="h-7 text-xs w-20"
           >
-            {isTesting ? <Loader2 className="h-3 w-3 animate-spin" /> : "test"}
+            {isTesting ? <Loader2 className="h-3 w-3 animate-spin" /> : "测试"}
           </Button>
 
           {isSyncing ? (
             <Button onClick={handleCancelSync} variant="destructive" size="sm" className="h-7 text-xs w-24">
               <X className="h-3 w-3 mr-1" />
-              cancel
+              取消
             </Button>
           ) : (
             <Button onClick={handleSyncNow} size="sm" className="h-7 text-xs w-24">
               <RefreshCw className="h-3 w-3 mr-1" />
-              sync now
+              立即同步
             </Button>
           )}
 
@@ -838,8 +834,8 @@ function RemoteSyncSection({
       {isConfigured && (
         <div className="px-3 py-2 bg-muted/50 border border-border rounded-md">
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span>{lastSync ? `last sync: ${lastSync}` : "not synced yet"}</span>
-            {config.enabled && <span>every {config.intervalMinutes} min</span>}
+            <span>{lastSync ? `上次同步：${lastSync}` : "尚未同步"}</span>
+            {config.enabled && <span>每 {config.intervalMinutes} 分钟</span>}
           </div>
         </div>
       )}
@@ -978,7 +974,7 @@ function SecondBrainCallout({ name }: { name: string }) {
       await commands.copyTextToClipboard(SECOND_BRAIN_PROMPT);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast({ title: "copied second-brain prompt", description: `粘贴到 ${name} 中` });
+      toast({ title: "已复制个人知识库提示词", description: `粘贴到 ${name} 中` });
     } catch (e) {
       toast({ title: "复制失败", description: String(e), variant: "destructive" });
     }
@@ -1014,7 +1010,7 @@ function SecondBrainCallout({ name }: { name: string }) {
       <div className="flex items-center gap-2 flex-wrap">
         <Button size="sm" onClick={copyPrompt} className="h-7 text-xs">
           {copied ? <Check className="h-3 w-3 mr-1.5" /> : <Copy className="h-3 w-3 mr-1.5" />}
-          {copied ? "copied" : "copy prompt"}
+          {copied ? "已复制" : "复制提示词"}
         </Button>
         <Button
           variant="outline"
@@ -1030,7 +1026,7 @@ function SecondBrainCallout({ name }: { name: string }) {
           ) : (
             <Download className="h-3 w-3 mr-1.5" />
           )}
-          {savedPath ? "saved" : "save .md"}
+          {savedPath ? "已保存" : "保存 .md"}
         </Button>
         <a
           href="#"

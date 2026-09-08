@@ -206,10 +206,10 @@ export function RegistryBrowser({
           </div>
           <div className="min-w-0">
             <DialogTitle className="text-sm font-semibold font-sans normal-case">
-              Browse MCP registry
+              浏览 MCP 注册表
             </DialogTitle>
             <p className="text-[11px] text-muted-foreground truncate">
-              official registry · registry.modelcontextprotocol.io
+              官方注册表 · registry.modelcontextprotocol.io
             </p>
           </div>
           <DialogClose asChild>
@@ -241,7 +241,7 @@ export function RegistryBrowser({
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-10 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              searching registry…
+              正在搜索注册表…
             </div>
           ) : error ? (
             <div className="flex items-start gap-1.5 text-xs rounded-md border border-destructive/40 bg-destructive/5 text-destructive p-3">
@@ -251,11 +251,11 @@ export function RegistryBrowser({
           ) : !debounced ? (
             <div className="space-y-1.5">
               <p className="px-0.5 pb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Recommended
+                推荐
               </p>
               {RECOMMENDED_SERVERS.map(renderRow)}
               <p className="pt-1 text-[11px] text-muted-foreground text-center">
-                search above to browse the full registry.
+                在上方搜索以浏览完整注册表。
               </p>
             </div>
           ) : servers.length === 0 ? (
@@ -277,7 +277,7 @@ export function RegistryBrowser({
                     {loadingMore ? (
                       <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                     ) : null}
-                    Load more
+                    加载更多
                   </Button>
                 </div>
               )}
@@ -286,8 +286,7 @@ export function RegistryBrowser({
         </div>
 
         <div className="px-4 py-2 bg-muted/50 border-t border-border text-[11px] text-muted-foreground">
-          adding a server opens the editor — review its tools and auth before
-          enabling.
+          添加服务器后会打开编辑器——启用前请检查其工具和身份验证配置。
         </div>
       </DialogContent>
     </Dialog>
@@ -315,7 +314,7 @@ function RegistryRow({
             {displayName(server)}
           </span>
           <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium border border-border text-muted-foreground">
-            {kind === "http" ? "remote" : kind === "stdio" ? "local" : "catalog"}
+            {kind === "http" ? "远程" : kind === "stdio" ? "本地" : "目录"}
           </span>
         </div>
         {ns && (
@@ -335,7 +334,7 @@ function RegistryRow({
             className="mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
           >
             <ExternalLink className="h-2.5 w-2.5" />
-            repository
+            代码仓库
           </button>
         )}
       </div>
@@ -343,7 +342,7 @@ function RegistryRow({
         {installed ? (
           <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground px-2 py-1">
             <Check className="h-3 w-3" />
-            added
+            已添加
           </span>
         ) : (
           <Button
@@ -354,12 +353,12 @@ function RegistryRow({
             disabled={kind === "none"}
             title={
               kind === "none"
-                ? "no installable remote or package listed"
+                ? "没有可安装的远程地址或软件包"
                 : undefined
             }
           >
             <Plus className="h-3 w-3 mr-1" />
-            Add
+            添加
           </Button>
         )}
       </div>

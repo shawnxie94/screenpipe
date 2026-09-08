@@ -36,10 +36,9 @@ export function InputMonitoringPanel({
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Lets screenpipe capture keystrokes and mouse clicks. Optional —
-        clipboard and app/window switches still work without it. Grant this
-        only if you want a full input replay (Pi can search what you typed
-        and where you clicked).
+        允许 screenpipe 采集按键和鼠标点击。此权限是可选的——即使不授予，
+        剪贴板和应用/窗口切换仍可正常工作。只有在你需要完整的输入回放时才授予它
+        （Pi 可以搜索你输入过的内容以及点击过的位置）。
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -55,7 +54,7 @@ export function InputMonitoringPanel({
           ) : (
             <ExternalLink className="h-3 w-3 mr-1.5" />
           )}
-          {granted ? "Enabled" : "Enable Input Monitoring"}
+          {granted ? "已启用" : "启用输入监控"}
         </Button>
 
         {suspectedGhost && !granted ? (
@@ -69,26 +68,22 @@ export function InputMonitoringPanel({
             {resetting ? (
               <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
             ) : null}
-            Reset & try again
+            重置并重试
           </Button>
         ) : null}
       </div>
 
       <p className="text-xs text-muted-foreground">
-        If the prompt doesn&apos;t appear, toggle <strong>screenpipe</strong> on
-        in System Settings → Privacy &amp; Security → Input Monitoring. Relaunch
-        screenpipe after enabling — macOS only applies TCC changes on next
-        process start.
+        如果没有出现提示，请在“系统设置 → 隐私与安全性 → 输入监控”中打开
+        <strong>screenpipe</strong>。启用后请重新启动 screenpipe——macOS 只会在下次启动进程时应用 TCC 更改。
       </p>
 
       {suspectedGhost && !granted ? (
         <div className="rounded-md border border-red-500/30 bg-red-500/5 px-3 py-2">
           <p className="text-xs text-red-700 dark:text-red-400">
-            Permission could not be activated after requesting it. Toggle
-            <strong> screenpipe </strong> on in System Settings → Privacy &amp;
-            Security → Input Monitoring. If the toggle is already on but
-            capture still fails, click <strong>重置并重试</strong> to
-            clear a stale TCC record and re-request.
+            请求权限后仍无法激活。请在“系统设置 → 隐私与安全性 → 输入监控”中打开
+            <strong> screenpipe </strong>。如果开关已打开但采集仍失败，请点击
+            <strong>重置并重试</strong>，清除过期的 TCC 记录后重新请求。
           </p>
         </div>
       ) : null}
@@ -96,9 +91,7 @@ export function InputMonitoringPanel({
       {grantedThisSession ? (
         <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
           <p className="text-xs text-amber-700 dark:text-amber-400">
-            <strong>重启 screenpipe</strong> to start capturing keystrokes
-            and clicks. The running recorder was started without Input
-            Monitoring and won&apos;t pick up the change until next launch.
+            请<strong>重启 screenpipe</strong>以开始采集按键和点击。当前录制进程启动时没有输入监控权限，必须下次启动后才会应用更改。
           </p>
         </div>
       ) : null}

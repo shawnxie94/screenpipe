@@ -85,7 +85,7 @@ describe("LinkPreviewAnchor", () => {
     });
 
     expect(screen.getByRole("tooltip")).toHaveTextContent(
-      "loading public details",
+      "正在加载公开详情",
     );
     expect(fetchRichLinkPreviewMock).toHaveBeenCalledTimes(1);
 
@@ -96,13 +96,13 @@ describe("LinkPreviewAnchor", () => {
     const tooltip = screen.getByRole("tooltip");
     expect(tooltip).toHaveTextContent("Add link previews to chat");
     expect(tooltip).toHaveTextContent(
-      "screenpipe/screenpipe · pull request #6450",
+      "screenpipe/screenpipe · 拉取请求 #6450",
     );
     expect(tooltip).toHaveTextContent(
       "Show useful context before opening a link.",
     );
-    expect(tooltip).toHaveTextContent("by @screenpipe");
-    expect(screen.getByText("open")).toHaveClass("uppercase");
+    expect(tooltip).toHaveTextContent("由 @screenpipe");
+    expect(screen.getByText("开放")).toHaveClass("uppercase");
   });
 
   it("shows closed instead of leftover draft on a closed GitHub pull request", async () => {
@@ -129,7 +129,7 @@ describe("LinkPreviewAnchor", () => {
 
     const tooltip = screen.getByRole("tooltip");
     expect(tooltip).toHaveTextContent("feat(chat): add conversation coding worktrees");
-    expect(screen.getByText("closed")).toHaveClass("uppercase");
+    expect(screen.getByText("已关闭")).toHaveClass("uppercase");
     expect(tooltip).not.toHaveTextContent("draft");
   });
 
@@ -144,7 +144,7 @@ describe("LinkPreviewAnchor", () => {
 
     const tooltip = screen.getByRole("tooltip");
     expect(tooltip).toHaveTextContent("Fix Chat Link Previews");
-    expect(tooltip).toHaveTextContent("Linear · issue SCR-123");
+    expect(tooltip).toHaveTextContent("Linear · 问题 SCR-123");
     expect(fetchRichLinkPreviewMock).not.toHaveBeenCalled();
   });
 
@@ -170,8 +170,8 @@ describe("LinkPreviewAnchor", () => {
 
     const tooltip = screen.getByRole("tooltip");
     expect(tooltip).toHaveTextContent("Embedded Web Player Customization");
-    expect(tooltip).toHaveTextContent("YouTube · video");
-    expect(tooltip).toHaveTextContent("by Google for Developers");
+    expect(tooltip).toHaveTextContent("YouTube · 视频");
+    expect(tooltip).toHaveTextContent("由 Google for Developers");
     expect(tooltip.querySelector("img")).toHaveAttribute(
       "src",
       "https://i.ytimg.com/vi/M7lc1UVf-VE/hqdefault.jpg",

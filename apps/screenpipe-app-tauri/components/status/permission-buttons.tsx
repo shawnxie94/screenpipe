@@ -89,17 +89,17 @@ export const PermissionButtons: React.FC<PermissionButtonsProps> = ({
         await localforage.setItem("screenPermissionRestartPending", true);
 
         toast({
-          title: "restart required",
+          title: "需要重启",
           description:
-            "please restart the app to apply screen recording permission",
+            "请重启应用以应用屏幕录制权限",
           duration: 5000,
         });
       }
     } catch (error) {
       console.error(`Failed to request ${type} permission:`, error);
       toast({
-        title: "error",
-        description: `failed to request ${type} permission`,
+          title: "错误",
+        description: `申请${type === "screen" ? "屏幕录制" : "麦克风"}权限失败`,
         variant: "destructive",
         duration: 3000,
       });
@@ -126,8 +126,8 @@ export const PermissionButtons: React.FC<PermissionButtonsProps> = ({
     } catch (error) {
       console.error(`failed to open ${type} permission settings:`, error);
       toast({
-        title: "error",
-        description: `failed to open ${type} permission settings`,
+          title: "错误",
+        description: `打开${type === "screen" ? "屏幕录制" : "麦克风"}权限设置失败`,
         variant: "destructive",
         duration: 3000,
       });
@@ -171,16 +171,16 @@ export const PermissionButtons: React.FC<PermissionButtonsProps> = ({
         disabled={isDisabled}
       >
         {type === "screen" && permissionStatus === "restartRequired"
-          ? "restart screenpipe"
-          : `allow ${type === "screen" ? "screen" : "audio"} access`}
+            ? "重启 screenpipe"
+            : `允许${type === "screen" ? "屏幕" : "音频"}访问`}
       </Button>
       <Button
         variant="ghost"
         size="icon"
         className="h-8 w-8"
         onClick={handleOpenPermissionSettings}
-        title={`Open ${type} settings`}
-        aria-label={`Open ${type} permission settings`}
+        title={`打开${type === "screen" ? "屏幕" : "音频"}设置`}
+        aria-label={`打开${type === "screen" ? "屏幕" : "音频"}权限设置`}
         disabled={isDisabled}
       >
         <Settings className="h-4 w-4" aria-hidden="true" />

@@ -148,7 +148,7 @@ export const useOnboarding = create<OnboardingState>((set, get) => ({
         error:
           error instanceof Error
             ? error.message
-            : "Failed to complete onboarding",
+            : "完成引导失败",
         isLoading: false,
       });
       throw error;
@@ -191,7 +191,7 @@ export const useOnboarding = create<OnboardingState>((set, get) => ({
       console.error("Error resetting onboarding:", error);
       set({
         error:
-          error instanceof Error ? error.message : "Failed to reset onboarding",
+          error instanceof Error ? error.message : "重置引导失败",
         isLoading: false,
       });
       throw error;

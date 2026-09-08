@@ -137,7 +137,7 @@ export function createMeetingShareArtifact(
   const metadata = [
     Number.isNaN(start.getTime()) ? "" : start.toLocaleString(),
     meeting.meeting_app,
-    meeting.attendees ? `with ${meeting.attendees}` : "",
+  meeting.attendees ? `与 ${meeting.attendees}` : "",
   ].filter(Boolean);
   const rawNote = meeting.note ?? "";
   const note = cleanInlineImages(rawNote);
@@ -145,19 +145,19 @@ export function createMeetingShareArtifact(
 
   return {
     surface: "meeting",
-    title: meeting.title?.trim() || "Meeting notes",
+    title: meeting.title?.trim() || "会议笔记",
     metadata,
     sections: hasShareableNote
       ? [
           {
             id: "notes",
-            title: "Notes",
+            title: "笔记",
             body: note,
           },
         ]
       : [],
     privacyNote:
-      "Only the meeting details and notes shown here are included. Transcript, recording, screen activity, and inline images stay private.",
+      "这里只包含此处显示的会议详情和笔记。转录文本、录音、屏幕活动记录和内嵌图片仍保持私密。",
   };
 }
 
@@ -177,10 +177,10 @@ export function createLiveViewShareArtifact(
   return {
     surface: "live-view",
     title: view.title,
-    metadata: [`view updated ${new Date(view.updatedAt).toLocaleString()}`],
+    metadata: [`视图更新于 ${new Date(view.updatedAt).toLocaleString()}`],
     sections,
     privacyNote:
-      "This is a frozen snapshot of the selected Blocks. Source evidence, screenshots, and future Live View updates are not included.",
+      "这是所选区块的固定快照，不包含来源证据、截图和未来的实时视图更新。",
   };
 }
 

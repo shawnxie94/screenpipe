@@ -55,7 +55,7 @@ export function nativeCalendarLabel({
 }): string {
   if (isMac) return "Apple Calendar";
   if (isWindows) return "Windows Calendar";
-  return "OS Calendar";
+  return "系统日历";
 }
 
 export function calendarProviderOptions(platform: {
@@ -224,7 +224,7 @@ function NativeCalendarConnect({
       if (result.status === "ok" && granted) {
         setConnected(true);
         await onConnected();
-        setStatusText(`${label} connected.`);
+        setStatusText(`${label} 已连接。`);
         onClose();
       } else {
         await commands.openPermissionSettings("calendar");
@@ -242,14 +242,13 @@ function NativeCalendarConnect({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        ScreenPipe reads event titles, times, and attendees so meeting notes can
-        start at the right moment. It does not write to your calendar.
+        ScreenPipe 会读取事件标题、时间和参会者，让会议笔记在正确的时间开始。它不会写入你的日历。
       </p>
       <div className="border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
         {platform.isMac
-          ? "For Google, Outlook, or Exchange via Apple Calendar, add the account in macOS Internet Accounts first."
+          ? "如果使用 Google、Outlook 或 Exchange，请先在 macOS“互联网账户”中添加账户。"
           : platform.isWindows
-            ? "For Google, Outlook, or Exchange via Windows Calendar, add the account in Windows Email & accounts first."
+            ? "如果使用 Google、Outlook 或 Exchange，请先在 Windows“电子邮件和账户”中添加账户。"
             : "使用操作系统的日历账户设置来选择可用的日历。"}
       </div>
       <div className="flex items-center justify-between gap-3">
@@ -259,7 +258,7 @@ function NativeCalendarConnect({
           ) : (
             <Monitor className="h-3.5 w-3.5" />
           )}
-          {connected ? "connected" : "not connected"}
+          {connected ? "已连接" : "未连接"}
         </div>
         <Button onClick={connect} disabled={busy} className="rounded-none">
           {busy ? (
@@ -267,7 +266,7 @@ function NativeCalendarConnect({
           ) : (
             <CalendarDays className="mr-2 h-3.5 w-3.5" />
           )}
-          connect
+          连接
         </Button>
       </div>
       {statusText && (
@@ -296,7 +295,7 @@ function IcsCalendarConnect({
     try {
       const test = await commands.icsCalendarTestUrl(trimmed);
       if (test.status !== "ok") {
-        throw new Error(test.error ?? "could not fetch calendar feed");
+        throw new Error(test.error ?? "无法获取日历源");
       }
       const entriesResult = await commands.icsCalendarGetEntries();
       const entries =
@@ -316,7 +315,7 @@ function IcsCalendarConnect({
       ];
       const saved = await commands.icsCalendarSaveEntries(next);
       if (saved.status !== "ok") {
-        throw new Error(saved.error ?? "failed to save ICS feed");
+        throw new Error(saved.error ?? "保存 ICS 日历源失败");
       }
       await onConnected();
       onClose();
@@ -340,7 +339,7 @@ function IcsCalendarConnect({
             setUrl(event.target.value);
             setStatusText(null);
           }}
-          placeholder="https:// or webcal:// URL"
+          placeholder="https:// 或 webcal:// 地址"
           className="rounded-none"
         />
         <Input
@@ -360,7 +359,7 @@ function IcsCalendarConnect({
         ) : (
           <Plus className="mr-2 h-3.5 w-3.5" />
         )}
-        add feed
+        添加日历源
       </Button>
       {statusText && (
         <p className="text-xs text-muted-foreground">{statusText}</p>

@@ -80,7 +80,7 @@ describe("provider error copy", () => {
       model: "llama3.2",
     });
 
-    expect(msg).toContain('Ollama model "llama3.2" is not installed');
+    expect(msg).toContain("Ollama 模型“llama3.2”尚未安装");
     expect(msg).toContain("ollama pull llama3.2");
   });
 
@@ -96,7 +96,7 @@ describe("provider error copy", () => {
     expect(presentation).toEqual({
       kind: "provider",
       message:
-        'Ollama model "qwen2.5vl:3b" does not support tools. Switch your AI preset to an Ollama model that supports tools.',
+        "Ollama 模型“qwen2.5vl:3b”不支持工具。请将 AI 预设切换到支持工具的 Ollama 模型。",
       retryable: false,
     });
     expect(presentation?.message).not.toContain("untrusted upstream suffix");
@@ -114,7 +114,7 @@ describe("provider error copy", () => {
       model: "auto",
     });
 
-    expect(msg).toContain("Can't reach the AI provider (screenpipe-cloud)");
+    expect(msg).toContain("无法连接 AI 服务商 (screenpipe-cloud)");
   });
 
   it("maps legacy provider socket errors to migration copy", () => {
@@ -126,7 +126,7 @@ describe("provider error copy", () => {
     });
 
     expect(presentation).toMatchObject({ kind: "provider", retryable: true });
-    expect(presentation?.message).toContain("Can't reach the AI provider (pi)");
+    expect(presentation?.message).toContain("无法连接 AI 服务商 (pi)");
     expect(presentation?.message).not.toContain("verbose: true");
   });
 
@@ -134,7 +134,7 @@ describe("provider error copy", () => {
     for (const raw of ["tls handshake eof", "error sending request"]) {
       expect(
         buildProviderErrorMessage(raw, { provider: "screenpipe-cloud", model: "auto" }),
-      ).toContain("Can't reach the AI provider (screenpipe-cloud)");
+      ).toContain("无法连接 AI 服务商 (screenpipe-cloud)");
     }
   });
 
@@ -145,7 +145,7 @@ describe("provider error copy", () => {
     );
 
     expect(presentation).toMatchObject({ kind: "provider", retryable: true });
-    expect(presentation?.message).toContain("Can't reach the AI provider (screenpipe-cloud)");
+    expect(presentation?.message).toContain("无法连接 AI 服务商 (screenpipe-cloud)");
     expect(presentation?.message).not.toContain("certificate has expired");
   });
 
@@ -155,7 +155,7 @@ describe("provider error copy", () => {
     ).toContain("anthropic");
     expect(
       buildProviderErrorMessage("Connection error.", { provider: "custom", model: "x" })
-    ).toContain("Can't reach the AI provider");
+    ).toContain("无法连接 AI 服务商");
   });
 
   it("maps a custom provider 403 to API key and URL guidance", () => {
@@ -165,11 +165,11 @@ describe("provider error copy", () => {
       url: "https://api.ai-genesis.app",
     });
 
-    expect(msg).toContain("custom AI provider rejected");
-    expect(msg).toContain("API key");
-    expect(msg).toContain("Custom URL");
+    expect(msg).toContain("自定义 AI 服务商拒绝了请求");
+    expect(msg).toContain("API 密钥");
+    expect(msg).toContain("自定义 URL");
     expect(msg).toContain("/v1");
-    expect(msg).toContain("Test Connection");
+    expect(msg).toContain("测试连接");
   });
 
   it("maps the opaque custom-provider 400 to safe preset guidance", () => {
@@ -179,7 +179,7 @@ describe("provider error copy", () => {
         model: "gemini-2.5-flash",
       }),
     ).toBe(
-      "The custom AI provider rejected the request. Verify the endpoint, model, and API key in Settings → AI.",
+      "自定义 AI 服务商拒绝了请求。请在“设置 → AI”中检查端点、模型和 API 密钥。",
     );
     expect(
       buildProviderErrorMessage("400 status code (no body)", {
@@ -208,7 +208,7 @@ describe("provider error copy", () => {
 
   it("maps only the full Codex usage-limit signature to sanitized recovery guidance", () => {
     const expected =
-      "The AI provider usage limit has been reached. Wait for it to reset, or switch your AI preset or provider.";
+      "已达到 AI 服务商使用上限。请等待额度重置，或切换 AI 预设/服务商。";
 
     expect(
       buildProviderErrorMessage(
@@ -276,17 +276,17 @@ describe("provider error copy", () => {
     }
     // custom + unknown/undefined fall back to an unnamed, still-clear message
     expect(buildProviderErrorMessage("fetch failed", { provider: "custom" })).toBe(
-      "Can't reach the AI provider. Check your internet connection and try again."
+      "无法连接 AI 服务商。请检查网络连接后重试。"
     );
     expect(buildProviderErrorMessage("fetch failed", null)).toBe(
-      "Can't reach the AI provider. Check your internet connection and try again."
+      "无法连接 AI 服务商。请检查网络连接后重试。"
     );
   });
 
   it("handles provider transport errors case-insensitively", () => {
     expect(
       buildProviderErrorMessage("TLS HANDSHAKE EOF", { provider: "screenpipe-cloud" }),
-    ).toContain("Can't reach the AI provider (screenpipe-cloud)");
+    ).toContain("无法连接 AI 服务商 (screenpipe-cloud)");
   });
 
   it("turns raw context-window JSON into actionable chat copy", () => {
@@ -304,7 +304,7 @@ describe("provider error copy", () => {
     expect(
       buildProviderErrorMessage(raw, { provider: "custom", model: "qwen3.5" })
     ).toBe(
-      "This provider exposes 8,192 context tokens, but Screenpipe's agent request already needs 13,069. Increase the provider's context window (for example, Ollama num_ctx) to at least 32,768, or choose a larger-context model, then retry in a new chat."
+      "此服务商提供 8,192 个上下文 token，但 screenpipe 代理请求已需要 13,069 个。请将服务商上下文窗口（例如 Ollama 的 num_ctx）增加到至少 32,768，或选择上下文更大的模型，然后在新聊天中重试。"
     );
   });
 
@@ -313,7 +313,7 @@ describe("provider error copy", () => {
     expect(
       buildProviderErrorMessage(raw, { provider: "custom", model: "local-model" })
     ).toBe(
-      "This provider accepts 65,536 context tokens, but the request used 70,000. Set Settings → AI → Advanced → model context tokens to 65,536, then start a new chat and retry."
+      "此服务商支持 65,536 个上下文 token，但此次请求使用了 70,000 个。请将“设置 → AI → 高级 → 模型上下文 token”设为 65,536，然后开始新聊天并重试。"
     );
   });
 
@@ -328,7 +328,7 @@ describe("provider error copy", () => {
 
   it("keeps the generic no-response copy for non-Ollama providers", () => {
     expect(buildNoResponseMessage({ provider: "screenpipe-cloud" })).toContain(
-      "No response from model"
+      "模型没有响应"
     );
     expect(buildNoResponseMessage({ provider: "native-ollama", model: "mistral" })).toContain(
       "无法连接 Ollama"

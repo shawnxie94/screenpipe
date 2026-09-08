@@ -19,7 +19,7 @@ describe("markdown chat export", () => {
       aggregatedAfter: new Map(),
     });
     expect(markdown).toContain("Ready.");
-    expect(markdown).toContain("**Artifact:** Report — Created");
+    expect(markdown).toContain("**内容文件:** Report — 已创建");
     expect(markdown).not.toContain("::screenpipe-result");
   });
 });

@@ -44,7 +44,7 @@ export function ModelDownloadTracker() {
           // Update toast using its reference
           if (toastRefs[model]) {
             toastRefs[model].update({
-              title: "downloading model",
+              title: "正在下载模型",
               description: (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
@@ -115,7 +115,7 @@ export function ModelDownloadTracker() {
         console.log("检测到 ffmpeg 安装开始");
 
         const toastRef = toast({
-          title: "installing ffmpeg",
+          title: "正在安装 ffmpeg",
           description: (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
@@ -142,8 +142,8 @@ export function ModelDownloadTracker() {
 
         // Show completion toast
         toast({
-          title: "ffmpeg installed",
-          description: "ffmpeg is ready to use",
+          title: "ffmpeg 已安装",
+          description: "ffmpeg 已准备就绪",
           duration: 3000,
         });
 
@@ -158,7 +158,7 @@ export function ModelDownloadTracker() {
 
         // Show toast for download start with initial progress
         const toastRef = toast({
-          title: "downloading model",
+          title: "正在下载模型",
           description: (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
@@ -188,8 +188,8 @@ export function ModelDownloadTracker() {
 
         // Show completion toast
         toast({
-          title: "model downloaded",
-          description: `model is ready to use`,
+          title: "模型已下载",
+          description: "模型已准备就绪，可以使用了",
           duration: 3000,
         });
 

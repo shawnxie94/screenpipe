@@ -37,7 +37,7 @@ export function buildFirstRunSummaryNotification(
   const actions: FirstRunSummaryNotificationPayload["actions"] = [
     {
       id: "open_summary",
-      label: "open summary",
+      label: "打开摘要",
       type: "deeplink",
       url: FIRST_RUN_SUMMARY_DEEPLINK,
       primary: true,
@@ -47,7 +47,7 @@ export function buildFirstRunSummaryNotification(
   if (preferredAgent) {
     actions.push({
       id: `ask_${preferredAgent.id}`,
-      label: `ask ${preferredAgent.label}`,
+      label: `询问 ${preferredAgent.label}`,
       type: "deeplink",
       url: `screenpipe://first-run-agent?target=${encodeURIComponent(preferredAgent.id)}`,
     });
@@ -55,8 +55,8 @@ export function buildFirstRunSummaryNotification(
 
   return {
     id: FIRST_RUN_SUMMARY_NOTIFICATION_ID,
-    title: "your first summary is ready",
-    body: "See what screenpipe picked up while you worked.",
+    title: "你的首份摘要已准备好",
+    body: "看看 screenpipe 在你工作期间记录了什么。",
     type: "firstRunSummary",
     priority: "normal",
     transient: false,

@@ -88,7 +88,7 @@ describe("terminal states", () => {
   });
 
   it("falls back to readable copy when the error has no message", () => {
-    expect(fold([{ type: "error" }]).error).toBe("couldn't reach the model");
+    expect(fold([{ type: "error" }]).error).toBe("无法连接到模型");
   });
 
   it("reads an error nested on message", () => {
@@ -135,7 +135,7 @@ describe("tool allowlist", () => {
     ]);
     expect(state.done).toBe(true);
     expect(state.stoppedReason).toBe("unexpected-tool");
-    expect(state.error).toBe("stopped — unexpected tool");
+    expect(state.error).toBe("已停止：遇到了未预期的工具");
   });
 
   it("allowed tools do not interrupt", () => {
@@ -229,7 +229,7 @@ describe("tool allowlist", () => {
     expect(state.done).toBe(true);
     expect(state.stoppedReason).toBe("unexpected-tool");
     // Case 65's copy is unchanged, and the partial answer is kept.
-    expect(state.error).toBe("stopped — unexpected tool");
+    expect(state.error).toBe("已停止：遇到了未预期的工具");
     expect(state.text).toBe("partial");
   });
 });
@@ -244,12 +244,12 @@ describe("stop", () => {
 
   it("stopping an empty turn explains itself", () => {
     const stopped = stopMeetingChatStream(emptyStreamState(), "aborted");
-    expect(stopped.error).toBe("stopped");
+    expect(stopped.error).toBe("已停止");
   });
 
   it("case 68: a timeout on an empty turn reports the timeout", () => {
     expect(stopMeetingChatStream(emptyStreamState(), "timeout").error).toBe(
-      "timed out",
+      "已超时",
     );
   });
 

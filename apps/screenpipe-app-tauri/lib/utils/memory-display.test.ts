@@ -83,12 +83,12 @@ OAuth demo recording.
     });
 
     expect(display.kind).toBe("daily");
-    expect(display.title).toBe("Daily Log · 2026-06-20");
+    expect(display.title).toBe("每日记录 · 2026-06-20");
     expect(display.summary).toBe("OAuth demo recording.");
     expect(display.properties).toEqual(
       expect.arrayContaining([
-        { label: "date", value: "2026-06-20" },
-        { label: "people", value: "Ansh · goruji" },
+        { label: "日期", value: "2026-06-20" },
+        { label: "相关人员", value: "Ansh · goruji" },
       ]),
     );
   });
@@ -126,7 +126,7 @@ OAuth demo recording.
     });
 
     expect(display.kind).toBe("crm");
-    expect(display.subtitle).toBe("Personal CRM");
+    expect(display.subtitle).toBe("个人关系管理");
     expect(display.summary).toBe("replied on X");
   });
 });

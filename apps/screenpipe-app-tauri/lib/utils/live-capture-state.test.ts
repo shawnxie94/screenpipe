@@ -154,7 +154,7 @@ describe("computeLiveCaptureState", () => {
     });
 
     expect(state.kind).toBe("waiting-for-meeting");
-    expect(state.label).toBe("Waiting for meeting");
+    expect(state.label).toBe("等待会议");
     expect(state.recordingContinues).toBe(false);
   });
 
@@ -170,7 +170,7 @@ describe("computeLiveCaptureState", () => {
 
     expect(state.kind).toBe("meeting-detector-unavailable");
     expect(state.severity).toBe("warning");
-    expect(state.description).toContain("Audio devices are closed");
+    expect(state.description).toContain("音频设备保持关闭");
     expect(state.recordingContinues).toBe(false);
   });
 

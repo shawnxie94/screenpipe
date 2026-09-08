@@ -48,7 +48,7 @@ export async function loadMeetingSummaryPipeConfig(
     throw new Error(
       typeof record.error === "string"
         ? record.error
-        : "meeting summary pipe is unavailable",
+        : "会议摘要定时任务不可用",
     );
   }
   return { presetIds: pipePresetIds(payload) };
@@ -83,7 +83,7 @@ export async function updateMeetingSummaryPrimaryPreset(
     throw new Error(
       typeof record.error === "string"
         ? record.error
-        : "meeting summary model did not save",
+        : "会议摘要模型未保存",
     );
   }
   return { presetIds };
@@ -117,7 +117,7 @@ export async function startMeetingSummaryRun(
     const reason =
       typeof record.error === "string"
         ? record.error
-        : "summary run did not start";
+        : "摘要任务未启动";
     throw new Error(reason);
   }
   return { executionId };

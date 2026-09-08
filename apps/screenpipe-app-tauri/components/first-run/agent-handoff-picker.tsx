@@ -77,7 +77,7 @@ export function AgentHandoffPicker({
   if (targets.length === 0) return null;
 
   const verb = (target: AgentHandoffTarget) =>
-    target.deeplink ? `Ask ${target.label}` : `Copy for ${target.label}`;
+    target.deeplink ? `询问 ${target.label}` : `复制给 ${target.label}`;
 
   if (targets.length === 1) {
     const only = targets[0];

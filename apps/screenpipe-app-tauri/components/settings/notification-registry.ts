@@ -76,7 +76,7 @@ export const NOTIFICATION_GROUPS: NotificationGroup[] = [
   {
     id: "app",
     label: "应用",
-    description: "screenpipe 本身的更新",
+    description: "知迹本身的更新",
   },
 ];
 

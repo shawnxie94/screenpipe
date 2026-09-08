@@ -41,8 +41,8 @@ export function ComposerEffortSlider({
   onValueChange,
   disabled = false,
   /** Ends of the scale. Named per provider so the axis reads honestly. */
-  minLabel = "Faster",
-  maxLabel = "Smarter",
+  minLabel = "更快",
+  maxLabel = "更聪明",
   testId,
 }: {
   label: string;

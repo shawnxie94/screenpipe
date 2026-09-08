@@ -80,6 +80,16 @@ type BootPhaseSnapshot = {
   cpuCompatMode: boolean;
 };
 
+const BOOT_PHASE_COPY: Record<BootPhaseSnapshot["phase"], string> = {
+  idle: "准备启动本地引擎...",
+  starting: "正在启动本地引擎...",
+  migrating_database: "正在更新本地数据库，大型数据可能需要几分钟...",
+  building_audio: "正在初始化音频...",
+  starting_pipes: "正在启动自动化...",
+  ready: "本地引擎已就绪",
+  error: "本地引擎启动失败",
+};
+
 const BOOT_PHASE_POLL_MS = 500;
 
 type EngineHealthPayload = {
@@ -324,7 +334,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
             ? err
             : err instanceof Error
               ? err.message
-              : String(err ?? "unknown error");
+              : String(err ?? "未知错误");
         console.error("failed to start screenpipe:", message);
 
         const kind: "permission" | "other" = /permission/i.test(message)
@@ -534,8 +544,8 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
           ? err
           : err instanceof Error
             ? err.message
-            : String(err ?? "unknown error");
-      setSpawnError(`failed to stop recording: ${message}`);
+            : String(err ?? "未知错误");
+      setSpawnError(`停止录制失败：${message}`);
       setSpawnErrorKind("other");
       return;
     }
@@ -568,18 +578,23 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
   };
 
   const progressSteps = [
-    { label: "engine", done: serverStarted, active: !serverStarted },
+    { label: "引擎", done: serverStarted, active: !serverStarted },
     {
-      label: "audio",
+      label: "音频",
       done: audioReady,
       active: serverStarted && !audioReady,
     },
     {
-      label: "vision",
+      label: "视觉",
       done: visionReady,
       active: serverStarted && !visionReady && audioReady,
     },
   ];
+  const startupMessage = bootPhase
+    ? BOOT_PHASE_COPY[bootPhase.phase]
+    : isTakingLonger
+      ? "启动时间较长，请稍候..."
+      : null;
 
   // ── Engine startup phase (starting / stuck) ──
   return (
@@ -616,7 +631,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
             present (e.g. "updating database — may take several minutes on
             large installs"), else the generic "starting engine..." hint. */}
         <AnimatePresence>
-          {state === "starting" && (bootPhase?.message || isTakingLonger) && (
+          {state === "starting" && startupMessage && (
             <motion.p
               key={bootPhase?.phase ?? "taking-longer"}
               className="font-mono text-[10px] text-muted-foreground/60 mt-3 max-w-[360px] text-center"
@@ -624,7 +639,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              {bootPhase?.message ?? "starting engine..."}
+              {startupMessage}
             </motion.p>
           )}
         </AnimatePresence>
@@ -634,8 +649,8 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
             reports it via the boot-phase snapshot. */}
         {bootPhase?.cpuCompatMode && (
           <p className="font-mono text-[10px] text-muted-foreground/60 mt-2 max-w-[360px] text-center">
-            compatibility mode: this CPU lacks AVX2 — local whisper
-            transcription is unavailable (cloud + parakeet engines still work)
+            兼容模式：此 CPU 不支持 AVX2，因此无法使用本地 whisper 转录
+            （云端和 parakeet 引擎仍可用）
           </p>
         )}
 
@@ -653,7 +668,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
               {spawnErrorKind === "port_conflict" ? (
                 <>
                   <p className="font-mono text-sm text-foreground text-center">
-                    port conflict — cannot start recording.
+                    端口冲突 — 无法开始录制。
                   </p>
                   <p className="font-mono text-[11px] text-muted-foreground text-center leading-relaxed break-words">
                     {spawnError}
@@ -674,7 +689,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                               ? err
                               : err instanceof Error
                                 ? err.message
-                                : String(err ?? "unknown error");
+                                : String(err ?? "未知错误");
                           setSpawnError(message);
                           setSpawnErrorKind(
                             /port.*in use|already in use/i.test(message)
@@ -686,7 +701,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                       }}
                       className="font-mono text-xs h-8 px-3"
                     >
-                      retry
+                      重试
                     </Button>
                     <Button
                       variant="outline"
@@ -694,7 +709,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                       onClick={handleContinueWithoutRecording}
                       className="font-mono text-xs h-8 px-3"
                     >
-                      continue without recording
+                      不录制并继续
                     </Button>
                   </div>
                   <div className="flex items-center gap-3">
@@ -704,7 +719,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                       onClick={openLogsFolder}
                       className="font-mono text-[10px] h-7 px-2"
                     >
-                      logs
+                      日志
                     </Button>
                     <Button
                       variant="outline"
@@ -714,24 +729,23 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                       }
                       className="font-mono text-[10px] h-7 px-2"
                     >
-                      <Calendar className="w-3 h-3 mr-1" /> help
+                    <Calendar className="w-3 h-3 mr-1" /> 帮助
                     </Button>
                   </div>
                 </>
               ) : spawnErrorKind === "permission" ? (
                 <>
                   <p className="font-mono text-sm text-foreground text-center">
-                    screen recording permission is required.
+                    需要屏幕录制权限。
                   </p>
                   <p className="font-mono text-[11px] text-muted-foreground text-center leading-relaxed">
-                    macOS tracks this permission per app signature. if you
-                    switched between prod / beta / dev builds, your previous
-                    grant doesn&apos;t carry over — each bundle id has its own
-                    record.
+                    macOS 会根据应用签名分别记录此权限。如果你在正式版、Beta
+                    版或开发版之间切换，之前授予的权限不会沿用 — 每个 Bundle ID
+                    都有独立的记录。
                   </p>
                   {bundleId && (
                     <p className="font-mono text-[10px] text-muted-foreground/60 text-center">
-                      currently running as:{" "}
+                      当前运行版本：{" "}
                       <span className="text-foreground/80">{bundleId}</span>
                     </p>
                   )}
@@ -743,7 +757,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                       }
                       className="font-mono text-xs h-8 px-3"
                     >
-                      open system settings →
+                      打开系统设置 →
                     </Button>
                     <Button
                       variant="outline"
@@ -755,7 +769,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                       {isResettingPerm ? (
                         <Loader className="w-3 h-3 animate-spin" />
                       ) : (
-                        "reset & re-request"
+                        "重置并重新请求"
                       )}
                     </Button>
                   </div>
@@ -765,21 +779,21 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                     }
                     className="font-mono text-[10px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
                   >
-                    troubleshooting guide ↗
+                    故障排查指南 ↗
                   </button>
                 </>
               ) : (
                 spawnError && (
                   <>
                     <p className="font-mono text-sm text-foreground text-center">
-                      engine failed to start.
+                      引擎启动失败。
                     </p>
                     <p className="font-mono text-[11px] text-muted-foreground text-center leading-relaxed break-words">
                       {spawnError}
                     </p>
                     {bundleId && (
                       <p className="font-mono text-[10px] text-muted-foreground/60 text-center">
-                        running as:{" "}
+                        当前运行版本：{" "}
                         <span className="text-foreground/80">{bundleId}</span>
                       </p>
                     )}
@@ -791,7 +805,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                 data-testid="onboarding-startup-skip"
                 className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
               >
-                continue without recording →
+                不录制并继续 →
               </button>
               <div className="flex items-center gap-3">
                 <Button
@@ -800,7 +814,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                   onClick={openLogsFolder}
                   className="font-mono text-[10px] h-7 px-2"
                 >
-                  logs
+                  日志
                 </Button>
                 <Button
                   variant="outline"
@@ -810,7 +824,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                   }
                   className="font-mono text-[10px] h-7 px-2"
                 >
-                  <Calendar className="w-3 h-3 mr-1" /> help
+                  <Calendar className="w-3 h-3 mr-1" /> 帮助
                 </Button>
               </div>
             </motion.div>

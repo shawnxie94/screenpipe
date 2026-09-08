@@ -431,6 +431,7 @@ const MONTH_NAMES = [
 ] as const;
 
 const MONTH_PATTERN = MONTH_NAMES.join("|");
+const MONTH_LABELS = ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"] as const;
 
 function startOfLocalDay(date: Date): Date {
   const result = new Date(date);
@@ -519,7 +520,7 @@ function parseExplicitTimeRanges(input: string, now: Date): {
     return {
       start: new Date(now.getTime() - days * 24 * 60 * 60 * 1000),
       end: new Date(now),
-      label: `past ${days} ${days === 1 ? "day" : "days"}`,
+      label: `过去 ${days} 天`,
     };
   });
 
@@ -532,7 +533,7 @@ function parseExplicitTimeRanges(input: string, now: Date): {
     return {
       start,
       end: new Date(startOfThisWeek.getTime() - 1),
-      label: "previous week",
+      label: "上周",
     };
   });
 
@@ -540,7 +541,7 @@ function parseExplicitTimeRanges(input: string, now: Date): {
     const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const end = new Date(now.getFullYear(), now.getMonth(), 1);
     end.setMilliseconds(-1);
-    return { start, end, label: "previous month" };
+    return { start, end, label: "上个月" };
   });
 
   consume(new RegExp(`~(${MONTH_PATTERN})(\\d{4})\\b`, "gi"), (match) => {
@@ -555,7 +556,7 @@ function parseExplicitTimeRanges(input: string, now: Date): {
     return {
       start,
       end,
-      label: `${MONTH_NAMES[monthIndex][0].toUpperCase()}${MONTH_NAMES[monthIndex].slice(1)} ${year}`,
+      label: `${MONTH_LABELS[monthIndex]} ${year}`,
     };
   });
 
@@ -573,7 +574,7 @@ function parseExplicitTimeRanges(input: string, now: Date): {
     return {
       start,
       end,
-      label: `${MONTH_NAMES[monthIndex][0].toUpperCase()}${MONTH_NAMES[monthIndex].slice(1)} ${year}`,
+      label: `${MONTH_LABELS[monthIndex]} ${year}`,
     };
   });
 
@@ -779,7 +780,7 @@ export function parseMentions(input: string, options?: ParseMentionsOptions): Pa
     timeRanges.push({
       start: options.selectionRange.start,
       end: options.selectionRange.end,
-      label: "selected range",
+      label: "选定范围",
       sourceToken: "@selection",
     });
     cleanedInput = cleanedInput.replace(selectionPattern, "").trim();
@@ -792,7 +793,7 @@ export function parseMentions(input: string, options?: ParseMentionsOptions): Pa
       getRange: () => {
         const start = new Date(now);
         start.setHours(0, 0, 0, 0);
-        return { start, end: now, label: "today" };
+        return { start, end: now, label: "今天" };
       },
     },
     {
@@ -803,7 +804,7 @@ export function parseMentions(input: string, options?: ParseMentionsOptions): Pa
         start.setHours(0, 0, 0, 0);
         const end = new Date(start);
         end.setHours(23, 59, 59, 999);
-        return { start, end, label: "yesterday" };
+        return { start, end, label: "昨天" };
       },
     },
     {
@@ -812,7 +813,7 @@ export function parseMentions(input: string, options?: ParseMentionsOptions): Pa
         const start = new Date(now);
         start.setDate(start.getDate() - 7);
         start.setHours(0, 0, 0, 0);
-        return { start, end: now, label: "last week" };
+        return { start, end: now, label: "上周" };
       },
     },
     {
@@ -822,14 +823,14 @@ export function parseMentions(input: string, options?: ParseMentionsOptions): Pa
         start.setHours(6, 0, 0, 0);
         const end = new Date(now);
         end.setHours(12, 0, 0, 0);
-        return { start, end: now < end ? now : end, label: "this morning" };
+        return { start, end: now < end ? now : end, label: "今天上午" };
       },
     },
     {
       pattern: /@last[- ]?hour\b/gi,
       getRange: () => {
         const start = new Date(now.getTime() - 60 * 60 * 1000);
-        return { start, end: now, label: "last hour" };
+        return { start, end: now, label: "过去一小时" };
       },
     },
   ];
@@ -1008,8 +1009,8 @@ export function buildChatMentionSuggestions(
     .slice(0, limit)
     .map((item) => ({
       tag: `@chat:${item.id}`,
-      label: item.title.trim() || "untitled",
-      description: "previous chat",
+      label: item.title.trim() || "未命名",
+      description: "之前的聊天",
       category: "chat" as const,
       conversationId: item.id,
     }));
@@ -1044,22 +1045,22 @@ export function buildSkillMentionSuggestions(
     return {
       tag: `$${skillKey}`,
       label: item.name.trim() || skillKey,
-      description: item.description.trim() || "installed skill",
+      description: item.description.trim() || "已安装的技能",
       category: "skill" as const,
     };
   });
 }
 
 export const TIME_RANGE_MENTION_SUGGESTIONS: MentionSuggestion[] = [
-  { tag: "~7days", description: "rolling past 7 days", category: "range" },
-  { tag: "~lastweek", description: "previous Monday–Sunday", category: "range" },
-  { tag: "~lastmonth", description: "previous calendar month", category: "range" },
-  { tag: "~april", description: "most recent April", category: "range" },
-  { tag: "~april2025", description: "April 2025", category: "range" },
-  { tag: "~(03/04/2025)", description: "one day (DD/MM/YYYY)", category: "range" },
+  { tag: "~7days", description: "过去 7 天", category: "range" },
+  { tag: "~lastweek", description: "上周一至周日", category: "range" },
+  { tag: "~lastmonth", description: "上一个日历月", category: "range" },
+  { tag: "~april", description: "最近的四月", category: "range" },
+  { tag: "~april2025", description: "2025 年四月", category: "range" },
+  { tag: "~(03/04/2025)", description: "单日（DD/MM/YYYY）", category: "range" },
   {
     tag: "~(03/04/2025 - 06/07/2025)",
-    description: "inclusive range (DD/MM/YYYY)",
+    description: "包含首尾日期的范围（DD/MM/YYYY）",
     category: "range",
   },
 ];
@@ -1103,19 +1104,19 @@ export function buildTagMentionSuggestions(
   }));
 }
 
-function pluralize(count: number, singular: string, plural = `${singular}s`) {
-  return `${count} ${count === 1 ? singular : plural}`;
+function pluralize(count: number, singular: string, _plural?: string) {
+  return `${count} ${singular}`;
 }
 
 function formatTagAutocompleteDescription(item: AppAutocompleteItem) {
   const parts = [
-    item.frame_count ? pluralize(item.frame_count, "frame") : null,
-    item.audio_count ? pluralize(item.audio_count, "audio clip") : null,
-    item.memory_count ? pluralize(item.memory_count, "memory", "memories") : null,
+    item.frame_count ? `${item.frame_count} 个画面` : null,
+    item.audio_count ? `${item.audio_count} 段音频` : null,
+    item.memory_count ? `${item.memory_count} 条记忆` : null,
   ].filter((part): part is string => Boolean(part));
 
-  if (parts.length > 0) return parts.join(", ");
-  return pluralize(item.count, "use");
+  if (parts.length > 0) return parts.join("，");
+  return `${item.count} 次使用`;
 }
 
 /**

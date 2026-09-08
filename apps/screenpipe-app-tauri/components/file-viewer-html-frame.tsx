@@ -85,7 +85,7 @@ export function HtmlPreviewFrame({
       if (
         !internal &&
         !(typeof window !== "undefined" &&
-          window.confirm(`open external link?\n\n${url}`))
+          window.confirm(`要打开外部链接吗？\n\n${url}`))
       ) {
         return;
       }

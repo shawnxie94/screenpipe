@@ -31,22 +31,22 @@ interface ScheduleSettingsProps {
   onChange: (enabled: boolean, rules: ScheduleRule[]) => void;
 }
 
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 const DAY_NAMES_FULL = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
+  "星期一",
+  "星期二",
+  "星期三",
+  "星期四",
+  "星期五",
+  "星期六",
+  "星期日",
 ];
 const HOUR_MARKERS = [0, 6, 12, 18, 24];
 
 const MODE_LABELS: Record<string, string> = {
-  all: "All",
-  audio_only: "Audio",
-  screen_only: "Screen",
+  all: "全部",
+  audio_only: "音频",
+  screen_only: "屏幕",
 };
 
 const WEEKDAY_9_TO_5: ScheduleRule[] = Array.from({ length: 5 }, (_, i) => ({
@@ -70,7 +70,7 @@ function timeToPercent(time: string): number {
 
 function formatTime(time: string): string {
   const [h, m] = time.split(":").map(Number);
-  const suffix = h >= 12 ? "pm" : "am";
+  const suffix = h >= 12 ? "下午" : "上午";
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
   return `${h12}:${m.toString().padStart(2, "0")}${suffix}`;
 }
@@ -165,13 +165,13 @@ export function ScheduleSettings({
             <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
             <div>
               <h3 className="text-sm font-medium text-foreground">
-                Recording Schedule
+                录制计划
                 <span className="ml-1.5 text-[9px] font-mono uppercase tracking-wider bg-muted text-muted-foreground px-1 py-0.5 rounded">
                   beta
                 </span>
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Define when recording is active
+                设置录制启用的时间段
               </p>
             </div>
             <HelpTooltip text="Set specific time ranges per day when screen and audio recording should be active. Outside these hours, recording pauses automatically." />
@@ -186,14 +186,14 @@ export function ScheduleSettings({
           <div className="space-y-3 mt-3">
             {/* Presets */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Presets:</span>
+              <span className="text-xs text-muted-foreground">预设：</span>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-6 px-2 text-xs font-mono"
                 onClick={() => applyPreset("weekdays")}
               >
-                Weekdays 9-5
+                工作日 9:00–17:00
               </Button>
               <Button
                 variant="outline"
@@ -201,7 +201,7 @@ export function ScheduleSettings({
                 className="h-6 px-2 text-xs font-mono"
                 onClick={() => applyPreset("always")}
               >
-                Always On
+                始终开启
               </Button>
               <Button
                 variant="outline"
@@ -209,7 +209,7 @@ export function ScheduleSettings({
                 className="h-6 px-2 text-xs font-mono"
                 onClick={() => applyPreset("custom")}
               >
-                Clear All
+                全部清除
               </Button>
             </div>
 
@@ -333,7 +333,7 @@ function DayRow({
           {/* Empty state hint */}
           {rules.length === 0 && (
             <span className="absolute inset-0 flex items-center justify-center text-[10px] text-muted-foreground/50 font-mono select-none">
-              No recording
+              未设置录制计划
             </span>
           )}
         </div>
@@ -345,7 +345,7 @@ function DayRow({
             e.stopPropagation();
             onAddRule();
           }}
-          title={`Add time range for ${dayNameFull}`}
+          title={`为${dayNameFull}添加时间范围`}
         >
           <Plus className="h-3.5 w-3.5" />
         </button>

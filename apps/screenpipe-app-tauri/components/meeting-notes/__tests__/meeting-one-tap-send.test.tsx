@@ -141,7 +141,7 @@ describe("meeting one-tap send", () => {
     screen.getByTestId("go").click();
 
     await waitFor(() =>
-      expect(screen.getByTestId("out")).toHaveTextContent("sent to #product"),
+      expect(screen.getByTestId("out")).toHaveTextContent("已发送到 #product"),
     );
     const call = mocks.localFetch.mock.calls.find(
       ([p]) => p === "/connections/slack/send",
@@ -162,7 +162,7 @@ describe("meeting one-tap send", () => {
     screen.getByTestId("go").click();
 
     await waitFor(() =>
-      expect(screen.getByTestId("out")).toHaveTextContent("Nothing to send"),
+      expect(screen.getByTestId("out")).toHaveTextContent("暂无可发送的内容"),
     );
     expect(
       mocks.localFetch.mock.calls.some(

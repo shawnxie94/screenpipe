@@ -64,9 +64,9 @@ export function PermissionBanner() {
 
 
   const missingPerms: string[] = [];
-  if (!permissions.screenOk) missingPerms.push("screen recording");
-  if (!permissions.micOk) missingPerms.push("microphone");
-  if (!permissions.accessibilityOk) missingPerms.push("accessibility");
+  if (!permissions.screenOk) missingPerms.push("屏幕录制");
+  if (!permissions.micOk) missingPerms.push("麦克风");
+  if (!permissions.accessibilityOk) missingPerms.push("辅助功能");
 
   return (
     <div className="w-full bg-destructive border-b-2 border-destructive px-4 py-3 flex items-center justify-between gap-3 z-50">
@@ -75,13 +75,13 @@ export function PermissionBanner() {
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-semibold text-destructive-foreground text-base">
             {permissions.screenRestartRequired
-              ? "restart required"
-              : `${missingPerms.join(" & ")} disabled`}
+              ? "需要重启"
+              : `${missingPerms.join("、")}未启用`}
           </span>
           <span className="text-destructive-foreground/80 hidden sm:inline text-sm">
             {permissions.screenRestartRequired
-              ? "screenpipe won’t work until you restart"
-              : "recording is paused"}
+              ? "重启前 screenpipe 无法正常工作"
+              : "录制已暂停"}
           </span>
         </div>
       </div>
@@ -111,8 +111,8 @@ export function PermissionBanner() {
           }}
         >
           {permissions.screenRestartRequired
-            ? "restart screenpipe"
-            : "fix permissions"}
+            ? "重启 screenpipe"
+            : "修复权限"}
         </Button>
 
       </div>

@@ -180,7 +180,7 @@ async function readConfigText(configPath: string): Promise<string | null> {
     return await readTextFile(configPath);
   } catch (e) {
     throw new Error(
-      `could not read ${configPath} (${e instanceof Error ? e.message : e}) — fix its permissions and retry`
+      `无法读取 ${configPath}（${e instanceof Error ? e.message : e}）——请修复权限后重试`
     );
   }
 }
@@ -200,7 +200,7 @@ async function readJsonConfigStrict(configPath: string): Promise<Record<string, 
     return parsed;
   } catch (e) {
     throw new Error(
-      `${configPath} is not valid JSON (${e instanceof Error ? e.message : e}) — fix or remove it; screenpipe won't overwrite it`
+      `${configPath} 不是有效的 JSON（${e instanceof Error ? e.message : e}）——请修复或删除它；screenpipe 不会覆盖该文件`
     );
   }
 }
@@ -810,22 +810,22 @@ export function friendlyToolError(err: unknown): FriendlyToolError {
   // Cause only — the fix is inferable from the retry button + open-file
   // action every surface renders next to this message. No embedded paths:
   // that's the open-file button's job.
-  if (detail.includes("not valid JSON")) {
-    return { message: "config file has a syntax error", path, detail };
+  if (detail.includes("not valid JSON") || detail.includes("不是有效的 JSON")) {
+    return { message: "配置文件存在语法错误", path, detail };
   }
-  if (detail.includes("could not read")) {
-    return { message: "can't read the config file — check its permissions", path, detail };
+  if (detail.includes("could not read") || detail.includes("无法读取")) {
+    return { message: "无法读取配置文件——请检查文件权限", path, detail };
   }
-  if (detail.includes("mcp_servers block")) {
-    return { message: "config has a custom mcp_servers block — add screenpipe there manually", path, detail };
+  if (detail.includes("mcp_servers block") || detail.includes("mcp_servers 区块")) {
+    return { message: "配置中已有自定义 mcp_servers 区块——请手动将 screenpipe 添加到其中", path, detail };
   }
   if (detail.includes("local API key isn't available")) {
     // Covers engine startup AND a mid-session crash/restart — "isn't
     // responding" is true in both; "starting" would lie in the second.
-    return { message: "screenpipe isn't responding — give it a few seconds and try again", detail };
+    return { message: "screenpipe 暂无响应——请稍等片刻后重试", detail };
   }
   if (detail.includes("unsupported platform")) {
-    return { message: "app not installed — open it once, then retry", detail };
+    return { message: "应用尚未安装——请先打开一次，然后重试", detail };
   }
   return { message: tildify(detail), path, detail };
 }

@@ -76,7 +76,7 @@ const TARGETS: { id: TargetId; label: string; props: AgentCardProps }[] = [
       name: "OpenClaw",
       iconSrc: "/openclaw-icon.svg",
       description:
-        "Run any AI agent on your VPS 24/7. Wire it to screenpipe — register the MCP server, install the skill, or sync your data.",
+        "让任意 AI 代理在你的 VPS 上全天候运行，并接入知迹——注册 MCP 服务、安装技能或同步数据。",
       homepage: "https://github.com/openclaw/openclaw",
       mcp: { format: "json", configPath: "~/openclaw/mcp.json", snippet: JSON_SNIPPET },
       skills: skillVariants("~/openclaw/skills"),
@@ -86,14 +86,14 @@ const TARGETS: { id: TargetId; label: string; props: AgentCardProps }[] = [
         fields: [
           {
             key: "endpoint",
-            label: "Gateway URL",
+            label: "网关 URL",
             secret: false,
             placeholder: "http://127.0.0.1:18789",
             helpUrl: "https://docs.openclaw.ai/gateway/configuration-reference",
           },
           {
             key: "token",
-            label: "Gateway Token",
+            label: "网关令牌",
             secret: true,
             placeholder: "your-openclaw-gateway-token",
             helpUrl: "https://docs.openclaw.ai/gateway/authentication",
@@ -109,7 +109,7 @@ const TARGETS: { id: TargetId; label: string; props: AgentCardProps }[] = [
       name: "Hermes",
       iconSrc: "/images/hermes.png",
       description:
-        "Self-improving agent with messaging gateways (Telegram, Discord, Slack, WhatsApp). Wire it to screenpipe.",
+        "可自我改进并支持 Telegram、Discord、Slack、WhatsApp 等消息网关的代理。将它接入 screenpipe。",
       homepage: "https://hermes-agent.nousresearch.com",
       mcp: { format: "yaml", configPath: "~/.hermes/config.yaml", snippet: YAML_SNIPPET },
       skills: skillVariants("~/.hermes/skills"),
@@ -119,14 +119,14 @@ const TARGETS: { id: TargetId; label: string; props: AgentCardProps }[] = [
         fields: [
           {
             key: "endpoint",
-            label: "API Server URL",
+            label: "API 服务器 URL",
             secret: false,
             placeholder: "http://127.0.0.1:8642",
             helpUrl: "https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server",
           },
           {
             key: "token",
-            label: "API Server Key",
+            label: "API 服务器密钥",
             secret: true,
             placeholder: "API_SERVER_KEY (optional)",
             helpUrl: "https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server",
@@ -142,7 +142,7 @@ const TARGETS: { id: TargetId; label: string; props: AgentCardProps }[] = [
       name: "Claude Code",
       iconSrc: "/images/claude-ai.svg",
       description:
-        "Anthropic's terminal/IDE agent. Give it screenpipe via MCP + skills, locally or on a remote box.",
+        "Anthropic 的终端/IDE 代理。通过 MCP 和技能在本地或远程设备上接入 screenpipe。",
       homepage: "https://claude.com/claude-code",
       mcp: { format: "json", configPath: "~/.claude.json", snippet: JSON_SNIPPET },
       skills: skillVariants("~/.claude/skills"),
@@ -155,7 +155,7 @@ const TARGETS: { id: TargetId; label: string; props: AgentCardProps }[] = [
     props: {
       name: "Claude Desktop",
       iconSrc: "/images/claude-ai.svg",
-      description: "The Claude desktop app. MCP-only — register screenpipe as an MCP server.",
+      description: "Claude 桌面应用。仅支持 MCP——将 screenpipe 注册为 MCP 服务器。",
       homepage: "https://claude.ai/download",
       mcp: {
         format: "json",
@@ -172,7 +172,7 @@ const TARGETS: { id: TargetId; label: string; props: AgentCardProps }[] = [
     props: {
       name: "Codex",
       iconSrc: "/images/codex.svg",
-      description: "OpenAI's Codex CLI. MCP-only — registers screenpipe in ~/.codex/config.toml.",
+      description: "OpenAI 的 Codex CLI。仅支持 MCP——将 screenpipe 注册到 ~/.codex/config.toml。",
       homepage: "https://developers.openai.com/codex",
       mcp: { format: "toml", configPath: "~/.codex/config.toml", snippet: TOML_SNIPPET },
       skills: [],
@@ -229,13 +229,13 @@ that installs the screenpipe MCP server${hasSkills ? " + skill" : ""} so ${name}
 
       <div className="rounded-md border border-border bg-muted/40 p-3 space-y-3">
         <p className="text-xs text-muted-foreground leading-relaxed">
-          <span className="text-foreground font-medium">Set screenpipe up where {name} runs</span>{" "}
+          <span className="text-foreground font-medium">在 {name} 所在设备上设置 screenpipe</span>{" "}
           — your VPS, a cloud box, or a Mac mini. Two easy ways:
         </p>
 
         <div className="space-y-1.5">
           <p className="text-[11px] text-muted-foreground">
-            1. Run this on the box (SSH in, paste):
+            1. 在目标设备上运行（通过 SSH 登录后粘贴）：
           </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 text-xs font-mono bg-background border border-border rounded px-2 py-1.5 overflow-x-auto whitespace-nowrap">
@@ -247,14 +247,14 @@ that installs the screenpipe MCP server${hasSkills ? " + skill" : ""} so ${name}
               className="h-7 text-xs shrink-0"
               onClick={() => copy(setupCmd, "cmd")}
             >
-              {copied === "cmd" ? "copied" : "copy"}
+              {copied === "cmd" ? "已复制" : "复制"}
             </Button>
           </div>
         </div>
 
         <div className="space-y-1.5 pt-2 border-t border-border/60">
           <p className="text-[11px] text-muted-foreground">
-            2. Or paste this into your AI (Claude, Cursor, Codex…) and let it set up your server:
+            2. 或将以下内容粘贴到你的 AI（Claude、Cursor、Codex…）中，让它配置服务器：
           </p>
           <div className="flex items-start gap-2">
             <pre className="flex-1 text-[11px] font-mono bg-background border border-border rounded px-2 py-1.5 overflow-x-auto whitespace-pre-wrap max-h-28">
@@ -266,13 +266,13 @@ that installs the screenpipe MCP server${hasSkills ? " + skill" : ""} so ${name}
               className="h-7 text-xs shrink-0"
               onClick={() => copy(aiPrompt, "prompt")}
             >
-              {copied === "prompt" ? "copied" : "copy"}
+              {copied === "prompt" ? "已复制" : "复制"}
             </Button>
           </div>
         </div>
 
         <p className="text-[11px] text-muted-foreground leading-relaxed">
-          then push your screenpipe data to that box via the{" "}
+          然后通过下方的{" "}
           <span className="font-medium">同步（远程）</span> tab below.
         </p>
       </div>

@@ -31,26 +31,26 @@ describe("ACP ownership split", () => {
     const rows = acpBoundaryRows("Codex");
     const owner = (what: string) => rows.find((r) => r.what.startsWith(what))?.owner;
 
-    expect(owner("Sign-in")).toBe("agent");
-    expect(owner("Model choice")).toBe("agent");
-    expect(owner("File and terminal")).toBe("agent");
+    expect(owner("登录与计费")).toBe("agent");
+    expect(owner("模型选择")).toBe("agent");
+    expect(owner("文件与终端访问")).toBe("agent");
   });
 
   it("keeps preset API keys on Screenpipe and says they are not forwarded", () => {
     const rows = acpBoundaryRows("Cursor");
-    const keys = rows.find((r) => r.what.includes("API keys"));
+    const keys = rows.find((r) => r.what.includes("API 密钥"));
 
     expect(keys?.owner).toBe("screenpipe");
     // The single most common wrong assumption — state it explicitly.
-    expect(keys?.detail).toMatch(/not passed to Cursor/i);
+    expect(keys?.detail).toContain("不会传给 Cursor");
   });
 
   it("credits Screenpipe for the screen and audio context it supplies", () => {
     const rows = acpBoundaryRows("Pi");
-    const ctx = rows.find((r) => r.what.includes("Screen and audio"));
+    const ctx = rows.find((r) => r.what.includes("屏幕与音频"));
 
     expect(ctx?.owner).toBe("screenpipe");
-    expect(ctx?.detail).toMatch(/seen, said, and heard/i);
+    expect(ctx?.detail).toContain("看到、说过和听到");
   });
 
   it("covers every row with a non-empty detail and a known owner", () => {

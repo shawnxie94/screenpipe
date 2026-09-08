@@ -85,8 +85,8 @@ describe("MessageContent — semantic activity widget", () => {
     expect(errorIcon).toHaveClass("bg-destructive");
     expect(runningIcon).toHaveClass("bg-foreground", "text-background");
     expect(runningIcon).not.toHaveClass("bg-phosphor");
-    expect(screen.getByText("Loaded PDF skill")).toBeTruthy();
-    expect(screen.getByText("failed")).toBeTruthy();
+    expect(screen.getByText("已加载PDF 技能")).toBeTruthy();
+    expect(screen.getByText("失败")).toBeTruthy();
   });
 
   it("keeps a running git commit activity monochrome", () => {
@@ -131,7 +131,7 @@ describe("MessageContent — semantic activity widget", () => {
     const widget = screen.getByTestId("tool-activity-widget");
     expect(widget).toHaveAttribute("data-activity-state", "error");
     fireEvent.click(screen.getByTestId("tool-activity-summary"));
-    expect(screen.getByTestId("tool-activity-list")).toHaveTextContent("failed");
+    expect(screen.getByTestId("tool-activity-list")).toHaveTextContent("失败");
   });
 
   it("uses the approval icon and waiting state while approval blocks the turn", () => {
@@ -157,7 +157,7 @@ describe("MessageContent — semantic activity widget", () => {
       "approval",
     );
     expect(screen.getByTestId("tool-activity-summary")).toHaveTextContent(
-      "Waiting for your approval",
+      "等待你的授权",
     );
     fireEvent.click(screen.getByTestId("tool-activity-summary"));
     const list = screen.getByTestId("tool-activity-list");

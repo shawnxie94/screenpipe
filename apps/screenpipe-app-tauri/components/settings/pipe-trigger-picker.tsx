@@ -65,13 +65,13 @@ interface Option {
 const OPTIONS: Option[] = [
   // "cron" is implementation vocabulary, not the user's — the picker offers
   // plain cadences and keeps the raw expression as an advanced escape hatch.
-  { id: "schedule", group: "recurring", label: "on a schedule", sub: "hourly, daily, every N minutes" },
-  { id: "meeting_started", group: "meetings", label: "meeting starts", sub: "a call is detected" },
-  { id: "meeting_ended", group: "meetings", label: "meeting ends", sub: "a call wraps up" },
-  { id: "slack", group: "slack", label: "new message", sub: "in a channel you pick", app: "slack" },
-  { id: "notion", group: "notion", label: "page created or edited", sub: "workspace or a database", app: "notion" },
-  { id: "obsidian", group: "obsidian", label: "new note", sub: "in a vault folder", app: "obsidian" },
-  { id: "pipe", group: "pipes", label: "after a scheduled task finishes", sub: "chain off another scheduled task" },
+  { id: "schedule", group: "recurring", label: "按计划运行", sub: "每小时、每天或每 N 分钟" },
+  { id: "meeting_started", group: "meetings", label: "会议开始", sub: "检测到通话" },
+  { id: "meeting_ended", group: "meetings", label: "会议结束", sub: "通话结束" },
+  { id: "slack", group: "slack", label: "新消息", sub: "来自指定频道", app: "slack" },
+  { id: "notion", group: "notion", label: "页面创建或编辑", sub: "工作区或数据库", app: "notion" },
+  { id: "obsidian", group: "obsidian", label: "新笔记", sub: "来自知识库文件夹", app: "obsidian" },
+  { id: "pipe", group: "pipes", label: "计划任务完成后", sub: "接续运行另一个计划任务" },
 ];
 const GROUP_ORDER = ["recurring", "meetings", "slack", "notion", "obsidian", "pipes"];
 
@@ -85,17 +85,17 @@ function optionIcon(o: Option) {
 // ── chip labels ──────────────────────────────────────────────────────────────
 
 function eventLabel(e: string): string {
-  if (e === "meeting_started") return "when a meeting starts";
-  if (e === "meeting_ended") return "when a meeting ends";
-  if (e.startsWith("pipe_completed:")) return `after ${e.slice(15)} finishes`;
+  if (e === "meeting_started") return "会议开始时";
+  if (e === "meeting_ended") return "会议结束时";
+  if (e.startsWith("pipe_completed:")) return `${e.slice(15)} 完成后`;
   return e.replace(/_/g, " ");
 }
 function sourceLabel(s: TriggerSource): string {
   const acct = s.instance ? ` (${s.instance})` : "";
-  if (s.app === "slack") return `slack${acct} · ${s.filter?.channel_name || s.filter?.channel || "a channel"}`;
-  if (s.app === "notion") return `notion${acct} · ${s.filter?.database_name || "any page edited"}`;
-  if (s.app === "obsidian") return `obsidian · ${s.path || "vault"}`;
-  return `${s.app} · ${s.kind || "new item"}`;
+  if (s.app === "slack") return `slack${acct} · ${s.filter?.channel_name || s.filter?.channel || "频道"}`;
+  if (s.app === "notion") return `notion${acct} · ${s.filter?.database_name || "任意编辑页面"}`;
+  if (s.app === "obsidian") return `obsidian · ${s.path || "知识库"}`;
+  return `${s.app} · ${s.kind || "新项目"}`;
 }
 
 // ── main ─────────────────────────────────────────────────────────────────────
@@ -130,8 +130,8 @@ export function PipeTriggerPicker(props: PickerProps) {
   return (
     <div>
       <div className="mb-2.5">
-        <div className="text-sm font-medium lowercase">运行时机</div>
-        <div className="text-[11px] text-muted-foreground">on a schedule, after a meeting, on a new message…</div>
+      <div className="text-sm font-medium">运行时机</div>
+        <div className="text-[11px] text-muted-foreground">按计划、会议结束后或收到新消息时运行…</div>
       </div>
       <div className="space-y-1.5">
         {events.map((e, i) => (
@@ -156,7 +156,7 @@ export function PipeTriggerPicker(props: PickerProps) {
           onClick={() => setOpen(true)}
           className="w-full h-8 text-[11px] uppercase tracking-wide border rounded-none px-2 flex items-center gap-1.5 text-muted-foreground hover:bg-foreground hover:text-background hover:border-foreground transition-colors"
         >
-          <Plus className="h-3.5 w-3.5" /> add trigger
+          <Plus className="h-3.5 w-3.5" /> 添加触发条件
         </button>
       </div>
 
@@ -217,14 +217,14 @@ function TriggerModal({
       {/* left rail */}
       <div className="w-[270px] border-r flex flex-col">
         <div className="p-3 pb-2">
-          <div className="text-sm font-medium mb-2 lowercase">添加触发器</div>
+        <div className="text-sm font-medium mb-2">添加触发条件</div>
           <div className="relative">
             <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="search triggers…"
+              placeholder="搜索触发条件…"
               className="w-full h-8 text-xs font-mono bg-muted/40 border rounded-none pl-8 pr-2 outline-none focus:border-foreground transition-colors"
             />
           </div>
@@ -235,7 +235,7 @@ function TriggerModal({
             if (!rows.length) return null;
             return (
               <div key={g} className="mb-1">
-                <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{g}</div>
+                <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{GROUP_LABELS[g] ?? g}</div>
                 {rows.map((o) => (
                   <button
                     key={o.id}
@@ -254,7 +254,7 @@ function TriggerModal({
               </div>
             );
           })}
-          {filtered.length === 0 && <div className="px-3 py-6 text-xs text-muted-foreground text-center">no triggers match.</div>}
+          {filtered.length === 0 && <div className="px-3 py-6 text-xs text-muted-foreground text-center">没有匹配的触发条件。</div>}
         </div>
       </div>
 
@@ -324,7 +324,7 @@ function Detail({
         )}
         {(option.id === "meeting_started" || option.id === "meeting_ended") && (
           <SimpleDetail
-            text={option.id === "meeting_started" ? "Runs whenever screenpipe detects a call starting." : "通话结束时运行 — 非常适合生成摘要。"}
+            text={option.id === "meeting_started" ? "每当 screenpipe 检测到通话开始时运行。" : "通话结束时运行——非常适合生成摘要。"}
             onAdd={() => onAddEvent(option.id)}
           />
         )}
@@ -345,17 +345,26 @@ function Detail({
 
 function detailTitle(id: OptionId): string {
   switch (id) {
-    case "schedule": return "on a schedule";
-    case "meeting_started": return "when a meeting starts";
-    case "meeting_ended": return "when a meeting ends";
-    case "slack": return "new Slack message in…";
-    case "notion": return "Notion page created or edited";
-    case "obsidian": return "new Obsidian note in…";
-    case "pipe": return "after a scheduled task finishes";
+    case "schedule": return "按计划运行";
+    case "meeting_started": return "会议开始时";
+    case "meeting_ended": return "会议结束时";
+    case "slack": return "指定频道中的新 Slack 消息…";
+    case "notion": return "Notion 页面创建或编辑";
+    case "obsidian": return "指定位置中的新 Obsidian 笔记…";
+    case "pipe": return "计划任务完成后";
   }
 }
 
-function PrimaryAdd({ disabled, onClick, label = "add trigger" }: { disabled?: boolean; onClick: () => void; label?: string }) {
+const GROUP_LABELS: Record<string, string> = {
+  recurring: "定期运行",
+  meetings: "会议",
+  slack: "Slack",
+  notion: "Notion",
+  obsidian: "Obsidian",
+  pipes: "任务串联",
+};
+
+function PrimaryAdd({ disabled, onClick, label = "添加触发条件" }: { disabled?: boolean; onClick: () => void; label?: string }) {
   return (
     <div className="mt-5 flex justify-end">
       <button disabled={disabled} onClick={onClick} className={BTN_PRIMARY}>{label}</button>
@@ -374,12 +383,12 @@ function SimpleDetail({ text, onAdd }: { text: string; onAdd: () => void }) {
 
 function PipeDetail({ pipes, onAdd }: { pipes: { name: string }[]; onAdd: (name: string) => void }) {
   const [name, setName] = useState("");
-  if (!pipes.length) return <p className="text-xs text-muted-foreground">No other enabled scheduled tasks yet — create one first.</p>;
+  if (!pipes.length) return <p className="text-xs text-muted-foreground">还没有其他已启用的定时任务 — 请先创建一个。</p>;
   return (
     <div>
-      <p className="text-xs text-muted-foreground mb-3">Run this scheduled task right after another finishes (chaining).</p>
+      <p className="text-xs text-muted-foreground mb-3">在另一个定时任务完成后立即运行此任务（串联）。</p>
       <select value={name} onChange={(e) => setName(e.target.value)} className={INPUT}>
-        <option value="">choose a scheduled task…</option>
+        <option value="">选择一个定时任务…</option>
         {pipes.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
       </select>
       <PrimaryAdd disabled={!name} onClick={() => onAdd(name)} />
@@ -442,7 +451,7 @@ function SourceDetail({
     if (app === "obsidian") {
       setConnecting(true);
       try {
-        const picked = await openDialog({ directory: true, multiple: false, title: "Select Obsidian vault folder" });
+        const picked = await openDialog({ directory: true, multiple: false, title: "选择 Obsidian 知识库文件夹" });
         if (typeof picked !== "string") return;
         await localFetch("/connections/obsidian", {
           method: "PUT",
@@ -471,7 +480,7 @@ function SourceDetail({
     <div>
       {accounts.length > 1 && (
         <div className="mb-3">
-          <label className={LABEL}>account</label>
+          <label className={LABEL}>账户</label>
           <select value={instance} onChange={(e) => setInstance(e.target.value)} className={`${INPUT} mt-1`}>
             {accounts.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
           </select>
@@ -487,7 +496,7 @@ function SourceDetail({
 const APP_META: Record<string, { name: string; blurb: string; examples: string[] }> = {
   slack: { name: "Slack", blurb: "允许此定时任务读取你频道中的消息。", examples: ["#general", "#support", "#eng"] },
   notion: { name: "Notion", blurb: "让此定时任务监控你工作区中的页面和数据库。", examples: ["CRM", "Meetings", "Docs"] },
-  obsidian: { name: "Obsidian", blurb: "将此定时任务指向一个 vault 文件夹，以监控新笔记。", examples: [] },
+  obsidian: { name: "Obsidian", blurb: "将此定时任务指向一个知识库文件夹，以监控新笔记。", examples: [] },
 };
 
 function ConnectCard({ app, connecting, onConnect }: { app: string; connecting: boolean; onConnect: () => void }) {
@@ -498,12 +507,12 @@ function ConnectCard({ app, connecting, onConnect }: { app: string; connecting: 
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <IntegrationIcon icon={app} className="w-5 h-5 flex items-center justify-center" fallbackClassName="h-5 w-5 text-muted-foreground" />
-            <div className="text-sm font-medium">connect {m.name}</div>
+            <div className="text-sm font-medium">连接 {m.name}</div>
           </div>
           <p className="text-xs text-muted-foreground mt-2">{m.blurb}</p>
           <button onClick={onConnect} disabled={connecting} className={`mt-3 ${BTN_SECONDARY}`}>
             {connecting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {app === "obsidian" ? "choose vault folder" : `connect ${m.name}`}
+            {app === "obsidian" ? "选择知识库文件夹" : `连接 ${m.name}`}
           </button>
         </div>
         {m.examples.length > 0 && (
@@ -514,7 +523,7 @@ function ConnectCard({ app, connecting, onConnect }: { app: string; connecting: 
           </div>
         )}
       </div>
-      <p className="text-[10px] text-muted-foreground mt-3">you can change what this scheduled task can access at any time.</p>
+      <p className="text-[10px] text-muted-foreground mt-3">你可以随时更改此定时任务可访问的内容。</p>
     </div>
   );
 }
@@ -535,10 +544,10 @@ function SlackPicker({ instance, onAdd }: { instance?: string; onAdd: (s: Trigge
         const list: SlackChannel[] = (j?.channels ?? [])
           .filter((c: SlackChannel) => c.name)
           .sort((a: SlackChannel, b: SlackChannel) => a.name.localeCompare(b.name));
-        if (!list.length) setErr("no channels found — make sure Slack has read access.");
+        if (!list.length) setErr("未找到频道——请确认 Slack 已获得读取权限。");
         setChannels(list);
       } catch {
-        setErr("couldn't reach Slack.");
+        setErr("无法连接 Slack。");
         setChannels([]);
       }
     })();
@@ -548,14 +557,14 @@ function SlackPicker({ instance, onAdd }: { instance?: string; onAdd: (s: Trigge
   return (
     <div>
       <label className={LABEL}>选择频道</label>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="search channels…" className={`${INPUT} mt-1 mb-2`} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索频道…" className={`${INPUT} mt-1 mb-2`} />
       <div className="border rounded-none max-h-[220px] overflow-y-auto">
         {channels === null ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground px-3 py-4"><Loader2 className="h-3.5 w-3.5 animate-spin" /> loading channels…</div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground px-3 py-4"><Loader2 className="h-3.5 w-3.5 animate-spin" /> 正在加载频道…</div>
         ) : err ? (
           <div className="text-xs text-muted-foreground px-3 py-3">{err}</div>
         ) : shown.length === 0 ? (
-          <div className="text-xs text-muted-foreground px-3 py-3">no match.</div>
+          <div className="text-xs text-muted-foreground px-3 py-3">没有匹配项。</div>
         ) : (
           shown.map((c) => (
             <button
@@ -609,7 +618,7 @@ function NotionPicker({ instance, onAdd }: { instance?: string; onAdd: (s: Trigg
   return (
     <div>
       <label className={LABEL}>选择数据源</label>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="search databases…" className={`${INPUT} mt-1 mb-2`} />
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索数据库…" className={`${INPUT} mt-1 mb-2`} />
       <div className="border rounded-none max-h-[220px] overflow-y-auto">
         <button onClick={() => setPicked(null)} className={`${row} border-b ${picked === null ? "bg-accent" : "hover:bg-accent/60"}`}>
           <IntegrationIcon icon="notion" className="w-3.5 h-3.5 flex items-center justify-center" fallbackClassName="h-3.5 w-3.5 text-muted-foreground" />
@@ -617,7 +626,7 @@ function NotionPicker({ instance, onAdd }: { instance?: string; onAdd: (s: Trigg
           {picked === null && <Check className="h-3.5 w-3.5" />}
         </button>
         {dbs === null ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground px-3 py-4"><Loader2 className="h-3.5 w-3.5 animate-spin" /> loading databases…</div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground px-3 py-4"><Loader2 className="h-3.5 w-3.5 animate-spin" /> 正在加载数据库…</div>
         ) : (
           shown.map((d) => (
             <button key={d.id} onClick={() => setPicked(d)} className={`${row} ${picked?.id === d.id ? "bg-accent" : "hover:bg-accent/60"}`}>
@@ -660,7 +669,7 @@ function ObsidianPicker({ onAdd }: { onAdd: (s: TriggerSource) => void }) {
   }, []);
 
   async function choose() {
-    const picked = await openDialog({ directory: true, multiple: false, defaultPath: vault || undefined, title: "Choose folder to watch" });
+    const picked = await openDialog({ directory: true, multiple: false, defaultPath: vault || undefined, title: "选择要监视的文件夹" });
     if (typeof picked === "string") setFolder(picked);
   }
 
@@ -670,9 +679,9 @@ function ObsidianPicker({ onAdd }: { onAdd: (s: TriggerSource) => void }) {
       <label className={LABEL}>要监控的文件夹</label>
       <div className="flex items-center gap-2 mt-1">
         <input value={folder} onChange={(e) => setFolder(e.target.value)} placeholder={vault || "/path/to/vault/folder"} className={INPUT} />
-        <button onClick={choose} className={BTN_SECONDARY}>browse</button>
+        <button onClick={choose} className={BTN_SECONDARY}>浏览</button>
       </div>
-      <p className="text-[10px] text-muted-foreground mt-1.5">tip: point at a subfolder (e.g. meetings/) for less noise.</p>
+      <p className="text-[10px] text-muted-foreground mt-1.5">提示：指向子文件夹（例如 meetings/）可以减少干扰。</p>
       <PrimaryAdd disabled={!folder.trim()} onClick={() => onAdd({ app: "obsidian", kind: "note", path: folder.trim() })} />
     </div>
   );
