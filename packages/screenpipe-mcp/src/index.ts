@@ -294,6 +294,44 @@ const server = new Server(
 // ---------------------------------------------------------------------------
 const TOOLS: Tool[] = [
   {
+    name: "answer",
+    description:
+      "Ask a grounded question over local work history and published knowledge (知迹 Local Brain). " +
+      "Returns an answer with per-claim evidence citations, source references, and retrieval diagnostics. " +
+      "Answers only from locally imported/recorded content; no evidence means an explicit 'insufficient evidence' result. " +
+      "USE WHEN: the user asks what happened, why a decision was made, how an exception was handled, or for SOPs/rules with citations.",
+    annotations: { title: "Answer (Local Brain)", readOnlyHint: true, openWorldHint: false },
+    inputSchema: {
+      type: "object",
+      properties: {
+        question: { type: "string", description: "Natural language question (≤2000 chars). Chinese supported." },
+        start_time: { type: "string", description: "Optional ISO 8601 lower bound for evidence." },
+        end_time: { type: "string", description: "Optional ISO 8601 upper bound for evidence." },
+        apps: { type: "array", items: { type: "string" }, description: "Optional app name filters." },
+        source_kinds: {
+          type: "array",
+          items: { type: "string", enum: ["frame", "ui_event", "audio", "memory", "office_message", "office_document", "office_transcript", "office_summary"] },
+          description: "Optional evidence kind filters.",
+        },
+      },
+      required: ["question"],
+    },
+  },
+  {
+    name: "get-brain-source",
+    description:
+      "Fetch one Local Brain evidence source by id: readable text, capture time, media availability, and current state. " +
+      "Deleted sources return gone (no body). USE WHEN: verifying an answer citation before acting on it.",
+    annotations: { title: "Get Brain Source", readOnlyHint: true, openWorldHint: false },
+    inputSchema: {
+      type: "object",
+      properties: {
+        source_uid: { type: "string", description: "Source id from an answer's evidence refs." },
+      },
+      required: ["source_uid"],
+    },
+  },
+  {
     name: "search-content",
     description:
       "Search screen text, audio transcriptions, input events, memories, and parsed app data. Returns timestamped results with app context. " +
@@ -1338,6 +1376,62 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const text = await res.text();
         const trimmed = text.length > 6000 ? `…${text.slice(-6000)}` : text;
         return { content: [{ type: "text", text: trimmed || "(no logs yet)" }] };
+      }
+
+      case "answer": {
+        const question = String(args.question || "").trim();
+        if (!question) throw new Error("question is required");
+        if (question.length > 2000) throw new Error("question must be ≤2000 chars");
+        const filters: Record<string, unknown> = {};
+        if (args.start_time) filters.start_time = String(args.start_time);
+        if (args.end_time) filters.end_time = String(args.end_time);
+        if (Array.isArray(args.apps)) filters.apps = args.apps.map(String);
+        if (Array.isArray(args.source_kinds)) filters.source_kinds = args.source_kinds.map(String);
+        const res = await callAPI("/answer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, filters }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          // Same REST error contract: code + message, retryable hint.
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ code: data.code || res.status, message: data.message || "answer failed", retryable: !!data.retryable }),
+              },
+            ],
+          };
+        }
+        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+      }
+
+      case "get-brain-source": {
+        const sourceUid = String(args.source_uid || "").trim();
+        if (!sourceUid) throw new Error("source_uid is required");
+        const res = await callAPI(`/brain/sources/${encodeURIComponent(sourceUid)}`);
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 410) {
+          return {
+            isError: true,
+            content: [{ type: "text", text: JSON.stringify({ code: "gone", message: "source deleted; no body is retained" }) }],
+          };
+        }
+        if (res.status === 404) {
+          return {
+            isError: true,
+            content: [{ type: "text", text: JSON.stringify({ code: "not_found", message: "unknown source id" }) }],
+          };
+        }
+        if (!res.ok) {
+          return {
+            isError: true,
+            content: [{ type: "text", text: JSON.stringify({ code: data.code || res.status, message: data.message || "fetch failed" }) }],
+          };
+        }
+        return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
       case "search-content": {
