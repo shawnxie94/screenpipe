@@ -316,3 +316,156 @@ mod tests {
         assert_eq!(expand_search_query("100.100.0.42"), r#""100.100.0.42"*"#);
     }
 }
+
+// ---------------------------------------------------------------------------
+// Local Brain Chinese projection (brain_search_* index). unicode61 cannot
+// match two-character Chinese substrings inside continuous CJK runs, so the
+// projection pre-tokenizes: every CJK run emits prefixed unigrams (`cu字`)
+// and bigrams (`cb词汇`); latin/code tokens pass through unchanged. Queries
+// use the same projection so a two-character term matches its bigram token.
+// Version bump invalidates the whole index (index_version column).
+// ---------------------------------------------------------------------------
+
+pub const BRAIN_SEARCH_INDEX_VERSION: i64 = 1;
+
+/// Question/function words stripped before candidate generation.
+const CJK_STOPWORDS: &[&str] = &[
+    "为什么", "如何", "怎样", "怎么", "什么", "哪些", "哪个", "我们", "你们",
+    "他们", "上次", "上次", "这次", "一下", "一些", "有没有", "是不是", "可以",
+    "应该", "需要", "关于", "以及", "或者", "并且", "但是", "然后", "所以",
+    "的", "了", "吗", "呢", "吧", "啊", "在", "是", "我", "你", "他", "她",
+    "它", "这", "那", "都", "也", "就", "还", "有", "和", "与", "及",
+];
+
+fn is_cjk(c: char) -> bool {
+    matches!(c as u32,
+        0x4E00..=0x9FFF | 0x3400..=0x4DBF | 0xF900..=0xFAFF | 0x2E80..=0x2EFF)
+}
+
+/// Project text into index tokens: latin alphanumerics kept, CJK runs →
+/// prefixed unigrams + bigrams. Byte cost ~3.8x the original for typical
+/// Chinese text (measured in preflight probe).
+pub fn chinese_project(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() * 2);
+    let chars: Vec<char> = text.chars().collect();
+    let mut i = 0usize;
+    while i < chars.len() {
+        let c = chars[i];
+        if is_cjk(c) {
+            let start = i;
+            while i < chars.len() && is_cjk(chars[i]) {
+                i += 1;
+            }
+            let run: Vec<char> = chars[start..i].to_vec();
+            for (pos, ch) in run.iter().enumerate() {
+                out.push_str("cu");
+                out.push(*ch);
+                out.push(' ');
+                let _ = pos;
+            }
+            if run.len() >= 2 {
+                for w in run.windows(2) {
+                    out.push_str("cb");
+                    out.push(w[0]);
+                    out.push(w[1]);
+                    out.push(' ');
+                }
+            }
+        } else if c.is_alphanumeric() {
+            let start = i;
+            while i < chars.len() && chars[i].is_alphanumeric() && !is_cjk(chars[i]) {
+                i += 1;
+            }
+            for ch in &chars[start..i] {
+                out.push(*ch);
+            }
+            out.push(' ');
+        } else {
+            i += 1;
+        }
+    }
+    out.trim_end().to_string()
+}
+
+/// Build the FTS MATCH expression for a query: quoted projected tokens ANDed
+/// for explicit phrases (kept verbatim), or ORed candidate terms for natural
+/// language questions.
+pub fn chinese_query_match(query: &str, natural_question: bool) -> String {
+    if !natural_question {
+        let projected = chinese_project(query);
+        let tokens: Vec<String> = projected
+            .split_whitespace()
+            // Prefer bigram tokens (more selective); fall back to unigrams.
+            .filter(|t| t.starts_with("cb") || t.starts_with("cu") || !t.starts_with('c'))
+            .map(|t| format!("\"{t}\""))
+            .collect();
+        return tokens.join(" AND ");
+    }
+    let terms = chinese_query_candidates(query);
+    terms
+        .iter()
+        .map(|t| format!("\"{t}\""))
+        .collect::<Vec<_>>()
+        .join(" OR ")
+}
+
+/// Candidate terms for a natural-language question: drop stopword phrases,
+/// emit CJK bigrams (unigram for isolated single chars) + latin words, ≤24.
+pub fn chinese_query_candidates(query: &str) -> Vec<String> {
+    let mut cleaned = query.to_string();
+    for stop in CJK_STOPWORDS {
+        cleaned = cleaned.replace(stop, " ");
+    }
+    let projected = chinese_project(&cleaned);
+    let mut tokens: Vec<String> = projected.split_whitespace().map(str::to_string).collect();
+    // Bigrams first (more selective), then unigrams as recall backstop.
+    tokens.sort_by_key(|t| if t.starts_with("cb") { 0 } else { 1 });
+    tokens.dedup();
+    tokens.truncate(24);
+    tokens
+}
+
+#[cfg(test)]
+mod brain_chinese_tests {
+    use super::*;
+
+    #[test]
+    fn project_emits_unigrams_and_bigrams() {
+        let projected = chinese_project("全文检索");
+        let tokens: Vec<&str> = projected.split_whitespace().collect();
+        assert!(tokens.contains(&"cu全") && tokens.contains(&"cu文") && tokens.contains(&"cu检") && tokens.contains(&"cu索"));
+        assert!(tokens.contains(&"cb全文") && tokens.contains(&"cb文检") && tokens.contains(&"cb检索"));
+    }
+
+    #[test]
+    fn two_char_query_matches_projection() {
+        // The preflight failure: "检索" misses in unicode61. The projection
+        // must contain the exact bigram token the query produces.
+        let index = chinese_project("为什么选择全文检索方案");
+        let query_tokens = chinese_project("检索");
+        let needle = query_tokens.split_whitespace().find(|t| t.starts_with("cb")).unwrap();
+        assert!(index.split_whitespace().any(|t| t == needle), "二字词必须命中投影");
+    }
+
+    #[test]
+    fn latin_and_code_tokens_survive() {
+        let tokens = chinese_project("用 rust 编写 fts5_index.rs");
+        assert!(tokens.split_whitespace().any(|t| t == "rust"));
+        assert!(tokens.split_whitespace().any(|t| t == "fts5"));
+    }
+
+    #[test]
+    fn natural_question_candidates_drop_stopwords_and_cap_at_24() {
+        let terms = chinese_query_candidates("为什么选择全文检索？我们上次怎么讨论的");
+        assert!(!terms.iter().any(|t| t.contains("cb为什") || t.contains("cb什么")));
+        assert!(terms.iter().any(|t| t.contains("检")));
+        assert!(terms.len() <= 24);
+    }
+
+    #[test]
+    fn phrase_match_uses_and_of_bigrams() {
+        let m = chinese_query_match("全文检索", false);
+        assert!(m.contains(" AND "));
+        assert!(m.contains("cb全文") && m.contains("cb检索"));
+    }
+}

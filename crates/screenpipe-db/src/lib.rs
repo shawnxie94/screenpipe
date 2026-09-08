@@ -43,7 +43,17 @@ pub use cancellable_query::{
     is_sqlite_interrupt, CancellableReadConnection, SqliteInterruptReason, SEARCH_QUERY_TIMEOUT,
     SQLITE_PROGRESS_CHECK_OPS,
 };
+pub use db::brain::types::{
+    BrainJobKind, BrainJobState, DeletionCause, KnowledgeAvailability, KnowledgeState,
+    KnowledgeType, SourceKind,
+};
+pub use db::{BrainReviewUpdate, BrainSearchDocInput, BrainSearchHit};
 pub use db::{
+    BrainHistoryBatch, BrainHistoryCoverageInput, BrainHistoryEntryInput, BrainHistoryEntryRow,
+    compute_input_hash, fingerprint, new_source_uid, BrainOfficeConnectionRow,
+    BrainOfficeConnectionUpdate, BrainOfficeObjectRow, BrainSourceInput,
+    BrainSourceRegistration, BrainSourceRow, BrainWorkUnitRow, BrainWorkUnitRevisionRow, BrainKnowledgeRow, BrainKnowledgeVersionRow, ClaimedBrainJob, OfficeSourceMeta,
+    SourceLocator, SourceRef,
     find_matching_a11y_positions, parse_all_text_positions, ActivityActionDraft,
     ActivityActionRecord, ActivityEvidenceDraft, ActivityEvidenceRecord, ActivityIntervalDraft,
     ActivityIntervalRecord, ActivityLedgerObservation, ActivityTaskDraft, DatabaseManager,

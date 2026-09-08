@@ -449,6 +449,21 @@ async fn flush_ax_bulk(
 mod accessibility;
 mod activity_ledger;
 mod audio;
+pub(crate) mod brain;
+pub use self::brain::office::{
+    BrainOfficeConnectionRow, BrainOfficeConnectionUpdate, BrainOfficeObjectRow,
+};
+pub use self::brain::history::{BrainHistoryBatch, BrainHistoryCoverageInput, BrainHistoryEntryInput, BrainHistoryEntryRow};
+pub use self::brain::knowledge::BrainReviewUpdate;
+pub use self::brain::search::{BrainSearchDocInput, BrainSearchHit};
+pub use self::brain::jobs::ClaimedBrainJob;
+pub use self::brain::work_units::{BrainKnowledgeRow, BrainKnowledgeVersionRow, BrainWorkUnitRevisionRow, BrainWorkUnitRow};
+pub use self::brain::sources::{BrainSourceInput, BrainSourceRegistration, BrainSourceRow};
+pub use self::brain::types::{
+    BrainJobKind, BrainJobState, DeletionCause, KnowledgeAvailability, KnowledgeState,
+    KnowledgeType, OfficeSourceMeta, SourceLocator, SourceRef, SourceKind,
+    compute_input_hash, fingerprint, new_source_uid, now_utc, format_ts as brain_format_ts,
+};
 mod display_layout;
 mod elements;
 mod feedback;
