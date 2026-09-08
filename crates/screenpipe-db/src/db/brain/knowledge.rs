@@ -19,6 +19,34 @@ pub struct BrainReviewUpdate {
 }
 
 impl DatabaseManager {
+    /// Replace a candidate body and its optimistic-lock revision atomically.
+    /// Validation happens in the engine before entering this transaction, but
+    /// the state/revision/body write itself is one CAS operation.
+    pub async fn brain_edit_candidate_version(
+        &self,
+        knowledge_id: &str,
+        version: i64,
+        expected_revision: &str,
+        body: &str,
+        title: Option<&str>,
+    ) -> Result<bool, SqlxError> {
+        let mut tx = self.begin_immediate_with_retry().await?;
+        let result = sqlx::query(
+            "UPDATE brain_knowledge_versions SET body=?1,title=COALESCE(?2,title),revision=?3,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') \
+             WHERE knowledge_id=?4 AND version=?5 AND state='candidate' AND revision=?6",
+        )
+        .bind(body)
+        .bind(title)
+        .bind(uuid::Uuid::new_v4().to_string())
+        .bind(knowledge_id)
+        .bind(version)
+        .bind(expected_revision)
+        .execute(&mut **tx.conn())
+        .await?;
+        tx.commit().await?;
+        Ok(result.rows_affected() > 0)
+    }
+
     /// CAS transition for one version: only applies when the row's state is
     /// `from_state` AND its revision matches `expected_revision`. Returns
     /// false on CAS failure (409 for the caller).
@@ -68,28 +96,31 @@ impl DatabaseManager {
     ) -> Result<bool, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         // Pointer CAS first: a concurrent publish changes current_version_id.
-        let current: Option<i64> = sqlx::query_scalar(
-            "SELECT current_version_id FROM brain_knowledge WHERE id = ?1",
-        )
-        .bind(knowledge_id)
-        .fetch_optional(&mut **tx.conn())
-        .await?
-        .flatten();
+        let current: Option<i64> =
+            sqlx::query_scalar("SELECT current_version_id FROM brain_knowledge WHERE id = ?1")
+                .bind(knowledge_id)
+                .fetch_optional(&mut **tx.conn())
+                .await?
+                .flatten();
         if current != expected_current_version_id {
             tx.commit().await?;
             return Ok(false);
         }
-        if let Some(prev) = current {
-            sqlx::query(
-                "UPDATE brain_knowledge_versions SET state = 'superseded', \
-                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
-                 WHERE knowledge_id = ?1 AND id = ?2 AND state = 'published'",
-            )
-            .bind(knowledge_id)
-            .bind(prev)
-            .execute(&mut **tx.conn())
-            .await?;
-        }
+        // Resolve the candidate before mutating the currently published
+        // version. A failed candidate CAS must be a true no-op.
+        let candidate_id: Option<i64> = sqlx::query_scalar(
+            "SELECT id FROM brain_knowledge_versions \
+             WHERE knowledge_id = ?1 AND version = ?2 AND state = 'candidate' AND revision = ?3",
+        )
+        .bind(knowledge_id)
+        .bind(version)
+        .bind(expected_revision)
+        .fetch_optional(&mut **tx.conn())
+        .await?;
+        let Some(_candidate_id) = candidate_id else {
+            tx.commit().await?;
+            return Ok(false);
+        };
         let res = sqlx::query(
             "UPDATE brain_knowledge_versions SET state = 'published', availability = 'valid', \
              review_due_at = ?1, revision = ?2, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
@@ -106,9 +137,24 @@ impl DatabaseManager {
             tx.commit().await?;
             return Ok(false);
         }
+        if let Some(prev) = current {
+            sqlx::query(
+                "UPDATE brain_knowledge_versions SET state = 'superseded', \
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
+                 WHERE knowledge_id = ?1 AND version = ?2 AND state = 'published'",
+            )
+            .bind(knowledge_id)
+            .bind(prev)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        // Publishing a corrected current version lifts a feedback-triggered
+        // pause: the suspension targets the faulty content, and keeping it
+        // would leave the correction loop unable to return the knowledge to
+        // retrieval. Resume stays available for pause-without-publish.
         sqlx::query(
             "UPDATE brain_knowledge SET current_version_id = ?1, publication_epoch = publication_epoch + 1, \
-             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2",
+             paused = 0, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2",
         )
         .bind(version)
         .bind(knowledge_id)
@@ -118,7 +164,11 @@ impl DatabaseManager {
         Ok(true)
     }
 
-    pub async fn brain_set_paused(&self, knowledge_id: &str, paused: bool) -> Result<(), SqlxError> {
+    pub async fn brain_set_paused(
+        &self,
+        knowledge_id: &str,
+        paused: bool,
+    ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query("UPDATE brain_knowledge SET paused = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2")
             .bind(paused)
@@ -172,7 +222,8 @@ impl DatabaseManager {
         .bind(input_hash)
         .bind(knowledge_type)
         .fetch_one(&self.pool)
-        .await? > 0)
+        .await?
+            > 0)
     }
 
     pub async fn brain_get_version(
@@ -205,7 +256,10 @@ impl DatabaseManager {
     }
 
     /// Review queue: candidates + due reconfirms, oldest first.
-    pub async fn brain_list_review_queue(&self, limit: u32) -> Result<Vec<BrainKnowledgeVersionRow>, SqlxError> {
+    pub async fn brain_list_review_queue(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<BrainKnowledgeVersionRow>, SqlxError> {
         sqlx::query_as(
             "SELECT id, knowledge_id, version, state, availability, title, body, input_hash, revision, \
              rejection_reason, review_due_at, created_at, updated_at \
@@ -278,10 +332,7 @@ impl DatabaseManager {
 
     /// Clear copied feedback bodies whose referenced content was deleted;
     /// the processing record (no content) survives.
-    pub async fn brain_clear_feedback_bodies(
-        &self,
-        knowledge_id: &str,
-    ) -> Result<(), SqlxError> {
+    pub async fn brain_clear_feedback_bodies(&self, knowledge_id: &str) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query("UPDATE brain_feedback SET comment = NULL WHERE knowledge_id = ?1")
             .bind(knowledge_id)
@@ -298,10 +349,12 @@ impl DatabaseManager {
             .bind(knowledge_id)
             .execute(&mut **tx.conn())
             .await?;
-        sqlx::query("DELETE FROM brain_dependencies WHERE consumer_kind = 'knowledge' AND consumer_id = ?1")
-            .bind(knowledge_id)
-            .execute(&mut **tx.conn())
-            .await?;
+        sqlx::query(
+            "DELETE FROM brain_dependencies WHERE consumer_kind = 'knowledge' AND consumer_id = ?1",
+        )
+        .bind(knowledge_id)
+        .execute(&mut **tx.conn())
+        .await?;
         tx.commit().await?;
         Ok(())
     }

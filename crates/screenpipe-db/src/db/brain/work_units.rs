@@ -158,6 +158,49 @@ impl DatabaseManager {
         Ok(ScopeWorkUnits { units: out })
     }
 
+    pub async fn brain_list_work_units(
+        &self,
+        scope_key: Option<&str>,
+        limit: u32,
+    ) -> Result<ScopeWorkUnits, SqlxError> {
+        let limit = limit.clamp(1, 200);
+        let units: Vec<BrainWorkUnitRow> = if let Some(scope_key) = scope_key {
+            sqlx::query_as(
+                "SELECT id, scope_key, task_key, interval_start, interval_end, state \
+                 FROM brain_work_units WHERE scope_key = ?1 AND state = 'active' \
+                 ORDER BY interval_start DESC LIMIT ?2",
+            )
+            .bind(scope_key)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await?
+        } else {
+            sqlx::query_as(
+                "SELECT id, scope_key, task_key, interval_start, interval_end, state \
+                 FROM brain_work_units WHERE state = 'active' \
+                 ORDER BY interval_start DESC LIMIT ?1",
+            )
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await?
+        };
+        let mut out = Vec::with_capacity(units.len());
+        for unit in units {
+            let revision: Option<BrainWorkUnitRevisionRow> = sqlx::query_as(
+                "SELECT work_unit_id, input_hash, extractor_schema_version, prompt_version, body, state \
+                 FROM brain_work_unit_revisions WHERE work_unit_id = ?1 AND state = 'valid' \
+                 ORDER BY created_at DESC LIMIT 1",
+            )
+            .bind(&unit.id)
+            .fetch_optional(&self.pool)
+            .await?;
+            if let Some(revision) = revision {
+                out.push((unit, revision));
+            }
+        }
+        Ok(ScopeWorkUnits { units: out })
+    }
+
     /// Knowledge item + current version for compile dedupe and review lists.
     pub async fn brain_find_knowledge_by_scope(
         &self,

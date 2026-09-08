@@ -90,10 +90,9 @@ impl DatabaseManager {
     pub async fn brain_bump_deletion_epoch(&self) -> Result<i64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         Self::bump_epoch_tx(&mut tx, EpochColumn::Deletion).await?;
-        let epoch: i64 =
-            sqlx::query_scalar("SELECT deletion_epoch FROM brain_state WHERE id = 1")
-                .fetch_one(&mut **tx.conn())
-                .await?;
+        let epoch: i64 = sqlx::query_scalar("SELECT deletion_epoch FROM brain_state WHERE id = 1")
+            .fetch_one(&mut **tx.conn())
+            .await?;
         tx.commit().await?;
         Ok(epoch)
     }

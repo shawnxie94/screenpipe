@@ -62,7 +62,7 @@ fn line_starting_with(text: &'static str, start: &str) -> Option<&'static str> {
 /// the shipped `meeting-summary` prompt.
 const FAST_PATH_START: &str = "在打印出 step 3 之前用户一直在盯着转圈动画";
 const FAST_PATH_END: &str = "第 1 步——用**一条命令**";
-const MEETING_MEMORY_START: &str = "## 🧠 Continuous improvement (memory)";
+const MEETING_MEMORY_START: &str = "## 🧠 持续改进（记忆）";
 const MEETING_MEMORY_END: &str = "一场会议刚刚结束";
 const MEETING_RUNTIME_PREAMBLE_START: &str = "在打印出 step 3 之前用户一直在盯着转圈动画";
 const MEETING_FETCH_PREAMBLE_START: &str =

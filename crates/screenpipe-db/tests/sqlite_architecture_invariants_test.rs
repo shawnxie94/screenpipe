@@ -111,24 +111,12 @@ fn credential_readers_resolve_the_existing_os_vault_key() {
             "open_for_data_dir_with_vault_key",
         ),
         (
-            "apps/screenpipe-app-tauri/src-tauri/src/oauth.rs",
-            "open_for_data_dir_with_vault_key",
-        ),
-        (
             "apps/screenpipe-app-tauri/src-tauri/src/chatgpt_oauth.rs",
             "open_for_data_dir_with_vault_key",
         ),
         (
             "apps/screenpipe-app-tauri/src-tauri/src/pi.rs",
             "open_for_data_dir_with_vault_key",
-        ),
-        (
-            "apps/screenpipe-app-tauri/src-tauri/src/auth_token.rs",
-            "get_key_for_read",
-        ),
-        (
-            "apps/screenpipe-app-tauri/src-tauri/src/main.rs",
-            "secrets::get_key()",
         ),
         (
             "apps/screenpipe-app-tauri/src-tauri/src/store.rs",

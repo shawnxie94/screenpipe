@@ -1381,6 +1381,43 @@ pub struct SchedulerState {
 #[async_trait::async_trait]
 #[allow(clippy::too_many_arguments)]
 pub trait PipeStore: Send + Sync {
+    /// Public task lease for a Pipe run. Implementations without the unified
+    /// task database return `Ok(None)` and retain the historical CLI behavior.
+    /// A duplicate active task must return an error with a stable
+    /// `pipe_task_already_active` prefix so schedulers can defer it without
+    /// starting a second external side effect.
+    async fn claim_task_run(
+        &self,
+        _pipe_name: &str,
+        _trigger_type: &str,
+        _config_revision: &str,
+        _input_hash: &str,
+        _input_refs: &serde_json::Value,
+        _config_snapshot: &serde_json::Value,
+        _model: &str,
+        _provider: Option<&str>,
+    ) -> Result<Option<PipeTaskLease>> {
+        Ok(None)
+    }
+
+    /// Extend the public task lease while a Pipe subprocess is running.
+    async fn heartbeat_task_run(&self, _lease: &PipeTaskLease) -> Result<bool> {
+        Ok(false)
+    }
+
+    /// Finish the public task ledger after the legacy Pipe execution row has
+    /// received its terminal status. The legacy row remains the compatibility
+    /// history source; this method is the authoritative lifecycle projection.
+    async fn finish_task_run(
+        &self,
+        _lease: &PipeTaskLease,
+        _success: bool,
+        _output_refs: &serde_json::Value,
+        _error_code: Option<&str>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
     /// Insert a new execution row with status='queued'. Returns the row id.
     async fn create_execution(
         &self,
@@ -1512,6 +1549,13 @@ pub trait PipeStore: Send + Sync {
         limit: i32,
         before_id: Option<i64>,
     ) -> Result<Vec<PipeExecutionActivity>>;
+}
+
+/// Lease returned by a unified task-backed PipeStore.
+#[derive(Clone, Debug)]
+pub struct PipeTaskLease {
+    pub run_id: String,
+    pub lease_token: String,
 }
 
 // ---------------------------------------------------------------------------
@@ -4581,7 +4625,9 @@ impl PipeManager {
                     }
                     Err(e) => {
                         warn!("failed to create execution row: {}", e);
-                        None
+                        remove_pid_file(&self.pipes_dir, name);
+                        self.running.lock().await.remove(name);
+                        return Err(anyhow!("failed to create execution row: {}", e));
                     }
                 }
             } else {
@@ -6503,7 +6549,36 @@ impl PipeManager {
                                 }
                                 Err(e) => {
                                     warn!("failed to create execution row: {}", e);
-                                    None
+                                    // A unified task lease may reject a
+                                    // duplicate delivery after a process
+                                    // restart. Never execute an external Pipe
+                                    // side effect without both ledgers having
+                                    // accepted the run.
+                                    {
+                                        let mut r = running_ref.lock().await;
+                                        r.remove(&pipe_name);
+                                    }
+                                    {
+                                        let mut qr = queued_ref.lock().await;
+                                        qr.remove(&pipe_name);
+                                    }
+                                    remove_pid_file(&pipes_dir_for_log, &pipe_name);
+                                    if !e
+                                        .to_string()
+                                        .starts_with("pipe_task_already_active:")
+                                    {
+                                        if let (Some((event, key)), Some(store)) =
+                                            (&claim_for_release, store_ref.as_ref())
+                                        {
+                                            let _ = store.release_event_run(
+                                                &pipe_name,
+                                                event,
+                                                key,
+                                            )
+                                            .await;
+                                        }
+                                    }
+                                    return;
                                 }
                             }
                         } else {

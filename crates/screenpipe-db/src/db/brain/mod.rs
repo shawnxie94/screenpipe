@@ -9,15 +9,15 @@
 use super::*;
 
 pub mod deletion;
-pub mod knowledge;
 pub mod history;
 pub mod jobs;
+pub mod knowledge;
 pub mod office;
 pub mod search;
 pub mod sources;
-pub mod work_units;
 pub mod state;
 pub mod types;
+pub mod work_units;
 
 #[cfg(test)]
 mod tests;

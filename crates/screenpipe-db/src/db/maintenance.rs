@@ -113,6 +113,41 @@ impl DatabaseManager {
         let start_str = start.to_rfc3339();
         let end_str = end.to_rfc3339();
 
+        // Retention is a single coordinated writer transaction. Snapshot the
+        // text needed by every currently published knowledge version before
+        // deleting raw frame/audio/ui rows; publication is also a writer, so
+        // it cannot race this protection decision between query and delete.
+        sqlx::query(
+            "UPDATE brain_source_revisions SET archived = 1 \
+             WHERE source_uid IN (\
+               SELECT s.source_uid FROM brain_sources s \
+               JOIN brain_dependencies d ON d.source_uid = s.source_uid \
+               JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id \
+               WHERE s.captured_at >= ?1 AND s.captured_at < ?2 \
+                 AND d.consumer_kind = 'knowledge' \
+                 AND v.state = 'published' AND v.availability = 'valid'\
+             )",
+        )
+        .bind(&start_str)
+        .bind(&end_str)
+        .execute(&mut **tx.conn())
+        .await?;
+        sqlx::query(
+            "UPDATE brain_sources SET state = 'archived', media_available = 0, \
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') \
+             WHERE captured_at >= ?1 AND captured_at < ?2 AND source_uid IN (\
+               SELECT s.source_uid FROM brain_sources s \
+               JOIN brain_dependencies d ON d.source_uid = s.source_uid \
+               JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id \
+               WHERE d.consumer_kind = 'knowledge' \
+                 AND v.state = 'published' AND v.availability = 'valid'\
+             )",
+        )
+        .bind(&start_str)
+        .bind(&end_str)
+        .execute(&mut **tx.conn())
+        .await?;
+
         // 1. Collect video file paths for chunks that become fully orphaned.
         // Only include files that have been uploaded to cloud (cloud_blob_id IS NOT NULL)
         // or files not managed by archive (no cloud tracking needed for non-archive deletes).
@@ -896,6 +931,42 @@ impl DatabaseManager {
 
         let start_str = start.to_rfc3339();
         let end_str = end.to_rfc3339();
+
+        // Retention batches use the fast delete path, so they must perform the
+        // same publication protection as the full-range delete before any raw
+        // rows disappear. Keep a bounded excerpt and mark the source archived;
+        // otherwise the source row is left active while its locator is gone and
+        // a later registration can incorrectly treat it as live content.
+        sqlx::query(
+            "UPDATE brain_source_revisions SET archived = 1 \
+             WHERE source_uid IN (\
+               SELECT s.source_uid FROM brain_sources s \
+               JOIN brain_dependencies d ON d.source_uid = s.source_uid \
+               JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id \
+               WHERE s.captured_at >= ?1 AND s.captured_at < ?2 \
+                 AND d.consumer_kind = 'knowledge' \
+                 AND v.state = 'published' AND v.availability = 'valid'\
+             )",
+        )
+        .bind(&start_str)
+        .bind(&end_str)
+        .execute(&mut **tx.conn())
+        .await?;
+        sqlx::query(
+            "UPDATE brain_sources SET state = 'archived', media_available = 0, \
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') \
+             WHERE captured_at >= ?1 AND captured_at < ?2 AND source_uid IN (\
+               SELECT s.source_uid FROM brain_sources s \
+               JOIN brain_dependencies d ON d.source_uid = s.source_uid \
+               JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id \
+               WHERE d.consumer_kind = 'knowledge' \
+                 AND v.state = 'published' AND v.availability = 'valid'\
+             )",
+        )
+        .bind(&start_str)
+        .bind(&end_str)
+        .execute(&mut **tx.conn())
+        .await?;
 
         // Collect snapshot files
         let snapshot_files: Vec<String> = sqlx::query_scalar(

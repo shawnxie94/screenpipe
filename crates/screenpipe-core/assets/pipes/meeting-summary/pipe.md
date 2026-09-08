@@ -142,7 +142,7 @@ featured: false
     -H "Content-Type: application/json" \
     -d '{"title": "<TITLE> 已总结", "body": "<一句话回顾>——要推送到某个地方吗？", "priority": "high", "actions": [
           {"label": "推送到 Notion", "type": "api", "method": "POST", "url": "http://localhost:3030/connections/notion/proxy/v1/pages", "body": { /* 由摘要构建的页面负载 */ }},
-          {"label": "在聊天中查看", "type": "chat", "prompt": "查看会议 <ID> 的现有摘要。不要重新运行 meeting-summary。", "context": {"meeting_id": <ID>}},
+          {"label": "在聊天中查看", "type": "chat", "prompt": "查看会议 <ID> 的现有摘要。不要重新运行 meeting-summary。Do not rerun meeting-summary.", "context": {"meeting_id": <ID>}},
           {"label": "忽略", "type": "dismiss"}
         ]}'
 

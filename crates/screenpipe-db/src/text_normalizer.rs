@@ -330,11 +330,56 @@ pub const BRAIN_SEARCH_INDEX_VERSION: i64 = 1;
 
 /// Question/function words stripped before candidate generation.
 const CJK_STOPWORDS: &[&str] = &[
-    "为什么", "如何", "怎样", "怎么", "什么", "哪些", "哪个", "我们", "你们",
-    "他们", "上次", "上次", "这次", "一下", "一些", "有没有", "是不是", "可以",
-    "应该", "需要", "关于", "以及", "或者", "并且", "但是", "然后", "所以",
-    "的", "了", "吗", "呢", "吧", "啊", "在", "是", "我", "你", "他", "她",
-    "它", "这", "那", "都", "也", "就", "还", "有", "和", "与", "及",
+    "为什么",
+    "如何",
+    "怎样",
+    "怎么",
+    "什么",
+    "哪些",
+    "哪个",
+    "我们",
+    "你们",
+    "他们",
+    "上次",
+    "上次",
+    "这次",
+    "一下",
+    "一些",
+    "有没有",
+    "是不是",
+    "可以",
+    "应该",
+    "需要",
+    "关于",
+    "以及",
+    "或者",
+    "并且",
+    "但是",
+    "然后",
+    "所以",
+    "的",
+    "了",
+    "吗",
+    "呢",
+    "吧",
+    "啊",
+    "在",
+    "是",
+    "我",
+    "你",
+    "他",
+    "她",
+    "它",
+    "这",
+    "那",
+    "都",
+    "也",
+    "就",
+    "还",
+    "有",
+    "和",
+    "与",
+    "及",
 ];
 
 fn is_cjk(c: char) -> bool {
@@ -433,8 +478,15 @@ mod brain_chinese_tests {
     fn project_emits_unigrams_and_bigrams() {
         let projected = chinese_project("全文检索");
         let tokens: Vec<&str> = projected.split_whitespace().collect();
-        assert!(tokens.contains(&"cu全") && tokens.contains(&"cu文") && tokens.contains(&"cu检") && tokens.contains(&"cu索"));
-        assert!(tokens.contains(&"cb全文") && tokens.contains(&"cb文检") && tokens.contains(&"cb检索"));
+        assert!(
+            tokens.contains(&"cu全")
+                && tokens.contains(&"cu文")
+                && tokens.contains(&"cu检")
+                && tokens.contains(&"cu索")
+        );
+        assert!(
+            tokens.contains(&"cb全文") && tokens.contains(&"cb文检") && tokens.contains(&"cb检索")
+        );
     }
 
     #[test]
@@ -443,8 +495,14 @@ mod brain_chinese_tests {
         // must contain the exact bigram token the query produces.
         let index = chinese_project("为什么选择全文检索方案");
         let query_tokens = chinese_project("检索");
-        let needle = query_tokens.split_whitespace().find(|t| t.starts_with("cb")).unwrap();
-        assert!(index.split_whitespace().any(|t| t == needle), "二字词必须命中投影");
+        let needle = query_tokens
+            .split_whitespace()
+            .find(|t| t.starts_with("cb"))
+            .unwrap();
+        assert!(
+            index.split_whitespace().any(|t| t == needle),
+            "二字词必须命中投影"
+        );
     }
 
     #[test]
@@ -457,7 +515,9 @@ mod brain_chinese_tests {
     #[test]
     fn natural_question_candidates_drop_stopwords_and_cap_at_24() {
         let terms = chinese_query_candidates("为什么选择全文检索？我们上次怎么讨论的");
-        assert!(!terms.iter().any(|t| t.contains("cb为什") || t.contains("cb什么")));
+        assert!(!terms
+            .iter()
+            .any(|t| t.contains("cb为什") || t.contains("cb什么")));
         assert!(terms.iter().any(|t| t.contains("检")));
         assert!(terms.len() <= 24);
     }

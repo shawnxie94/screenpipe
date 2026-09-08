@@ -113,8 +113,8 @@ impl DatabaseManager {
         }
 
         let now = super::types::format_ts(super::types::now_utc());
-        let fingerprint_json = serde_json::to_string(&input.fingerprint_inputs)
-            .unwrap_or_else(|_| "{}".to_string());
+        let fingerprint_json =
+            serde_json::to_string(&input.fingerprint_inputs).unwrap_or_else(|_| "{}".to_string());
 
         // Locate an existing identity.
         let existing: Option<(String, String)> = if input.kind.is_office() {
@@ -238,7 +238,10 @@ impl DatabaseManager {
                 .bind(office.map(|o| o.object_id.as_str()))
                 .bind(input.kind.is_office().then(|| object_kind_str(input.kind)))
                 .bind(office.and_then(|o| o.object_revision.clone()))
-                .bind(office.map(|o| super::types::format_ts(o.event_at.unwrap_or(input.captured_at))))
+                .bind(
+                    office
+                        .map(|o| super::types::format_ts(o.event_at.unwrap_or(input.captured_at))),
+                )
                 .bind(office.map(|o| super::types::format_ts(o.fetched_at)))
                 .bind(office.and_then(|o| o.source_url.clone()))
                 .bind(office.map(|o| o.completeness.as_str()))
@@ -260,9 +263,7 @@ impl DatabaseManager {
             }
         };
 
-        if !registration.suppressed
-            && (registration.created || registration.revision_changed)
-        {
+        if !registration.suppressed && (registration.created || registration.revision_changed) {
             if let Some(excerpt) = &input.excerpt {
                 sqlx::query(
                     "INSERT OR IGNORE INTO brain_source_revisions (source_uid, revision, excerpt) \
@@ -422,35 +423,151 @@ impl DatabaseManager {
         add_tombstone: bool,
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        let row: Option<(String, String, i64)> = sqlx::query_as(
-            "SELECT kind, locator_table, locator_id FROM brain_sources WHERE source_uid = ?1",
+        let row: Option<(String, String, i64, Option<String>, Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
+            "SELECT kind, locator_table, locator_id, provider, account_namespace, object_kind, object_id \
+             FROM brain_sources WHERE source_uid = ?1",
         )
         .bind(source_uid)
         .fetch_optional(&mut **tx.conn())
         .await?;
-        let Some((kind, table, id)) = row else {
-            tx.commit().await?;
-            return Ok(());
-        };
-        if add_tombstone {
+        if let Some((kind, table, id, provider, account, object_kind, object_id)) = row {
+            if add_tombstone && kind.starts_with("office_") {
+                sqlx::query(
+                    "INSERT OR IGNORE INTO brain_tombstones \
+                     (kind, provider, account_namespace, object_kind, object_id) \
+                     VALUES ('office_object', ?1, ?2, ?3, ?4)",
+                )
+                .bind(&provider)
+                .bind(&account)
+                .bind(&object_kind)
+                .bind(&object_id)
+                .execute(&mut **tx.conn())
+                .await?;
+            } else if add_tombstone {
+                sqlx::query(
+                    "INSERT OR IGNORE INTO brain_tombstones (kind, locator_table, locator_id) \
+                     VALUES ('source_locator', ?1, ?2)",
+                )
+                .bind(&table)
+                .bind(id)
+                .execute(&mut **tx.conn())
+                .await?;
+            }
+        }
+
+        // Remove every managed projection before the source row cascades.
+        // This is deliberately conservative: a deleted source must never
+        // remain searchable through an FTS row, work-unit body, or answer.
+        sqlx::query(
+            "DELETE FROM brain_search_fts WHERE doc_id IN \
+             (SELECT doc_id FROM brain_search_documents WHERE ref_uid = ?1)",
+        )
+        .bind(source_uid)
+        .execute(&mut **tx.conn())
+        .await?;
+        sqlx::query("DELETE FROM brain_search_documents WHERE ref_uid = ?1")
+            .bind(source_uid)
+            .execute(&mut **tx.conn())
+            .await?;
+
+        let work_units: Vec<String> = sqlx::query_scalar(
+            "SELECT DISTINCT consumer_id FROM brain_dependencies \
+             WHERE source_uid = ?1 AND consumer_kind = 'work_unit'",
+        )
+        .bind(source_uid)
+        .fetch_all(&mut **tx.conn())
+        .await?;
+        for work_unit in &work_units {
             sqlx::query(
-                "INSERT OR IGNORE INTO brain_tombstones (kind, locator_table, locator_id) \
-                 VALUES ('source_locator', ?1, ?2)",
+                "UPDATE brain_work_units SET state = 'invalidated', updated_at = \
+                 strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?1",
             )
-            .bind(&table)
-            .bind(id)
+            .bind(&work_unit)
+            .execute(&mut **tx.conn())
+            .await?;
+            sqlx::query(
+                "UPDATE brain_work_unit_revisions SET state = 'invalidated', body = '' \
+                 WHERE work_unit_id = ?1",
+            )
+            .bind(&work_unit)
             .execute(&mut **tx.conn())
             .await?;
         }
+        let mut knowledge: Vec<String> = sqlx::query_scalar(
+            "SELECT DISTINCT consumer_id FROM brain_dependencies \
+             WHERE source_uid = ?1 AND consumer_kind = 'knowledge'",
+        )
+        .bind(source_uid)
+        .fetch_all(&mut **tx.conn())
+        .await?;
+        // Knowledge normally depends on a WorkUnit rather than directly on
+        // the capture. Walk that second edge before deleting the source so a
+        // source -> work_unit -> knowledge chain is closed in one transaction.
+        for work_unit in &work_units {
+            let chained: Vec<String> = sqlx::query_scalar(
+                "SELECT DISTINCT consumer_id FROM brain_dependencies \
+                 WHERE source_uid = ?1 AND consumer_kind = 'knowledge_work_unit'",
+            )
+            .bind(work_unit)
+            .fetch_all(&mut **tx.conn())
+            .await?;
+            knowledge.extend(chained);
+        }
+        knowledge.sort();
+        knowledge.dedup();
+        for knowledge_id in &knowledge {
+            sqlx::query(
+                "UPDATE brain_knowledge_versions SET body = '', \
+                 availability = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') \
+                 WHERE knowledge_id = ?2",
+            )
+            .bind(if add_tombstone { "deleted" } else { "stale" })
+            .bind(&knowledge_id)
+            .execute(&mut **tx.conn())
+            .await?;
+            sqlx::query(
+                "DELETE FROM brain_search_fts WHERE doc_id IN \
+                         (SELECT doc_id FROM brain_search_documents WHERE ref_uid = ?1)",
+            )
+            .bind(&knowledge_id)
+            .execute(&mut **tx.conn())
+            .await?;
+            sqlx::query("DELETE FROM brain_search_documents WHERE ref_uid = ?1")
+                .bind(&knowledge_id)
+                .execute(&mut **tx.conn())
+                .await?;
+        }
+        sqlx::query(
+            "UPDATE brain_answers SET body = NULL, claims = NULL, sources = NULL, \
+             status = 'context_changed' WHERE sources LIKE '%' || ?1 || '%' OR claims LIKE '%' || ?1 || '%'",
+        )
+        .bind(source_uid)
+        .execute(&mut **tx.conn())
+        .await?;
+        for knowledge_id in &knowledge {
+            sqlx::query("UPDATE brain_feedback SET comment = NULL WHERE knowledge_id = ?1")
+                .bind(knowledge_id)
+                .execute(&mut **tx.conn())
+                .await?;
+        }
+        sqlx::query("UPDATE brain_history_entries SET body = '' WHERE body LIKE '%' || ?1 || '%'")
+            .bind(source_uid)
+            .execute(&mut **tx.conn())
+            .await?;
+        sqlx::query("DELETE FROM brain_dependencies WHERE source_uid = ?1")
+            .bind(source_uid)
+            .execute(&mut **tx.conn())
+            .await?;
         sqlx::query("DELETE FROM brain_sources WHERE source_uid = ?1")
             .bind(source_uid)
             .execute(&mut **tx.conn())
             .await?;
-        let _ = kind;
-        sqlx::query("UPDATE brain_state SET source_epoch = source_epoch + 1, \
-                     deletion_epoch = deletion_epoch + 1 WHERE id = 1")
-            .execute(&mut **tx.conn())
-            .await?;
+        sqlx::query(
+            "UPDATE brain_state SET source_epoch = source_epoch + 1, \
+                     deletion_epoch = deletion_epoch + 1 WHERE id = 1",
+        )
+        .execute(&mut **tx.conn())
+        .await?;
         tx.commit().await?;
         Ok(())
     }
@@ -600,13 +717,11 @@ impl DatabaseManager {
         consumer_id: &str,
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        sqlx::query(
-            "DELETE FROM brain_dependencies WHERE consumer_kind = ?1 AND consumer_id = ?2",
-        )
-        .bind(consumer_kind)
-        .bind(consumer_id)
-        .execute(&mut **tx.conn())
-        .await?;
+        sqlx::query("DELETE FROM brain_dependencies WHERE consumer_kind = ?1 AND consumer_id = ?2")
+            .bind(consumer_kind)
+            .bind(consumer_id)
+            .execute(&mut **tx.conn())
+            .await?;
         tx.commit().await?;
         Ok(())
     }

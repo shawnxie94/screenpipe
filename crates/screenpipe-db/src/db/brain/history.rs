@@ -78,7 +78,7 @@ impl DatabaseManager {
         }
         for cov in &batch.coverage {
             sqlx::query(
-                "INSERT INTO brain_history_coverage (start_at, end_at, imported_batch) \
+                "INSERT OR IGNORE INTO brain_history_coverage (start_at, end_at, imported_batch) \
                  VALUES (?1, ?2, ?3)",
             )
             .bind(&cov.start_at)
@@ -100,29 +100,24 @@ impl DatabaseManager {
     }
 
     pub async fn brain_history_batch_imported(&self, batch: i64) -> Result<bool, SqlxError> {
-        let validated: String = sqlx::query_scalar(
-            "SELECT validated_batches FROM brain_migrations WHERE id = 1",
-        )
-        .fetch_one(&self.pool)
-        .await
-        .unwrap_or_else(|_| "[]".to_string());
+        let validated: String =
+            sqlx::query_scalar("SELECT validated_batches FROM brain_migrations WHERE id = 1")
+                .fetch_one(&self.pool)
+                .await
+                .unwrap_or_else(|_| "[]".to_string());
         Ok(serde_json::from_str::<Vec<i64>>(&validated)
             .unwrap_or_default()
             .contains(&batch))
     }
 
     /// Record a batch's validation result (id set + coverage checksum).
-    pub async fn brain_history_mark_batch_validated(
-        &self,
-        batch: i64,
-    ) -> Result<(), SqlxError> {
+    pub async fn brain_history_mark_batch_validated(&self, batch: i64) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        let validated: String = sqlx::query_scalar(
-            "SELECT validated_batches FROM brain_migrations WHERE id = 1",
-        )
-        .fetch_one(&mut **tx.conn())
-        .await
-        .unwrap_or_else(|_| "[]".to_string());
+        let validated: String =
+            sqlx::query_scalar("SELECT validated_batches FROM brain_migrations WHERE id = 1")
+                .fetch_one(&mut **tx.conn())
+                .await
+                .unwrap_or_else(|_| "[]".to_string());
         let mut list = serde_json::from_str::<Vec<i64>>(&validated).unwrap_or_default();
         if !list.contains(&batch) {
             list.push(batch);
@@ -170,9 +165,7 @@ impl DatabaseManager {
         Ok(())
     }
 
-    pub async fn brain_history_migration_state(
-        &self,
-    ) -> Result<(String, i64, String), SqlxError> {
+    pub async fn brain_history_migration_state(&self) -> Result<(String, i64, String), SqlxError> {
         sqlx::query_as(
             "SELECT phase, batch_cursor, validated_batches FROM brain_migrations WHERE id = 1",
         )
@@ -181,27 +174,21 @@ impl DatabaseManager {
     }
 
     /// Snapshot comparison inputs: total entries + coverage spans.
-    pub async fn brain_history_counts(
-        &self,
-    ) -> Result<(i64, i64), SqlxError> {
-        let entries: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM brain_history_entries")
-                .fetch_one(&self.pool)
-                .await?;
-        let spans: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM brain_history_coverage")
-                .fetch_one(&self.pool)
-                .await?;
+    pub async fn brain_history_counts(&self) -> Result<(i64, i64), SqlxError> {
+        let entries: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM brain_history_entries")
+            .fetch_one(&self.pool)
+            .await?;
+        let spans: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM brain_history_coverage")
+            .fetch_one(&self.pool)
+            .await?;
         Ok((entries, spans))
     }
 
     /// Canonical body digest set for validation (entry id → sha256 of body).
     pub async fn brain_history_digests(&self) -> Result<Vec<(String, String)>, SqlxError> {
-        sqlx::query_as(
-            "SELECT id, body FROM brain_history_entries ORDER BY id",
-        )
-        .fetch_all(&self.pool)
-        .await
+        sqlx::query_as("SELECT id, body FROM brain_history_entries ORDER BY id")
+            .fetch_all(&self.pool)
+            .await
     }
 
     /// Upsert one entry post-migration (new history entries after ACTIVE).

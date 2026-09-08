@@ -91,16 +91,19 @@ impl DatabaseManager {
         updates: BrainOfficeConnectionUpdate,
     ) -> Result<i64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        self.brain_office_ensure_connection_tx(&mut tx, provider).await?;
+        self.brain_office_ensure_connection_tx(&mut tx, provider)
+            .await?;
         let sets: Vec<&str> = Vec::new();
         let _ = sets;
         // Field-by-field updates keep call sites explicit about what changed.
         if let Some(v) = updates.account_namespace {
-            sqlx::query("UPDATE brain_office_connections SET account_namespace = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
+            sqlx::query(
+                "UPDATE brain_office_connections SET account_namespace = ?1 WHERE provider = ?2",
+            )
+            .bind(v)
+            .bind(provider)
+            .execute(&mut **tx.conn())
+            .await?;
         }
         if let Some(v) = updates.cli_path {
             sqlx::query("UPDATE brain_office_connections SET cli_path = ?1 WHERE provider = ?2")
@@ -126,11 +129,13 @@ impl DatabaseManager {
             .await?;
         }
         if let Some(v) = updates.runtime_status {
-            sqlx::query("UPDATE brain_office_connections SET runtime_status = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
+            sqlx::query(
+                "UPDATE brain_office_connections SET runtime_status = ?1 WHERE provider = ?2",
+            )
+            .bind(v)
+            .bind(provider)
+            .execute(&mut **tx.conn())
+            .await?;
         }
         if let Some(v) = updates.auth_status {
             sqlx::query("UPDATE brain_office_connections SET auth_status = ?1 WHERE provider = ?2")
@@ -161,11 +166,13 @@ impl DatabaseManager {
                 .await?;
         }
         if let Some(v) = updates.last_sync_at {
-            sqlx::query("UPDATE brain_office_connections SET last_sync_at = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
+            sqlx::query(
+                "UPDATE brain_office_connections SET last_sync_at = ?1 WHERE provider = ?2",
+            )
+            .bind(v)
+            .bind(provider)
+            .execute(&mut **tx.conn())
+            .await?;
         }
         if let Some(v) = updates.last_success_at {
             sqlx::query(
@@ -272,7 +279,8 @@ impl DatabaseManager {
         scope_json: &str,
     ) -> Result<i64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        self.brain_office_ensure_connection_tx(&mut tx, provider).await?;
+        self.brain_office_ensure_connection_tx(&mut tx, provider)
+            .await?;
         sqlx::query(
             "INSERT INTO brain_office_scopes (provider, scope, revision) VALUES (?1, ?2, 1) \
              ON CONFLICT (provider) DO UPDATE SET scope = ?2, revision = revision + 1, \
@@ -385,9 +393,7 @@ impl DatabaseManager {
         .await?;
         let mut disabled = Vec::new();
         for (kind, id, uid) in rows {
-            let keep = keep_object_ids
-                .iter()
-                .any(|(k, i)| *k == kind && *i == id);
+            let keep = keep_object_ids.iter().any(|(k, i)| *k == kind && *i == id);
             if !keep {
                 sqlx::query(
                     "UPDATE brain_office_objects SET state = 'disabled', \
@@ -455,10 +461,12 @@ impl DatabaseManager {
                 .await?;
             erased += 1;
         }
-        sqlx::query("UPDATE brain_state SET source_epoch = source_epoch + 1, \
-                     deletion_epoch = deletion_epoch + 1 WHERE id = 1")
-            .execute(&mut **tx.conn())
-            .await?;
+        sqlx::query(
+            "UPDATE brain_state SET source_epoch = source_epoch + 1, \
+                     deletion_epoch = deletion_epoch + 1 WHERE id = 1",
+        )
+        .execute(&mut **tx.conn())
+        .await?;
         tx.commit().await?;
         Ok(erased)
     }

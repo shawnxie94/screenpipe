@@ -119,15 +119,13 @@ impl DatabaseManager {
 
     /// Coverage snapshot for /brain/status (indexed vs known objects).
     pub async fn brain_search_coverage(&self) -> Result<(i64, i64), SqlxError> {
-        let indexed: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM brain_search_documents")
+        let indexed: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM brain_search_documents")
+            .fetch_one(&self.pool)
+            .await?;
+        let office: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM brain_office_objects WHERE state = 'active'")
                 .fetch_one(&self.pool)
                 .await?;
-        let office: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM brain_office_objects WHERE state = 'active'",
-        )
-        .fetch_one(&self.pool)
-        .await?;
         let knowledge: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM brain_knowledge_versions WHERE state = 'published'",
         )
@@ -200,12 +198,11 @@ impl DatabaseManager {
         }
         // Memories (their own FTS stays authoritative; keep a projection doc
         // so /answer's sources route sees them with filters).
-        let memory_rows: Vec<(i64, String)> = sqlx::query_as(
-            "SELECT id, content FROM memories ORDER BY updated_at DESC LIMIT ?1",
-        )
-        .bind(limit)
-        .fetch_all(&self.pool)
-        .await?;
+        let memory_rows: Vec<(i64, String)> =
+            sqlx::query_as("SELECT id, content FROM memories ORDER BY updated_at DESC LIMIT ?1")
+                .bind(limit)
+                .fetch_all(&self.pool)
+                .await?;
         for (id, content) in memory_rows {
             self.brain_search_upsert_doc(&BrainSearchDocInput {
                 doc_id: format!("memory:{id}"),
