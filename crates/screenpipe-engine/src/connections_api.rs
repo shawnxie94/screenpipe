@@ -1031,6 +1031,10 @@ async fn webhook_proxy(
     headers: axum::http::HeaderMap,
     body: axum::body::Bytes,
 ) -> axum::response::Response {
+    if let Some(response) = deny_office_provider_id(&id) {
+        return response.into_response();
+    }
+
     use axum::response::IntoResponse;
 
     let (instance, forwarded_query) = split_instance_query(raw_query.as_deref());
@@ -1136,6 +1140,21 @@ async fn webhook_proxy(
 /// - Only safe HTTP methods allowed (GET, POST, PUT, PATCH) — DELETE blocked by default
 /// - Unresolved URL placeholders are rejected (prevents requests to wrong hosts)
 /// - All proxy requests are logged for audit
+/// Office provider ids never flow through generic connection routes; the
+/// dedicated `/connections/office/*` surface owns them (TRD §10.2).
+fn deny_office_provider_id(id: &str) -> Option<(StatusCode, Json<Value>)> {
+    if screenpipe_connect::office::types::is_office_provider(id) {
+        return Some((
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "error": "office connections must use /connections/office routes",
+                "provider": id
+            })),
+        ));
+    }
+    None
+}
+
 async fn connection_proxy(
     State(state): State<ConnectionsState>,
     axum::extract::Path((id, api_path)): axum::extract::Path<(String, String)>,
@@ -1144,6 +1163,10 @@ async fn connection_proxy(
     headers: axum::http::HeaderMap,
     body: axum::body::Bytes,
 ) -> axum::response::Response {
+    if let Some(response) = deny_office_provider_id(&id) {
+        return response.into_response();
+    }
+
     use axum::response::IntoResponse;
 
     // Block destructive methods — pipes should not delete external resources
@@ -1385,6 +1408,10 @@ async fn connection_config(
     Path(id): Path<String>,
     axum::extract::RawQuery(raw_query): axum::extract::RawQuery,
 ) -> (StatusCode, Json<Value>) {
+    if let Some(response) = deny_office_provider_id(&id) {
+        return response;
+    }
+
     let (instance, _) = split_instance_query(raw_query.as_deref());
 
     let mgr = state.cm.lock().await;
