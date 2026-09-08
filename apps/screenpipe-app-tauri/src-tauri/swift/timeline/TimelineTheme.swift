@@ -67,29 +67,29 @@ enum TimelineTheme {
 
     static let hourFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "h a"
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "a h"
         return f
     }()
 
     static let playheadFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "h:mm:ss a"
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "a h:mm:ss"
         return f
     }()
 
     static let clockFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "h:mm a"
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "a h:mm"
         return f
     }()
 
     static let dateButtonFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "MMM d"
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "M月d日"
         return f
     }()
 }

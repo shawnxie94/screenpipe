@@ -9,17 +9,17 @@ import { openHomeWindow, waitForAppReady } from "../helpers/test-utils.js";
 
 const CACHED_SUMMARY = `A cached source-backed summary.
 
-### Accomplishments
+### 已完成事项
 - Completed the Timeline integration.
 
-### Key moments
+### 关键时刻
 - Verified the selected-day boundary.
 - Confirmed the local cache path.
 
-### Unfinished
+### 未完成
 - Review is still pending.
 
-**Next:** Review the change.`;
+**下一步：** Review the change.`;
 function localDateId(): string {
   const date = new Date();
   const year = date.getFullYear();

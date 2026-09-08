@@ -301,15 +301,15 @@ struct TimelineRecordingOffCard: View {
                     .font(.system(size: 24))
                     .foregroundStyle(TimelineTheme.trace)
             }
-            Text("Screen recording is off")
+            Text("屏幕录制已关闭")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(TimelineTheme.foreground)
-            Text("Enable screen recording in settings to start capturing your timeline.")
+            Text("请在设置中启用屏幕录制，以开始采集时间线。")
                 .font(TimelineTheme.captionFont)
                 .foregroundStyle(TimelineTheme.trace)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 320)
-            Button("Open settings") {
+            Button("打开设置") {
                 model.emitAction("open_recording_settings")
             }
             .buttonStyle(TimelineControlStyle())
@@ -340,17 +340,17 @@ struct TimelineBuildingMemoryCard: View {
                     .font(.system(size: 22))
                     .foregroundStyle(TimelineTheme.phosphor)
             }
-            Text("Building Your Memory")
+            Text("正在构建你的记忆")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(TimelineTheme.foreground)
-            Text("Screenpipe is recording your screen activity. Your timeline will appear here as frames are captured.")
+            Text("screenpipe 正在记录屏幕活动。采集到画面后，时间线会显示在这里。")
                 .font(TimelineTheme.captionFont)
                 .foregroundStyle(TimelineTheme.trace)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 340)
             HStack(spacing: 6) {
                 Circle().fill(TimelineTheme.phosphor).frame(width: 6, height: 6)
-                Text("Recording in progress").font(TimelineTheme.captionFont)
+                Text("正在录制").font(TimelineTheme.captionFont)
             }
             .foregroundStyle(TimelineTheme.trace)
         }
@@ -370,10 +370,10 @@ struct TimelineScreenshotPausedCard: View {
                     .font(TimelineTheme.monoFont)
                     .foregroundStyle(TimelineTheme.trace)
             }
-            Text("SCREENSHOT PAUSED")
+            Text("屏幕截图已暂停")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(TimelineTheme.foreground)
-            Text("screenpipe saved activity for this moment, but no image was saved. This usually happens during low-battery or privacy pause modes.")
+            Text("screenpipe 已保存这一时刻的活动，但没有保存图像。这通常发生在低电量或隐私暂停模式下。")
                 .font(TimelineTheme.captionFont)
                 .foregroundStyle(TimelineTheme.trace)
                 .multilineTextAlignment(.center)
@@ -385,10 +385,10 @@ struct TimelineScreenshotPausedCard: View {
 
     private var navigationButtons: some View {
         HStack(spacing: 8) {
-            Button("Previous") { model.step(1) }
+            Button("上一个") { model.step(1) }
                 .buttonStyle(TimelineControlStyle())
                 .disabled(model.currentIndex >= model.frames.count - 1)
-            Button("Next") { model.step(-1) }
+            Button("下一个") { model.step(-1) }
                 .buttonStyle(TimelineControlStyle())
                 .disabled(model.currentIndex <= 0)
         }
@@ -405,19 +405,19 @@ struct TimelineImageUnavailableCard: View {
             Image(systemName: "photo.badge.exclamationmark")
                 .font(.system(size: 22))
                 .foregroundStyle(TimelineTheme.trace)
-            Text("IMAGE UNAVAILABLE")
+            Text("图像不可用")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(TimelineTheme.foreground)
-            Text("This moment was recorded, but its image could not be read from disk or the local server.")
+            Text("这一时刻已被记录，但无法从磁盘或本地服务器读取图像。")
                 .font(TimelineTheme.captionFont)
                 .foregroundStyle(TimelineTheme.trace)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 340)
             HStack(spacing: 8) {
-                Button("Previous") { model.step(1) }
+                Button("上一个") { model.step(1) }
                     .buttonStyle(TimelineControlStyle())
                     .disabled(model.currentIndex >= model.frames.count - 1)
-                Button("Next") { model.step(-1) }
+                Button("下一个") { model.step(-1) }
                     .buttonStyle(TimelineControlStyle())
                     .disabled(model.currentIndex <= 0)
             }
@@ -434,10 +434,10 @@ struct TimelineNoFrameCard: View {
             Image(systemName: "photo.badge.exclamationmark")
                 .font(.system(size: 22))
                 .foregroundStyle(TimelineTheme.trace)
-            Text("NO FRAME SELECTED")
+            Text("未选择画面")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(TimelineTheme.foreground)
-            Text("Select a point on the timeline to view a recorded frame.")
+            Text("请选择时间线上的一个点来查看已记录的画面。")
                 .font(TimelineTheme.captionFont)
                 .foregroundStyle(TimelineTheme.trace)
         }
@@ -470,7 +470,7 @@ struct TimelineControlBar: View {
             }
             .buttonStyle(TimelineControlStyle())
             .disabled(model.isNavigating || model.isAtEarliest)
-            .help("Previous day")
+            .help("前一天")
 
             Button { showCalendar.toggle() } label: {
                 HStack(spacing: 6) {
@@ -498,13 +498,13 @@ struct TimelineControlBar: View {
             // Forward navigation is the escape hatch from a slow/empty older
             // day, so it remains clickable while that request is pending.
             .disabled(model.isAtToday)
-            .help("Next day")
+            .help("后一天")
 
             Button { model.jumpToNow() } label: {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(TimelineControlStyle())
-            .help("Jump to now")
+            .help("跳转到现在")
         }
     }
 
@@ -514,13 +514,13 @@ struct TimelineControlBar: View {
                 Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
             }
             .buttonStyle(TimelineControlStyle())
-            .help(model.isPlaying ? "Pause (Space)" : "Play (Space)")
+            .help(model.isPlaying ? "暂停（空格键）" : "播放（空格键）")
 
             Button { model.cycleSpeed() } label: {
                 Text("\(formattedSpeed)x").font(TimelineTheme.monoFont)
             }
             .buttonStyle(TimelineControlStyle())
-            .help("Playback speed")
+            .help("播放速度")
 
             // Per-device mute only earns its space once more than one device is
             // audible, which is when muting is actually a decision.
@@ -563,32 +563,32 @@ struct TimelineControlBar: View {
             }
         }
         .buttonStyle(TimelineControlStyle())
-        .accessibilityLabel("daily summary")
-        .help("Generate a summary for this day")
+        .accessibilityLabel("每日摘要")
+        .help("生成当天摘要")
     }
 
     private var searchAction: some View {
         Button { model.emitAction("open_search") } label: {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
-                Text("search")
+                Text("搜索")
             }
         }
         .buttonStyle(TimelineControlStyle())
-        .accessibilityLabel("search")
-        .help("Search timeline (/)")
+        .accessibilityLabel("搜索")
+        .help("搜索时间线（/）")
     }
 
     private var chatAction: some View {
         Button { model.emitAction("open_chat") } label: {
             HStack(spacing: 6) {
                 Image(systemName: "bubble.left")
-                Text("chat")
+                Text("聊天")
             }
         }
         .buttonStyle(TimelineControlStyle())
-        .accessibilityLabel("chat")
-        .help("Open chat")
+        .accessibilityLabel("聊天")
+        .help("打开聊天")
     }
 }
 
@@ -616,7 +616,7 @@ struct TimelineMuteButton: View {
         }
         .buttonStyle(TimelinePlainButtonStyle())
         .foregroundStyle(isMuted ? TimelineTheme.trace : TimelineTheme.foreground)
-        .help(isMuted ? "unmute \(device)" : "mute \(device)")
+        .help(isMuted ? "取消静音 \(device)" : "静音 \(device)")
     }
 }
 
@@ -683,8 +683,8 @@ struct TimelineCalendarPopover: View {
 
     private var monthLabel: String {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "MMMM yyyy"
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "yyyy年M月"
         return f.string(from: month)
     }
 
@@ -783,8 +783,8 @@ struct TimelineFilterRail: View {
             )
         }
         .buttonStyle(TimelinePlainButtonStyle())
-        .accessibilityLabel(model.showSubtitles ? "hide captions" : "show captions")
-        .help(model.showSubtitles ? "Hide captions" : "Show captions")
+        .accessibilityLabel(model.showSubtitles ? "隐藏字幕" : "显示字幕")
+        .help(model.showSubtitles ? "隐藏字幕" : "显示字幕")
     }
 
     private func row(
@@ -878,7 +878,7 @@ struct TimelineFilterRail: View {
     private func meetingLabel(_ meeting: TimelineMeeting) -> String {
         let names = meeting.speakers.prefix(2).joined(separator: ", ")
         let extra = meeting.speakers.count > 2 ? " +\(meeting.speakers.count - 2)" : ""
-        let who = names.isEmpty ? "\(meeting.durationMinutes)m call" : names + extra
+        let who = names.isEmpty ? "\(meeting.durationMinutes) 分钟通话" : names + extra
         return "\(who) · \(TimelineTheme.clockFormatter.string(from: meeting.start))"
     }
 
@@ -934,12 +934,12 @@ struct TimelineSubtitleBar: View {
                                 .buttonStyle(TimelinePlainButtonStyle())
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(TimelineTheme.foreground)
-                                .help("Change speaker")
+                                .help("更改说话人")
                         }
                         if line.isPending {
                             HStack(spacing: 4) {
                                 ProgressView().controlSize(.mini)
-                                Text("transcribing…")
+                                Text("正在转写…")
                                     .font(TimelineTheme.captionFont)
                                     .foregroundStyle(TimelineTheme.trace)
                             }
@@ -989,9 +989,9 @@ struct TimelineSpeakerEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("CHANGE SPEAKER")
+            Text("更改说话人")
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
-            TextField("speaker name", text: $name)
+            TextField("说话人姓名", text: $name)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 8)
                 .frame(width: 220, height: 28)
@@ -1003,13 +1003,13 @@ struct TimelineSpeakerEditor: View {
                     .foregroundStyle(Color.red.opacity(0.85))
             }
             HStack(spacing: 6) {
-                Button("cancel", action: onClose)
+                Button("取消", action: onClose)
                     .buttonStyle(TimelineControlStyle())
                 Button {
                     save()
                 } label: {
                     if isSaving { ProgressView().controlSize(.mini) }
-                    else { Text("save") }
+                    else { Text("保存") }
                 }
                 .buttonStyle(TimelineControlStyle(isActive: true))
                 .disabled(isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -1078,7 +1078,7 @@ struct TimelineSearchPill: View {
                 Button { model.stepSearchResult(1) } label: { Image(systemName: "chevron.left") }
                     .buttonStyle(TimelinePlainButtonStyle())
                     .disabled(review.isLast)
-                    .help("older match (←)")
+                    .help("较早的匹配（←）")
 
                 TimelineSearchStripView(review: review) { model.jumpToSearchResult($0) }
 
@@ -1089,11 +1089,11 @@ struct TimelineSearchPill: View {
                 Button { model.stepSearchResult(-1) } label: { Image(systemName: "chevron.right") }
                     .buttonStyle(TimelinePlainButtonStyle())
                     .disabled(review.isFirst)
-                    .help("newer match (→)")
+                    .help("较新的匹配（→）")
 
                 Button { model.exitSearchReview() } label: { Image(systemName: "xmark") }
                     .buttonStyle(TimelinePlainButtonStyle())
-                    .help("Exit search review (Esc)")
+                    .help("退出搜索浏览（Esc）")
             }
             .foregroundStyle(TimelineTheme.foreground)
             .padding(.horizontal, 12)
@@ -1143,8 +1143,8 @@ struct TimelineSearchStripView: View {
                 }
             )
             .accessibilityElement()
-            .accessibilityLabel("search results")
-            .accessibilityValue("\(review.activeIndex + 1) of \(review.count)")
+            .accessibilityLabel("搜索结果")
+            .accessibilityValue("第 \(review.activeIndex + 1) 个，共 \(review.count) 个")
         }
     }
 }
@@ -1168,20 +1168,20 @@ struct TimelineTagToolbar: View {
                 Spacer()
                 Button { confirmingDelete.toggle() } label: { Image(systemName: "trash") }
                     .buttonStyle(TimelinePlainButtonStyle())
-                    .help("Delete this range")
+                    .help("删除此范围")
             }
             .foregroundStyle(TimelineTheme.foreground)
 
             if confirmingDelete {
                 // Destructive and irreversible, so it states exactly what goes.
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("permanently delete all screen recordings, audio, and transcriptions from \(rangeLabel)? this cannot be undone.")
+                    Text("要永久删除 \(rangeLabel) 内的所有屏幕录制、音频和转写内容吗？此操作无法撤销。")
                         .font(TimelineTheme.captionFont)
                         .foregroundStyle(TimelineTheme.trace)
                     HStack {
-                        Button("cancel") { confirmingDelete = false }
+                        Button("取消") { confirmingDelete = false }
                             .buttonStyle(TimelineControlStyle())
-                        Button("delete permanently") {
+                        Button("永久删除") {
                             model.emitAction("delete_range")
                             confirmingDelete = false
                             model.clearSelection()
@@ -1205,7 +1205,7 @@ struct TimelineTagToolbar: View {
                             }
                         }
                         .buttonStyle(TimelineControlStyle(isActive: state == .all))
-                        .help(state == .all ? "Remove \(tag) from selection" : "Add \(tag) to selection")
+                        .help(state == .all ? "从选择范围移除 \(tag)" : "将 \(tag) 添加到选择范围")
                     }
                 }
                 let customSelectionTags = model.selectionTags.filter { !quickTags.contains($0) }
@@ -1222,19 +1222,19 @@ struct TimelineTagToolbar: View {
                                     }
                                 }
                                 .buttonStyle(TimelineControlStyle(isActive: true))
-                                .help("Remove \(tag) from selection")
+                                .help("从选择范围移除 \(tag)")
                             }
                         }
                     }
                 }
                 HStack(spacing: 6) {
-                    TextField("custom tag", text: $customTag)
+                    TextField("自定义标签", text: $customTag)
                         .textFieldStyle(.plain)
                         .font(TimelineTheme.captionFont)
                         .padding(.horizontal, 6)
                         .frame(height: 24)
                         .overlay(Rectangle().stroke(TimelineTheme.border, lineWidth: 1))
-                    Button("add") {
+                    Button("添加") {
                         let trimmed = customTag.trimmingCharacters(in: .whitespaces)
                         guard !trimmed.isEmpty else { return }
                         model.applyTag(trimmed, add: true)
@@ -1251,7 +1251,7 @@ struct TimelineTagToolbar: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "sparkles")
-                            Text("ask ai")
+                            Text("询问 AI")
                         }
                     }
                     .buttonStyle(TimelineControlStyle())
@@ -1263,11 +1263,11 @@ struct TimelineTagToolbar: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "square.and.arrow.up")
-                            Text("export video")
+                            Text("导出视频")
                         }
                     }
                     .buttonStyle(TimelineControlStyle())
-                    .help("Export this selection as an MP4 with synced audio")
+                    .help("将此选择范围导出为带同步音频的 MP4")
                 }
             }
         }

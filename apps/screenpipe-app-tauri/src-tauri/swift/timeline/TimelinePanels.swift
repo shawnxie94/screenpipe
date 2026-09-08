@@ -83,7 +83,7 @@ struct TimelineHoverPreview: View {
             if TimelineFrames.hasAudio(frame) {
                 HStack(spacing: 4) {
                     Image(systemName: "mic").font(.system(size: 9))
-                    Text("audio recorded").font(.system(size: 10))
+                    Text("已录制音频").font(.system(size: 10))
                 }
                 .foregroundStyle(TimelineTheme.trace)
             }
@@ -199,7 +199,7 @@ struct TimelineTranscriptPanel: View {
                 Image(systemName: "doc.on.doc").font(.system(size: 11))
             }
             .buttonStyle(TimelinePlainButtonStyle())
-            .help("copy transcript")
+            .help("复制转写")
             Button {
                 model.emitAction("summarize_transcript")
             } label: {
@@ -207,12 +207,12 @@ struct TimelineTranscriptPanel: View {
             }
             .buttonStyle(TimelinePlainButtonStyle())
             .disabled(entries.isEmpty)
-            .help(entries.isEmpty ? "no transcription to summarize" : "summarize")
+            .help(entries.isEmpty ? "没有可供摘要的转写" : "生成摘要")
             Button { model.showAudioTranscript = false } label: {
                 Image(systemName: "xmark").font(.system(size: 11))
             }
             .buttonStyle(TimelinePlainButtonStyle())
-            .help("close")
+            .help("关闭")
         }
         .foregroundStyle(TimelineTheme.foreground)
         .padding(.horizontal, 10)
@@ -226,7 +226,7 @@ struct TimelineTranscriptPanel: View {
                 Image(systemName: "waveform.slash")
                     .font(.system(size: 18))
                     .foregroundStyle(TimelineTheme.trace)
-                Text("no speech near this moment")
+                Text("这一时刻附近没有语音")
                     .font(TimelineTheme.captionFont)
                     .foregroundStyle(TimelineTheme.trace)
             }

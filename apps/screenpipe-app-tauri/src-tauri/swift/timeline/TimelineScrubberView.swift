@@ -122,25 +122,25 @@ struct TimelineScrubberView: View {
             case .recordingOff:
                 Image(systemName: "display.trianglebadge.exclamationmark")
                     .foregroundStyle(TimelineTheme.trace)
-                Text("screen recording is off — no timeline to show")
+                Text("屏幕录制已关闭——没有可显示的时间线")
                     .font(TimelineTheme.captionFont)
                     .foregroundStyle(TimelineTheme.trace)
             case .connectionError:
                 Image(systemName: "exclamationmark.triangle")
                     .foregroundStyle(TimelineTheme.trace)
-                Text("can't reach screenpipe — no timeline to show")
+                Text("无法连接 screenpipe——没有可显示的时间线")
                     .font(TimelineTheme.captionFont)
                     .foregroundStyle(TimelineTheme.trace)
             case .loading:
                 ProgressView().controlSize(.small)
-                Text("loading timeline...")
+                Text("正在加载时间线…")
                     .font(TimelineTheme.captionFont)
                     .foregroundStyle(TimelineTheme.trace)
             case .buildingMemory, .hasFrames:
                 Circle()
                     .fill(TimelineTheme.phosphor)
                     .frame(width: 6, height: 6)
-                Text("recording... timeline will appear soon")
+                Text("正在录制……时间线很快就会显示")
                     .font(TimelineTheme.captionFont)
                     .foregroundStyle(TimelineTheme.trace)
             }

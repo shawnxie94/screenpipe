@@ -378,7 +378,7 @@ struct TimelineHostView: View {
                             .shadow(color: Color.black.opacity(0.25), radius: 8, y: 3)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Back to activity")
+                    .accessibilityLabel("返回活动")
                     .padding(16)
                 }
             }

@@ -675,7 +675,7 @@ describe("connected snapshot sharing", function () {
     );
     // The row above states the channel, so the button names the app and stops
     // there instead of restating the whole destination in caps.
-    expect(await confirmSlack.getText()).toContain("send to Slack");
+    expect(await confirmSlack.getText()).toContain("发送到 Slack");
     await confirmSlack.click();
     await waitForTestId("connected-share-receipt", 10_000);
     await waitForSettledShareDialog();
