@@ -518,6 +518,15 @@ async fn do_local_cleanup(
                         {
                             remove_evicted_file(path).await;
                         }
+                        if let Some(brain) = crate::brain::shared() {
+                            if let Err(e) = brain
+                                .deletion()
+                                .propagate_retention_range(batch_start, batch_end, false)
+                                .await
+                            {
+                                warn!("retention: brain source propagation failed: {}", e);
+                            }
+                        }
                     }
                     Err(e) => {
                         warn!(

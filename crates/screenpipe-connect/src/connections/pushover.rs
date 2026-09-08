@@ -13,7 +13,7 @@ static DEF: IntegrationDef = IntegrationDef {
     name: "Pushover",
     icon: "pushover",
     category: Category::Notification,
-    description: "Send push notifications to your phone via Pushover. POST to https://api.pushover.net/1/messages.json with token, user, and message fields.",
+    description: "通过 Pushover 向手机发送推送通知。向 https://api.pushover.net/1/messages.json POST，并提供 token、user 和 message 字段。",
     fields: &[
         FieldDef {
             key: "api_token",

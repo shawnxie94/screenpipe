@@ -46,12 +46,10 @@ impl UserBrowser {
     pub fn default_instance(bridge: Arc<BrowserBridge>) -> Arc<Self> {
         Self::new(
             "user-browser",
-            "Your Browser",
-            "The user's real browser via the screenpipe extension. Has \
-             their actual logged-in sessions, cookies, passkeys — use this \
-             when the task needs the user's identity (their email, social \
-             accounts, banks, anything they're logged into). The user can \
-             see what's happening in their own browser tabs.",
+            "你的浏览器",
+            "通过 screenpipe 扩展连接你的真实浏览器，包含已登录的会话、Cookie 和通行密钥。\
+             当任务需要使用你的身份（电子邮件、社交账号、银行账户或其他已登录服务）时使用它。\
+             你可以在自己的浏览器标签页中看到正在发生的操作。",
             bridge,
         )
     }

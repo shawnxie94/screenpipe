@@ -1,8 +1,8 @@
 {
   "schema": "live-view-kit.v1",
   "id": "automation-finder",
-  "title": "Automation finder",
-  "description": "Find one repeated workflow worth automating and turn it into a safe, testable first step.",
+  "title": "自动化发现",
+  "description": "找到一个值得自动化的重复工作流，并将其转化为安全、可测试的第一步。",
   "version": 1,
   "pipes": [
     {
@@ -13,7 +13,7 @@
   "template": {
     "schema": "live-view-template.v1",
     "id": "automation-finder",
-    "title": "Automation finder",
+    "title": "自动化发现",
     "revision": 1,
     "timeRange": "7d",
     "periodPolicy": {
@@ -23,7 +23,7 @@
     "blocks": [
       {
         "id": "best-opportunity",
-        "title": "Best automation opportunity",
+        "title": "最佳自动化机会",
         "kind": "markdown.v1",
         "width": 12,
         "order": 0,
@@ -35,7 +35,7 @@
       },
       {
         "id": "workflow-evidence",
-        "title": "When this workflow repeated",
+        "title": "工作流重复发生的时间",
         "kind": "timeline.v1",
         "width": 6,
         "order": 1,
@@ -47,7 +47,7 @@
       },
       {
         "id": "friction",
-        "title": "Why it is costly",
+        "title": "为什么成本高",
         "kind": "list.v1",
         "width": 6,
         "order": 2,
@@ -59,7 +59,7 @@
       },
       {
         "id": "current-coverage",
-        "title": "What is already covered",
+        "title": "已有的自动化覆盖",
         "kind": "table.v1",
         "width": 6,
         "order": 3,
@@ -71,7 +71,7 @@
       },
       {
         "id": "safe-first-version",
-        "title": "Safe first version",
+        "title": "安全的第一版",
         "kind": "markdown.v1",
         "width": 6,
         "order": 4,
@@ -83,7 +83,7 @@
       },
       {
         "id": "success-test",
-        "title": "How to know it worked",
+        "title": "如何确认它有效",
         "kind": "list.v1",
         "width": 12,
         "order": 5,

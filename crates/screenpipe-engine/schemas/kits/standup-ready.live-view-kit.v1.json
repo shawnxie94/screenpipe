@@ -1,8 +1,8 @@
 {
   "schema": "live-view-kit.v1",
   "id": "standup-ready",
-  "title": "Standup ready",
-  "description": "Walk into standup with specific progress, today's priorities, blockers, and supporting context.",
+  "title": "站会准备",
+  "description": "带着明确的进展、今日优先事项、阻塞问题和支持性背景参加站会。",
   "version": 1,
   "pipes": [
     {
@@ -13,7 +13,7 @@
   "template": {
     "schema": "live-view-template.v1",
     "id": "standup-ready",
-    "title": "Standup ready",
+    "title": "站会准备",
     "revision": 1,
     "timeRange": "24h",
     "periodPolicy": {
@@ -23,7 +23,7 @@
     "blocks": [
       {
         "id": "standup-note",
-        "title": "Standup note",
+        "title": "站会笔记",
         "kind": "markdown.v1",
         "width": 12,
         "order": 0,
@@ -35,7 +35,7 @@
       },
       {
         "id": "progress",
-        "title": "What I worked on",
+        "title": "我做了什么",
         "kind": "list.v1",
         "width": 6,
         "order": 1,
@@ -47,7 +47,7 @@
       },
       {
         "id": "today",
-        "title": "What is next",
+        "title": "接下来做什么",
         "kind": "list.v1",
         "width": 6,
         "order": 2,
@@ -59,7 +59,7 @@
       },
       {
         "id": "blockers",
-        "title": "Blockers",
+        "title": "阻塞问题",
         "kind": "list.v1",
         "width": 6,
         "order": 3,
@@ -71,7 +71,7 @@
       },
       {
         "id": "supporting-context",
-        "title": "Supporting context",
+        "title": "支持性背景",
         "kind": "timeline.v1",
         "width": 6,
         "order": 4,

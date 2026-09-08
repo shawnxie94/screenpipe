@@ -1,8 +1,8 @@
 {
   "schema": "live-view-kit.v1",
   "id": "commitments",
-  "title": "Commitments",
-  "description": "One living inbox for promises, requests, waiting, corrections, and follow-through.",
+  "title": "待办承诺",
+  "description": "用一个持续更新的收件箱管理承诺、请求、等待事项、修正事项和后续跟进。",
   "version": 1,
   "pipes": [
     {
@@ -13,7 +13,7 @@
   "template": {
     "schema": "live-view-template.v1",
     "id": "commitments",
-    "title": "Commitments",
+    "title": "待办承诺",
     "revision": 1,
     "timeRange": "7d",
     "periodPolicy": {
@@ -23,7 +23,7 @@
     "blocks": [
       {
         "id": "open-commitments",
-        "title": "Needs attention",
+        "title": "需要关注",
         "kind": "list.v1",
         "width": 12,
         "order": 0,
@@ -35,7 +35,7 @@
       },
       {
         "id": "due-now",
-        "title": "Due now",
+        "title": "现在到期",
         "kind": "metric.v1",
         "width": 3,
         "order": 1,
@@ -47,7 +47,7 @@
       },
       {
         "id": "waiting-on",
-        "title": "Waiting",
+        "title": "等待中",
         "kind": "metric.v1",
         "width": 3,
         "order": 2,
@@ -59,7 +59,7 @@
       },
       {
         "id": "needs-review",
-        "title": "Needs review",
+        "title": "需要审核",
         "kind": "metric.v1",
         "width": 3,
         "order": 3,
@@ -71,7 +71,7 @@
       },
       {
         "id": "material-changes",
-        "title": "What changed",
+        "title": "发生了什么变化",
         "kind": "timeline.v1",
         "width": 6,
         "order": 4,
@@ -83,7 +83,7 @@
       },
       {
         "id": "inbox-context",
-        "title": "What Screenpipe could verify",
+        "title": "Screenpipe 能验证什么",
         "kind": "markdown.v1",
         "width": 6,
         "order": 5,

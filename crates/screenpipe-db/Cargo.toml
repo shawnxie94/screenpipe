@@ -9,7 +9,10 @@ edition.workspace = true
 
 [dependencies]
 chrono = { workspace = true }
+hex = { workspace = true }
 image = { workspace = true }
+sha2 = { workspace = true }
+uuid = { workspace = true }
 sqlx = { workspace = true, features = [
   "chrono",
   "migrate",

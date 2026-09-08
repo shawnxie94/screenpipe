@@ -13,7 +13,7 @@ static DEF: IntegrationDef = IntegrationDef {
     name: "ntfy",
     icon: "ntfy",
     category: Category::Notification,
-    description: "Send push notifications via ntfy (self-hosted or ntfy.sh). POST plain text or JSON to the topic URL.",
+    description: "通过 ntfy（自托管或 ntfy.sh）发送推送通知。向主题 URL POST 纯文本或 JSON。",
     fields: &[FieldDef {
         key: "topic_url",
         label: "Topic URL",

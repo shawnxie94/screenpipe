@@ -1,8 +1,8 @@
 {
   "schema": "live-view-kit.v1",
   "id": "process-map",
-  "title": "Process map",
-  "description": "Map one repeated workflow from trigger to handoffs, friction, controls, and a safe improvement.",
+  "title": "流程地图",
+  "description": "从触发条件到交接、摩擦点、控制措施和安全改进，梳理一个重复工作流。",
   "version": 1,
   "pipes": [
     {
@@ -13,7 +13,7 @@
   "template": {
     "schema": "live-view-template.v1",
     "id": "process-map",
-    "title": "Process map",
+    "title": "流程地图",
     "revision": 1,
     "timeRange": "7d",
     "periodPolicy": {
@@ -23,7 +23,7 @@
     "blocks": [
       {
         "id": "trigger-and-outcome",
-        "title": "Trigger and outcome",
+        "title": "触发条件与结果",
         "kind": "markdown.v1",
         "width": 6,
         "order": 0,
@@ -35,7 +35,7 @@
       },
       {
         "id": "observed-steps",
-        "title": "Observed steps",
+        "title": "观察到的步骤",
         "kind": "timeline.v1",
         "width": 6,
         "order": 1,
@@ -47,7 +47,7 @@
       },
       {
         "id": "handoffs",
-        "title": "People and handoffs",
+        "title": "人员与交接",
         "kind": "table.v1",
         "width": 6,
         "order": 2,
@@ -59,7 +59,7 @@
       },
       {
         "id": "bottlenecks",
-        "title": "Friction and bottlenecks",
+        "title": "摩擦点与瓶颈",
         "kind": "list.v1",
         "width": 6,
         "order": 3,
@@ -71,7 +71,7 @@
       },
       {
         "id": "controls-and-exceptions",
-        "title": "Controls and exceptions",
+        "title": "控制措施与例外",
         "kind": "table.v1",
         "width": 6,
         "order": 4,
@@ -83,7 +83,7 @@
       },
       {
         "id": "improvement-path",
-        "title": "Safe improvement path",
+        "title": "安全的改进路径",
         "kind": "markdown.v1",
         "width": 6,
         "order": 5,

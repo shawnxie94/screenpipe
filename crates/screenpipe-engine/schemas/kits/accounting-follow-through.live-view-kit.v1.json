@@ -1,8 +1,8 @@
 {
   "schema": "live-view-kit.v1",
   "id": "accounting-follow-through",
-  "title": "Accounting follow-through",
-  "description": "Review missing documents and payment follow-ups against authoritative connected sources.",
+  "title": "财务跟进",
+  "description": "根据已连接的权威来源检查缺失文件和付款跟进事项。",
   "version": 1,
   "pipes": [
     {
@@ -13,7 +13,7 @@
   "template": {
     "schema": "live-view-template.v1",
     "id": "accounting-follow-through",
-    "title": "Accounting follow-through",
+    "title": "财务跟进",
     "revision": 1,
     "timeRange": "30d",
     "periodPolicy": {
@@ -23,7 +23,7 @@
     "blocks": [
       {
         "id": "accounting-exceptions",
-        "title": "Needs attention",
+        "title": "需要关注",
         "kind": "list.v1",
         "width": 12,
         "order": 0,
@@ -35,7 +35,7 @@
       },
       {
         "id": "missing-count",
-        "title": "Unresolved gaps",
+        "title": "未解决的缺口",
         "kind": "metric.v1",
         "width": 3,
         "order": 1,
@@ -47,7 +47,7 @@
       },
       {
         "id": "coverage",
-        "title": "Document coverage",
+        "title": "文件覆盖率",
         "kind": "metric.v1",
         "width": 3,
         "order": 2,
@@ -59,7 +59,7 @@
       },
       {
         "id": "possible-matches",
-        "title": "Possible matches",
+        "title": "可能的匹配",
         "kind": "table.v1",
         "width": 6,
         "order": 3,
@@ -71,7 +71,7 @@
       },
       {
         "id": "accounting-changes",
-        "title": "Recently reconciled",
+        "title": "最近已对账",
         "kind": "timeline.v1",
         "width": 6,
         "order": 4,
@@ -83,7 +83,7 @@
       },
       {
         "id": "accounting-boundary",
-        "title": "Data boundary",
+        "title": "数据边界",
         "kind": "markdown.v1",
         "width": 6,
         "order": 5,

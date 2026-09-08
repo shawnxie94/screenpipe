@@ -1,8 +1,8 @@
 {
   "schema": "live-view-kit.v1",
   "id": "daily-memory",
-  "title": "Daily memory",
-  "description": "Remember what changed, recover loose ends, and know exactly where to resume tomorrow.",
+  "title": "每日记忆",
+  "description": "记住今天的变化，找回遗漏事项，并准确知道明天从哪里继续。",
   "version": 1,
   "pipes": [
     {
@@ -17,7 +17,7 @@
   "template": {
     "schema": "live-view-template.v1",
     "id": "daily-memory",
-    "title": "Daily memory",
+    "title": "每日记忆",
     "revision": 1,
     "timeRange": "today",
     "periodPolicy": {
@@ -27,7 +27,7 @@
     "blocks": [
       {
         "id": "today-in-brief",
-        "title": "Today in brief",
+        "title": "今日概览",
         "kind": "markdown.v1",
         "width": 12,
         "order": 0,
@@ -39,7 +39,7 @@
       },
       {
         "id": "accomplishments",
-        "title": "What I finished",
+        "title": "我完成的事项",
         "kind": "list.v1",
         "width": 6,
         "order": 1,
@@ -51,7 +51,7 @@
       },
       {
         "id": "key-moments",
-        "title": "Key moments",
+        "title": "关键时刻",
         "kind": "timeline.v1",
         "width": 6,
         "order": 2,
@@ -63,7 +63,7 @@
       },
       {
         "id": "unfinished-work",
-        "title": "Where I stopped",
+        "title": "我停在了哪里",
         "kind": "list.v1",
         "width": 6,
         "order": 3,
@@ -75,7 +75,7 @@
       },
       {
         "id": "loose-ends",
-        "title": "Loose ends I may have missed",
+        "title": "可能遗漏的事项",
         "kind": "list.v1",
         "width": 6,
         "order": 4,
@@ -87,7 +87,7 @@
       },
       {
         "id": "resume-here",
-        "title": "Start here tomorrow",
+        "title": "明天从这里开始",
         "kind": "markdown.v1",
         "width": 12,
         "order": 5,

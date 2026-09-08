@@ -1,8 +1,8 @@
 {
   "schema": "live-view-kit.v1",
   "id": "meeting-follow-through",
-  "title": "Meeting follow-through",
-  "description": "Turn your latest meeting into decisions, owned actions, open loops, and a clear next step.",
+  "title": "会议跟进",
+  "description": "将最近的会议整理为决策、负责人行动项、待解决事项和明确的下一步。",
   "version": 1,
   "pipes": [
     {
@@ -17,7 +17,7 @@
   "template": {
     "schema": "live-view-template.v1",
     "id": "meeting-follow-through",
-    "title": "Meeting follow-through",
+    "title": "会议跟进",
     "revision": 1,
     "timeRange": "24h",
     "periodPolicy": {
@@ -27,7 +27,7 @@
     "blocks": [
       {
         "id": "latest-meeting",
-        "title": "Latest meeting",
+        "title": "最近的会议",
         "kind": "markdown.v1",
         "width": 12,
         "order": 0,
@@ -39,7 +39,7 @@
       },
       {
         "id": "decisions",
-        "title": "Decisions",
+        "title": "决策",
         "kind": "list.v1",
         "width": 6,
         "order": 1,
@@ -51,7 +51,7 @@
       },
       {
         "id": "action-items",
-        "title": "Action items",
+        "title": "行动项",
         "kind": "list.v1",
         "width": 6,
         "order": 2,
@@ -63,7 +63,7 @@
       },
       {
         "id": "people-and-context",
-        "title": "People and context",
+        "title": "人员与背景",
         "kind": "table.v1",
         "width": 6,
         "order": 3,
@@ -75,7 +75,7 @@
       },
       {
         "id": "open-loops",
-        "title": "Open loops",
+        "title": "待解决事项",
         "kind": "list.v1",
         "width": 6,
         "order": 4,
@@ -87,7 +87,7 @@
       },
       {
         "id": "next-step",
-        "title": "What to do next",
+        "title": "下一步做什么",
         "kind": "markdown.v1",
         "width": 12,
         "order": 5,

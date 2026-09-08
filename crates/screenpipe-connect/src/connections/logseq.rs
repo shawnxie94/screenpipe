@@ -13,7 +13,7 @@ static DEF: IntegrationDef = IntegrationDef {
     name: "Logseq",
     icon: "logseq",
     category: Category::Productivity,
-    description: "Write to Logseq graphs. Provide the local graph directory path. The AI will write markdown files to the journals/ and pages/ directories.",
+    description: "写入 Logseq 图谱。提供本地图谱目录路径，AI 会将 Markdown 文件写入 journals/ 和 pages/ 目录。",
     fields: &[FieldDef {
         key: "graph_path",
         label: "Graph Path",

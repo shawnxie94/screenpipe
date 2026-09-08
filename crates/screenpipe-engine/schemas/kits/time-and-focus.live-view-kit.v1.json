@@ -1,8 +1,8 @@
 {
   "schema": "live-view-kit.v1",
   "id": "time-and-focus",
-  "title": "Time & focus",
-  "description": "See active time, focus, app usage, and the shape of your day.",
+  "title": "时间与专注",
+  "description": "查看活跃时长、专注程度、应用使用情况以及一天的时间分布。",
   "version": 1,
   "pipes": [
     {
@@ -13,7 +13,7 @@
   "template": {
     "schema": "live-view-template.v1",
     "id": "time-and-focus",
-    "title": "Time & focus",
+    "title": "时间与专注",
     "revision": 1,
     "timeRange": "today",
     "periodPolicy": {
@@ -23,7 +23,7 @@
     "blocks": [
       {
         "id": "active-time",
-        "title": "Active time",
+        "title": "活跃时长",
         "kind": "metric.v1",
         "width": 3,
         "order": 0,
@@ -35,7 +35,7 @@
       },
       {
         "id": "focus-score",
-        "title": "Focus score",
+        "title": "专注评分",
         "kind": "metric.v1",
         "width": 3,
         "order": 1,
@@ -47,7 +47,7 @@
       },
       {
         "id": "time-by-application",
-        "title": "Time by application",
+        "title": "按应用统计时间",
         "kind": "bar-chart.v1",
         "width": 6,
         "order": 2,
@@ -59,7 +59,7 @@
       },
       {
         "id": "focus-over-time",
-        "title": "Focus over time",
+        "title": "专注度随时间变化",
         "kind": "line-chart.v1",
         "width": 6,
         "order": 3,
@@ -71,7 +71,7 @@
       },
       {
         "id": "time-by-project",
-        "title": "Time by project",
+        "title": "按项目统计时间",
         "kind": "bar-chart.v1",
         "width": 6,
         "order": 4,
@@ -83,7 +83,7 @@
       },
       {
         "id": "workday-timeline",
-        "title": "Activity timeline",
+        "title": "活动时间线",
         "kind": "timeline.v1",
         "width": 6,
         "order": 5,

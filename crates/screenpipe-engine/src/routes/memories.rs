@@ -369,6 +369,13 @@ pub(crate) async fn delete_memory_handler(
         )
     })?;
 
+    // Propagate to the brain source registry (user erase: derived bodies go,
+    // identity is tombstoned so the memory can never re-derive).
+    if let Some(brain) = crate::brain::shared() {
+        if let Err(e) = brain.deletion().delete_memory(id).await {
+            tracing::warn!("brain: memory deletion propagation failed: {}", e);
+        }
+    }
 
     Ok(JsonResponse(json!({"ok": true})))
 }

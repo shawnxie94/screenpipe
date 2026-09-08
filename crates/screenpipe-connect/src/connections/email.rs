@@ -10,10 +10,10 @@ use serde_json::{Map, Value};
 
 static DEF: IntegrationDef = IntegrationDef {
     id: "email",
-    name: "Email (SMTP)",
+    name: "电子邮件 (SMTP)",
     icon: "email",
     category: Category::Notification,
-    description: "Send emails via SMTP. Use the stored SMTP credentials to send emails.",
+    description: "通过 SMTP 发送电子邮件。使用已保存的 SMTP 凭据发送邮件。",
     fields: &[
         FieldDef {
             key: "smtp_host",
