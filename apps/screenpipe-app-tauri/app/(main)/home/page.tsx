@@ -61,7 +61,7 @@ import { usePlatform } from "@/lib/hooks/use-platform";
 import { useIsFullscreen } from "@/lib/hooks/use-is-fullscreen";
 import { FeedbackSection } from "@/components/settings/feedback-section";
 import { PipeStoreView } from "@/components/pipe-store";
-import { BrainSection } from "@/components/settings/brain-section";
+import { KnowledgeHub } from "@/components/brain/knowledge-hub";
 import { ConnectionsSection } from "@/components/settings/connections-section";
 import { MeetingNotesSection } from "@/components/meeting-notes";
 import { StandaloneChat } from "@/components/standalone-chat";
@@ -1008,7 +1008,7 @@ function HomeContent() {
           />
         );
       case "brain":
-        return <BrainSection />;
+        return <KnowledgeHub />;
       case "pipes":
         return <PipeStoreView />;
       case "connections":
