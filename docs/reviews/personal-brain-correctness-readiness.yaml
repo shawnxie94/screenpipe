@@ -1,0 +1,63 @@
+schema_version: 1
+id: review-personal-brain-correctness-implementation-to-verify
+feature_id: plan-personal-brain-correctness
+stage: implementation_to_verify
+status: blocked
+waiting_on: external
+next_action: >-
+  在不修改冻结分母的前提下准备真实模型/Runtime、飞书与腾讯会议账号和样本，
+  执行真实工作流、冻结质量集、性能/SLA 与审核负担观察，再执行 45 项 F11 矩阵；具备证据后逐项更新状态。
+iteration: 1
+source_artifacts:
+  - name: execution-plan
+    uri: docs/plans/personal-brain-correctness-execution-plan.md
+    sha256: 1930a41d283ea4ae1d8a1ec613bd73519ade5830c8076b834fb9f327278c426e
+  - name: prd
+    uri: docs/prd/personal-brain-local-first.md
+    sha256: 8f23d662cd4ddeb274d61a20eb19eca5d69b0c737305778ddf3d9fa98d57df4d
+  - name: trd
+    uri: docs/trd/personal-brain-local-first.md
+    sha256: 04444417f4ebefd13d54165dc7f59b7852ef72bb5579b86c112556b16264c3f4
+traceability:
+  - acceptance_id: AC-R13-01..05
+    evidence: docs/reviews/personal-brain-correctness-acceptance.md
+  - acceptance_id: AC-R9-01..04
+    evidence: docs/reviews/evidence/personal-brain-correctness/local-verification-2026-09-08.md
+  - acceptance_id: AC-EVAL-01..07
+    evidence: docs/reviews/personal-brain-correctness-acceptance.md
+decisions:
+  - id: DEC-VERIFY-001
+    decision: >-
+      隔离测试通过只作为实现证据；除非完整满足 PRD 阈值和真实工作流，不将 AC 标为 passed。
+  - id: DEC-VERIFY-002
+    decision: >-
+      继续保持 implementation.status=in_progress 与 product_acceptance=not_run，避免把旧报告或局部测试继承为当前通过。
+assumptions:
+  - 真实验收使用用户明确选定的 Preset/Runtime，并记录实际绑定身份，不写入密钥。
+  - Office 真实内容只留在用户控制的本地评测目录，不进入仓库或报告正文。
+evidence:
+  - id: EV-LOCAL-2026-09-08
+    path: docs/reviews/evidence/personal-brain-correctness/local-verification-2026-09-08.md
+    status: passed
+    meaning: 隔离 Rust/TypeScript/MCP 契约与工具检查通过；不等同于产品45项通过。
+  - id: EV-F11-MATRIX-2026-09-08
+    path: docs/reviews/personal-brain-correctness-acceptance.md
+    status: blocked
+    meaning: 45 项已逐项列出，当前均为 unverified，保留完整缺口。
+findings:
+  - id: DR-VERIFY-001
+    severity: blocker
+    status: blocked
+    title: 真实工作流与冻结质量集尚未执行
+    detail: >-
+      真实模型/Runtime、飞书/腾讯会议样本、10会话/30–50查询保留集、性能/SLA
+      和审核负担观察尚未在当前批次运行；桌面入口/标签页 smoke 已单独通过，但不覆盖这些阈值。
+    next_action: 按 F11 矩阵冻结输入并运行完整验收。
+  - id: DR-VERIFY-002
+    severity: warning
+    status: resolved
+    title: Tauri native build/test 与桌面 smoke 已完成
+    detail: >-
+      `bun run build:tauri:e2e` 构建通过；`local-brain-entry-split.spec.ts` 的两项
+      WebDriver smoke 通过。该证据仅覆盖入口/标签页拆分，不覆盖完整45项产品验收。
+    next_action: 无；继续等待真实模型、办公账号、冻结质量集与性能/审核观察证据。

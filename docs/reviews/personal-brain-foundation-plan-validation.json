@@ -1,0 +1,320 @@
+{
+  "id": "validation-personal-brain-foundation-plan-2026-09-08",
+  "stage": "planning_structure_only",
+  "status": "passed",
+  "checked_at": "2026-09-08",
+  "reviewed_head": "0a83343ac7e75cc67effa3dae4430bcb4dd825cf",
+  "plan_id": "plan-personal-brain-correctness",
+  "scope_revision": 2,
+  "source_plan_sha256": "f8df5eaf0475c4b0ebcb0e0c52ea2c0dd9e07359f5f623345ddb00f44079e14e",
+  "source_hash": "b65ab4381055f7e0d71af6761483909b7ca3f865f3bcd17b518bdf42ff989f0a",
+  "artifacts": [
+    {
+      "uri": "docs/prd/personal-brain-local-first.md",
+      "sha256": "8f23d662cd4ddeb274d61a20eb19eca5d69b0c737305778ddf3d9fa98d57df4d"
+    },
+    {
+      "uri": "docs/trd/personal-brain-local-first.md",
+      "sha256": "04444417f4ebefd13d54165dc7f59b7852ef72bb5579b86c112556b16264c3f4"
+    },
+    {
+      "uri": "docs/plans/personal-brain-correctness-execution-plan.md",
+      "sha256": "f8df5eaf0475c4b0ebcb0e0c52ea2c0dd9e07359f5f623345ddb00f44079e14e"
+    },
+    {
+      "uri": "docs/roadmap.md",
+      "sha256": "da94d143d83a94e8cbe0c16a4d2ad34cdb8cd170dffa6ad1efa87d13ffff8a9b"
+    }
+  ],
+  "node_count": 14,
+  "acceptance_count": 45,
+  "execution_sequence": [
+    "F01",
+    "F02",
+    "F12",
+    "F03",
+    "F09",
+    "F04",
+    "F13",
+    "F05",
+    "F06",
+    "F07",
+    "F14",
+    "F08",
+    "F10",
+    "F11"
+  ],
+  "maximum_dependency_depth": 10,
+  "acceptance_mapping": {
+    "AC-R1-01": [
+      "F04",
+      "F08",
+      "F11"
+    ],
+    "AC-R1-02": [
+      "F02",
+      "F04",
+      "F13",
+      "F11"
+    ],
+    "AC-R1-03": [
+      "F02",
+      "F04",
+      "F11"
+    ],
+    "AC-R1-04": [
+      "F03",
+      "F04",
+      "F14",
+      "F11"
+    ],
+    "AC-R2-01": [
+      "F04",
+      "F08",
+      "F11"
+    ],
+    "AC-R2-02": [
+      "F05",
+      "F10",
+      "F11"
+    ],
+    "AC-R2-03": [
+      "F02",
+      "F05",
+      "F10",
+      "F11"
+    ],
+    "AC-R3-01": [
+      "F06",
+      "F11"
+    ],
+    "AC-R3-02": [
+      "F02",
+      "F06",
+      "F11"
+    ],
+    "AC-R3-03": [
+      "F06",
+      "F11"
+    ],
+    "AC-R4-01": [
+      "F02",
+      "F06",
+      "F11"
+    ],
+    "AC-R5-01": [
+      "F06",
+      "F10",
+      "F11"
+    ],
+    "AC-R5-02": [
+      "F06",
+      "F11"
+    ],
+    "AC-R5-03": [
+      "F02",
+      "F05",
+      "F06",
+      "F11"
+    ],
+    "AC-R6-01": [
+      "F02",
+      "F07",
+      "F11"
+    ],
+    "AC-R6-02": [
+      "F02",
+      "F03",
+      "F04",
+      "F11"
+    ],
+    "AC-R6-03": [
+      "F02",
+      "F11"
+    ],
+    "AC-R6-04": [
+      "F09",
+      "F07",
+      "F11"
+    ],
+    "AC-R7-01": [
+      "F05",
+      "F06",
+      "F10",
+      "F11"
+    ],
+    "AC-R7-02": [
+      "F02",
+      "F05",
+      "F10",
+      "F11"
+    ],
+    "AC-R8-01": [
+      "F09",
+      "F04",
+      "F13",
+      "F11"
+    ],
+    "AC-R8-02": [
+      "F09",
+      "F04",
+      "F13",
+      "F11"
+    ],
+    "AC-R8-03": [
+      "F03",
+      "F04",
+      "F13",
+      "F10",
+      "F11"
+    ],
+    "AC-R9-01": [
+      "F07",
+      "F08",
+      "F11"
+    ],
+    "AC-R9-02": [
+      "F02",
+      "F07",
+      "F08",
+      "F11"
+    ],
+    "AC-R9-03": [
+      "F02",
+      "F04",
+      "F08",
+      "F11"
+    ],
+    "AC-R9-04": [
+      "F07",
+      "F14",
+      "F10",
+      "F11"
+    ],
+    "AC-R11-01": [
+      "F10",
+      "F11"
+    ],
+    "AC-R11-02": [
+      "F10",
+      "F11"
+    ],
+    "AC-R11-03": [
+      "F10",
+      "F11"
+    ],
+    "AC-R12-01": [
+      "F05",
+      "F08",
+      "F10",
+      "F11"
+    ],
+    "AC-R12-02": [
+      "F06",
+      "F10",
+      "F11"
+    ],
+    "AC-R12-03": [
+      "F12",
+      "F13",
+      "F14",
+      "F10",
+      "F11"
+    ],
+    "AC-R13-01": [
+      "F12",
+      "F07",
+      "F14",
+      "F10",
+      "F11"
+    ],
+    "AC-R13-02": [
+      "F12",
+      "F13",
+      "F07",
+      "F14",
+      "F10",
+      "F11"
+    ],
+    "AC-R13-03": [
+      "F09",
+      "F14",
+      "F11"
+    ],
+    "AC-R13-04": [
+      "F13",
+      "F14",
+      "F11"
+    ],
+    "AC-R13-05": [
+      "F02",
+      "F12",
+      "F09",
+      "F13",
+      "F14",
+      "F10",
+      "F11"
+    ],
+    "AC-EVAL-01": [
+      "F11"
+    ],
+    "AC-EVAL-02": [
+      "F04",
+      "F08",
+      "F11"
+    ],
+    "AC-EVAL-03": [
+      "F06",
+      "F11"
+    ],
+    "AC-EVAL-04": [
+      "F11"
+    ],
+    "AC-EVAL-05": [
+      "F10",
+      "F11"
+    ],
+    "AC-EVAL-06": [
+      "F09",
+      "F11"
+    ],
+    "AC-EVAL-07": [
+      "F08",
+      "F11"
+    ]
+  },
+  "checks": {
+    "45_acceptance_ids": true,
+    "14_unique_nodes": true,
+    "node_acceptance_ids_valid": true,
+    "all_ac_have_implementation_owner": true,
+    "trd_verification_covers_45": true,
+    "source_artifact_hashes_match": true,
+    "source_hash_consistent": true,
+    "no_self_hash_in_frontmatter": true,
+    "base_identity_preserved": true,
+    "reviewed_head_matches": true,
+    "dag_acyclic_and_sequence_valid": true,
+    "diagram_matches_dependencies": true,
+    "node_contracts_complete": true,
+    "shared_writes_serial": true,
+    "local_document_links_resolve": true,
+    "historical_reports_unchanged": true,
+    "diff_whitespace_clean": true,
+    "approved_and_implementation_authorized": true
+  },
+  "unresolved_links": [],
+  "verification_method": "Python3/PyYAML frontmatter and node contract parsing; set/DAG/link/SHA-256 checks; git diff --check. No product tests or live-data access.",
+  "implementation_status": "in_progress",
+  "plan_to_build": "required_per_batch",
+  "historical_review": "docs/reviews/personal-brain-implementation-readiness.yaml",
+  "historical_review_note": "Immutable review of 37 AC at 5fcacf6b1; new R12/R13 not retroactively assessed. Previous artifact validation retains its historical hashes.",
+  "implementation_progress": {
+    "completed_units": [
+      "F01"
+    ],
+    "current_batch": "B01",
+    "review_mode": "final_batch_review",
+    "product_acceptance": "not_run"
+  }
+}

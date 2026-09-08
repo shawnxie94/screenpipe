@@ -3,7 +3,7 @@ id: trd-personal-brain-local-first
 type: trd
 status: approved
 created_at: 2026-09-07
-updated_at: 2026-09-07
+updated_at: 2026-09-08
 sources:
   - docs/prd/personal-brain-local-first.md
   - docs/research/personal-brain-local-first-preflight.md
@@ -11,7 +11,9 @@ sources:
   - "2026-09-07：用户指定飞书/腾讯会议与连接页，跳过规划前验证，直接生成实施计划"
   - "2026-09-07：中文品牌知迹及前端品牌替换纳入首版"
   - "源码基线 HEAD 58617738c05f631e3d96b81eb51edf08f0818471，加当前工作区；关键文件指纹见预研记录"
+  - "2026-09-08：用户确认信息架构与统一任务基础改造；现行源码核对HEAD 0a83343ac7e75cc67effa3dae4430bcb4dd825cf"
 related:
+  - docs/plans/personal-brain-correctness-execution-plan.md
   - docs/plans/personal-brain-local-first-execution-plan.md
   - docs/prd/personal-brain-local-first.md
   - docs/reviews/personal-brain-local-first-trd-readiness.yaml
@@ -24,13 +26,13 @@ related:
 
 # TRD：知迹 · Local Brain 首版
 
-> 按用户最新范围生成实施计划：首版只接入飞书和腾讯会议，操作统一放「连接」；WPS 后置。用户明确取消规划前接入/模型验证，旧预研缺口转入实施任务验收。本设计已收口用于规划，新增接口、表和功能尚未实现；approved 不表示验证通过。原评审保留历史快照，本轮不运行新的交接门禁。
+> 本次迭代设计：按2026-09-08决定，将工作单元在知识库展示、聊天提问、系统活动和统一任务基础能力纳入[基础改造与修复计划](../plans/personal-brain-correctness-execution-plan.md)。本文描述目标契约；现有模块部分实现但尚不符合完整要求，approved不表示验收通过。原U计划、预研和基于5fcacf6b1的实施评审保持历史快照，最新范围按PRD R12/R13执行。
 
 ## 1. 技术目标与边界
 
 从真实开发工作的需求分析、调研、业务沟通中形成带证据的 Work Unit，再编译为可自审、修订、删除失效的 SOP / DecisionRule / ExceptionPlaybook。SQLite 为唯一内容与状态真源；桌面应用负责运行和用户操作；REST 与通用 MCP 共用查询与生命周期规则。
 
-本期覆盖 PRD R1–R9、R11 的首版要求和 AC-EVAL-01…07，共 37 项验收。AC-R4-02、R10 及其四项历史验收后置；仅增加飞书/腾讯会议两个只读办公入口，不增加 WPS、国内 Runtime、双向办公操作、向量库、外部队列或全新 Agent 框架。首轮模型固定 `shawnhub-copy / deepseek-v4-flash-0731`，费用与每日调用总量不设硬上限。
+本期覆盖 PRD R1–R9、R11–R13的首版要求和AC-EVAL-01…07，共45项验收。AC-R4-02、R10 及其四项历史验收后置；仅增加飞书/腾讯会议两个只读办公入口，不增加 WPS、国内 Runtime、双向办公操作、向量库、外部队列或全新 Agent 框架。复用用户选中的Preset和已有Runtime，运行时冻结绑定；费用与每日调用总量不设硬上限。
 
 历史保全迁移与 AI 重算是两件事：迁移保留所有仍有效的历史条目和 coverage；新模型任务默认只处理启用后的新增证据，历史由用户单独启动近 7 天回填。
 
@@ -50,9 +52,11 @@ related:
 | Tauri `brain_views.rs` | 现有 canvas / slot / Pipe 展示状态 | 可复用 UI 基础，不能作为知识版本数据库或另建平行编译器 |
 | `packages/screenpipe-mcp` | 官方 MCP SDK 的 stdio 服务，通过认证 REST 读写，不直接读库 | 新工具共用 REST 数据形状、错误与最终引用校验 |
 
-上表来自当前文件核对；CodeGraph 用于定位，但索引含旧路径，不能替代现行源码。此次工作区另有大量前端汉化改动；本轮规划 HEAD 为 `a255ffdf2d7a36c12a5a471eb4abe556ba14be03`，关键文件指纹在实施计划记录。旧预研的 HEAD 只代表当时证据。
+上表保留首轮设计的组件依据；旧预研及原U计划基线仅代表当时证据。2026-09-08本次修订核对HEAD为`0a83343ac7e75cc67effa3dae4430bcb4dd825cf`，工作区修订前干净。CodeGraph用于定位后核对现行源码，未重新运行旧实现审查的测试。
 
 新增影响面已直接核对：主页面 `app/(main)/home/page.tsx` 将「连接」作为独立 section，复用 `components/settings/connections-section.tsx`；`lib/constants/connections.ts` 维护分类。Engine `connections_api.rs` 挂载连接列表与通用代理；`screenpipe-connect/src/connections/mod.rs` 的存量凭据保存存在无 SecretStore 时的文件回退。新办公入口必须避开通用任意方法代理与凭据明文回退，不把只读接入变成通用代理。`sync_scheduler.rs` 是远程文件同步，不能直接当办公内容增量任务。
+
+本次已核对的差距：`screenpipe-core/src/pipes/mod.rs`已有PipeConfig、PipeStore和定时/事件/手动执行；`activity_history.rs`仍自带定时生成，`brain_runtime.rs`有发现循环、`brain/worker.rs`有租约队列，`office_runtime.rs`另有自动同步定时器。`knowledge-hub.tsx`仍为知识审核/提问/运行状态/画布，未展示工作单元；系统活动只识别activity-history/live-view内部会话，Brain前缀被过滤。Pi的`brain-tools.ts`桥接已提交，但`trimAnswer`丢弃answer/claim等身份，不能据其存在认定聊天反馈闭环已完成。
 
 ### 2.2 复用评估
 
@@ -61,45 +65,45 @@ related:
 | SQLite / SQLx / 既有写协调 | extend | 项目已使用，无额外服务与同步真源；复用迁移、事务和锁。SQLite 上游成熟、公共领域；Rust 依赖继续使用仓库锁文件。锁竞争、索引大小和迁移恢复由本项目验证 |
 | 本地检索：SQLite FTS5 | extend | 离线、部署成本低，无模型费用；索引可重建。新增中文 token 投影，保留原文与证据身份。暂不引入搜索服务或向量组件，避免首版新增网络出口与运维 |
 | Pi / 已有 AI Preset / 临时会话机制 | extend | 沿用已安装依赖与模型配置界面；需要版本固定、取消、密钥引用和禁用工具/扩展。依赖升级和许可证按锁文件审查，不复制独立 Runtime |
-| Tokio / 持久任务表 | extend | 现有 async 生命周期足以承载单用户串行任务；重试、租约和事务进度写入现有数据库。托管队列和 Temporal 类工作流服务在本规模不适用，不引入服务成本与锁定 |
+| Pipes / Brain持久任务 / Tokio | consolidate + extend | 复用Pipes定义/触发和Brain租约/幂等/恢复，统一任务、运行、事件和资源接纳；保留类型化业务处理器。继续同库同writer与Tauri生命周期，不引入外部队列或新服务；主要代价是存量迁移、历史兼容和取消/重试语义回归 |
 | 现有 semantic parser / AX、OCR、音频 | extend | 无新增办公账号权限；只适配可见证据。客户端版本变化需维护样本；不承诺整份云文档或历史消息读取 |
 | 官方 lark-cli / tmeet | reuse + extend | 复用 CLI 的认证及结构化读取能力，仅加本项目所需的参数/结果与生命周期适配；首轮兼容基线 lark-cli 1.0.65、tmeet 1.0.16（均 MIT，证据见办公调研）。安装/版本确认并入实现，不在本轮调用；不加载全套办公 Skill/MCP 给抽取模型 |
 | 现有连接 UI / connections_api / ConnectionManager | extend | 复用主侧栏入口、列表、刷新事件及 localFetch；新增办公专用状态和范围接口。新凭据只存 Keychain 引用，不沿用无 SecretStore 的正文文件回退；不重建通用连接器框架 |
 | serde / schemars、MCP SDK | reuse | 使用仓库现有结构校验与协议工具；SDK 当前声明 `^1.27.1`，实施以锁文件解析版本固定。无需另造协议服务；保留现有构建与测试入口 |
 | `screenpipe-vault::crypto` / OS Keychain | extend | 历史加密复用现有小载荷加密；模型密钥采用 Keychain 引用。不能把 store 曾加密误写成数据库全盘加密。SQLCipher 会改变整个采集库兼容和部署，不作为本期迁库附带改造 |
 
-均为既有组件的复用或扩展；产品类型、依赖关系和状态是本次 Local Brain 功能本身。没有另行自研通用基础设施的决定。新增依赖如被证明必要，需在 TRD 记录锁定版本、许可证、维护责任和替代方案后再进入计划。
+均为既有组件的复用或扩展；产品类型、依赖关系和状态是本次 Local Brain 功能本身。本次明确整合仓库内任务基础能力，不建设独立通用工作流产品。新增依赖如被证明必要，需在 TRD 记录锁定版本、许可证、维护责任和替代方案后再进入计划。
 
 ## 3. 架构、所有权与调用流程
 
 ```mermaid
 flowchart LR
-  Capture[既有 AX / OCR / 音频采集] --> DB[DatabaseManager / SQLite]
-  Ledger[final activity ledger] --> DB
-  UI[桌面审核 / Ask / 连接] --> API[Engine BrainService / REST]
-  UI --> OfficeAPI[既有 connections_api 的办公入口]
-  OfficeAPI --> Office[OfficeService / 持久导入任务]
-  Office --> CLI[受限 lark-cli / tmeet 读取]
-  Office --> DB
-  MCP[通用 MCP] --> API
-  API --> DB
-  Worker[BrainWorker 串行调度] --> API
-  Desktop[Tauri 生命周期] --> Worker
-  Worker --> Executor[严格 Preset / 临时 Pi completion]
-  Executor --> Model[用户指定模型]
-  Worker --> Registry[类型 schema / prompt / validator / renderer]
+  Capture[既有采集 / final ledger] --> DB[DatabaseManager / SQLite]
+  Library[知识库 / 聊天] --> Brain[BrainService / 问答与内容]
+  MCP[外部 MCP] --> Brain
+  Auto[自动化] --> Tasks[统一 TaskService / 调度与运行]
+  Conn[连接配置] --> Tasks
+  Desktop[Tauri 生命周期] --> Tasks
+  Tasks --> Handlers[抽取 / 编译 / 活动总结 / 办公 / 用户Pipes]
+  Handlers --> Brain
+  Handlers --> Exec[共享资源接纳 / 模型或CLI执行器]
+  Tasks --> DB
+  Brain --> DB
+  Tasks --> Events[运行事件及受管消息]
+  Events --> Activity[系统活动 / 只读聊天渲染]
 ```
 
-- **Engine / BrainService**：持有数据库服务、来源解析、读屏障、检索、状态转换与事务提交；REST 是外部入口。新增 `brain` 模块，不把模型调用塞进采集 actor。
-- **BrainWorker**：在桌面应用启动后由 Tauri 创建、只存在一个实例；持有 Engine 提供的服务句柄和 Tauri 注入的 `BrainModelExecutor`。模块通过 trait/消息接口依赖，不让 engine 引用 Tauri。数据库是任务真源；内存通知只是唤醒提示，丢失后轮询恢复。
-- **Tauri / executor**：唯一模型凭据解析者；沿用 Pi 管理器及 AppHandle。管理进程、临时目录、取消和应用关闭，不由 React 页面保活。关窗口继续，退出时取消在途调用、保存暂停原因；仅 CLI engine 运行时显示 `desktop_unavailable`。
-- **UI**：只发用户意图、展示服务返回状态，不直接更新版本/当前发布指针；生成 TS 绑定按仓库流程执行。现有 memory CRUD 和人工文档保持原契约。
-- **OfficeService / OfficeExecutor**：Engine 管连接范围、账号命名空间、同步任务、来源入库与删除屏障；Tauri 注入受控 CLI 执行/登录能力并拥有进程生命周期。`screenpipe-connect` 放两个供应商适配及规范化类型，不自行创建 SQLite writer；登录及任何远程 I/O 都不持数据库事务。
-- **内部工作接口**：`claim_job / heartbeat / load_evidence / commit_result / fail_job` 仅进程内服务调用，不暴露给普通 REST/MCP 客户端，避免外部伪造 Worker 结果。REST 不可传任意模型端点、shell 命令或模板路径。
+- **Engine / BrainService**：持有来源解析、内容读屏障、检索、状态转换与事务提交；既有Brain模块继续承接业务，不把模型调用塞进采集actor。
+- **TaskService**：整合任务目录、定时/事件/手动触发、持久运行和领取/恢复；Tauri启动唯一桌面调度所有者，数据库为真源，内存通知只负责唤醒。原BrainWorker可短期保留适配外观，但切换后不再拥有独立队列、预算和调度循环。
+- **模块依赖**：在既有crate中组织`screenpipe-core::tasks`公共类型/处理器trait、`screenpipe-db::db::tasks`同库存储、`screenpipe-engine::tasks`服务及注册。Pipes通过trait适配TaskStore，core不反向依赖engine；业务实现留在原brain/office/activity/Pipes模块，不新增crate或第二个SQLite writer。新模块路径为拟实施落点。
+- **Tauri / executor**：管理应用生命周期、Preset/Keychain解析、Pi/已有ACP与受限办公CLI、临时目录、进程取消与清理；通过trait注入Engine。关窗口继续，退出时收敛在途任务并持久记录；只有CLI engine时桌面处理器显示`desktop_unavailable`。
+- **UI**：知识库读内容，自动化发定义/运行意图，系统活动按run_id投影消息；不直接写发布指针或从模型消息猜运行状态。现有memory/画布和用户Pipes保持各自内容契约。
+- **OfficeService**：连接配置、账号、范围和游标仍由办公业务管理；公共任务只存配置引用和运行时快照。远程I/O不持数据库事务，connect适配器不自行创建writer。
+- **内部工作接口**：`claim_run / heartbeat / commit_result / fail_attempt / append_event`只用于进程内处理器；普通REST/MCP不能伪造执行完成、指定shell/模型端点或替换内置校验器。
 
-`POST /answer`：验证请求 → 建立短期 query job → 唤醒 Worker → 有界检索和普通 completion → 引用/版本二次核对 → 一次性返回。答案不流式输出，避免删除发生后仍先泄漏旧 token。请求端断开即发取消；客户端重试通过 idempotency key 关联同一仍有效请求。
+`POST /answer`与应用内聊天桥接调用同一BrainService：验证请求 → 建立有界交互运行上下文 → 本地检索和受限completion → 引用/版本二次核对 → 返回结构化结果。交互请求可共用运行/事件记录，但不创建自动化定义，也不在系统活动复制每轮普通聊天。答案不先流式输出未经验证的token；断开即取消，幂等键关联同一仍有效请求。外部MCP继续走认证REST，内部聊天无需绕经外部MCP。
 
-自动沉淀：发现 final 区间 → 解析稳定来源和当前修订 → 创建幂等 extract job → 调用模型 → 校验字段引用 → 同一事务保存 Work Unit 修订及进度 → 发起低优先级编译。任何失败均不推进“已成功覆盖”游标。
+自动沉淀：发现 final 区间 → 解析稳定来源和当前修订 → 创建幂等 extract job → 调用模型 → 校验字段引用 → 同一事务保存 Work Unit 修订及进度 → 通过同一TaskService发起低优先级编译。任何失败均不推进“已成功覆盖”游标。
 
 ## 4. 数据契约与稳定身份
 
@@ -131,7 +135,7 @@ flowchart LR
 | `brain_work_units` / `brain_work_unit_revisions` | 逻辑 UUID、有效修订指针、scope、input_hash、类型版本、body JSON、状态；`UNIQUE(work_unit_id,input_hash)`，仅一份当前有效修订 |
 | `brain_knowledge` / `brain_knowledge_versions` | 逻辑 UUID、type/version、scope_key、current_version_id；版本号唯一；候选输入 hash、审核/可用状态、正文、review_due_at、reviewer、原因 |
 | `brain_dependencies` | consumer kind/id/version/field_path → source_uid/revision，另记录 Work Unit/知识之间的直接边；消费者提交时完整登记传递来源，便于保守整版删除；索引 source_uid 与 consumer |
-| `brain_jobs` | kind、scope/input_hash、state、priority、attempt counters、not_before、deadline、lease owner/token/expiry、cursor、last_error_code；活跃同类输入唯一，终态历史限量保留且不含 prompt |
+| `task_definitions` / `task_runs` / `task_attempts` / `task_events` | 公共定义/配置引用、输入快照、run/root/parent身份、幂等键、调度所有权、租约/预算/状态、消息序号与产物引用；详见§4.4。既有brain_jobs/pipe执行历史按§9.1映射迁移，不长期双写 |
 | `brain_answers` / `brain_feedback` | answer_id、来源依赖、声明级引用、body（仅保存时落库）、TTL、版本定位、反馈类型/处理状态；删除时正文整体擦除、保留无内容处理记录 |
 | `brain_deletions` / `brain_cleanup_jobs` | delete_id、dataset、来源定位/时间范围、journal seq、阶段与失败项、受管出口 ID；不含被删内容。删除屏障与清理重试解耦 |
 | `brain_history_entries` / `brain_history_coverage` / `brain_migrations` | 原 ID / 稳定导入身份、编码后的原条目、范围、依赖范围、批次 hash、游标与校验结果；保全合法 entries 和 coverage |
@@ -146,6 +150,21 @@ flowchart LR
 - **WorkUnit.v1**：task、inputs、actions、decisions、exceptions、outputs、result、evidence_refs、confidence。每个事实字段为 `{value, evidence_refs[]}`；未知 result 为 `null`，列表可空。证据须在本次输入包中、修订当前有效，引用中的摘录须与原文位置相符。JSON 合法只证明形状，不证明事实支持。
 - **三种知识类型**：内部静态注册表分别提供 schema、中文 prompt、validator、renderer。SOP 为共同步骤/适用条件/异常分支；DecisionRule 为条件/判断/适用边界；ExceptionPlaybook 为触发/诊断/处理/未知结果。每个事实叶节点具引用，结构版本与抽取版本分离。
 - **SOP 门槛**：至少三个同流程、相互独立会话，有共同证据支持；自动候选按任务/应用/关键词产生可解释的 scope_key，人工可校正归组，改组需新修订。单次事件只可生成明确“暂定/单次观察”的规则或异常候选，不生成常规 SOP。分组不确定就保留 Work Unit，不补造共同流程。
+
+### 4.4 公共任务与运行契约
+
+| 对象 | 必需字段与约束 |
+|---|---|
+| TaskDefinition.v1 | `definition_id, kind, origin=builtin/user/connection, schema_version, config_revision, config_ref, trigger, enabled, resource_class, retry_policy, model_binding_policy`；内置定义在DB，用户pipe.md仍为用户配置正文真源，办公配置仍在连接表；公共目录只持引用/规范化投影，更新必须经原拥有方，禁止第二个可编辑副本 |
+| TaskRun.v1 | `run_id, definition_id?, definition_revision, root_run_id, parent_run_id?, trigger_key, input_hash, input_refs, config_snapshot, state, revision, priority, not_before, deadline, cursor, lease_owner/token/expiry, owner_generation, output_refs, error_code`；快照只含必要参数/身份和secret_ref，正文证据独立受管；活跃同类同输入/触发唯一 |
+| TaskAttempt.v1 | `attempt_id, run_id, attempt_no, started_at, finished_at, runtime_binding, model_calls_used, retry_reason, outcome`；调用数跨重启累计，提交前校验租约代次。无法确认外部写结果时为`outcome_unknown`，不伪装failed可安全重试 |
+| TaskEvent.v1 | `run_id, seq, attempt_id?, phase, event_type, timestamp, safe_metadata, payload_ref?, output_refs?`；`UNIQUE(run_id,seq)`，完成/进度事件与受管DB产物在同一事务，UI按序号补拉去重 |
+| 受管消息/产物 | 模型输入摘要、允许展示的prompt/messages/tool结果和最终产物引用以payload_ref登记来源依赖、有效性及保留规则；可能混合来源的正文整段清理。外部用户Pipes副作用记录回执/未知结果，不能声称与本地DB原子提交 |
+| scheduler ownership / legacy map | 按task kind保存`owner_generation, migration_state, checkpoint`；`legacy_namespace + legacy_id → definition_id/run_id`唯一，保留历史关联。旧记录缺精确来源时沿用保守时间范围依赖，不能直接导入为无依赖正文 |
+
+同一次业务运行的重试复用run_id，长回填用root run聚合有界子步骤；步骤可独立租约/断点，界面只列根运行，详情展开子步骤。新的人工重跑生成新run_id并关联`retry_of`，不擦去旧失败或取消历史；已删输入不可重跑。
+
+事件通知可复用现有Tauri事件/轮询，无需新消息服务。系统活动读task_events和当前task_runs进行可重建投影，聊天store只保存受管引用/缓存，不能成为第二套运行真源；旧聊天会话通过legacy映射继续读取。消息保留沿用可配置受管历史策略并有条数/体积上限，F12冻结具体值；不得以迁移为由截断既有合法运行历史。永久诊断仅含无正文元数据。
 
 ## 5. 知识审核、失效与纠错
 
@@ -184,29 +203,36 @@ flowchart LR
 | 接口（拟新增） | 关键输入 / 返回 |
 |---|---|
 | `POST /answer` | `{question, filters:{start_time?,end_time?,apps?,source_kinds?}, idempotency_key?}`；question ≤2000 字符，拒绝任意工具/端点参数 |
-| `/answer` 200 | `{answer_id, status: answered|partial|no_evidence|conflict|needs_confirmation, claims:[{claim_id,text,evidence_refs}], sources:[SourceRef], knowledge_versions, retrieval:{routes,coverage}, uncertainty, expires_at}`；无证据不写事实答案 |
+| `/answer` 200 | `{answer_id, status: answered|partial|no_evidence|conflict|needs_confirmation, claims:[{claim_id,text,evidence_refs,knowledge_version_ids}], sources:[SourceRef], knowledge_versions, retrieval:{routes,coverage}, uncertainty, expires_at}`；无证据不写事实答案 |
 | `POST /brain/answers/{id}/save` | expected source/publication epochs；重新验有效性后保存，过期或删除返回 409/410，不从客户端接受原答案正文 |
 | `GET /brain/sources/{id}` | 当前引用状态/可读文本/采集方式/媒体可用性；删除返回 410 且无旧正文，未知 ID 为 404 |
-| `GET /brain/knowledge`、`GET /brain/knowledge/{id}` | state/type/availability filters，keyset cursor、limit≤20；详情区分当前版/历史版与来源状态 |
+| `GET /brain/work-units`、`GET /brain/work-units/{id}` | 时间/app/project/validity过滤，keyset cursor、limit≤20；逻辑ID/当前修订/标题/范围/结果，详情含字段证据、原始活动、历史修订及相关知识版本；删除410且无正文 |
+| `GET /brain/knowledge`、`GET /brain/knowledge/{id}` | state/type/availability filters，keyset cursor、limit≤20；当前/历史版、来源状态及支持work_unit_id/revision/会话关系，均通过同一读屏障 |
 | `PATCH /brain/knowledge/{id}/versions/{v}` | 仅 candidate 可编辑；expected_revision 与 body；422 返回字段校验原因 |
 | `POST /brain/knowledge/{id}/versions/{v}/review` | `{action:publish|reject|pause|resume|deprecate|reconfirm,expected_revision,expected_current_version_id,reason?}`；事务转换，错误动作409 |
 | `POST /brain/feedback` | answer_id/claim_id/version_id 至少一项，kind、comment；返回 pending/located，必要时暂停目标版本 |
-| `GET /brain/status` / `GET /brain/jobs` | 启用/迁移/索引覆盖、各队列数、最老等待、暂停原因、指定模型身份、清理失败数；不含 prompt/key |
+| `GET /brain/status` / `GET /brain/jobs` | 兼容投影：Brain覆盖/迁移和TaskService中相关运行的队列/暂停/模型/清理状态；不再持独立运行状态，不含prompt/key |
 | `POST /brain/backfills` | 默认冻结 `[requested_at-7d,requested_at)`；可显式范围，返回 batch_id/range/count，count 未统计完成明确 estimating |
-| `POST /brain/jobs/{id}/control` | pause/resume/cancel/retry 与 expected_revision；人工 retry 新一轮最多3次、保留前轮原因，已删输入禁止重试 |
+| `POST /brain/jobs/{id}/control` | 兼容转发到统一run控制；旧job映射run_id，expected_revision和操作粒度不丢，人工retry保留原原因，已删输入禁止重试 |
 | `GET /brain/deletions/{id}` | blocked/cleaning/completed/failed，各受管出口待清理数、可重试项；无被删内容 |
+
+公共任务API复用本地认证，拟由`/tasks/definitions`列出目录及允许编辑字段，`PATCH /tasks/definitions/{id}`采用expected_revision；`POST /tasks/definitions/{id}/runs`手动启动并返回run_id；`GET /tasks/runs`与`/{id}`返回根运行/子步骤状态，`GET /tasks/runs/{id}/events?after_seq=`按序号有界读消息，`POST /tasks/runs/{id}/control`显式pause/resume/cancel/retry。连接来源定义在通用编辑接口返回`managed_by_connection`及跳转目标，不能旁路连接授权/范围校验。既有Pipes和Brain API委托该服务并保留旧ID/状态映射，不双写。
 
 其他错误统一 `{code,message,retryable,retry_after_ms?,request_id}`：400 请求不合法；401/403 沿用现有认证实现；404/410 如上；409 输入/状态冲突；422 schema/证据不合法；429 `busy`（排队到10秒，计失败）；503 desktop/model/index unavailable；504 总 deadline 超时。HTTP 200 no_evidence/conflict 属有理由拒答，和运行失败单独计量。
 
-MCP 添加 `answer`、`get_brain_source`，映射相同 REST schema/诊断，协议错误用 SDK 的 `isError` 加原 code；现有 memory 工具保持。审核/删除不从只读 Ask 工具隐式触发。MCP 的新调用必须反映当前状态，已返回第三方客户端的历史文本无法远程撤回。
+MCP 添加 `answer`、`get_brain_source`，映射相同 REST schema/诊断，协议错误用 SDK 的 `isError` 加原 code；现有 memory 工具保持。审核/删除不从只读问答工具隐式触发。MCP 的新调用必须反映当前状态，已返回第三方客户端的历史文本无法远程撤回。
 
 ## 7. 调度、模型绑定与资源边界
 
 ### 7.1 持久调度
 
-任务 `pending → running → succeeded | failed | paused | cancelled`；重试仍 pending 并记录原因，不能重置调用计数。租约 token 是每次领取的随机代次，过期 Worker 即使恢复也不能提交。租约 30s、心跳 5s、重启回收过期租约；同一个任务的成功产物与 cursor 在一个事务提交，重复完成依靠唯一约束返回已有产物。
+定义状态与运行状态分开：定义enabled/paused只决定未来触发；运行`queued → running → succeeded | failed | timed_out | cancelled`，可在步骤边界进入paused，resume返回queued。重试在同一run下新增attempt并记录not_before/原因，不重置预算；人工重跑使用retry_of。取消请求先进入cancelling，终止/回收与结果屏障落实后才cancelled；终止失败保留具名错误和清理重试，不显示已结束。配置/权限/模型不可用为paused并给出reason；外部写入结果未知为needs_attention，必须核对后显式处理。
 
-Local Brain 单并发，优先级 `answer > 新增 extract > backfill/compile`；后台一次只处理一个有界证据包。为避免编译永远饿死，每 5 个新增步骤后允许一个低优先级步骤，仅当没有等候 answer 且新增最老任务尚未接近 15min；实际 SLA 与积压如实记录。现有用户聊天/Pipe 会话不被强制停止；Pi 池不可用计入本任务排队/失败，不额外无限等待。
+租约30s、心跳5s，token和调度owner_generation每次领取/接管重新生成；过期执行者不能提交。成功产物、依赖、cursor、run状态及完成事件在同一DB事务提交；纯外部副作用只记录已确认回执或未知结果。办公每页的对象/索引/游标亦使用当前运行身份核验。睡眠/崩溃后先恢复删除屏障及租约，再接纳运行。
+
+统一资源接纳器覆盖聊天、Brain和用户Pipes的模型调用，初始模型调用总并发1（前台/后台共享），优先级`交互 > 新增extract > backfill/compile`；迁移前已开始的调用先完成或按原规则取消回收，再启用新接纳规则，不强制结束用户会话；之后所有新模型调用要获取同一资源许可。办公I/O初始每provider/account并发1、全局2，不占用AI许可，DB写入仍走既有协调。每5个新增步骤允许一个低优先级步骤，在无等待交互且新增未接近15min时执行；记录真实等待和积压。
+
+资源许可按模型调用租借而非跨整段Agent工具等待持有：聊天调用brain_answer前释放其模型许可，内部completion按同一请求链获取许可，防止聊天占满池后等待自己的子调用。总deadline覆盖检索/排队/模型/校验；嵌套工具调用不能重置时间与调用预算。用户Pipes既有权限/输出和fallback行为在迁移中保持，其策略显式登记；Brain遵守不静默换模型和最多3次调用，不能继承用户Pipe的宽松重试。
 
 | 参数 | 首轮保守默认 / 计时口径 |
 |---|---|
@@ -214,7 +240,7 @@ Local Brain 单并发，优先级 `answer > 新增 extract > backfill/compile`�
 | 后台单步骤 / 调用 | 单步骤总 120s；单调用最多 45s 且不得超过步骤剩余时间；取消和清理另预留最多 5s |
 | 证据包 | 最多 32 来源、24,000 Unicode 字符、估计输入≤12,000 tokens，取最先达到者；输出≤4,096 tokens，超限分页/拆步，不静默截掉结论支持证据 |
 | 后台读取 / 写批次 | 每次≤100 source/consumer，CPU 工作块≤50ms 后让出；写事务目标<100ms，不含 I/O 等待 |
-| 自动重试 | 只由 BrainWorker 管理：网络瞬态最多1次、非法结构回修最多1次，总模型调用≤3；退避1s且服从剩余deadline；鉴权/配置错误不重试 |
+| 自动重试 | 只由统一运行服务按Brain处理器策略管理：网络瞬态最多1次、非法结构回修最多1次，总模型调用≤3；退避1s且服从剩余deadline；鉴权/配置错误不重试 |
 | 取消 | 标记 cancellation token，发送 Pi abort，最多2s确认，否则 kill 并 wait/reap；终止不了则暂停新模型调用，清理失败可见 |
 | 预算 | `daily_calls_limit=null, daily_cost_limit=null` 为首轮配置；仍记调用量、tokens、耗时，不能据虚构费用阈值暂停 |
 
@@ -222,21 +248,17 @@ Local Brain 单并发，优先级 `answer > 新增 extract > backfill/compile`�
 
 首次启用 `enabled_at` 使用事务提交 UTC 时刻和当时来源高水位。跨界 final 区间只取 `captured_at≥enabled_at` 的来源形成新逻辑片段，旧部分保留原 ledger 链接但不自动调用模型。迟到转写以原音频捕获时间归属：启用后音频的迟到文本使原 Work Unit 修订；启用前来源除非在已选择回填范围内，不进入新增队列。所有范围半开区间；显式回填按启动时往前168小时冻结，UI展示本地时间，休眠/夏令时不反复移动边界。
 
-### 7.2 指定模型映射与出口
+### 7.2 选中预设映射、执行能力与出口
 
-> 变更（2026-09-08，用户指令）：AI 相关能力改为**复用「模型与密钥」中用户选中的预设，支持手动切换 Runtime**——不再固定 `shawnhub-copy / deepseek-v4-flash-0731`，也不拒绝 ACP。resolver 每次调用实时解析"默认预设（缺省回退第一个预设）"，手动切换后下一次调用即生效；普通（非 ACP）补全仍禁工具并受 brain 侧 token/上下文预算约束；`__title:` 会话不落盘、临时目录清理、凭据只引用不记录等执行卫生不变。`ModelBinding.v1` 结构不变，`preset_id` 为空表示尚未选择任何预设。下述原文中"固定 catalog/model、不转 ACP"的条款由本变更取代，其余继续生效。
+`ModelBinding.v1 = {preset_id,preset_revision,provider_catalog_id,model_id,wire_api,endpoint_fingerprint,secret_ref,runtime_id,runtime_version,pi_version?,profile_version}`。任务显式绑定预设或跟随当前选择，在领取run时冻结实际身份；用户切换后下一run生效，同一run自动尝试不悄悄换预设。缺少有效选择、凭据或能力返回具名可恢复错误，不能以回落第一个预设掩盖错误。测量前固定实际绑定，不再要求早期DeepSeek固定模型。
 
-绑定快照 `ModelBinding.v1 = {preset_id,preset_revision,provider_catalog_id,model_id,wire_api,endpoint_fingerprint,secret_ref,pi_version,profile_version}`。首轮 catalog ID 固定 shawnhub-copy、model 固定 deepseek-v4-flash-0731；`wire_api=openai-completions` 经全局配置元数据核对。endpoint 与密钥只在本机解析，报告记录身份/指纹，不复制私人地址或凭据。
+复用现有AI Preset和已支持的Pi/ACP路径，不增加国内Runtime。Brain抽取/编译/answer使用受限profile：只接收有界本地证据、禁用任意工具/扩展/skills/context files和自主操作、禁止Runtime自行保存会话；统一取消、超时及调用计数。ACP是否可用取决于实际能否提供这些能力，不能仅凭协议注册项判定支持，也不能因选择ACP直接拒绝；无法限制的Runtime返回`capability_unavailable`。用户Pipes自身的Agent执行能力保留原权限，不能用于绕过Brain profile。
 
-`shawnhub-copy` 不是现有 Preset provider enum：首版沿用 Custom Preset 表示该 OpenAI-compatible 接口，并保存明确的 catalog 来源和模型 ID。严格 resolver 只使用选中的 preset revision；删除、改名、缺 key、模型不在配置中时返回配置错误，不回落默认模型、不转 ACP。导入仅选定 provider/model 的白名单字段，不能复制全局 models/auth/trust 文件到项目或应用目录。
+凭据仅在macOS Keychain的`kb-model`服务以引用解析；配置保存secret_ref，私人端点仅保留本机配置和诊断指纹。已有全局Pi配置只读取允许的provider/model元数据，不复制auth/trust正文，不执行任意配置命令。既有明文相关字段通过具名兼容迁移处理，密钥不进新状态、日志、对话或导出。
 
-凭据在 macOS Keychain 的 `kb-model` 服务中，以账号/条目 ID 引用；模型配置只存 `secret_ref`。若全局 Pi 只有文字值或命令型 resolver，需迁移/绑定已知 Keychain 项后验证；禁止自动执行任意配置命令。新配置不得写 apiKey 明文，进程运行期短时 env 注入不写日志/错误/诊断包。
+Runtime侧保持临时会话不落盘，每次执行使用受管目录，完成/取消/启动失败均回收；异常时持久记录待清理并先清理后恢复。系统活动需要的消息由应用按§4.4主动接收并受控存储，和Runtime自行保存会话是两件事；对输入/模型输出/tool消息登记完整传递来源依赖，删除清除整段正文及UI缓存。诊断只记身份、字节数、调用量、耗时和清理状态，不记正文或秘密；不展示模型隐藏推理。
 
-新增 `brain-extract-v1` 执行 profile，扩展已有 ephemeral side session 机制：禁用 tools、extensions、skills、context files、prompt templates、session persistence；不接受 ACP 执行 profile。`/answer` 一次普通 completion，无工具调用、Agent 循环或桌面操作；Worker 统一拥有重试计数，既有 run_background_pi 的空结果重试和过长超时不能叠加。
-
-每次只传有界证据包，记录出口目标、字节数、输入引用、profile 和完成/清理状态，不记正文。每次执行专属临时目录，完成/取消/异常启动均清理；启动扫除本 profile 遗留目录和孤儿进程，不能清理用户其他聊天。既有受管 Pi 会话引用这些证据时，登记 session → source 依赖并纳入删除；本功能无会话落盘不能用来免除旧会话清理要求。
-
-**实施验收项**：全局 Pi 0.85.0 合成调用已通过；应用内实际锁定版本、严格 profile、Keychain 绑定、取消/超时与会话目录清理在模型执行节点中完成。用户取消规划前联调，不要求本轮验证，也不宣称模型接入已就绪。
+旧Pi合成probe仅为历史证据。F09及F11分别验证当前应用的能力/取消/Keychain与真实模型质量，不能用全局模型列表或旧probe代替应用内验收。
 
 ## 8. 删除、保留、恢复与受管出口
 
@@ -248,8 +270,8 @@ Local Brain 单并发，优先级 `answer > 新增 extract > backfill/compile`�
 
 1. 写入与 DB 备份分离的同 dataset 删除 journal（只含 ID/范围/seq），fsync 成功后才确认删除屏障。journal 写失败则不返回“已删除”；先写成功、DB 未提交时重放仍会安全抑制对应内容。
 2. 通过现有写协调在事务中登记 tombstone、增加 deletion epoch、取消有关 job、标记全部依赖消费者不可读。对大范围删除使用范围屏障，尚未遍历到的来源也立即受保护。读请求、Worker 取包、发布、答案保存/返回统一检查。
-3. 分批清除受影响 Work Unit 所有修订、知识所有相关版本正文、旧叙述/历史、保存答案整段 body、反馈正文、索引与缓存；多来源消费者也整版删除，不保留混合正文中的未命中段落。其他独立来源可重新编译成 candidate，不能直接恢复旧发布版。
-4. 在事务外清理受管文件块、历史备份片段、Pi 会话、媒体；每项可重试，UI 显示 cleaning/failed。原始数据删除、派生不可读、文件清理完成分别有状态，不能用“引用已断开”冒充完成。
+3. 分批清除受影响 Work Unit 所有修订、知识所有相关版本正文、旧叙述/历史、保存答案整段body、反馈、task快照/消息payload、系统活动及聊天受管结果正文、索引与缓存；多来源消费者也整版删除，不保留混合正文中的未命中段落。其他独立来源可重新编译成 candidate，不能直接恢复旧发布版。
+4. 在事务外清理受管文件块、历史备份片段、Pi会话、持久消息缓存、媒体；每项可重试，UI 显示 cleaning/failed。原始数据删除、派生不可读、文件清理完成分别有状态，不能用“引用已断开”冒充完成。
 
 同一进程内读出口持有短期 emission guard；删除请求先更新屏障、取消尚未出站的响应，再等待已进入发送阶段的 guard 结束后确认。无法撤回已交付的字节；确认后的新响应、新查询、新保存均不得带旧内容。模型已收到的请求可能不能从供应商侧撤回，取消仅阻止继续使用和本地提交，按 PRD 记录出口边界。
 
@@ -279,6 +301,18 @@ Local Brain 单并发，优先级 `answer > 新增 extract > backfill/compile`�
 - 校验通过后原子切换读入口，恢复写入到数据库；旧 key 与受管备份中的该 key 在可恢复清理队列中移除，不整份删除含用户其他设置的 store。校验前回退读旧快照也必须套 journal 过滤。运行中不双写两套真源。
 - 故障验证覆盖：每批提交前后退出、切换前后退出、加密 key 拒绝/恢复、coverage 孔洞、重复导入、删除与迁移交错、从迁移前备份恢复。合法历史保全是验收条件，不能用只保留近7天完成迁库。
 
+### 9.1 任务机制迁移与回滚
+
+历史内容迁库（上节）与调度接管独立检查，不能因为一个完成就把另一个置为active。公共任务扩展使用增量migration，不修改已部署SQL。按类型执行`legacy → draining → ready_to_switch → unified`，在同库保存所有权代次和进度：
+
+1. 先接入公共存储/事件/资源接口的适配层，以隔离测试验证旧Pipes配置、触发、权限和历史契约；未切换类型仍由旧所有者执行，新触发器不可同时启用。
+2. 停止该类型旧触发，等待在途任务完成，或取消并确认进程回收、旧租约无法提交；外部写结果未知须登记needs_attention，不自动重放。迁移期间到达的触发写入持久收件记录，按原有事件去重、定时补跑策略处理，不扩大旧任务的副作用次数。
+3. 保全定义、运行历史、状态和旧ID映射，核对配置指纹、历史ID集合、coverage/cursor及删除journal。原子切换owner_generation和读写入口，新服务再恢复触发；重复启动依赖唯一约束与代次拒绝旧实例。
+4. 顺序为Brain抽取/编译/回填的完整纵向链 → 活动总结/办公同步 → 用户Pipes兼容接管与移除重复循环。活动与办公业务保留参数和游标，已有live-view展示保持，不把采集或UI轮询塞入任务目录。
+5. 回滚先停止新触发并收敛在途，保留公共表/历史/删除代次，使用理解新存储与删除规则的兼容适配器回退；不启用忽略owner_generation的旧二进制，不恢复旧store快照或重置完成记录。逐类型故障注入证明切换前后崩溃、睡眠恢复与重复通知最多产生一份有效结果。
+
+退出条件是所有纳入类型只有一个调度所有者、一个状态真源；`activity_history.rs`、`brain_runtime.rs`、`office_runtime.rs`不再单独定时启动业务任务。Pipes现有API及pipe.md格式继续可用，通过适配调用公共运行服务；禁止以“统一”名义默默删除用户任务能力。
+
 ## 10. 办公适配与界面落点
 
 ### 10.1 两个只读连接器
@@ -292,7 +326,7 @@ Local Brain 单并发，优先级 `answer > 新增 extract > backfill/compile`�
 
 复用现有 CLI 二进制；缺失时从「连接」的依赖操作安装固定官方版本到应用管理目录，使用仓库既有下载/校验与进程机制，记录版本与可执行文件摘要。已有全局 CLI 不静默升级。实现优先适配以上已调研版本，其他版本明确兼容或不支持，不能运行 latest 后假定协议相同。
 
-CLI 通过 `Command` 固定 argv 执行，供应商/动作枚举映射到编译期命令白名单；前端、REST、文档正文不能传任意命令、可执行路径、环境变量或 shell 片段。进程启动前重验范围与连接revision，并核对CLI实际账号与已绑定命名空间；全局CLI被切换到其他账号时暂停并要求重新绑定，不能读取后再按旧账号归档；输出上限2MiB、单调用60秒、取消2秒后强制终止并回收，超限/超时保留未完成状态，不截断后当成功。适配器只暴露读取结果给 BrainWorker；授权与依赖安装仅响应「连接」中的显式用户操作，不作为模型工具。
+CLI 通过 `Command` 固定 argv 执行，供应商/动作枚举映射到编译期命令白名单；前端、REST、文档正文不能传任意命令、可执行路径、环境变量或 shell 片段。进程启动前重验范围与连接revision，并核对CLI实际账号与已绑定命名空间；全局CLI被切换到其他账号时暂停并要求重新绑定，不能读取后再按旧账号归档；输出上限2MiB、单调用60秒、取消2秒后强制终止并回收，超限/超时保留未完成状态，不截断后当成功。适配器只暴露读取结果给办公任务处理器；授权与依赖安装仅响应「连接」中的显式用户操作，不作为模型工具。
 
 授权复用官方 CLI 的合法认证流程，UI 只显示供应商登录地址/设备码与结果；API Key/新增持久凭据必须落 OS Keychain，仅存引用。已有 CLI 会话只引用，不复制 auth 文件、不执行配置中的任意凭据命令。无法满足凭据存储边界时该连接返回配置错误，不回退明文。断开应用连接不注销/清理用户全局 CLI；仅清理本应用拥有的临时授权进程与凭据引用。
 
@@ -305,17 +339,17 @@ CLI 通过 `Command` 固定 argv 执行，供应商/动作枚举映射到编译�
 | `GET /connections/office`、`GET /connections/office/{provider}` | 返回版本/依赖、账号别名、runtime/auth/sync独立状态、能力、范围revision、最近成功时间/完整度/错误；无凭据 |
 | `POST /connections/office/{provider}/setup` | 仅允许 install_dependency 或 authorize；返回 operation_id，状态可轮询/取消，登录TTL按供应商响应，客户端不指定安装URL或命令 |
 | `PUT /connections/office/{provider}/scope` | expected_revision、明确资源ID/链接、消息/会议时间范围、auto_sync；服务器严格验证供应商域名、对象类型和范围。冲突409；保存不自动导入历史 |
-| `POST /connections/office/{provider}/sync` | expected_revision、用户选定窗口、idempotency_key；返回持久 job_id，禁止全租户/无限时间范围 |
-| `POST /connections/office/{provider}/control` | pause/resume/cancel/retry 或 cancel_setup，加 expected_revision；停止后旧结果不能提交 |
+| `POST /connections/office/{provider}/sync` | expected_revision、用户选定窗口、idempotency_key；返回持久run_id及兼容job_id，禁止全租户/无限时间范围 |
+| `POST /connections/office/{provider}/control` | 显式target=definition/run/setup；定义pause/resume仅影响后续同步；cancel/retry必须带该provider/account的run_id，cancel_setup带operation_id；expected_revision与授权校验防止跨任务误控 |
 | `POST /connections/office/{provider}/disconnect` | expected_revision、local_data=retain_inactive（默认）或 erase；先停用/取消，再按 R6 清理；不删除平台原件 |
 
 Engine 仅接收受认证的用户意图。授权与安装需要桌面执行器；CLI-only 实例返回 desktop_unavailable。旧 `/connections` 列表可以附加两个连接卡片的非敏感摘要；通用凭据 GET/PUT/代理路由必须拒绝这两个ID，不把官方CLI变成任意API网关，不影响旧连接。
 
-`runtime_status=missing|supported|unsupported`、`auth_status=disconnected|authorizing|authorized|expired|capability_missing`、`sync_status=idle|queued|running|partial|paused|failed` 分开保存；认证成功不等于同步成功。授权拒绝/取消、无云录制、正文缺失都不可显示“已同步”。前端通过既有刷新事件更新列表，后台状态不依赖 React 页面存活。
+`runtime_status=missing|supported|unsupported`、`auth_status=disconnected|authorizing|authorized|expired|capability_missing`属于连接业务状态；`sync_status=idle|queued|running|partial|paused|failed`由公共TaskRun和办公完整度/游标投影，不另存一套运行真源。认证成功不等于同步成功。授权拒绝/取消、无云录制、正文缺失都不可显示“已同步”。前端通过既有刷新事件更新列表，后台状态不依赖 React 页面存活。
 
 默认手动读取。飞书范围是文档ID白名单、会话ID白名单及明确时间窗口；腾讯会议是会议ID白名单，或显式选择“本人可访问会议＋时间范围”。自动同步可选，启用后默认15分钟一轮，只推进已批准的新时间窗口并刷新已选文档/会议。首次旧消息/会议导入窗口默认显示近7天且需用户确认；读取范围与 AI 历史回填是两种独立进度。文档只能获取当前版本时显示抓取时刻，不把它当成过去时刻的正文。
 
-`office_sync` 复用持久任务/租约/取消和现有DB单写协调，每实例最多一个导入调用。每页最多50对象（供应商更小限制优先），单批最多100来源；页内来源、依赖和cursor同事务提交，所有页完成才推进完成高水位。页数/输出限制命中返回 partial，明确续传位置。限流/5xx至多2次指数退避并遵守 Retry-After；401/403停止自动重试，转重新授权/能力缺失；转写处理中按定时同步再次检查，不在请求内忙轮询。连接停用/缩范围/换账号或来源删除使运行结果失效。
+`office_sync`经公共TaskService触发并复用持久运行/租约/取消和现有DB写协调；按§7.1每provider/account最多一个导入调用、全局最多两个，不占模型许可。每页最多50对象（供应商更小限制优先），单批最多100来源；页内来源、依赖和cursor同事务提交，所有页完成才推进完成高水位。页数/输出限制命中返回 partial，明确续传位置。限流/5xx至多2次指数退避并遵守 Retry-After；401/403停止自动重试，转重新授权/能力缺失；转写处理中按定时同步再次检查，不在请求内忙轮询。连接断开/撤权/缩范围/换账号或来源删除使运行结果失效；只暂停后续同步不取消当前运行，取消当前run必须明确操作。
 
 导入先建立 source 与本地检索投影。只有存在明确的消息/会议/文档关联和实际 activity ledger 区间，才补入该 Work Unit 的输入修订；独立导入资料可以被 `/answer` 引用，但不会凭空生成用户工作活动或SOP。时间过滤以真实事件时间为准；平台摘要、原始转写与采集音频通过来源关系去重，不能计为多次独立实践。
 
@@ -325,29 +359,41 @@ Engine 仅接收受认证的用户意图。授权与安装需要桌面执行器�
 
 卡片主流程：未连接 → 检查依赖/连接 → 官方登录 → 选择内容范围 → 立即同步 → 显示导入数量、最近成功时间、完整度。已连接支持范围编辑、自动同步开关、暂停/重试、断开及资料保留/清理；高级版本/CLI信息折叠展示。浏览器返回失败、取消登录、权限不足与转写未就绪都有可恢复状态；不要求输入 shell 命令或把 token 粘贴给模型。
 
-沿用 DESIGN.md 和当前中文 UI，在现有设置/Brain 相关入口提供「知识」列表与集中审核页，Ask 的答案展示 claim 引用与可展开来源。审阅入口位置采用 PRD 已接受的设计阶段裁决；详细视觉稿在界面实现前定稿，不在本 TRD 新建一套 canvas。
+沿用DESIGN.md和当前中文UI，固定以下入口职责，不再把入口位置留作开放选择：
 
-集中页显示待审数量、最老积压、待复核、失败原因；候选详情支持来源对照、修改、发布、驳回、暂停/恢复。每天约5分钟是负担目标，不自动发布、不逐条弹窗、不把未展示候选从积压统计移走。
+| 入口/落点 | 本次实施契约 |
+|---|---|
+| 知识库：`components/brain/knowledge-hub.tsx` | tab固定工作单元/知识/画布。工作单元分页、过滤和详情消费§6.2新API，展示task/actions/decisions/result/exceptions、字段证据、原始活动和支撑知识；未知项目为空。知识按审核/可用性筛选，并展示支持工作单元与会话 |
+| 聊天：`brain-tools.ts`及聊天消息组件 | 内部桥接BrainService；保留answer_id、claim_id、source revision、knowledge_version_id、过滤和诊断，不在trimAnswer丢弃。结构化结果卡支持来源/版本/反馈；与普通模型补充解释区分。先完成该闭环再移除知识库的Ask tab |
+| 系统活动：`internal-session.ts` / `pi-event-router.ts` / `chat-store.ts` / `chat-sidebar.tsx` | 识别统一run身份与legacy会话映射，不再只按activity-history/live-view前缀过滤。复用现有只读聊天渲染，根run为一条记录，尝试/模型调用/校验/重试/回填子步骤在详情；纯I/O以事件显示 |
+| 自动化：`components/pipe-store.tsx`与Pipes组件 | 任务目录区分内置/用户/连接来源；内置类型显示允许字段，用户任务保留原编辑器。运行列表跳转系统活动，启停定义与控制当前run分开，回填可选择范围和控制批次 |
+| 连接：现有office卡片与面板 | 授权/账号/范围/自动同步仍是唯一可编辑配置；共享run_id用于查看进度或跳转系统活动，自动化中的连接任务只有配置跳转，不另设独立开关 |
 
-首次启用清楚区分“迁移已有历史”“处理新增”“另行回填近7天”，展示选定模型与数据出口。查询忙碌、模型离线、采集缺失、索引部分覆盖、未知事实、过期知识、删除清理中均有中文状态和下一步；用户不需要理解租约或 epoch。键盘可操作、焦点可见、状态不只依赖颜色；沿用明暗主题和减少动态效果设置。
+知识详情保留来源对照、编辑、发布、驳回、暂停/恢复、到期复核、版本比较和待处理反馈。候选积压属于知识审核视图；全局运行积压/覆盖/失败转入系统活动及自动化摘要，知识库没有运行状态tab。每日约5分钟目标不放宽自审，也不逐条弹窗。
+
+从知识库“围绕此内容提问”携带`work_unit_id/revision`或`knowledge_id/version_id`和范围引用；聊天重新取当前数据，删除/切版返回明确不可用，不把旧文本复制为事实。受管Brain结果/来源卡记录依赖；删除/修订事件驱动正在展示的聊天、系统活动和知识库缓存失效，重开历史也重新验证。普通聊天保留原行为，不全盘清理无关人工消息。
+
+运行详情显示输入范围/安全摘要、进度、模型/预设、消息与工具调用、校验/重试、错误、时间和产物链接；状态只来自TaskRun，不能由Pi completion事件提前标成功。阅读不改变执行状态；继续讨论新开普通聊天携带run引用，不恢复只读执行会话。多个attempt不得重复侧栏记录，刷新/断线从seq补拉，不仅靠前端内存拼接。
+
+首次启用区分历史保全/新增/显式近7天回填。忙碌、模型不可用、采集缺失、索引部分覆盖、未知事实、过期知识、清理中均有中文状态和下一步；不向普通用户暴露租约或epoch。键盘/焦点/无障碍、明暗主题和减少动态效果沿用现有规范。
 
 ### 10.4 知迹品牌展示契约
 
-沿用现有React/Next前端，在 `apps/screenpipe-app-tauri/lib/brand.ts` 建立一个无运行时依赖的展示常量入口（拟新增）：`PRODUCT_NAME=知迹`、`PRODUCT_BILINGUAL_NAME=知迹 · Screenpipe`、`PRODUCT_DESCRIPTION=本地优先的个人工作知识库`、`PRODUCT_TAGLINE=把工作经历，沉淀为自己的知识。`。只集中产品展示文字，不接管技术ID、外部链接或所有通用文案，不为改名引入新的国际化框架。
+沿用现有React/Next前端，在 `apps/screenpipe-app-tauri/lib/brand.ts` 建立一个无运行时依赖的展示常量入口（已存在，核对现行导出）：`PRODUCT_NAME=知迹`、`PRODUCT_BILINGUAL_NAME=知迹 · Screenpipe`、`PRODUCT_DESCRIPTION=本地优先的个人工作知识库`、`PRODUCT_TAGLINE=把工作经历，沉淀为自己的知识。`。只集中产品展示文字，不接管技术ID、外部链接或所有通用文案，不为改名引入新的国际化框架。
 
-当前源码抽样已确认产品字样分散在 `components/splash-screen.tsx`、`app/(main)/home/page.tsx`、`app/error.tsx`、`app/notification-panel/page.tsx`、`components/notification-handler.tsx` 与设置提示中；`app/layout.tsx` 为客户端组件，标题按实际现有生成位置处理，不能凭空套用服务端metadata方案。没有发现现成的brand helper。此处是定位证据，不是全部替换清单；实施时扫描 app/components/lib/public 中的品牌用法。
+当前源码抽样已确认产品字样分散在 `components/splash-screen.tsx`、`app/(main)/home/page.tsx`、`app/error.tsx`、`app/notification-panel/page.tsx`、`components/notification-handler.tsx` 与设置提示中；`app/layout.tsx` 为客户端组件，标题按实际现有生成位置处理，不能凭空套用服务端metadata方案。这是首轮设计时的定位证据，当前已存在brand helper；本次复用并核对残留，不重复新建。此处不是全部替换清单；实施时扫描 app/components/lib/public 中的品牌用法。
 
 | 展示类别 | 实施规则 |
 |---|---|
-| 主导航、启动/引导、知识/Ask、设置/连接、帮助/错误/空态 | 当前产品名用PRODUCT_NAME；关于/帮助需要说明项目关系时用PRODUCT_BILINGUAL_NAME |
+| 主导航、启动/引导、知识/聊天、设置/连接、帮助/错误/空态 | 当前产品名用PRODUCT_NAME；关于/帮助需要说明项目关系时用PRODUCT_BILINGUAL_NAME |
 | 标题、toast/通知、tooltip、alt/aria-label | 使用同一展示来源，逐项检查无障碍名称与实际画面；覆盖前端控制的窗口/通知标题 |
 | 应用自有品牌图片/字标 | 查出内嵌英文产品文字；可由现有图形标志配“知迹”文字替代，保留原配色/布局，不新增Logo设计范围 |
 | 技术字符串与历史内容 | CLI/包/API/MCP/URL/scheme/事件/storage key/路径/生成绑定不替换；许可证/上游署名及用户历史文本保持原样 |
 | 系统权限指引 | 显示真实注册名并可附“知迹”；本次不改变应用包/进程/签名/权限身份，避免引导用户查找错误条目 |
 
-新增 `docs/reviews/personal-brain-brand-retained-identifiers.md` 作为实施时的具名保留清单（此刻未创建），记录文件/字段、保留文本、理由和类别。实现先列显示位置与技术例外，再按语义修改；不能全局替换代码中的screenpipe。字符串扫描只用于发现，需结合实际画面判断SVG字标、标题、无障碍文案和布局。
+新增 `docs/reviews/personal-brain-brand-retained-identifiers.md` 作为实施时的具名保留清单（沿用现有记录并补充），记录文件/字段、保留文本、理由和类别。实现先列显示位置与技术例外，再按语义修改；不能全局替换代码中的screenpipe。字符串扫描只用于发现，需结合实际画面判断SVG字标、标题、无障碍文案和布局。
 
-该工作由U13单写入，排在U11之后、U12之前，覆盖已有页面和本轮新页面。与进行中的前端汉化共享文件时串行处理并保留对方已有修改。校验采用残留清单、关键页面画面与相关已有前端检查，不新增只断言常量等于字面的测试；品牌改名不触发数据库迁移、凭据迁移或原生重命名构建。
+首轮品牌工作由原U13承接；本次残留修复由F10单写入，最终F11验收，覆盖既有与本轮新增入口。与进行中的前端汉化共享文件时串行处理并保留对方已有修改。校验采用残留清单、关键页面画面与相关已有前端检查，不新增只断言常量等于字面的测试；品牌改名不触发数据库迁移、凭据迁移或原生重命名构建。
 
 ## 11. 可观测、测试与验收映射
 
@@ -373,7 +419,10 @@ release 构建固定机器和采集负载比较 Brain 关闭/开启：CPU<20%、
 | V10 办公连接 | 两工具分别≥90%内容导入与中文检索；飞书消息/文档、真实会议转写时间；连接全流程、受限读取、分页/修订、断开/重连/删除抑制和跨工具来源链 | AC-R9-01、AC-R9-02、AC-R9-03、AC-R9-04、AC-EVAL-07 |
 | V11 真实质量 | ≥10会话、≥3同流程；独立冻结30–50条查询及预期来源；全部编译事实人工核验≥90%支持，发布步骤全部有据，至少1有用SOP/1流程变体；保留集无依据结论0且可回答率≥80% | AC-EVAL-01、AC-EVAL-02、AC-EVAL-03 |
 | V13 知迹品牌 | 当前产品品牌统一；前端文字/字标/alt/通知/标题全覆盖、具名保留项有据；技术ID/链接/权限指引不变，布局与无障碍无回归 | AC-R11-01、AC-R11-02、AC-R11-03 |
-| V12 持续验收 | 真实v1→纠错→v2→删除；固定模型、资源/SLA、审核负担与积压；验证所有已启用出口 | AC-EVAL-04、AC-EVAL-05、AC-EVAL-06 |
+| V14 内容入口与消息 | 工作单元双向证据链/未知/失效；聊天结构化引用、过滤与反馈；知识库无Ask/status，系统活动按根run聚合且纯I/O事件真实 | AC-R12-01、AC-R12-02、AC-R12-03 |
+| V15 公共任务与资源 | 定义单一配置源、三类触发/持久状态、启停与取消、账号隔离、资源满载/嵌套调用无死锁、写结果未知不重放 | AC-R13-01、AC-R13-02、AC-R13-03 |
+| V16 迁移与完成一致性 | 四类旧机制切换/重启/回滚、Pipes权限/配置/API/历史兼容、单所有者、产物与完成事件原子、消息删除不复活 | AC-R13-04、AC-R13-05 |
+| V12 持续验收 | 真实v1→纠错→v2→删除；固定实际模型绑定、资源/SLA、审核负担与积压；验证所有已启用出口 | AC-EVAL-04、AC-EVAL-05、AC-EVAL-06 |
 
 自动断言检查引用/状态/事务，不代替人工语义支持判断。真实内容与保留答案只放用户控制的本地评测目录，不提交客户材料；仓库保存脱敏夹具/指标/身份指纹。调试集与验收集目录和 ID 分开，调参者不能用保留答案调 prompt。
 
@@ -392,17 +441,10 @@ release 构建固定机器和采集负载比较 Brain 关闭/开启：CPU<20%、
 
 ## 12. 实施计划输入与用户决定
 
-用户于2026-09-07明确：“先不考虑WPS了，首版就飞书和腾讯会议接入吧，操作放到连接里。也不需要验证了，直接进入实施计划生成阶段吧。”因此本轮只同步设计并生成 [实施计划](../plans/personal-brain-local-first-execution-plan.md)，不启动采样、OAuth、安装、模型调用或产品测试，也不运行新的交接门禁。
+2026-09-07用户收口飞书/腾讯会议及连接入口，并跳过规划前预验证；2026-09-08在实现审查后进一步确认入口分工和统一任务机制纳入本次基础改造。当前执行入口是[基础改造与修复计划](../plans/personal-brain-correctness-execution-plan.md)，原U计划/预研/实施审查保持历史身份。本次未采样、OAuth、安装、模型调用或运行产品测试；45项完成需要实际实施证据。
 
-设计顺序：共同来源/删除/连接契约 → 连接执行与两款只读适配、严格模型执行 → 历史迁移与Work Unit → 审核/FTS/answer/MCP/反馈 → 知迹品牌展示替换 → 集成验收。删除屏障先于任何可保存派生正文；来源修订与清理随各层一起交付；连接“已授权”不能代替“已导入”。
+顺序：F01共同契约/兼容基线 → F02删除/恢复 → F12公共任务存储与事件 → F03历史保全、F09共享资源/受限执行 → F04业务正确性、F13 Brain纵向接管 → F05/F06版本/检索回答与F07连接 → F14活动/办公/Pipes迁移 → F08办公证据 → F10五入口与品牌 → F11整体验收。编号保持稳定，具体依赖/所有权以计划DAG为准。
 
-| 历史事项 | 本轮处理 | 实施责任 |
-|---|---|---|
-| DR-TRD-001 办公采样不足 | 原三工具AX优先假设被替代；不要求再做规划前PoC，不标resolved测试通过 | 连接公共执行器、飞书、腾讯会议及最终集成节点完成V10；WPS不再追踪首版通过 |
-| DR-TRD-002 应用内Pi联调不足 | 用户决定后移到实施验收 | 严格模型执行节点验证绑定/取消/清理，失败不得静默换模型 |
-| DR-TRD-003 中文FTS | 保留此前合成probe证据及算法决定 | 索引/问答节点完成真实检索与容量测试 |
-| DI-EVAL-001 真实验收集 | 在质量验收前冻结；本轮不准备真实资料 | 最终集成节点，调试集与保留集分离 |
+风险优先验证单所有者切换、取消/外部未知结果、正文删除传播和资源嵌套等待；不先做界面聚合再留下多套运行真源。类型化业务处理器保留独立证据/权限/游标规则，首版不引入新的Runtime/办公平台或外部工作流服务。
 
-原PRD/TRD评审归档为历史快照；当前记录说明用户跳过规划前验证，不生成虚假的ready报告。本次范围与计划可用于后续实施交接，产品完成仍以37项首版验收的实际结果为准。未获得开始编码的指令，本轮不创建Build Task Pack、不修改产品实现。
-
-品牌范围以PRD R11为准，增加U13/验证包V13，不重编号原有任务或后置R10。未实施前只表示范围已确认，不宣称应用已完成更名。
+原实施审查针对5fcacf6b1的37项，是历史问题证据；新增R12/R13的8项属于本次批准范围，不能追记为旧审查已覆盖。文档静态校验只证明45项映射、DAG和输入指纹一致，不代表plan_to_build或产品验收通过。执行阶段按当前计划生成Task Pack并收窄节点路径，F11通过后才更新完成状态。

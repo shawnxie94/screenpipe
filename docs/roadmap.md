@@ -9,12 +9,14 @@
 
 ## 进行中
 
-- **Local Brain 首版实施与修复**（updated_at: 2026-09-08）：首版范围为飞书、腾讯会议两个只读入口，操作统一在主侧栏「连接」；WPS 与国内 Runtime 新兼容后置。[PRD](prd/personal-brain-local-first.md)、[TRD](trd/personal-brain-local-first.md) 与[原实施计划](plans/personal-brain-local-first-execution-plan.md)保留为首版依据。按 2026-09-08 用户决定复用「模型与密钥」选中预设并允许手动切换 Runtime，不恢复固定模型限制。
-  - 当前代码与汉化已提交至 `5fcacf6b1`，本轮审查开始时工作区干净。原 U01–U11、U13 已有模块实现及[历史验收记录](reviews/personal-brain-local-first-acceptance.md)，但不能据此认定完整闭环已经完成。
-  - [实施质量审查](reviews/personal-brain-implementation-readiness.yaml)为 `blocked`：发现删除/恢复、历史迁移、增量抽取、版本事务、检索引用、办公控制与证据链、Runtime、审核界面的实质缺口。10 个合成契约反例复现、1 个正常检索对照通过；基础测试通过，现有两组 Brain 前端测试为 83 通过/1 个汉化断言失败。37 项逐项状态见报告，正式真实样本与持续使用仍未完成。
-  - [正确性修复计划](plans/personal-brain-correctness-execution-plan.md)已生成（approved，F01–F11 串行，**尚未开工**）：先修删除/恢复和历史，再修抽取/版本/回答，补齐连接与审核闭环，最后回到原 37 项验收。后续代码修复可先用合成夹具推进，真实账号能力/转写与模型质量在最终验收中单独记录；不将缺少授权件当作全部剩余工作。全部完成后再并入已完成基线。
+- **Local Brain 首版基础改造与修复**（updated_at: 2026-09-08）：[PRD](prd/personal-brain-local-first.md)、[TRD](trd/personal-brain-local-first.md)已纳入本次确认的入口分工和统一任务基础能力。飞书/腾讯会议仍为首版两个只读办公入口，WPS与国内Runtime新适配后置；复用选中Preset并允许手动切换已有Runtime，保留无费用/每日调用硬上限。
+  - **入口分工**：知识库呈现工作单元/知识/画布；聊天承担提问、引用和纠错；系统活动按业务运行聚合消息与状态；自动化管理内置/用户任务定义；连接维护办公授权、账号、范围和同步配置。工作单元以实际活动为锚，关联办公资料补证，知识仍需自审发布。
+  - **基础改造**：复用Pipes定义/触发和Brain持久队列，统一run/attempt/event、取消/重试/恢复与资源接纳；活动总结、Brain、办公同步及用户Pipes逐类型迁移到一个调度所有者。保留业务校验、账号游标、用户Pipes权限/输出及历史，连接配置不出现第二套编辑真源。
+  - 本次文档修订核对代码HEAD `0a83343ac`，修订前工作区干净。[原U计划](plans/personal-brain-local-first-execution-plan.md)与[历史验收记录](reviews/personal-brain-local-first-acceptance.md)保留溯源；已有模块不等于完整闭环已通过。
+  - [原实施审查](reviews/personal-brain-implementation-readiness.yaml)针对`5fcacf6b1`的37项，结果blocked：删除/恢复、历史、抽取、版本、检索引用、办公控制、Runtime和审核存在缺口。10个合成反例复现、1个对照通过；前端两组测试83通过/1失败。该报告保持历史快照，不宣称已覆盖当前HEAD或新增范围，正式真实样本与持续使用仍待验收。
+  - [本次基础改造与修复计划](plans/personal-brain-correctness-execution-plan.md)已更新（approved，**F01基线已验收，B01整批实施中**）：保留F01–F11，增加F12公共任务、F13 Brain纵向接管、F14活动/办公/Pipes迁移，共14节点串行。按用户最新指示由当前会话直接完成整批代码与自测，不安排子智能体，最后统一审查/验证且不逐节点交回；同一问题三轮修正失败则停止征询。先删除/恢复和公共任务，再业务迁移与五入口，F11汇总原37项＋R12/R13新增8项＝45项。文档结构校验见[计划校验记录](reviews/personal-brain-foundation-plan-validation.json)，不代替产品测试；完成并验证后再并入已完成基线。
 
-- **桌面端前端完全汉化**：以当前 `zh-local` / Local Brain 定位为准，覆盖主导航、首页、设置、聊天、时间线、首次启动、通知、错误和空状态等用户可见路径；保留代码标识、协议字段、模型名和必要的第三方专有名词。产品品牌替换统一由Local Brain计划U13负责，与本项共享文件串行修改。
+- **桌面端前端完全汉化**：以当前 `zh-local` / Local Brain 定位为准，覆盖主导航、首页、设置、聊天、时间线、首次启动、通知、错误和空状态等用户可见路径；保留代码标识、协议字段、模型名和必要的第三方专有名词。品牌历史实现见原U13，本次残留修复和新入口由F10承接，与本项共享文件串行修改。
 
 ## 待规划
 
