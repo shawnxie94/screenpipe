@@ -548,6 +548,8 @@ const E2E_COMMANDS: &[&str] = &[
     "screen_recording_restart_requested",
     "recording_health_return_race",
     "inject_db_hard_fault",
+    "inject_db_transient_fault",
+    "db_retry_write_probe",
     "db_hard_fault_state",
     "seed_flags",
     "capture_pi_start_error",

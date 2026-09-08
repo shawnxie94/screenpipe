@@ -779,6 +779,20 @@ async fn inject_db_hard_fault(
 }
 
 #[command]
+async fn inject_db_transient_fault(
+    state: State<'_, RecordingState>,
+) -> Result<serde_json::Value, String> {
+    super::seeds::inject_db_transient_fault(state).await
+}
+
+#[command]
+async fn db_retry_write_probe(
+    state: State<'_, RecordingState>,
+) -> Result<serde_json::Value, String> {
+    super::seeds::db_retry_write_probe(state).await
+}
+
+#[command]
 fn db_hard_fault_state(state: State<'_, RecordingState>) -> Result<serde_json::Value, String> {
     super::seeds::db_hard_fault_state(state)
 }
@@ -901,6 +915,8 @@ pub(super) fn plugin() -> TauriPlugin<Wry> {
             screen_recording_restart_requested,
             recording_health_return_race,
             inject_db_hard_fault,
+            inject_db_transient_fault,
+            db_retry_write_probe,
             db_hard_fault_state,
             seed_flags,
             capture_pi_start_error,

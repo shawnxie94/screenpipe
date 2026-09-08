@@ -1084,7 +1084,17 @@ async fn main() {
             }
 
             // Resolve data directory from user setting (custom dir or ~/.screenpipe)
-            let (data_dir, data_dir_fell_back) = config::resolve_data_dir(&store.data_dir)?;
+            let selected_data_dir = config::selected_recording_data_dir(&store.data_dir)?;
+            crate::db_relaunch::set_active_database(&selected_data_dir);
+            let data_dir = match config::resolve_data_dir(&store.data_dir) {
+                Ok(path) => path,
+                Err(error) => {
+                    let message = format!("无法初始化数据库：无法访问录制数据目录：{error}");
+                    warn!("{message}; keeping the UI available while recording retries");
+                    crate::health::set_boot_error(&message);
+                    selected_data_dir
+                }
+            };
             info!("Recording data directory: {}", data_dir.display());
 
             // Pin SCREENPIPE_DATA_DIR to the *resolved* dir so every consumer of
@@ -1127,15 +1137,6 @@ async fn main() {
                         e
                     );
                 }
-            }
-
-            if data_dir_fell_back {
-                let app_handle_fb = app_handle.clone();
-                tauri::async_runtime::spawn(async move {
-                    // Small delay so the frontend window is ready to receive events
-                    tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-                    let _ = app_handle_fb.emit("data-dir-fallback", ());
-                });
             }
 
             // Initialize onboarding store
@@ -1422,25 +1423,10 @@ async fn main() {
 
             // }
 
-            let launch_db_path = data_dir.join("db.sqlite");
-            let launch_db_quarantined = screenpipe_db::sqlite_quarantine_exists(&launch_db_path);
-            if launch_db_quarantined {
-                // Preserve the cross-launch fail-closed boundary before any
-                // server, SQLite pool, watchdog, or capture thread is started.
-                crate::health::set_recording_status(crate::health::RecordingStatus::Error);
-            }
-
             // Start server core + capture on a dedicated thread with its own tokio runtime
             // to avoid competing with Tauri's UI runtime.
             // Two-phase startup: ServerCore (DB + HTTP + pipes) then CaptureSession (vision + audio).
             'start_server: {
-                if launch_db_quarantined {
-                    info!(
-                        database = %launch_db_path.display(),
-                        "Skipping server and capture startup: durable SQLite quarantine is active"
-                    );
-                    break 'start_server;
-                }
                 let store_clone = store.clone();
                 let data_dir_clone = data_dir.clone();
                 if !crate::recording::server_access_allowed(&store_clone) {
@@ -1623,6 +1609,7 @@ async fn main() {
                                 Ok(s) => s,
                                 Err(e) => {
                                     error!("Failed to start server core: {}", e);
+                                    crate::db_relaunch::note_respawn_failure(&app_for_db_wedge, &e).await;
                                     if crate::port_conflict::is_error(&e, config.port) {
                                         crate::port_conflict::show_reclaim_failed(
                                             &app_for_startup_error,
@@ -1789,60 +1776,6 @@ async fn main() {
             crate::meeting_live_notes::start(app_handle.clone());
             crate::meeting_stall_notifications::start(app_handle.clone());
             crate::db_recovery_notifications::start(app_handle.clone());
-            if launch_db_quarantined {
-                // A new process must preserve the same fail-closed state as the
-                // process that observed the hard fault — unless its exact
-                // prerequisite has cleared (fresh process for SHORT_READ,
-                // recovered volume headroom for FULL) and this unchanged
-                // generation verifies healthy. Verification runs off the setup
-                // thread: it reads the whole file, which is seconds on a large
-                // database, and the UI must not wait for it.
-                let self_heal_app = app_handle.clone();
-                let self_heal_db_path = launch_db_path.clone();
-                let notify_data_dir = data_dir.clone();
-                let recovery_app = app_handle.clone();
-                let automatic_recovery = headless_startup;
-                tauri::async_runtime::spawn(async move {
-                    let self_heal_outcome = crate::db_self_heal::try_self_heal_at_launch(
-                        self_heal_app,
-                        self_heal_db_path,
-                        !automatic_recovery,
-                    )
-                    .await;
-                    crate::db_self_heal::finish_launch_quarantine(
-                        self_heal_outcome,
-                        || {
-                            crate::health::set_boot_error(
-                                "database remains quarantined after a SQLite hard fault; run `screenpipe db recover` while screenpipe is closed",
-                            );
-                        },
-                        || crate::db_relaunch::surface_quarantined_recovery_at_launch(
-                            &launch_db_path,
-                            !automatic_recovery,
-                        ),
-                    )
-                    .await;
-                    if self_heal_outcome
-                        != crate::db_self_heal::LaunchSelfHealOutcome::QuarantineUnresolved
-                    {
-                        return;
-                    }
-                    if automatic_recovery {
-                        let recovery = crate::db_recovery_notifications::
-                            start_headless_quarantined_database_recovery(
-                                recovery_app,
-                                notify_data_dir,
-                            );
-                        if let Err(error) = recovery {
-                            error!("failed to start automatic protected database recovery: {error}");
-                        }
-                    } else {
-                        crate::db_recovery_notifications::notify_quarantined_database(
-                            notify_data_dir,
-                        );
-                    }
-                });
-            }
             crate::disk_pressure_notifications::start(app_handle.clone());
             activity_history::start(app_handle.clone());
             first_run_summary::start(app_handle.clone());
