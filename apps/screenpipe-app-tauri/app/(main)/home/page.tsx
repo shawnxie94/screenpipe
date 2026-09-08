@@ -60,7 +60,7 @@ import { AppSidebar, useSidebarContext } from "@/components/app-sidebar";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import { useIsFullscreen } from "@/lib/hooks/use-is-fullscreen";
 import { FeedbackSection } from "@/components/settings/feedback-section";
-import { PipeStoreView } from "@/components/pipe-store";
+import { PipeStoreView, TaskActivityPanel } from "@/components/pipe-store";
 import { KnowledgeHub } from "@/components/brain/knowledge-hub";
 import { ConnectionsSection } from "@/components/settings/connections-section";
 import { MeetingNotesSection } from "@/components/meeting-notes";
@@ -189,6 +189,7 @@ function HomeContent() {
     }
   }, [activeSection, activityReturnVisible]);
   const [connectionFocusRequest, setConnectionFocusRequest] = useState<ConnectionFocusRequest | null>(null);
+  const [taskActivityFocusRunId, setTaskActivityFocusRunId] = useState<string | null>(null);
 
   const { settings, updateSettings, isSettingsLoaded } = useSettings();
   const { toast } = useToast();
@@ -947,6 +948,17 @@ function HomeContent() {
     setConnectionFocusRequest(null);
   }, []);
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const runId = (event as CustomEvent<{ runId?: string }>).detail?.runId;
+      if (!runId) return;
+      setTaskActivityFocusRunId(runId);
+      setActiveSection("activity");
+    };
+    window.addEventListener("open-task-run", handler);
+    return () => window.removeEventListener("open-task-run", handler);
+  }, [setActiveSection]);
+
   // Listen for open-settings events from child components (e.g. connections strip)
   useEffect(() => {
     const handler = (e: Event) => {
@@ -1003,9 +1015,10 @@ function HomeContent() {
         );
       case "activity":
         return (
-          <ActivityLedger
-            onOpenArtifact={() => setActivityReturnVisible(true)}
-          />
+          <div className="flex h-full min-h-0 flex-col overflow-y-auto">
+            <TaskActivityPanel focusRunId={taskActivityFocusRunId} />
+            <ActivityLedger onOpenArtifact={() => setActivityReturnVisible(true)} />
+          </div>
         );
       case "brain":
         return <KnowledgeHub />;
@@ -1065,7 +1078,7 @@ function HomeContent() {
     meetings: { label: "会议", icon: <CalendarClock className="h-3.5 w-3.5" /> },
     timeline: { label: "时间线", icon: <MonitorPlay className="h-3.5 w-3.5" /> },
     activity: { label: "活动", icon: <ListTree className="h-3.5 w-3.5" /> },
-    brain: { label: "库", icon: <Brain className="h-3.5 w-3.5" /> },
+    brain: { label: "知识库", icon: <Brain className="h-3.5 w-3.5" /> },
     pipes: { label: "自动化", icon: <TimerReset className="h-3.5 w-3.5" /> },
     connections: { label: "连接", icon: <Plug className="h-3.5 w-3.5" /> },
   };

@@ -109,6 +109,655 @@ function parseJsonBody(init: RequestInit | undefined): Record<string, unknown> {
   }
 }
 
+interface MockBrainVersion {
+  id: number;
+  knowledge_id: string;
+  version: number;
+  state: "candidate" | "published" | "rejected" | "superseded";
+  availability: "valid" | "stale" | "review_due" | "error" | "deleted";
+  body: Record<string, unknown>;
+  created_at: string;
+  published_at?: string;
+  review_due_at?: string;
+  input_hash?: string;
+  revision: string;
+  work_unit_ids: string[];
+  rejection_reason?: string;
+  evidence: Array<Record<string, unknown>>;
+  supported: boolean;
+}
+
+interface MockBrainState {
+  knowledgeId: string;
+  currentVersionId: number;
+  paused: boolean;
+  nextVersionId: number;
+  versions: MockBrainVersion[];
+  answerCount: number;
+  jobs: Array<Record<string, unknown>>;
+  office: Record<"feishu" | "tencent-meeting", Record<string, unknown>>;
+  taskDefinitions: Array<Record<string, unknown>>;
+  taskRuns: Array<Record<string, unknown>>;
+  taskEvents: Array<Record<string, unknown>>;
+}
+
+export function createMockBrainState(): MockBrainState {
+  const now = new Date().toISOString();
+  return {
+    knowledgeId: "knowledge-1",
+    currentVersionId: 10,
+    paused: false,
+    nextVersionId: 11,
+    versions: [
+      {
+        id: 10,
+        knowledge_id: "knowledge-1",
+        version: 1,
+        state: "published",
+        availability: "valid",
+        body: {
+          title: "发布流程",
+          steps: [{ name: "检查", detail: "运行测试" }],
+        },
+        created_at: now,
+        published_at: now,
+        review_due_at: new Date(Date.now() + 30 * 86400000).toISOString(),
+        revision: "rev-1",
+        work_unit_ids: ["wu-1"],
+        evidence: [
+          {
+            source_uid: "source-release-1",
+            revision: "source-rev-1",
+            kind: "ui_event",
+            excerpt: "发布前运行测试",
+            captured_at: now,
+            media_available: false,
+          },
+        ],
+        supported: true,
+      },
+    ],
+    answerCount: 0,
+    jobs: [
+      {
+        id: 21,
+        kind: "office_sync",
+        state: "succeeded",
+        priority: 5,
+        attempts: 1,
+        created_at: now,
+        updated_at: now,
+      },
+    ],
+    office: {
+      feishu: mockOfficeStatus("feishu", "authorized"),
+      "tencent-meeting": mockOfficeStatus("tencent-meeting", "disconnected"),
+    },
+    taskDefinitions: [
+      mockTaskDefinition("activity.summary", "builtin"),
+      mockTaskDefinition("brain.extract", "builtin"),
+      mockTaskDefinition("daily-review", "user"),
+      mockTaskDefinition("pipe.user.daily-pipe", "user"),
+      mockTaskDefinition("office.sync", "connection"),
+    ],
+    taskRuns: [],
+    taskEvents: [],
+  };
+}
+
+function mockOfficeStatus(
+  provider: "feishu" | "tencent-meeting",
+  authStatus: "authorized" | "disconnected",
+) {
+  return {
+    provider,
+    runtime_status: "supported",
+    auth_status: authStatus,
+    sync_status: "idle",
+    cli_version: "mock-1.0.0",
+    cli_path: `/mock/bin/${provider}`,
+    account_alias: authStatus === "authorized" ? `${provider}-demo` : undefined,
+    scope: {
+      document_ids: provider === "feishu" ? ["doc-release"] : [],
+      chat_ids: [],
+      meeting_ids: [],
+      all_accessible_meetings: false,
+      window_start_ms: 0,
+      window_end_ms: 0,
+      auto_sync: false,
+    },
+    scope_revision: 1,
+    capabilities: provider === "feishu" ? ["documents", "chats"] : ["meetings"],
+    imported_objects: authStatus === "authorized" ? 3 : 0,
+    completeness: authStatus === "authorized" ? "full" : "unknown",
+  };
+}
+
+function mockTaskDefinition(definitionId: string, origin: "builtin" | "user" | "connection") {
+  const isConnection = origin === "connection";
+  const isUserPipe = origin === "user" && definitionId.startsWith("pipe.user.");
+  const kind = isConnection
+    ? "office_sync"
+    : isUserPipe
+      ? "pipe_run"
+      : definitionId === "brain.extract"
+        ? "brain_extract"
+        : "activity_summary";
+  return {
+    definition_id: definitionId,
+    kind,
+    origin,
+    ...(isConnection
+      ? {
+          managed_by_connection: true,
+          configuration_target: "connections",
+        }
+      : {}),
+    ...(isUserPipe
+      ? {
+          managed_by_pipe: true,
+          configuration_target: "pipes",
+        }
+      : {}),
+    schema_version: 1,
+    config_revision: isConnection ? "connection-v1" : "cfg-1",
+    trigger: { kind: "manual" },
+    enabled: true,
+    resource_class: isConnection ? "office_io" : "interactive",
+    retry_policy: {
+      max_attempts: 3,
+      network_retries: 2,
+      invalid_output_retries: 1,
+      backoff_ms: 1000,
+    },
+    model_binding_policy: "selected-preset",
+    revision: 1,
+    owner_generation: 1,
+    migration_state: "current",
+  };
+}
+
+function mockBrainItem(state: MockBrainState) {
+  const current = state.versions.find((version) => version.id === state.currentVersionId);
+  return {
+    id: state.knowledgeId,
+    knowledge_type: "sop",
+    scope_key: "repo:screenpipe",
+    title: String(current?.body.title ?? "发布流程"),
+    current_version: current?.version,
+    current_state: current?.state,
+    availability: current?.availability ?? "deleted",
+    paused: state.paused,
+    review_due_at: current?.review_due_at,
+    candidate_versions: state.versions
+      .filter((version) => version.state === "candidate")
+      .map((version) => version.version),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+function mockBrainDetail(state: MockBrainState) {
+  return {
+    ...mockBrainItem(state),
+    versions: state.versions,
+    source_summaries: [
+      {
+        source_uid: "source-release-1",
+        kind: "ui_event",
+        app: "Terminal",
+        captured_at: new Date().toISOString(),
+        state: "active",
+        title: "发布前检查",
+      },
+    ],
+  };
+}
+
+function mockBrainError(message: string, code = "bad_request", status = 400) {
+  return Response.json(
+    { code, message, retryable: false, request_id: "browser-mock-request" },
+    { status },
+  );
+}
+
+function mockBrainResponse(
+  url: URL,
+  init: RequestInit | undefined,
+  state: MockBrainState,
+): Response | null {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const body = parseJsonBody(init);
+  const knowledgeMatch = url.pathname.match(/^\/brain\/knowledge\/([^/]+)$/);
+  const versionMatch = url.pathname.match(
+    /^\/brain\/knowledge\/([^/]+)\/versions\/(\d+)$/,
+  );
+  const candidateMatch = url.pathname.match(
+    /^\/brain\/knowledge\/([^/]+)\/versions$/,
+  );
+  const reviewMatch = url.pathname.match(
+    /^\/brain\/knowledge\/([^/]+)\/versions\/(\d+)\/review$/,
+  );
+
+  if (url.pathname === "/brain/work-units" && method === "GET") {
+    return Response.json({
+      work_units: [
+        {
+          id: "wu-1",
+          scope_key: "repo:screenpipe",
+          task_key: "release",
+          state: "ready",
+          input_hash: "hash-1",
+          extractor_schema_version: "extract-v1",
+          prompt_version: "prompt-v1",
+          body: { title: "今天的发布工作", actions: ["运行测试"] },
+        },
+      ],
+    });
+  }
+  const workUnitMatch = url.pathname.match(/^\/brain\/work-units\/([^/]+)$/);
+  if (workUnitMatch && method === "GET") {
+    const workUnitId = decodeURIComponent(workUnitMatch[1]);
+    if (workUnitId === "wu-expired" || workUnitId === "wu-deleted") {
+      return mockBrainError(
+        workUnitId === "wu-expired" ? "工作单元已过期" : "工作单元已删除",
+        workUnitId === "wu-expired" ? "work_unit_expired" : "work_unit_deleted",
+        410,
+      );
+    }
+    if (workUnitId !== "wu-1") {
+      return mockBrainError("工作单元不存在", "not_found", 404);
+    }
+    return Response.json({
+      work_unit: {
+        id: "wu-1",
+        scope_key: "repo:screenpipe",
+        task_key: "release",
+        interval_start: "2026-09-08T00:00:00Z",
+        interval_end: "2026-09-08T01:00:00Z",
+        state: "active",
+        input_hash: "hash-1",
+        extractor_schema_version: "extract-v1",
+        prompt_version: "prompt-v1",
+        revision_state: "valid",
+        body: { title: "今天的发布工作", actions: ["运行测试"] },
+      },
+      evidence: [
+        {
+          source_uid: "source-release-1",
+          revision: "source-rev-1",
+          kind: "ui_event",
+          captured_at: "2026-09-08T00:30:00Z",
+          app: "Terminal",
+          state: "active",
+          media_available: false,
+          text: "运行测试",
+        },
+      ],
+      related_knowledge: [
+        {
+          knowledge_id: state.knowledgeId,
+          version: 1,
+          state: "published",
+          availability: "valid",
+          title: "发布流程",
+        },
+      ],
+    });
+  }
+  if (url.pathname === "/brain/knowledge" && method === "GET") {
+    const item = mockBrainItem(state);
+    const stateFilter = url.searchParams.get("state");
+    const items = stateFilter && item.current_state !== stateFilter ? [] : [item];
+    return Response.json({ items });
+  }
+  if (knowledgeMatch && method === "GET") {
+    if (decodeURIComponent(knowledgeMatch[1]) !== state.knowledgeId) {
+      return mockBrainError("知识不存在", "not_found", 404);
+    }
+    return Response.json(mockBrainDetail(state));
+  }
+  if (versionMatch && method === "PATCH") {
+    const version = state.versions.find(
+      (candidate) => candidate.version === Number(versionMatch[2]),
+    );
+    if (!version || version.state !== "candidate") return mockBrainError("只有候选版本可以编辑", "conflict", 409);
+    if (body.expected_revision !== version.revision) return mockBrainError("版本已被他人修改，请刷新后重试", "conflict", 409);
+    version.body = (body.body ?? {}) as Record<string, unknown>;
+    version.revision = `${version.revision}-edited`;
+    return Response.json({ ok: true });
+  }
+  if (reviewMatch && method === "POST") {
+    const version = state.versions.find(
+      (candidate) => candidate.version === Number(reviewMatch[2]),
+    );
+    if (!version) return mockBrainError("版本不存在", "not_found", 404);
+    if (body.expected_revision !== version.revision) return mockBrainError("版本已被他人修改，请刷新后重试", "conflict", 409);
+    if (body.action === "publish") {
+      if (version.state !== "candidate" || body.expected_current_version_id !== state.currentVersionId) {
+        return mockBrainError("版本状态已变化，请刷新后重试", "conflict", 409);
+      }
+      state.versions.forEach((candidate) => {
+        if (candidate.id === state.currentVersionId) candidate.state = "superseded";
+      });
+      version.state = "published";
+      version.published_at = new Date().toISOString();
+      state.currentVersionId = version.id;
+      state.paused = false;
+    } else if (body.action === "pause") {
+      state.paused = true;
+    } else if (body.action === "resume") {
+      state.paused = false;
+    } else if (body.action === "reject") {
+      version.state = "rejected";
+      version.rejection_reason = String(body.reason ?? "browser mock rejection");
+    } else if (body.action === "reconfirm") {
+      version.review_due_at = new Date(Date.now() + 30 * 86400000).toISOString();
+    }
+    return Response.json({ ok: true, state: version.state });
+  }
+  if (candidateMatch && method === "POST") {
+    if (body.expected_current_version_id !== state.currentVersionId) {
+      return mockBrainError("当前发布版本已变化，请刷新后重试", "conflict", 409);
+    }
+    const current = state.versions.find((version) => version.id === state.currentVersionId);
+    const versionNumber = Math.max(...state.versions.map((version) => version.version)) + 1;
+    const version: MockBrainVersion = {
+      id: state.nextVersionId++,
+      knowledge_id: state.knowledgeId,
+      version: versionNumber,
+      state: "candidate",
+      availability: "valid",
+      body: (body.body ?? current?.body ?? {}) as Record<string, unknown>,
+      created_at: new Date().toISOString(),
+      input_hash: typeof body.input_hash === "string" ? body.input_hash : "hash-v2",
+      revision: `rev-${versionNumber}`,
+      work_unit_ids: Array.isArray(body.work_unit_ids) ? (body.work_unit_ids as string[]) : ["wu-1"],
+      evidence: current?.evidence ?? [],
+      supported: true,
+    };
+    state.versions.push(version);
+    return Response.json({ ok: true, knowledge_id: state.knowledgeId, version: versionNumber, state: "candidate" });
+  }
+  if (url.pathname === "/brain/feedback" && method === "POST") {
+    state.paused = true;
+    return Response.json({
+      feedback_id: `feedback-${state.answerCount + 1}`,
+      status: "located",
+      located_knowledge_id: state.knowledgeId,
+      located_version: state.versions.find((version) => version.id === state.currentVersionId)?.version,
+      target_paused: true,
+    });
+  }
+  if (url.pathname === "/brain/status" && method === "GET") {
+    return Response.json({
+      enabled: true,
+      migration_phase: "active",
+      index_coverage: { indexed: 3, total: 3, partial: false },
+      queues: [],
+      cleanup_failures: 0,
+      pending_candidates: state.versions.filter((version) => version.state === "candidate").length,
+      review_due_count: 0,
+      history: { imported_entries: 0, total_entries: 0, coverage_spans: 0, phase: "complete" },
+    });
+  }
+  if (url.pathname === "/brain/jobs" && method === "GET") {
+    return Response.json({ jobs: state.jobs });
+  }
+  if (url.pathname === "/answer" && method === "POST") {
+    state.answerCount += 1;
+    const current = state.versions.find((version) => version.id === state.currentVersionId);
+    const answerId = `answer-${state.answerCount}`;
+    return Response.json({
+      answer_id: answerId,
+      status: current ? "answered" : "no_evidence",
+      answer: current ? `基于知识 v${current.version}：${String(current.body.title ?? "发布流程")}` : undefined,
+      claims: current
+        ? [{ claim_id: `claim-${state.answerCount}`, text: "发布前运行测试", evidence_refs: ["source-release-1"], knowledge_version_id: String(current.id) }]
+        : [],
+      sources: current
+        ? [{
+            source_uid: "source-release-1",
+            revision: "source-rev-1",
+            kind: "ui_event",
+            excerpt: "发布前运行测试",
+            captured_at: new Date().toISOString(),
+            media_available: false,
+          }]
+        : [],
+      knowledge_versions: current
+        ? [{ knowledge_id: state.knowledgeId, version: current.version, knowledge_type: "sop", state: current.state, availability: current.availability }]
+        : [],
+      retrieval: { routes: [{ route: "knowledge", status: current ? "ok" : "no_hits", hits: current ? 1 : 0 }], coverage: { indexed: current ? 1 : 0, total: 1, partial: false } },
+      uncertainty: [],
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 3600000).toISOString(),
+    });
+  }
+  if (url.pathname === "/connections/office" && method === "GET") {
+    return Response.json({ connections: Object.values(state.office) });
+  }
+  const officeMatch = url.pathname.match(
+    /^\/connections\/office\/(feishu|tencent-meeting)(?:\/(refresh|authorize|scope|sync|control|disconnect))?$/,
+  );
+  if (officeMatch) {
+    const provider = officeMatch[1] as "feishu" | "tencent-meeting";
+    const action = officeMatch[2];
+    const office = state.office[provider];
+    if (!action && method === "GET") return Response.json(office);
+    if (action === "authorize" && method === "POST") {
+      office.auth_status = "authorized";
+      office.account_alias = `${provider}-demo`;
+      office.completeness = "full";
+      return Response.json({ status: office, next: "browser mock authorization complete" });
+    }
+    if (action === "refresh" && method === "POST") return Response.json(office);
+    if (action === "scope" && method === "PUT") {
+      if (body.expected_revision !== office.scope_revision) {
+        return mockBrainError("连接范围已变化，请刷新后重试", "conflict", 409);
+      }
+      if (office.auth_status !== "authorized") return mockBrainError("连接尚未授权", "not_authorized", 400);
+      office.scope_revision = Number(office.scope_revision) + 1;
+      office.scope = {
+        document_ids: Array.isArray(body.document_ids) ? body.document_ids : [],
+        chat_ids: Array.isArray(body.chat_ids) ? body.chat_ids : [],
+        meeting_ids: Array.isArray(body.meeting_ids) ? body.meeting_ids : [],
+        all_accessible_meetings: body.all_accessible_meetings === true,
+        window_start_ms: Number(body.window_start_ms ?? 0),
+        window_end_ms: Number(body.window_end_ms ?? 0),
+        auto_sync: body.auto_sync === true,
+      };
+      return Response.json({ scope_revision: office.scope_revision });
+    }
+    if (action === "sync" && method === "POST") {
+      if (office.auth_status !== "authorized") return mockBrainError("连接尚未授权", "not_authorized", 400);
+      office.sync_status = "queued";
+      const jobId = 100 + state.jobs.length;
+      state.jobs.push({
+        id: jobId,
+        kind: "office_sync",
+        state: "queued",
+        priority: 5,
+        attempts: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      return Response.json({ job_id: jobId });
+    }
+    if (action === "control" && method === "POST") {
+      const control = String(body.action ?? "");
+      if (!["pause", "cancel", "retry"].includes(control)) return mockBrainError("未知操作");
+      office.sync_status = control === "pause" ? "paused" : control === "retry" ? "queued" : "idle";
+      return Response.json({ affected: 1 });
+    }
+    if (action === "disconnect" && method === "POST") {
+      office.auth_status = "disconnected";
+      office.sync_status = "idle";
+      office.account_alias = undefined;
+      office.imported_objects = 0;
+      office.completeness = "unknown";
+      return Response.json({ ok: true });
+    }
+  }
+  if (url.pathname === "/tasks/definitions" && method === "GET") {
+    return Response.json({ definitions: state.taskDefinitions });
+  }
+  const definitionMatch = url.pathname.match(/^\/tasks\/definitions\/([^/]+)$/);
+  if (definitionMatch && method === "PATCH") {
+    const definitionId = decodeURIComponent(definitionMatch[1]);
+    const definition = state.taskDefinitions.find(
+      (candidate) => candidate.definition_id === definitionId,
+    );
+    if (!definition) return mockBrainError("任务定义不存在", "not_found", 404);
+    if (Number(body.expected_revision) !== Number(definition.revision)) {
+      return mockBrainError("任务定义版本已变化，请刷新后重试", "revision_conflict", 409);
+    }
+    const managedFields = [
+      "config_revision",
+      "config_ref",
+      "trigger",
+      "model_binding_policy",
+    ];
+    if (definition.managed_by_connection && ("enabled" in body || managedFields.some((field) => field in body))) {
+      return mockBrainError(
+        "连接任务的账号、范围、自动同步和触发配置必须在连接页面维护",
+        "managed_definition_immutable",
+        403,
+      );
+    }
+    if (definition.managed_by_pipe && ("enabled" in body || managedFields.some((field) => field in body))) {
+      return mockBrainError(
+        "用户任务的 pipe.md、启停和触发配置必须在“我的任务”编辑器维护",
+        "pipe_definition_immutable",
+        403,
+      );
+    }
+    if (!("enabled" in body) && !managedFields.some((field) => field in body)) {
+      return mockBrainError("至少需要提供一个可更新字段", "empty_update", 400);
+    }
+    if (typeof body.enabled === "boolean") definition.enabled = body.enabled;
+    if (typeof body.config_revision === "string") definition.config_revision = body.config_revision;
+    if (typeof body.config_ref === "string") definition.config_ref = body.config_ref;
+    if (body.trigger && typeof body.trigger === "object") definition.trigger = body.trigger;
+    if (typeof body.model_binding_policy === "string") definition.model_binding_policy = body.model_binding_policy;
+    definition.revision = Number(definition.revision) + 1;
+    return Response.json({ definition });
+  }
+  const startTaskMatch = url.pathname.match(/^\/tasks\/definitions\/([^/]+)\/runs$/);
+  if (startTaskMatch && method === "POST") {
+    const definitionId = decodeURIComponent(startTaskMatch[1]);
+    const definition = state.taskDefinitions.find(
+      (candidate) => candidate.definition_id === definitionId,
+    );
+    if (!definition) return mockBrainError("任务定义不存在", "not_found", 404);
+    if (definition.enabled !== true) {
+      return mockBrainError("任务定义已停用", "definition_disabled", 409);
+    }
+    if (definition.kind === "activity_summary") {
+      return mockBrainError(
+        "活动总结由系统活动入口按时间范围运行，不能直接从统一任务目录启动",
+        "activity_summary_managed",
+        409,
+      );
+    }
+    if (definition.managed_by_pipe) {
+      return mockBrainError(
+        "用户任务必须通过 Pipe 运行入口启动，不能直接创建公共任务运行",
+        "pipe_definition_managed",
+        409,
+      );
+    }
+    const inputHash = typeof body.input_hash === "string" ? body.input_hash : `input-${state.taskRuns.length + 1}`;
+    const existing = state.taskRuns.find(
+      (run) => run.definition_id === definitionId && run.input_hash === inputHash,
+    );
+    if (existing) return Response.json({ run_id: existing.run_id, created: false });
+    const runId = `run-${state.taskRuns.length + 1}`;
+    const isIo = definition.kind === "office_sync";
+    const forcedFailure =
+      body.input_refs && typeof body.input_refs === "object" &&
+      (body.input_refs as Record<string, unknown>).force_failure === true;
+    const run = {
+      run_id: runId,
+      definition_id: definitionId,
+      definition_revision: String(definition.config_revision),
+      root_run_id: runId,
+      trigger_key: typeof body.trigger_key === "string" ? body.trigger_key : "manual",
+      input_hash: inputHash,
+      input_refs: body.input_refs ?? {},
+      config_snapshot: body.config_snapshot ?? {},
+      state: forcedFailure ? "failed" : "running",
+      revision: 1,
+      priority: Number(body.priority ?? 5),
+      owner_generation: 1,
+      output_refs: {},
+      ...(forcedFailure ? { error_code: "handler_failed" } : {}),
+    };
+    state.taskRuns.push(run);
+    state.taskEvents.push({
+      run_id: runId,
+      seq: 1,
+      phase: forcedFailure ? "failed" : isIo ? "io" : "running",
+      event_type: forcedFailure ? "run_failed" : isIo ? "office_sync_started" : "started",
+      attempt_id: "attempt-1",
+      timestamp: new Date().toISOString(),
+      safe_metadata: { source: "browser-mock", ...(forcedFailure ? { error_code: "handler_failed" } : {}) },
+      output_refs: {},
+    });
+    return Response.json({ run_id: runId, created: true });
+  }
+  if (url.pathname === "/tasks/runs" && method === "GET") {
+    return Response.json({
+      runs: state.taskRuns.map((run) => ({
+        run_id: run.run_id,
+        definition_id: run.definition_id,
+        state: run.state,
+        root_run_id: run.root_run_id,
+        revision: run.revision,
+      })),
+    });
+  }
+  const taskRunMatch = url.pathname.match(/^\/tasks\/runs\/([^/]+)(?:\/(events|control))?$/);
+  if (taskRunMatch) {
+    const runId = decodeURIComponent(taskRunMatch[1]);
+    const run = state.taskRuns.find((candidate) => candidate.run_id === runId);
+    if (!run) return mockBrainError("任务运行不存在", "not_found", 404);
+    if (!taskRunMatch[2] && method === "GET") return Response.json({ run });
+    if (taskRunMatch[2] === "events" && method === "GET") {
+      const afterSeq = Number(url.searchParams.get("after_seq") ?? 0);
+      const seen = new Set<number>();
+      return Response.json({
+        events: state.taskEvents.filter((event) => {
+          const seq = Number(event.seq);
+          if (event.run_id !== runId || seq <= afterSeq || seen.has(seq)) return false;
+          seen.add(seq);
+          return true;
+        }),
+      });
+    }
+    if (taskRunMatch[2] === "control" && method === "POST") {
+      if (Number(body.expected_revision) !== run.revision) return mockBrainError("任务版本已变化，请刷新后重试", "conflict", 409);
+      const control = String(body.control ?? "");
+      const nextState = control === "pause" ? "paused" : control === "resume" ? "running" : control === "cancel" ? "cancelled" : control === "retry" ? "running" : null;
+      if (!nextState) return mockBrainError("未知任务控制操作");
+      run.state = nextState;
+      run.revision = Number(run.revision) + 1;
+      const attemptId = `attempt-${state.taskEvents.filter((event) => event.run_id === runId && event.attempt_id).length + 1}`;
+      state.taskEvents.push({
+        run_id: runId,
+        seq: state.taskEvents.filter((event) => event.run_id === runId).length + 1,
+        phase: nextState,
+        event_type: `control_${control}`,
+        ...(control === "retry" ? { attempt_id: attemptId } : {}),
+        timestamp: new Date().toISOString(),
+        safe_metadata: { control },
+        output_refs: {},
+      });
+      return Response.json({ run });
+    }
+  }
+  return null;
+}
+
 export function createMockHealth(scenario: BrowserDevScenario = "ready") {
   const now = new Date().toISOString();
   return {
@@ -182,6 +831,7 @@ export function mockLocalApiResponse(
   url: URL,
   init: RequestInit | undefined,
   scenario: BrowserDevScenario,
+  brainState: MockBrainState = createMockBrainState(),
 ): Response {
   if (scenario === "backend-error") {
     return Response.json(
@@ -191,6 +841,8 @@ export function mockLocalApiResponse(
   }
 
   const method = (init?.method ?? "GET").toUpperCase();
+  const brainResponse = mockBrainResponse(url, init, brainState);
+  if (brainResponse) return brainResponse;
   const emptyPage = {
     data: [],
     pagination: { limit: 100, offset: 0, total: 0 },
@@ -832,6 +1484,7 @@ function isLocalEngineUrl(url: URL, apiPort: number): boolean {
 
 function installMockFetch(apiPort: number, scenario: BrowserDevScenario) {
   const nativeFetch = window.fetch.bind(window);
+  const brainState = createMockBrainState();
   window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     const value =
       typeof input === "string"
@@ -851,13 +1504,13 @@ function installMockFetch(apiPort: number, scenario: BrowserDevScenario) {
     ) {
       return new Promise((resolve) => {
         window.setTimeout(
-          () => resolve(mockLocalApiResponse(url, init, scenario)),
+          () => resolve(mockLocalApiResponse(url, init, scenario, brainState)),
           15_000,
         );
       });
     }
 
-    return Promise.resolve(mockLocalApiResponse(url, init, scenario));
+    return Promise.resolve(mockLocalApiResponse(url, init, scenario, brainState));
   };
 }
 

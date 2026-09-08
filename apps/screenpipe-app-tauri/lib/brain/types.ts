@@ -158,6 +158,48 @@ export interface KnowledgeListItemDto {
   updated_at: string;
 }
 
+export interface WorkUnitDto {
+  id: string;
+  scope_key: string;
+  task_key?: string;
+  interval_start?: string;
+  interval_end?: string;
+  state: string;
+  input_hash: string;
+  extractor_schema_version: string;
+  prompt_version: string;
+  body: Record<string, unknown>;
+}
+
+export interface WorkUnitEvidenceDto {
+  source_uid: string;
+  revision: string;
+  kind: SourceKind;
+  captured_at: string;
+  app?: string;
+  window?: string;
+  state: string;
+  media_available: boolean;
+  text?: string;
+  source_url?: string;
+}
+
+export interface RelatedKnowledgeDto {
+  knowledge_id: string;
+  version: number;
+  state: KnowledgeState;
+  availability: KnowledgeAvailability;
+  title: string;
+}
+
+export interface WorkUnitDetailDto {
+  work_unit: WorkUnitDto & {
+    revision_state: string;
+  };
+  evidence: WorkUnitEvidenceDto[];
+  related_knowledge: RelatedKnowledgeDto[];
+}
+
 export interface KnowledgeVersionDto {
   /** Version row id — stable anchor for feedback. */
   id: number;
@@ -209,6 +251,14 @@ export interface ReviewRequest {
 export interface KnowledgeEditRequest {
   expected_revision: string;
   body: Record<string, unknown>;
+}
+
+export interface KnowledgeCandidateRequest {
+  expected_current_version_id?: number;
+  title?: string;
+  body: Record<string, unknown>;
+  input_hash?: string;
+  work_unit_ids?: string[];
 }
 
 export type FeedbackKind =

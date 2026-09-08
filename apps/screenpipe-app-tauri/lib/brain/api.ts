@@ -11,10 +11,13 @@ import type {
   FeedbackResponse,
   JobDto,
   KnowledgeDetailDto,
+  KnowledgeCandidateRequest,
   KnowledgeEditRequest,
   KnowledgeListItemDto,
   ReviewRequest,
   SourceDetailDto,
+  WorkUnitDto,
+  WorkUnitDetailDto,
 } from "@/lib/brain/types";
 
 const BASE = "/brain";
@@ -31,6 +34,20 @@ async function parse<T>(res: Response, fallbackMessage: string): Promise<T> {
     throw err;
   }
   return body as T;
+}
+
+export async function listWorkUnits(params?: { scope_key?: string; limit?: number }): Promise<WorkUnitDto[]> {
+  const search = new URLSearchParams();
+  if (params?.scope_key) search.set("scope_key", params.scope_key);
+  if (params?.limit) search.set("limit", String(params.limit));
+  const res = await localFetch(`${BASE}/work-units?${search.toString()}`);
+  const body = await parse<{ work_units: WorkUnitDto[] }>(res, "加载工作单元失败");
+  return body.work_units;
+}
+
+export async function getWorkUnit(id: string): Promise<WorkUnitDetailDto> {
+  const res = await localFetch(`${BASE}/work-units/${encodeURIComponent(id)}`);
+  return parse<WorkUnitDetailDto>(res, "加载工作单元详情失败");
 }
 
 export async function listKnowledge(params?: {
@@ -82,6 +99,21 @@ export async function editKnowledgeVersion(
     },
   );
   await parse<{ ok: boolean }>(res, "编辑失败");
+}
+
+export async function createKnowledgeCandidate(
+  knowledgeId: string,
+  req: KnowledgeCandidateRequest,
+): Promise<{ version: number }> {
+  const res = await localFetch(
+    `${BASE}/knowledge/${encodeURIComponent(knowledgeId)}/versions`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req),
+    },
+  );
+  return parse<{ version: number }>(res, "创建候选修订失败");
 }
 
 export async function submitFeedback(

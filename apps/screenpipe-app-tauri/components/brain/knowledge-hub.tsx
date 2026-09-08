@@ -4,50 +4,46 @@
 
 "use client";
 
-// 知识中枢：知识审核台 + 带引用提问（Ask）+ 运行状态。
+// 知识库：工作单元、知识审核台和画布；提问与运行记录分别归入聊天和系统活动。
 // 所有状态以服务端返回为准；本组件只发送用户意图，不直接修改版本/发布指针。
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  answer,
+  createKnowledgeCandidate,
+  getWorkUnit,
   getBrainSource,
-  getBrainStatus,
   getKnowledge,
-  listJobs,
   listKnowledge,
+  listWorkUnits,
   reviewKnowledgeVersion,
   editKnowledgeVersion,
-  startBackfill,
   submitFeedback,
 } from "@/lib/brain/api";
+import { showChatWithPrefill } from "@/lib/chat-utils";
 import {
   AVAILABILITY_LABELS,
   KNOWLEDGE_STATE_LABELS,
   KNOWLEDGE_TYPE_LABELS,
-  type AnswerResponse,
-  type BrainStatusDto,
-  type ClaimDto,
-  type JobDto,
   type KnowledgeDetailDto,
   type KnowledgeListItemDto,
   type ReviewAction,
   type SourceDetailDto,
+  type WorkUnitDto,
 } from "@/lib/brain/types";
 import { BrainSection } from "@/components/settings/brain-section";
 
-type Tab = "knowledge" | "ask" | "status" | "canvas";
+type Tab = "work-units" | "knowledge" | "canvas";
 
 export function KnowledgeHub() {
   const [tab, setTab] = useState<Tab>("knowledge");
   const tabs: Array<{ id: Tab; label: string }> = [
-    { id: "knowledge", label: "知识审核" },
-    { id: "ask", label: "提问" },
-    { id: "status", label: "运行状态" },
+    { id: "work-units", label: "工作单元" },
+    { id: "knowledge", label: "知识" },
     { id: "canvas", label: "画布" },
   ];
   return (
     <div className="flex h-full flex-col space-y-3 p-4" data-testid="knowledge-hub">
-      <div role="tablist" aria-label="知识中枢" className="flex gap-1">
+      <div role="tablist" aria-label="知识库" className="flex gap-1">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -63,11 +59,141 @@ export function KnowledgeHub() {
         ))}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
+        {tab === "work-units" && <WorkUnitList />}
         {tab === "knowledge" && <KnowledgeReview />}
-        {tab === "ask" && <AskPanel />}
-        {tab === "status" && <StatusPanel />}
         {tab === "canvas" && <BrainSection />}
       </div>
+    </div>
+  );
+}
+
+function WorkUnitList() {
+  const [items, setItems] = useState<WorkUnitDto[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Awaited<ReturnType<typeof getWorkUnit>> | null>(null);
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setBusy(true);
+    try {
+      setItems(await listWorkUnits({ limit: 100 }));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  const openDetail = useCallback(async (id: string) => {
+    setBusy(true);
+    setSelectedId(id);
+    try {
+      setDetail(await getWorkUnit(id));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (selectedId && detail) {
+    return (
+      <div className="space-y-3" data-testid="work-unit-detail">
+        <button
+          className="text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            setSelectedId(null);
+            setDetail(null);
+          }}
+        >
+          ← 返回工作单元列表
+        </button>
+        <div>
+          <h2 className="text-sm font-medium">
+            {String(detail.work_unit.body.title ?? detail.work_unit.task_key ?? "未命名工作单元")}
+          </h2>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            {detail.work_unit.scope_key} · {detail.work_unit.state} · 修订 {detail.work_unit.input_hash.slice(0, 8)}…
+          </p>
+        </div>
+        <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs">
+          {renderKnowledgeText(detail.work_unit.body)}
+        </pre>
+        <section className="rounded-md border p-3">
+          <h3 className="text-xs font-medium">原始活动与字段证据（{detail.evidence.length}）</h3>
+          {detail.evidence.length === 0 ? (
+            <p className="mt-2 text-[11px] text-muted-foreground">没有可用的原始证据，可能已删除或过期。</p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {detail.evidence.map((evidence) => (
+                <li key={`${evidence.source_uid}:${evidence.revision}`} className="rounded bg-muted/30 p-2 text-[11px]">
+                  <p>{evidence.kind} · {evidence.state} · {evidence.captured_at}</p>
+                  {evidence.app && <p>应用：{evidence.app}</p>}
+                  {evidence.text && <p className="mt-1 whitespace-pre-wrap">{evidence.text.slice(0, 500)}</p>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section className="rounded-md border p-3">
+          <h3 className="text-xs font-medium">相关知识（{detail.related_knowledge.length}）</h3>
+          {detail.related_knowledge.length === 0 ? (
+            <p className="mt-2 text-[11px] text-muted-foreground">尚未被知识版本引用。</p>
+          ) : (
+            <ul className="mt-2 space-y-1">
+              {detail.related_knowledge.map((knowledge) => (
+                <li key={`${knowledge.knowledge_id}:${knowledge.version}`} className="text-[11px]">
+                  {knowledge.title} · v{knowledge.version} · {knowledge.state} · {knowledge.availability}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3" data-testid="work-unit-list">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-medium">工作单元</h2>
+          <p className="text-xs text-muted-foreground">按稳定区间保存的本地活动证据与抽取结果。</p>
+        </div>
+        <button className="rounded-md border px-2 py-1 text-xs" onClick={load} disabled={busy}>刷新</button>
+      </div>
+      {error && <p role="alert" className="text-xs text-red-500">{error}</p>}
+      {!busy && items.length === 0 && <p className="text-xs text-muted-foreground">暂无已完成的工作单元。</p>}
+      <ul className="space-y-2">
+        {items.map((item) => (
+          <li key={item.id}>
+            <button
+              className="w-full rounded-md border p-3 text-left hover:bg-accent"
+              onClick={() => openDetail(item.id)}
+              aria-label={`查看工作单元 ${String(item.body.title ?? item.task_key ?? item.id)}`}
+            >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium">{String(item.body.title ?? item.task_key ?? "未命名工作单元")}</p>
+                <p className="text-[11px] text-muted-foreground">{item.scope_key} · {item.state}</p>
+              </div>
+              <span className="text-[10px] text-muted-foreground">{item.id.slice(0, 8)}…</span>
+            </div>
+            <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-muted-foreground">
+              {renderKnowledgeText(item.body)}
+            </p>
+            {item.interval_start && item.interval_end && (
+              <p className="mt-2 text-[10px] text-muted-foreground">{item.interval_start} → {item.interval_end}</p>
+            )}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -84,6 +210,7 @@ function KnowledgeReview() {
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<"all" | "candidate" | "published">("all");
   const [editText, setEditText] = useState<string | null>(null);
+  const [editVersion, setEditVersion] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -107,6 +234,7 @@ function KnowledgeReview() {
       const d = await getKnowledge(id);
       setDetail(d);
       setEditText(null);
+      setEditVersion(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -121,14 +249,19 @@ function KnowledgeReview() {
   }, [items, filter, candidates]);
 
   const doReview = useCallback(
-    async (action: ReviewAction, version: number, revision: string) => {
-      if (action === "reject" && !window.confirm("驳回该候选？相同输入不会重复生成。")) return;
+    async (action: ReviewAction, version: number, revision: string, reason?: string) => {
+      if (action === "reject") {
+        const rejectionReason = window.prompt("请输入驳回原因（用于抑制相同输入重复生成）：", reason ?? "");
+        if (rejectionReason === null || !rejectionReason.trim()) return;
+        reason = rejectionReason.trim();
+      }
       setBusy(true);
       try {
         await reviewKnowledgeVersion(detail!.id, version, {
           action,
           expected_revision: revision,
-          expected_current_version_id: detail!.current_version ?? undefined,
+          expected_current_version_id: currentVersionRowId(detail!),
+          ...(reason ? { reason } : {}),
         });
         await openDetail(detail!.id);
         await load();
@@ -161,6 +294,28 @@ function KnowledgeReview() {
     },
     [detail, load],
   );
+
+  const createCandidate = useCallback(async () => {
+    if (!detail?.current_version) return;
+    const published = detail.versions.find((version) => version.version === detail.current_version);
+    if (!published) return;
+    setBusy(true);
+    try {
+      await createKnowledgeCandidate(detail.id, {
+        expected_current_version_id: currentVersionRowId(detail),
+        title: published.body.title ? String(published.body.title) : detail.title,
+        body: published.body,
+        input_hash: published.input_hash,
+        work_unit_ids: published.work_unit_ids,
+      });
+      await openDetail(detail.id);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [detail, load, openDetail]);
 
   if (!detail) {
     return (
@@ -224,10 +379,6 @@ function KnowledgeReview() {
     );
   }
 
-  const currentVersion =
-    detail.versions.find((v) => v.version === detail.current_version) ??
-    detail.versions[detail.versions.length - 1];
-
   return (
     <div className="space-y-4" data-testid="knowledge-detail">
       <button
@@ -249,6 +400,40 @@ function KnowledgeReview() {
           {AVAILABILITY_LABELS[detail.availability]}
           {detail.paused ? " · 已暂停" : ""}
         </p>
+        {detail.current_version && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              className="rounded-md border px-2 py-1 text-[11px] disabled:opacity-50"
+              disabled={busy}
+              onClick={createCandidate}
+            >
+              从当前发布版创建候选修订
+            </button>
+            <button
+              className="rounded-md border px-2 py-1 text-[11px] disabled:opacity-50"
+              disabled={busy}
+              onClick={async () => {
+                const version = detail.versions.find((v) => v.version === detail.current_version);
+                if (!version) return;
+                await showChatWithPrefill({
+                  context: JSON.stringify({
+                    kind: "brain_knowledge_citation",
+                    knowledge_id: detail.id,
+                    knowledge_version_id: version.id,
+                    version: version.version,
+                    scope_key: detail.scope_key,
+                    work_unit_ids: version.work_unit_ids,
+                  }),
+                  prompt: "请围绕这条已核验知识回答我的后续问题：",
+                  displayLabel: `围绕知识「${detail.title}」提问`,
+                  source: "brain-knowledge-citation",
+                });
+              }}
+            >
+              围绕此内容提问
+            </button>
+          </div>
+        )}
       </div>
 
       {detail.versions.map((v) => (
@@ -271,7 +456,10 @@ function KnowledgeReview() {
                   <button
                     className="rounded-md border px-2 py-1 text-[11px] disabled:opacity-50"
                     disabled={busy}
-                    onClick={() => setEditText(JSON.stringify(v.body, null, 2))}
+                    onClick={() => {
+                      setEditVersion(v.version);
+                      setEditText(JSON.stringify(v.body, null, 2));
+                    }}
                   >
                     编辑
                   </button>
@@ -289,9 +477,9 @@ function KnowledgeReview() {
                   <button
                     className="rounded-md border px-2 py-1 text-[11px] disabled:opacity-50"
                     disabled={busy}
-                    onClick={() => doReview("pause", v.version, v.revision)}
+                    onClick={() => doReview(detail.paused ? "resume" : "pause", v.version, v.revision)}
                   >
-                    暂停
+                    {detail.paused ? "恢复" : "暂停"}
                   </button>
                   <button
                     className="rounded-md border px-2 py-1 text-[11px] disabled:opacity-50"
@@ -331,10 +519,15 @@ function KnowledgeReview() {
               </ul>
             </details>
           )}
+          {v.work_unit_ids.length > 0 && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              支持工作单元：{v.work_unit_ids.join("、")}
+            </p>
+          )}
         </div>
       ))}
 
-      {editText && currentVersion && (
+      {editText && editVersion !== null && detail.versions.find((v) => v.version === editVersion) && (
         <div className="space-y-2 rounded-md border p-3">
           <h3 className="text-xs font-medium">编辑候选内容（JSON）</h3>
           <textarea
@@ -349,8 +542,10 @@ function KnowledgeReview() {
               onClick={async () => {
                 try {
                   const parsed = JSON.parse(editText ?? "{}");
-                  await editKnowledgeVersion(detail.id, currentVersion.version, {
-                    expected_revision: currentVersion.revision,
+                  const editing = detail.versions.find((v) => v.version === editVersion);
+                  if (!editing) return;
+                  await editKnowledgeVersion(detail.id, editing.version, {
+                    expected_revision: editing.revision,
                     body: parsed,
                   });
                   await openDetail(detail.id);
@@ -361,7 +556,13 @@ function KnowledgeReview() {
             >
               保存编辑
             </button>
-            <button className="rounded-md border px-3 py-1.5 text-xs" onClick={() => setEditText(null)}>
+            <button
+              className="rounded-md border px-3 py-1.5 text-xs"
+              onClick={() => {
+                setEditText(null);
+                setEditVersion(null);
+              }}
+            >
               取消
             </button>
           </div>
@@ -385,6 +586,11 @@ function KnowledgeReview() {
   );
 }
 
+function currentVersionRowId(detail: KnowledgeDetailDto): number | undefined {
+  if (detail.current_version == null) return undefined;
+  return detail.versions.find((version) => version.version === detail.current_version)?.id;
+}
+
 function renderKnowledgeText(body: Record<string, unknown>): string {
   // Compact Chinese rendering of the knowledge body.
   const lines: string[] = [];
@@ -404,6 +610,31 @@ function renderKnowledgeText(body: Record<string, unknown>): string {
     (body.handling as string[]).forEach((s) => lines.push(`- 处理：${s}`));
   }
   if (body.single_observation === true) lines.push("（单次观察，未泛化）");
+  const structuredFields: Array<[string, string]> = [
+    ["task", "任务"],
+    ["inputs", "输入"],
+    ["actions", "动作"],
+    ["decisions", "决策"],
+    ["results", "结果"],
+    ["result", "结果"],
+    ["exceptions", "异常"],
+    ["outputs", "输出"],
+    ["evidence_refs", "证据引用"],
+    ["confidence", "置信度"],
+  ];
+  for (const [key, label] of structuredFields) {
+    const value = body[key];
+    if (value === undefined || value === null) continue;
+    if (key === "result" && body.results !== undefined) continue;
+    if (Array.isArray(value)) {
+      lines.push(`${label}：`);
+      value.forEach((item) => lines.push(`- ${typeof item === "string" ? item : JSON.stringify(item)}`));
+    } else if (typeof value === "object") {
+      lines.push(`${label}：${JSON.stringify(value)}`);
+    } else {
+      lines.push(`${label}：${String(value)}`);
+    }
+  }
   if (lines.length === 0) return JSON.stringify(body, null, 2);
   return lines.join("\n");
 }
@@ -435,310 +666,5 @@ function SourceChip({ sourceUid, excerpt }: { sourceUid: string; excerpt?: strin
         </div>
       )}
     </details>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Ask（带引用提问）
-// ---------------------------------------------------------------------------
-
-function AskPanel() {
-  const [question, setQuestion] = useState("");
-  const [result, setResult] = useState<AnswerResponse | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const ask = useCallback(async () => {
-    if (!question.trim()) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await answer({ question });
-      setResult(res);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }, [question]);
-
-  const statusText: Record<string, string> = {
-    answered: "已回答",
-    partial: "部分回答",
-    no_evidence: "证据不足",
-    conflict: "证据冲突",
-    needs_confirmation: "需要确认",
-  };
-
-  return (
-    <div className="space-y-3" data-testid="ask-panel">
-      <div className="flex gap-2">
-        <input
-          className="flex-1 rounded-md border bg-transparent px-3 py-2 text-sm"
-          placeholder="基于本地记录提问，例如：上次为什么延期？遇到 X 异常怎么处理？"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.nativeEvent.isComposing) ask();
-          }}
-        />
-        <button
-          className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50"
-          onClick={ask}
-          disabled={busy}
-        >
-          {busy ? "思考中…" : "提问"}
-        </button>
-      </div>
-      {error && (
-        <p role="alert" className="text-xs text-red-500">
-          {error}
-        </p>
-      )}
-      {result && (
-        <div className="space-y-2" data-testid="answer-card">
-          <p className="text-xs text-muted-foreground">
-            状态：{statusText[result.status] ?? result.status}
-          </p>
-          {result.answer && <p className="text-sm">{result.answer}</p>}
-          {result.status === "no_evidence" && (
-            <p className="text-sm text-muted-foreground">证据不足，无法从本地记录回答该问题。</p>
-          )}
-          {result.claims.map((claim) => (
-            <ClaimCard key={claim.claim_id} claim={claim} answerId={result.answer_id} />
-          ))}
-          {result.uncertainty.length > 0 && (
-            <ul className="rounded-md border border-amber-300 p-2 text-[11px] text-amber-700">
-              {result.uncertainty.map((u, i) => (
-                <li key={i}>⚠ {u}</li>
-              ))}
-            </ul>
-          )}
-          {result.sources.length > 0 && (
-            <details>
-              <summary className="cursor-pointer text-[11px] text-muted-foreground">
-                引用来源（{result.sources.length}）
-              </summary>
-              <ul className="mt-1 space-y-1">
-                {result.sources.map((s) => (
-                  <li key={s.source_uid} className="text-[11px] text-muted-foreground">
-                    <SourceChip sourceUid={s.source_uid} excerpt={s.excerpt} />
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ClaimCard({ claim, answerId }: { claim: ClaimDto; answerId: string }) {
-  const [reported, setReported] = useState<string | null>(null);
-  return (
-    <div className="rounded-md border p-2">
-      <p className="text-sm">{claim.text}</p>
-      <div className="mt-1 flex flex-wrap items-center gap-1">
-        {claim.evidence_refs.map((ref) => (
-          <span key={ref} className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-            {ref}
-          </span>
-        ))}
-        <span className="ml-auto flex gap-1">
-          {(["incorrect", "outdated", "irrelevant"] as const).map((k) => (
-            <button
-              key={k}
-              className="rounded border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-accent"
-              onClick={async () => {
-                try {
-                  await submitFeedback({
-                    answer_id: answerId,
-                    claim_id: claim.claim_id,
-                    kind: k,
-                  });
-                  setReported(k);
-                } catch {
-                  setReported("failed");
-                }
-              }}
-            >
-              {reported === k ? "已反馈" : k === "incorrect" ? "有误" : k === "outdated" ? "过时" : "无关"}
-            </button>
-          ))}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// 运行状态
-// ---------------------------------------------------------------------------
-
-function StatusPanel() {
-  const [status, setStatus] = useState<BrainStatusDto | null>(null);
-  const [jobs, setJobs] = useState<JobDto[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      setStatus(await getBrainStatus());
-      setJobs(await listJobs(20));
-    } catch {
-      // engine may not be up yet
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 15000);
-    return () => clearInterval(t);
-  }, [load]);
-
-  const JOB_KIND_LABELS: Record<string, string> = {
-    extract: "抽取",
-    compile: "编译",
-    answer: "回答",
-    backfill_extract: "历史回填",
-    office_sync: "办公同步",
-    history_migration: "历史迁移",
-    cleanup: "清理",
-  };
-  const JOB_STATE_LABELS: Record<string, string> = {
-    pending: "等待",
-    running: "运行中",
-    succeeded: "成功",
-    failed: "失败",
-    paused: "已暂停",
-    cancelled: "已取消",
-  };
-
-  return (
-    <div className="space-y-4 text-xs" data-testid="brain-status">
-      {!status && <p className="text-muted-foreground">正在加载运行状态…</p>}
-      {status && (
-        <>
-          <div className="grid grid-cols-2 gap-2">
-            <StatCard label="引擎" value={status.enabled ? "已启用" : "未启用"} />
-            <StatCard
-              label="历史迁移"
-              value={
-                status.migration_phase === "active"
-                  ? `完成（${status.history.imported_entries} 条）`
-                  : status.migration_phase
-              }
-            />
-            <StatCard
-              label="待审候选"
-              value={`${status.pending_candidates}`}
-            />
-            <StatCard
-              label="模型"
-              value={
-                status.model
-                  ? `${status.model.model_id}（${status.model.preset_id}）`
-                  : "未绑定"
-              }
-            />
-            {status.paused_reason && (
-              <StatCard label="暂停原因" value={status.paused_reason} tone="warn" />
-            )}
-            {status.cleanup_failures > 0 && (
-              <StatCard label="清理失败项" value={`${status.cleanup_failures}`} tone="warn" />
-            )}
-          </div>
-
-          <div>
-            <h3 className="mb-1 text-xs font-medium">任务队列</h3>
-            {status.queues.length === 0 ? (
-              <p className="text-muted-foreground">暂无积压。</p>
-            ) : (
-              <ul className="space-y-1">
-                {status.queues.map((q) => (
-                  <li key={q.kind} className="flex justify-between rounded border px-2 py-1">
-                    <span>{JOB_KIND_LABELS[q.kind] ?? q.kind}</span>
-                    <span className="text-muted-foreground">
-                      等待 {q.pending} · 运行 {q.running}
-                      {q.oldest_waiting_ms != null
-                        ? ` · 最老等待 ${Math.round(q.oldest_waiting_ms / 1000)}s`
-                        : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="rounded-md border px-3 py-1.5 disabled:opacity-50"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                try {
-                  const n = await startBackfill();
-                  setMessage(`已启动近 7 天历史回填：${n.count ?? "?"} 个区间`);
-                  await load();
-                } catch (e) {
-                  setMessage(e instanceof Error ? e.message : String(e));
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              回填近 7 天历史
-            </button>
-            <button
-              className="rounded-md border px-3 py-1.5"
-              onClick={load}
-              disabled={busy}
-            >
-              刷新状态
-            </button>
-          </div>
-          {message && <p className="text-muted-foreground">{message}</p>}
-
-          <div>
-            <h3 className="mb-1 text-xs font-medium">最近任务</h3>
-            <ul className="space-y-1">
-              {jobs.slice(0, 10).map((j) => (
-                <li key={j.id} className="flex justify-between rounded border px-2 py-1">
-                  <span>
-                    #{j.id} {JOB_KIND_LABELS[j.kind] ?? j.kind}
-                  </span>
-                  <span
-                    className={
-                      j.state === "failed" ? "text-red-500" : "text-muted-foreground"
-                    }
-                  >
-                    {JOB_STATE_LABELS[j.state] ?? j.state}
-                    {j.last_error_code ? ` · ${j.last_error_code}` : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "warn";
-}) {
-  return (
-    <div className="rounded-md border p-2">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className={tone === "warn" ? "text-amber-600" : ""}>{value}</p>
-    </div>
   );
 }

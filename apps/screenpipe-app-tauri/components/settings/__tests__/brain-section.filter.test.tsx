@@ -597,7 +597,7 @@ describe("BrainSection type filter", () => {
     await waitFor(() => {
       expect(chatMocks.showChatWithPrefill).toHaveBeenCalledWith({
         context: "",
-        prompt: `help me understand the Screenpipe artifact at ${ARTIFACTS[0].path}`,
+        prompt: `帮我理解位于 ${ARTIFACTS[0].path} 的 Screenpipe 产物`,
         autoSend: false,
         source: "brain-artifact",
         useHomeChat: true,
