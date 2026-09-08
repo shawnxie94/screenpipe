@@ -104,3 +104,10 @@ related:
   12. tmeet 1.0.16 `auth status` 无 `--json` 旗标且只输出纯文本——argv 去掉 `--json`，解析器改为文本为主（Logged in/OpenId 行）+ JSON 兼容回退；meeting/record/transcript 全套 argv 与分页（`--start/--end ISO`、`--page-size`、`--page-token`、`--record-file-id`）对齐真实 CLI，transcript 段落单次返回无 pid 游标。
 - **测试**：connect office 19、engine brain 16 绿。新增/更新 4 个夹具测试对齐真实契约。
 - **U12 状态更新**：功能链路（含两款工具真实连接与飞书真实内容导入+问答引用）已全部真实走查通过；正式 37 项的量化门槛（≥10 真实会话、30–50 保留查询、腾讯会议 ≥90% 内容导入）需真实使用积累（尤其是有云录制的会议）后执行。
+
+## 8. 2026-09-08 晚追记：对话接入知识库（MCP 注册）
+
+- **问题**：连接页两款工具只把内容导入 brain，对话 agent 无工具可触达（sp_mcp_list_tools 空）。
+- **修复**：把知迹 MCP（packages/screenpipe-mcp，含 answer/get-brain-source）以 stdio 注册进引擎 `/mcp-servers`（id `local-brain`，名「知迹知识库」，持久化于 `~/.screenpipe-dev/mcp_servers.json`）；dist 重新构建纳入新工具。注册 env 变量名须用 `SCREENPIPE_LOCAL_API_PORT`（api-base.ts 不读 `SCREENPIPE_PORT`）。
+- **验证**：引擎 `/mcp-servers/local-brain/tools` 列出 30 个工具（answer/get-brain-source 在列）；`/mcp-servers/local-brain/call` 真实调用 answer 返回引用飞书「技术资讯」真实片段的诚实回答——与对话内 sp_mcp_call 同一通路。对话中即可发现并调用。
+- **待产品化（记残留）**：注册目前是实例级手工步骤；产品化应在 brain 启用时幂等 upsert 该 MCP 条目（含打包路径/env 决策），另 engine 的 stdio launcher 已按配置传 env（.envs(env) 实测有效）。
