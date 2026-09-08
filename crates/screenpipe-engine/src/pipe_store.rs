@@ -6,9 +6,18 @@
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use screenpipe_core::pipes::{PipeExecution, PipeExecutionActivity, PipeStore, SchedulerState};
-use screenpipe_db::DatabaseManager;
+use screenpipe_core::pipes::{
+    PipeExecution, PipeExecutionActivity, PipeStore, PipeTaskLease, SchedulerState,
+};
+use screenpipe_db::{
+    DatabaseManager, TaskDefinition, TaskKind, TaskOrigin, TaskResourceClass, TaskRetryPolicy,
+    TaskRunRequest, TaskTrigger,
+};
+use serde_json::json;
+use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::sync::Mutex;
+use uuid::Uuid;
 
 /// SQLite-backed pipe store using the main screenpipe database.
 /// Reads go through the read pool (27 connections), writes go through
@@ -16,16 +25,323 @@ use std::sync::Arc;
 /// unserialized writes that cause WAL contention and pool exhaustion.
 pub struct SqlitePipeStore {
     db: Arc<DatabaseManager>,
+    task_leases: Arc<Mutex<HashMap<i64, PipeTaskLease>>>,
+    task_heartbeats: Arc<Mutex<HashMap<i64, tokio::task::JoinHandle<()>>>>,
 }
 
 impl SqlitePipeStore {
     pub fn new(db: Arc<DatabaseManager>) -> Self {
-        Self { db }
+        Self {
+            db,
+            task_leases: Arc::new(Mutex::new(HashMap::new())),
+            task_heartbeats: Arc::new(Mutex::new(HashMap::new())),
+        }
+    }
+
+    async fn ensure_pipe_definition(&self) -> Result<(), sqlx::Error> {
+        if self.db.task_get_definition("pipe.run").await?.is_none() {
+            self.db
+                .task_upsert_definition(
+                    &TaskDefinition {
+                        definition_id: "pipe.run".to_string(),
+                        kind: TaskKind::PipeRun,
+                        origin: TaskOrigin::Builtin,
+                        schema_version: 1,
+                        config_revision: "pipe-v1".to_string(),
+                        config_ref: Some("pipe.md".to_string()),
+                        trigger: TaskTrigger {
+                            kind: "manual_or_schedule".to_string(),
+                            expression: None,
+                        },
+                        enabled: true,
+                        resource_class: TaskResourceClass::UserPipe,
+                        retry_policy: TaskRetryPolicy {
+                            max_attempts: 3,
+                            network_retries: 1,
+                            invalid_output_retries: 1,
+                            backoff_ms: 1_000,
+                        },
+                        model_binding_policy: Some("selected_preset".to_string()),
+                        revision: 0,
+                        owner_generation: 0,
+                        migration_state: "unified".to_string(),
+                    },
+                    None,
+                )
+                .await?;
+        }
+        Ok(())
+    }
+
+    async fn ensure_user_pipe_definition(
+        &self,
+        pipe_name: &str,
+        trigger_type: &str,
+        model: &str,
+    ) -> Result<String, sqlx::Error> {
+        let definition_id = crate::tasks::user_pipe_definition_id(pipe_name);
+        if self.db.task_get_definition(&definition_id).await?.is_none() {
+            self.db
+                .task_upsert_definition(
+                    &TaskDefinition {
+                        definition_id: definition_id.clone(),
+                        kind: TaskKind::PipeRun,
+                        origin: TaskOrigin::User,
+                        schema_version: 1,
+                        config_revision: "pipe-v1".to_string(),
+                        config_ref: Some(format!("pipe:{pipe_name}")),
+                        trigger: TaskTrigger {
+                            kind: match trigger_type {
+                                "event" => "event",
+                                "scheduled" => "interval",
+                                _ => "manual",
+                            }
+                            .to_string(),
+                            expression: None,
+                        },
+                        enabled: true,
+                        resource_class: TaskResourceClass::UserPipe,
+                        retry_policy: TaskRetryPolicy {
+                            max_attempts: 3,
+                            network_retries: 1,
+                            invalid_output_retries: 1,
+                            backoff_ms: 1_000,
+                        },
+                        model_binding_policy: Some(model.to_string()),
+                        revision: 0,
+                        owner_generation: 0,
+                        migration_state: "unified_projection".to_string(),
+                    },
+                    None,
+                )
+                .await?;
+        }
+        Ok(definition_id)
+    }
+
+    async fn claim_pipe_task(
+        &self,
+        pipe_name: &str,
+        trigger_type: &str,
+        model: &str,
+        provider: Option<&str>,
+        trigger_event: Option<&str>,
+        trigger_key: Option<&str>,
+    ) -> Result<PipeTaskLease> {
+        self.ensure_pipe_definition().await?;
+        let definition_id = self
+            .ensure_user_pipe_definition(pipe_name, trigger_type, model)
+            .await?;
+        let definition = self
+            .db
+            .task_get_definition(&definition_id)
+            .await?
+            .ok_or_else(|| sqlx::Error::Protocol("user Pipe task definition disappeared".into()))?;
+        if !definition.enabled {
+            return Err(anyhow::anyhow!("pipe_task_disabled:{pipe_name}"));
+        }
+        let event_identity = trigger_event
+            .zip(trigger_key)
+            .map(|(event, key)| format!("event:{event}:{key}"));
+        let trigger_key =
+            event_identity.unwrap_or_else(|| format!("{trigger_type}:{}", Uuid::new_v4()));
+        let input_refs = json!({
+            "pipe_name": pipe_name,
+            "trigger_type": trigger_type,
+            "trigger_event": trigger_event,
+            "trigger_key": trigger_key,
+        });
+        let config_snapshot = json!({
+            "pipe_name": pipe_name,
+            "model": model,
+            "provider": provider,
+            "source": "pipe.md",
+        });
+        let input_hash = if trigger_event.is_some() && trigger_key.starts_with("event:") {
+            // Event identity, rather than the selected model, is the
+            // idempotency boundary. A preset change must not replay an
+            // already accepted external side effect.
+            screenpipe_db::fingerprint(&[pipe_name, trigger_type, &trigger_key])
+        } else {
+            screenpipe_db::fingerprint(&[
+                pipe_name,
+                trigger_type,
+                model,
+                provider.unwrap_or_default(),
+                &trigger_key,
+            ])
+        };
+        let (run_id, created) = self
+            .db
+            .task_start_run(&TaskRunRequest {
+                definition_id: Some(definition_id),
+                definition_revision: definition.config_revision,
+                root_run_id: None,
+                parent_run_id: None,
+                retry_of: None,
+                trigger_key,
+                input_hash,
+                input_refs,
+                config_snapshot,
+                priority: 60,
+                not_before: None,
+                deadline: None,
+                owner_generation: 0,
+            })
+            .await?;
+        if !created {
+            return Err(anyhow::anyhow!("pipe_task_already_active:{pipe_name}"));
+        }
+        let claimed = self
+            .db
+            .task_claim_run(&run_id, &format!("pipe:{pipe_name}"), 30)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("pipe_task_already_active:{pipe_name}"))?;
+        let lease_token = claimed
+            .run
+            .lease_token
+            .ok_or_else(|| anyhow::anyhow!("pipe_task_missing_lease:{pipe_name}"))?;
+        Ok(PipeTaskLease {
+            run_id,
+            lease_token,
+        })
+    }
+
+    async fn track_task_lease(&self, execution_id: i64, lease: PipeTaskLease) {
+        self.task_leases
+            .lock()
+            .await
+            .insert(execution_id, lease.clone());
+        let db = self.db.clone();
+        let heartbeat = tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
+            loop {
+                interval.tick().await;
+                match db
+                    .task_heartbeat(&lease.run_id, &lease.lease_token, 30)
+                    .await
+                {
+                    Ok(true) => {}
+                    _ => break,
+                }
+            }
+        });
+        self.task_heartbeats
+            .lock()
+            .await
+            .insert(execution_id, heartbeat);
+    }
+
+    async fn finish_task_for_execution(
+        &self,
+        execution_id: i64,
+        success: bool,
+        output_refs: serde_json::Value,
+        error_code: Option<&str>,
+    ) -> Result<()> {
+        if let Some(handle) = self.task_heartbeats.lock().await.remove(&execution_id) {
+            handle.abort();
+        }
+        let lease = self.task_leases.lock().await.remove(&execution_id);
+        if let Some(lease) = lease {
+            let state = if success {
+                screenpipe_db::TaskState::Succeeded
+            } else {
+                screenpipe_db::TaskState::Failed
+            };
+            let finished = self
+                .db
+                .task_finish_run(
+                    &lease.run_id,
+                    &lease.lease_token,
+                    state,
+                    &output_refs,
+                    error_code,
+                )
+                .await?;
+            if !finished {
+                return Err(anyhow::anyhow!("pipe_task_lease_lost:{execution_id}"));
+            }
+        }
+        Ok(())
     }
 }
 
 #[async_trait::async_trait]
 impl PipeStore for SqlitePipeStore {
+    async fn claim_task_run(
+        &self,
+        pipe_name: &str,
+        trigger_type: &str,
+        _config_revision: &str,
+        _input_hash: &str,
+        input_refs: &serde_json::Value,
+        _config_snapshot: &serde_json::Value,
+        model: &str,
+        provider: Option<&str>,
+    ) -> Result<Option<PipeTaskLease>> {
+        let event_name = input_refs
+            .get("trigger_event")
+            .and_then(|value| value.as_str());
+        let event_key = input_refs
+            .get("trigger_key")
+            .and_then(|value| value.as_str())
+            .map(|value| {
+                event_name
+                    .map(|name| {
+                        value
+                            .strip_prefix(&format!("event:{name}:"))
+                            .unwrap_or(value)
+                    })
+                    .unwrap_or(value)
+            });
+        self.claim_pipe_task(
+            pipe_name,
+            trigger_type,
+            model,
+            provider,
+            event_name,
+            event_key,
+        )
+        .await
+        .map(Some)
+    }
+
+    async fn heartbeat_task_run(&self, lease: &PipeTaskLease) -> Result<bool> {
+        Ok(self
+            .db
+            .task_heartbeat(&lease.run_id, &lease.lease_token, 30)
+            .await?)
+    }
+
+    async fn finish_task_run(
+        &self,
+        lease: &PipeTaskLease,
+        success: bool,
+        output_refs: &serde_json::Value,
+        error_code: Option<&str>,
+    ) -> Result<()> {
+        let state = if success {
+            screenpipe_db::TaskState::Succeeded
+        } else {
+            screenpipe_db::TaskState::Failed
+        };
+        if !self
+            .db
+            .task_finish_run(
+                &lease.run_id,
+                &lease.lease_token,
+                state,
+                output_refs,
+                error_code,
+            )
+            .await?
+        {
+            return Err(anyhow::anyhow!("pipe_task_lease_lost:{}", lease.run_id));
+        }
+        Ok(())
+    }
+
     async fn create_execution(
         &self,
         pipe_name: &str,
@@ -33,10 +349,53 @@ impl PipeStore for SqlitePipeStore {
         model: &str,
         provider: Option<&str>,
     ) -> Result<i64> {
-        Ok(self
+        let lease = self
+            .claim_pipe_task(pipe_name, trigger_type, model, provider, None, None)
+            .await?;
+        let execution_id = match self
             .db
             .pipe_create_execution_queued(pipe_name, trigger_type, model, provider, None, None)
-            .await?)
+            .await
+        {
+            Ok(id) => id,
+            Err(error) => {
+                let _ = self
+                    .db
+                    .task_finish_run(
+                        &lease.run_id,
+                        &lease.lease_token,
+                        screenpipe_db::TaskState::Failed,
+                        &json!({}),
+                        Some("pipe_execution_storage"),
+                    )
+                    .await;
+                return Err(error.into());
+            }
+        };
+        if let Err(error) = self
+            .db
+            .task_record_legacy_mapping(&screenpipe_db::TaskLegacyMapping {
+                legacy_namespace: "pipe_executions".to_string(),
+                legacy_id: execution_id.to_string(),
+                definition_id: Some(crate::tasks::user_pipe_definition_id(pipe_name)),
+                run_id: Some(lease.run_id.clone()),
+            })
+            .await
+        {
+            let _ = self
+                .db
+                .task_finish_run(
+                    &lease.run_id,
+                    &lease.lease_token,
+                    screenpipe_db::TaskState::Failed,
+                    &json!({}),
+                    Some("pipe_task_mapping_storage"),
+                )
+                .await;
+            return Err(error.into());
+        }
+        self.track_task_lease(execution_id, lease).await;
+        Ok(execution_id)
     }
 
     async fn create_execution_with_trigger(
@@ -48,7 +407,17 @@ impl PipeStore for SqlitePipeStore {
         trigger_event: Option<&str>,
         trigger_key: Option<&str>,
     ) -> Result<i64> {
-        Ok(self
+        let lease = self
+            .claim_pipe_task(
+                pipe_name,
+                trigger_type,
+                model,
+                provider,
+                trigger_event,
+                trigger_key,
+            )
+            .await?;
+        let execution_id = match self
             .db
             .pipe_create_execution_queued(
                 pipe_name,
@@ -58,7 +427,47 @@ impl PipeStore for SqlitePipeStore {
                 trigger_event,
                 trigger_key,
             )
-            .await?)
+            .await
+        {
+            Ok(id) => id,
+            Err(error) => {
+                let _ = self
+                    .db
+                    .task_finish_run(
+                        &lease.run_id,
+                        &lease.lease_token,
+                        screenpipe_db::TaskState::Failed,
+                        &json!({}),
+                        Some("pipe_execution_storage"),
+                    )
+                    .await;
+                return Err(error.into());
+            }
+        };
+        if let Err(error) = self
+            .db
+            .task_record_legacy_mapping(&screenpipe_db::TaskLegacyMapping {
+                legacy_namespace: "pipe_executions".to_string(),
+                legacy_id: execution_id.to_string(),
+                definition_id: Some(crate::tasks::user_pipe_definition_id(pipe_name)),
+                run_id: Some(lease.run_id.clone()),
+            })
+            .await
+        {
+            let _ = self
+                .db
+                .task_finish_run(
+                    &lease.run_id,
+                    &lease.lease_token,
+                    screenpipe_db::TaskState::Failed,
+                    &json!({}),
+                    Some("pipe_task_mapping_storage"),
+                )
+                .await;
+            return Err(error.into());
+        }
+        self.track_task_lease(execution_id, lease).await;
+        Ok(execution_id)
     }
 
     async fn claim_event_run(
@@ -169,6 +578,18 @@ impl PipeStore for SqlitePipeStore {
                 ],
             )
             .await?;
+        self.finish_task_for_execution(
+            id,
+            matches!(status, "completed" | "succeeded"),
+            json!({
+                "execution_id": id,
+                "status": status,
+                "session_path": session_path,
+                "stdout_available": !stdout.is_empty(),
+            }),
+            error_type.or(error_message),
+        )
+        .await?;
         Ok(())
     }
 
@@ -726,6 +1147,77 @@ mod tests {
             )
             .await
             .unwrap());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_pipe_execution_is_projected_into_unified_task_ledger() {
+        let (store, _tmp) = setup_test_store().await;
+        let execution_id = store
+            .create_execution_with_trigger(
+                "meeting-summary",
+                "event",
+                "fixture-model",
+                Some("fixture-provider"),
+                Some("meeting_ended"),
+                Some("meeting-42@v1"),
+            )
+            .await
+            .unwrap();
+
+        let mapping = store
+            .db
+            .task_get_legacy_mapping("pipe_executions", &execution_id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        let run_id = mapping.run_id.unwrap();
+        let running = store.db.task_get_run(&run_id).await.unwrap().unwrap();
+        assert_eq!(running.state, screenpipe_db::TaskState::Running);
+        assert_eq!(
+            running.definition_id.as_deref(),
+            Some(crate::tasks::user_pipe_definition_id("meeting-summary")).as_deref()
+        );
+        assert_eq!(running.input_refs["pipe_name"], "meeting-summary");
+        assert!(store
+            .create_execution_with_trigger(
+                "meeting-summary",
+                "event",
+                "a-different-model",
+                Some("a-different-provider"),
+                Some("meeting_ended"),
+                Some("meeting-42@v1"),
+            )
+            .await
+            .is_err());
+
+        store
+            .set_execution_running(execution_id, Some(1234))
+            .await
+            .unwrap();
+        store
+            .finish_execution(
+                execution_id,
+                "completed",
+                "{}",
+                "",
+                Some(0),
+                None,
+                None,
+                None,
+            )
+            .await
+            .unwrap();
+
+        let finished = store.db.task_get_run(&run_id).await.unwrap().unwrap();
+        assert_eq!(finished.state, screenpipe_db::TaskState::Succeeded);
+        assert_eq!(finished.output_refs["execution_id"], execution_id);
+        assert!(store
+            .db
+            .task_list_events(&run_id, 0, 20)
+            .await
+            .unwrap()
+            .iter()
+            .any(|event| event.event_type == "run_finished"));
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

@@ -87,6 +87,7 @@ pub mod server;
 pub mod sleep_monitor;
 pub mod snapshot_compaction;
 pub mod structured_outputs;
+pub mod tasks;
 pub mod ui_recorder;
 // Exposed publicly so the commercial `screenpipe-sdk` (screenpipe/sdk repo)
 // can wrap `start_ffmpeg_process` / `write_frame_to_ffmpeg` /

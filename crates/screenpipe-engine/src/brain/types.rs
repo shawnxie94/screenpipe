@@ -277,6 +277,20 @@ pub struct KnowledgeEditRequest {
     pub body: serde_json::Value,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct KnowledgeCandidateRequest {
+    /// Optional CAS over the currently published version row id.
+    pub expected_current_version_id: Option<i64>,
+    #[serde(default)]
+    pub title: Option<String>,
+    pub body: serde_json::Value,
+    #[serde(default)]
+    pub input_hash: Option<String>,
+    /// Defaults to the published version's work-unit relations.
+    #[serde(default)]
+    pub work_unit_ids: Vec<String>,
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum FeedbackKind {

@@ -16,11 +16,10 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use chrono::Utc;
 use screenpipe_db::DeletionCause;
 use screenpipe_db::DatabaseManager;
 use serde_json::json;
-use tokio::sync::Notify;
+use tokio::sync::{Mutex as AsyncMutex, Notify};
 
 use super::types::{BrainError, SourceKind};
 
@@ -32,6 +31,7 @@ struct BarrierInner {
     epoch: u64,
     live_emissions: usize,
     stale_emissions: usize,
+    accepting: bool,
 }
 
 /// In-process read barrier. `begin_emission` snapshots the epoch; a deletion
@@ -49,6 +49,7 @@ impl DeletionBarrier {
                 epoch: 0,
                 live_emissions: 0,
                 stale_emissions: 0,
+                accepting: true,
             }),
             notify: Notify::new(),
         }
@@ -66,17 +67,21 @@ impl DeletionBarrier {
     }
 
     pub fn begin_emission(self: &Arc<Self>) -> EmissionGuard {
-        let epoch = self
+        let (epoch, accepted) = self
             .inner
             .lock()
             .map(|mut s| {
-                s.live_emissions += 1;
-                s.epoch
+                let accepted = s.accepting;
+                if accepted {
+                    s.live_emissions += 1;
+                }
+                (s.epoch, accepted)
             })
-            .unwrap_or(0);
+            .unwrap_or((0, false));
         EmissionGuard {
             barrier: self.clone(),
             epoch,
+            accepted,
         }
     }
 
@@ -84,10 +89,15 @@ impl DeletionBarrier {
     pub async fn begin_deletion(self: &Arc<Self>) {
         {
             let mut s = self.inner.lock().expect("barrier poisoned");
+            s.accepting = false;
             s.epoch += 1;
             s.stale_emissions = s.live_emissions;
         }
         loop {
+            // Register the waiter before inspecting the counter. Otherwise a
+            // guard can drop between the inspection and `notified()`, losing
+            // the wakeup and blocking the deletion forever.
+            let notified = self.notify.notified();
             let remaining = self
                 .inner
                 .lock()
@@ -96,7 +106,15 @@ impl DeletionBarrier {
             if remaining == 0 {
                 return;
             }
-            self.notify.notified().await;
+            notified.await;
+        }
+    }
+
+    /// Re-open admission only after every deletion step and its file cleanup
+    /// has committed successfully. Failed waves remain closed for reads.
+    pub fn finish_deletion(&self) {
+        if let Ok(mut state) = self.inner.lock() {
+            state.accepting = true;
         }
     }
 }
@@ -110,6 +128,7 @@ impl Default for DeletionBarrier {
 pub struct EmissionGuard {
     barrier: Arc<DeletionBarrier>,
     epoch: u64,
+    accepted: bool,
 }
 
 impl EmissionGuard {
@@ -118,7 +137,7 @@ impl EmissionGuard {
         self.barrier
             .inner
             .lock()
-            .map(|s| s.epoch == self.epoch)
+            .map(|s| self.accepted && s.accepting && s.epoch == self.epoch)
             .unwrap_or(false)
     }
 }
@@ -126,6 +145,9 @@ impl EmissionGuard {
 impl Drop for EmissionGuard {
     fn drop(&mut self) {
         if let Ok(mut s) = self.barrier.inner.lock() {
+            if !self.accepted {
+                return;
+            }
             s.live_emissions = s.live_emissions.saturating_sub(1);
             if self.epoch < s.epoch {
                 s.stale_emissions = s.stale_emissions.saturating_sub(1);
@@ -143,6 +165,40 @@ pub struct DeletionService {
     pub db: Arc<DatabaseManager>,
     pub brain_dir: PathBuf,
     pub barrier: Arc<DeletionBarrier>,
+    pub journal_lock: Arc<AsyncMutex<()>>,
+    pub wave_lock: Arc<AsyncMutex<()>>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct JournalEntry {
+    seq: i64,
+    cause: DeletionCause,
+    scope: serde_json::Value,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct DeletionScope {
+    kind: String,
+    #[serde(default)]
+    uids: Option<Vec<String>>,
+    #[allow(dead_code)]
+    start: Option<String>,
+    #[allow(dead_code)]
+    end: Option<String>,
+}
+
+fn validate_scope(value: &serde_json::Value) -> Result<(DeletionScope, Vec<String>), BrainError> {
+    let scope: DeletionScope = serde_json::from_value(value.clone())
+        .map_err(|e| BrainError::new("deletion_scope_invalid", e.to_string(), true))?;
+    let uids = scope.uids.clone().ok_or_else(||
+        BrainError::new("deletion_scope_invalid", "deletion scope is missing uids", true))?;
+    if !matches!(scope.kind.as_str(), "sources" | "retention_range") {
+        return Err(BrainError::new("deletion_scope_invalid", "unknown deletion scope kind", true));
+    }
+    if uids.iter().any(|uid| uid.trim().is_empty()) {
+        return Err(BrainError::new("deletion_scope_invalid", "deletion scope contains empty uid", true));
+    }
+    Ok((scope, uids))
 }
 
 #[derive(Debug)]
@@ -183,18 +239,30 @@ impl DeletionService {
         Ok(())
     }
 
-    /// Highest sequence in the journal file (0 when absent/corrupt tail).
-    async fn journal_max_seq(&self) -> i64 {
+    /// Parse the complete journal. A malformed non-empty line fails closed so
+    /// startup cannot silently declare a partially replayed wave complete.
+    async fn journal_entries(&self) -> Result<Vec<JournalEntry>, BrainError> {
         let content = match tokio::fs::read_to_string(self.journal_path()).await {
             Ok(c) => c,
-            Err(_) => return 0,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(e) => return Err(BrainError::new("journal_read_failed", e.to_string(), true)),
         };
-        content
-            .lines()
-            .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
-            .filter_map(|v| v.get("seq").and_then(|s| s.as_i64()))
-            .max()
-            .unwrap_or(0)
+        let entries: Vec<JournalEntry> = content.lines().enumerate().filter(|(_, line)| !line.trim().is_empty()).map(|(n, line)| {
+            serde_json::from_str::<JournalEntry>(line).map_err(|e| BrainError::new(
+                "journal_corrupt", format!("deletion journal line {} is invalid: {}", n + 1, e), true))
+        }).collect::<Result<_, _>>()?;
+        let mut previous = 0;
+        for entry in &entries {
+            if entry.seq <= previous || entry.seq <= 0 {
+                return Err(BrainError::new("journal_corrupt", "journal seq must be positive and strictly increasing", true));
+            }
+            previous = entry.seq;
+        }
+        Ok(entries)
+    }
+
+    async fn journal_max_seq(&self) -> Result<i64, BrainError> {
+        Ok(self.journal_entries().await?.into_iter().map(|e| e.seq).max().unwrap_or(0))
     }
 
     /// Delete whole sources (user erase of captures/memories/office copies).
@@ -222,8 +290,12 @@ impl DeletionService {
         source_uids: Vec<String>,
         cause: DeletionCause,
     ) -> Result<DeletionOutcome, BrainError> {
-        // 1. Journal first: fsync success is what makes the delete real.
-        let journal_seq = self.journal_max_seq().await + 1;
+        // 1. Journal first: fsync success is what makes the delete real. The
+        // lock spans max+append+DB record, so concurrent waves cannot share a
+        // sequence or leave an unpaired DB row.
+        let _wave_lock = self.wave_lock.lock().await;
+        let _journal_lock = self.journal_lock.lock().await;
+        let journal_seq = self.journal_max_seq().await? + 1;
         self.journal_append(journal_seq, cause, &scope)
             .await
             .map_err(|e| BrainError::new("journal_write_failed", e.to_string(), true))?;
@@ -231,14 +303,23 @@ impl DeletionService {
         // 2. Record + barrier + job cancellation.
         let deletion_id = self
             .db
-            .brain_record_deletion(cause, &scope.to_string())
+            .brain_record_deletion_with_seq(cause, &scope.to_string(), journal_seq)
             .await
             .map_err(db_err)?;
+        drop(_journal_lock);
         self.db
             .brain_activate_deletion_barrier(deletion_id, true)
             .await
             .map_err(db_err)?;
         self.barrier.begin_deletion().await;
+
+        // Task snapshots/events are part of the managed derived graph. Clear
+        // source references before invalidating consumers so a queued or
+        // replayed task cannot reintroduce erased evidence after recovery.
+        self.db
+            .task_redact_source_refs(&source_uids)
+            .await
+            .map_err(db_err)?;
 
         // 3. Propagate consumers (work units invalidated; knowledge flagged).
         let knowledge_hits = self
@@ -256,6 +337,7 @@ impl DeletionService {
         // 4. Remove bodies (archived excerpts cascade with the row) and add
         //    tombstones so user-deleted content can never re-import.
         let mut removed = 0usize;
+        let mut failed = false;
         for uid in &source_uids {
             match self.db.brain_delete_source(uid, cause.is_user_initiated()).await {
                 Ok(()) => removed += 1,
@@ -266,11 +348,18 @@ impl DeletionService {
                         .db
                         .brain_add_cleanup_item(deletion_id, "db_body", uid)
                         .await;
+                    failed = true;
                     tracing::warn!("brain deletion: body removal pending for {}: {}", uid, e);
                 }
             }
         }
-        self.db.brain_update_deletion_state(deletion_id, "completed").await.map_err(db_err)?;
+        self.db
+            .brain_update_deletion_state(deletion_id, if failed { "failed" } else { "completed" })
+            .await
+            .map_err(db_err)?;
+        if !failed {
+            self.barrier.finish_deletion();
+        }
         Ok(DeletionOutcome {
             deletion_id,
             journal_seq,
@@ -368,24 +457,104 @@ impl DeletionService {
     /// Journal entries beyond the recorded DB waves are replayed as blocked
     /// waves first (safe: suppression is conservative).
     pub async fn recover_incomplete(&self) -> Result<usize, BrainError> {
+        let _wave_lock = self.wave_lock.lock().await;
         let mut recovered = 0;
+        let mut failed_any = false;
+        let entries = self.journal_entries().await?;
+        for entry in &entries {
+            let (_, uids) = validate_scope(&entry.scope)?;
+            if let Some(existing) = self.db.brain_get_deletion_by_journal_seq(entry.seq).await.map_err(db_err)? {
+                let existing_scope: serde_json::Value = serde_json::from_str(&existing.scope)
+                    .map_err(|e| BrainError::new("deletion_scope_invalid", e.to_string(), true))?;
+                if existing.cause != entry.cause.as_str() || existing_scope != entry.scope {
+                    return Err(BrainError::new("journal_identity_mismatch", format!("journal seq {} does not match DB wave", entry.seq), true));
+                }
+            } else {
+                let _lock = self.journal_lock.lock().await;
+                self.db.brain_record_deletion_with_seq(
+                    entry.cause,
+                    &entry.scope.to_string(),
+                    entry.seq,
+                ).await.map_err(db_err)?;
+            }
+        }
         let incomplete = self
             .db
             .brain_incomplete_deletions()
             .await
             .map_err(db_err)?;
+        if !incomplete.is_empty() && entries.is_empty() {
+            return Err(BrainError::new(
+                "journal_missing",
+                "incomplete deletion waves have no matching journal",
+                true,
+            ));
+        }
         for wave in incomplete {
             if wave.state == "journal_only" {
                 // Journal written, DB row present but barrier never armed.
-                let _ = self
+                self
                     .db
                     .brain_activate_deletion_barrier(wave.id, true)
-                    .await;
+                    .await
+                    .map_err(db_err)?;
             }
-            let _ = self.db.brain_update_deletion_state(wave.id, "completed").await;
+            let scope: serde_json::Value = serde_json::from_str(&wave.scope)
+                .map_err(|e| BrainError::new("deletion_scope_invalid", e.to_string(), true))?;
+            let (_, uids) = validate_scope(&scope)?;
+            let mut failed = false;
+            for uid in &uids {
+                if let Err(e) = self.db.brain_delete_source(uid, wave.cause == DeletionCause::UserErase.as_str()).await {
+                    failed = true;
+                    self.db
+                        .brain_add_cleanup_item(wave.id, "db_body", uid)
+                        .await
+                        .map_err(db_err)?;
+                    tracing::warn!("brain recovery: source {} remains pending: {}", uid, e);
+                }
+            }
+            // Retry cleanup items left by a crashed or failed attempt. The
+            // source cleanup is idempotent and deliberately also traverses
+            // derived rows when the source row itself was already removed.
+            let pending = self.db.brain_pending_cleanup_items(wave.id).await.map_err(db_err)?;
+            for (item_id, exit, target, _state, _attempts) in pending {
+                let retry = if exit == "db_body" {
+                    self.db
+                        .brain_delete_source(&target, wave.cause == DeletionCause::UserErase.as_str())
+                        .await
+                        .map_err(|e| e.to_string())
+                } else if exit == "file" {
+                    tokio::fs::remove_file(&target)
+                        .await
+                        .or_else(|e| if e.kind() == std::io::ErrorKind::NotFound { Ok(()) } else { Err(e) })
+                        .map_err(|e| e.to_string())
+                } else {
+                    Err(format!("unsupported cleanup target: {exit}"))
+                };
+                match retry {
+                    Ok(()) => self.db.brain_cleanup_item_done(item_id).await.map_err(db_err)?,
+                    Err(error) => {
+                        failed = true;
+                        self.db.brain_cleanup_item_failed(item_id, &error).await.map_err(db_err)?;
+                    }
+                }
+            }
+            self.db
+                .brain_update_deletion_state(wave.id, if failed { "failed" } else { "completed" })
+                .await
+                .map_err(db_err)?;
+            failed_any |= failed;
             recovered += 1;
         }
         let _ = self.db.brain_prune_terminal_jobs(500).await;
+        if failed_any {
+            return Err(BrainError::new(
+                "deletion_recovery_incomplete",
+                "one or more deletion cleanup items remain unfinished",
+                true,
+            ));
+        }
+        self.barrier.finish_deletion();
         Ok(recovered)
     }
 }
@@ -417,5 +586,21 @@ mod tests {
             .await
             .expect("deletion should complete after guard drop")
             .unwrap();
+    }
+
+    #[tokio::test]
+    async fn barrier_rejects_new_emission_until_cleanup_finishes() {
+        let barrier = Arc::new(DeletionBarrier::new());
+        let old = barrier.begin_emission();
+        let b2 = barrier.clone();
+        let deleter = tokio::spawn(async move { b2.begin_deletion().await });
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        let new = barrier.begin_emission();
+        assert!(!new.valid(), "new reads must not be admitted during deletion");
+        drop(old);
+        deleter.await.unwrap();
+        assert!(!new.valid(), "cleanup gate remains closed before completion");
+        barrier.finish_deletion();
+        assert!(barrier.begin_emission().valid());
     }
 }

@@ -14,18 +14,21 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use chrono::{DateTime, Duration, Utc};
+use http_body_util::BodyExt;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use screenpipe_db::DeletionCause;
 use screenpipe_db::BrainReviewUpdate;
-use screenpipe_db::{BrainJobKind, BrainJobState, KnowledgeAvailability, KnowledgeState, KnowledgeType};
+use screenpipe_db::DeletionCause;
+use screenpipe_db::{
+    BrainJobKind, BrainJobState, KnowledgeAvailability, KnowledgeState, KnowledgeType,
+};
 
 use super::types::{
     BrainError, BrainStatusDto, DeletionStatusDto, FeedbackKind, FeedbackRequest, FeedbackResponse,
-    IndexCoverageDto, JobControlAction, JobControlRequest, JobDto, KnowledgeDetailDto,
-    KnowledgeListItemDto, KnowledgeVersionDto, QueueStatusDto, ReviewAction, ReviewRequest,
-    KnowledgeEditRequest, SourceDetailDto,
+    IndexCoverageDto, JobControlAction, JobControlRequest, JobDto, KnowledgeCandidateRequest,
+    KnowledgeDetailDto, KnowledgeEditRequest, KnowledgeListItemDto, KnowledgeVersionDto,
+    QueueStatusDto, ReviewAction, ReviewRequest, SourceDetailDto,
 };
 use super::worker::JobHandlers;
 use crate::server::AppState;
@@ -33,9 +36,15 @@ use crate::server::AppState;
 pub(crate) fn brain_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/knowledge", get(list_knowledge))
+        .route("/work-units", get(list_work_units))
+        .route("/work-units/:id", get(get_work_unit))
         .route("/knowledge/:id", get(get_knowledge))
+        .route("/knowledge/:id/versions", post(create_candidate_version))
         .route("/knowledge/:id/versions/:version", patch(edit_version))
-        .route("/knowledge/:id/versions/:version/review", post(review_version))
+        .route(
+            "/knowledge/:id/versions/:version/review",
+            post(review_version),
+        )
         .route("/feedback", post(submit_feedback))
         .route("/status", get(brain_status))
         .route("/jobs", get(list_jobs))
@@ -46,20 +55,184 @@ pub(crate) fn brain_routes() -> Router<Arc<AppState>> {
         .route("/search/reindex", post(reindex))
 }
 
+#[derive(Debug, Deserialize)]
+struct WorkUnitQuery {
+    scope_key: Option<String>,
+    #[serde(default = "default_work_unit_limit")]
+    limit: u32,
+}
+
+fn default_work_unit_limit() -> u32 {
+    50
+}
+
+async fn list_work_units(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<WorkUnitQuery>,
+) -> Response {
+    match state
+        .brain
+        .db
+        .brain_list_work_units(query.scope_key.as_deref(), query.limit)
+        .await
+    {
+        Ok(work_units) => Json(json!({
+            "work_units": work_units.units.into_iter().map(|(unit, revision)| json!({
+                "id": unit.id,
+                "scope_key": unit.scope_key,
+                "task_key": unit.task_key,
+                "interval_start": unit.interval_start,
+                "interval_end": unit.interval_end,
+                "state": unit.state,
+                "input_hash": revision.input_hash,
+                "extractor_schema_version": revision.extractor_schema_version,
+                "prompt_version": revision.prompt_version,
+                "body": serde_json::from_str::<serde_json::Value>(&revision.body).unwrap_or(json!({"raw": revision.body})),
+            })).collect::<Vec<_>>(),
+        }))
+        .into_response(),
+        Err(error) => err_response(BrainError::new("db_error", error.to_string(), true)),
+    }
+}
+
+/// Return one work unit together with its current extracted revision, the
+/// source evidence it consumed, and the knowledge versions that cite it.
+/// Work-unit bodies are derived data, so invalidated units use the same read
+/// barrier as knowledge and sources and never return stale正文.
+async fn get_work_unit(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+    let db = state.brain.db.clone();
+    let result: Result<Response, BrainError> = guarded_response(&state.brain, async {
+        let unit: Option<(
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            String,
+        )> = sqlx::query_as(
+            "SELECT id, scope_key, task_key, interval_start, interval_end, state \
+             FROM brain_work_units WHERE id = ?1",
+        )
+        .bind(&id)
+        .fetch_optional(&db.pool)
+        .await
+        .map_err(|e| BrainError::new("db_error", e.to_string(), true))?;
+        let Some((unit_id, scope_key, task_key, interval_start, interval_end, state_value)) = unit else {
+            return Err(BrainError::new("not_found", "工作单元不存在", false));
+        };
+        if state_value != "active" {
+            return Err(BrainError::new("gone", "工作单元已失效", false));
+        }
+        let revision: Option<(String, String, String, String, String)> = sqlx::query_as(
+            "SELECT input_hash, extractor_schema_version, prompt_version, body, state \
+             FROM brain_work_unit_revisions WHERE work_unit_id = ?1 AND state = 'valid' \
+             ORDER BY created_at DESC LIMIT 1",
+        )
+        .bind(&id)
+        .fetch_optional(&db.pool)
+        .await
+        .map_err(|e| BrainError::new("db_error", e.to_string(), true))?;
+        let Some((input_hash, extractor_schema_version, prompt_version, body, revision_state)) = revision else {
+            return Err(BrainError::new("gone", "工作单元当前没有有效修订", false));
+        };
+
+        let source_rows: Vec<(String, Option<String>)> = sqlx::query_as(
+            "SELECT DISTINCT source_uid, source_revision FROM brain_dependencies \
+             WHERE consumer_kind = 'work_unit' AND consumer_id = ?1",
+        )
+        .bind(&id)
+        .fetch_all(&db.pool)
+        .await
+        .map_err(|e| BrainError::new("db_error", e.to_string(), true))?;
+        let mut evidence = Vec::new();
+        for (source_uid, source_revision) in source_rows {
+            let Some(source) = db
+                .brain_get_source(&source_uid)
+                .await
+                .map_err(|e| BrainError::new("db_error", e.to_string(), true))?
+            else {
+                continue;
+            };
+            let revision = source_revision.unwrap_or_else(|| source.revision.clone());
+            let text = if source.state == "deleted" {
+                None
+            } else {
+                db.brain_source_text(&source_uid, &revision)
+                    .await
+                    .ok()
+                    .flatten()
+                    .map(|(value, _archived)| value)
+            };
+            evidence.push(json!({
+                "source_uid": source_uid,
+                "revision": revision,
+                "kind": screenpipe_db::SourceKind::from_str(&source.kind)
+                    .unwrap_or(screenpipe_db::SourceKind::Frame),
+                "captured_at": parse_ts(&source.captured_at),
+                "app": source.app,
+                "window": source.window_name,
+                "state": source.state,
+                "media_available": source.media_available,
+                "text": text,
+                "source_url": source.source_url,
+            }));
+        }
+
+        let related_knowledge: Vec<(String, i64, String, String, String)> = sqlx::query_as(
+            "SELECT DISTINCT v.knowledge_id, v.version, v.state, v.availability, v.title \
+             FROM brain_dependencies d \
+             JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id \
+                AND CAST(v.id AS TEXT) = d.consumer_version \
+             WHERE d.consumer_kind = 'knowledge_work_unit' AND d.source_uid = ?1 \
+             ORDER BY v.knowledge_id, v.version",
+        )
+        .bind(&id)
+        .fetch_all(&db.pool)
+        .await
+        .map_err(|e| BrainError::new("db_error", e.to_string(), true))?;
+        let body = serde_json::from_str::<serde_json::Value>(&body).unwrap_or(json!({ "raw": body }));
+        Ok(Json(json!({
+            "work_unit": {
+                "id": unit_id,
+                "scope_key": scope_key,
+                "task_key": task_key,
+                "interval_start": interval_start,
+                "interval_end": interval_end,
+                "state": state_value,
+                "input_hash": input_hash,
+                "extractor_schema_version": extractor_schema_version,
+                "prompt_version": prompt_version,
+                "revision_state": revision_state,
+                "body": body,
+            },
+            "evidence": evidence,
+            "related_knowledge": related_knowledge.into_iter().map(|(knowledge_id, version, state, availability, title)| json!({
+                "knowledge_id": knowledge_id,
+                "version": version,
+                "state": state,
+                "availability": availability,
+                "title": title,
+            })).collect::<Vec<_>>(),
+        })).into_response())
+    })
+    .await;
+    match result {
+        Ok(response) => response,
+        Err(error) => err_response(error),
+    }
+}
+
 /// Save a returned answer. Expected epochs are re-validated server side; the
 /// body comes from the stored request mapping, never from the client.
-async fn save_answer(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<String>,
-) -> Response {
+async fn save_answer(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+    let guard = state.brain.barrier.begin_emission();
     let db = &state.brain.db;
-    let row: Option<(String, Option<String>)> = sqlx::query_as(
-        "SELECT status, claims FROM brain_answers WHERE id = ?1",
-    )
-    .bind(&id)
-    .fetch_optional(&db.pool)
-    .await
-    .unwrap_or(None);
+    let row: Option<(String, Option<String>)> =
+        sqlx::query_as("SELECT status, claims FROM brain_answers WHERE id = ?1")
+            .bind(&id)
+            .fetch_optional(&db.pool)
+            .await
+            .unwrap_or(None);
     let Some((status, claims)) = row else {
         return err_response(BrainError::new("not_found", "回答不存在或已过期", false));
     };
@@ -74,16 +247,29 @@ async fn save_answer(
     if expired > 0 {
         return err_response(BrainError::new("gone", "回答已过期", false));
     }
-    let ok = sqlx::query("UPDATE brain_answers SET saved_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?1")
-        .bind(&id)
-        .execute(&db.pool)
-        .await
-        .map(|r| r.rows_affected() > 0)
-        .unwrap_or(false);
+    let ok = match db.begin_immediate_with_retry().await {
+        Ok(mut tx) => {
+            let result = sqlx::query("UPDATE brain_answers SET saved_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?1")
+                .bind(&id)
+                .execute(&mut **tx.conn()).await;
+            match result {
+                Ok(result) => tx.commit().await.is_ok() && result.rows_affected() > 0,
+                Err(_) => false,
+            }
+        }
+        Err(_) => false,
+    };
     if ok {
         let _ = status;
         let _ = claims;
-        Json(json!({"ok": true})).into_response()
+        if !guard.valid() {
+            return err_response(BrainError::new(
+                "context_changed",
+                "数据已变化，请重试",
+                true,
+            ));
+        }
+        hold_emission_guard(Json(json!({"ok": true})).into_response(), guard)
     } else {
         err_response(BrainError::new("db_error", "保存失败", true))
     }
@@ -109,18 +295,36 @@ pub(crate) fn err_response(e: BrainError) -> Response {
     (status, Json(serde_json::to_value(&e).unwrap_or_default())).into_response()
 }
 
-/// Barrier-aware helper: capture the epoch, run the read, refuse to emit if
-/// a deletion confirmed meanwhile.
-async fn guard_emission<T>(
+/// Keep the epoch guard owned by the HTTP body until Axum has consumed it.
+/// Checking before returning a response leaves a race during body emission.
+pub(crate) fn hold_emission_guard(
+    response: Response,
+    guard: super::deletion::EmissionGuard,
+) -> Response {
+    let (parts, body) = response.into_parts();
+    let body = body
+        .map_frame(move |frame| {
+            let _guard = &guard;
+            frame
+        })
+        .boxed_unsync();
+    Response::from_parts(parts, axum::body::Body::new(body))
+}
+
+async fn guarded_response(
     brain: &Arc<super::BrainShared>,
-    read: impl std::future::Future<Output = Result<T, BrainError>>,
-) -> Result<T, BrainError> {
+    read: impl std::future::Future<Output = Result<Response, BrainError>>,
+) -> Result<Response, BrainError> {
     let guard = brain.barrier.begin_emission();
-    let result = read.await?;
+    let response = read.await?;
     if !guard.valid() {
-        return Err(BrainError::new("context_changed", "数据已变化，请重试", true));
+        return Err(BrainError::new(
+            "context_changed",
+            "数据已变化，请重试",
+            true,
+        ));
     }
-    Ok(result)
+    Ok(hold_emission_guard(response, guard))
 }
 
 // ---------------------------------------------------------------------------
@@ -144,7 +348,7 @@ async fn list_knowledge(
     Query(q): Query<KnowledgeListQuery>,
 ) -> Response {
     let db = &state.brain.db;
-    let result = guard_emission(&state.brain, async {
+    let result = guarded_response(&state.brain, async {
         let rows: Vec<(String, String, String, Option<i64>, bool, String, String)> = sqlx::query_as(
             "SELECT id, knowledge_type, scope_key, current_version_id, paused, created_at, updated_at \
              FROM brain_knowledge ORDER BY updated_at DESC LIMIT 200",
@@ -225,13 +429,15 @@ async fn knowledge_item_dto(
             .map(|v| v.title.clone())
             .unwrap_or_else(|| "（无版本）".to_string()),
         current_version,
-        current_state: current.as_ref().map(|v| {
-            KnowledgeState::from_str(&v.state).unwrap_or(KnowledgeState::Candidate)
-        }),
+        current_state: current
+            .as_ref()
+            .map(|v| KnowledgeState::from_str(&v.state).unwrap_or(KnowledgeState::Candidate)),
         availability,
         paused,
         review_due_at: current.as_ref().and_then(|v| {
-            v.review_due_at.as_deref().and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+            v.review_due_at
+                .as_deref()
+                .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
                 .map(|t| t.with_timezone(&Utc))
         }),
         candidate_versions: candidates,
@@ -250,7 +456,8 @@ async fn effective_availability(
     let Some(v) = version else {
         return KnowledgeAvailability::Deleted;
     };
-    let base = KnowledgeAvailability::from_str(&v.availability).unwrap_or(KnowledgeAvailability::Valid);
+    let base =
+        KnowledgeAvailability::from_str(&v.availability).unwrap_or(KnowledgeAvailability::Valid);
     if v.state != "published" {
         return base;
     }
@@ -291,12 +498,9 @@ async fn effective_availability(
     base
 }
 
-async fn get_knowledge(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<String>,
-) -> Response {
+async fn get_knowledge(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     let db = state.brain.db.clone();
-    let result: Result<Response, BrainError> = guard_emission(&state.brain, async {
+    let result: Result<Response, BrainError> = guarded_response(&state.brain, async {
         let Some(item_row) = db
             .brain_get_knowledge_item(&id)
             .await
@@ -367,13 +571,15 @@ async fn get_knowledge(
 async fn version_work_units(
     db: &Arc<screenpipe_db::DatabaseManager>,
     knowledge_id: &str,
-    _version_id: i64,
+    version_id: i64,
 ) -> Vec<String> {
     sqlx::query_as::<_, (String,)>(
         "SELECT DISTINCT source_uid FROM brain_dependencies \
-         WHERE consumer_kind = 'knowledge_work_unit' AND consumer_id = ?1",
+         WHERE consumer_kind = 'knowledge_work_unit' AND consumer_id = ?1 \
+         AND consumer_version = ?2",
     )
     .bind(knowledge_id)
+    .bind(version_id.to_string())
     .fetch_all(&db.pool)
     .await
     .map(|rows| rows.into_iter().map(|(id,)| id).collect())
@@ -383,16 +589,25 @@ async fn version_work_units(
 async fn version_evidence(
     db: &Arc<screenpipe_db::DatabaseManager>,
     knowledge_id: &str,
-    _version_id: i64,
+    version_id: i64,
 ) -> Vec<super::types::EvidenceRefDto> {
-    let sources = db
-        .brain_sources_of_consumer("knowledge", knowledge_id)
-        .await
-        .unwrap_or_default();
+    let sources: Vec<(String, Option<String>)> = sqlx::query_as(
+        "SELECT DISTINCT source_uid, source_revision FROM brain_dependencies \
+         WHERE consumer_kind = 'knowledge' AND consumer_id = ?1 AND consumer_version = ?2",
+    )
+    .bind(knowledge_id)
+    .bind(version_id.to_string())
+    .fetch_all(&db.pool)
+    .await
+    .unwrap_or_default();
     let mut out = Vec::new();
     for (uid, _rev) in sources {
         if let Some(row) = db.brain_get_source(&uid).await.ok().flatten() {
-            let excerpt = db.brain_source_text(&uid, &row.revision).await.ok().flatten();
+            let excerpt = db
+                .brain_source_text(&uid, &row.revision)
+                .await
+                .ok()
+                .flatten();
             out.push(super::types::EvidenceRefDto {
                 source_uid: row.source_uid.clone(),
                 revision: row.revision.clone(),
@@ -453,20 +668,107 @@ fn parse_ts_opt(s: &str) -> Option<DateTime<Utc>> {
 // Candidate edit + review
 // ---------------------------------------------------------------------------
 
+async fn create_candidate_version(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<KnowledgeCandidateRequest>,
+) -> Response {
+    let db = state.brain.db.clone();
+    let guard = state.brain.barrier.begin_emission();
+    let Some(item) = db.brain_get_knowledge_item(&id).await.ok().flatten() else {
+        return err_response(BrainError::new("not_found", "知识不存在", false));
+    };
+    let Some(current_id) = item.current_version_id else {
+        return err_response(BrainError::new(
+            "conflict",
+            "只有已发布版本可以创建候选修订",
+            false,
+        ));
+    };
+    if req.expected_current_version_id != Some(current_id) {
+        return err_response(BrainError::new(
+            "conflict",
+            "当前发布版本已变化，请刷新后重试",
+            false,
+        ));
+    }
+    let Some(current) = db.brain_get_version(&id, current_id).await.ok().flatten() else {
+        return err_response(BrainError::new("conflict", "发布版本不存在", false));
+    };
+    if current.state != "published" {
+        return err_response(BrainError::new("conflict", "当前版本不是已发布版本", false));
+    }
+    let work_units = if req.work_unit_ids.is_empty() {
+        version_work_units(&db, &id, current.id).await
+    } else {
+        req.work_unit_ids.clone()
+    };
+    let mut ref_map = std::collections::HashMap::new();
+    for (index, work_unit_id) in work_units.iter().enumerate() {
+        ref_map.insert(format!("u{}", index + 1), work_unit_id.clone());
+    }
+    if let Err(error) = super::registry::validate(
+        KnowledgeType::from_str(&item.knowledge_type).unwrap_or(KnowledgeType::Sop),
+        &req.body,
+        &super::registry::RegistryContext {
+            work_unit_refs: &ref_map,
+        },
+    ) {
+        return err_response(BrainError::new(
+            "validation_failed",
+            format!("{}: {}", error.path, error.reason),
+            false,
+        ));
+    }
+    if !guard.valid() {
+        return err_response(BrainError::new(
+            "context_changed",
+            "数据已变化，请重试",
+            true,
+        ));
+    }
+    let title = req.title.as_deref().unwrap_or(&current.title);
+    let input_hash = req
+        .input_hash
+        .unwrap_or_else(|| screenpipe_db::fingerprint(&[req.body.to_string().as_str()]));
+    let version = match db
+        .brain_add_knowledge_candidate_version(
+            &id,
+            title,
+            &req.body.to_string(),
+            &input_hash,
+            &work_units,
+        )
+        .await
+    {
+        Ok(version) => version,
+        Err(error) => return err_response(BrainError::new("db_error", error.to_string(), true)),
+    };
+    if !guard.valid() {
+        return err_response(BrainError::new(
+            "context_changed",
+            "数据已变化，请重试",
+            true,
+        ));
+    }
+    hold_emission_guard(
+        Json(json!({"ok": true, "knowledge_id": id, "version": version, "state": "candidate"}))
+            .into_response(),
+        guard,
+    )
+}
+
 async fn edit_version(
     State(state): State<Arc<AppState>>,
     Path((id, version)): Path<(String, i64)>,
     Json(body): Json<KnowledgeEditRequest>,
 ) -> Response {
     let db = state.brain.db.clone();
+    let guard = state.brain.barrier.begin_emission();
     match db.brain_get_version(&id, version).await {
         Ok(Some(row)) => {
             if row.state != "candidate" {
-                return err_response(BrainError::new(
-                    "conflict",
-                    "只有候选版本可以编辑",
-                    false,
-                ));
+                return err_response(BrainError::new("conflict", "只有候选版本可以编辑", false));
             }
             if row.revision != body.expected_revision {
                 return err_response(BrainError::new(
@@ -481,7 +783,9 @@ async fn edit_version(
             for (i, wu) in wu_ids.iter().enumerate() {
                 ref_map.insert(format!("u{}", i + 1), wu.clone());
             }
-            let reg_ctx = super::registry::RegistryContext { work_unit_refs: &ref_map };
+            let reg_ctx = super::registry::RegistryContext {
+                work_unit_refs: &ref_map,
+            };
             let k_type = db
                 .brain_get_knowledge_item(&id)
                 .await
@@ -497,31 +801,37 @@ async fn edit_version(
                     false,
                 ));
             }
-            // Persist the edit with a fresh CAS revision.
-            let update = BrainReviewUpdate {
-                from_state: "candidate",
-                to_state: "candidate",
-                availability: None,
-                rejection_reason: None,
-                review_due_at: None,
-                reviewer_note: None,
-            };
+            if !guard.valid() {
+                return err_response(BrainError::new(
+                    "context_changed",
+                    "数据已变化，请重试",
+                    true,
+                ));
+            }
+            // Persist body + revision in one CAS transaction; a process crash
+            // cannot expose a new revision with the previous body.
+            let title = body.body.get("title").and_then(serde_json::Value::as_str);
             let ok = db
-                .brain_review_transition(&id, version, &body.expected_revision, update)
+                .brain_edit_candidate_version(
+                    &id,
+                    version,
+                    &body.expected_revision,
+                    &body.body.to_string(),
+                    title,
+                )
                 .await
                 .unwrap_or(false);
             if !ok {
                 return err_response(BrainError::new("conflict", "编辑冲突", false));
             }
-            let _ = sqlx::query(
-                "UPDATE brain_knowledge_versions SET body = ?1 WHERE knowledge_id = ?2 AND version = ?3",
-            )
-            .bind(body.body.to_string())
-            .bind(&id)
-            .bind(version)
-            .execute(&db.pool)
-            .await;
-            Json(json!({"ok": true})).into_response()
+            if !guard.valid() {
+                return err_response(BrainError::new(
+                    "context_changed",
+                    "数据已变化，请重试",
+                    true,
+                ));
+            }
+            hold_emission_guard(Json(json!({"ok": true})).into_response(), guard)
         }
         Ok(None) => err_response(BrainError::new("not_found", "版本不存在", false)),
         Err(e) => err_response(BrainError::new("db_error", e.to_string(), true)),
@@ -534,12 +844,7 @@ async fn review_version(
     Json(req): Json<ReviewRequest>,
 ) -> Response {
     let db = state.brain.db.clone();
-    let Some(row) = db
-        .brain_get_version(&id, version)
-        .await
-        .ok()
-        .flatten()
-    else {
+    let Some(row) = db.brain_get_version(&id, version).await.ok().flatten() else {
         return err_response(BrainError::new("not_found", "版本不存在", false));
     };
     match req.action {
@@ -549,7 +854,10 @@ async fn review_version(
             let wu_ids = version_work_units(&db, &id, row.id).await;
             let mut blocked = Vec::new();
             for wu in &wu_ids {
-                let sources = db.brain_sources_of_consumer("work_unit", wu).await.unwrap_or_default();
+                let sources = db
+                    .brain_sources_of_consumer("work_unit", wu)
+                    .await
+                    .unwrap_or_default();
                 for (uid, _rev) in sources {
                     let live = db
                         .brain_get_source(&uid)
@@ -570,7 +878,8 @@ async fn review_version(
                     false,
                 ));
             }
-            let review_due = (Utc::now() + Duration::days(30)).to_rfc3339_opts(chrono::SecondsFormat::Micros, true);
+            let review_due = (Utc::now() + Duration::days(30))
+                .to_rfc3339_opts(chrono::SecondsFormat::Micros, true);
             let ok = db
                 .brain_publish_version(
                     &id,
@@ -591,8 +900,8 @@ async fn review_version(
             // Index the published body into the local projection.
             if let Ok(row) = db.brain_get_version(&id, version).await {
                 if let Some(row) = row {
-                    let _ = db.brain_search_upsert_doc(
-                        &screenpipe_db::BrainSearchDocInput {
+                    let _ = db
+                        .brain_search_upsert_doc(&screenpipe_db::BrainSearchDocInput {
                             doc_id: format!("knowledge:{id}:{version}"),
                             kind: "knowledge".into(),
                             ref_uid: id.clone(),
@@ -601,9 +910,8 @@ async fn review_version(
                             body: row.body.clone(),
                             app: None,
                             event_at: None,
-                        },
-                    )
-                    .await;
+                        })
+                        .await;
                 }
             }
             Json(json!({"ok": true, "state": "published"})).into_response()
@@ -626,10 +934,9 @@ async fn review_version(
             }
             // Rejection suppression keyed on scope+input+extractor identity.
             if let Some(item) = db.brain_get_knowledge_item(&id).await.ok().flatten() {
-                if let (Some(scope), Some(hash)) = (
-                    Some(item.scope_key.clone()),
-                    row.input_hash.clone(),
-                ) {
+                if let (Some(scope), Some(hash)) =
+                    (Some(item.scope_key.clone()), row.input_hash.clone())
+                {
                     let _ = db
                         .brain_add_rejection_suppression(
                             &scope,
@@ -673,7 +980,8 @@ async fn review_version(
         ReviewAction::Reconfirm => {
             // Reviewing an original version confirms it; content changes go
             // through new versions.
-            let review_due = (Utc::now() + Duration::days(30)).to_rfc3339_opts(chrono::SecondsFormat::Micros, true);
+            let review_due = (Utc::now() + Duration::days(30))
+                .to_rfc3339_opts(chrono::SecondsFormat::Micros, true);
             let update = BrainReviewUpdate {
                 from_state: "published",
                 to_state: "published",
@@ -746,7 +1054,11 @@ async fn submit_feedback(
         FeedbackKind::MissingSteps => "missing_steps",
         FeedbackKind::Other => "other",
     };
-    let status = if located.is_some() { "located" } else { "pending" };
+    let status = if located.is_some() {
+        "located"
+    } else {
+        "pending"
+    };
     let feedback_id = match db
         .brain_insert_feedback(
             req.answer_id.as_deref(),
@@ -797,19 +1109,28 @@ async fn brain_status(State(state): State<Arc<AppState>>) -> Response {
             kind: BrainJobKind::from_str(&kind).unwrap_or(BrainJobKind::Cleanup),
             pending: pending.max(0) as u64,
             running: running.max(0) as u64,
-            oldest_waiting_ms: oldest.as_deref().and_then(parse_ts_opt).map(|t| {
-                (Utc::now() - t).num_milliseconds().max(0) as u64
-            }),
+            oldest_waiting_ms: oldest
+                .as_deref()
+                .and_then(parse_ts_opt)
+                .map(|t| (Utc::now() - t).num_milliseconds().max(0) as u64),
         })
         .collect();
     let (indexed, total) = (0u64, 0u64);
-    let (phase, _cursor, _validated) = db
-        .brain_history_migration_state()
-        .await
-        .unwrap_or(("not_started".into(), 0, "[]".into()));
+    let (phase, _cursor, _validated) =
+        db.brain_history_migration_state()
+            .await
+            .unwrap_or(("not_started".into(), 0, "[]".into()));
     let (entries, spans) = db.brain_history_counts().await.unwrap_or((0, 0));
-    let enabled = db.brain_get_state().await.map(|s| s.enabled).unwrap_or(false);
-    let enabled_at = db.brain_get_state().await.ok().and_then(|s| s.enabled_at.and_then(|t| parse_ts_opt(&t)));
+    let enabled = db
+        .brain_get_state()
+        .await
+        .map(|s| s.enabled)
+        .unwrap_or(false);
+    let enabled_at = db
+        .brain_get_state()
+        .await
+        .ok()
+        .and_then(|s| s.enabled_at.and_then(|t| parse_ts_opt(&t)));
     let paused_reason = match state.brain.worker_handle().await {
         Some(w) => w.paused_reason().await,
         None => None,
@@ -872,10 +1193,7 @@ struct JobsQuery {
     limit: Option<u32>,
 }
 
-async fn list_jobs(
-    State(state): State<Arc<AppState>>,
-    Query(q): Query<JobsQuery>,
-) -> Response {
+async fn list_jobs(State(state): State<Arc<AppState>>, Query(q): Query<JobsQuery>) -> Response {
     let rows = state
         .brain
         .db
@@ -908,11 +1226,18 @@ async fn control_job(
     let db = &state.brain.db;
     let ok = match req.action {
         JobControlAction::Retry => db.brain_retry_job(id).await.unwrap_or(false),
-        JobControlAction::Pause => db.brain_set_job_state(id, BrainJobState::Paused).await.unwrap_or(false),
-        JobControlAction::Resume => db.brain_set_job_state(id, BrainJobState::Pending).await.unwrap_or(false),
-        JobControlAction::Cancel => {
-            db.brain_set_job_state(id, BrainJobState::Cancelled).await.unwrap_or(false)
-        }
+        JobControlAction::Pause => db
+            .brain_set_job_state(id, BrainJobState::Paused)
+            .await
+            .unwrap_or(false),
+        JobControlAction::Resume => db
+            .brain_set_job_state(id, BrainJobState::Pending)
+            .await
+            .unwrap_or(false),
+        JobControlAction::Cancel => db
+            .brain_set_job_state(id, BrainJobState::Cancelled)
+            .await
+            .unwrap_or(false),
     };
     if ok {
         Json(json!({"ok": true})).into_response()
@@ -921,10 +1246,7 @@ async fn control_job(
     }
 }
 
-async fn get_deletion(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<i64>,
-) -> Response {
+async fn get_deletion(State(state): State<Arc<AppState>>, Path(id): Path<i64>) -> Response {
     let db = &state.brain.db;
     match db.brain_get_deletion(id).await {
         Ok(Some(row)) => {
@@ -933,8 +1255,14 @@ async fn get_deletion(
                 deletion_id: row.id,
                 cause: DeletionCause::from_str(&row.cause).unwrap_or(DeletionCause::UserErase),
                 state: row.state,
-                pending_cleanups: pending.iter().filter(|(_, _, _, state, _)| state != "done").count() as u64,
-                failed_cleanups: pending.iter().filter(|(_, _, _, state, _)| state == "failed").count() as u64,
+                pending_cleanups: pending
+                    .iter()
+                    .filter(|(_, _, _, state, _)| state != "done")
+                    .count() as u64,
+                failed_cleanups: pending
+                    .iter()
+                    .filter(|(_, _, _, state, _)| state == "failed")
+                    .count() as u64,
                 created_at: parse_ts(&row.created_at),
                 updated_at: parse_ts(&row.updated_at),
             })
@@ -945,12 +1273,9 @@ async fn get_deletion(
     }
 }
 
-async fn get_source(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<String>,
-) -> Response {
+async fn get_source(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     let db = &state.brain.db;
-    let result: Result<Response, BrainError> = guard_emission(&state.brain, async {
+    let result: Result<Response, BrainError> = guarded_response(&state.brain, async {
         let Some(row) = db
             .brain_get_source(&id)
             .await
@@ -1004,7 +1329,11 @@ mod tests {
         )
     }
 
-    async fn seed_candidate(db: &Arc<screenpipe_db::DatabaseManager>, scope: &str, title: &str) -> (String, i64, String) {
+    async fn seed_candidate(
+        db: &Arc<screenpipe_db::DatabaseManager>,
+        scope: &str,
+        title: &str,
+    ) -> (String, i64, String) {
         // Returns (knowledge_id, version, revision-of-version-row) via the
         // caller's separate lookup.
         let body = serde_json::json!({
@@ -1019,7 +1348,11 @@ mod tests {
         });
         let (kid, version) = db
             .brain_create_knowledge_candidate(
-                "sop", scope, title, &body.to_string(), "hash-1",
+                "sop",
+                scope,
+                title,
+                &body.to_string(),
+                "hash-1",
                 &["wu-1".to_string(), "wu-2".to_string(), "wu-3".to_string()],
             )
             .await
@@ -1050,7 +1383,10 @@ mod tests {
             .await
             .unwrap();
         let row2 = db.brain_get_version(&kid, v2).await.unwrap().unwrap();
-        eprintln!("DEBUG v2 row state={} revision={}", row2.state, row2.revision);
+        eprintln!(
+            "DEBUG v2 row state={} revision={}",
+            row2.state, row2.revision
+        );
         let ok2 = db
             .brain_publish_version(&kid, v2, &row2.revision, Some(v1), "2026-10-07T00:00:00Z")
             .await
@@ -1077,14 +1413,28 @@ mod tests {
         let db = test_db().await;
         let (kid, v1, _) = seed_candidate(&db, "scope-b", "候选").await;
         let row = db.brain_get_version(&kid, v1).await.unwrap().unwrap();
-        db.brain_publish_version(&kid, v1, &row.revision, None, "2026-10-07T00:00:00Z").await.unwrap();
-        let v2 = db.brain_add_knowledge_candidate_version(&kid, "v2", &row.body, "h2", &[]).await.unwrap();
+        db.brain_publish_version(&kid, v1, &row.revision, None, "2026-10-07T00:00:00Z")
+            .await
+            .unwrap();
+        let v2 = db
+            .brain_add_knowledge_candidate_version(&kid, "v2", &row.body, "h2", &[])
+            .await
+            .unwrap();
         let row2 = db.brain_get_version(&kid, v2).await.unwrap().unwrap();
-        let v3 = db.brain_add_knowledge_candidate_version(&kid, "v3", &row.body, "h3", &[]).await.unwrap();
+        let v3 = db
+            .brain_add_knowledge_candidate_version(&kid, "v3", &row.body, "h3", &[])
+            .await
+            .unwrap();
         let row3 = db.brain_get_version(&kid, v3).await.unwrap().unwrap();
         // v3 wins; v2's publish with a stale current pointer must refuse.
-        assert!(db.brain_publish_version(&kid, v3, &row3.revision, Some(v1), "2026-10-07T00:00:00Z").await.unwrap());
-        assert!(!db.brain_publish_version(&kid, v2, &row2.revision, Some(v1), "2026-10-07T00:00:00Z").await.unwrap());
+        assert!(db
+            .brain_publish_version(&kid, v3, &row3.revision, Some(v1), "2026-10-07T00:00:00Z")
+            .await
+            .unwrap());
+        assert!(!db
+            .brain_publish_version(&kid, v2, &row2.revision, Some(v1), "2026-10-07T00:00:00Z")
+            .await
+            .unwrap());
     }
 
     #[tokio::test]
@@ -1100,23 +1450,52 @@ mod tests {
             review_due_at: None,
             reviewer_note: None,
         };
-        assert!(db.brain_review_transition(&kid, v1, &row.revision, update).await.unwrap());
-        assert!(!db.brain_review_transition(&kid, v1, &row.revision, BrainReviewUpdate {
-            from_state: "candidate",
-            to_state: "published",
-            availability: Some("valid"),
-            rejection_reason: None,
-            review_due_at: None,
-            reviewer_note: None,
-        }).await.unwrap(), "rejected 版本不能再次转换");
-        db.brain_add_rejection_suppression("scope-c", "hash-1", "sop", "1", "zh-extract-v1", None).await.unwrap();
-        assert!(db.brain_is_rejected("scope-c", "hash-1", "sop").await.unwrap());
+        assert!(db
+            .brain_review_transition(&kid, v1, &row.revision, update)
+            .await
+            .unwrap());
+        assert!(
+            !db.brain_review_transition(
+                &kid,
+                v1,
+                &row.revision,
+                BrainReviewUpdate {
+                    from_state: "candidate",
+                    to_state: "published",
+                    availability: Some("valid"),
+                    rejection_reason: None,
+                    review_due_at: None,
+                    reviewer_note: None,
+                }
+            )
+            .await
+            .unwrap(),
+            "rejected 版本不能再次转换"
+        );
+        db.brain_add_rejection_suppression("scope-c", "hash-1", "sop", "1", "zh-extract-v1", None)
+            .await
+            .unwrap();
+        assert!(db
+            .brain_is_rejected("scope-c", "hash-1", "sop")
+            .await
+            .unwrap());
     }
 
     #[tokio::test]
     async fn feedback_without_target_stays_pending() {
         let db = test_db().await;
-        let id = db.brain_insert_feedback(None, None, None, None, "incorrect", Some("说错了"), "pending").await.unwrap();
+        let id = db
+            .brain_insert_feedback(
+                None,
+                None,
+                None,
+                None,
+                "incorrect",
+                Some("说错了"),
+                "pending",
+            )
+            .await
+            .unwrap();
         let row: (String,) = sqlx::query_as("SELECT status FROM brain_feedback WHERE id = ?1")
             .bind(&id)
             .fetch_one(&db.pool)
@@ -1124,12 +1503,13 @@ mod tests {
             .unwrap();
         assert_eq!(row.0, "pending");
         db.brain_resolve_feedback(&id, "kid", 1).await.unwrap();
-        let (status, kid, version): (String, Option<String>, Option<i64>) =
-            sqlx::query_as("SELECT status, knowledge_id, knowledge_version_id FROM brain_feedback WHERE id = ?1")
-                .bind(&id)
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+        let (status, kid, version): (String, Option<String>, Option<i64>) = sqlx::query_as(
+            "SELECT status, knowledge_id, knowledge_version_id FROM brain_feedback WHERE id = ?1",
+        )
+        .bind(&id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
         assert_eq!(status, "located");
         assert_eq!(kid.as_deref(), Some("kid"));
         assert_eq!(version, Some(1));

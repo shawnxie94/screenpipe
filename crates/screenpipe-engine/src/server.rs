@@ -541,6 +541,11 @@ impl SCServer {
     /// so that invariant violation must become a recoverable startup error,
     /// never a process abort that prevents the user from updating.
     pub async fn try_create_router(&self) -> Result<Router, std::io::Error> {
+        if let Some(brain) = &self.brain {
+            brain.ensure_recovered().await.map_err(|error| {
+                std::io::Error::new(std::io::ErrorKind::Other, format!("brain startup recovery failed: {error}"))
+            })?;
+        }
         catch_router_build_panic(self.create_router_inner()).await
     }
 
@@ -553,6 +558,10 @@ impl SCServer {
     }
 
     async fn create_router_inner(&self) -> Router {
+
+        if let Err(error) = crate::tasks::register_default_definitions(self.db.clone()).await {
+            tracing::warn!(%error, "task catalog registration failed; task APIs remain read-only until storage recovers");
+        }
 
         // Recording-coverage sampler: accumulates working-time-vs-healthy-capture
         // seconds every 5s. Spawned UNCONDITIONALLY (accumulation is cheap, local,
@@ -1126,6 +1135,7 @@ impl SCServer {
             "/connections/office",
             crate::brain::office_routes::office_routes(),
         );
+        let router = router.nest("/tasks", crate::tasks::routes());
         let router = router.nest(
             "/connections",
             crate::connections_api::router(

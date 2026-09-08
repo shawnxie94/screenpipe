@@ -12,6 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio_util::sync::CancellationToken;
+use tokio::sync::Semaphore;
 
 use super::types::BrainError;
 
@@ -75,6 +76,11 @@ impl BrainLimits {
     pub const MAX_OUTPUT_TOKENS: u32 = 4_096;
 }
 
+/// One process-wide model permit shared by interactive answers and background
+/// handlers. A queued background task cannot consume the permit forever and a
+/// chat request never deadlocks behind a nested child completion.
+static MODEL_LANE: Semaphore = Semaphore::const_new(1);
+
 /// Wrapper enforcing the per-job call budget. The worker creates one per
 /// claimed job; the handler sees `Refused` once the budget is spent and must
 /// fail the job instead of looping.
@@ -83,6 +89,7 @@ pub struct BudgetedExecutor {
     inner: Arc<dyn BrainModelExecutor>,
     calls: Arc<AtomicU32>,
     max_calls: u32,
+    persisted_job: Option<(Arc<screenpipe_db::DatabaseManager>, i64, String)>,
 }
 
 impl BudgetedExecutor {
@@ -91,7 +98,20 @@ impl BudgetedExecutor {
             inner,
             calls: Arc::new(AtomicU32::new(0)),
             max_calls: max_calls.max(1),
+            persisted_job: None,
         }
+    }
+
+    pub fn new_for_job(
+        inner: Arc<dyn BrainModelExecutor>,
+        max_calls: u32,
+        db: Arc<screenpipe_db::DatabaseManager>,
+        job_id: i64,
+        lease_token: String,
+    ) -> Self {
+        let mut executor = Self::new(inner, max_calls);
+        executor.persisted_job = Some((db, job_id, lease_token));
+        executor
     }
 
     pub fn used_calls(&self) -> u32 {
@@ -111,6 +131,31 @@ impl BudgetedExecutor {
                 false,
             ));
         }
-        self.inner.complete(request, cancel).await
+        if let Some((db, job_id, lease_token)) = &self.persisted_job {
+            let counted = db
+                .brain_job_model_call(*job_id, lease_token)
+                .await
+                .map_err(|e| BrainError::new("lease_lost", e.to_string(), true))?;
+            if !counted {
+                return Err(BrainError::new(
+                    "lease_lost",
+                    "任务租约已失效，模型结果不会提交",
+                    true,
+                ));
+            }
+        }
+        let permit = match tokio::time::timeout(Duration::from_secs(10), MODEL_LANE.acquire()).await {
+            Ok(Ok(permit)) => permit,
+            _ => {
+                return Err(BrainError::new(
+                    "resource_busy",
+                    "模型资源当前被其他任务占用",
+                    true,
+                ));
+            }
+        };
+        let result = self.inner.complete(request, cancel).await;
+        drop(permit);
+        result
     }
 }

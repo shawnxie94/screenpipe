@@ -50,7 +50,7 @@ pub async fn search(args: BrainSearchArgs<'_>) -> BrainSearchResult {
     let (memories_status, memory_evidence) = search_memories(args.db, args.question, args.filters).await;
     evidence.extend(memory_evidence);
     // Route 3: published, valid, unpaused knowledge only.
-    let (knowledge_status, knowledge) = search_knowledge(args.db, &match_expr).await;
+    let (knowledge_status, knowledge) = search_knowledge(args.db, &match_expr, args.filters).await;
 
     evidence.truncate(MAX_TOTAL);
     let routes = vec![sources_status, memories_status, knowledge_status];
@@ -90,10 +90,23 @@ async fn search_sources(
             evidence,
         );
     }
-    let hits = db
+    let hits = match db
         .brain_search_topk(match_expr, &["source", "memory"], MAX_PER_ROUTE)
         .await
-        .unwrap_or_default();
+    {
+        Ok(hits) => hits,
+        Err(_) => {
+            return (
+                RetrievalRouteDto {
+                    route: "sources",
+                    status: RouteStatus::Failed,
+                    hits: 0,
+                    error_code: Some("index_query_failed".into()),
+                },
+                evidence,
+            );
+        }
+    };
     for hit in hits {
         if let Some(reason) = filter_violation(db, &hit, filters).await {
             let _ = reason;
@@ -173,6 +186,7 @@ async fn search_memories(
 async fn search_knowledge(
     db: &Arc<DatabaseManager>,
     match_expr: &str,
+    filters: &AnswerFilters,
 ) -> (RetrievalRouteDto, Vec<KnowledgeHit>) {
     if match_expr.is_empty() {
         return (
@@ -180,10 +194,23 @@ async fn search_knowledge(
             Vec::new(),
         );
     }
-    let hits = db
+    let hits = match db
         .brain_search_topk(match_expr, &["knowledge"], MAX_PER_ROUTE)
         .await
-        .unwrap_or_default();
+    {
+        Ok(hits) => hits,
+        Err(_) => {
+            return (
+                RetrievalRouteDto {
+                    route: "knowledge",
+                    status: RouteStatus::Failed,
+                    hits: 0,
+                    error_code: Some("index_query_failed".into()),
+                },
+                Vec::new(),
+            );
+        }
+    };
     let mut knowledge = Vec::new();
     for hit in hits {
         // Only current published + valid + unpaused versions are quotable.
@@ -191,6 +218,14 @@ async fn search_knowledge(
             continue;
         };
         if paused {
+            continue;
+        }
+        if !filters.apps.is_empty()
+            && !filters
+                .apps
+                .iter()
+                .any(|app| hit.app.as_deref().unwrap_or_default().eq_ignore_ascii_case(app))
+        {
             continue;
         }
         let current: Option<(i64, String)> = sqlx::query_as(
@@ -207,7 +242,15 @@ async fn search_knowledge(
         }
         let row = db.brain_get_version(&kid, current_version).await.ok().flatten();
         let Some(row) = row else { continue };
-        if row.state != "published" || row.availability != "valid" {
+        if row.state != "published"
+            || row.availability != "valid"
+            || row
+                .review_due_at
+                .as_deref()
+                .and_then(|value| DateTime::parse_from_rfc3339(value).ok())
+                .map(|due| due.with_timezone(&Utc) <= Utc::now())
+                .unwrap_or(false)
+        {
             continue;
         }
         knowledge.push(KnowledgeHit {
@@ -249,8 +292,11 @@ async fn filter_violation(
     if hit.kind == "source" {
         let row = db.brain_get_source(&hit.ref_uid).await.ok().flatten();
         let Some(row) = row else { return Some("deleted") };
-        if row.state == "deleted" {
+        if matches!(row.state.as_str(), "deleted" | "disabled") {
             return Some("deleted");
+        }
+        if row.revision != hit.ref_revision {
+            return Some("stale_revision");
         }
         if !filters.apps.is_empty() {
             let app = row.app.as_deref().unwrap_or_default();

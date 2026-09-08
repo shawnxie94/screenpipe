@@ -11,8 +11,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
 use screenpipe_db::compute_input_hash;
-use screenpipe_db::{BrainJobKind, BrainSourceInput, ClaimedBrainJob, DatabaseManager, SourceKind, SourceLocator};
-use tokio_util::sync::CancellationToken;
+use screenpipe_db::{BrainJobKind, BrainSourceInput, DatabaseManager, SourceKind, SourceLocator};
 
 use super::executor::BrainLimits;
 use super::prompts;
@@ -192,9 +191,15 @@ async fn build_evidence_pack(
         .map_err(|_| JobFailure::permanent("bad_payload"))?;
 
     // Raw ledger evidence rows in range (capture-table locators).
-    let rows: Vec<(String, i64)> = sqlx::query_as(
-        "SELECT source_type, source_id FROM activity_evidence ae \
+    let rows: Vec<(String, i64, String, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT ae.source_type, ae.source_id, ae.occurred_at, \
+                COALESCE(sf.app_name, ue.app_name, ef.app_name), \
+                COALESCE(sf.window_name, ue.window_title, ef.window_name) \
+         FROM activity_evidence ae \
          JOIN activity_intervals i ON i.id = ae.interval_id \
+         LEFT JOIN frames sf ON ae.source_type = 'frame' AND sf.id = ae.source_id \
+         LEFT JOIN ui_events ue ON ae.source_type = 'ui_event' AND ue.id = ae.source_id \
+         LEFT JOIN frames ef ON ue.frame_id = ef.id \
          WHERE i.start_at >= ?1 AND i.start_at < ?2 \
          ORDER BY ae.occurred_at LIMIT ?3",
     )
@@ -211,10 +216,10 @@ async fn build_evidence_pack(
     let mut used_chars = 0usize;
     let mut n = 0usize;
 
-    for (kind, id) in rows {
+    for (kind, id, occurred_at, app_name, window_name) in rows {
         let (source_kind, locator_table) = match kind.as_str() {
             "frame" => (SourceKind::Frame, "frames"),
-            "ui_event" => (SourceKind::UiEvent, "ui_monitoring"),
+            "ui_event" => (SourceKind::UiEvent, "ui_events"),
             "audio" => (SourceKind::Audio, "audio_transcriptions"),
             _ => continue,
         };
@@ -237,7 +242,7 @@ async fn build_evidence_pack(
                 .await
                 .ok()
                 .flatten(),
-            "ui_event" => sqlx::query_scalar::<_, String>("SELECT text_output FROM ui_monitoring WHERE id = ?1")
+            "ui_event" => sqlx::query_scalar::<_, String>("SELECT COALESCE(text_content, element_value, element_name, event_type) FROM ui_events WHERE id = ?1")
                 .bind(id)
                 .fetch_optional(&ctx.db.pool)
                 .await
@@ -255,15 +260,18 @@ async fn build_evidence_pack(
             continue;
         };
         let normalized = super::sources::normalize_text(&text);
+        let captured_at = DateTime::parse_from_rfc3339(&occurred_at)
+            .map(|value| value.with_timezone(&Utc))
+            .unwrap_or(start_ts);
         let registration = register_capture_source(
             &ctx.db,
             source_kind,
             SourceLocator::new(locator_table, id),
             Some(&normalized),
-            None,
-            None,
-            start_ts,
-            true,
+            app_name.as_deref(),
+            window_name.as_deref(),
+            captured_at,
+            source_kind == SourceKind::Frame,
         )
         .await
         .map_err(|e| JobFailure::transient(format!("db_error:{e}")))?;

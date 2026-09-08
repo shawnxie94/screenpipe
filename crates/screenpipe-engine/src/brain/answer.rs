@@ -74,10 +74,13 @@ async fn answer(State(state): State<Arc<AppState>>, Json(req): Json<AnswerReques
             true,
         ));
     }
-    match result {
+    let response = match result {
         Ok(response) => Json(response).into_response(),
         Err(e) => err_response(e),
-    }
+    };
+    // Own the guard through body polling so a deletion racing the handler
+    // return cannot expose a response assembled from the old epoch.
+    super::routes::hold_emission_guard(response, guard)
 }
 
 async fn run_answer(
@@ -381,7 +384,8 @@ async fn answer_response(
         Some(key) => format!("idem:{key}"),
         None => format!("q:{}", super::sources::input_hash_for(&[], &req.question)),
     };
-    let _ = sqlx::query(
+    if let Ok(mut tx) = db.begin_immediate_with_retry().await {
+        let _ = sqlx::query(
         "INSERT INTO brain_answers (id, question_hash, status, claims, created_at, expires_at) \
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
     )
@@ -391,8 +395,10 @@ async fn answer_response(
     .bind(serde_json::to_string(&claims).unwrap_or_default())
     .bind(created_at.to_rfc3339_opts(chrono::SecondsFormat::Micros, true))
     .bind(expires_at.to_rfc3339_opts(chrono::SecondsFormat::Micros, true))
-    .execute(&db.pool)
-    .await;
+        .execute(&mut **tx.conn())
+        .await;
+        let _ = tx.commit().await;
+    }
     let _ = started;
     AnswerResponse {
         answer_id,
@@ -407,4 +413,3 @@ async fn answer_response(
         expires_at,
     }
 }
-

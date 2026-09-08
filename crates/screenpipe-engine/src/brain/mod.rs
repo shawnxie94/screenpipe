@@ -44,6 +44,10 @@ pub struct BrainShared {
     /// Dataset-scoped managed state directory (`<screenpipe_dir>/brain`).
     pub brain_dir: PathBuf,
     pub barrier: Arc<DeletionBarrier>,
+    /// Serializes journal sequence allocation with the following DB record.
+    pub journal_lock: Arc<tokio::sync::Mutex<()>>,
+    pub wave_lock: Arc<tokio::sync::Mutex<()>>,
+    recovery: tokio::sync::OnceCell<Result<(), String>>,
     /// Running worker handle, injected by the desktop shell.
     pub worker: tokio::sync::RwLock<Option<Arc<worker::WorkerHandle>>>,
     /// Injected model executor (same instance the worker uses), so the
@@ -89,6 +93,9 @@ impl BrainShared {
             db,
             brain_dir,
             barrier: Arc::new(DeletionBarrier::new()),
+            journal_lock: Arc::new(tokio::sync::Mutex::new(())),
+            wave_lock: Arc::new(tokio::sync::Mutex::new(())),
+            recovery: tokio::sync::OnceCell::const_new(),
             worker: tokio::sync::RwLock::new(None),
             executor: tokio::sync::RwLock::new(None),
         })
@@ -99,6 +106,8 @@ impl BrainShared {
             db: self.db.clone(),
             brain_dir: self.brain_dir.clone(),
             barrier: self.barrier.clone(),
+            journal_lock: self.journal_lock.clone(),
+            wave_lock: self.wave_lock.clone(),
         }
     }
 
@@ -107,5 +116,24 @@ impl BrainShared {
     pub async fn refresh_barrier(&self) {
         let epoch = self.db.brain_current_deletion_epoch().await.unwrap_or(0);
         self.barrier.set_epoch(epoch.max(0) as u64);
+    }
+
+    /// Complete journal replay before any worker or HTTP route is exposed.
+    /// Errors are retained so later callers fail closed instead of serving a
+    /// database whose durable deletion journal was not replayed.
+    pub async fn ensure_recovered(&self) -> Result<(), String> {
+        let deletion = self.deletion();
+        self.recovery
+            .get_or_init(|| async move {
+                deletion
+                    .recover_incomplete()
+                    .await
+                    .map(|_| ())
+                    .map_err(|e| e.to_string())?;
+                self.refresh_barrier().await;
+                Ok(())
+            })
+            .await
+            .clone()
     }
 }

@@ -44,7 +44,10 @@ fn service(state: &Arc<AppState>) -> OfficeService {
 fn err_response(e: BrainError) -> Response {
     let status = match e.code.as_str() {
         "conflict" => StatusCode::CONFLICT,
-        "not_authorized" | "scope_empty" | "scope_invalid" | "unknown_provider"
+        "not_authorized"
+        | "scope_empty"
+        | "scope_invalid"
+        | "unknown_provider"
         | "office_routes_forbidden" => StatusCode::BAD_REQUEST,
         "busy" => StatusCode::TOO_MANY_REQUESTS,
         "desktop_unavailable" => StatusCode::SERVICE_UNAVAILABLE,
@@ -131,7 +134,10 @@ async fn start_sync(
 ) -> Response {
     let svc = service(&state);
     let (expected, idempotency_key) = match &body {
-        Some(Json(b)) => (b.expected_revision.unwrap_or(i64::MAX), b.idempotency_key.clone()),
+        Some(Json(b)) => (
+            b.expected_revision.unwrap_or(i64::MAX),
+            b.idempotency_key.clone(),
+        ),
         None => (i64::MAX, None),
     };
     let expected = if expected == i64::MAX {
@@ -143,8 +149,7 @@ async fn start_sync(
     } else {
         expected
     };
-    match svc.enqueue_sync(&provider, expected, idempotency_key).await
-    {
+    match svc.enqueue_sync(&provider, expected, idempotency_key).await {
         Ok(job_id) => Json(json!({ "job_id": job_id })).into_response(),
         Err(e) => err_response(e),
     }
@@ -162,23 +167,25 @@ async fn control(
 ) -> Response {
     let svc = service(&state);
     let result: Result<u64, BrainError> = match body.action.as_str() {
-        "pause" => {
-            svc.db
-                .brain_cancel_jobs(Some(screenpipe_db::BrainJobKind::OfficeSync), None, "paused_by_user")
-                .await
-                .map_err(|e| BrainError::new("db_error", e.to_string(), true))
-        }
-        "cancel" => {
-            svc.db
-                .brain_cancel_jobs(Some(screenpipe_db::BrainJobKind::OfficeSync), None, "cancelled_by_user")
-                .await
-                .map_err(|e| BrainError::new("db_error", e.to_string(), true))
-        }
-        "retry" => svc
-            .refresh(&provider)
+        "pause" => svc
+            .db
+            .brain_cancel_jobs_for_scope(
+                screenpipe_db::BrainJobKind::OfficeSync,
+                &provider,
+                "paused_by_user",
+            )
             .await
-            .map(|_| 0)
-            .map_err(|e| e),
+            .map_err(|e| BrainError::new("db_error", e.to_string(), true)),
+        "cancel" => svc
+            .db
+            .brain_cancel_jobs_for_scope(
+                screenpipe_db::BrainJobKind::OfficeSync,
+                &provider,
+                "cancelled_by_user",
+            )
+            .await
+            .map_err(|e| BrainError::new("db_error", e.to_string(), true)),
+        "retry" => svc.refresh(&provider).await.map(|_| 0).map_err(|e| e),
         _ => {
             return err_response(BrainError::new("bad_request", "未知操作", false));
         }

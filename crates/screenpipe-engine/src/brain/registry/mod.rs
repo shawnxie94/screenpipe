@@ -81,16 +81,29 @@ fn validate_sop(body: &Value, ctx: &RegistryContext<'_>) -> ValidateResult {
         .get("steps")
         .and_then(Value::as_array)
         .ok_or_else(|| fail("steps", "缺少步骤"))?;
+    let mut evidence_refs = std::collections::BTreeSet::new();
     for (i, step) in steps.iter().enumerate() {
         if step.get("name").and_then(Value::as_str).unwrap_or_default().trim().is_empty() {
             return Err(fail(&format!("steps[{i}].name"), "步骤名不能为空"));
         }
         check_refs(step, &format!("steps[{i}]"), ctx, true)?;
+        if let Some(refs) = step.get("evidence_refs").and_then(Value::as_array) {
+            evidence_refs.extend(refs.iter().filter_map(Value::as_str));
+        }
     }
     if let Some(exceptions) = body.get("exceptions").and_then(Value::as_array) {
         for (i, exc) in exceptions.iter().enumerate() {
             check_refs(exc, &format!("exceptions[{i}]"), ctx, true)?;
+            if let Some(refs) = exc.get("evidence_refs").and_then(Value::as_array) {
+                evidence_refs.extend(refs.iter().filter_map(Value::as_str));
+            }
         }
+    }
+    if sessions != evidence_refs.len() as i64 {
+        return Err(fail(
+            "session_count",
+            "session_count 必须由相互独立的证据引用推导，不能由模型自行声明",
+        ));
     }
     Ok(())
 }

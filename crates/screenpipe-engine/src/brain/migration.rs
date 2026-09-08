@@ -205,7 +205,7 @@ async fn migration_activate(
     if !missing_locally.is_empty()
         || !extra_locally.is_empty()
         || !digest_mismatches.is_empty()
-        || spans_local < body.coverage_spans as i64
+        || spans_local != body.coverage_spans as i64
     {
         let message = json!({
             "missing_locally": missing_locally.len(),

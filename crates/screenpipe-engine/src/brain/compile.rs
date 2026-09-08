@@ -147,7 +147,7 @@ async fn try_save(
         knowledge_type: KnowledgeType,
         input_hash: &str,
         scope: &str,
-    ) -> Result<String, sqlx::Error> {
+    ) -> Result<(String, i64), sqlx::Error> {
         let body_str = body.to_string();
         let existing = ctx_db
             .brain_find_knowledge_by_scope(scope, knowledge_type.as_str())
@@ -163,7 +163,7 @@ async fn try_save(
                         unit_ids,
                     )
                     .await
-                    .map(|_| item.id)
+                    .map(|version| (item.id, version))
             }
             None => ctx_db
                 .brain_create_knowledge_candidate(
@@ -175,11 +175,11 @@ async fn try_save(
                     unit_ids,
                 )
                 .await
-                .map(|(id, _)| id),
+                .map(|(id, version)| (id, version)),
         }
     }
 
-    let knowledge_id = save(
+    let (knowledge_id, knowledge_version_id) = save(
         &ctx.db,
         body,
         &unit_ids,
@@ -191,6 +191,7 @@ async fn try_save(
     .await
     .map_err(|e| SaveSkip::Db(e.to_string()))?;
     // Transitive source edges: work unit → its sources → this knowledge.
+    let knowledge_version = knowledge_version_id.to_string();
     for wu in ref_map.values() {
         let sources = ctx
             .db
@@ -200,7 +201,14 @@ async fn try_save(
         for (source_uid, revision) in sources {
             let _ = ctx
                 .db
-                .brain_register_dependency("knowledge", &knowledge_id, None, None, &source_uid, revision.as_deref())
+                .brain_register_dependency(
+                    "knowledge",
+                    &knowledge_id,
+                    Some(&knowledge_version),
+                    None,
+                    &source_uid,
+                    revision.as_deref(),
+                )
                 .await;
         }
     }
