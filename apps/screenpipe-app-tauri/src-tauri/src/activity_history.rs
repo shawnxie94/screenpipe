@@ -11,6 +11,7 @@ use crate::pi::{self, AcpAgentConfig, PiBackend, PiProviderConfig, PiState};
 use crate::recording::{local_api_context_from_app, RecordingState};
 use crate::store::{self, AIProviderType, SettingsStore};
 use chrono::{DateTime, Local, Utc};
+use screenpipe_db::{DatabaseManager, TaskRunRequest, TaskState};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -1328,6 +1329,84 @@ fn merge_partial_entries(
     }
 }
 
+struct ActivityTaskLease {
+    db: Arc<DatabaseManager>,
+    run_id: String,
+    lease_token: String,
+}
+
+async fn begin_activity_task(
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    source: &str,
+    idempotency_key: &str,
+) -> Result<Option<ActivityTaskLease>, String> {
+    let Some(shared) = screenpipe_engine::brain::shared() else {
+        // The activity projection can still be read during very early native
+        // startup, before the engine publishes its shared database.
+        return Ok(None);
+    };
+    let db = shared.db.clone();
+    let start_text = start.to_rfc3339();
+    let end_text = end.to_rfc3339();
+    let input_hash = screenpipe_db::fingerprint(&[
+        start_text.as_str(),
+        end_text.as_str(),
+        source,
+        idempotency_key,
+    ]);
+    let (run_id, created) = db
+        .task_start_run(&TaskRunRequest {
+            definition_id: Some("activity.summary".into()),
+            definition_revision: "activity-v1".into(),
+            root_run_id: None,
+            parent_run_id: None,
+            retry_of: None,
+            trigger_key: format!("{source}:{idempotency_key}"),
+            input_hash,
+            input_refs: json!({
+                "start_time": start_text,
+                "end_time": end_text,
+                "source": source,
+            }),
+            config_snapshot: json!({"history_schema": "activity-history-pi-v9"}),
+            priority: 40,
+            not_before: None,
+            deadline: None,
+            owner_generation: 0,
+        })
+        .await
+        .map_err(|error| format!("activity_task_storage:{error}"))?;
+    if !created {
+        let state = db
+            .task_get_run(&run_id)
+            .await
+            .map_err(|error| format!("activity_task_storage:{error}"))?
+            .map(|run| run.state);
+        if matches!(state, Some(TaskState::Queued)) {
+            // A prior process accepted the same interval but had not started
+            // it yet; this process may become its sole owner.
+        } else {
+            return Err("activity_task_already_active".into());
+        }
+    }
+    let Some(claimed) = db
+        .task_claim_run(&run_id, &format!("activity-{idempotency_key}"), 30)
+        .await
+        .map_err(|error| format!("activity_task_storage:{error}"))?
+    else {
+        return Err("activity_task_already_active".into());
+    };
+    Ok(Some(ActivityTaskLease {
+        db,
+        run_id,
+        lease_token: claimed
+            .run
+            .lease_token
+            .ok_or_else(|| "activity_task_missing_lease".to_string())?,
+    }))
+}
+
 async fn generate(
     app: &AppHandle,
     state: &ActivityHistoryState,
@@ -1350,6 +1429,28 @@ async fn generate(
         );
         return Ok(history_in_range(read_all(app)?, start, end));
     };
+    let task_lease = match begin_activity_task(start, end, source, &idempotency_key).await {
+        Ok(lease) => lease,
+        Err(error) if error == "activity_task_already_active" => {
+            return Ok(history_in_range(read_all(app)?, start, end));
+        }
+        Err(error) => return Err(error),
+    };
+    let mut task_heartbeat = task_lease.as_ref().map(|lease| {
+        let db = lease.db.clone();
+        let run_id = lease.run_id.clone();
+        let lease_token = lease.lease_token.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(5));
+            loop {
+                interval.tick().await;
+                match db.task_heartbeat(&run_id, &lease_token, 30).await {
+                    Ok(true) => {}
+                    _ => break,
+                }
+            }
+        })
+    });
     let run_id = uuid::Uuid::new_v4().to_string();
     let started_at = Instant::now();
 
@@ -1361,7 +1462,7 @@ async fn generate(
                 generated_activity_count,
             } = result;
             let activity_count = history.entries.len();
-            if let Some(error_message) = degraded_error {
+            if let Some(error_message) = degraded_error.as_ref() {
                 error!(
                     activity_run_id = %run_id,
                     activity_source = source,
@@ -1380,6 +1481,25 @@ async fn generate(
                     activity_count,
                     "activity generation completed"
                 );
+            }
+            if let Some(handle) = task_heartbeat.take() {
+                handle.abort();
+            }
+            if let Some(lease) = &task_lease {
+                let _ = lease
+                    .db
+                    .task_finish_run(
+                        &lease.run_id,
+                        &lease.lease_token,
+                        TaskState::Succeeded,
+                        &json!({
+                            "activity_run_id": run_id,
+                            "entries": activity_count,
+                            "coverage_complete": degraded_error.is_none(),
+                        }),
+                        None,
+                    )
+                    .await;
             }
             Ok(history)
         }
@@ -1400,6 +1520,21 @@ async fn generate(
                     "activity generation failed: {}",
                     error_message,
                 );
+            }
+            if let Some(handle) = task_heartbeat.take() {
+                handle.abort();
+            }
+            if let Some(lease) = &task_lease {
+                let _ = lease
+                    .db
+                    .task_finish_run(
+                        &lease.run_id,
+                        &lease.lease_token,
+                        TaskState::Failed,
+                        &json!({"activity_run_id": run_id}),
+                        Some(&error_message),
+                    )
+                    .await;
             }
             Err(error_message)
         }

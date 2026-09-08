@@ -10,10 +10,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use screenpipe_connect::office::types::{OfficeProvider, OfficeScope};
+use screenpipe_connect::office::types::{OfficeAuthStatus, OfficeProvider, OfficeScope};
+use screenpipe_db::BrainJobKind;
 use screenpipe_engine::brain::office::{office_sync_handler, OfficeService};
 use screenpipe_engine::brain::worker::JobHandlers;
-use screenpipe_db::BrainJobKind;
 use tauri::AppHandle;
 
 /// Build the OfficeService the same way the REST routes do (shared managed
@@ -63,10 +63,7 @@ pub fn start_auto_sync(app: &AppHandle) {
                 let Ok(status) = service.status(provider.as_str()).await else {
                     continue;
                 };
-                if !status.scope.auto_sync {
-                    continue;
-                }
-                if status.auth_status != screenpipe_connect::office::types::OfficeAuthStatus::Authorized.as_str() {
+                if !auto_sync_is_eligible(&status.scope, &status.auth_status) {
                     continue;
                 }
                 let _ = service
@@ -81,4 +78,57 @@ pub fn start_auto_sync(app: &AppHandle) {
 /// one definition with the connector layer.
 pub fn scope_is_empty(scope: &OfficeScope) -> bool {
     scope.is_empty()
+}
+
+/// Auto-sync is deliberately opt-in and must never run for an unauthorised
+/// connection, even if a stale scope row still has `auto_sync=true`.
+pub fn auto_sync_is_eligible(scope: &OfficeScope, auth_status: &str) -> bool {
+    scope.auto_sync && auth_status == OfficeAuthStatus::Authorized.as_str()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn managed_directory_is_isolated_from_general_app_data() {
+        assert_eq!(
+            managed_dir(&PathBuf::from("/tmp/screenpipe")),
+            PathBuf::from("/tmp/screenpipe/office-cli")
+        );
+    }
+
+    #[test]
+    fn scope_empty_matches_import_policy() {
+        let mut scope = OfficeScope::default();
+        assert!(scope_is_empty(&scope));
+
+        scope
+            .document_ids
+            .push("https://example.feishu.cn/docx/abc".into());
+        assert!(!scope_is_empty(&scope));
+
+        scope.document_ids.clear();
+        scope.all_accessible_meetings = true;
+        assert!(!scope_is_empty(&scope));
+    }
+
+    #[test]
+    fn auto_sync_requires_opt_in_and_authorization() {
+        let mut scope = OfficeScope::default();
+        assert!(!auto_sync_is_eligible(
+            &scope,
+            OfficeAuthStatus::Authorized.as_str()
+        ));
+
+        scope.auto_sync = true;
+        assert!(!auto_sync_is_eligible(
+            &scope,
+            OfficeAuthStatus::Disconnected.as_str()
+        ));
+        assert!(auto_sync_is_eligible(
+            &scope,
+            OfficeAuthStatus::Authorized.as_str()
+        ));
+    }
 }

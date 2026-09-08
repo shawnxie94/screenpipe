@@ -53,10 +53,14 @@ pub async fn migrate_activity_history(app: &AppHandle) {
     };
     if entries_arr.is_empty() && coverage_arr.is_empty() {
         // Mark active so the brain starts clean without a second probe.
-        let _ = post_json(app, "/brain/migration/activate", &json!({
-            "entries": {},
-            "coverage_spans": 0
-        }))
+        let _ = post_json(
+            app,
+            "/brain/migration/activate",
+            &json!({
+                "entries": {},
+                "coverage_spans": 0
+            }),
+        )
         .await;
         brain_history_active().store(true, Ordering::SeqCst);
         return;
@@ -79,14 +83,12 @@ enum MigrationProbe {
 
 async fn probe_migration_status(app: &AppHandle) -> MigrationProbe {
     match get_json(app, "/brain/migration/status").await {
-        Some(value) => {
-            match value.get("phase").and_then(|p| p.as_str()) {
-                Some("active") => MigrationProbe::Active,
-                Some("not_started") | Some("importing") | Some("validating") => MigrationProbe::Pending,
-                Some("failed") => MigrationProbe::Failed,
-                _ => MigrationProbe::Unknown,
-            }
-        }
+        Some(value) => match value.get("phase").and_then(|p| p.as_str()) {
+            Some("active") => MigrationProbe::Active,
+            Some("not_started") | Some("importing") | Some("validating") => MigrationProbe::Pending,
+            Some("failed") => MigrationProbe::Failed,
+            _ => MigrationProbe::Unknown,
+        },
         None => MigrationProbe::Unknown,
     }
 }
@@ -103,13 +105,8 @@ async fn run_migration(
         let payload = json!({
             "batch": batch_index as i64,
             "entries": chunk.iter().map(|entry| {
-                json!({
-                    "id": entry.get("id").cloned().unwrap_or_else(|| json!(uuid::Uuid::new_v4().to_string())),
-                    "body": entry.to_string(),
-                    "encoding": "plain",
-                    "captured_range_start": entry.get("start_at").cloned(),
-                    "captured_range_end": entry.get("end_at").cloned(),
-                })
+                let id = migration_entry_id(entry);
+                migration_entry_payload(entry, id)
             }).collect::<Vec<_>>(),
             "coverage": [],
         });
@@ -135,18 +132,10 @@ async fn run_migration(
     }
 
     // Validate: id → digest over canonical bodies.
-    use sha2::Digest;
     let mut digest_map = serde_json::Map::new();
     for entry in entries {
-        let id = entry
-            .get("id")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default()
-            .to_string();
-        let canonical: String = entry.to_string().split_whitespace().collect::<Vec<_>>().join(" ");
-        let mut hasher = sha2::Sha256::new();
-        hasher.update(canonical.as_bytes());
-        digest_map.insert(id, json!(format!("{:x}", hasher.finalize())));
+        let id = migration_entry_id(entry);
+        digest_map.insert(id, json!(canonical_entry_digest(entry)));
     }
     let response = post_json(
         app,
@@ -158,16 +147,54 @@ async fn run_migration(
     )
     .await
     .ok_or_else(|| "activate request failed".to_string())?;
-    if response.get("ok").and_then(|v| v.as_bool()) == Some(true) {
+    if activation_succeeded(&response) {
         brain_history_active().store(true, Ordering::SeqCst);
         tracing::info!("brain history migration completed; brain enabled");
         Ok(())
     } else {
         Err(format!(
             "validation failed: {}",
-            response.get("message").and_then(|v| v.as_str()).unwrap_or("unknown")
+            response
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
         ))
     }
+}
+
+fn migration_entry_id(entry: &serde_json::Value) -> String {
+    entry
+        .get("id")
+        .and_then(|value| value.as_str())
+        .map(str::to_owned)
+        .unwrap_or_else(|| format!("legacy-{}", canonical_entry_digest(entry)))
+}
+
+fn migration_entry_payload(entry: &serde_json::Value, id: String) -> serde_json::Value {
+    json!({
+        "id": id,
+        "body": entry.to_string(),
+        "encoding": "plain",
+        "captured_range_start": entry.get("start_at").cloned(),
+        "captured_range_end": entry.get("end_at").cloned(),
+    })
+}
+
+fn canonical_entry_digest(entry: &serde_json::Value) -> String {
+    use sha2::Digest;
+
+    let canonical = entry
+        .to_string()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(canonical.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
+
+fn activation_succeeded(response: &serde_json::Value) -> bool {
+    response.get("ok").and_then(|value| value.as_bool()) == Some(true)
 }
 
 async fn get_json(app: &AppHandle, path: &str) -> Option<serde_json::Value> {
@@ -180,13 +207,13 @@ async fn get_json(app: &AppHandle, path: &str) -> Option<serde_json::Value> {
     response.json().await.ok()
 }
 
-async fn post_json(app: &AppHandle, path: &str, body: &serde_json::Value) -> Option<serde_json::Value> {
+async fn post_json(
+    app: &AppHandle,
+    path: &str,
+    body: &serde_json::Value,
+) -> Option<serde_json::Value> {
     let ctx = crate::recording::local_api_context_from_app(app);
-    let request = ctx.apply_auth(
-        reqwest::Client::new()
-            .post(ctx.url(path))
-            .json(body),
-    );
+    let request = ctx.apply_auth(reqwest::Client::new().post(ctx.url(path)).json(body));
     let response = request.send().await.ok()?;
     response.json().await.ok()
 }
@@ -213,4 +240,68 @@ pub async fn upsert_history_entry(
     .await
     .map(|_| ())
     .ok_or_else(|| "engine request failed".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::{
+        activation_succeeded, canonical_entry_digest, migration_entry_id, migration_entry_payload,
+    };
+
+    #[test]
+    fn migration_payload_preserves_body_and_captured_range() {
+        let entry = json!({
+            "id": "history-1",
+            "start_at": "2026-09-08T09:00:00Z",
+            "end_at": "2026-09-08T09:15:00Z",
+            "body": "正文含空格 以及中文",
+        });
+
+        let payload = migration_entry_payload(&entry, "history-1".to_string());
+
+        assert_eq!(payload["id"], "history-1");
+        assert_eq!(payload["body"], entry.to_string());
+        assert_eq!(payload["encoding"], "plain");
+        assert_eq!(payload["captured_range_start"], entry["start_at"]);
+        assert_eq!(payload["captured_range_end"], entry["end_at"]);
+    }
+
+    #[test]
+    fn migration_entry_without_id_gets_a_stable_validation_id() {
+        let entry = json!({"body": "legacy"});
+
+        let first = migration_entry_id(&entry);
+        let second = migration_entry_id(&entry);
+
+        assert_eq!(first, second);
+        assert!(first.starts_with("legacy-"));
+    }
+
+    #[test]
+    fn migration_digest_is_stable_for_json_whitespace() {
+        let compact = json!({"id":"history-1","body":""});
+        let spaced = serde_json::from_str::<serde_json::Value>(
+            r#"{
+                "id": "history-1",
+                "body": ""
+            }"#,
+        )
+        .expect("fixture JSON must parse");
+
+        assert_eq!(
+            canonical_entry_digest(&compact),
+            canonical_entry_digest(&spaced)
+        );
+    }
+
+    #[test]
+    fn activation_requires_explicit_success() {
+        assert!(activation_succeeded(&json!({"ok": true})));
+        assert!(!activation_succeeded(&json!({"ok": false})));
+        assert!(!activation_succeeded(
+            &json!({"message": "validation failed"})
+        ));
+    }
 }

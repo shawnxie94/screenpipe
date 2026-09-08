@@ -819,7 +819,6 @@ async fn capture_pi_start_error(
         &state,
         &session_id,
         project_dir,
-        None,
         provider_config,
         None,
     )

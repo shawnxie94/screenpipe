@@ -58,33 +58,46 @@ function trimAnswer(data: any): string {
   const claims = (data.claims ?? [])
     .slice(0, 8)
     .map((c: any) => ({
+      claim_id: c.claim_id,
       text: c.text,
       needs_confirmation: c.needs_confirmation === true ? true : undefined,
       evidence_refs: (c.evidence_refs ?? []).slice(0, 4),
+      knowledge_version_id: c.knowledge_version_id,
     }));
   const sources = (data.sources ?? []).slice(0, 6).map((s: any) => ({
     uid: s.source_uid,
+    revision: s.revision,
     kind: s.kind,
     captured_at: s.captured_at,
+    source_url: s.source_url,
+    archived: s.archived,
+    media_available: s.media_available,
     excerpt: String(s.excerpt ?? "").slice(0, 280),
   }));
   const knowledge = (data.knowledge_versions ?? []).slice(0, 5).map((k: any) => ({
     id: k.knowledge_id,
     version: k.version,
+    knowledge_type: k.knowledge_type,
     state: k.state,
+    availability: k.availability,
   }));
   const retrieval = (data.retrieval?.routes ?? []).map((r: any) => ({
     route: r.route,
     hits: r.hits,
     status: r.status,
+    error_code: r.error_code,
   }));
   return JSON.stringify({
+    answer_id: data.answer_id,
+    created_at: data.created_at,
+    expires_at: data.expires_at,
     status: data.status,
     answer: data.answer,
     claims,
     sources,
     knowledge,
     retrieval,
+    uncertainty: data.uncertainty,
   });
 }
 

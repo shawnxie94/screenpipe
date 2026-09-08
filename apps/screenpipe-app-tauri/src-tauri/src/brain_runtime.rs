@@ -393,6 +393,10 @@ impl BrainModelExecutor for BrainPiExecutor {
 }
 
 /// Start the BrainWorker after the engine server is up. Call once.
+pub(crate) const fn brain_startup_order() -> [&'static str; 4] {
+    ["deletion_recovery", "history_migration", "discovery", "worker_lease"]
+}
+
 pub async fn start_brain_worker(app: &AppHandle) {
     {
         let state = app.state::<BrainRuntimeState>();
@@ -419,6 +423,16 @@ pub async fn start_brain_worker(app: &AppHandle) {
             }
         }
     };
+    // Journal recovery is a startup gate: no discovery or worker lease may be
+    // taken while an interrupted deletion can still leave old bodies visible.
+    if let Err(error) = shared.ensure_recovered().await {
+        tracing::warn!("brain: deletion recovery failed; worker not started: {error}");
+        return;
+    }
+    if let Err(error) = activate_public_brain_owner(&shared.db).await {
+        tracing::warn!("brain: public task owner activation failed; worker not started: {error}");
+        return;
+    }
     // History preservation migration first (pauses the old writer briefly).
     crate::brain_migration::migrate_activity_history(app).await;
     shared.refresh_barrier().await;
@@ -457,7 +471,7 @@ pub async fn start_brain_worker(app: &AppHandle) {
         screenpipe_db::BrainJobKind::Compile,
         screenpipe_engine::brain::compile::compile_handler(),
     );
-    let handle = worker::start(
+    let handle = worker::start_public(
         shared.db.clone(),
         executor.clone(),
         handlers,
@@ -474,20 +488,23 @@ pub async fn start_brain_worker(app: &AppHandle) {
         let state = app.state::<BrainRuntimeState>();
         *state.worker.write().await = Some(handle.clone());
     }
-    // Startup recovery: finish deletion waves interrupted by a previous exit.
     let db = shared.db.clone();
-    let deletion = shared.deletion();
-    let recover = tokio::spawn(async move {
-        match deletion.recover_incomplete().await {
-            Ok(n) if n > 0 => tracing::info!("brain: recovered {n} incomplete deletion waves"),
-            Ok(_) => {}
-            Err(e) => tracing::warn!("brain: deletion recovery failed: {e}"),
-        }
-        let _ = db.brain_reap_expired_leases().await;
-    });
-    let _ = recover;
+    let _ = db.brain_reap_expired_leases().await;
     crate::office_runtime::start_auto_sync(app);
     tracing::info!("brain worker started");
+}
+
+#[cfg(test)]
+mod brain_runtime_tests {
+    use super::brain_startup_order;
+
+    #[test]
+    fn brain_runtime_recovery_precedes_discovery_and_worker_lease() {
+        let order = brain_startup_order();
+        assert_eq!(order[0], "deletion_recovery");
+        assert!(order.iter().position(|step| *step == "discovery")
+            < order.iter().position(|step| *step == "worker_lease"));
+    }
 }
 
 /// Stop the worker on app exit; in-flight steps are cancelled and uncommitted.
@@ -512,4 +529,39 @@ async fn detect_pi_version() -> String {
         }
         _ => "unknown".to_string(),
     }
+}
+
+async fn activate_public_brain_owner(
+    db: &Arc<screenpipe_db::DatabaseManager>,
+) -> Result<(), String> {
+    let current = db
+        .task_get_owner_state("brain")
+        .await
+        .map_err(|error| error.to_string())?;
+    let (generation, expected_generation) = match current {
+        Some(state) if state.migration_state == "unified" => {
+            return Ok(())
+        }
+        Some(state) => (state.owner_generation + 1, Some(state.owner_generation)),
+        None => (1, None),
+    };
+    let changed = db
+        .task_set_owner_state(
+            &screenpipe_db::TaskOwnerState {
+                kind: "brain".to_string(),
+                owner_generation: generation,
+                migration_state: "unified".to_string(),
+                checkpoint: Some("desktop_public_task_worker".to_string()),
+            },
+            expected_generation,
+        )
+        .await
+        .map_err(|error| error.to_string())?;
+    if !changed {
+        return Err("brain owner generation changed during activation".to_string());
+    }
+    db.task_activate_owner_generation("brain", generation)
+        .await
+        .map_err(|error| error.to_string())?;
+    Ok(())
 }
