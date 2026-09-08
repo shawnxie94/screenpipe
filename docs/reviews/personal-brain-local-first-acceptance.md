@@ -111,3 +111,11 @@ related:
 - **修复**：把知迹 MCP（packages/screenpipe-mcp，含 answer/get-brain-source）以 stdio 注册进引擎 `/mcp-servers`（id `local-brain`，名「知迹知识库」，持久化于 `~/.screenpipe-dev/mcp_servers.json`）；dist 重新构建纳入新工具。注册 env 变量名须用 `SCREENPIPE_LOCAL_API_PORT`（api-base.ts 不读 `SCREENPIPE_PORT`）。
 - **验证**：引擎 `/mcp-servers/local-brain/tools` 列出 30 个工具（answer/get-brain-source 在列）；`/mcp-servers/local-brain/call` 真实调用 answer 返回引用飞书「技术资讯」真实片段的诚实回答——与对话内 sp_mcp_call 同一通路。对话中即可发现并调用。
 - **待产品化（记残留）**：注册目前是实例级手工步骤；产品化应在 brain 启用时幂等 upsert 该 MCP 条目（含打包路径/env 决策），另 engine 的 stdio launcher 已按配置传 env（.envs(env) 实测有效）。
+
+## 9. 2026-09-08 深夜追记：对话改用原生工具，MCP 注册撤除
+
+- **架构修正（用户判断）**：这 30 个工具是 screenpipe 自己的底层能力，对话属同一应用，正确形态是**原生内置工具**（Pi 扩展直调本地 REST），不应绕道 MCP stdio 子进程再回环 HTTP 调自己。MCP 包（packages/screenpipe-mcp）保留给外部 agent（Claude Desktop 等）作为知识出口。
+- **落地**：新增 `assets/extensions/brain-tools.ts`（`brain_answer` + `brain_source` 两个收敛工具：带引用知识库问答、按 uid 取证据原文；对 typed 错误永不抛出、对重载荷做裁剪——claims≤8/sources≤6/摘录≤280 字符/原文≤4000 字符，防上下文膨胀），注册进共享扩展 seeding 清单（`SHARED_PI_EXTENSION_FILES` 平衡测试随行）；新增 5 项 vitest 全绿。
+- **工具收敛结论**：原 30 工具与对话内置面无重复（对话仅 mcp 桥+应用扩展）；本轮按"知识问答"单一职责收敛为 2 个原生工具，检索/会议/录制/说话人/管道等能力保持原位（管道/对话侧另有扩展覆盖），后续有真实需求再按需加原生口。
+- **撤除**：`local-brain` MCP 注册条目已 DELETE（mcp_servers.json 清空）；扩展文件在下次对话消息时自动种到聊天会话目录。
+- **验证**：`/brain/sources/:id` 端点字段与工具输出对齐（SourceDetailDto.text，非 excerpt）；partial 形态（claims/sources 空、引用记忆）对工具健壮；parity 测试 shared_pi_extensions_cover_every_pi_harness 绿。

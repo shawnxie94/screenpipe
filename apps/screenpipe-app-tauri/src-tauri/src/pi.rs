@@ -1839,6 +1839,10 @@ fn ensure_shared_pi_extensions(project_dir: &str) -> Result<(), String> {
     // Connection gate: lets Pi block on inline app authorization before
     // continuing app-dependent tasks.
     ensure_connection_gate_extension(project_dir)?;
+    // Brain tools: first-party 知迹 knowledge-base tools (answer/source).
+    // The chat and the brain share the app, so these are native tools that
+    // call local REST directly — not an MCP hop.
+    ensure_brain_tools_extension(project_dir)?;
     Ok(())
 }
 
@@ -1852,7 +1856,26 @@ const SHARED_PI_EXTENSION_FILES: &[&str] = &[
     "save-artifact.ts",
     "live-views.ts",
     "connection-gate.ts",
+    "brain-tools.ts",
 ];
+
+/// Install the Local Brain tools extension. Registers `brain_answer` /
+/// `brain_source` against the engine's own REST API.
+fn ensure_brain_tools_extension(project_dir: &str) -> Result<(), String> {
+    let ext_dir = std::path::Path::new(project_dir)
+        .join(".pi")
+        .join("extensions");
+    std::fs::create_dir_all(&ext_dir)
+        .map_err(|e| format!("Failed to create extensions dir: {}", e))?;
+
+    let ext_path = ext_dir.join("brain-tools.ts");
+    let ext_content = include_str!("../assets/extensions/brain-tools.ts");
+    std::fs::write(&ext_path, ext_content)
+        .map_err(|e| format!("Failed to write brain-tools extension: {}", e))?;
+
+    debug!("brain-tools extension installed at {:?}", ext_path);
+    Ok(())
+}
 
 /// Install the MCP bridge extension. Registers proxy tools that route
 /// `sp_mcp_call` / `sp_mcp_list_tools` requests through the local
