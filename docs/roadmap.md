@@ -1,4 +1,4 @@
-# screenpipe 路线图
+# 知迹（Screenpipe）路线图
 
 <!-- doc-covers: none -->
 
@@ -9,9 +9,9 @@
 
 ## 进行中
 
-- **Local Brain 首版实施规划**：已按用户决定收口为飞书、腾讯会议两个只读入口，授权/范围/同步/断开统一在主侧栏「连接」；WPS 与国内 Runtime 后置。[PRD](prd/personal-brain-local-first.md) 与 [TRD](trd/personal-brain-local-first.md) 已同步，[实施计划](plans/personal-brain-local-first-execution-plan.md) 已生成（approved，12个串行任务，功能尚未编码）。用户明确跳过规划前采样/PoC/模型联调；既有未知项进入各实现节点和最终验收，不计为已通过。下一步从共同契约与来源/删除基础开始，具体开工以后续实施指令为准。保留指定 Pi 模型、历史保全/新增优先/显式7天回填及约5分钟集中审核要求。
+- **Local Brain 首版实施**：已按用户决定收口为飞书、腾讯会议两个只读入口，授权/范围/同步/断开统一在主侧栏「连接」；WPS 与国内 Runtime 后置。[PRD](prd/personal-brain-local-first.md) 与 [TRD](trd/personal-brain-local-first.md) 已同步，[实施计划](plans/personal-brain-local-first-execution-plan.md)（approved，13个串行任务、37项首版验收）。2026-09-07 U01–U11、U13 代码全部落地且各层测试绿（db 163 / connect office 18 / engine brain 15 / MCP 92 / 前端品牌 30），桌面开发版构建启动，对运行实例完成 REST 全量走查并修复 5 个 bug（记录见[验收记录](reviews/personal-brain-local-first-acceptance.md)，含实过/残留/未测三分）；品牌替换按[具名保留清单](reviews/personal-brain-brand-retained-identifiers.md)完成。正式验收待外部授权件解除具名残留：① lark-cli 补 `im` 读 scope；② 安装 tmeet；③ 真实模型回答验证（2026-09-08 起绑定已改为复用「模型与密钥」选中预设+手动切换 Runtime，不再固定预设）。解除后重跑 U12 真实样本验收再并入已完成基线。未创建 git 提交（工作树含 462 个他人未提交汉化文件，须分批严格分离）。
 
-- **桌面端前端完全汉化**：以当前 `zh-local` / Local Brain 定位为准，覆盖主导航、首页、设置、聊天、时间线、首次启动、通知、错误和空状态等用户可见路径；保留代码标识、协议字段、模型名和必要的第三方专有名词。
+- **桌面端前端完全汉化**：以当前 `zh-local` / Local Brain 定位为准，覆盖主导航、首页、设置、聊天、时间线、首次启动、通知、错误和空状态等用户可见路径；保留代码标识、协议字段、模型名和必要的第三方专有名词。产品品牌替换统一由Local Brain计划U13负责，与本项共享文件串行修改。
 
 ## 待规划
 

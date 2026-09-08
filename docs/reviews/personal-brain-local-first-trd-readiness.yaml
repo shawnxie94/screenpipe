@@ -8,7 +8,7 @@ valid_for_current_source: false
 previous_report:
   uri: docs/reviews/archive/personal-brain-local-first-trd-readiness-iteration-1-before-office-plan.yaml
   sha256: 6e13eadb3156649a122f14441a974d0a029f4a881b8d13f7148b328cb7dd4374
-reason: 用户收口为飞书/腾讯会议并指定连接入口；跳过规划前验证，直接生成实施计划。旧来源hash与blocked/ready结论不代表本轮设计。
+reason: 用户收口为飞书/腾讯会议并指定连接入口；跳过规划前验证，直接生成实施计划。旧来源hash与blocked/ready结论不代表本轮设计。 用户追加知迹中文品牌与前端替换，计划增加U13与R11，共37项首版验收。
 current_action: planning_authorized_by_user
 assessment_performed: false
 validation_performed: false
@@ -16,15 +16,15 @@ implementation_started: false
 residual_risks: 办公权限/CLI契约与应用内Pi绑定/取消清理转入计划U03-U06、U12，不标记测试通过。
 current_source_artifacts:
 - uri: docs/prd/personal-brain-local-first.md
-  sha256: a398147b3f3cd7d1cbe035369e93498cabdacd61c01cea59c81220fdba91ddc7
+  sha256: 0c3fc104659e69e4a594d122ca3c222b2afbf280d7dceb73199ed4a102762c32
 - uri: docs/trd/personal-brain-local-first.md
-  sha256: 83bb0063abadd2b18f6ac492207020a043a00f0ad6159ee8416bd27f2f80757a
+  sha256: 2a113fdbc12f1a63f2d0ce86e92eefbc7d2e4b99b635ea8bd711aaccd0019e75
 - uri: docs/roadmap.md
-  sha256: e94737b875f0b18b1c86ad8851a8a0313a0594cabf0220e314b5c5885704b28d
+  sha256: ae534b087c71430e7e438f7c536b86a9c1a6fc952f143f358b3ac4be244372ad
 - uri: docs/plans/personal-brain-local-first-execution-plan.md
-  sha256: 2019fa1bf9af8882b260100316371ac6711e8c5f5d56989c47c2679f4de80442
+  sha256: 5d4d9f7046ff46ab8b1c9aa8fa1ee5a277e06434ca6fe5fcc72363db054eb945
 execution_plan:
   uri: docs/plans/personal-brain-local-first-execution-plan.md
-  sha256: 2019fa1bf9af8882b260100316371ac6711e8c5f5d56989c47c2679f4de80442
+  sha256: 5d4d9f7046ff46ab8b1c9aa8fa1ee5a277e06434ca6fe5fcc72363db054eb945
   status: approved
   plan_to_build: not_run_this_turn

@@ -18,18 +18,22 @@ related:
 - docs/reviews/personal-brain-local-first-readiness.yaml
 - docs/reviews/personal-brain-local-first-trd-readiness.yaml
 approval:
-  basis: 用户确定两款办公接入与连接入口，并明确直接生成实施计划；沿用已授权的Local Brain范围
+  basis: 用户确定两款办公接入与连接入口，并明确直接生成实施计划；沿用已授权的Local Brain范围；用户追加中文品牌知迹与前端品牌替换首版要求
   scope: 批准范围下的实施计划；本轮未请求开始编码
   preflight_validation: skipped_by_user
   product_acceptance: deferred_to_implementation
   plan_to_build: not_run_this_turn
+implementation:
+  progress_note: 2026-09-07 用户下达开工指令后 U01–U11、U13 全部实现，各层测试绿，桌面开发版构建启动并完成 REST 全量实机走查，修复5个bug；U12 依赖真实授权样本（lark im scope / tmeet 安装 / 模型预设选择）的条目未测不记通过，计划status维持approved不并入已完成基线。2026-09-08 用户指令变更模型绑定（复用「模型与密钥」选中预设+手动切换Runtime，见TRD §7.2变更注记），已改 U03 执行器并同步修复 brain_migrations SQL 书写错误；真实模型回答待重建后重跑验证
+  evidence: .agent/runs/2026-09-07-personal-brain-local-first/node-evidence/
+  acceptance_record: docs/reviews/personal-brain-local-first-acceptance.md
 source_artifacts:
 - name: personal-brain-local-first
   uri: docs/prd/personal-brain-local-first.md
-  sha256: a398147b3f3cd7d1cbe035369e93498cabdacd61c01cea59c81220fdba91ddc7
+  sha256: 0c3fc104659e69e4a594d122ca3c222b2afbf280d7dceb73199ed4a102762c32
 - name: personal-brain-local-first
   uri: docs/trd/personal-brain-local-first.md
-  sha256: 83bb0063abadd2b18f6ac492207020a043a00f0ad6159ee8416bd27f2f80757a
+  sha256: 2a113fdbc12f1a63f2d0ce86e92eefbc7d2e4b99b635ea8bd711aaccd0019e75
 - name: personal-brain-office-connectors
   uri: docs/research/personal-brain-office-connectors.md
   sha256: 9278f6450da725011c8753379c0f0e1298aed517c43fca8d35aa4ea54d08c5b7
@@ -38,7 +42,7 @@ source_artifacts:
   sha256: 953e4093768e1f422f147ead4e01c7825400d869db9f0ab28ff6cff7caa94df2
 - name: roadmap
   uri: docs/roadmap.md
-  sha256: e94737b875f0b18b1c86ad8851a8a0313a0594cabf0220e314b5c5885704b28d
+  sha256: ae534b087c71430e7e438f7c536b86a9c1a6fc952f143f358b3ac4be244372ad
 - name: AGENTS
   uri: AGENTS.md
   sha256: 5e285bd461f88c7ad9e469f36addd9a9d33129b5b04f04cc1e91fd9e95f28542
@@ -48,18 +52,20 @@ source_artifacts:
 - name: DESIGN
   uri: DESIGN.md
   sha256: 4cddbf7f906a5df7a1190a219c5911d6cc7d824a76c54f38ae63e9af1039fc92
-source_hash: 8094125c7c664e763326b8636c7f58bb17f11abedd4372266cf466425fbf1d68
+source_hash: 9d3716360d2024672c19f3fe4d210876004cf84d2bac5172e87407e497c3a1ed
 ---
 
-# Local Brain 首版实施计划
+# 知迹 · Local Brain 首版实施计划
 
 > 已按用户明确范围生成。首版为飞书、腾讯会议只读接入，所有接入操作放主侧栏「连接」；WPS 与国内 Runtime 后置。本轮跳过规划前采样、PoC、OAuth 和模型联调，不运行产品验证、不启动编码。原评审被本次范围与阶段决定取代，历史缺口由实现节点处理。
 
 ## 1. 目标与交付范围
 
-交付“办公/采集证据 → Work Unit → SOP / DecisionRule / ExceptionPlaybook → 自审发布 → 中文本地检索与带引用问答 → 反馈修订/删除”闭环。沿用指定 Pi 的 `shawnhub-copy / deepseek-v4-flash-0731`、不设费用/每日调用硬上限、历史保全/新增优先/显式7天回填、约5分钟集中审核。
+交付“办公/采集证据 → Work Unit → SOP / DecisionRule / ExceptionPlaybook → 自审发布 → 中文本地检索与带引用问答 → 反馈修订/删除”闭环。沿用指定 Pi 的 `shawnhub-copy / deepseek-v4-flash-0731`、不设费用/每日调用硬上限、历史保全/新增优先/显式7天回填、约5分钟集中审核。（2026-09-08 变更：模型绑定改为复用「模型与密钥」选中预设、支持手动切换 Runtime，不设费用/每日调用硬上限维持不变。）
 
 连接范围为飞书消息与文档、腾讯会议已有权限的转写和纪要。默认手动导入，自动同步显式启用；不扩展全账号历史、办公写操作、WPS、向量、外部记忆或新Runtime。平台原件留在平台，导入副本与派生知识的本地生命周期由Screenpipe管理。资料可访问不能证明用户处理过它。
+
+中文产品品牌为“知迹”，定位“本地优先的个人工作知识库”，介绍“把工作经历，沉淀为自己的知识。”。U13负责全部前端产品品牌展示替换，前端技术字符串与上游署名按PRD R11保留；本轮不修改产品源码。
 
 「连接」复用现有主页面section及 `components/settings/connections-section.tsx`；不另建办公中心。页面覆盖依赖/授权、账号和能力、资源范围、同步/取消/重试、断开与本地资料清理。知识审核与Ask保持其各自入口。
 
@@ -82,7 +88,7 @@ CodeGraph提示连接源码索引已漂移，已直接读取当前文件核对�
 | `apps/screenpipe-app-tauri/src-tauri/src/main.rs` | `842c61480c1702f1b5e65a47f210b1498ab1f111d678c60a4ced462ac8a901cc` |
 | `packages/screenpipe-mcp/package.json` | `925dae8783692d15e4112e912df8f31cbf4598f1e9777a6d13738defcc522318` |
 
-直接影响：DB来源/任务/删除表，Engine BrainService与连接路由，两个官方CLI适配，Tauri执行/生命周期，连接卡片及知识/Ask界面，MCP工具。间接影响：旧search/memories、retention、history迁移、凭据边界、生成绑定与缓存。只读内容接入不修改采集/编码热路径。
+直接影响：DB来源/任务/删除表，Engine BrainService与连接路由，两个官方CLI适配，Tauri执行/生命周期，连接卡片及知识/Ask界面，MCP工具。间接影响：旧search/memories、retention、history迁移、凭据边界、生成绑定与缓存。只读内容接入不修改采集/编码热路径。品牌任务另覆盖app/components/lib/public的展示文案、字标及相关UI测试预期，不改原生身份或数据协议。
 
 ## 3. 任务与依赖
 
@@ -99,7 +105,8 @@ CodeGraph提示连接源码索引已漂移，已直接读取当前文件核对�
 | U09 | 知识版本、自审与反馈服务 | U08 | 版本竞态/错误发布 |
 | U10 | 中文 FTS、普通问答与 MCP | U09 | 中文漏召回/旧版泄漏 |
 | U11 | 知识审核、Ask 引用与运行状态界面 | U10 | 入口分散/状态不可恢复 |
-| U12 | 集成、生命周期与真实使用验收 | U11 | 真实质量/性能/审核负担 |
+| U13 | 知迹品牌统一与前端替换 | U11 | 品牌遗漏/误改技术标识/与汉化冲突 |
+| U12 | 集成、生命周期与真实使用验收 | U11, U13 | 真实质量/性能/审核负担 |
 
 ```mermaid
 flowchart LR
@@ -116,10 +123,12 @@ flowchart LR
   U08 --> U09[U09 审核状态服务]
   U09 --> U10[U10 检索与MCP]
   U10 --> U11[U11 知识界面]
-  U11 --> U12[U12 集成验收]
+  U11 --> U13[U13 知迹品牌替换]
+  U13 --> U12[U12 集成验收]
+  U11 --> U12
 ```
 
-按依赖计算的最长链为 `U01 → U02 → U04 → U05/U06 → U08 → U09 → U10 → U11 → U12`；未估工期，不将节点数当作工时。实际默认串行执行 `U01…U12`；U03、U04–U06放在知识闭环之前，尽早在实现中处理模型、账号和CLI差异。没有独立预研/验证任务挡在U01之前。
+按依赖计算的最长链为 `U01 → U02 → U04 → U05/U06 → U08 → U09 → U10 → U11 → U13 → U12`；未估工期，不将节点数当作工时。实际默认串行执行 `U01…U11 → U13 → U12`（保留原节点编号）；U03、U04–U06放在知识闭环之前，尽早在实现中处理模型、账号和CLI差异。没有独立预研/验证任务挡在U01之前。
 
 ## 4. 公共执行契约
 
@@ -133,7 +142,7 @@ node_defaults:
   task_id: null
   source_task_pack_sha256: null
   source_artifacts: inherit_frontmatter_source_artifacts
-  source_hash: 8094125c7c664e763326b8636c7f58bb17f11abedd4372266cf466425fbf1d68
+  source_hash: 9d3716360d2024672c19f3fe4d210876004cf84d2bac5172e87407e497c3a1ed
   actor: local_lead
   parallel_mode: serial_same_worktree
   forbidden_writes:
@@ -634,6 +643,55 @@ parallel_mode: serial_same_worktree
 
 交接信号：用户能完成连接与知识闭环，依赖诊断折叠、无CLI命令/秘密输入流；约5分钟审核目标留待真实观察。
 
+### U13 · 知迹品牌统一与前端替换
+
+```yaml
+inherits: node_defaults
+plan_unit_id: U13
+depends_on:
+- U11
+acceptance_ids:
+- AC-R11-01
+- AC-R11-02
+- AC-R11-03
+write_ownership:
+- apps/screenpipe-app-tauri/lib/brand.ts
+- apps/screenpipe-app-tauri/app/**/*.tsx
+- apps/screenpipe-app-tauri/components/**/*.tsx
+- apps/screenpipe-app-tauri/lib/**/*.ts
+- apps/screenpipe-app-tauri/lib/**/*.tsx
+- apps/screenpipe-app-tauri/public/
+- apps/screenpipe-app-tauri/e2e/specs/
+- docs/reviews/personal-brain-brand-retained-identifiers.md
+forbidden_writes:
+- 继承node_defaults.forbidden_writes；上述目录只允许品牌展示、必要常量引用和直接相关测试预期/字标改动
+- 仓库/包/crate/API/MCP/URL/scheme/事件/配置/storage key/路径及生成的lib/utils/tauri.ts
+- src-tauri原生实现/配置、应用包/进程/签名/权限身份、许可证/上游署名/代码头
+- 用户历史内容、无关汉化与业务逻辑、依赖清单和锁文件
+mutex:
+- frontend-brand
+- main-navigation
+- brain-ui
+- connections-ui
+- frontend-localization
+required_skills:
+- codebase-analysis
+required_capabilities:
+- React/TypeScript
+- 前端画面与无障碍检查
+- 品牌文字与技术标识区分
+parallel_mode: serial_same_worktree
+```
+
+1. 扫描app/components/lib/public中的产品品牌、字标、标题、通知、alt/aria-label与tooltip，以及直接依赖这些展示的现有e2e用例；先输出精确修改文件清单和具名保留项，Task Pack只纳入该清单。广目录只用于限定扫描落点，不授权改动其他逻辑。
+2. 建立lib/brand.ts展示常量，将默认产品名统一为“知迹”，定位与介绍按PRD；关于/帮助可显示“知迹 · Screenpipe”。覆盖已有页面及U04–U11新增页面。
+3. 处理内嵌英文产品字标、空/错误态、权限引导和通知；系统实际名称、技术标识、外部产品/上游署名、用户历史内容保留，必要时加中文说明。
+4. 更新直接受品牌文案影响的现有UI测试预期；保持其他汉化修改，禁止全仓机械替换、批量改快照掩盖不一致或修改生成绑定。残留清单及画面证据进入本节点交接。
+
+验证检查点：前端品牌残留扫描加具名例外；启动/引导、首页、知识/Ask、设置/连接、错误/空态和通知的画面/无障碍检查；相关前端检查与typecheck；对比命令/链接/scheme/配置键及系统权限提示未误改。不为单个常量增加镜像测试，不要求原生更名构建。
+
+交接信号：AC-R11-01..03有证据，所有当前产品品牌展示为知迹，英文残留均有明确保留理由；U12可开始最终验收。当前节点未执行，不表示前端已完成替换。
+
 ### U12 · 集成、生命周期与真实使用验收
 
 ```yaml
@@ -641,6 +699,7 @@ inherits: node_defaults
 plan_unit_id: U12
 depends_on:
 - U11
+- U13
 acceptance_ids:
 - AC-R1-01
 - AC-R1-02
@@ -676,6 +735,9 @@ acceptance_ids:
 - AC-EVAL-05
 - AC-EVAL-06
 - AC-EVAL-07
+- AC-R11-01
+- AC-R11-02
+- AC-R11-03
 write_ownership:
 - docs/reviews/personal-brain-local-first-acceptance.md
 - docs/roadmap.md
@@ -702,13 +764,13 @@ parallel_mode: serial_same_worktree
 3. 测中文内容指标、事实支持/引用/可回答率、resource/SLA和5工作日集中审核；失败和不可测项如实保留，不调整分母。
 4. 完成节点证据汇总后再更新完成状态；阻塞修复回到对应节点，不用验收节点随意修改全部代码。不发布、不推送。
 
-验证检查点：执行TRD V1–V12与本计划34项映射，按改动范围运行仓库测试；真实与mock证据区分，输出结果/失败/未测/限制。
+验证检查点：执行TRD V1–V13与本计划37项映射，按改动范围运行仓库测试；真实与mock证据区分，输出结果/失败/未测/限制。
 
-交接信号：34项首版有实际通过证据或用户明确接受的具名残余风险；未测绝不自动计通过，未完成不更新completed。
+交接信号：37项首版有实际通过证据或用户明确接受的具名残余风险；未测绝不自动计通过，品牌遗漏也不能记为完成，未完成不更新completed。
 
 ## 6. 并行与写入归属
 
-本次选择单一主执行者、同工作区串行。U03/U04共享Tauri入口，U04/U05/U06/U11共享连接界面边界，U01/U02/U09/U10共享类型/schema/路由，不能同时写。U05与U06的供应商文件可在未来使用独立worktree并行，但公共契约先冻结、最终集成仍由一个writer执行；本计划当前不授权并行派发。
+本次选择单一主执行者、同工作区串行。U13位于U11之后、U12之前，与全部前端UI及汉化任务共享文件，禁止并发写；其广目录范围在Build前按实际品牌匹配收窄为精确文件清单。U03/U04共享Tauri入口，U04/U05/U06/U11共享连接界面边界，U01/U02/U09/U10共享类型/schema/路由，不能同时写。U05与U06的供应商文件可在未来使用独立worktree并行，但公共契约先冻结、最终集成仍由一个writer执行；本计划当前不授权并行派发。
 
 路径归属已按仓库相对路径归一化；发现的重叠是上述明确串行资源，不存在获准并发写的重叠节点。任何新增注册/生成文件属于共享变更，先回共同契约节点修改所有权，不能以适配器任务名扩大写范围。
 
@@ -727,7 +789,7 @@ parallel_mode: serial_same_worktree
 
 具体新增测试名随节点实现落定，命令不得以“零测试被选中”当通过；没有新改动或失败不重复扩大测试。API使用运行实例的认证LocalApiContext，不写死3030。测试与真实样本的授权在实际执行时处理，本轮不启动授权。
 
-34项首版验收按PRD定义，AC-R4-02与R10后置。主要责任节点如下（U12汇总最终质量，不代替各节点边界测试）：
+37项首版验收按PRD定义，AC-R4-02与R10后置，R11品牌在首版。主要责任节点如下（U12汇总最终质量，不代替各节点边界测试）：
 
 | 验收ID | 实现/验证节点 |
 |---|---|
@@ -758,6 +820,9 @@ parallel_mode: serial_same_worktree
 | AC-R9-02 | U01, U04, U05, U06, U12 |
 | AC-R9-03 | U12 |
 | AC-R9-04 | U01, U04, U05, U06, U11, U12 |
+| AC-R11-01 | U13, U12 |
+| AC-R11-02 | U13, U12 |
+| AC-R11-03 | U13, U12 |
 | AC-EVAL-01 | U12 |
 | AC-EVAL-02 | U08, U12 |
 | AC-EVAL-03 | U12 |
@@ -774,6 +839,7 @@ parallel_mode: serial_same_worktree
 | 腾讯会议账号资格/云转写可用性 | 按能力显示，不支持或无转写时保留明确状态；不偷偷改回屏幕截图冒充成功 | U04/U06 |
 | 应用内Pi模型/Keychain/取消清理 | 按TRD严格profile实现并在节点内验证，失败不换模型 | U03 |
 | CLI认证和固定版本安装细节 | 复用厂商正式方式与已有安装机制；新增凭据只存Keychain，不支持时配置失败，记录具体限制 | U04 |
+| 前端品牌遗漏或误改技术字符串 | 知迹展示常量、具名残留/保留清单及画面核对；不改原生身份或用户历史 | U13/U12 |
 | 真实流程、检索质量与使用负担 | 开发用脱敏/合成夹具，保留集在U12前冻结；未测项明确列出 | U08/U10/U12 |
 
 供应商细节变化属于节点实现中的兼容处理，不能静默增加WPS、写操作、新Runtime或绕过来源/凭据限制。若实际无法支持目标能力，记录事实和影响并带着可审阅改动反馈，不回写“通过”。

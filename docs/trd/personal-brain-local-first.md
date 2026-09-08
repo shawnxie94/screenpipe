@@ -9,6 +9,7 @@ sources:
   - docs/research/personal-brain-local-first-preflight.md
   - docs/research/personal-brain-office-connectors.md
   - "2026-09-07：用户指定飞书/腾讯会议与连接页，跳过规划前验证，直接生成实施计划"
+  - "2026-09-07：中文品牌知迹及前端品牌替换纳入首版"
   - "源码基线 HEAD 58617738c05f631e3d96b81eb51edf08f0818471，加当前工作区；关键文件指纹见预研记录"
 related:
   - docs/plans/personal-brain-local-first-execution-plan.md
@@ -21,7 +22,7 @@ related:
 <!-- screenpipe — AI that knows everything you've seen, said, or heard -->
 <!-- https://screenpipe.com -->
 
-# TRD：Local Brain 首版
+# TRD：知迹 · Local Brain 首版
 
 > 按用户最新范围生成实施计划：首版只接入飞书和腾讯会议，操作统一放「连接」；WPS 后置。用户明确取消规划前接入/模型验证，旧预研缺口转入实施任务验收。本设计已收口用于规划，新增接口、表和功能尚未实现；approved 不表示验证通过。原评审保留历史快照，本轮不运行新的交接门禁。
 
@@ -29,7 +30,7 @@ related:
 
 从真实开发工作的需求分析、调研、业务沟通中形成带证据的 Work Unit，再编译为可自审、修订、删除失效的 SOP / DecisionRule / ExceptionPlaybook。SQLite 为唯一内容与状态真源；桌面应用负责运行和用户操作；REST 与通用 MCP 共用查询与生命周期规则。
 
-本期覆盖 PRD R1–R9 的首版要求和 AC-EVAL-01…07，共 34 项验收。AC-R4-02、R10 及其四项历史验收后置；仅增加飞书/腾讯会议两个只读办公入口，不增加 WPS、国内 Runtime、双向办公操作、向量库、外部队列或全新 Agent 框架。首轮模型固定 `shawnhub-copy / deepseek-v4-flash-0731`，费用与每日调用总量不设硬上限。
+本期覆盖 PRD R1–R9、R11 的首版要求和 AC-EVAL-01…07，共 37 项验收。AC-R4-02、R10 及其四项历史验收后置；仅增加飞书/腾讯会议两个只读办公入口，不增加 WPS、国内 Runtime、双向办公操作、向量库、外部队列或全新 Agent 框架。首轮模型固定 `shawnhub-copy / deepseek-v4-flash-0731`，费用与每日调用总量不设硬上限。
 
 历史保全迁移与 AI 重算是两件事：迁移保留所有仍有效的历史条目和 coverage；新模型任务默认只处理启用后的新增证据，历史由用户单独启动近 7 天回填。
 
@@ -223,6 +224,8 @@ Local Brain 单并发，优先级 `answer > 新增 extract > backfill/compile`�
 
 ### 7.2 指定模型映射与出口
 
+> 变更（2026-09-08，用户指令）：AI 相关能力改为**复用「模型与密钥」中用户选中的预设，支持手动切换 Runtime**——不再固定 `shawnhub-copy / deepseek-v4-flash-0731`，也不拒绝 ACP。resolver 每次调用实时解析"默认预设（缺省回退第一个预设）"，手动切换后下一次调用即生效；普通（非 ACP）补全仍禁工具并受 brain 侧 token/上下文预算约束；`__title:` 会话不落盘、临时目录清理、凭据只引用不记录等执行卫生不变。`ModelBinding.v1` 结构不变，`preset_id` 为空表示尚未选择任何预设。下述原文中"固定 catalog/model、不转 ACP"的条款由本变更取代，其余继续生效。
+
 绑定快照 `ModelBinding.v1 = {preset_id,preset_revision,provider_catalog_id,model_id,wire_api,endpoint_fingerprint,secret_ref,pi_version,profile_version}`。首轮 catalog ID 固定 shawnhub-copy、model 固定 deepseek-v4-flash-0731；`wire_api=openai-completions` 经全局配置元数据核对。endpoint 与密钥只在本机解析，报告记录身份/指纹，不复制私人地址或凭据。
 
 `shawnhub-copy` 不是现有 Preset provider enum：首版沿用 Custom Preset 表示该 OpenAI-compatible 接口，并保存明确的 catalog 来源和模型 ID。严格 resolver 只使用选中的 preset revision；删除、改名、缺 key、模型不在配置中时返回配置错误，不回落默认模型、不转 ACP。导入仅选定 provider/model 的白名单字段，不能复制全局 models/auth/trust 文件到项目或应用目录。
@@ -328,6 +331,24 @@ Engine 仅接收受认证的用户意图。授权与安装需要桌面执行器�
 
 首次启用清楚区分“迁移已有历史”“处理新增”“另行回填近7天”，展示选定模型与数据出口。查询忙碌、模型离线、采集缺失、索引部分覆盖、未知事实、过期知识、删除清理中均有中文状态和下一步；用户不需要理解租约或 epoch。键盘可操作、焦点可见、状态不只依赖颜色；沿用明暗主题和减少动态效果设置。
 
+### 10.4 知迹品牌展示契约
+
+沿用现有React/Next前端，在 `apps/screenpipe-app-tauri/lib/brand.ts` 建立一个无运行时依赖的展示常量入口（拟新增）：`PRODUCT_NAME=知迹`、`PRODUCT_BILINGUAL_NAME=知迹 · Screenpipe`、`PRODUCT_DESCRIPTION=本地优先的个人工作知识库`、`PRODUCT_TAGLINE=把工作经历，沉淀为自己的知识。`。只集中产品展示文字，不接管技术ID、外部链接或所有通用文案，不为改名引入新的国际化框架。
+
+当前源码抽样已确认产品字样分散在 `components/splash-screen.tsx`、`app/(main)/home/page.tsx`、`app/error.tsx`、`app/notification-panel/page.tsx`、`components/notification-handler.tsx` 与设置提示中；`app/layout.tsx` 为客户端组件，标题按实际现有生成位置处理，不能凭空套用服务端metadata方案。没有发现现成的brand helper。此处是定位证据，不是全部替换清单；实施时扫描 app/components/lib/public 中的品牌用法。
+
+| 展示类别 | 实施规则 |
+|---|---|
+| 主导航、启动/引导、知识/Ask、设置/连接、帮助/错误/空态 | 当前产品名用PRODUCT_NAME；关于/帮助需要说明项目关系时用PRODUCT_BILINGUAL_NAME |
+| 标题、toast/通知、tooltip、alt/aria-label | 使用同一展示来源，逐项检查无障碍名称与实际画面；覆盖前端控制的窗口/通知标题 |
+| 应用自有品牌图片/字标 | 查出内嵌英文产品文字；可由现有图形标志配“知迹”文字替代，保留原配色/布局，不新增Logo设计范围 |
+| 技术字符串与历史内容 | CLI/包/API/MCP/URL/scheme/事件/storage key/路径/生成绑定不替换；许可证/上游署名及用户历史文本保持原样 |
+| 系统权限指引 | 显示真实注册名并可附“知迹”；本次不改变应用包/进程/签名/权限身份，避免引导用户查找错误条目 |
+
+新增 `docs/reviews/personal-brain-brand-retained-identifiers.md` 作为实施时的具名保留清单（此刻未创建），记录文件/字段、保留文本、理由和类别。实现先列显示位置与技术例外，再按语义修改；不能全局替换代码中的screenpipe。字符串扫描只用于发现，需结合实际画面判断SVG字标、标题、无障碍文案和布局。
+
+该工作由U13单写入，排在U11之后、U12之前，覆盖已有页面和本轮新页面。与进行中的前端汉化共享文件时串行处理并保留对方已有修改。校验采用残留清单、关键页面画面与相关已有前端检查，不新增只断言常量等于字面的测试；品牌改名不触发数据库迁移、凭据迁移或原生重命名构建。
+
 ## 11. 可观测、测试与验收映射
 
 ### 11.1 运行指标
@@ -351,6 +372,7 @@ release 构建固定机器和采集负载比较 Brain 关闭/开启：CPU<20%、
 | V9 运行 | 关窗/退出/休眠恢复；队列10s/总60s；最多3调用；取消/过期租约无提交；null预算不暂停；会话目录/子进程清理 | AC-R8-01、AC-R8-02 |
 | V10 办公连接 | 两工具分别≥90%内容导入与中文检索；飞书消息/文档、真实会议转写时间；连接全流程、受限读取、分页/修订、断开/重连/删除抑制和跨工具来源链 | AC-R9-01、AC-R9-02、AC-R9-03、AC-R9-04、AC-EVAL-07 |
 | V11 真实质量 | ≥10会话、≥3同流程；独立冻结30–50条查询及预期来源；全部编译事实人工核验≥90%支持，发布步骤全部有据，至少1有用SOP/1流程变体；保留集无依据结论0且可回答率≥80% | AC-EVAL-01、AC-EVAL-02、AC-EVAL-03 |
+| V13 知迹品牌 | 当前产品品牌统一；前端文字/字标/alt/通知/标题全覆盖、具名保留项有据；技术ID/链接/权限指引不变，布局与无障碍无回归 | AC-R11-01、AC-R11-02、AC-R11-03 |
 | V12 持续验收 | 真实v1→纠错→v2→删除；固定模型、资源/SLA、审核负担与积压；验证所有已启用出口 | AC-EVAL-04、AC-EVAL-05、AC-EVAL-06 |
 
 自动断言检查引用/状态/事务，不代替人工语义支持判断。真实内容与保留答案只放用户控制的本地评测目录，不提交客户材料；仓库保存脱敏夹具/指标/身份指纹。调试集与验收集目录和 ID 分开，调参者不能用保留答案调 prompt。
@@ -372,7 +394,7 @@ release 构建固定机器和采集负载比较 Brain 关闭/开启：CPU<20%、
 
 用户于2026-09-07明确：“先不考虑WPS了，首版就飞书和腾讯会议接入吧，操作放到连接里。也不需要验证了，直接进入实施计划生成阶段吧。”因此本轮只同步设计并生成 [实施计划](../plans/personal-brain-local-first-execution-plan.md)，不启动采样、OAuth、安装、模型调用或产品测试，也不运行新的交接门禁。
 
-设计顺序：共同来源/删除/连接契约 → 连接执行与两款只读适配、严格模型执行 → 历史迁移与Work Unit → 审核/FTS/answer/MCP/反馈 → 集成验收。删除屏障先于任何可保存派生正文；来源修订与清理随各层一起交付；连接“已授权”不能代替“已导入”。
+设计顺序：共同来源/删除/连接契约 → 连接执行与两款只读适配、严格模型执行 → 历史迁移与Work Unit → 审核/FTS/answer/MCP/反馈 → 知迹品牌展示替换 → 集成验收。删除屏障先于任何可保存派生正文；来源修订与清理随各层一起交付；连接“已授权”不能代替“已导入”。
 
 | 历史事项 | 本轮处理 | 实施责任 |
 |---|---|---|
@@ -381,4 +403,6 @@ release 构建固定机器和采集负载比较 Brain 关闭/开启：CPU<20%、
 | DR-TRD-003 中文FTS | 保留此前合成probe证据及算法决定 | 索引/问答节点完成真实检索与容量测试 |
 | DI-EVAL-001 真实验收集 | 在质量验收前冻结；本轮不准备真实资料 | 最终集成节点，调试集与保留集分离 |
 
-原PRD/TRD评审归档为历史快照；当前记录说明用户跳过规划前验证，不生成虚假的ready报告。本次范围与计划可用于后续实施交接，产品完成仍以34项首版验收的实际结果为准。未获得开始编码的指令，本轮不创建Build Task Pack、不修改产品实现。
+原PRD/TRD评审归档为历史快照；当前记录说明用户跳过规划前验证，不生成虚假的ready报告。本次范围与计划可用于后续实施交接，产品完成仍以37项首版验收的实际结果为准。未获得开始编码的指令，本轮不创建Build Task Pack、不修改产品实现。
+
+品牌范围以PRD R11为准，增加U13/验证包V13，不重编号原有任务或后置R10。未实施前只表示范围已确认，不宣称应用已完成更名。
