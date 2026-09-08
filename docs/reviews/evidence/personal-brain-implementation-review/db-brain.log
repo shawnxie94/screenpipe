@@ -1,0 +1,24 @@
+running 20 tests
+test db::brain::types::tests::deletion_cause_is_explicit ... ok
+test db::brain::types::tests::fingerprint_is_stable_hex ... ok
+test db::brain::tests::knowledge_state_enums_roundtrip ... ok
+test db::brain::types::tests::job_states_and_priorities ... ok
+test db::brain::types::tests::input_hash_is_order_insensitive_and_input_sensitive ... ok
+test db::brain::types::tests::knowledge_type_roundtrip ... ok
+test text_normalizer::brain_chinese_tests::latin_and_code_tokens_survive ... ok
+test db::brain::types::tests::source_kind_roundtrip ... ok
+test text_normalizer::brain_chinese_tests::natural_question_candidates_drop_stopwords_and_cap_at_24 ... ok
+test text_normalizer::brain_chinese_tests::project_emits_unigrams_and_bigrams ... ok
+test text_normalizer::brain_chinese_tests::phrase_match_uses_and_of_bigrams ... ok
+test text_normalizer::brain_chinese_tests::two_char_query_matches_projection ... ok
+test db::brain::tests::user_deleted_source_is_tombstoned_and_never_reimports ... ok
+test db::brain::tests::office_identity_is_provider_scoped ... ok
+test db::brain::tests::register_source_is_idempotent_and_revision_aware ... ok
+test db::brain::tests::archived_excerpt_survives_retention_but_user_erase_wins ... ok
+test db::brain::tests::expired_lease_is_reaped_with_attempts_preserved ... ok
+test db::brain::tests::job_lifecycle_dedupe_claim_and_token_guard ... ok
+test db::brain::tests::transient_failure_requeues_then_exhausts ... ok
+test db::brain::tests::deletion_barrier_cancels_jobs_and_propagates_consumers ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 145 filtered out; finished in 0.59s
+

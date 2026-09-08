@@ -1,0 +1,51 @@
+{
+  "git_head": "5fcacf6b1a51bfaa0003e9e9907b608e80bad568",
+  "date": "2026-09-08",
+  "files": [
+    {
+      "name": "connect-office.log",
+      "uri": "docs/reviews/evidence/personal-brain-implementation-review/connect-office.log",
+      "sha256": "85e8bcaec927bbc15e644fa45fae8258e7e00ce477b52bcf7d4cbe841c85efde"
+    },
+    {
+      "name": "contract-probes.log",
+      "uri": "docs/reviews/evidence/personal-brain-implementation-review/contract-probes.log",
+      "sha256": "4f6e164625bf0e7ef1fdde62cacce322aa84f2ff80d19c02e311cc1298fcff5a"
+    },
+    {
+      "name": "contract-probes.rs.txt",
+      "uri": "docs/reviews/evidence/personal-brain-implementation-review/contract-probes.rs.txt",
+      "sha256": "cba4a7077c840c00e4cee3852bd0a0877dea1cf9e7656a0271145a742b359e01"
+    },
+    {
+      "name": "db-brain.log",
+      "uri": "docs/reviews/evidence/personal-brain-implementation-review/db-brain.log",
+      "sha256": "a0aba0dd1fc8ed02acba14942c3f2ec812dfe27fad234d51b537bce97b2d605e"
+    },
+    {
+      "name": "engine-brain.log",
+      "uri": "docs/reviews/evidence/personal-brain-implementation-review/engine-brain.log",
+      "sha256": "6abcd156316f52dbd3ca39d7aea9b4c12c6fb8e68b14cae4bbece9092bf2493b"
+    },
+    {
+      "name": "frontend-brain.log",
+      "uri": "docs/reviews/evidence/personal-brain-implementation-review/frontend-brain.log",
+      "sha256": "39bfd5b2d4b024364b78a5b95a01cb07a47375fb934d7c11fc43be970e998256"
+    },
+    {
+      "name": "frontend-typecheck.log",
+      "uri": "docs/reviews/evidence/personal-brain-implementation-review/frontend-typecheck.log",
+      "sha256": "b476889bf992c65567e696d34bb53db0d41da203e4a09cf5187543c1500899da"
+    },
+    {
+      "name": "mcp-typecheck.log",
+      "uri": "docs/reviews/evidence/personal-brain-implementation-review/mcp-typecheck.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    {
+      "name": "mcp.log",
+      "uri": "docs/reviews/evidence/personal-brain-implementation-review/mcp.log",
+      "sha256": "6dc4a7dd1138c8baf5234143d481e2a1ffd8259dfb5057f33f1ba487a7462e5a"
+    }
+  ]
+}

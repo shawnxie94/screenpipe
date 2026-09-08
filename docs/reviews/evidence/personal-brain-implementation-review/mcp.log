@@ -1,0 +1,31 @@
+$ vitest run
+
+ RUN  v4.0.18 /Users/shawn/Developer/GitHub/screenpipe/packages/screenpipe-mcp
+
+ ✓ src/stdio-startup.test.ts (8 tests) 884ms
+$ bun scripts/build.mjs
+dist/cli.js 1981161 bytes
+dist/http-server.js 1878837 bytes
+dist/index.js 1931825 bytes
+ ✓ src/self-contained-pack.test.ts (3 tests) 921ms
+     ✓ supports concurrent agent starts from the same immutable artifact  592ms
+(node:50239) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ✓ src/http-server.test.ts (26 tests) 64ms
+ ✓ src/export-video.test.ts (4 tests) 25ms
+ ✓ src/activity-summary-tool.test.ts (3 tests) 15ms
+ ✓ src/time-normalization.test.ts (5 tests) 5ms
+ ✓ src/version.test.ts (7 tests) 4ms
+ ✓ src/telemetry.test.ts (5 tests) 4ms
+ ✓ src/qualified-value.test.ts (7 tests) 3ms
+ ✓ src/pack-contents.test.ts (9 tests) 2ms
+ ✓ src/notification-request.test.ts (5 tests) 2ms
+ ✓ src/activity-summary-format.test.ts (4 tests) 2ms
+ ✓ src/api-base.test.ts (3 tests) 1ms
+ ✓ src/element-format.test.ts (3 tests) 1ms
+
+ Test Files  14 passed (14)
+      Tests  92 passed (92)
+   Start at  13:33:34
+   Duration  3.57s (transform 184ms, setup 0ms, import 678ms, tests 1.93s, environment 1ms)
+

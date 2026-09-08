@@ -1,0 +1,30 @@
+Review log excerpt: DOM dump omitted; failure assertion and complete count retained.
+
+ FAIL  components/settings/__tests__/brain-section.filter.test.tsx > BrainSection type filter > opens an editable chat with the artifact preview and does not auto-send
+AssertionError: expected "spy" to be called with arguments: [ { context: '', …(5) } ]
+
+Received: 
+
+  1st spy call:
+
+  Array [
+    Object {
+      "autoSend": false,
+      "context": "",
+      "filePreviewPath": "/tmp/pipes/glob-pipe/output/note-0.md",
+-     "prompt": "help me understand the Screenpipe artifact at /tmp/pipes/glob-pipe/output/note-0.md",
++     "prompt": "帮我理解位于 /tmp/pipes/glob-pipe/output/note-0.md 的 Screenpipe 产物",
+      "source": "brain-artifact",
+      "useHomeChat": true,
+    },
+  ]
+
+
+Number of calls: 1
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 83 passed (84)
+   Start at  13:43:15
+   Duration  5.87s (transform 674ms, setup 116ms, collect 1.37s, tests 6.44s, environment 955ms, prepare 230ms)
+

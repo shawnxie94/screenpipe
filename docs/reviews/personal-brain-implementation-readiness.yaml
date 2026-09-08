@@ -1,0 +1,751 @@
+id: review-personal-brain-implementation-2026-09-08
+type: delivery_readiness
+mode: assess
+status: blocked
+stage: implementation_to_verify
+iteration: 1
+created_at: '2026-09-08'
+updated_at: '2026-09-08'
+owner: local_lead
+repair_authorized: false
+base_commit: 5fcacf6b1a51bfaa0003e9e9907b608e80bad568
+branch: zh-local
+working_tree_at_start: clean
+conclusion: 主要模块已有实现，但尚不符合原计划的完整首版行为。存在十组实质性实现缺口，另有品牌/测试与正式验收证据问题；本轮只审查并生成整改计划，不执行产品修复。
+decision_basis:
+- 首版仍是飞书、腾讯会议，只读接入操作在连接；WPS、国内 Runtime 新兼容、向量和外部 MemoryProvider 后置。
+- 2026-09-08 用户允许跟随模型与密钥中的选中预设并手动切换 Runtime（含 ACP）；不把取消固定 DeepSeek 绑定当缺陷，不增加费用/每日调用总量否决阈值。
+- 普通问答只查本地、来源支持、可取消/清理、凭据边界等原约束继续有效。
+- 用户本轮授权整体审查与后续计划，不表示授权本轮重启实现或执行真实办公/模型操作。
+source_artifacts:
+- name: personal-brain-local-first.md
+  uri: docs/prd/personal-brain-local-first.md
+  sha256: a508f5bdffdaa5cf224727c427112a55c43250589f5a45407982e528bfd598c0
+- name: personal-brain-local-first.md
+  uri: docs/trd/personal-brain-local-first.md
+  sha256: 5a99e40ce6329092a20234e5b593c0840fc86b3ea3cab1ab2f42fad5e9a71a9d
+- name: personal-brain-local-first-execution-plan.md
+  uri: docs/plans/personal-brain-local-first-execution-plan.md
+  sha256: 401cf55509363f0eb0da896fb75d6e8886f59575cb68dcbf93da32a41aae755c
+- name: personal-brain-local-first-acceptance.md
+  uri: docs/reviews/personal-brain-local-first-acceptance.md
+  sha256: 834eba32f714afe5faa0fb158fc3ee11be4f2c64417556d78d2868186516dba2
+- name: personal-brain-brand-retained-identifiers.md
+  uri: docs/reviews/personal-brain-brand-retained-identifiers.md
+  sha256: 0f73e6d18c6f84143d71e4016b368102e87ec6cd8da880535c48a45825b4b4a2
+- name: AGENTS.md
+  uri: AGENTS.md
+  sha256: 5e285bd461f88c7ad9e469f36addd9a9d33129b5b04f04cc1e91fd9e95f28542
+- name: VISION.md
+  uri: VISION.md
+  sha256: bf2b38ef85a3642fb293d0bfc7b9960ced3e67ead8c7a9cad62986d30a42dac0
+implementation_identity:
+  git_head: 5fcacf6b1a51bfaa0003e9e9907b608e80bad568
+  code_scope:
+  - crates/screenpipe-db/src/db/brain/
+  - crates/screenpipe-db/src/migrations/20260907120000_create_brain.sql
+  - crates/screenpipe-engine/src/brain/
+  - crates/screenpipe-engine/src/routes/data.rs
+  - crates/screenpipe-engine/src/retention.rs
+  - crates/screenpipe-connect/src/office/
+  - apps/screenpipe-app-tauri/src-tauri/src/brain_runtime.rs
+  - apps/screenpipe-app-tauri/src-tauri/src/brain_migration.rs
+  - apps/screenpipe-app-tauri/components/brain/
+  - apps/screenpipe-app-tauri/components/settings/office-connection-card.tsx
+  - packages/screenpipe-mcp/src/index.ts
+  note: 源码证据的行号属于该提交。先使用 CodeGraph 定位，再读当前源码；不把文档注释当已实现行为。
+implemented_foundation:
+- 同库 Brain 来源、修订、任务、依赖、删除状态和办公连接表；可复用的数据层基础。
+- 抽取/编译/版本审核/中文 FTS/answer 的服务及 REST/MCP 工具已经存在。
+- 飞书/腾讯会议受限 CLI 适配器、连接卡片、KnowledgeHub/Ask 及知迹品牌常量已落地。
+- 用户所选 AI 预设/Runtime 的复用路径已实现；基础层、MCP 与类型检查有通过证据。
+verification:
+- id: db-brain
+  command: cargo test -p screenpipe-db --lib brain -- --nocapture
+  cwd: .
+  exit_code: 0
+  passed: 20
+  failed: 0
+  evidence: docs/reviews/evidence/personal-brain-implementation-review/db-brain.log
+- id: connect-office
+  command: cargo test -p screenpipe-connect --lib office
+  cwd: .
+  exit_code: 0
+  passed: 19
+  failed: 0
+  evidence: docs/reviews/evidence/personal-brain-implementation-review/connect-office.log
+- id: engine-brain
+  command: cargo test -p screenpipe-engine --lib brain
+  cwd: .
+  exit_code: 0
+  passed: 16
+  failed: 0
+  evidence: docs/reviews/evidence/personal-brain-implementation-review/engine-brain.log
+- id: mcp
+  command: bun run test
+  cwd: packages/screenpipe-mcp
+  exit_code: 0
+  passed: 92
+  failed: 0
+  evidence: docs/reviews/evidence/personal-brain-implementation-review/mcp.log
+- id: frontend-brain
+  command: bun x vitest run --config vitest.config.ts components/settings/__tests__/brain-section.filter.test.tsx components/settings/__tests__/brain-overview.test.tsx
+  cwd: apps/screenpipe-app-tauri
+  exit_code: 1
+  passed: 83
+  failed: 1
+  evidence: docs/reviews/evidence/personal-brain-implementation-review/frontend-brain.log
+- id: frontend-typecheck
+  command: bun run typecheck
+  cwd: apps/screenpipe-app-tauri
+  exit_code: 0
+  passed: null
+  failed: null
+  evidence: docs/reviews/evidence/personal-brain-implementation-review/frontend-typecheck.log
+- id: mcp-typecheck
+  command: bun run typecheck
+  cwd: packages/screenpipe-mcp
+  exit_code: 0
+  passed: null
+  failed: null
+  evidence: docs/reviews/evidence/personal-brain-implementation-review/mcp-typecheck.log
+- id: contract-probes
+  command: cargo test -p screenpipe-engine --test local_brain_review_probe -- --nocapture
+  cwd: .
+  exit_code: 101
+  passed: 1
+  failed: 10
+  evidence: docs/reviews/evidence/personal-brain-implementation-review/contract-probes.log
+probe_explanation:
+  source: docs/reviews/evidence/personal-brain-implementation-review/contract-probes.rs.txt
+  expected_semantics: 测试断言 PRD/TRD 所要求行为；失败是实际反例，非故意断言错误行为通过。
+  isolation: '11 个探针仅用 sqlite::memory: 和 tempfile；无外部模型/真实办公请求。P11 为正常检索正对照。'
+  product_changes: 临时 integration test 已移出 crates；只保留文档区可复现源码和日志，不给后续正常 cargo test 留下新增失败测试。
+findings:
+- id: DR-LIFECYCLE-001
+  severity: blocker
+  priority: P1
+  status: open
+  title: 显式删除、崩溃恢复和 retention 尚未形成完整清理链
+  proof: synthetic_reproduced_and_source_review
+  acceptance_ids:
+  - AC-R1-03
+  - AC-R3-02
+  - AC-R6-01
+  - AC-R6-02
+  - AC-R6-03
+  - AC-R9-03
+  original_units:
+  - U02
+  - U05
+  - U06
+  - U07
+  - U09
+  - U10
+  evidence:
+  - crates/screenpipe-engine/src/brain/deletion.rs:230：传播主要修改有效性；273 行直接标 completed；370 行 recover_incomplete 不读取 journal 文件、不重放清理，只完成
+    DB 中未完波次。
+  - crates/screenpipe-db/src/db/brain/deletion.rs:254：Work Unit 只改 state；知识只修改 published availability，未擦除修订正文。
+  - crates/screenpipe-db/src/db/brain/sources.rs:419 与 77：通用删除写 source_locator 墓碑，办公注册只检查 office_object 墓碑，命名空间不一致。
+  - crates/screenpipe-engine/src/routes/data.rs:46：/data/delete-range 直接删除底层数据/文件，无 Brain 删除调用；对应 db/maintenance.rs 无 Brain
+    传播。
+  - crates/screenpipe-engine/src/retention.rs:489,524：原始文本先删除再传播；不能满足已发布知识引用原始文本豁免。
+  - contract-probes P01/P02/P09：删除成功后仍有 2 处派生正文/索引；只有 journal 的删除未恢复；办公对象删除后可以再次注册。
+  impact: 用户删除的内容仍可能留在历史正文、索引或重导入副本中；清理完成状态不能作为已遗忘的证据。自动保留期也可能先破坏应豁免的原文。
+  next_action: F02 统一所有删除入口、原始/派生/文件/索引清理及无正文墓碑；journal 与 DB 序号核对恢复；失败保持待重试；retention 在删除原文前计算豁免。
+- id: DR-HISTORY-001
+  severity: blocker
+  priority: P1
+  status: open
+  title: 迁移没有切换唯一读写来源，校验和加密边界不完整
+  proof: source_review
+  acceptance_ids:
+  - AC-R1-04
+  - AC-R6-02
+  - AC-R8-03
+  original_units:
+  - U07
+  evidence:
+  - apps/screenpipe-app-tauri/src-tauri/src/activity_history.rs:374,387：read_all/write_all 仍访问旧 store；brain_history_active/migration_in_progress
+    没有读写入口消费。1572/2572 是异步 best-effort 镜像。
+  - apps/screenpipe-app-tauri/src-tauri/src/brain_migration.rs:40,65,111：先读快照后置迁移标记；导入 encoding 固定 plain，不能以旧 store 的文件解密作为允许降级到明文
+    DB 的依据。
+  - crates/screenpipe-engine/src/brain/migration.rs:204：brain_history_counts 返回 (entries, spans)，却取 entries 当 coverage_spans；只比数量下限，没有完整区间对照。
+  impact: “迁移 active”不能证明历史已安全接管；离线镜像失败、新旧副本差异或覆盖区间遗漏可能造成记录缺失，回退也可能恢复已删除内容。
+  next_action: F03 修复快照冻结、幂等导入、逐项摘要及完整 coverage 对照、事务切换和失败恢复；加密历史保持同等级保护，密钥不可用暂停。
+- id: DR-EXTRACT-001
+  severity: blocker
+  priority: P1
+  status: open
+  title: 新增边界、任务身份和抽取/编译提交检查不满足增量契约
+  proof: synthetic_reproduced_and_source_review
+  acceptance_ids:
+  - AC-R1-01
+  - AC-R1-02
+  - AC-R1-03
+  - AC-R2-01
+  - AC-R8-01
+  - AC-R8-02
+  - AC-R8-03
+  - AC-R9-03
+  - AC-EVAL-02
+  original_units:
+  - U01
+  - U03
+  - U07
+  - U08
+  evidence:
+  - crates/screenpipe-engine/src/brain/extract.rs:26,38：发现阶段没有 enabled/enabled_at 检查，输入 hash 仅 scope；相同应用/标题的不同 final 区间共用活动任务身份。
+  - apps/screenpipe-app-tauri/src-tauri/src/brain_runtime.rs:436：每 5 分钟回看固定 26 小时；已完成任务不作为持久 checkpoint，首次启用前数据和长时间停机后的积压边界均不可靠。
+  - crates/screenpipe-engine/src/brain/migration.rs:291：回填 scope 使用每段起止时间；compile.rs:35 要同 scope 至少 3 个 Work Unit，单次规则/异常也被统一拦截。
+  - crates/screenpipe-engine/src/brain/extract.rs:140,155,217：模型返回后先写正文，再单独写依赖且忽略失败；提交无租约/删除/修订原子重验。ui_event 映射 ui_monitoring，与
+    activity_evidence 的 ui_events 事件身份不一致；eN 映射未随正文持久化。
+  - crates/screenpipe-engine/src/brain/compile.rs:134,158：输入使用 Work Unit ID + 空修订；每次新增 candidate，未消费驳回抑制；registry/mod.rs:62
+    只信模型 session_count。P10 证明 1 个会话声称 3 个即通过。
+  impact: 可能漏抽、重抽、跨越启用边界，取消后仍留下产物；回填资料难以聚成 SOP，驳回后持续产生重复待审。JSON 合法不能代表流程归纳正确。
+  next_action: F04 用来源/区间/分类/模型身份的稳定修订和持久游标；实现受租约、删除及来源修订共同约束的原子提交；修复事件映射、持久引用和类型专属编译门槛。
+- id: DR-KNOWLEDGE-001
+  severity: blocker
+  priority: P1
+  status: open
+  title: 版本行 ID 与版本号混用，失败发布也会修改旧版
+  proof: synthetic_reproduced_and_source_review
+  acceptance_ids:
+  - AC-R2-02
+  - AC-R2-03
+  - AC-R7-01
+  - AC-R5-03
+  original_units:
+  - U09
+  - U11
+  evidence:
+  - crates/screenpipe-db/src/db/brain/knowledge.rs:82,120：current_version_id 写的是版本号，supersede 却按全局 row id 查询；105 行候选 CAS 失败仍
+    commit 已修改旧版的事务。
+  - contract-probes P07：第二条知识发布 v2 后 v1 仍为 published；P08：错误 revision 的发布返回 false，却将原 v1 改为 superseded。
+  - crates/screenpipe-engine/src/brain/routes.rs:456：编辑 CAS 与正文更新是分开的写入；531 行发布先查来源再提交，来源有效性检查不含准确修订、暂停/归档可核验性，且无同事务保护。
+  impact: 多条知识和并发审核时，当前版本与历史状态可能自相矛盾；一次冲突操作即可让已发布知识停止可用，删除竞态也可能允许过时内容发布。
+  next_action: F05 明确 row_id/version 两类身份并迁移现有指针；编辑/发布使用同事务 CAS，失败完全回滚；发布依赖来源与删除 epoch 同时重验。
+- id: DR-RETRIEVAL-001
+  severity: blocker
+  priority: P1
+  status: open
+  title: 检索放行停用/过期资料、忽略知识过滤并吞掉数据库错误
+  proof: synthetic_reproduced_and_source_review
+  acceptance_ids:
+  - AC-R3-02
+  - AC-R3-03
+  - AC-R5-02
+  - AC-R9-02
+  original_units:
+  - U10
+  evidence:
+  - crates/screenpipe-engine/src/brain/search.rs:81,173,244：sources 仅排除 deleted；knowledge 未接收 filters 且未检查 review_due_at；FTS
+    失败 unwrap_or_default 后返回 NoHits。
+  - contract-probes P03/P04/P05/P06 分别复现 disabled 来源返回、到期知识返回、应用过滤无效和 DROP FTS 后误报 NoHits；P11 正常检索对照通过。
+  - crates/screenpipe-engine/src/brain/search.rs：来源结果使用索引快照且没有当前原文/修订的完整核对；知识发布索引 app/event_at 为空，无法据此完成跨应用/日期过滤。
+  impact: 用户选定的范围和资料停用规则无法可靠约束答案；系统故障会伪装为没有证据，降低信任且掩盖故障。
+  next_action: F06 对三路统一过滤、当前修订和可用性谓词；区分 disabled/no_hits/timeout/failed/ok；覆盖版本、范围、删除和缓存失效。
+- id: DR-ANSWER-001
+  severity: blocker
+  priority: P1
+  status: open
+  title: 无引用结论、旧知识引用和保存回答缺少完整校验
+  proof: source_review
+  acceptance_ids:
+  - AC-R5-01
+  - AC-R5-02
+  - AC-R5-03
+  - AC-R6-01
+  - AC-R7-01
+  - AC-EVAL-03
+  original_units:
+  - U10
+  - U11
+  evidence:
+  - crates/screenpipe-engine/src/brain/answer.rs:264：supported 初始 true，evidence 缺失/空数组可通过；未验证的顶层 answer 直接返回。失效声明正文还被复制进 uncertainty。
+  - crates/screenpipe-engine/src/brain/answer.rs：kN 引用在模型返回后未重新核验发布版本/状态；每个 ClaimDto.knowledge_version_id 固定 None。
+  - crates/screenpipe-engine/src/brain/answer.rs:95：幂等缓存只使用 key，未绑定问题/filters/epoch；读取 body 字段但写入仅 claims，缓存返回内容与首次结果不同。
+  - crates/screenpipe-engine/src/brain/answer.rs 与 routes.rs:51：保存/缓存正文缺少依赖登记、TTL 实际回收及保存前有效性重验，直接 pool 写入且部分错误被忽略。
+  impact: 引用存在不等于支持结论，当前实现甚至允许完全没有引用的事实；切版或删除后仍可能输出旧结论。保存与反馈不能可靠定位依据。
+  next_action: F06 从通过校验的 claims 组装所有用户可见正文；按实际来源/知识版本重验；F02 纳入回答正文清理；补全幂等、TTL 和结构化引用映射。
+- id: DR-OFFICE-001
+  severity: blocker
+  priority: P1
+  status: open
+  title: 连接授权、暂停/重试/断开及范围隔离尚未闭环
+  proof: source_review
+  acceptance_ids:
+  - AC-R9-02
+  - AC-R9-04
+  - AC-R6-01
+  - AC-R6-04
+  original_units:
+  - U04
+  - U05
+  - U06
+  - U11
+  evidence:
+  - crates/screenpipe-engine/src/brain/office_routes.rs:90：authorize 仅 refresh，没有启动登录；/:provider/control 的 pause/cancel 取消所有
+    provider 的 office_sync，retry 只 refresh。
+  - crates/screenpipe-engine/src/brain/office.rs:245：scope.chat_ids 作为 message object_id 保留集；文档/会议未进入保留集，聊天 ID 与消息 ID 语义不同。
+  - crates/screenpipe-engine/src/brain/office.rs:348：retain_inactive 传空 account_namespace，实际账号对象可能不被停用；erase 绕过共享删除 journal；范围停用只改
+    office_objects，sources/索引未同步。
+  - crates/screenpipe-engine/src/brain/office.rs run_sync / office_runtime：同步开头检查账号，分页写入和游标提交未共同校验 connection/scope revision；暂停未持久化，自动同步可再次入队。
+  - apps/screenpipe-app-tauri/components/settings/office-connection-card.tsx：主要是检查/同步，当前任务 busy 时控制按钮禁用；不能从连接页完成计划中的授权与中途取消。
+  impact: 首次用户不能仅靠“连接”完成接入；暂停飞书可能影响腾讯会议；范围变化或断开后旧任务仍有提交/引用窗口。
+  next_action: F07 实现官方依赖/授权操作及 provider+account+revision 控制；暂停、重试和断开可重启恢复；按资源父子关系判断范围，分页数据和游标原子提交。
+- id: DR-OFFICE-002
+  severity: blocker
+  priority: P1
+  status: open
+  title: 办公内容导入与工作轨迹、时间回链尚未连通
+  proof: source_review
+  acceptance_ids:
+  - AC-R9-01
+  - AC-R9-03
+  - AC-R1-01
+  - AC-R2-01
+  - AC-EVAL-07
+  original_units:
+  - U05
+  - U06
+  - U08
+  evidence:
+  - crates/screenpipe-engine/src/brain/extract.rs:210：证据包只组装 frame/ui_event/audio，没有将明确关联活动的办公来源接入抽取。
+  - crates/screenpipe-engine/src/brain/office.rs:733：腾讯会议 transcript 的 event_at 填 scope.window_start_ms，source_url 为 None；会议信息未用于准确事件时间与可点击回链。
+  - crates/screenpipe-connect/src/office/tencent_meeting.rs:219：段落时间写入展示文本，未持久化结构化段落身份/时间锚；不能将此等同于已完成时间回链。
+  - crates/screenpipe-engine/src/brain/office.rs persist_object：全文入 FTS、来源只留有界 excerpt；来源查看及重建依赖 excerpt，长文后段可核验性和重建前后召回一致性需修复。
+  impact: “资料能导入”和“真实开发流程能沉淀”之间仍缺活动关联；会议过滤/回链可能错误，长文检索命中后难以看到对应证据。
+  next_action: F08 修复事件时间、原始/AI纪要区分、段落/文档分块引用和重建一致性；通过明确活动锚进入 Work Unit，独立导入资料仍仅作为资料。
+- id: DR-RUNTIME-001
+  severity: blocker
+  priority: P1
+  status: open
+  title: 模型执行的持久预算、取消清理和凭据路径与契约不一致
+  proof: source_review
+  acceptance_ids:
+  - AC-R8-01
+  - AC-R8-02
+  - AC-R6-04
+  - AC-EVAL-06
+  original_units:
+  - U03
+  evidence:
+  - apps/screenpipe-app-tauri/src-tauri/src/brain_runtime.rs:136：复用 preset.api_key 值（加密 store），没有采用要求中的 Keychain secret_ref；未读取用户实际密钥，本结论仅来自源码。
+  - apps/screenpipe-app-tauri/src-tauri/src/brain_runtime.rs:167,178,197,258：启动失败的 ? 可绕过清理；外层 timeout 丢弃 future 后正常清理段不执行，取消
+    watcher 和残留目录无完整回收契约。
+  - crates/screenpipe-engine/src/brain/worker.rs:268：BudgetedExecutor 每次租约重建；brain_job_model_call 没有生产调用，最多三次模型调用不跨重试累计；暂停配置错误
+    helper 未接入实际失败路径。
+  - crates/screenpipe-engine/src/brain/answer.rs:40：交互单独 semaphore，后台 worker 同时执行，无法证明共享资源预算、公平调度和请求断开后的取消。
+  impact: 重试可能超出任务预算，取消/超时可留下进程或受管会话资料；Keychain 规则尚未落到该调用链。这里不把用户允许的 ACP 或切换 Runtime 本身视为缺陷。
+  next_action: F09 保留选中 preset/手动 Runtime 切换，明确不同 Runtime 的受限能力；实现持久调用预算、共享调度、drop-safe 进程与目录回收、Keychain 引用及执行身份记录。
+- id: DR-REVIEW-001
+  severity: blocker
+  priority: P1
+  status: open
+  title: 回答反馈到 v2 审核的用户闭环断裂
+  proof: source_review
+  acceptance_ids:
+  - AC-R2-02
+  - AC-R7-01
+  - AC-R7-02
+  - AC-R8-03
+  - AC-R9-04
+  - AC-EVAL-05
+  original_units:
+  - U09
+  - U11
+  evidence:
+  - apps/screenpipe-app-tauri/components/brain/knowledge-hub.tsx:227,274,352：点击候选 v2 编辑只存 body，保存却用 currentVersion（优先已发布 v1），因此请求编辑
+    v1 并得到冲突。
+  - crates/screenpipe-engine/src/brain/routes.rs:704：反馈按 answer/claim 查 brain_answers 的知识字段；answer 未写入这些关联，普通 Ask 反馈无法定位版本，停在
+    pending。
+  - knowledge-hub.tsx：没有完整的已发布版本创建修订、待处理反馈收件箱和带原因恢复链；运行状态只允许启动回填，没有暂停/恢复操作。
+  - crates/screenpipe-engine/src/brain/routes.rs brain_status：index coverage、review_due_count、backfill 等是固定 0/None，显示不能证明真实状态。
+  impact: 日常“回答有误 → 暂停 v1 → 编辑 v2 → 自审发布 → 再问”无法完成，积压与约五分钟审核目标也无可靠入口/指标。
+  next_action: F10 基于 F05/F06/F07/F09 的真实契约补齐界面状态和闭环；版本显式绑定编辑会话；加行为回归，不以 typecheck 或旧 Brain 测试替代。
+- id: DR-BRAND-001
+  severity: warning
+  priority: P2
+  status: open
+  title: 仍有产品品牌残留，汉化断言未同步
+  proof: test_reproduced_and_source_review
+  acceptance_ids:
+  - AC-R11-01
+  - AC-R11-02
+  - AC-R11-03
+  original_units:
+  - U13
+  evidence:
+  - apps/screenpipe-app-tauri/components/settings/brain-section.tsx:541：编辑后会展示的预填提示仍称“Screenpipe 产物”，属于当前产品文案。
+  - components/settings/__tests__/brain-section.filter.test.tsx:598：仍期望英文 prompt；本轮对应两文件测试为 83 passed / 1 failed。实际输出已汉化，因此该失败主要是预期漂移。
+  - 已有品牌常量及具名保留清单可复用；本轮没有重新进行全页面原生画面验收。
+  impact: 不能继续沿用“各层测试绿/品牌已全部核对”的旧结论；这是局部文案与验证缺口，不能据此推断整套 UI 功能失败。
+  next_action: F10 将现有产品预填文案统一为知迹，更新精确断言及具名保留清单，补画面/无障碍核对；保留技术标识和上游署名。
+- id: DR-VERIFY-001
+  severity: warning
+  priority: P2
+  status: open
+  title: 现有测试和实例手工记录不足以证明 37 项首版完成
+  proof: evidence_gap
+  acceptance_ids:
+  - AC-R3-01
+  - AC-R4-01
+  - AC-EVAL-01
+  - AC-EVAL-02
+  - AC-EVAL-03
+  - AC-EVAL-04
+  - AC-EVAL-05
+  - AC-EVAL-06
+  - AC-EVAL-07
+  original_units:
+  - U12
+  evidence:
+  - docs/reviews/personal-brain-local-first-acceptance.md 明确 U12 正式真实语料、事实支持率、问答率与持续使用未完成；本轮不将原先跳过规划前验证视为实现豁免。
+  - 本轮 db brain 20、connect office 19、engine brain 16、MCP 92 通过；它们没有覆盖新增 KnowledgeHub/Office 操作全链或本轮十项反例。
+  - MCP answer/get-brain-source 已实现，但现有 92 项没有新工具的当前引用/错误/删除闭环；验收记录中的单机绝对路径手工注册不等于可复现交付。
+  - docs/roadmap.md 旧描述还称未提交、462 个未提交文件；审查开始时 HEAD 5fcacf6b1 且工作区干净，需区分历史记录与当前状态。
+  impact: 交付缺口既包含代码缺陷，也包含尚无证据的质量与兼容项；不能用测试总数推算产品完成百分比。
+  next_action: F11 在修复后先跑隔离全链，再按原 PRD 冻结真实会话/查询/版本和资源口径；逐项补证据或具名风险接受，保持失败/未测独立。
+traceability_semantics:
+  nonconforming: 至少一个明确实现反例或完整调用链不满足要求；不是该条完全未实现。
+  partial: 有相关基础，但当前覆盖不完整或有局部缺陷；不能记为验收通过。
+  unverified: 正式冻结语料/人工质量/持续使用尚无本轮通过证据；相关代码缺陷另见 findings。
+traceability_counts:
+  nonconforming: 25
+  partial: 5
+  unverified: 7
+traceability:
+- acceptance_id: AC-R1-01
+  assessment: nonconforming
+  findings:
+  - DR-EXTRACT-001
+  - DR-OFFICE-002
+  followup_units:
+  - F04
+  - F08
+  - F11
+- acceptance_id: AC-R1-02
+  assessment: nonconforming
+  findings:
+  - DR-EXTRACT-001
+  followup_units:
+  - F02
+  - F04
+  - F11
+- acceptance_id: AC-R1-03
+  assessment: nonconforming
+  findings:
+  - DR-LIFECYCLE-001
+  - DR-EXTRACT-001
+  followup_units:
+  - F02
+  - F04
+  - F11
+- acceptance_id: AC-R1-04
+  assessment: nonconforming
+  findings:
+  - DR-HISTORY-001
+  followup_units:
+  - F03
+  - F04
+  - F11
+- acceptance_id: AC-R2-01
+  assessment: nonconforming
+  findings:
+  - DR-EXTRACT-001
+  - DR-OFFICE-002
+  followup_units:
+  - F04
+  - F08
+  - F11
+- acceptance_id: AC-R2-02
+  assessment: nonconforming
+  findings:
+  - DR-KNOWLEDGE-001
+  - DR-REVIEW-001
+  followup_units:
+  - F05
+  - F10
+  - F11
+- acceptance_id: AC-R2-03
+  assessment: nonconforming
+  findings:
+  - DR-KNOWLEDGE-001
+  followup_units:
+  - F02
+  - F05
+  - F10
+  - F11
+- acceptance_id: AC-R3-01
+  assessment: partial
+  findings:
+  - DR-VERIFY-001
+  followup_units:
+  - F06
+  - F11
+- acceptance_id: AC-R3-02
+  assessment: nonconforming
+  findings:
+  - DR-LIFECYCLE-001
+  - DR-RETRIEVAL-001
+  followup_units:
+  - F02
+  - F06
+  - F11
+- acceptance_id: AC-R3-03
+  assessment: nonconforming
+  findings:
+  - DR-RETRIEVAL-001
+  followup_units:
+  - F06
+  - F11
+- acceptance_id: AC-R4-01
+  assessment: partial
+  findings:
+  - DR-VERIFY-001
+  followup_units:
+  - F02
+  - F06
+  - F11
+- acceptance_id: AC-R5-01
+  assessment: nonconforming
+  findings:
+  - DR-ANSWER-001
+  followup_units:
+  - F06
+  - F10
+  - F11
+- acceptance_id: AC-R5-02
+  assessment: nonconforming
+  findings:
+  - DR-RETRIEVAL-001
+  - DR-ANSWER-001
+  followup_units:
+  - F06
+  - F11
+- acceptance_id: AC-R5-03
+  assessment: nonconforming
+  findings:
+  - DR-KNOWLEDGE-001
+  - DR-ANSWER-001
+  followup_units:
+  - F02
+  - F05
+  - F06
+  - F11
+- acceptance_id: AC-R6-01
+  assessment: nonconforming
+  findings:
+  - DR-LIFECYCLE-001
+  - DR-ANSWER-001
+  - DR-OFFICE-001
+  followup_units:
+  - F02
+  - F07
+  - F11
+- acceptance_id: AC-R6-02
+  assessment: nonconforming
+  findings:
+  - DR-LIFECYCLE-001
+  - DR-HISTORY-001
+  followup_units:
+  - F02
+  - F03
+  - F04
+  - F11
+- acceptance_id: AC-R6-03
+  assessment: nonconforming
+  findings:
+  - DR-LIFECYCLE-001
+  followup_units:
+  - F02
+  - F11
+- acceptance_id: AC-R6-04
+  assessment: nonconforming
+  findings:
+  - DR-OFFICE-001
+  - DR-RUNTIME-001
+  followup_units:
+  - F07
+  - F09
+  - F11
+- acceptance_id: AC-R7-01
+  assessment: nonconforming
+  findings:
+  - DR-KNOWLEDGE-001
+  - DR-ANSWER-001
+  - DR-REVIEW-001
+  followup_units:
+  - F05
+  - F06
+  - F10
+  - F11
+- acceptance_id: AC-R7-02
+  assessment: nonconforming
+  findings:
+  - DR-REVIEW-001
+  followup_units:
+  - F02
+  - F05
+  - F10
+  - F11
+- acceptance_id: AC-R8-01
+  assessment: nonconforming
+  findings:
+  - DR-EXTRACT-001
+  - DR-RUNTIME-001
+  followup_units:
+  - F04
+  - F09
+  - F11
+- acceptance_id: AC-R8-02
+  assessment: nonconforming
+  findings:
+  - DR-EXTRACT-001
+  - DR-RUNTIME-001
+  followup_units:
+  - F04
+  - F09
+  - F11
+- acceptance_id: AC-R8-03
+  assessment: nonconforming
+  findings:
+  - DR-HISTORY-001
+  - DR-EXTRACT-001
+  - DR-REVIEW-001
+  followup_units:
+  - F03
+  - F04
+  - F10
+  - F11
+- acceptance_id: AC-R9-01
+  assessment: nonconforming
+  findings:
+  - DR-OFFICE-002
+  followup_units:
+  - F07
+  - F08
+  - F11
+- acceptance_id: AC-R9-02
+  assessment: nonconforming
+  findings:
+  - DR-RETRIEVAL-001
+  - DR-OFFICE-001
+  followup_units:
+  - F02
+  - F07
+  - F08
+  - F11
+- acceptance_id: AC-R9-03
+  assessment: nonconforming
+  findings:
+  - DR-LIFECYCLE-001
+  - DR-EXTRACT-001
+  - DR-OFFICE-002
+  followup_units:
+  - F02
+  - F04
+  - F08
+  - F11
+- acceptance_id: AC-R9-04
+  assessment: nonconforming
+  findings:
+  - DR-OFFICE-001
+  - DR-REVIEW-001
+  followup_units:
+  - F07
+  - F10
+  - F11
+- acceptance_id: AC-R11-01
+  assessment: partial
+  findings:
+  - DR-BRAND-001
+  followup_units:
+  - F10
+  - F11
+- acceptance_id: AC-R11-02
+  assessment: partial
+  findings:
+  - DR-BRAND-001
+  followup_units:
+  - F10
+  - F11
+- acceptance_id: AC-R11-03
+  assessment: partial
+  findings:
+  - DR-BRAND-001
+  followup_units:
+  - F10
+  - F11
+- acceptance_id: AC-EVAL-01
+  assessment: unverified
+  findings:
+  - DR-VERIFY-001
+  followup_units:
+  - F11
+- acceptance_id: AC-EVAL-02
+  assessment: unverified
+  findings:
+  - DR-EXTRACT-001
+  - DR-VERIFY-001
+  followup_units:
+  - F04
+  - F08
+  - F11
+- acceptance_id: AC-EVAL-03
+  assessment: unverified
+  findings:
+  - DR-ANSWER-001
+  - DR-VERIFY-001
+  followup_units:
+  - F06
+  - F11
+- acceptance_id: AC-EVAL-04
+  assessment: unverified
+  findings:
+  - DR-VERIFY-001
+  followup_units:
+  - F11
+- acceptance_id: AC-EVAL-05
+  assessment: unverified
+  findings:
+  - DR-REVIEW-001
+  - DR-VERIFY-001
+  followup_units:
+  - F10
+  - F11
+- acceptance_id: AC-EVAL-06
+  assessment: unverified
+  findings:
+  - DR-RUNTIME-001
+  - DR-VERIFY-001
+  followup_units:
+  - F09
+  - F11
+- acceptance_id: AC-EVAL-07
+  assessment: unverified
+  findings:
+  - DR-OFFICE-002
+  - DR-VERIFY-001
+  followup_units:
+  - F08
+  - F11
+not_executed:
+- 真实飞书/腾讯会议登录、同步及真实转写/时间回链；本轮未重新判断当前账号资格。
+- 真实模型事实质量、30–50 查询保留集、10+ 会话和 5 工作日审核观察。
+- 原生 Tauri 重建/进程取消实测、全页面视觉/无障碍验收及全仓测试。
+- 旧 /search 全部排序/分页/过滤与文件出口故障恢复场景；MCP 92 通过只证明已选现有测试。
+next_action:
+  owner: next_iteration_implementer
+  action: repair
+  plan: docs/plans/personal-brain-correctness-execution-plan.md
+  sequence: F01 固定修复契约 → F02 删除 → F03 历史 → F04 抽取 → F05 版本 → F06 检索回答 → F07/F08 办公 → F09 Runtime → F10 界面 → F11 完整验收
+  gate_note: 当前 implementation_to_verify blocked 是质量结论；不需要用户补一次确认才能完成本轮审查产物。后续收到实施指令再建 Task Pack 执行，不把真实样本未测当成代码修复的阻塞。
+concurrent_changes_excluded:
+  observed_at: 2026-09-08 review finalization
+  paths:
+  - apps/screenpipe-app-tauri/src-tauri/src/pi.rs
+  - apps/screenpipe-app-tauri/src-tauri/assets/extensions/brain-tools.ts
+  - apps/screenpipe-app-tauri/src-tauri/assets/extensions/__tests__/brain-tools.test.ts
+  handling: 审查期间出现的其他开发改动；未改写、未提交，未纳入本报告的通过证据。报告结论针对记录的 HEAD；实施 F01/F09 前须重新核对这些 Runtime 相关变更。

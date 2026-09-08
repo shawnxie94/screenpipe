@@ -1,0 +1,110 @@
+// screenpipe — AI that knows everything you've seen, said, or heard
+// https://screenpipe.com
+// Review-only contract probes. Synthetic SQLite memory databases, no external services.
+use std::{collections::HashMap, sync::Arc};
+use chrono::Utc;
+use screenpipe_db::{DatabaseManager, BrainSourceInput, BrainSearchDocInput, SourceKind, SourceLocator, OfficeSourceMeta, DeletionCause};
+use screenpipe_engine::brain::{BrainShared, search::{search, BrainSearchArgs}, types::{AnswerFilters, RouteStatus, KnowledgeType}, registry::{validate, RegistryContext}};
+use serde_json::json;
+
+async fn db() -> Arc<DatabaseManager> { Arc::new(DatabaseManager::new("sqlite::memory:", Default::default()).await.unwrap()) }
+fn source(office: bool) -> BrainSourceInput {
+    BrainSourceInput { kind: if office { SourceKind::OfficeMessage } else { SourceKind::Frame }, locator: SourceLocator::new(if office {"office_objects"} else {"frames"}, 42), revision: "review-rev".into(), fingerprint_inputs: json!({"synthetic":true}), captured_at: Utc::now(), app: Some("fixture-app".into()), window_name: None, evidence_method: "review_fixture".into(), media_available: false,
+        office: office.then(|| OfficeSourceMeta {provider:"feishu".into(), account_namespace:"review-account".into(), object_id:"om_review".into(), object_revision:Some("rev-1".into()), event_at:Some(Utc::now()), fetched_at:Utc::now(), source_url:None, completeness:"full".into(), activity_anchor:None, platform_generated:false}), excerpt:Some("reviewmarker synthetic body".into()) }
+}
+async fn indexed_source(db: &Arc<DatabaseManager>, office:bool) -> String {
+    let s = db.brain_register_source(&source(office)).await.unwrap();
+    db.brain_search_upsert_doc(&BrainSearchDocInput {doc_id:format!("source:{}",s.source_uid), kind:"source".into(), ref_uid:s.source_uid.clone(), ref_revision:s.revision.clone(), body:"reviewmarker synthetic body".into(), ..Default::default()}).await.unwrap();
+    s.source_uid
+}
+async fn candidate(db:&Arc<DatabaseManager>, scope:&str) -> String {
+    db.brain_create_knowledge_candidate("sop",scope,"reviewmarker","{\"title\":\"reviewmarker\"}",scope,&[]).await.unwrap().0
+}
+async fn publish(db:&Arc<DatabaseManager>, id:&str, version:i64, expected:Option<i64>, due:&str) {
+    let v=db.brain_get_version(id,version).await.unwrap().unwrap();
+    assert!(db.brain_publish_version(id,version,&v.revision,expected,due).await.unwrap());
+}
+async fn indexed_knowledge(db:&Arc<DatabaseManager>, due:&str) -> String {
+    let id=candidate(db,"fixture-scope").await;
+    publish(db,&id,1,None,due).await;
+    db.brain_search_upsert_doc(&BrainSearchDocInput {doc_id:format!("knowledge:{id}:1"),kind:"knowledge".into(),ref_uid:id.clone(),ref_revision:"1".into(),body:"reviewmarker".into(),app:Some("fixture-app".into()),..Default::default()}).await.unwrap(); id
+}
+
+#[tokio::test]
+async fn p01_explicit_erase_must_clear_derived_body_and_index() {
+    let db=db().await; let uid=indexed_source(&db,false).await;
+    let wu=db.brain_save_work_unit("scope",None,None,None,"ih","v1","p1","reviewmarker private derivative").await.unwrap();
+    db.brain_register_dependency("work_unit",&wu,None,None,&uid,Some("review-rev")).await.unwrap();
+    let temp=tempfile::tempdir().unwrap(); let shared=BrainShared::new(db.clone(),temp.path().to_path_buf());
+    shared.deletion().delete_sources(vec![uid],DeletionCause::UserErase).await.unwrap();
+    let residual:i64=sqlx::query_scalar("SELECT (SELECT COUNT(*) FROM brain_search_documents WHERE body LIKE '%reviewmarker%') + (SELECT COUNT(*) FROM brain_work_unit_revisions WHERE body LIKE '%reviewmarker%')").fetch_one(&db.pool).await.unwrap();
+    assert_eq!(residual,0,"erasure reported success but copied bodies survive");
+}
+#[tokio::test]
+async fn p02_journal_ahead_of_db_must_replay_after_restore() {
+    let db=db().await; let uid=indexed_source(&db,false).await;
+    let temp=tempfile::tempdir().unwrap(); let shared=BrainShared::new(db.clone(),temp.path().to_path_buf());
+    std::fs::write(shared.brain_dir.join("deletion-journal.jsonl"),format!("{}\n",json!({"seq":1,"cause":"user_erase","scope":{"kind":"sources","uids":[uid]},"ts":Utc::now().to_rfc3339()}))).unwrap();
+    shared.deletion().recover_incomplete().await.unwrap();
+    let count:i64=sqlx::query_scalar("SELECT COUNT(*) FROM brain_sources WHERE source_uid=?").bind(&uid).fetch_one(&db.pool).await.unwrap();
+    assert_eq!(count,0,"journal-only deletion was not replayed");
+}
+#[tokio::test]
+async fn p03_disabled_source_must_not_be_retrieved() {
+    let db=db().await; let uid=indexed_source(&db,false).await; db.brain_set_source_state(&[uid],"disabled").await.unwrap();
+    let f=AnswerFilters::default();let r=search(BrainSearchArgs{db:&db,question:"reviewmarker",filters:&f}).await;
+    assert!(r.evidence.is_empty(),"disabled source was returned as answer evidence");
+}
+#[tokio::test]
+async fn p04_expired_knowledge_must_not_be_quoted() {
+    let db=db().await; indexed_knowledge(&db,"2000-01-01T00:00:00Z").await;
+    let f=AnswerFilters::default();let r=search(BrainSearchArgs{db:&db,question:"reviewmarker",filters:&f}).await;
+    assert!(r.knowledge.is_empty(),"past-due knowledge is still quotable");
+}
+#[tokio::test]
+async fn p05_knowledge_must_obey_app_filters() {
+    let db=db().await; indexed_knowledge(&db,"2099-01-01T00:00:00Z").await;
+    let f=AnswerFilters{apps:vec!["different-app".into()],..Default::default()}; let r=search(BrainSearchArgs{db:&db,question:"reviewmarker",filters:&f}).await;
+    assert!(r.knowledge.is_empty(),"knowledge route ignored app filter");
+}
+#[tokio::test]
+async fn p06_broken_index_must_report_failed_not_no_hits() {
+    let db=db().await; sqlx::query("DROP TABLE brain_search_fts").execute(&db.pool).await.unwrap();
+    let f=AnswerFilters::default();let r=search(BrainSearchArgs{db:&db,question:"reviewmarker",filters:&f}).await;
+    assert_eq!(r.report.routes[0].status,RouteStatus::Failed,"SQL error was swallowed as empty retrieval");
+}
+#[tokio::test]
+async fn p07_second_knowledge_v2_must_supersede_its_v1() {
+    let db=db().await; let _first=candidate(&db,"first").await; let id=candidate(&db,"second").await;
+    publish(&db,&id,1,None,"2099-01-01T00:00:00Z").await;
+    db.brain_add_knowledge_candidate_version(&id,"v2","{}","new-input",&[]).await.unwrap();
+    publish(&db,&id,2,Some(1),"2099-01-01T00:00:00Z").await;
+    let v1=db.brain_get_version(&id,1).await.unwrap().unwrap();
+    assert_eq!(v1.state,"superseded","row id and version number were mixed");
+}
+#[tokio::test]
+async fn p08_failed_publish_cas_must_preserve_current_version() {
+    let db=db().await; let id=candidate(&db,"first").await; publish(&db,&id,1,None,"2099-01-01T00:00:00Z").await;
+    db.brain_add_knowledge_candidate_version(&id,"v2","{}","new-input",&[]).await.unwrap();
+    assert!(!db.brain_publish_version(&id,2,"wrong-revision",Some(1),"2099-01-01T00:00:00Z").await.unwrap());
+    let v1=db.brain_get_version(&id,1).await.unwrap().unwrap(); assert_eq!(v1.state,"published","failed CAS mutated the old published version");
+}
+#[tokio::test]
+async fn p09_erased_office_object_must_not_reimport() {
+    let db=db().await; let uid=indexed_source(&db,true).await;
+    let temp=tempfile::tempdir().unwrap();let shared=BrainShared::new(db.clone(),temp.path().to_path_buf());
+    shared.deletion().delete_sources(vec![uid],DeletionCause::UserErase).await.unwrap();
+    let r=db.brain_register_source(&source(true)).await.unwrap(); assert!(r.suppressed,"office tombstone namespace does not match registration");
+}
+#[test]
+fn p10_sop_session_count_must_be_evidence_derived() {
+    let refs=HashMap::from([("u1".into(),"one-real-session".into())]);
+    let body=json!({"schema_version":1,"title":"synthetic SOP","session_count":3,"applicability":["synthetic"],"steps":[{"name":"step","evidence_refs":["u1"]}]});
+    assert!(validate(KnowledgeType::Sop,&body,&RegistryContext{work_unit_refs:&refs}).is_err(),"one session plus model-declared 3 was accepted");
+}
+#[tokio::test]
+async fn p11_control_valid_source_is_retrievable() {
+    let db=db().await; indexed_source(&db,false).await;
+    let f=AnswerFilters::default();let r=search(BrainSearchArgs{db:&db,question:"reviewmarker",filters:&f}).await;
+    assert_eq!(r.evidence.len(),1,"positive control must retrieve the synthetic marker");
+}

@@ -1,0 +1,74 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 08s
+     Running tests/local_brain_review_probe.rs (target/debug/deps/local_brain_review_probe-ddec05589e62c112)
+
+running 11 tests
+
+thread 'p10_sop_session_count_must_be_evidence_derived' (6354204) panicked at crates/screenpipe-engine/tests/local_brain_review_probe.rs:103:5:
+one session plus model-declared 3 was accepted
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test p10_sop_session_count_must_be_evidence_derived ... FAILED
+
+thread 'p06_broken_index_must_report_failed_not_no_hits' (6354200) panicked at crates/screenpipe-engine/tests/local_brain_review_probe.rs:74:5:
+assertion `left == right` failed: SQL error was swallowed as empty retrieval
+  left: NoHits
+ right: Failed
+test p06_broken_index_must_report_failed_not_no_hits ... FAILED
+test p11_control_valid_source_is_retrievable ... ok
+
+thread 'p02_journal_ahead_of_db_must_replay_after_restore' (6354196) panicked at crates/screenpipe-engine/tests/local_brain_review_probe.rs:50:5:
+assertion `left == right` failed: journal-only deletion was not replayed
+  left: 1
+ right: 0
+
+thread 'p03_disabled_source_must_not_be_retrieved' (6354197) panicked at crates/screenpipe-engine/tests/local_brain_review_probe.rs:56:5:
+disabled source was returned as answer evidence
+test p02_journal_ahead_of_db_must_replay_after_restore ... FAILED
+test p03_disabled_source_must_not_be_retrieved ... FAILED
+
+thread 'p05_knowledge_must_obey_app_filters' (6354199) panicked at crates/screenpipe-engine/tests/local_brain_review_probe.rs:68:5:
+knowledge route ignored app filter
+test p05_knowledge_must_obey_app_filters ... FAILED
+
+thread 'p08_failed_publish_cas_must_preserve_current_version' (6354202) panicked at crates/screenpipe-engine/tests/local_brain_review_probe.rs:90:65:
+assertion `left == right` failed: failed CAS mutated the old published version
+  left: "superseded"
+ right: "published"
+
+thread 'p07_second_knowledge_v2_must_supersede_its_v1' (6354201) panicked at crates/screenpipe-engine/tests/local_brain_review_probe.rs:83:5:
+assertion `left == right` failed: row id and version number were mixed
+  left: "published"
+ right: "superseded"
+
+thread 'p04_expired_knowledge_must_not_be_quoted' (6354198) panicked at crates/screenpipe-engine/tests/local_brain_review_probe.rs:62:5:
+past-due knowledge is still quotable
+test p08_failed_publish_cas_must_preserve_current_version ... FAILED
+test p07_second_knowledge_v2_must_supersede_its_v1 ... FAILED
+test p04_expired_knowledge_must_not_be_quoted ... FAILED
+
+thread 'p09_erased_office_object_must_not_reimport' (6354203) panicked at crates/screenpipe-engine/tests/local_brain_review_probe.rs:97:67:
+office tombstone namespace does not match registration
+
+thread 'p01_explicit_erase_must_clear_derived_body_and_index' (6354195) panicked at crates/screenpipe-engine/tests/local_brain_review_probe.rs:41:5:
+assertion `left == right` failed: erasure reported success but copied bodies survive
+  left: 2
+ right: 0
+test p09_erased_office_object_must_not_reimport ... FAILED
+test p01_explicit_erase_must_clear_derived_body_and_index ... FAILED
+
+failures:
+
+failures:
+    p01_explicit_erase_must_clear_derived_body_and_index
+    p02_journal_ahead_of_db_must_replay_after_restore
+    p03_disabled_source_must_not_be_retrieved
+    p04_expired_knowledge_must_not_be_quoted
+    p05_knowledge_must_obey_app_filters
+    p06_broken_index_must_report_failed_not_no_hits
+    p07_second_knowledge_v2_must_supersede_its_v1
+    p08_failed_publish_cas_must_preserve_current_version
+    p09_erased_office_object_must_not_reimport
+    p10_sop_session_count_must_be_evidence_derived
+
+test result: FAILED. 1 passed; 10 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.79s
+
+error: test failed, to rerun pass `-p screenpipe-engine --test local_brain_review_probe`

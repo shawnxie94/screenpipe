@@ -1,0 +1,20 @@
+running 16 tests
+test brain::extract::tests::parse_json_object_tolerates_fences ... ok
+test brain::extract::tests::parse_json_object_extracts_object_from_prose ... ok
+test brain::registry::tests::render_includes_key_sections ... ok
+test brain::sources::tests::excerpt_is_bounded ... ok
+test brain::registry::tests::decision_rule_single_observation_requires_boundary ... ok
+test brain::registry::tests::sop_requires_three_sessions_and_refs ... ok
+test brain::extract::tests::work_unit_validation_enforces_field_refs ... ok
+test brain::sources::tests::normalization_is_whitespace_insensitive ... ok
+test brain::deletion::tests::barrier_blocks_emission_during_deletion ... ok
+test brain::routes::tests::feedback_without_target_stays_pending ... ok
+test brain::routes::tests::publish_then_v2_supersedes_v1_atomically ... ok
+test brain::routes::tests::rejected_input_hash_is_suppressed ... ok
+test brain::routes::tests::concurrent_publish_on_stale_current_fails ... ok
+test brain::worker::tests::model_budget_is_enforced_per_job ... ok
+test brain::worker::tests::worker_claims_and_completes_job ... ok
+test brain::worker::tests::transient_failure_retries_then_succeeds ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 1423 filtered out; finished in 1.56s
+
