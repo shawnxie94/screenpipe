@@ -44,7 +44,10 @@ mod focus_handoff;
 mod icons;
 mod agent_event_emitter;
 mod audio_exclusions;
+mod brain_migration;
+mod brain_runtime;
 mod brain_views;
+mod office_runtime;
 mod calendar;
 mod capture_session;
 mod chat_control;
@@ -1426,6 +1429,13 @@ async fn main() {
                 .unwrap_or(11435);
             let server_shutdown_tx = spawn_server(app_handle.clone(), focus_port);
             app.manage(server_shutdown_tx);
+            app.manage(brain_runtime::BrainRuntimeState::default());
+            {
+                let handle = app_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    brain_runtime::start_brain_worker(&handle).await;
+                });
+            }
 
 
             // Startup permission gate: check CRITICAL permissions immediately after onboarding
@@ -2019,6 +2029,14 @@ async fn main() {
                 tauri::RunEvent::Exit => {
                     info!("App exiting — running cleanup");
 
+                    // Cancel in-flight brain steps first: uncommitted results
+                    // must never be written after exit begins.
+                    {
+                        let app = app_handle.app_handle().clone();
+                        tauri::async_runtime::block_on(
+                            async move { brain_runtime::stop_brain_worker(&app).await },
+                        );
+                    }
 
                     process_exit::run_blocking_pre_exit_teardown(app_handle.app_handle().clone());
 

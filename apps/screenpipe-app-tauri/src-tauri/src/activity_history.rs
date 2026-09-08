@@ -23,6 +23,22 @@ use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 
 const STORE_KEY: &str = "activityHistory:activity-history-pi-v9";
+
+// Brain history migration state. While migrating, the writer pauses (single
+// writer). Once active, the brain DB is the read source and the writer
+// mirrors new entries into it via the engine.
+static MIGRATION_IN_PROGRESS: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+static BRAIN_HISTORY_ACTIVE: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+pub fn migration_in_progress() -> &'static std::sync::atomic::AtomicBool {
+    &MIGRATION_IN_PROGRESS
+}
+
+pub fn brain_history_active() -> &'static std::sync::atomic::AtomicBool {
+    &BRAIN_HISTORY_ACTIVE
+}
 const DEFAULT_INTERVAL_MINUTES: u64 = 15;
 const COVERAGE_SLOP_MS: i64 = 1_000;
 const OBSERVED_WINDOW_MINUTES: i64 = 30;
@@ -355,7 +371,7 @@ fn merge_coverage(mut coverage: Vec<ActivityHistoryCoverage>) -> Vec<ActivityHis
         .collect()
 }
 
-fn read_all(app: &AppHandle) -> Result<PersistedActivityHistory, String> {
+pub(crate) fn read_all(app: &AppHandle) -> Result<PersistedActivityHistory, String> {
     let store = store::get_store(app, None).map_err(|error| error.to_string())?;
     let stored = store
         .get(STORE_KEY)
@@ -1320,6 +1336,12 @@ async fn generate(
     source: &'static str,
     idempotency_key: String,
 ) -> Result<PersistedActivityHistory, String> {
+    if MIGRATION_IN_PROGRESS.load(std::sync::atomic::Ordering::SeqCst) {
+        // History migration holds the single-writer lease; skip this tick
+        // without touching the store.
+        return read_all(app);
+    }
+
     let Some(_idempotency_guard) = state.try_begin(idempotency_key.clone()) else {
         info!(
             activity_source = source,
@@ -1520,6 +1542,12 @@ async fn generate_inner(
         degraded_error,
     } = generated;
     let generated_activity_count = entries.len();
+    let entries_for_brain: Vec<ActivityHistoryEntry> =
+        if BRAIN_HISTORY_ACTIVE.load(std::sync::atomic::Ordering::SeqCst) {
+            entries.clone()
+        } else {
+            Vec::new()
+        };
     let mut stored = read_all(app)?;
     if coverage_complete {
         stored.entries.retain(|entry| !overlaps(entry, start, end));
@@ -1540,6 +1568,9 @@ async fn generate_inner(
     }
     stored.coverage = merge_coverage(stored.coverage);
     write_all(app, &stored)?;
+    if !entries_for_brain.is_empty() {
+        mirror_new_entries_to_brain(app, &entries_for_brain, start, end);
+    }
     if source == "manual" {
         let settings = SettingsStore::get(app)?.ok_or("Settings are not available")?;
         set_next_run(
@@ -2533,4 +2564,39 @@ mod tests {
         );
     }
 
+}
+
+/// Post-activation mirror: new history entries go into the brain DB through
+/// the engine. Best-effort with visible warnings — the store copy stays as a
+/// legacy cache, the brain DB is authoritative.
+fn mirror_new_entries_to_brain(
+    app: &AppHandle,
+    entries: &[ActivityHistoryEntry],
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+) {
+    let app = app.clone();
+    let entries: Vec<serde_json::Value> = entries
+        .iter()
+        .filter_map(|e| serde_json::to_value(e).ok())
+        .collect();
+    tokio::spawn(async move {
+        for entry in entries {
+            let id = entry
+                .get("id")
+                .cloned()
+                .unwrap_or_else(|| json!(uuid::Uuid::new_v4().to_string()));
+            let body = crate::brain_migration::upsert_history_entry(
+                &app,
+                id.as_str().unwrap_or_default().to_string(),
+                entry.to_string(),
+                start.to_rfc3339(),
+                end.to_rfc3339(),
+            )
+            .await;
+            if let Err(error) = body {
+                tracing::warn!("brain history mirror failed: {error}");
+            }
+        }
+    });
 }
