@@ -208,7 +208,9 @@ function internalSessionTitle(
     case "activity-history":
       return `活动生成 · ${hh}:${mm}`;
     case "live-view":
-      return `Live View 生成 · ${hh}:${mm}`;
+      return `仪表盘生成 · ${hh}:${mm}`;
+    case "brain-task":
+      return `Brain 沉淀 · ${hh}:${mm}`;
   }
 }
 

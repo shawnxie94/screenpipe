@@ -32,6 +32,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import type { InternalSessionCategory } from "@/lib/utils/internal-session";
 import { useInterval } from "@/lib/hooks/use-interval";
 import { useTauriEvent } from "@/lib/hooks/use-tauri-event";
 import {
@@ -40,6 +41,9 @@ import {
   Undo2,
   Trash2,
   AlertCircle,
+  ListTree,
+  LayoutDashboard,
+  Sparkles,
   ChevronDown,
   ChevronRight,
   MessageSquare,
@@ -805,17 +809,47 @@ export function ChatSidebar({
     PIPES_SIDEBAR_COLLAPSED_KEY,
     true
   );
-  // "系统活动" group: opt-in surface for `__title:activity-history-*`
-  // sessions that the router otherwise hides. Default-collapsed so it
-  // doesn't compete with recents on every app open; the user's first
-  // failed activity-generation run is what teaches them to expand it.
+  // "系统活动" group: surfaces background run sessions (activity timeline
+  // generation, Live View generation …) grouped by their kind, mirroring the
+  // automation section's per-task grouping. The store's internal-category
+  // derivation (stable across restarts) keeps these out of 最近.
   const [systemActivityCollapsed, setSystemActivityCollapsed] = useCollapsedPref(
     "screenpipe:system-activity-collapsed",
     true,
   );
   const internalActivitySessions = useInternalSystemActivitySessions();
+  const [expandedActivityGroups, setExpandedActivityGroups] = useState<Set<string>>(
+    () => new Set(["activity-history", "live-view"]),
+  );
+  const toggleActivityGroupExpanded = (key: string) => {
+    setExpandedActivityGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+  const systemActivityGroups = useMemo(() => {
+    const groups: Array<{
+      key: InternalSessionCategory;
+      title: string;
+      sessions: SessionRecord[];
+    }> = [
+      { key: "activity-history", title: "活动时间线", sessions: [] },
+      { key: "live-view", title: "仪表盘生成", sessions: [] },
+      { key: "brain-task", title: "Brain 沉淀", sessions: [] },
+    ];
+    for (const session of internalActivitySessions) {
+      groups
+        .find((group) => group.key === session.internalCategory)
+        ?.sessions.push(session);
+    }
+    return groups.filter((group) => group.sessions.length > 0);
+  }, [internalActivitySessions]);
   const nowTick = useMinuteTick();
   const [pipeInventory, setPipeInventory] = useState<SidebarPipeInventoryItem[]>([]);
+  // pipe.md 的中文标题（slug -> title），用于自动化分组头显示。
+  const [pipeTitleMap, setPipeTitleMap] = useState<Record<string, string>>({});
   const [pipeInventoryLoaded, setPipeInventoryLoaded] = useState(false);
   const [pipeInventoryAuthoritative, setPipeInventoryAuthoritative] = useState(false);
   const pipeInventoryAuthoritativeRef = useRef(false);
@@ -882,6 +916,25 @@ export function ChatSidebar({
       });
       if (append && pipeInventoryCursorRef.current != null) {
         params.set("before_id", String(pipeInventoryCursorRef.current));
+      }
+      // Display titles live in each pipe's pipe.md frontmatter; the activity
+      // endpoint only returns slugs, so join against the pipe registry once.
+      if (Object.keys(pipeTitleMap.current).length === 0) {
+        void localFetch("/pipes")
+          .then((res) => (res.ok ? res.json() : null))
+          .then((list) => {
+            if (!Array.isArray(list?.data)) return;
+            const next: Record<string, string> = {};
+            for (const pipe of list.data) {
+              const name = pipe?.config?.name;
+              const title = pipe?.config?.title;
+              if (typeof name === "string" && typeof title === "string" && title.trim()) {
+                next[name] = title.trim();
+              }
+            }
+            setPipeTitleMap(next);
+          })
+          .catch(() => {});
       }
       const response = await localFetch(`/pipes/activity?${params.toString()}`);
       if (!response.ok) return;
@@ -2061,6 +2114,7 @@ export function ChatSidebar({
                     <PipeGroupRow
                       key={item.key}
                       item={item}
+                      displayName={pipeTitleMap[item.title] ?? item.title}
                       lastRun={pipeLastRuns[item.title]}
                       runsLoading={loadingPipeRuns.has(item.title)}
                       runsLoaded={loadedPipeRuns[item.title] != null}
@@ -2099,7 +2153,7 @@ export function ChatSidebar({
 
           <div className="group/system-activity min-h-0 flex flex-col shrink-0">
             <Section
-              title="系统活动"
+              title="系统运行"
               collapsed={systemActivityCollapsed}
               onCollapsedChange={setSystemActivityCollapsed}
               count={internalActivitySessions.length}
@@ -2108,85 +2162,118 @@ export function ChatSidebar({
               }
               bodyClassName=""
             >
-              {internalActivitySessions.length === 0 ? (
+              {systemActivityGroups.length === 0 ? (
                 <div className="px-2.5 py-2 text-xs sidebar-text-secondary italic">
-                  暂无系统活动
+                  暂无系统运行
                 </div>
               ) : (
                 <div className="flex flex-col">
-                  {internalActivitySessions.slice(0, 12).map((session) => {
-                    const isLive =
-                      session.status === "streaming"
-                      || session.status === "thinking"
-                      || session.status === "tool";
+                  {systemActivityGroups.map((group) => {
+                    const expanded = expandedActivityGroups.has(group.key);
                     return (
-                      <div
-                        key={session.id}
-                        role="button"
-                        tabIndex={0}
-                        className={cn(
-                          "group/activity flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left transition-colors",
-                          "hover:bg-muted/15",
-                        )}
-                        title={
-                          session.lastError
-                            ? `${session.title}\n${session.lastError}`
-                            : session.title
-                        }
-                        onClick={() => {
-                          if (session.lastError) {
-                            toast({
-                              title: session.title,
-                              description: session.lastError,
-                              variant: "destructive",
-                            });
-                          }
-                          // Open the read-only transcript in the chat panel
-                          // so the user sees the full prompt + tool calls +
-                          // streamed output, not just a status dot. Never
-                          // abort the background generation on selection —
-                          // the run continues while the user inspects it.
-                          void emit("chat-load-conversation", {
-                            conversationId: session.id,
-                            targetWindow: "home",
-                          });
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            event.currentTarget.click();
-                          }
-                        }}
-                      >
-                        <span
-                          className={cn(
-                            "h-1.5 w-1.5 shrink-0 rounded-full",
-                            session.status === "error"
-                              ? "bg-destructive"
-                              : isLive
-                                ? "bg-foreground animate-pulse"
-                                : "bg-muted-foreground/40",
-                          )}
-                          aria-hidden
-                        />
-                        <span className="min-w-0 flex-1 truncate text-xs">
-                          {session.title}
-                        </span>
-                        <span className="shrink-0 text-[10px] tabular-nums sidebar-text-tertiary">
-                          {formatCompactAge(session.updatedAt, nowTick)}
-                        </span>
+                      <div key={group.key} data-testid={`sidebar-subsection-${group.key}`}>
                         <button
                           type="button"
-                          className="shrink-0 rounded p-1 text-muted-foreground/0 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive group-hover/activity:text-muted-foreground"
-                          aria-label="删除系统活动"
-                          title="删除系统活动"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setDeletingSessionId(session.id);
-                          }}
+                          aria-expanded={expanded}
+                          className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+                          onClick={() => toggleActivityGroupExpanded(group.key)}
                         >
-                          <Trash2 className="h-3 w-3" aria-hidden />
+                          {expanded ? (
+                            <ChevronDown className="h-3 w-3 shrink-0" aria-hidden />
+                          ) : (
+                            <ChevronRight className="h-3 w-3 shrink-0" aria-hidden />
+                          )}
+                          <span className="min-w-0 flex-1 truncate">{group.title}</span>
+                          <span className="shrink-0 text-[10px] tabular-nums">
+                            {group.sessions.length}
+                          </span>
                         </button>
+                        {expanded && (
+                          <div className="flex flex-col">
+                            {group.sessions.slice(0, 12).map((session) => {
+                              const isLive =
+                                session.status === "streaming"
+                                || session.status === "thinking"
+                                || session.status === "tool";
+                              return (
+                                <div
+                                  key={session.id}
+                                  role="button"
+                                  tabIndex={0}
+                                  className={cn(
+                                    "group/activity flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left transition-colors",
+                                    "hover:bg-muted/15",
+                                  )}
+                                  title={
+                                    session.lastError
+                                      ? `${session.title}\n${session.lastError}`
+                                      : session.title
+                                  }
+                                  onClick={() => {
+                                    if (session.lastError) {
+                                      toast({
+                                        title: session.title,
+                                        description: session.lastError,
+                                        variant: "destructive",
+                                      });
+                                    }
+                                    // Open the read-only transcript in the chat
+                                    // panel; never abort the background run.
+                                    void emit("chat-load-conversation", {
+                                      conversationId: session.id,
+                                      targetWindow: "home",
+                                    });
+                                  }}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Enter" || event.key === " ") {
+                                      event.preventDefault();
+                                      event.currentTarget.click();
+                                    }
+                                  }}
+                                >
+                                  <span className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-sm bg-muted/50">
+                                    {group.key === "activity-history" ? (
+                                      <ListTree className="h-3 w-3 sidebar-text-secondary" aria-hidden />
+                                    ) : group.key === "live-view" ? (
+                                      <LayoutDashboard className="h-3 w-3 sidebar-text-secondary" aria-hidden />
+                                    ) : (
+                                      <Sparkles className="h-3 w-3 sidebar-text-secondary" aria-hidden />
+                                    )}
+                                  </span>
+                                  <span className="min-w-0 flex-1 truncate text-xs">
+                                    {session.title}
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      "h-1.5 w-1.5 shrink-0 rounded-full",
+                                      session.status === "error"
+                                        ? "bg-destructive"
+                                        : isLive
+                                          ? "bg-foreground animate-pulse"
+                                          : "bg-muted-foreground/40",
+                                    )}
+                                    aria-hidden
+                                  />
+                                  <span className="shrink-0 text-[10px] tabular-nums sidebar-text-tertiary">
+                                    {formatCompactAge(session.updatedAt, nowTick)}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="shrink-0 rounded p-1 text-muted-foreground/0 transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive group-hover/activity:text-muted-foreground"
+                                    aria-label="删除系统运行"
+                                    title="删除系统运行"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setDeletingSessionId(session.id);
+                                    }}
+                                  >
+                                    <Trash2 className="h-3 w-3" aria-hidden />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -2206,11 +2293,11 @@ export function ChatSidebar({
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>
-              {deletingSession?.internalCategory ? "删除系统活动" : "删除聊天"}
+              {deletingSession?.internalCategory ? "删除系统运行" : "删除聊天"}
             </DialogTitle>
             <DialogDescription>
               {deletingSession?.internalCategory
-                ? "删除此系统活动记录？此操作无法撤销。"
+                ? "删除此系统运行记录？此操作无法撤销。"
                 : "删除此聊天？此操作无法撤销。"}
             </DialogDescription>
           </DialogHeader>
@@ -2804,6 +2891,7 @@ function RecentsBody({
  */
 function PipeGroupRow({
   item,
+  displayName,
   lastRun,
   runsLoading = false,
   runsLoaded = false,
@@ -2827,6 +2915,8 @@ function PipeGroupRow({
   setOpenConversationMenuId,
 }: {
   item: Extract<SidebarItem, { kind: "group" }>;
+  /** 管道显示名（pipe.md title）；不传时回退到 slug。 */
+  displayName?: string;
   lastRun?: string;
   runsLoading?: boolean;
   runsLoaded?: boolean;
@@ -2862,10 +2952,10 @@ function PipeGroupRow({
         )}
         aria-expanded={expanded}
       >
-        <span className="truncate flex-1 text-xs">{item.title}</span>
-        <span className="relative inline-flex items-center justify-end shrink-0 w-6 h-4">
+        <span className="truncate flex-1 text-xs">{displayName ?? item.title}</span>
+        <span className="relative inline-flex items-center justify-end shrink-0 w-14 h-4">
           {lastRunAge && !expanded && (
-            <span className="absolute inset-0 flex items-center justify-end text-[10px] tabular-nums sidebar-text-tertiary opacity-100 group-hover/pipe:opacity-0 transition-opacity duration-150">
+            <span className="absolute inset-0 flex items-center justify-end whitespace-nowrap text-[10px] tabular-nums sidebar-text-tertiary opacity-100 group-hover/pipe:opacity-0 transition-opacity duration-150">
               {lastRunAge}
             </span>
           )}

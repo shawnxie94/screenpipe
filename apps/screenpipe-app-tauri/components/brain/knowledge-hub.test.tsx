@@ -128,8 +128,8 @@ describe("KnowledgeHub", () => {
     expect(mocks.listWorkUnits).toHaveBeenCalledWith({ limit: 100 });
     fireEvent.click(screen.getByRole("button", { name: /查看工作单元/ }));
     expect(await screen.findByTestId("work-unit-detail")).toBeTruthy();
-    expect(screen.getByText(/原始活动与字段证据/)).toBeTruthy();
-    expect(screen.getByText(/相关知识/)).toBeTruthy();
+    expect(screen.getByText(/原始活动证据/)).toBeTruthy();
+    expect(screen.getByText(/衍生知识/)).toBeTruthy();
     expect(mocks.getWorkUnit).toHaveBeenCalledWith("wu-1");
 
     fireEvent.click(screen.getByRole("tab", { name: "画布" }));

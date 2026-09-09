@@ -9,6 +9,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import {
   afterEach,
@@ -168,7 +169,8 @@ describe("archive all recent chats", () => {
     );
     renderSidebar();
 
-    fireEvent.click(screen.getByTestId("sidebar-section-系统活动"));
+    fireEvent.click(screen.getByTestId("sidebar-section-系统运行"));
+    expect(screen.getByTestId("sidebar-subsection-activity-history")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /活动生成 · 12:34/ }));
 
     expect(mocks.emit).toHaveBeenCalledWith("chat-load-conversation", {
@@ -180,25 +182,47 @@ describe("archive all recent chats", () => {
     );
   });
 
-  it("deletes an activity-history run from the system activity section", async () => {
-    const id = "__title:activity-history-deletable";
+  it("groups system activity entries by their kind and deletes from the subsection", async () => {
     useChatStore.getState().actions.upsert(
-      session(id, {
+      session("__title:activity-history-deletable", {
         title: "活动生成 · 12:34",
         internalCategory: "activity-history",
       }),
     );
+    useChatStore.getState().actions.upsert(
+      session("__title:live-view-run", {
+        title: "仪表盘生成 · 13:00",
+        internalCategory: "live-view",
+      }),
+    );
+    useChatStore.getState().actions.upsert(
+      session("__title:brain-extraction-run", {
+        title: "Brain 沉淀 · 13:05",
+        internalCategory: "brain-task",
+      }),
+    );
     renderSidebar();
 
-    fireEvent.click(screen.getByTestId("sidebar-section-系统活动"));
-    fireEvent.click(screen.getByRole("button", { name: "删除系统活动" }));
-    expect(screen.getByText("删除此系统活动记录？此操作无法撤销。")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("sidebar-section-系统运行"));
+    expect(screen.getByTestId("sidebar-subsection-activity-history")).toBeTruthy();
+    expect(screen.getByTestId("sidebar-subsection-live-view")).toBeTruthy();
+    expect(screen.getByTestId("sidebar-subsection-brain-task")).toBeTruthy();
+    expect(screen.getByText("活动时间线")).toBeTruthy();
+    expect(screen.getByText("仪表盘生成")).toBeTruthy();
+
+    const historySubsection = screen.getByTestId("sidebar-subsection-activity-history");
+    fireEvent.click(
+      within(historySubsection).getByRole("button", { name: "删除系统运行" }),
+    );
+    expect(screen.getByText("删除此系统运行记录？此操作无法撤销。")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "删除" }));
 
     await waitFor(() => {
-      expect(mocks.deleteConversationFile).toHaveBeenCalledWith(id);
-      expect(useChatStore.getState().sessions[id]).toBeUndefined();
+      expect(mocks.deleteConversationFile).toHaveBeenCalledWith(
+        "__title:activity-history-deletable",
+      );
+      expect(useChatStore.getState().sessions["__title:activity-history-deletable"]).toBeUndefined();
     });
   });
 

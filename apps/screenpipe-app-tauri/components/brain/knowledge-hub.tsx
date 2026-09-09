@@ -34,6 +34,53 @@ import { BrainSection } from "@/components/settings/brain-section";
 
 type Tab = "work-units" | "knowledge" | "canvas";
 
+// ── 产品化展示辅助：把存储层的枚举/标识翻译成界面语言 ──────────────
+
+const WORK_UNIT_STATE_LABELS: Record<string, string> = {
+  active: "有效",
+  invalidated: "已失效",
+};
+
+const SOURCE_KIND_LABELS: Record<string, string> = {
+  frame: "屏幕画面",
+  ui_event: "界面操作",
+  audio: "音频",
+  memory: "记忆片段",
+  office_message: "消息",
+  office_document: "文档",
+  office_transcript: "会议转写",
+  office_summary: "会议纪要",
+};
+
+const EVIDENCE_STATE_LABELS: Record<string, string> = {
+  indexed: "已入库",
+  pending: "待处理",
+  deleted: "已删除",
+};
+
+/** "Google Chrome|页面标题 - google chrome" → 应用名 + 去掉尾部域名的上下文。 */
+function friendlyScope(scopeKey: string): { app: string; context: string } {
+  const idx = scopeKey.indexOf("|");
+  const rawApp = idx >= 0 ? scopeKey.slice(0, idx) : "";
+  const rawContext = idx >= 0 ? scopeKey.slice(idx + 1) : "";
+  const app = rawApp.replace(/^google\s+/i, "").trim() || "本地活动";
+  const context = rawContext.replace(/\s*[-–—·]\s*google\s+chrome\s*$/i, "").trim();
+  return { app, context };
+}
+
+/** 紧凑的本地时间；无法解析时原样返回。 */
+function formatMoment(iso?: string): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString(undefined, {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function KnowledgeHub() {
   const [tab, setTab] = useState<Tab>("knowledge");
   const tabs: Array<{ id: Tab; label: string }> = [
@@ -102,6 +149,8 @@ function WorkUnitList() {
   useEffect(() => { load(); }, [load]);
 
   if (selectedId && detail) {
+    const scope = friendlyScope(detail.work_unit.scope_key);
+    const stateLabel = WORK_UNIT_STATE_LABELS[detail.work_unit.state] ?? detail.work_unit.state;
     return (
       <div className="space-y-3" data-testid="work-unit-detail">
         <button
@@ -114,26 +163,45 @@ function WorkUnitList() {
           ← 返回工作单元列表
         </button>
         <div>
-          <h2 className="text-sm font-medium">
-            {String(detail.work_unit.body.title ?? detail.work_unit.task_key ?? "未命名工作单元")}
-          </h2>
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="min-w-0 text-sm font-medium">
+              {String(detail.work_unit.body.title ?? detail.work_unit.task_key ?? "未命名工作单元")}
+            </h2>
+            <span className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              {stateLabel}
+            </span>
+          </div>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            {detail.work_unit.scope_key} · {detail.work_unit.state} · 修订 {detail.work_unit.input_hash.slice(0, 8)}…
+            {scope.app}
+            {scope.context ? ` · ${scope.context}` : ""}
+            {detail.work_unit.interval_start && (
+              <> · {formatMoment(detail.work_unit.interval_start)}
+                {detail.work_unit.interval_end ? ` – ${formatMoment(detail.work_unit.interval_end)}` : ""}
+              </>
+            )}
           </p>
         </div>
         <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs">
           {renderKnowledgeText(detail.work_unit.body)}
         </pre>
         <section className="rounded-md border p-3">
-          <h3 className="text-xs font-medium">原始活动与字段证据（{detail.evidence.length}）</h3>
+          <h3 className="text-xs font-medium">原始活动证据（{detail.evidence.length}）</h3>
           {detail.evidence.length === 0 ? (
             <p className="mt-2 text-[11px] text-muted-foreground">没有可用的原始证据，可能已删除或过期。</p>
           ) : (
             <ul className="mt-2 space-y-2">
               {detail.evidence.map((evidence) => (
                 <li key={`${evidence.source_uid}:${evidence.revision}`} className="rounded bg-muted/30 p-2 text-[11px]">
-                  <p>{evidence.kind} · {evidence.state} · {evidence.captured_at}</p>
-                  {evidence.app && <p>应用：{evidence.app}</p>}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate">
+                      {SOURCE_KIND_LABELS[evidence.kind] ?? evidence.kind}
+                      {evidence.app ? ` · ${evidence.app}` : ""}
+                    </span>
+                    <span className="shrink-0 text-muted-foreground">{formatMoment(evidence.captured_at)}</span>
+                  </div>
+                  <p className="mt-0.5 text-muted-foreground">
+                    {EVIDENCE_STATE_LABELS[evidence.state] ?? evidence.state}
+                  </p>
                   {evidence.text && <p className="mt-1 whitespace-pre-wrap">{evidence.text.slice(0, 500)}</p>}
                 </li>
               ))}
@@ -141,14 +209,19 @@ function WorkUnitList() {
           )}
         </section>
         <section className="rounded-md border p-3">
-          <h3 className="text-xs font-medium">相关知识（{detail.related_knowledge.length}）</h3>
+          <h3 className="text-xs font-medium">衍生知识（{detail.related_knowledge.length}）</h3>
           {detail.related_knowledge.length === 0 ? (
-            <p className="mt-2 text-[11px] text-muted-foreground">尚未被知识版本引用。</p>
+            <p className="mt-2 text-[11px] text-muted-foreground">尚未沉淀出相关知识。</p>
           ) : (
             <ul className="mt-2 space-y-1">
               {detail.related_knowledge.map((knowledge) => (
                 <li key={`${knowledge.knowledge_id}:${knowledge.version}`} className="text-[11px]">
-                  {knowledge.title} · v{knowledge.version} · {knowledge.state} · {knowledge.availability}
+                  <span>{knowledge.title}</span>
+                  <span className="ml-1 text-muted-foreground">
+                    v{knowledge.version} · {KNOWLEDGE_STATE_LABELS[knowledge.state] ?? knowledge.state}
+                    {" · "}
+                    {AVAILABILITY_LABELS[knowledge.availability] ?? knowledge.availability}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -163,36 +236,47 @@ function WorkUnitList() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-medium">工作单元</h2>
-          <p className="text-xs text-muted-foreground">按稳定区间保存的本地活动证据与抽取结果。</p>
+          <p className="text-xs text-muted-foreground">从你的日常活动中沉淀出的工作片段，是知识的证据来源。</p>
         </div>
         <button className="rounded-md border px-2 py-1 text-xs" onClick={load} disabled={busy}>刷新</button>
       </div>
       {error && <p role="alert" className="text-xs text-red-500">{error}</p>}
       {!busy && items.length === 0 && <p className="text-xs text-muted-foreground">暂无已完成的工作单元。</p>}
       <ul className="space-y-2">
-        {items.map((item) => (
-          <li key={item.id}>
-            <button
-              className="w-full rounded-md border p-3 text-left hover:bg-accent"
-              onClick={() => openDetail(item.id)}
-              aria-label={`查看工作单元 ${String(item.body.title ?? item.task_key ?? item.id)}`}
-            >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium">{String(item.body.title ?? item.task_key ?? "未命名工作单元")}</p>
-                <p className="text-[11px] text-muted-foreground">{item.scope_key} · {item.state}</p>
-              </div>
-              <span className="text-[10px] text-muted-foreground">{item.id.slice(0, 8)}…</span>
-            </div>
-            <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-muted-foreground">
-              {renderKnowledgeText(item.body)}
-            </p>
-            {item.interval_start && item.interval_end && (
-              <p className="mt-2 text-[10px] text-muted-foreground">{item.interval_start} → {item.interval_end}</p>
-            )}
-            </button>
-          </li>
-        ))}
+        {items.map((item) => {
+          const scope = friendlyScope(item.scope_key);
+          const interval = item.interval_start
+            ? formatMoment(item.interval_start)
+              + (item.interval_end ? ` – ${formatMoment(item.interval_end)}` : "")
+            : "";
+          return (
+            <li key={item.id}>
+              <button
+                className="w-full rounded-md border p-3 text-left hover:bg-accent"
+                onClick={() => openDetail(item.id)}
+                aria-label={`查看工作单元 ${String(item.body.title ?? item.task_key ?? item.id)}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{String(item.body.title ?? item.task_key ?? "未命名工作单元")}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      {scope.app}{scope.context ? ` · ${scope.context}` : ""}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    {WORK_UNIT_STATE_LABELS[item.state] ?? item.state}
+                  </span>
+                </div>
+                <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-xs text-muted-foreground">
+                  {renderKnowledgeText(item.body)}
+                </p>
+                {interval && (
+                  <p className="mt-2 text-[10px] text-muted-foreground">{interval}</p>
+                )}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

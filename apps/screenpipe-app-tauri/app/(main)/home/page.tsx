@@ -60,7 +60,7 @@ import { AppSidebar, useSidebarContext } from "@/components/app-sidebar";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import { useIsFullscreen } from "@/lib/hooks/use-is-fullscreen";
 import { FeedbackSection } from "@/components/settings/feedback-section";
-import { PipeStoreView, TaskActivityPanel } from "@/components/pipe-store";
+import { PipeStoreView } from "@/components/pipe-store";
 import { KnowledgeHub } from "@/components/brain/knowledge-hub";
 import { ConnectionsSection } from "@/components/settings/connections-section";
 import { MeetingNotesSection } from "@/components/meeting-notes";
@@ -189,7 +189,6 @@ function HomeContent() {
     }
   }, [activeSection, activityReturnVisible]);
   const [connectionFocusRequest, setConnectionFocusRequest] = useState<ConnectionFocusRequest | null>(null);
-  const [taskActivityFocusRunId, setTaskActivityFocusRunId] = useState<string | null>(null);
 
   const { settings, updateSettings, isSettingsLoaded } = useSettings();
   const { toast } = useToast();
@@ -948,17 +947,6 @@ function HomeContent() {
     setConnectionFocusRequest(null);
   }, []);
 
-  useEffect(() => {
-    const handler = (event: Event) => {
-      const runId = (event as CustomEvent<{ runId?: string }>).detail?.runId;
-      if (!runId) return;
-      setTaskActivityFocusRunId(runId);
-      setActiveSection("activity");
-    };
-    window.addEventListener("open-task-run", handler);
-    return () => window.removeEventListener("open-task-run", handler);
-  }, [setActiveSection]);
-
   // Listen for open-settings events from child components (e.g. connections strip)
   useEffect(() => {
     const handler = (e: Event) => {
@@ -1015,10 +1003,9 @@ function HomeContent() {
         );
       case "activity":
         return (
-          <div className="flex h-full min-h-0 flex-col overflow-y-auto">
-            <TaskActivityPanel focusRunId={taskActivityFocusRunId} />
-            <ActivityLedger onOpenArtifact={() => setActivityReturnVisible(true)} />
-          </div>
+          <ActivityLedger
+            onOpenArtifact={() => setActivityReturnVisible(true)}
+          />
         );
       case "brain":
         return <KnowledgeHub />;

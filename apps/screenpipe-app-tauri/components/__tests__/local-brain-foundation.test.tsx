@@ -42,7 +42,6 @@ vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
 vi.mock("posthog-js", () => ({ default: { capture: vi.fn() } }));
 
 import { answer, listKnowledge, listWorkUnits } from "@/lib/brain/api";
-import { TaskActivityPanel, TaskDefinitionsPanel } from "@/components/pipe-store";
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -143,103 +142,5 @@ describe("Local Brain frontend contracts", () => {
       code: "evidence_unavailable",
       status: 503,
     });
-  });
-
-  it("keeps user Pipe and connection task configuration in their owning editors", async () => {
-    mocks.listTaskDefinitions.mockResolvedValue([
-      {
-        definition_id: "activity.summary",
-        kind: "activity_summary",
-        origin: "builtin",
-        schema_version: 1,
-        config_revision: "activity-v1",
-        trigger: { kind: "manual" },
-        enabled: true,
-        resource_class: "extract",
-        retry_policy: { max_attempts: 3, network_retries: 1, invalid_output_retries: 1, backoff_ms: 1000 },
-        model_binding_policy: "follow_current",
-        revision: 1,
-        owner_generation: 0,
-        migration_state: "unified",
-      },
-      {
-        definition_id: "pipe.user.daily-pipe",
-        kind: "pipe_run",
-        origin: "user",
-        managed_by_pipe: true,
-        configuration_target: "pipes",
-        schema_version: 1,
-        config_revision: "pipe-hash",
-        config_ref: "pipe:daily-pipe",
-        trigger: { kind: "interval", expression: "every 1h" },
-        enabled: true,
-        resource_class: "user_pipe",
-        retry_policy: { max_attempts: 3, network_retries: 1, invalid_output_retries: 1, backoff_ms: 1000 },
-        model_binding_policy: "selected-preset",
-        revision: 1,
-        owner_generation: 0,
-        migration_state: "unified_projection",
-      },
-      {
-        definition_id: "office.sync",
-        kind: "office_sync",
-        origin: "connection",
-        managed_by_connection: true,
-        configuration_target: "connections",
-        schema_version: 1,
-        config_revision: "connection-v1",
-        trigger: { kind: "interval", expression: "15m" },
-        enabled: true,
-        resource_class: "office_io",
-        retry_policy: { max_attempts: 3, network_retries: 1, invalid_output_retries: 1, backoff_ms: 1000 },
-        model_binding_policy: "follow_current",
-        revision: 1,
-        owner_generation: 0,
-        migration_state: "unified",
-      },
-    ]);
-    mocks.listTaskRuns.mockResolvedValue([]);
-    const openSettings = vi.fn();
-    window.addEventListener("open-settings", openSettings);
-    render(<TaskDefinitionsPanel />);
-
-    await waitFor(() => expect(screen.getByTestId("task-definition-pipe.user.daily-pipe")).toBeTruthy());
-    const userPipe = screen.getByTestId("task-definition-pipe.user.daily-pipe");
-    expect(within(userPipe).getByText("由下方 Pipe 编辑器维护")).toBeTruthy();
-    expect(within(userPipe).queryByRole("button", { name: "立即运行" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "前往连接配置" }));
-    expect(openSettings).toHaveBeenCalled();
-    window.removeEventListener("open-settings", openSettings);
-  });
-
-  it("renders task activity read-only and deduplicates replayed sequence numbers", async () => {
-    mocks.listTaskRuns.mockResolvedValue([
-      { run_id: "run-1", definition_id: "office.sync", state: "running", root_run_id: "run-1", revision: 2 },
-    ]);
-    mocks.getTaskRun.mockResolvedValue({
-      run_id: "run-1",
-      definition_id: "office.sync",
-      definition_revision: "connection-v1",
-      root_run_id: "run-1",
-      trigger_key: "manual",
-      input_hash: "hash",
-      input_refs: { provider: "feishu" },
-      config_snapshot: {},
-      state: "running",
-      revision: 2,
-      priority: 30,
-      owner_generation: 0,
-      output_refs: {},
-    });
-    mocks.listTaskEvents.mockResolvedValue([
-      { run_id: "run-1", seq: 1, phase: "io", event_type: "office_sync_started", timestamp: "now", safe_metadata: {}, output_refs: {} },
-      { run_id: "run-1", seq: 1, phase: "io", event_type: "office_sync_started", timestamp: "now", safe_metadata: {}, output_refs: {} },
-    ]);
-    render(<TaskActivityPanel />);
-    fireEvent.click(await screen.findByRole("button", { name: /office.sync/ }));
-    await waitFor(() => expect(screen.getByText("office_sync_started")).toBeTruthy());
-    expect(screen.getAllByText("#1")).toHaveLength(1);
-    expect(screen.getByText("I/O 事件")).toBeTruthy();
-    expect(screen.queryByText("取消本次运行")).toBeNull();
   });
 });

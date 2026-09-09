@@ -521,7 +521,12 @@ export const useChatStore = create<ChatStore>((set) => ({
           if (isEphemeralSideConversationId(s, r.id)) continue;
           const existing = next[r.id];
           if (!existing) {
-            next[r.id] = r;
+            // Re-derive the internal category from the stable session-id
+            // prefix: disk records lose the in-memory flag, and without this
+            // internal runs resurface as 最近 chats after a restart.
+            next[r.id] = r.internalCategory
+              ? r
+              : { ...r, internalCategory: getInternalSessionCategory(r.id) };
             continue;
           }
           const merged: SessionRecord = {
@@ -561,6 +566,10 @@ export const useChatStore = create<ChatStore>((set) => ({
             dedupKey: existing.dedupKey ?? r.dedupKey,
             branchedFrom: existing.branchedFrom ?? r.branchedFrom,
             importedFrom: existing.importedFrom ?? r.importedFrom,
+            internalCategory:
+              existing.internalCategory
+              ?? r.internalCategory
+              ?? getInternalSessionCategory(r.id),
           };
           merged.unread = restoreUnread(existing, merged);
           next[r.id] = merged;
@@ -1310,7 +1319,8 @@ export function selectInternalSystemActivitySessions(
     .filter(
       (session) =>
         (session.internalCategory === "activity-history"
-          || session.internalCategory === "live-view")
+          || session.internalCategory === "live-view"
+          || session.internalCategory === "brain-task")
         && !session.hidden
         && !isEphemeralSideConversation(session),
     )
