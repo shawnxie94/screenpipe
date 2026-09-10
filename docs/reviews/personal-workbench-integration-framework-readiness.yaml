@@ -3,7 +3,7 @@ type: delivery_readiness
 mode: assess
 status: ready
 stage: trd_to_plan
-iteration: 8
+iteration: 9
 created_at: '2026-09-10'
 updated_at: '2026-09-10'
 owner: local_lead
@@ -20,10 +20,10 @@ decision_basis:
 source_artifacts:
 - name: personal-workbench-integration-framework.md
   uri: docs/trd/personal-workbench-integration-framework.md
-  sha256: d52446979fb6fa558a681a291561326c83c1674a18077ea229dba131ea1e1fa1
+  sha256: 8b6829bd6f085e725ff8feeef4ba2b632a2c1ff0b5e31d556f6d5bbc61ffbae7
 - name: roadmap.md
   uri: docs/roadmap.md
-  sha256: ff33e7293e62a051cb30997082ed0a141ebd0f2c87ae8947e3cefd6cf7bf2880
+  sha256: 0a34ceec3d836094ea31e3147f11ec50d2ea52d2fe1bd3cd0a93e33914c0c2c5
 - name: personal-brain-local-first.md
   uri: docs/prd/personal-brain-local-first.md
   sha256: 8f23d662cd4ddeb274d61a20eb19eca5d69b0c737305778ddf3d9fa98d57df4d
@@ -38,7 +38,7 @@ source_artifacts:
   sha256: 146b61c95e489bd4e7d1df3e06c349469dd99500c8c5da0c96633c5e0749d59e
 - name: tasks/mod.rs (Core 任务契约)
   uri: crates/screenpipe-core/src/tasks/mod.rs
-  sha256: e53b44851c7a92ff65e0c5553362c74e05202224de7dfb51c5d0f3c78a6d8822
+  sha256: 00724746d7ce3345659025c6472e178892ce525134762124ebac9fa5d46a2a62
 - name: create_tasks.sql
   uri: crates/screenpipe-db/src/migrations/20260908150000_create_tasks.sql
   sha256: ce579e64f3da9287baeed51c20d3424b341be389501a2dd3f9e6f1df181ed0a9
@@ -119,6 +119,13 @@ iterations:
   result: ready
   new_findings: []
   note: 追加三条用户决定：O-07 取值收口（断开阈值 5 分钟可配；保留上限 屏幕 120 / 界面 240 / 转写不限 / 会议全留 / 总量 800，均匀采样）；brain 标识改名（提议 knowledge，记为 O-12，作为纯改名批次排在活动层改造前）；三个抽取阶段都改为 skill（共享取数 skill + 三个任务 skill，代码侧校验不外包）。无新增发现；P1 收尾归属与 start_gate_for_p2 不变。
+- iteration: 9
+  at: '2026-09-10'
+  mode: assess
+  result: ready
+  new_findings:
+  - DR-MOD-003
+  note: 改名两批落地（批 1 `800aa2029`、批 2 `4b322a531`）并做完真实库升级保真验证；新增发现 DR-MOD-003（批 1 引入 owner generation 两侧键不一致与 cutover arm 不可达）已在批 2 内修复并回归。P1 收尾遗留项中的“改名”收口，活动层改造与四个 skill 待做。
 - iteration: 8
   at: '2026-09-10'
   mode: assess
@@ -281,6 +288,19 @@ findings:
   impact: "以一次性快照为准的生成方式既不可复现也不可扩展；摘要过短会让后续 WorkUnit 与知识提炼建立在不充分的理解上。"
   resolution: "D-14：任务只给时间范围/目标/输出契约与铁律，取数由执行体通过只读工具自查，取数方法沉淀为内部 skill，并记录查询轨迹与结果指纹；D-13 规定摘要自足口径（分档长度 + 必含要素 + 关键字）。O-11 记录可复现验证方式。"
   next_action: "并入 P1 收尾遗留项；先补“按时间窗查观测”的只读工具，再改活动生成提示词。"
+
+- id: DR-MOD-003
+  severity: warning
+  priority: P1
+  status: resolved
+  title: "批 1 改名让 owner generation 两侧键不一致，且 cutover 激活 arm 不可达"
+  evidence:
+  - "apps/.../knowledge_runtime.rs 批 1 起用 task_get_owner_state(\"knowledge\") 与 task_activate_owner_generation(\"knowledge\", …)。"
+  - "crates/screenpipe-db/src/db/knowledge/jobs.rs:96 仍按 task_owner_state WHERE kind='brain' 读世代；迁移的 LIKE 'brain\\_%' 不命中裸 'brain' 行。"
+  - "crates/screenpipe-db/src/db/tasks/mod.rs 的 match 键为 \"brain\"，调用方传 \"knowledge\" → 命中空分支，激活静默失效。"
+  impact: "两侧以不同世代做围栏；cutover 批量激活不生效，迁移状态无法从 legacy 切到 unified。"
+  resolution: "批 2 修复：迁移按最大世代把裸 'brain' 行合并进 'knowledge' 后删除；lookup 与 match 键同步；补 task_runs/task_legacy_map 的 definition_id 归一；legacy_db_upgrade 测试用真实库副本回归。"
+  next_action: "P2 接入新包种类时沿用同一 owner kind，不再出现第二套世代键。"
 
 - id: DR-DOC-001
   severity: info

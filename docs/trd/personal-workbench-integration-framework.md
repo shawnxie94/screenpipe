@@ -2,7 +2,7 @@
 id: screenpipe-personal-workbench-integration-framework
 type: trd
 scope: zh-local-personal-workbench
-version: "1.7"
+version: "1.8"
 status: draft
 direction_status: confirmed
 implementation_status: not_started
@@ -25,7 +25,7 @@ related:
 
 # screenpipe zh-local 个人工作台整合框架
 
-<!-- doc-covers: crates/screenpipe-core/src/tasks, crates/screenpipe-db/src/db/brain, crates/screenpipe-db/src/migrations, crates/screenpipe-engine/src/brain, crates/screenpipe-engine/src/tasks, crates/screenpipe-connect/src/connections, crates/screenpipe-connect/src/office -->
+<!-- doc-covers: crates/screenpipe-core/src/tasks, crates/screenpipe-db/src/db/knowledge, crates/screenpipe-db/src/migrations, crates/screenpipe-engine/src/knowledge, crates/screenpipe-engine/src/tasks, crates/screenpipe-connect/src/connections, crates/screenpipe-connect/src/office -->
 <!-- doc-verified: 18b2379be -->
 
 本框架替代原 `zhiji` 独立 MIT 拆分路线。当前目标是直接在活跃的 `screenpipe` `zh-local` 分支上满足个人日常需求，并持续吸收上游有效优化；不再为不明确的商业化前景维护一套难以局部拆分、难以追赶上游的独立产品。
@@ -159,20 +159,20 @@ Lumina、Infinitum（以及 zhihuan 的历史设计）的能力迁移排在 zh-l
 
 实现前先对表；表中“动作”是唯一允许的做法，避免把“扩展”做成“重写”。
 
-命名：本文件统一把这一领域称为 `knowledge-pack`。**命名规则**：包名 = `<领域>-pack`（文档、注册表、任务定义命名空间用）；代码短名 = 同一个词根去掉 `-pack`（模块、路由、表前缀、类型前缀用）——短名不是别名，而是同一条规则算出来的结果，不出现两套叫法。本包短名为 `knowledge`：模块 `knowledge`、路由 `/knowledge/*`、表 `knowledge_*`、任务定义 `knowledge.*`、类型 `Knowledge*`。代码与数据库现行使用 `brain` / `brain_*` 标识；按 2026-09-10 的决定统一改名，改名是一次纯改名、零行为变化的独立批次，排在活动层改造之前（目标名待 O-12 确认）。过渡期间引用代码标识时保留原名，不交替使用两个领域名。
+命名：本文件统一把这一领域称为 `knowledge-pack`。**命名规则**：包名 = `<领域>-pack`（文档、注册表、任务定义命名空间用）；代码短名 = 同一个词根去掉 `-pack`（模块、路由、表前缀、类型前缀用）——短名不是别名，而是同一条规则算出来的结果，不出现两套叫法。本包短名为 `knowledge`。改名已落地：批 1（代码与接口，提交 `800aa2029`）与批 2（数据库对象与持久化值，提交 `4b322a531`）；仅有以下历史标识保留——`task_legacy_map.legacy_namespace='knowledge_jobs'`、已导入运行 `run_id='brain-job-<id>'`、`LEGACY_CONSUMER_ID='desktop.brain-overview.v1'`、持久化会话分类值 `brain-task`、第三方别名与 lucide 图标名。
 
 | Core 原语 | 现状实现 | 本框架动作 |
 |---|---|---|
-| Workflow / Run / Attempt | `crates/screenpipe-core/src/tasks/mod.rs`（TaskDefinition / TaskRun / TaskAttempt / TaskEvent / TaskControl / TaskOwnerState）；`create_tasks.sql` 的 `task_definitions` / `task_runs` / `task_attempts` / `task_events` / `task_legacy_map` / `task_owner_state`；门面 `crates/screenpipe-engine/src/tasks/mod.rs` | 扩展：新包按 D-07 注册；legacy `brain_jobs` 桥在迁移收尾后删除 |
-| 活动层（活动事件） | 现状两套：`activity_intervals` / `activity_evidence`（结构化）与活动历史叙事（本地加密存储，已镜像到 `brain_history_entries`） | 收敛为一套（D-13）：保留间隔、增加摘要与关键字、读源改为数据库 |
-| Source / 来源修订 | `brain_sources` / `brain_source_revisions`；`SourceKind` 闭集；`SourceRef{source_uid, dataset_id, revision, locator}` | 扩展：kind 由包注册；`dataset_id` 承担 scope（D-09） |
-| Source Evidence | `brain_source_revisions.excerpt` + `brain_dependencies(consumer_kind, consumer_id, field_path, source_uid)` | 复用 |
-| Relation | 只有派生依赖 `brain_dependencies`，无通用关系表 | 新建最小契约（§6 O-02），不做图数据库 |
-| Review / 版本 | `brain_knowledge` / `brain_knowledge_versions` / `brain_rejections` + `engine/brain/registry` 校验器 | 复用 |
-| 生命周期 / 删除传播 | `brain_deletions` / `brain_cleanup_items(exit, target, state)` / `brain_tombstones` | 扩展：每个新出口必须登记 exit |
-| 对象信封 | 无通用表；各域自己带版本列（`brain_work_units`+revisions、`brain_knowledge`+versions） | 新建最小信封；不重写既有表 |
+| Workflow / Run / Attempt | `crates/screenpipe-core/src/tasks/mod.rs`（TaskDefinition / TaskRun / TaskAttempt / TaskEvent / TaskControl / TaskOwnerState）；`create_tasks.sql` 的 `task_definitions` / `task_runs` / `task_attempts` / `task_events` / `task_legacy_map` / `task_owner_state`；门面 `crates/screenpipe-engine/src/tasks/mod.rs` | 扩展：新包按 D-07 注册；legacy `knowledge_jobs` 桥在迁移收尾后删除 |
+| 活动层（活动事件） | 现状两套：`activity_intervals` / `activity_evidence`（结构化）与活动历史叙事（本地加密存储，已镜像到 `knowledge_history_entries`） | 收敛为一套（D-13）：保留间隔、增加摘要与关键字、读源改为数据库 |
+| Source / 来源修订 | `knowledge_sources` / `knowledge_source_revisions`；`SourceKind` 闭集；`SourceRef{source_uid, dataset_id, revision, locator}` | 扩展：kind 由包注册；`dataset_id` 承担 scope（D-09） |
+| Source Evidence | `knowledge_source_revisions.excerpt` + `knowledge_dependencies(consumer_kind, consumer_id, field_path, source_uid)` | 复用 |
+| Relation | 只有派生依赖 `knowledge_dependencies`，无通用关系表 | 新建最小契约（§6 O-02），不做图数据库 |
+| Review / 版本 | `knowledge_items` / `knowledge_item_versions` / `knowledge_rejections` + `engine/knowledge/registry` 校验器 | 复用 |
+| 生命周期 / 删除传播 | `knowledge_deletions` / `knowledge_cleanup_items(exit, target, state)` / `knowledge_tombstones` | 扩展：每个新出口必须登记 exit |
+| 对象信封 | 无通用表；各域自己带版本列（`knowledge_work_units`+revisions、`knowledge_items`+versions） | 新建最小信封；不重写既有表 |
 | 情境记忆 | `memories` + `memories_fts`；`SourceKind::Memory` | 扩展：只新增 scope 列 |
-| 长期记忆（semantic / procedural） | `brain_knowledge` / `brain_knowledge_versions`（已带版本、审核、暂停；无过期与冲突标记） | 复用：不搬到新表；Core 只统一检索入口与生命周期规则（§2.2 落地解释） |
+| 长期记忆（semantic / procedural） | `knowledge_items` / `knowledge_item_versions`（已带版本、审核、暂停；无过期与冲突标记） | 复用：不搬到新表；Core 只统一检索入口与生命周期规则（§2.2 落地解释） |
 | Action Intent / Completion Record | 无 | 新建（P3，`personal-pack`）；不得与 Source Evidence 混用（§2.3） |
 | 外发出口 | `crates/screenpipe-engine/src/external_memory_sync.rs` → `~/.claude/CLAUDE.md`、`~/.codex/AGENTS.md`、Obsidian；目的地在 `screenpipe-connect::connections::{claude_code, codex}` | 复用并登记进出口清单 |
 | Connector / 授权 | `crates/screenpipe-connect`（`connections/`、`office/`）、连接 API、「连接」入口 | 复用：新输入一律走同层 |
@@ -323,3 +323,4 @@ Core 统一承载两类记忆：
 | 2026-09-10 | 1.5 | 用户指定活动层重构：新增 D-13（两套总结合一、证据按变化保留、摘要必须自足且分档、会话计数按活动去重、旧叙事隔离、读源收敛）、D-14（取数由执行体自己做，任务只给指令；取数逻辑沉淀为内部 skill；现行提示词自相矛盾需一并修正）、D-15（WorkUnit 先读摘要、按需召回，新增流程/环境/细节字段，知识只从 WorkUnit）；§2.0 补活动层锚点，§5/§6 补对应冻结点与 O-07–O-11；本批判定为 **P1 收尾遗留项**，不新开阶段 | 阶段归属不变（P1 收尾一并完成）；实现状态未变（still not_started） |
 | 2026-09-10 | 1.6 | 记入 O-07 取值（断开阈值 5 分钟可配；保留上限 屏幕 120 / 界面 240 / 转写不限 / 会议全留 / 总量 800，均匀采样）；按用户要求把 `brain` 命名换新（提议目标名 `knowledge`，见 O-12：模块、路由、表前缀、任务枚举、工具名；已应用的迁移文件不改，用新增迁移 RENAME）；三个抽取阶段都改为 skill（一层共享取数 skill + 活动总结 / 工作单元 / 知识提炼三个任务 skill，校验仍留在代码） | 改名作为“纯改名、零行为变化”的独立批次，排在活动层改造之前；实现状态未变（still not_started） |
 | 2026-09-10 | 1.7 | 短名定为 `knowledge`（O-12 收口）；新增 D-16：内部 skill 用中性真源 + 按 Agent 适配注入（复用现有 `AgentLayout` 与 ACP/Pi 注入层），仓内来源目录改为中性名，skill 哈希进输入指纹；四个 skill（共享取数 + 活动总结 / 工作单元 / 知识提炼）全部实现，不按成本分阶段 | 阶段归属与顺序不变；改名批次排在活动层改造之前；实现状态未变（still not_started） |
+| 2026-09-10 | 1.8 | 改名批 1 / 批 2 落地（`800aa2029`、`4b322a531`）：代码与数据库对象统一为 `knowledge`，持久化任务 id 归一并修复 owner generation 两侧键不一致；§2.0 实现名同步，命名说明只保留历史标识清单；新增 legacy 库升级保真测试（真实库副本 + 仓库迁移器） | 遗留项“改名”收口；活动层改造与四个 skill 仍待做；实现状态仍未变（still not_started） |

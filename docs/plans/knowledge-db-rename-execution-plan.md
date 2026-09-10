@@ -105,3 +105,10 @@ approval:
 
 - **禁止**：修改 `crates/screenpipe-db/src/migrations/` 下**已存在**的迁移；改动 `docs/**`；commit / push；直接对真实用户库执行任何操作（真实库的备份、副本验证与执行由协调会话负责）。
 - 行为零变化：除对象名与上述持久化值归一外，不改任何逻辑、提示词、断言含义。
+
+## 完成记录
+
+- 提交：`4b322a531`
+- 交付：23 表 + 16 索引 + FTS 重建 + 持久化值归一；协调会话补修 owner generation 键不一致与不可达的 cutover arm
+- 证据：`docs/reviews/evidence/knowledge-rename-2026-09-10/`（子任务报告 + 协调会话独立复验）
+- 验收：协调会话逐条复跑；真实库升级路径用副本 + 仓库自身迁移器验证通过
