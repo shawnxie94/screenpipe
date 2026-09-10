@@ -625,11 +625,11 @@ impl DatabaseManager {
                     // handler boundary via knowledge_pause_claimed_job.
                 }
                 (TaskControl::Pause, _, "paused") => {
-                    sqlx::query("UPDATE brain_jobs SET state='paused',updated_at=?1 WHERE id=?2 AND state IN ('pending','paused')")
+                    sqlx::query("UPDATE knowledge_jobs SET state='paused',updated_at=?1 WHERE id=?2 AND state IN ('pending','paused')")
                         .bind(now()).bind(job_id).execute(&mut **tx.conn()).await?;
                 }
                 (TaskControl::Resume, "paused", "queued") => {
-                    sqlx::query("UPDATE brain_jobs SET state='pending',not_before=NULL,updated_at=?1 WHERE id=?2 AND state='paused'")
+                    sqlx::query("UPDATE knowledge_jobs SET state='pending',not_before=NULL,updated_at=?1 WHERE id=?2 AND state='paused'")
                         .bind(now()).bind(job_id).execute(&mut **tx.conn()).await?;
                 }
                 (TaskControl::Cancel, "running", "cancelling") => {
@@ -637,11 +637,11 @@ impl DatabaseManager {
                     // terminal cancellation with its token.
                 }
                 (TaskControl::Cancel, _, "cancelled") => {
-                    sqlx::query("UPDATE brain_jobs SET state='cancelled',last_error_code='user_cancelled',lease_token=NULL,lease_expires_at=NULL,updated_at=?1 WHERE id=?2 AND state IN ('pending','paused')")
+                    sqlx::query("UPDATE knowledge_jobs SET state='cancelled',last_error_code='user_cancelled',lease_token=NULL,lease_expires_at=NULL,updated_at=?1 WHERE id=?2 AND state IN ('pending','paused')")
                         .bind(now()).bind(job_id).execute(&mut **tx.conn()).await?;
                 }
                 (TaskControl::Retry, _, "queued") => {
-                    sqlx::query("UPDATE brain_jobs SET state='pending',attempts=0,model_calls=0,not_before=NULL,lease_token=NULL,lease_expires_at=NULL,updated_at=?1 WHERE id=?2 AND state IN ('failed','cancelled','paused')")
+                    sqlx::query("UPDATE knowledge_jobs SET state='pending',attempts=0,model_calls=0,not_before=NULL,lease_token=NULL,lease_expires_at=NULL,updated_at=?1 WHERE id=?2 AND state IN ('failed','cancelled','paused')")
                         .bind(now()).bind(job_id).execute(&mut **tx.conn()).await?;
                 }
                 _ => {}
@@ -875,10 +875,10 @@ impl DatabaseManager {
         owner_generation: i64,
     ) -> Result<(), SqlxError> {
         let definition_ids: &[&str] = match kind {
-            "brain" => &[
-                "brain.extract",
-                "brain.compile",
-                "brain.backfill",
+            "knowledge" => &[
+                "knowledge.extract",
+                "knowledge.compile",
+                "knowledge.backfill",
                 "office.sync",
             ],
             _ => &[],

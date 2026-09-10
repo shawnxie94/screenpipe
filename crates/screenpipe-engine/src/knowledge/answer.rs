@@ -92,7 +92,7 @@ async fn run_answer(
     // it is still valid.
     if let Some(key) = &req.idempotency_key {
         let existing: Option<(String, String, Option<String>, String)> = sqlx::query_as(
-            "SELECT id, status, body, created_at FROM brain_answers \
+            "SELECT id, status, body, created_at FROM knowledge_answers \
              WHERE question_hash = ?1 ORDER BY created_at DESC LIMIT 1",
         )
         .bind(&format!("idem:{key}"))
@@ -386,7 +386,7 @@ async fn answer_response(
     };
     if let Ok(mut tx) = db.begin_immediate_with_retry().await {
         let _ = sqlx::query(
-        "INSERT INTO brain_answers (id, question_hash, status, claims, created_at, expires_at) \
+        "INSERT INTO knowledge_answers (id, question_hash, status, claims, created_at, expires_at) \
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
     )
     .bind(&answer_id)

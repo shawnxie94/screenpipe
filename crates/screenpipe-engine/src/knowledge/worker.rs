@@ -197,9 +197,9 @@ pub fn start_public(
 
 fn definition_for_kind(kind: KnowledgeJobKind) -> &'static str {
     match kind {
-        KnowledgeJobKind::Extract => "brain.extract",
-        KnowledgeJobKind::Compile => "brain.compile",
-        KnowledgeJobKind::BackfillExtract => "brain.backfill",
+        KnowledgeJobKind::Extract => "knowledge.extract",
+        KnowledgeJobKind::Compile => "knowledge.compile",
+        KnowledgeJobKind::BackfillExtract => "knowledge.backfill",
         KnowledgeJobKind::OfficeSync => "office.sync",
         KnowledgeJobKind::Answer => "knowledge.answer",
         KnowledgeJobKind::Cleanup => "knowledge.cleanup",
@@ -574,7 +574,7 @@ pub async fn pause_on_binding_error(handle: &WorkerHandle, err: &KnowledgeError)
     }
 }
 
-/// Terminal states are pruned occasionally to keep `brain_jobs` bounded.
+/// Terminal states are pruned occasionally to keep `knowledge_jobs` bounded.
 pub async fn housekeeping(db: &DatabaseManager) {
     let _ = db.knowledge_prune_terminal_jobs(1000).await;
 }

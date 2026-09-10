@@ -117,17 +117,17 @@ impl TaskService {
     pub async fn register_default_definitions(&self) -> Result<(), sqlx::Error> {
         for (id, kind, resource) in [
             (
-                "brain.extract",
+                "knowledge.extract",
                 TaskKind::KnowledgeExtract,
                 TaskResourceClass::Extract,
             ),
             (
-                "brain.compile",
+                "knowledge.compile",
                 TaskKind::KnowledgeCompile,
                 TaskResourceClass::Extract,
             ),
             (
-                "brain.backfill",
+                "knowledge.backfill",
                 TaskKind::KnowledgeBackfill,
                 TaskResourceClass::Backfill,
             ),
@@ -707,9 +707,9 @@ async fn update_definition(
 fn is_managed_definition_id(definition_id: &str) -> bool {
     matches!(
         definition_id,
-        "brain.extract"
-            | "brain.compile"
-            | "brain.backfill"
+        "knowledge.extract"
+            | "knowledge.compile"
+            | "knowledge.backfill"
             | "activity.summary"
             | "office.sync"
             | "pipe.run"

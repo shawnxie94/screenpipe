@@ -6,7 +6,7 @@
 //!
 //! Order of operations for every deletion (TRD §8.1):
 //! 1. append + fsync the journal entry (identity/scope only, no content);
-//! 2. record the wave in `brain_deletions` and activate the barrier
+//! 2. record the wave in `knowledge_deletions` and activate the barrier
 //!    (deletion epoch bump + job cancellation);
 //! 3. propagate: invalidate consumers, remove bodies, add tombstones for
 //!    user erases;

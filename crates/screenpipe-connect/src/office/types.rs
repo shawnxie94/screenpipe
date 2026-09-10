@@ -548,7 +548,7 @@ impl OfficeError {
     }
 }
 
-/// User-approved read scope (JSON persisted in `brain_office_scopes`).
+/// User-approved read scope (JSON persisted in `knowledge_office_scopes`).
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct OfficeScope {
     /// Feishu document id/url whitelist.

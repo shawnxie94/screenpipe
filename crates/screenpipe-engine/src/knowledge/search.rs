@@ -229,7 +229,7 @@ async fn search_knowledge(
             continue;
         }
         let current: Option<(i64, String)> = sqlx::query_as(
-            "SELECT current_version_id FROM brain_knowledge WHERE id = ?1",
+            "SELECT current_version_id FROM knowledge_items WHERE id = ?1",
         )
         .bind(&hit.ref_uid)
         .fetch_optional(&db.pool)
@@ -275,7 +275,7 @@ async fn knowledge_row(
     knowledge_id: &str,
 ) -> Option<(String, String, bool)> {
     sqlx::query_as::<_, (String, String, bool)>(
-        "SELECT id, knowledge_type, paused FROM brain_knowledge WHERE id = ?1",
+        "SELECT id, knowledge_type, paused FROM knowledge_items WHERE id = ?1",
     )
     .bind(knowledge_id)
     .fetch_optional(&db.pool)

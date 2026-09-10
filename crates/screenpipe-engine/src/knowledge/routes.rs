@@ -111,7 +111,7 @@ async fn get_work_unit(State(state): State<Arc<AppState>>, Path(id): Path<String
             String,
         )> = sqlx::query_as(
             "SELECT id, scope_key, task_key, interval_start, interval_end, state \
-             FROM brain_work_units WHERE id = ?1",
+             FROM knowledge_work_units WHERE id = ?1",
         )
         .bind(&id)
         .fetch_optional(&db.pool)
@@ -125,7 +125,7 @@ async fn get_work_unit(State(state): State<Arc<AppState>>, Path(id): Path<String
         }
         let revision: Option<(String, String, String, String, String)> = sqlx::query_as(
             "SELECT input_hash, extractor_schema_version, prompt_version, body, state \
-             FROM brain_work_unit_revisions WHERE work_unit_id = ?1 AND state = 'valid' \
+             FROM knowledge_work_unit_revisions WHERE work_unit_id = ?1 AND state = 'valid' \
              ORDER BY created_at DESC LIMIT 1",
         )
         .bind(&id)
@@ -137,7 +137,7 @@ async fn get_work_unit(State(state): State<Arc<AppState>>, Path(id): Path<String
         };
 
         let source_rows: Vec<(String, Option<String>)> = sqlx::query_as(
-            "SELECT DISTINCT source_uid, source_revision FROM brain_dependencies \
+            "SELECT DISTINCT source_uid, source_revision FROM knowledge_dependencies \
              WHERE consumer_kind = 'work_unit' AND consumer_id = ?1",
         )
         .bind(&id)
@@ -180,8 +180,8 @@ async fn get_work_unit(State(state): State<Arc<AppState>>, Path(id): Path<String
 
         let related_knowledge: Vec<(String, i64, String, String, String)> = sqlx::query_as(
             "SELECT DISTINCT v.knowledge_id, v.version, v.state, v.availability, v.title \
-             FROM brain_dependencies d \
-             JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id \
+             FROM knowledge_dependencies d \
+             JOIN knowledge_item_versions v ON v.knowledge_id = d.consumer_id \
                 AND CAST(v.id AS TEXT) = d.consumer_version \
              WHERE d.consumer_kind = 'knowledge_work_unit' AND d.source_uid = ?1 \
              ORDER BY v.knowledge_id, v.version",
@@ -228,7 +228,7 @@ async fn save_answer(State(state): State<Arc<AppState>>, Path(id): Path<String>)
     let guard = state.knowledge.barrier.begin_emission();
     let db = &state.knowledge.db;
     let row: Option<(String, Option<String>)> =
-        sqlx::query_as("SELECT status, claims FROM brain_answers WHERE id = ?1")
+        sqlx::query_as("SELECT status, claims FROM knowledge_answers WHERE id = ?1")
             .bind(&id)
             .fetch_optional(&db.pool)
             .await
@@ -238,7 +238,7 @@ async fn save_answer(State(state): State<Arc<AppState>>, Path(id): Path<String>)
     };
     // Expired answers cannot be saved (410 semantics, no body revival).
     let expired: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM brain_answers WHERE id = ?1 AND expires_at <= strftime('%Y-%m-%dT%H:%M:%fZ','now')",
+        "SELECT COUNT(*) FROM knowledge_answers WHERE id = ?1 AND expires_at <= strftime('%Y-%m-%dT%H:%M:%fZ','now')",
     )
     .bind(&id)
     .fetch_one(&db.pool)
@@ -249,7 +249,7 @@ async fn save_answer(State(state): State<Arc<AppState>>, Path(id): Path<String>)
     }
     let ok = match db.begin_immediate_with_retry().await {
         Ok(mut tx) => {
-            let result = sqlx::query("UPDATE brain_answers SET saved_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?1")
+            let result = sqlx::query("UPDATE knowledge_answers SET saved_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?1")
                 .bind(&id)
                 .execute(&mut **tx.conn()).await;
             match result {
@@ -351,7 +351,7 @@ async fn list_knowledge(
     let result = guarded_response(&state.knowledge, async {
         let rows: Vec<(String, String, String, Option<i64>, bool, String, String)> = sqlx::query_as(
             "SELECT id, knowledge_type, scope_key, current_version_id, paused, created_at, updated_at \
-             FROM brain_knowledge ORDER BY updated_at DESC LIMIT 200",
+             FROM knowledge_items ORDER BY updated_at DESC LIMIT 200",
         )
         .fetch_all(&db.pool)
         .await
@@ -406,7 +406,7 @@ async fn knowledge_item_dto(
         None => sqlx::query_as::<_, screenpipe_db::KnowledgeKnowledgeVersionRow>(
             "SELECT id, knowledge_id, version, state, availability, title, body, input_hash, revision, \
              rejection_reason, review_due_at, created_at, updated_at \
-             FROM brain_knowledge_versions WHERE knowledge_id = ?1 ORDER BY version DESC LIMIT 1",
+             FROM knowledge_item_versions WHERE knowledge_id = ?1 ORDER BY version DESC LIMIT 1",
         )
         .bind(id)
         .fetch_optional(&db.pool)
@@ -414,7 +414,7 @@ async fn knowledge_item_dto(
     };
     let availability = effective_availability(db, &current).await;
     let candidates: Vec<i64> = sqlx::query_scalar(
-        "SELECT version FROM brain_knowledge_versions WHERE knowledge_id = ?1 AND state = 'candidate' ORDER BY version",
+        "SELECT version FROM knowledge_item_versions WHERE knowledge_id = ?1 AND state = 'candidate' ORDER BY version",
     )
     .bind(id)
     .fetch_all(&db.pool)
@@ -470,8 +470,8 @@ async fn effective_availability(
     }
     // Sources gone (user erase) → deleted; scope-shrink invalidation → stale.
     let dead_sources: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM brain_dependencies d \
-         LEFT JOIN brain_sources s ON s.source_uid = d.source_uid \
+        "SELECT COUNT(*) FROM knowledge_dependencies d \
+         LEFT JOIN knowledge_sources s ON s.source_uid = d.source_uid \
          WHERE d.consumer_kind = 'knowledge' AND d.consumer_id = ?1 \
          AND (s.source_uid IS NULL OR s.state = 'deleted')",
     )
@@ -483,8 +483,8 @@ async fn effective_availability(
         return KnowledgeAvailability::Deleted;
     }
     let stale_sources: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM brain_dependencies d \
-         JOIN brain_sources s ON s.source_uid = d.source_uid \
+        "SELECT COUNT(*) FROM knowledge_dependencies d \
+         JOIN knowledge_sources s ON s.source_uid = d.source_uid \
          WHERE d.consumer_kind = 'knowledge' AND d.consumer_id = ?1 \
          AND s.state IN ('stale', 'disabled')",
     )
@@ -525,7 +525,7 @@ async fn get_knowledge(State(state): State<Arc<AppState>>, Path(id): Path<String
         let rows: Vec<screenpipe_db::KnowledgeKnowledgeVersionRow> = sqlx::query_as(
             "SELECT id, knowledge_id, version, state, availability, title, body, input_hash, revision, \
              rejection_reason, review_due_at, created_at, updated_at \
-             FROM brain_knowledge_versions WHERE knowledge_id = ?1 ORDER BY version",
+             FROM knowledge_item_versions WHERE knowledge_id = ?1 ORDER BY version",
         )
         .bind(&id)
         .fetch_all(&db.pool)
@@ -574,7 +574,7 @@ async fn version_work_units(
     version_id: i64,
 ) -> Vec<String> {
     sqlx::query_as::<_, (String,)>(
-        "SELECT DISTINCT source_uid FROM brain_dependencies \
+        "SELECT DISTINCT source_uid FROM knowledge_dependencies \
          WHERE consumer_kind = 'knowledge_work_unit' AND consumer_id = ?1 \
          AND consumer_version = ?2",
     )
@@ -592,7 +592,7 @@ async fn version_evidence(
     version_id: i64,
 ) -> Vec<super::types::EvidenceRefDto> {
     let sources: Vec<(String, Option<String>)> = sqlx::query_as(
-        "SELECT DISTINCT source_uid, source_revision FROM brain_dependencies \
+        "SELECT DISTINCT source_uid, source_revision FROM knowledge_dependencies \
          WHERE consumer_kind = 'knowledge' AND consumer_id = ?1 AND consumer_version = ?2",
     )
     .bind(knowledge_id)
@@ -1024,7 +1024,7 @@ async fn submit_feedback(
         // knowledge_version_id anchors the version ROW id (stable, not the
         // per-item version counter).
         let hit: Option<(String, i64)> = sqlx::query_as(
-            "SELECT knowledge_id, version FROM brain_knowledge_versions WHERE id = ?1",
+            "SELECT knowledge_id, version FROM knowledge_item_versions WHERE id = ?1",
         )
         .bind(version_row_id)
         .fetch_optional(&db.pool)
@@ -1036,7 +1036,7 @@ async fn submit_feedback(
         if let (Some(answer_id), Some(claim_id)) = (&req.answer_id, &req.claim_id) {
             // Claim text locates the version recorded in the saved answer.
             let hit: Option<(String, i64)> = sqlx::query_as(
-                "SELECT knowledge_id, knowledge_version_id FROM brain_answers \
+                "SELECT knowledge_id, knowledge_version_id FROM knowledge_answers \
                  WHERE id = ?1 AND claims LIKE ?2 AND knowledge_id IS NOT NULL LIMIT 1",
             )
             .bind(answer_id)
@@ -1399,7 +1399,7 @@ mod tests {
         assert_eq!(v2_row.state, "published");
         // Only one published version at any time.
         let published: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM brain_knowledge_versions WHERE knowledge_id = ?1 AND state = 'published'",
+            "SELECT COUNT(*) FROM knowledge_item_versions WHERE knowledge_id = ?1 AND state = 'published'",
         )
         .bind(&kid)
         .fetch_one(&db.pool)
@@ -1496,7 +1496,7 @@ mod tests {
             )
             .await
             .unwrap();
-        let row: (String,) = sqlx::query_as("SELECT status FROM brain_feedback WHERE id = ?1")
+        let row: (String,) = sqlx::query_as("SELECT status FROM knowledge_feedback WHERE id = ?1")
             .bind(&id)
             .fetch_one(&db.pool)
             .await
@@ -1504,7 +1504,7 @@ mod tests {
         assert_eq!(row.0, "pending");
         db.knowledge_resolve_feedback(&id, "kid", 1).await.unwrap();
         let (status, kid, version): (String, Option<String>, Option<i64>) = sqlx::query_as(
-            "SELECT status, knowledge_id, knowledge_version_id FROM brain_feedback WHERE id = ?1",
+            "SELECT status, knowledge_id, knowledge_version_id FROM knowledge_feedback WHERE id = ?1",
         )
         .bind(&id)
         .fetch_one(&db.pool)

@@ -62,7 +62,7 @@ impl DatabaseManager {
         let mut inserted = 0u64;
         for entry in &batch.entries {
             let res = sqlx::query(
-                "INSERT OR IGNORE INTO brain_history_entries \
+                "INSERT OR IGNORE INTO knowledge_history_entries \
                  (id, body, encoding, captured_range_start, captured_range_end, imported_batch) \
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             )
@@ -78,7 +78,7 @@ impl DatabaseManager {
         }
         for cov in &batch.coverage {
             sqlx::query(
-                "INSERT OR IGNORE INTO brain_history_coverage (start_at, end_at, imported_batch) \
+                "INSERT OR IGNORE INTO knowledge_history_coverage (start_at, end_at, imported_batch) \
                  VALUES (?1, ?2, ?3)",
             )
             .bind(&cov.start_at)
@@ -88,7 +88,7 @@ impl DatabaseManager {
             .await?;
         }
         sqlx::query(
-            "UPDATE brain_migrations SET batch_cursor = MAX(batch_cursor, ?1), phase = \
+            "UPDATE knowledge_migrations SET batch_cursor = MAX(batch_cursor, ?1), phase = \
              CASE WHEN phase IN ('not_started', 'importing') THEN 'importing' ELSE phase END, \
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = 1",
         )
@@ -101,7 +101,7 @@ impl DatabaseManager {
 
     pub async fn knowledge_history_batch_imported(&self, batch: i64) -> Result<bool, SqlxError> {
         let validated: String =
-            sqlx::query_scalar("SELECT validated_batches FROM brain_migrations WHERE id = 1")
+            sqlx::query_scalar("SELECT validated_batches FROM knowledge_migrations WHERE id = 1")
                 .fetch_one(&self.pool)
                 .await
                 .unwrap_or_else(|_| "[]".to_string());
@@ -114,7 +114,7 @@ impl DatabaseManager {
     pub async fn knowledge_history_mark_batch_validated(&self, batch: i64) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let validated: String =
-            sqlx::query_scalar("SELECT validated_batches FROM brain_migrations WHERE id = 1")
+            sqlx::query_scalar("SELECT validated_batches FROM knowledge_migrations WHERE id = 1")
                 .fetch_one(&mut **tx.conn())
                 .await
                 .unwrap_or_else(|_| "[]".to_string());
@@ -123,7 +123,7 @@ impl DatabaseManager {
             list.push(batch);
         }
         sqlx::query(
-            "UPDATE brain_migrations SET validated_batches = ?1, updated_at = \
+            "UPDATE knowledge_migrations SET validated_batches = ?1, updated_at = \
              strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = 1",
         )
         .bind(serde_json::to_string(&list).unwrap_or_else(|_| "[]".to_string()))
@@ -138,7 +138,7 @@ impl DatabaseManager {
     pub async fn knowledge_history_activate(&self) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "UPDATE brain_migrations SET phase = 'active', error = NULL, updated_at = \
+            "UPDATE knowledge_migrations SET phase = 'active', error = NULL, updated_at = \
              strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = 1",
         )
         .execute(&mut **tx.conn())
@@ -154,7 +154,7 @@ impl DatabaseManager {
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "UPDATE brain_migrations SET phase = ?1, error = ?2, updated_at = \
+            "UPDATE knowledge_migrations SET phase = ?1, error = ?2, updated_at = \
              strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = 1",
         )
         .bind(phase)
@@ -167,7 +167,7 @@ impl DatabaseManager {
 
     pub async fn knowledge_history_migration_state(&self) -> Result<(String, i64, String), SqlxError> {
         sqlx::query_as(
-            "SELECT phase, batch_cursor, validated_batches FROM brain_migrations WHERE id = 1",
+            "SELECT phase, batch_cursor, validated_batches FROM knowledge_migrations WHERE id = 1",
         )
         .fetch_one(&self.pool)
         .await
@@ -175,10 +175,10 @@ impl DatabaseManager {
 
     /// Snapshot comparison inputs: total entries + coverage spans.
     pub async fn knowledge_history_counts(&self) -> Result<(i64, i64), SqlxError> {
-        let entries: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM brain_history_entries")
+        let entries: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM knowledge_history_entries")
             .fetch_one(&self.pool)
             .await?;
-        let spans: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM brain_history_coverage")
+        let spans: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM knowledge_history_coverage")
             .fetch_one(&self.pool)
             .await?;
         Ok((entries, spans))
@@ -186,7 +186,7 @@ impl DatabaseManager {
 
     /// Canonical body digest set for validation (entry id → sha256 of body).
     pub async fn knowledge_history_digests(&self) -> Result<Vec<(String, String)>, SqlxError> {
-        sqlx::query_as("SELECT id, body FROM brain_history_entries ORDER BY id")
+        sqlx::query_as("SELECT id, body FROM knowledge_history_entries ORDER BY id")
             .fetch_all(&self.pool)
             .await
     }
@@ -204,7 +204,7 @@ impl DatabaseManager {
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "INSERT INTO brain_history_entries \
+            "INSERT INTO knowledge_history_entries \
              (id, body, encoding, captured_range_start, captured_range_end, imported_batch) \
              VALUES (?1, ?2, ?3, ?4, ?5, 0) \
              ON CONFLICT (id) DO UPDATE SET body = ?2, encoding = ?3, \
@@ -230,7 +230,7 @@ impl DatabaseManager {
     ) -> Result<Vec<KnowledgeHistoryEntryRow>, SqlxError> {
         sqlx::query_as(
             "SELECT id, body, encoding, captured_range_start, captured_range_end, imported_batch \
-             FROM brain_history_entries \
+             FROM knowledge_history_entries \
              WHERE captured_range_end > ?1 AND captured_range_start < ?2 \
              ORDER BY captured_range_start",
         )

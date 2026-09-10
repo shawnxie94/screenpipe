@@ -32,7 +32,7 @@ impl DatabaseManager {
     ) -> Result<bool, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let result = sqlx::query(
-            "UPDATE brain_knowledge_versions SET body=?1,title=COALESCE(?2,title),revision=?3,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') \
+            "UPDATE knowledge_item_versions SET body=?1,title=COALESCE(?2,title),revision=?3,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') \
              WHERE knowledge_id=?4 AND version=?5 AND state='candidate' AND revision=?6",
         )
         .bind(body)
@@ -59,7 +59,7 @@ impl DatabaseManager {
     ) -> Result<bool, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let res = sqlx::query(
-            "UPDATE brain_knowledge_versions SET \
+            "UPDATE knowledge_item_versions SET \
              state = ?1, availability = COALESCE(?2, availability), \
              rejection_reason = ?3, review_due_at = COALESCE(?4, review_due_at), \
              reviewer_note = COALESCE(?5, reviewer_note), revision = ?6, \
@@ -97,7 +97,7 @@ impl DatabaseManager {
         let mut tx = self.begin_immediate_with_retry().await?;
         // Pointer CAS first: a concurrent publish changes current_version_id.
         let current: Option<i64> =
-            sqlx::query_scalar("SELECT current_version_id FROM brain_knowledge WHERE id = ?1")
+            sqlx::query_scalar("SELECT current_version_id FROM knowledge_items WHERE id = ?1")
                 .bind(knowledge_id)
                 .fetch_optional(&mut **tx.conn())
                 .await?
@@ -109,7 +109,7 @@ impl DatabaseManager {
         // Resolve the candidate before mutating the currently published
         // version. A failed candidate CAS must be a true no-op.
         let candidate_id: Option<i64> = sqlx::query_scalar(
-            "SELECT id FROM brain_knowledge_versions \
+            "SELECT id FROM knowledge_item_versions \
              WHERE knowledge_id = ?1 AND version = ?2 AND state = 'candidate' AND revision = ?3",
         )
         .bind(knowledge_id)
@@ -122,7 +122,7 @@ impl DatabaseManager {
             return Ok(false);
         };
         let res = sqlx::query(
-            "UPDATE brain_knowledge_versions SET state = 'published', availability = 'valid', \
+            "UPDATE knowledge_item_versions SET state = 'published', availability = 'valid', \
              review_due_at = ?1, revision = ?2, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
              WHERE knowledge_id = ?3 AND version = ?4 AND state = 'candidate' AND revision = ?5",
         )
@@ -139,7 +139,7 @@ impl DatabaseManager {
         }
         if let Some(prev) = current {
             sqlx::query(
-                "UPDATE brain_knowledge_versions SET state = 'superseded', \
+                "UPDATE knowledge_item_versions SET state = 'superseded', \
                  updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
                  WHERE knowledge_id = ?1 AND version = ?2 AND state = 'published'",
             )
@@ -153,7 +153,7 @@ impl DatabaseManager {
         // would leave the correction loop unable to return the knowledge to
         // retrieval. Resume stays available for pause-without-publish.
         sqlx::query(
-            "UPDATE brain_knowledge SET current_version_id = ?1, publication_epoch = publication_epoch + 1, \
+            "UPDATE knowledge_items SET current_version_id = ?1, publication_epoch = publication_epoch + 1, \
              paused = 0, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2",
         )
         .bind(version)
@@ -170,7 +170,7 @@ impl DatabaseManager {
         paused: bool,
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        sqlx::query("UPDATE brain_knowledge SET paused = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2")
+        sqlx::query("UPDATE knowledge_items SET paused = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?2")
             .bind(paused)
             .bind(knowledge_id)
             .execute(&mut **tx.conn())
@@ -192,7 +192,7 @@ impl DatabaseManager {
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "INSERT OR IGNORE INTO brain_rejections \
+            "INSERT OR IGNORE INTO knowledge_rejections \
              (scope_key, input_hash, knowledge_type, schema_version, prompt_version, reason) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         )
@@ -215,7 +215,7 @@ impl DatabaseManager {
         knowledge_type: &str,
     ) -> Result<bool, SqlxError> {
         Ok(sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM brain_rejections WHERE scope_key = ?1 AND input_hash = ?2 \
+            "SELECT COUNT(*) FROM knowledge_rejections WHERE scope_key = ?1 AND input_hash = ?2 \
              AND knowledge_type = ?3",
         )
         .bind(scope_key)
@@ -234,7 +234,7 @@ impl DatabaseManager {
         sqlx::query_as(
             "SELECT id, knowledge_id, version, state, availability, title, body, input_hash, revision, \
              rejection_reason, review_due_at, created_at, updated_at \
-             FROM brain_knowledge_versions WHERE knowledge_id = ?1 AND version = ?2",
+             FROM knowledge_item_versions WHERE knowledge_id = ?1 AND version = ?2",
         )
         .bind(knowledge_id)
         .bind(version)
@@ -248,7 +248,7 @@ impl DatabaseManager {
     ) -> Result<Option<KnowledgeKnowledgeRow>, SqlxError> {
         sqlx::query_as(
             "SELECT id, knowledge_type, scope_key, current_version_id, paused, created_at, updated_at \
-             FROM brain_knowledge WHERE id = ?1",
+             FROM knowledge_items WHERE id = ?1",
         )
         .bind(knowledge_id)
         .fetch_optional(&self.pool)
@@ -263,7 +263,7 @@ impl DatabaseManager {
         sqlx::query_as(
             "SELECT id, knowledge_id, version, state, availability, title, body, input_hash, revision, \
              rejection_reason, review_due_at, created_at, updated_at \
-             FROM brain_knowledge_versions WHERE state = 'candidate' \
+             FROM knowledge_item_versions WHERE state = 'candidate' \
              OR (state = 'published' AND availability = 'review_due') \
              OR (state = 'published' AND review_due_at IS NOT NULL AND review_due_at <= strftime('%Y-%m-%dT%H:%M:%fZ','now')) \
              ORDER BY created_at LIMIT ?1",
@@ -291,7 +291,7 @@ impl DatabaseManager {
         let id = super::types::new_source_uid();
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "INSERT INTO brain_feedback \
+            "INSERT INTO knowledge_feedback \
              (id, answer_id, claim_id, knowledge_id, knowledge_version_id, kind, comment, status) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         )
@@ -317,7 +317,7 @@ impl DatabaseManager {
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "UPDATE brain_feedback SET status = 'located', knowledge_id = ?1, \
+            "UPDATE knowledge_feedback SET status = 'located', knowledge_id = ?1, \
              knowledge_version_id = ?2, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
              WHERE id = ?3",
         )
@@ -334,7 +334,7 @@ impl DatabaseManager {
     /// the processing record (no content) survives.
     pub async fn knowledge_clear_feedback_bodies(&self, knowledge_id: &str) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        sqlx::query("UPDATE brain_feedback SET comment = NULL WHERE knowledge_id = ?1")
+        sqlx::query("UPDATE knowledge_feedback SET comment = NULL WHERE knowledge_id = ?1")
             .bind(knowledge_id)
             .execute(&mut **tx.conn())
             .await?;
@@ -345,12 +345,12 @@ impl DatabaseManager {
     /// Delete an entire knowledge item (user erase): all versions + body.
     pub async fn knowledge_delete_knowledge(&self, knowledge_id: &str) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        sqlx::query("DELETE FROM brain_knowledge WHERE id = ?1")
+        sqlx::query("DELETE FROM knowledge_items WHERE id = ?1")
             .bind(knowledge_id)
             .execute(&mut **tx.conn())
             .await?;
         sqlx::query(
-            "DELETE FROM brain_dependencies WHERE consumer_kind = 'knowledge' AND consumer_id = ?1",
+            "DELETE FROM knowledge_dependencies WHERE consumer_kind = 'knowledge' AND consumer_id = ?1",
         )
         .bind(knowledge_id)
         .execute(&mut **tx.conn())

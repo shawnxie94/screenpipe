@@ -7,9 +7,9 @@ use super::*;
 
 fn task_binding(kind: KnowledgeJobKind) -> Option<(&'static str, &'static str)> {
     match kind {
-        KnowledgeJobKind::Extract => Some(("brain.extract", "extract")),
-        KnowledgeJobKind::Compile => Some(("brain.compile", "extract")),
-        KnowledgeJobKind::BackfillExtract => Some(("brain.backfill", "backfill")),
+        KnowledgeJobKind::Extract => Some(("knowledge.extract", "extract")),
+        KnowledgeJobKind::Compile => Some(("knowledge.compile", "extract")),
+        KnowledgeJobKind::BackfillExtract => Some(("knowledge.backfill", "backfill")),
         KnowledgeJobKind::OfficeSync => Some(("office.sync", "office_io")),
         _ => None,
     }
@@ -64,7 +64,7 @@ impl DatabaseManager {
         let mut tx = self.begin_immediate_with_retry().await?;
         if let Some(hash) = input_hash {
             let existing: Option<i64> = sqlx::query_scalar(
-                "SELECT id FROM brain_jobs WHERE kind = ?1 AND input_hash = ?2 \
+                "SELECT id FROM knowledge_jobs WHERE kind = ?1 AND input_hash = ?2 \
                  AND state IN ('pending', 'running', 'paused')",
             )
             .bind(kind.as_str())
@@ -78,7 +78,7 @@ impl DatabaseManager {
         }
         let revision = uuid::Uuid::new_v4().to_string();
         let id = sqlx::query(
-            "INSERT INTO brain_jobs (kind, scope_key, input_hash, payload, priority, \
+            "INSERT INTO knowledge_jobs (kind, scope_key, input_hash, payload, priority, \
              deadline_at, batch_id, revision) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         )
         .bind(kind.as_str())
@@ -93,7 +93,7 @@ impl DatabaseManager {
         .await?
         .last_insert_rowid();
         let owner_generation: i64 = sqlx::query_scalar(
-            "SELECT COALESCE((SELECT owner_generation FROM task_owner_state WHERE kind='brain'),0)",
+            "SELECT COALESCE((SELECT owner_generation FROM task_owner_state WHERE kind='knowledge'),0)",
         )
         .fetch_one(&mut **tx.conn())
         .await?;
@@ -196,7 +196,7 @@ impl DatabaseManager {
             .collect();
         let sql = format!(
             "SELECT id, kind, scope_key, input_hash, cursor, payload, attempts, model_calls, \
-             deadline_at FROM brain_jobs \
+             deadline_at FROM knowledge_jobs \
              WHERE state = 'pending' AND kind IN ({placeholders}) \
              AND (not_before IS NULL OR not_before <= ?{now_idx}) \
              ORDER BY priority ASC, created_at ASC, id ASC LIMIT 1",
@@ -246,7 +246,7 @@ impl DatabaseManager {
             super::types::now_utc() + chrono::Duration::milliseconds(lease_ms as i64),
         );
         sqlx::query(
-            "UPDATE brain_jobs SET state = 'running', lease_owner = ?1, lease_token = ?2, \
+            "UPDATE knowledge_jobs SET state = 'running', lease_owner = ?1, lease_token = ?2, \
              lease_expires_at = ?3, updated_at = ?4 WHERE id = ?5",
         )
         .bind(worker_id)
@@ -356,7 +356,7 @@ impl DatabaseManager {
             i32,
             Option<String>,
         )> = sqlx::query_as(
-            "SELECT id,kind,scope_key,input_hash,cursor,payload,attempts,model_calls,deadline_at FROM brain_jobs WHERE id=?1 AND state='pending'",
+            "SELECT id,kind,scope_key,input_hash,cursor,payload,attempts,model_calls,deadline_at FROM knowledge_jobs WHERE id=?1 AND state='pending'",
         )
         .bind(job_id)
         .fetch_optional(&mut **tx.conn())
@@ -388,7 +388,7 @@ impl DatabaseManager {
             super::types::now_utc() + chrono::Duration::milliseconds(lease_ms as i64),
         );
         let changed = sqlx::query(
-            "UPDATE brain_jobs SET state='running',lease_owner=?1,lease_token=?2,lease_expires_at=?3,updated_at=?4 WHERE id=?5 AND state='pending'",
+            "UPDATE knowledge_jobs SET state='running',lease_owner=?1,lease_token=?2,lease_expires_at=?3,updated_at=?4 WHERE id=?5 AND state='pending'",
         )
         .bind(worker_id)
         .bind(lease_token)
@@ -428,7 +428,7 @@ impl DatabaseManager {
             super::types::now_utc() + chrono::Duration::milliseconds(lease_ms as i64),
         );
         let res = sqlx::query(
-            "UPDATE brain_jobs SET lease_expires_at = ?1, updated_at = ?2 \
+            "UPDATE knowledge_jobs SET lease_expires_at = ?1, updated_at = ?2 \
              WHERE id = ?3 AND lease_token = ?4 AND state = 'running'",
         )
         .bind(&lease_expires)
@@ -462,7 +462,7 @@ impl DatabaseManager {
     ) -> Result<bool, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let res = sqlx::query(
-            "UPDATE brain_jobs SET state = 'succeeded', result_ref = ?1, cursor = \
+            "UPDATE knowledge_jobs SET state = 'succeeded', result_ref = ?1, cursor = \
              COALESCE(?2, cursor), lease_token = NULL, lease_expires_at = NULL, \
              updated_at = ?3 WHERE id = ?4 AND lease_token = ?5 AND state = 'running'",
         )
@@ -511,7 +511,7 @@ impl DatabaseManager {
         let mut tx = self.begin_immediate_with_retry().await?;
         let now = super::types::format_ts(super::types::now_utc());
         let (attempts, max_attempts): (i32, i32) = sqlx::query_as(
-            "SELECT attempts, max_attempts FROM brain_jobs WHERE id = ?1 AND lease_token = ?2 \
+            "SELECT attempts, max_attempts FROM knowledge_jobs WHERE id = ?1 AND lease_token = ?2 \
              AND state = 'running'",
         )
         .bind(job_id)
@@ -534,7 +534,7 @@ impl DatabaseManager {
         };
         let knowledge_changed = if exhausted {
             sqlx::query(
-                "UPDATE brain_jobs SET state = 'failed', attempts = attempts + 1, \
+                "UPDATE knowledge_jobs SET state = 'failed', attempts = attempts + 1, \
                  last_error_code = ?1, lease_token = NULL, lease_expires_at = NULL, \
                  updated_at = ?2 WHERE id = ?3 AND lease_token = ?4 AND state = 'running'",
             )
@@ -547,7 +547,7 @@ impl DatabaseManager {
             .rows_affected()
         } else {
             sqlx::query(
-                "UPDATE brain_jobs SET state = 'pending', attempts = attempts + 1, \
+                "UPDATE knowledge_jobs SET state = 'pending', attempts = attempts + 1, \
                  last_error_code = ?1, not_before = ?2, lease_token = NULL, \
                  lease_expires_at = NULL, updated_at = ?3 WHERE id = ?4 AND lease_token = ?5 \
                  AND state = 'running'",
@@ -594,7 +594,7 @@ impl DatabaseManager {
         let mut tx = self.begin_immediate_with_retry().await?;
         let now = super::types::format_ts(super::types::now_utc());
         let changed = sqlx::query(
-            "UPDATE brain_jobs SET state='cancelled',last_error_code=?1,lease_token=NULL,lease_expires_at=NULL,updated_at=?2 WHERE id=?3 AND lease_token=?4 AND state='running'",
+            "UPDATE knowledge_jobs SET state='cancelled',last_error_code=?1,lease_token=NULL,lease_expires_at=NULL,updated_at=?2 WHERE id=?3 AND lease_token=?4 AND state='running'",
         )
         .bind(reason)
         .bind(&now)
@@ -654,7 +654,7 @@ impl DatabaseManager {
         let mut tx = self.begin_immediate_with_retry().await?;
         let now = super::types::format_ts(super::types::now_utc());
         let changed = sqlx::query(
-            "UPDATE brain_jobs SET state='paused',last_error_code=?1,lease_token=NULL,lease_expires_at=NULL,updated_at=?2 WHERE id=?3 AND lease_token=?4 AND state='running'",
+            "UPDATE knowledge_jobs SET state='paused',last_error_code=?1,lease_token=NULL,lease_expires_at=NULL,updated_at=?2 WHERE id=?3 AND lease_token=?4 AND state='running'",
         )
         .bind(reason)
         .bind(&now)
@@ -709,7 +709,7 @@ impl DatabaseManager {
     ) -> Result<bool, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let res = sqlx::query(
-            "UPDATE brain_jobs SET model_calls = model_calls + 1 WHERE id = ?1 \
+            "UPDATE knowledge_jobs SET model_calls = model_calls + 1 WHERE id = ?1 \
              AND lease_token = ?2 AND state = 'running'",
         )
         .bind(job_id)
@@ -737,13 +737,13 @@ impl DatabaseManager {
         let mut tx = self.begin_immediate_with_retry().await?;
         let now = super::types::format_ts(super::types::now_utc());
         let expired: Vec<(i64, String)> = sqlx::query_as(
-            "SELECT id, lease_token FROM brain_jobs WHERE state='running' AND lease_expires_at IS NOT NULL AND lease_expires_at < ?1",
+            "SELECT id, lease_token FROM knowledge_jobs WHERE state='running' AND lease_expires_at IS NOT NULL AND lease_expires_at < ?1",
         )
         .bind(&now)
         .fetch_all(&mut **tx.conn())
         .await?;
         let res = sqlx::query(
-            "UPDATE brain_jobs SET state = 'pending', lease_token = NULL, \
+            "UPDATE knowledge_jobs SET state = 'pending', lease_token = NULL, \
              lease_expires_at = NULL, updated_at = ?1 \
              WHERE state = 'running' AND lease_expires_at IS NOT NULL AND lease_expires_at < ?1",
         )
@@ -781,7 +781,7 @@ impl DatabaseManager {
         let res = match (kind, input_hash) {
             (Some(k), Some(h)) => {
                 sqlx::query(
-                    "UPDATE brain_jobs SET state = 'cancelled', last_error_code = ?1, \
+                    "UPDATE knowledge_jobs SET state = 'cancelled', last_error_code = ?1, \
                      updated_at = ?2 WHERE kind = ?3 AND input_hash = ?4 \
                      AND state IN ('pending', 'running', 'paused')",
                 )
@@ -794,7 +794,7 @@ impl DatabaseManager {
             }
             (Some(k), None) => {
                 sqlx::query(
-                    "UPDATE brain_jobs SET state = 'cancelled', last_error_code = ?1, \
+                    "UPDATE knowledge_jobs SET state = 'cancelled', last_error_code = ?1, \
                      updated_at = ?2 WHERE kind = ?3 \
                      AND state IN ('pending', 'running', 'paused')",
                 )
@@ -806,7 +806,7 @@ impl DatabaseManager {
             }
             (None, Some(h)) => {
                 sqlx::query(
-                    "UPDATE brain_jobs SET state = 'cancelled', last_error_code = ?1, \
+                    "UPDATE knowledge_jobs SET state = 'cancelled', last_error_code = ?1, \
                      updated_at = ?2 WHERE input_hash = ?3 \
                      AND state IN ('pending', 'running', 'paused')",
                 )
@@ -818,7 +818,7 @@ impl DatabaseManager {
             }
             (None, None) => {
                 sqlx::query(
-                    "UPDATE brain_jobs SET state = 'cancelled', last_error_code = ?1, \
+                    "UPDATE knowledge_jobs SET state = 'cancelled', last_error_code = ?1, \
                      updated_at = ?2 WHERE state IN ('pending', 'running', 'paused')",
                 )
                 .bind(reason)
@@ -828,7 +828,7 @@ impl DatabaseManager {
             }
         };
         sqlx::query(
-            "UPDATE task_runs SET state='cancelled',error_code=?1,lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL,revision=revision+1,updated_at=?2 WHERE run_id IN (SELECT 'brain-job-' || id FROM brain_jobs WHERE state='cancelled' AND last_error_code=?1)",
+            "UPDATE task_runs SET state='cancelled',error_code=?1,lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL,revision=revision+1,updated_at=?2 WHERE run_id IN (SELECT 'brain-job-' || id FROM knowledge_jobs WHERE state='cancelled' AND last_error_code=?1)",
         )
         .bind(reason)
         .bind(&now)
@@ -849,7 +849,7 @@ impl DatabaseManager {
         let mut tx = self.begin_immediate_with_retry().await?;
         let now = super::types::format_ts(super::types::now_utc());
         let res = sqlx::query(
-            "UPDATE brain_jobs SET state='cancelled', last_error_code=?1, updated_at=?2 \
+            "UPDATE knowledge_jobs SET state='cancelled', last_error_code=?1, updated_at=?2 \
              WHERE kind=?3 AND scope_key=?4 AND state IN ('pending','running','paused')",
         )
         .bind(reason)
@@ -860,7 +860,7 @@ impl DatabaseManager {
         .await?;
         sqlx::query(
             "UPDATE task_runs SET state='cancelled',error_code=?1,lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL,revision=revision+1,updated_at=?2 \
-             WHERE run_id IN (SELECT 'brain-job-' || id FROM brain_jobs WHERE kind=?3 AND scope_key=?4 AND state='cancelled' AND last_error_code=?1)",
+             WHERE run_id IN (SELECT 'brain-job-' || id FROM knowledge_jobs WHERE kind=?3 AND scope_key=?4 AND state='cancelled' AND last_error_code=?1)",
         )
         .bind(reason)
         .bind(&now)
@@ -877,7 +877,7 @@ impl DatabaseManager {
     pub async fn knowledge_retry_job(&self, job_id: i64) -> Result<bool, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let res = sqlx::query(
-            "UPDATE brain_jobs SET state = 'pending', attempts = 0, model_calls = 0, \
+            "UPDATE knowledge_jobs SET state = 'pending', attempts = 0, model_calls = 0, \
              not_before = NULL, lease_token = NULL, lease_expires_at = NULL, updated_at = ?1 \
              WHERE id = ?2 AND state IN ('failed', 'paused', 'cancelled')",
         )
@@ -901,7 +901,7 @@ impl DatabaseManager {
     ) -> Result<bool, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let res = sqlx::query(
-            "UPDATE brain_jobs SET state = ?1, updated_at = ?2 WHERE id = ?3 \
+            "UPDATE knowledge_jobs SET state = ?1, updated_at = ?2 WHERE id = ?3 \
              AND state NOT IN ('succeeded', 'failed', 'cancelled')",
         )
         .bind(state.as_str())
@@ -934,7 +934,7 @@ impl DatabaseManager {
     pub async fn knowledge_get_job(&self, job_id: i64) -> Result<Option<KnowledgeJobRow>, SqlxError> {
         sqlx::query_as::<_, KnowledgeJobRow>(
             "SELECT id, kind, scope_key, input_hash, state, priority, attempts, model_calls, \
-             batch_id, last_error_code, result_ref, created_at, updated_at FROM brain_jobs WHERE id = ?1",
+             batch_id, last_error_code, result_ref, created_at, updated_at FROM knowledge_jobs WHERE id = ?1",
         )
         .bind(job_id)
         .fetch_optional(&self.pool)
@@ -949,7 +949,7 @@ impl DatabaseManager {
     ) -> Result<Vec<KnowledgeJobRow>, SqlxError> {
         let mut sql = String::from(
             "SELECT id, kind, scope_key, input_hash, state, priority, attempts, model_calls, \
-             batch_id, last_error_code, result_ref, created_at, updated_at FROM brain_jobs WHERE 1=1",
+             batch_id, last_error_code, result_ref, created_at, updated_at FROM knowledge_jobs WHERE 1=1",
         );
         if state.is_some() {
             sql.push_str(" AND state = ?1");
@@ -982,7 +982,7 @@ impl DatabaseManager {
              SUM(CASE WHEN state = 'pending' THEN 1 ELSE 0 END), \
              SUM(CASE WHEN state = 'running' THEN 1 ELSE 0 END), \
              MIN(CASE WHEN state = 'pending' THEN created_at END) \
-             FROM brain_jobs GROUP BY kind",
+             FROM knowledge_jobs GROUP BY kind",
         )
         .fetch_all(&self.pool)
         .await
@@ -992,9 +992,9 @@ impl DatabaseManager {
     pub async fn knowledge_prune_terminal_jobs(&self, keep: u32) -> Result<u64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let res = sqlx::query(
-            "DELETE FROM brain_jobs WHERE state IN ('succeeded', 'failed', 'cancelled') \
+            "DELETE FROM knowledge_jobs WHERE state IN ('succeeded', 'failed', 'cancelled') \
              AND id NOT IN (\
-             SELECT id FROM brain_jobs WHERE state IN ('succeeded', 'failed', 'cancelled') \
+             SELECT id FROM knowledge_jobs WHERE state IN ('succeeded', 'failed', 'cancelled') \
              ORDER BY updated_at DESC LIMIT ?1)",
         )
         .bind(keep.clamp(10, 10000))

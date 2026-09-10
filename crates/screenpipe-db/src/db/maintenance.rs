@@ -118,11 +118,11 @@ impl DatabaseManager {
         // deleting raw frame/audio/ui rows; publication is also a writer, so
         // it cannot race this protection decision between query and delete.
         sqlx::query(
-            "UPDATE brain_source_revisions SET archived = 1 \
+            "UPDATE knowledge_source_revisions SET archived = 1 \
              WHERE source_uid IN (\
-               SELECT s.source_uid FROM brain_sources s \
-               JOIN brain_dependencies d ON d.source_uid = s.source_uid \
-               JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id \
+               SELECT s.source_uid FROM knowledge_sources s \
+               JOIN knowledge_dependencies d ON d.source_uid = s.source_uid \
+               JOIN knowledge_item_versions v ON v.knowledge_id = d.consumer_id \
                WHERE s.captured_at >= ?1 AND s.captured_at < ?2 \
                  AND d.consumer_kind = 'knowledge' \
                  AND v.state = 'published' AND v.availability = 'valid'\
@@ -133,12 +133,12 @@ impl DatabaseManager {
         .execute(&mut **tx.conn())
         .await?;
         sqlx::query(
-            "UPDATE brain_sources SET state = 'archived', media_available = 0, \
+            "UPDATE knowledge_sources SET state = 'archived', media_available = 0, \
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') \
              WHERE captured_at >= ?1 AND captured_at < ?2 AND source_uid IN (\
-               SELECT s.source_uid FROM brain_sources s \
-               JOIN brain_dependencies d ON d.source_uid = s.source_uid \
-               JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id \
+               SELECT s.source_uid FROM knowledge_sources s \
+               JOIN knowledge_dependencies d ON d.source_uid = s.source_uid \
+               JOIN knowledge_item_versions v ON v.knowledge_id = d.consumer_id \
                WHERE d.consumer_kind = 'knowledge' \
                  AND v.state = 'published' AND v.availability = 'valid'\
              )",
@@ -938,11 +938,11 @@ impl DatabaseManager {
         // otherwise the source row is left active while its locator is gone and
         // a later registration can incorrectly treat it as live content.
         sqlx::query(
-            "UPDATE brain_source_revisions SET archived = 1 \
+            "UPDATE knowledge_source_revisions SET archived = 1 \
              WHERE source_uid IN (\
-               SELECT s.source_uid FROM brain_sources s \
-               JOIN brain_dependencies d ON d.source_uid = s.source_uid \
-               JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id \
+               SELECT s.source_uid FROM knowledge_sources s \
+               JOIN knowledge_dependencies d ON d.source_uid = s.source_uid \
+               JOIN knowledge_item_versions v ON v.knowledge_id = d.consumer_id \
                WHERE s.captured_at >= ?1 AND s.captured_at < ?2 \
                  AND d.consumer_kind = 'knowledge' \
                  AND v.state = 'published' AND v.availability = 'valid'\
@@ -953,12 +953,12 @@ impl DatabaseManager {
         .execute(&mut **tx.conn())
         .await?;
         sqlx::query(
-            "UPDATE brain_sources SET state = 'archived', media_available = 0, \
+            "UPDATE knowledge_sources SET state = 'archived', media_available = 0, \
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') \
              WHERE captured_at >= ?1 AND captured_at < ?2 AND source_uid IN (\
-               SELECT s.source_uid FROM brain_sources s \
-               JOIN brain_dependencies d ON d.source_uid = s.source_uid \
-               JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id \
+               SELECT s.source_uid FROM knowledge_sources s \
+               JOIN knowledge_dependencies d ON d.source_uid = s.source_uid \
+               JOIN knowledge_item_versions v ON v.knowledge_id = d.consumer_id \
                WHERE d.consumer_kind = 'knowledge' \
                  AND v.state = 'published' AND v.availability = 'valid'\
              )",

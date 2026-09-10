@@ -42,7 +42,7 @@ impl DatabaseManager {
         ));
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "INSERT INTO brain_search_documents \
+            "INSERT INTO knowledge_search_documents \
              (doc_id, kind, ref_uid, ref_revision, title, body, app, event_at, index_version) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9) \
              ON CONFLICT (doc_id) DO UPDATE SET ref_revision = ?4, title = ?5, body = ?6, \
@@ -59,11 +59,11 @@ impl DatabaseManager {
         .bind(crate::text_normalizer::KNOWLEDGE_SEARCH_INDEX_VERSION)
         .execute(&mut **tx.conn())
         .await?;
-        sqlx::query("DELETE FROM brain_search_fts WHERE doc_id = ?1")
+        sqlx::query("DELETE FROM knowledge_search_fts WHERE doc_id = ?1")
             .bind(&input.doc_id)
             .execute(&mut **tx.conn())
             .await?;
-        sqlx::query("INSERT INTO brain_search_fts (doc_id, body) VALUES (?1, ?2)")
+        sqlx::query("INSERT INTO knowledge_search_fts (doc_id, body) VALUES (?1, ?2)")
             .bind(&input.doc_id)
             .bind(&projected)
             .execute(&mut **tx.conn())
@@ -74,11 +74,11 @@ impl DatabaseManager {
 
     pub async fn knowledge_search_delete_doc(&self, doc_id: &str) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        sqlx::query("DELETE FROM brain_search_fts WHERE doc_id = ?1")
+        sqlx::query("DELETE FROM knowledge_search_fts WHERE doc_id = ?1")
             .bind(doc_id)
             .execute(&mut **tx.conn())
             .await?;
-        sqlx::query("DELETE FROM brain_search_documents WHERE doc_id = ?1")
+        sqlx::query("DELETE FROM knowledge_search_documents WHERE doc_id = ?1")
             .bind(doc_id)
             .execute(&mut **tx.conn())
             .await?;
@@ -104,10 +104,10 @@ impl DatabaseManager {
         }
         let sql = format!(
             "SELECT d.doc_id, d.kind, d.ref_uid, d.ref_revision, d.title, d.body, d.app, d.event_at, \
-             bm25(brain_search_fts, 10.0) AS rank \
-             FROM brain_search_fts f \
-             JOIN brain_search_documents d ON d.doc_id = f.doc_id \
-             WHERE brain_search_fts MATCH ?1 AND d.kind IN ({kind_filter}) \
+             bm25(knowledge_search_fts, 10.0) AS rank \
+             FROM knowledge_search_fts f \
+             JOIN knowledge_search_documents d ON d.doc_id = f.doc_id \
+             WHERE knowledge_search_fts MATCH ?1 AND d.kind IN ({kind_filter}) \
              ORDER BY rank LIMIT ?2"
         );
         sqlx::query_as::<_, KnowledgeSearchHit>(sqlx::AssertSqlSafe(sql))
@@ -119,15 +119,15 @@ impl DatabaseManager {
 
     /// Coverage snapshot for /knowledge/status (indexed vs known objects).
     pub async fn knowledge_search_coverage(&self) -> Result<(i64, i64), SqlxError> {
-        let indexed: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM brain_search_documents")
+        let indexed: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM knowledge_search_documents")
             .fetch_one(&self.pool)
             .await?;
         let office: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM brain_office_objects WHERE state = 'active'")
+            sqlx::query_scalar("SELECT COUNT(*) FROM knowledge_office_objects WHERE state = 'active'")
                 .fetch_one(&self.pool)
                 .await?;
         let knowledge: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM brain_knowledge_versions WHERE state = 'published'",
+            "SELECT COUNT(*) FROM knowledge_item_versions WHERE state = 'published'",
         )
         .fetch_one(&self.pool)
         .await?;
@@ -146,9 +146,9 @@ impl DatabaseManager {
         let office_rows: Vec<(String, String, String, Option<String>, Option<String>, Option<String>)> =
             sqlx::query_as(
                 "SELECT o.source_uid, o.object_kind, o.title, o.source_url, s.revision, r.excerpt \
-                 FROM brain_office_objects o \
-                 JOIN brain_sources s ON s.source_uid = o.source_uid \
-                 LEFT JOIN brain_source_revisions r ON r.source_uid = o.source_uid AND r.revision = s.revision \
+                 FROM knowledge_office_objects o \
+                 JOIN knowledge_sources s ON s.source_uid = o.source_uid \
+                 LEFT JOIN knowledge_source_revisions r ON r.source_uid = o.source_uid AND r.revision = s.revision \
                  WHERE o.state = 'active' LIMIT ?1",
             )
             .bind(limit)
@@ -175,8 +175,8 @@ impl DatabaseManager {
         // Published knowledge bodies.
         let knowledge_rows: Vec<(String, String, i64, String, String)> = sqlx::query_as(
             "SELECT k.id, k.knowledge_type, v.version, v.title, v.body \
-             FROM brain_knowledge k \
-             JOIN brain_knowledge_versions v ON v.knowledge_id = k.id \
+             FROM knowledge_items k \
+             JOIN knowledge_item_versions v ON v.knowledge_id = k.id \
              WHERE v.state = 'published' AND v.availability = 'valid' LIMIT ?1",
         )
         .bind(limit)

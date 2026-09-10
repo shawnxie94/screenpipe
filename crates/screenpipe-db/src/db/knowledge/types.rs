@@ -375,7 +375,7 @@ impl KnowledgeAvailability {
     }
 }
 
-/// History migration phases (`brain_migrations.state`).
+/// History migration phases (`knowledge_migrations.state`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MigrationPhase {

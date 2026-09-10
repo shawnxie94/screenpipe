@@ -34,11 +34,11 @@ impl DatabaseManager {
     ) -> Result<i64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let seq: i64 =
-            sqlx::query_scalar("SELECT COALESCE(MAX(journal_seq), 0) + 1 FROM brain_deletions")
+            sqlx::query_scalar("SELECT COALESCE(MAX(journal_seq), 0) + 1 FROM knowledge_deletions")
                 .fetch_one(&mut **tx.conn())
                 .await?;
         let id = sqlx::query(
-            "INSERT INTO brain_deletions (journal_seq, cause, scope, state) \
+            "INSERT INTO knowledge_deletions (journal_seq, cause, scope, state) \
              VALUES (?1, ?2, ?3, 'journal_only')",
         )
         .bind(seq)
@@ -63,7 +63,7 @@ impl DatabaseManager {
     ) -> Result<i64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let id = sqlx::query(
-            "INSERT INTO brain_deletions (journal_seq, cause, scope, state) \
+            "INSERT INTO knowledge_deletions (journal_seq, cause, scope, state) \
              VALUES (?1, ?2, ?3, 'journal_only')",
         )
         .bind(journal_seq)
@@ -82,7 +82,7 @@ impl DatabaseManager {
     ) -> Result<Option<KnowledgeDeletionRow>, SqlxError> {
         sqlx::query_as::<_, KnowledgeDeletionRow>(
             "SELECT id, journal_seq, cause, scope, state, created_at, updated_at \
-             FROM brain_deletions WHERE journal_seq = ?1",
+             FROM knowledge_deletions WHERE journal_seq = ?1",
         )
         .bind(journal_seq)
         .fetch_optional(&self.pool)
@@ -99,26 +99,26 @@ impl DatabaseManager {
     ) -> Result<i64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "UPDATE brain_deletions SET state = 'blocked', \
-             source_epoch = (SELECT source_epoch FROM brain_state WHERE id = 1), \
+            "UPDATE knowledge_deletions SET state = 'blocked', \
+             source_epoch = (SELECT source_epoch FROM knowledge_state WHERE id = 1), \
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?1",
         )
         .bind(deletion_id)
         .execute(&mut **tx.conn())
         .await?;
-        sqlx::query("UPDATE brain_state SET deletion_epoch = deletion_epoch + 1 WHERE id = 1")
+        sqlx::query("UPDATE knowledge_state SET deletion_epoch = deletion_epoch + 1 WHERE id = 1")
             .execute(&mut **tx.conn())
             .await?;
         if cancel_all_jobs {
             sqlx::query(
-                "UPDATE brain_jobs SET state = 'cancelled', last_error_code = 'input_deleted', \
+                "UPDATE knowledge_jobs SET state = 'cancelled', last_error_code = 'input_deleted', \
                  updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') \
                  WHERE state IN ('pending', 'running', 'paused') AND kind != 'cleanup'",
             )
             .execute(&mut **tx.conn())
             .await?;
         }
-        let epoch: i64 = sqlx::query_scalar("SELECT deletion_epoch FROM brain_state WHERE id = 1")
+        let epoch: i64 = sqlx::query_scalar("SELECT deletion_epoch FROM knowledge_state WHERE id = 1")
             .fetch_one(&mut **tx.conn())
             .await?;
         tx.commit().await?;
@@ -132,7 +132,7 @@ impl DatabaseManager {
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "UPDATE brain_deletions SET state = ?1, \
+            "UPDATE knowledge_deletions SET state = ?1, \
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?2",
         )
         .bind(state)
@@ -149,7 +149,7 @@ impl DatabaseManager {
     ) -> Result<Option<KnowledgeDeletionRow>, SqlxError> {
         sqlx::query_as::<_, KnowledgeDeletionRow>(
             "SELECT id, journal_seq, cause, scope, state, created_at, updated_at \
-             FROM brain_deletions WHERE id = ?1",
+             FROM knowledge_deletions WHERE id = ?1",
         )
         .bind(deletion_id)
         .fetch_optional(&self.pool)
@@ -160,7 +160,7 @@ impl DatabaseManager {
     pub async fn knowledge_incomplete_deletions(&self) -> Result<Vec<KnowledgeDeletionRow>, SqlxError> {
         sqlx::query_as::<_, KnowledgeDeletionRow>(
             "SELECT id, journal_seq, cause, scope, state, created_at, updated_at \
-             FROM brain_deletions WHERE state IN ('journal_only', 'blocked', 'cleaning', 'failed') \
+             FROM knowledge_deletions WHERE state IN ('journal_only', 'blocked', 'cleaning', 'failed') \
              ORDER BY id ASC",
         )
         .fetch_all(&self.pool)
@@ -179,7 +179,7 @@ impl DatabaseManager {
     ) -> Result<i64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let id = sqlx::query(
-            "INSERT INTO brain_cleanup_items (deletion_id, exit, target) VALUES (?1, ?2, ?3)",
+            "INSERT INTO knowledge_cleanup_items (deletion_id, exit, target) VALUES (?1, ?2, ?3)",
         )
         .bind(deletion_id)
         .bind(exit)
@@ -194,7 +194,7 @@ impl DatabaseManager {
     pub async fn knowledge_cleanup_item_done(&self, item_id: i64) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "UPDATE brain_cleanup_items SET state = 'done', updated_at = \
+            "UPDATE knowledge_cleanup_items SET state = 'done', updated_at = \
              strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?1",
         )
         .bind(item_id)
@@ -211,7 +211,7 @@ impl DatabaseManager {
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "UPDATE brain_cleanup_items SET state = 'failed', attempts = attempts + 1, \
+            "UPDATE knowledge_cleanup_items SET state = 'failed', attempts = attempts + 1, \
              last_error = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?2",
         )
         .bind(error)
@@ -227,7 +227,7 @@ impl DatabaseManager {
         deletion_id: i64,
     ) -> Result<Vec<(i64, String, String, String, i32)>, SqlxError> {
         sqlx::query_as(
-            "SELECT id, exit, target, state, attempts FROM brain_cleanup_items \
+            "SELECT id, exit, target, state, attempts FROM knowledge_cleanup_items \
              WHERE deletion_id = ?1 AND state IN ('pending', 'failed') ORDER BY id",
         )
         .bind(deletion_id)
@@ -241,10 +241,10 @@ impl DatabaseManager {
     pub async fn knowledge_refresh_deletion_state(&self, deletion_id: i64) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "UPDATE brain_deletions SET state = CASE \
-             WHEN (SELECT COUNT(*) FROM brain_cleanup_items WHERE deletion_id = ?1 \
+            "UPDATE knowledge_deletions SET state = CASE \
+             WHEN (SELECT COUNT(*) FROM knowledge_cleanup_items WHERE deletion_id = ?1 \
                    AND state IN ('pending', 'failed')) = 0 THEN 'completed' \
-             WHEN (SELECT COUNT(*) FROM brain_cleanup_items WHERE deletion_id = ?1 \
+             WHEN (SELECT COUNT(*) FROM knowledge_cleanup_items WHERE deletion_id = ?1 \
                    AND state = 'failed') > 0 THEN 'failed' \
              ELSE 'cleaning' END, \
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?1 \
@@ -258,7 +258,7 @@ impl DatabaseManager {
     }
 
     pub async fn knowledge_cleanup_failure_count(&self) -> Result<i64, SqlxError> {
-        sqlx::query_scalar("SELECT COUNT(*) FROM brain_cleanup_items WHERE state = 'failed'")
+        sqlx::query_scalar("SELECT COUNT(*) FROM knowledge_cleanup_items WHERE state = 'failed'")
             .fetch_one(&self.pool)
             .await
     }
@@ -274,7 +274,7 @@ impl DatabaseManager {
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "UPDATE brain_knowledge_versions SET availability = ?1, updated_at = \
+            "UPDATE knowledge_item_versions SET availability = ?1, updated_at = \
              strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE knowledge_id = ?2 AND state = 'published'",
         )
         .bind(availability)
@@ -300,14 +300,14 @@ impl DatabaseManager {
                 "work_unit" => {
                     if version.is_none() {
                         sqlx::query(
-                            "UPDATE brain_work_units SET state = 'invalidated', updated_at = \
+                            "UPDATE knowledge_work_units SET state = 'invalidated', updated_at = \
                              strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?1",
                         )
                         .bind(id)
                         .execute(&mut **tx.conn())
                         .await?;
                         sqlx::query(
-                            "UPDATE brain_work_unit_revisions SET state = 'invalidated' \
+                            "UPDATE knowledge_work_unit_revisions SET state = 'invalidated' \
                              WHERE work_unit_id = ?1",
                         )
                         .bind(id)
@@ -315,7 +315,7 @@ impl DatabaseManager {
                         .await?;
                     } else {
                         sqlx::query(
-                            "UPDATE brain_work_unit_revisions SET state = 'invalidated' \
+                            "UPDATE knowledge_work_unit_revisions SET state = 'invalidated' \
                              WHERE work_unit_id = ?1 AND input_hash = ?2",
                         )
                         .bind(id)
@@ -334,7 +334,7 @@ impl DatabaseManager {
                 _ => {}
             }
         }
-        sqlx::query("UPDATE brain_state SET source_epoch = source_epoch + 1 WHERE id = 1")
+        sqlx::query("UPDATE knowledge_state SET source_epoch = source_epoch + 1 WHERE id = 1")
             .execute(&mut **tx.conn())
             .await?;
         tx.commit().await?;

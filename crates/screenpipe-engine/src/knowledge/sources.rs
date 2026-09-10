@@ -236,7 +236,7 @@ pub async fn load_evidence(
             | SourceKind::OfficeDocument
             | SourceKind::OfficeTranscript
             | SourceKind::OfficeSummary => {
-                // Imported copies keep their snapshot in brain_source_revisions.
+                // Imported copies keep their snapshot in knowledge_source_revisions.
                 let text = db
                     .knowledge_source_text(&row.source_uid, &row.revision)
                     .await

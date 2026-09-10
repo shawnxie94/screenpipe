@@ -436,12 +436,12 @@ describe("browser development runtime", () => {
     expect(disabledStart.status).toBe(409);
     expect(await disabledStart.json()).toMatchObject({ code: "definition_disabled" });
 
-    const started = (await (await request("/tasks/definitions/brain.extract/runs", {
+    const started = (await (await request("/tasks/definitions/knowledge.extract/runs", {
       method: "POST",
       body: JSON.stringify({ input_hash: "same-input", input_refs: { start_time: "2026-09-08T00:00:00Z" } }),
     })).json()) as { run_id: string; created: boolean };
     expect(started).toMatchObject({ run_id: "run-1", created: true });
-    expect(await (await request("/tasks/definitions/brain.extract/runs", {
+    expect(await (await request("/tasks/definitions/knowledge.extract/runs", {
       method: "POST",
       body: JSON.stringify({ input_hash: "same-input" }),
     })).json()).toMatchObject({ run_id: "run-1", created: false });
@@ -479,7 +479,7 @@ describe("browser development runtime", () => {
       undefined,
     ]);
 
-    const failedStart = await request("/tasks/definitions/brain.extract/runs", {
+    const failedStart = await request("/tasks/definitions/knowledge.extract/runs", {
       method: "POST",
       body: JSON.stringify({ input_refs: { force_failure: true } }),
     });

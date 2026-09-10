@@ -254,7 +254,7 @@ async fn jobs_db_expired_lease_reaps_while_preserving_model_call_count() {
         .await
         .unwrap());
     let mut tx = db.begin_immediate_with_retry().await.unwrap();
-    sqlx::query("UPDATE brain_jobs SET lease_expires_at = '2000-01-01T00:00:00Z' WHERE id = ?")
+    sqlx::query("UPDATE knowledge_jobs SET lease_expires_at = '2000-01-01T00:00:00Z' WHERE id = ?")
         .bind(job_id)
         .execute(&mut **tx.conn())
         .await
@@ -361,14 +361,14 @@ async fn deletion_db_deletion_barrier_cancels_jobs_and_invalidates_consumers() {
     // and returns knowledge hits. Engine P01 owns end-to-end erase/body
     // clearing; this test must not treat retained low-level body as allowed.
     let work_unit_state: String =
-        sqlx::query_scalar("SELECT state FROM brain_work_units WHERE id = ?1")
+        sqlx::query_scalar("SELECT state FROM knowledge_work_units WHERE id = ?1")
             .bind(&work_unit)
             .fetch_one(&db.pool)
             .await
             .unwrap();
     assert_eq!(work_unit_state, "invalidated");
     let revision_body: String =
-        sqlx::query_scalar("SELECT body FROM brain_work_unit_revisions WHERE work_unit_id = ?1")
+        sqlx::query_scalar("SELECT body FROM knowledge_work_unit_revisions WHERE work_unit_id = ?1")
             .bind(&work_unit)
             .fetch_one(&db.pool)
             .await
@@ -398,7 +398,7 @@ async fn publication_db_retention_preserves_published_excerpt_before_raw_delete(
     // Move the source timestamp into the tested retention range while keeping
     // the locator pointed at the real frame fixture.
     let mut tx = db.begin_immediate_with_retry().await.unwrap();
-    sqlx::query("UPDATE brain_sources SET captured_at = ?1 WHERE source_uid = ?2")
+    sqlx::query("UPDATE knowledge_sources SET captured_at = ?1 WHERE source_uid = ?2")
         .bind(captured)
         .bind(&registration.source_uid)
         .execute(&mut **tx.conn())
@@ -445,7 +445,7 @@ async fn publication_db_retention_preserves_published_excerpt_before_raw_delete(
         .await
         .unwrap());
     let matched: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM brain_sources s JOIN brain_dependencies d ON d.source_uid = s.source_uid JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id WHERE s.source_uid = ?1 AND s.captured_at >= ?2 AND s.captured_at < ?3 AND d.consumer_kind = 'knowledge' AND v.state = 'published' AND v.availability = 'valid'",
+        "SELECT COUNT(*) FROM knowledge_sources s JOIN knowledge_dependencies d ON d.source_uid = s.source_uid JOIN knowledge_item_versions v ON v.knowledge_id = d.consumer_id WHERE s.source_uid = ?1 AND s.captured_at >= ?2 AND s.captured_at < ?3 AND d.consumer_kind = 'knowledge' AND v.state = 'published' AND v.availability = 'valid'",
     )
     .bind(&registration.source_uid)
     .bind(captured - Duration::minutes(1))
@@ -505,7 +505,7 @@ async fn publication_db_publish_lifts_feedback_pause_so_the_correction_loop_recl
     // Incorrect feedback suspends the whole knowledge row (locator pause),
     // which removes it from retrieval until a corrected publish lands.
     db.knowledge_set_paused(&knowledge, true).await.unwrap();
-    let paused: i64 = sqlx::query_scalar("SELECT paused FROM brain_knowledge WHERE id = ?1")
+    let paused: i64 = sqlx::query_scalar("SELECT paused FROM knowledge_items WHERE id = ?1")
         .bind(&knowledge)
         .fetch_one(&db.pool)
         .await
@@ -535,7 +535,7 @@ async fn publication_db_publish_lifts_feedback_pause_so_the_correction_loop_recl
         .unwrap());
 
     let (current, paused_after): (Option<i64>, i64) = sqlx::query_as(
-        "SELECT current_version_id, paused FROM brain_knowledge WHERE id = ?1",
+        "SELECT current_version_id, paused FROM knowledge_items WHERE id = ?1",
     )
     .bind(&knowledge)
     .fetch_one(&db.pool)

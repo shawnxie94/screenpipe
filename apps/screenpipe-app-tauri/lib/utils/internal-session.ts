@@ -34,7 +34,14 @@ export type InternalSessionCategory =
   | "brain-task";
 export const INTERNAL_ACTIVITY_HISTORY_PREFIX = `${INTERNAL_TITLE_PREFIX}activity-history-`;
 export const INTERNAL_LIVE_VIEW_PREFIX = `${INTERNAL_TITLE_PREFIX}live-view-`;
-export const INTERNAL_KNOWLEDGE_TASK_PREFIX = `${INTERNAL_TITLE_PREFIX}brain-`;
+export const INTERNAL_KNOWLEDGE_TASK_PREFIX = `${INTERNAL_TITLE_PREFIX}knowledge-`;
+/**
+ * Writer prefix used before the brain → knowledge rename. Kept as a
+ * read-side alias only: sessions minted with it must still categorize as
+ * `brain-task`, or they would silently drop out of the Knowledge 沉淀
+ * sidebar group.
+ */
+export const INTERNAL_KNOWLEDGE_TASK_LEGACY_PREFIX = `${INTERNAL_TITLE_PREFIX}brain-`;
 
 /** Returns true when a session ID belongs to an internal title-gen session. */
 export function isInternalTitleSession(sessionId: string): boolean {
@@ -67,7 +74,10 @@ export function getInternalSessionCategory(
   if (sessionId.startsWith(INTERNAL_LIVE_VIEW_PREFIX)) {
     return "live-view";
   }
-  if (sessionId.startsWith(INTERNAL_KNOWLEDGE_TASK_PREFIX)) {
+  if (
+    sessionId.startsWith(INTERNAL_KNOWLEDGE_TASK_PREFIX) ||
+    sessionId.startsWith(INTERNAL_KNOWLEDGE_TASK_LEGACY_PREFIX)
+  ) {
     return "brain-task";
   }
   return null;

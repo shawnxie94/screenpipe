@@ -34,7 +34,7 @@ fn source(office: bool, locator_id: i64, captured_at: chrono::DateTime<Utc>) -> 
         },
         locator: SourceLocator::new(
             if office {
-                "brain_office_objects"
+                "knowledge_office_objects"
             } else {
                 "frames"
             },
@@ -305,7 +305,7 @@ async fn deletion_p01_explicit_erase_must_clear_derived_body_and_index() {
         .await
         .unwrap();
     let residual: i64 = sqlx::query_scalar(
-        "SELECT (SELECT COUNT(*) FROM brain_search_documents WHERE body LIKE '%reviewmarker%') + (SELECT COUNT(*) FROM brain_work_unit_revisions WHERE body LIKE '%reviewmarker%')",
+        "SELECT (SELECT COUNT(*) FROM knowledge_search_documents WHERE body LIKE '%reviewmarker%') + (SELECT COUNT(*) FROM knowledge_work_unit_revisions WHERE body LIKE '%reviewmarker%')",
     )
     .fetch_one(&db.pool)
     .await
@@ -331,7 +331,7 @@ async fn migration_runtime_p02_journal_ahead_of_db_must_replay_after_restore() {
     )
     .unwrap();
     shared.deletion().recover_incomplete().await.unwrap();
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM brain_sources WHERE source_uid = ?")
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM knowledge_sources WHERE source_uid = ?")
         .bind(&uid)
         .fetch_one(&db.pool)
         .await
@@ -376,7 +376,7 @@ async fn retrieval_answer_p04_expired_knowledge_must_not_be_quoted() {
 
     let mut tx = db.begin_immediate_with_retry().await.unwrap();
     sqlx::query(
-        "UPDATE brain_knowledge_versions SET review_due_at = '2000-01-01T00:00:00Z' \
+        "UPDATE knowledge_item_versions SET review_due_at = '2000-01-01T00:00:00Z' \
          WHERE knowledge_id = ?1 AND version = 1",
     )
     .bind(&id)
@@ -435,7 +435,7 @@ async fn retrieval_p05_knowledge_must_obey_app_filters() {
 async fn retrieval_p06_broken_index_must_report_failed_not_no_hits() {
     let db = db().await;
     let mut tx = db.begin_immediate_with_retry().await.unwrap();
-    sqlx::query("DROP TABLE brain_search_fts")
+    sqlx::query("DROP TABLE knowledge_search_fts")
         .execute(&mut **tx.conn())
         .await
         .unwrap();
@@ -594,7 +594,7 @@ async fn deletion_concurrent_waves_have_unique_durable_sequences() {
     left.unwrap();
     right.unwrap();
     let seqs: Vec<i64> =
-        sqlx::query_scalar("SELECT journal_seq FROM brain_deletions ORDER BY journal_seq")
+        sqlx::query_scalar("SELECT journal_seq FROM knowledge_deletions ORDER BY journal_seq")
             .fetch_all(&db.pool)
             .await
             .unwrap();

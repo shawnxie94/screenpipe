@@ -79,7 +79,7 @@ impl DatabaseManager {
                 sqlx::Error::Configuration("office source missing office meta".into())
             })?;
             sqlx::query_scalar::<_, i64>(
-                "SELECT COUNT(*) FROM brain_tombstones \
+                "SELECT COUNT(*) FROM knowledge_tombstones \
                  WHERE kind = 'office_object' AND provider = ?1 \
                  AND account_namespace = ?2 AND object_kind = ?3 AND object_id = ?4",
             )
@@ -92,7 +92,7 @@ impl DatabaseManager {
                 > 0
         } else {
             sqlx::query_scalar::<_, i64>(
-                "SELECT COUNT(*) FROM brain_tombstones \
+                "SELECT COUNT(*) FROM knowledge_tombstones \
                  WHERE kind = 'source_locator' AND locator_table = ?1 AND locator_id = ?2",
             )
             .bind(&input.locator.table)
@@ -122,7 +122,7 @@ impl DatabaseManager {
                 sqlx::Error::Configuration("office source missing office meta".into())
             })?;
             sqlx::query_as::<_, (String, String)>(
-                "SELECT source_uid, revision FROM brain_sources \
+                "SELECT source_uid, revision FROM knowledge_sources \
                  WHERE provider = ?1 AND account_namespace = ?2 AND object_kind = ?3 \
                  AND object_id = ?4",
             )
@@ -134,7 +134,7 @@ impl DatabaseManager {
             .await?
         } else {
             sqlx::query_as::<_, (String, String)>(
-                "SELECT source_uid, revision FROM brain_sources \
+                "SELECT source_uid, revision FROM knowledge_sources \
                  WHERE locator_table = ?1 AND locator_id = ?2",
             )
             .bind(&input.locator.table)
@@ -158,7 +158,7 @@ impl DatabaseManager {
                 if input.kind.is_office() {
                     let office = input.office.as_ref().unwrap();
                     sqlx::query(
-                        "UPDATE brain_sources SET revision = ?1, state = 'active', \
+                        "UPDATE knowledge_sources SET revision = ?1, state = 'active', \
                          media_available = ?2, captured_at = ?3, app = ?4, window_name = ?5, \
                          object_revision = ?6, event_at = ?7, fetched_at = ?8, source_url = ?9, \
                          completeness = ?10, activity_anchor = ?11, platform_generated = ?12, \
@@ -183,7 +183,7 @@ impl DatabaseManager {
                     .await?;
                 } else {
                     sqlx::query(
-                        "UPDATE brain_sources SET revision = ?1, state = 'active', \
+                        "UPDATE knowledge_sources SET revision = ?1, state = 'active', \
                          media_available = ?2, captured_at = ?3, app = ?4, window_name = ?5, \
                          fingerprint_inputs = ?6, updated_at = ?7 WHERE source_uid = ?8",
                     )
@@ -198,7 +198,7 @@ impl DatabaseManager {
                     .execute(&mut **tx.conn())
                     .await?;
                 }
-                sqlx::query("UPDATE brain_state SET source_epoch = source_epoch + 1 WHERE id = 1")
+                sqlx::query("UPDATE knowledge_state SET source_epoch = source_epoch + 1 WHERE id = 1")
                     .execute(&mut **tx.conn())
                     .await?;
                 KnowledgeSourceRegistration {
@@ -213,7 +213,7 @@ impl DatabaseManager {
                 let uid = super::types::new_source_uid();
                 let office = input.office.as_ref();
                 sqlx::query(
-                    "INSERT INTO brain_sources (\
+                    "INSERT INTO knowledge_sources (\
                      source_uid, dataset_id, kind, locator_table, locator_id, revision, \
                      fingerprint_inputs, media_available, captured_at, app, window_name, \
                      evidence_method, provider, account_namespace, object_id, object_kind, \
@@ -250,7 +250,7 @@ impl DatabaseManager {
                 .bind(&now)
                 .execute(&mut **tx.conn())
                 .await?;
-                sqlx::query("UPDATE brain_state SET source_epoch = source_epoch + 1 WHERE id = 1")
+                sqlx::query("UPDATE knowledge_state SET source_epoch = source_epoch + 1 WHERE id = 1")
                     .execute(&mut **tx.conn())
                     .await?;
                 KnowledgeSourceRegistration {
@@ -266,7 +266,7 @@ impl DatabaseManager {
         if !registration.suppressed && (registration.created || registration.revision_changed) {
             if let Some(excerpt) = &input.excerpt {
                 sqlx::query(
-                    "INSERT OR IGNORE INTO brain_source_revisions (source_uid, revision, excerpt) \
+                    "INSERT OR IGNORE INTO knowledge_source_revisions (source_uid, revision, excerpt) \
                      VALUES (?1, ?2, ?3)",
                 )
                 .bind(&registration.source_uid)
@@ -290,7 +290,7 @@ impl DatabaseManager {
              media_available, captured_at, app, window_name, evidence_method, provider, \
              account_namespace, object_id, object_kind, event_at, fetched_at, source_url, \
              completeness, activity_anchor, platform_generated \
-             FROM brain_sources WHERE source_uid = ?1",
+             FROM knowledge_sources WHERE source_uid = ?1",
         )
         .bind(source_uid)
         .fetch_optional(&self.pool)
@@ -321,7 +321,7 @@ impl DatabaseManager {
         revision: &str,
     ) -> Result<Option<(String, bool)>, SqlxError> {
         let row: Option<(Option<String>, i64)> = sqlx::query_as(
-            "SELECT excerpt, archived FROM brain_source_revisions \
+            "SELECT excerpt, archived FROM knowledge_source_revisions \
              WHERE source_uid = ?1 AND revision = ?2",
         )
         .bind(source_uid)
@@ -346,7 +346,7 @@ impl DatabaseManager {
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "INSERT INTO brain_source_revisions (source_uid, revision, excerpt, archived) \
+            "INSERT INTO knowledge_source_revisions (source_uid, revision, excerpt, archived) \
              VALUES (?1, ?2, ?3, 1) \
              ON CONFLICT (source_uid, revision) DO UPDATE SET excerpt = ?3, archived = 1",
         )
@@ -372,7 +372,7 @@ impl DatabaseManager {
         let now = super::types::format_ts(super::types::now_utc());
         for uid in source_uids {
             changed += sqlx::query(
-                "UPDATE brain_sources SET state = ?1, updated_at = ?2 WHERE source_uid = ?3",
+                "UPDATE knowledge_sources SET state = ?1, updated_at = ?2 WHERE source_uid = ?3",
             )
             .bind(state)
             .bind(&now)
@@ -381,7 +381,7 @@ impl DatabaseManager {
             .await?
             .rows_affected();
         }
-        sqlx::query("UPDATE brain_state SET source_epoch = source_epoch + 1 WHERE id = 1")
+        sqlx::query("UPDATE knowledge_state SET source_epoch = source_epoch + 1 WHERE id = 1")
             .execute(&mut **tx.conn())
             .await?;
         tx.commit().await?;
@@ -401,7 +401,7 @@ impl DatabaseManager {
         let now = super::types::format_ts(super::types::now_utc());
         for uid in source_uids {
             changed += sqlx::query(
-                "UPDATE brain_sources SET media_available = ?1, updated_at = ?2 \
+                "UPDATE knowledge_sources SET media_available = ?1, updated_at = ?2 \
                  WHERE source_uid = ?3",
             )
             .bind(media_available)
@@ -425,7 +425,7 @@ impl DatabaseManager {
         let mut tx = self.begin_immediate_with_retry().await?;
         let row: Option<(String, String, i64, Option<String>, Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
             "SELECT kind, locator_table, locator_id, provider, account_namespace, object_kind, object_id \
-             FROM brain_sources WHERE source_uid = ?1",
+             FROM knowledge_sources WHERE source_uid = ?1",
         )
         .bind(source_uid)
         .fetch_optional(&mut **tx.conn())
@@ -433,7 +433,7 @@ impl DatabaseManager {
         if let Some((kind, table, id, provider, account, object_kind, object_id)) = row {
             if add_tombstone && kind.starts_with("office_") {
                 sqlx::query(
-                    "INSERT OR IGNORE INTO brain_tombstones \
+                    "INSERT OR IGNORE INTO knowledge_tombstones \
                      (kind, provider, account_namespace, object_kind, object_id) \
                      VALUES ('office_object', ?1, ?2, ?3, ?4)",
                 )
@@ -445,7 +445,7 @@ impl DatabaseManager {
                 .await?;
             } else if add_tombstone {
                 sqlx::query(
-                    "INSERT OR IGNORE INTO brain_tombstones (kind, locator_table, locator_id) \
+                    "INSERT OR IGNORE INTO knowledge_tombstones (kind, locator_table, locator_id) \
                      VALUES ('source_locator', ?1, ?2)",
                 )
                 .bind(&table)
@@ -459,19 +459,19 @@ impl DatabaseManager {
         // This is deliberately conservative: a deleted source must never
         // remain searchable through an FTS row, work-unit body, or answer.
         sqlx::query(
-            "DELETE FROM brain_search_fts WHERE doc_id IN \
-             (SELECT doc_id FROM brain_search_documents WHERE ref_uid = ?1)",
+            "DELETE FROM knowledge_search_fts WHERE doc_id IN \
+             (SELECT doc_id FROM knowledge_search_documents WHERE ref_uid = ?1)",
         )
         .bind(source_uid)
         .execute(&mut **tx.conn())
         .await?;
-        sqlx::query("DELETE FROM brain_search_documents WHERE ref_uid = ?1")
+        sqlx::query("DELETE FROM knowledge_search_documents WHERE ref_uid = ?1")
             .bind(source_uid)
             .execute(&mut **tx.conn())
             .await?;
 
         let work_units: Vec<String> = sqlx::query_scalar(
-            "SELECT DISTINCT consumer_id FROM brain_dependencies \
+            "SELECT DISTINCT consumer_id FROM knowledge_dependencies \
              WHERE source_uid = ?1 AND consumer_kind = 'work_unit'",
         )
         .bind(source_uid)
@@ -479,14 +479,14 @@ impl DatabaseManager {
         .await?;
         for work_unit in &work_units {
             sqlx::query(
-                "UPDATE brain_work_units SET state = 'invalidated', updated_at = \
+                "UPDATE knowledge_work_units SET state = 'invalidated', updated_at = \
                  strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?1",
             )
             .bind(&work_unit)
             .execute(&mut **tx.conn())
             .await?;
             sqlx::query(
-                "UPDATE brain_work_unit_revisions SET state = 'invalidated', body = '' \
+                "UPDATE knowledge_work_unit_revisions SET state = 'invalidated', body = '' \
                  WHERE work_unit_id = ?1",
             )
             .bind(&work_unit)
@@ -494,7 +494,7 @@ impl DatabaseManager {
             .await?;
         }
         let mut knowledge: Vec<String> = sqlx::query_scalar(
-            "SELECT DISTINCT consumer_id FROM brain_dependencies \
+            "SELECT DISTINCT consumer_id FROM knowledge_dependencies \
              WHERE source_uid = ?1 AND consumer_kind = 'knowledge'",
         )
         .bind(source_uid)
@@ -505,7 +505,7 @@ impl DatabaseManager {
         // source -> work_unit -> knowledge chain is closed in one transaction.
         for work_unit in &work_units {
             let chained: Vec<String> = sqlx::query_scalar(
-                "SELECT DISTINCT consumer_id FROM brain_dependencies \
+                "SELECT DISTINCT consumer_id FROM knowledge_dependencies \
                  WHERE source_uid = ?1 AND consumer_kind = 'knowledge_work_unit'",
             )
             .bind(work_unit)
@@ -517,7 +517,7 @@ impl DatabaseManager {
         knowledge.dedup();
         for knowledge_id in &knowledge {
             sqlx::query(
-                "UPDATE brain_knowledge_versions SET body = '', \
+                "UPDATE knowledge_item_versions SET body = '', \
                  availability = ?1, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') \
                  WHERE knowledge_id = ?2",
             )
@@ -526,44 +526,44 @@ impl DatabaseManager {
             .execute(&mut **tx.conn())
             .await?;
             sqlx::query(
-                "DELETE FROM brain_search_fts WHERE doc_id IN \
-                         (SELECT doc_id FROM brain_search_documents WHERE ref_uid = ?1)",
+                "DELETE FROM knowledge_search_fts WHERE doc_id IN \
+                         (SELECT doc_id FROM knowledge_search_documents WHERE ref_uid = ?1)",
             )
             .bind(&knowledge_id)
             .execute(&mut **tx.conn())
             .await?;
-            sqlx::query("DELETE FROM brain_search_documents WHERE ref_uid = ?1")
+            sqlx::query("DELETE FROM knowledge_search_documents WHERE ref_uid = ?1")
                 .bind(&knowledge_id)
                 .execute(&mut **tx.conn())
                 .await?;
         }
         sqlx::query(
-            "UPDATE brain_answers SET body = NULL, claims = NULL, sources = NULL, \
+            "UPDATE knowledge_answers SET body = NULL, claims = NULL, sources = NULL, \
              status = 'context_changed' WHERE sources LIKE '%' || ?1 || '%' OR claims LIKE '%' || ?1 || '%'",
         )
         .bind(source_uid)
         .execute(&mut **tx.conn())
         .await?;
         for knowledge_id in &knowledge {
-            sqlx::query("UPDATE brain_feedback SET comment = NULL WHERE knowledge_id = ?1")
+            sqlx::query("UPDATE knowledge_feedback SET comment = NULL WHERE knowledge_id = ?1")
                 .bind(knowledge_id)
                 .execute(&mut **tx.conn())
                 .await?;
         }
-        sqlx::query("UPDATE brain_history_entries SET body = '' WHERE body LIKE '%' || ?1 || '%'")
+        sqlx::query("UPDATE knowledge_history_entries SET body = '' WHERE body LIKE '%' || ?1 || '%'")
             .bind(source_uid)
             .execute(&mut **tx.conn())
             .await?;
-        sqlx::query("DELETE FROM brain_dependencies WHERE source_uid = ?1")
+        sqlx::query("DELETE FROM knowledge_dependencies WHERE source_uid = ?1")
             .bind(source_uid)
             .execute(&mut **tx.conn())
             .await?;
-        sqlx::query("DELETE FROM brain_sources WHERE source_uid = ?1")
+        sqlx::query("DELETE FROM knowledge_sources WHERE source_uid = ?1")
             .bind(source_uid)
             .execute(&mut **tx.conn())
             .await?;
         sqlx::query(
-            "UPDATE brain_state SET source_epoch = source_epoch + 1, \
+            "UPDATE knowledge_state SET source_epoch = source_epoch + 1, \
                      deletion_epoch = deletion_epoch + 1 WHERE id = 1",
         )
         .execute(&mut **tx.conn())
@@ -588,7 +588,7 @@ impl DatabaseManager {
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "INSERT OR IGNORE INTO brain_dependencies \
+            "INSERT OR IGNORE INTO knowledge_dependencies \
              (consumer_kind, consumer_id, consumer_version, field_path, source_uid, source_revision) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         )
@@ -615,7 +615,7 @@ impl DatabaseManager {
         for uid in source_uids {
             let rows: Vec<(String, String, Option<String>)> = sqlx::query_as(
                 "SELECT DISTINCT consumer_kind, consumer_id, consumer_version \
-                 FROM brain_dependencies WHERE source_uid = ?1",
+                 FROM knowledge_dependencies WHERE source_uid = ?1",
             )
             .bind(uid)
             .fetch_all(&self.pool)
@@ -633,7 +633,7 @@ impl DatabaseManager {
         consumer_id: &str,
     ) -> Result<Vec<(String, Option<String>)>, SqlxError> {
         sqlx::query_as(
-            "SELECT source_uid, source_revision FROM brain_dependencies \
+            "SELECT source_uid, source_revision FROM knowledge_dependencies \
              WHERE consumer_kind = ?1 AND consumer_id = ?2",
         )
         .bind(consumer_kind)
@@ -648,7 +648,7 @@ impl DatabaseManager {
         locator_id: i64,
     ) -> Result<Vec<String>, SqlxError> {
         sqlx::query_scalar(
-            "SELECT source_uid FROM brain_sources WHERE locator_table = ?1 AND locator_id = ?2",
+            "SELECT source_uid FROM knowledge_sources WHERE locator_table = ?1 AND locator_id = ?2",
         )
         .bind(locator_table)
         .bind(locator_id)
@@ -665,7 +665,7 @@ impl DatabaseManager {
         let mut out = Vec::new();
         for kind in kinds {
             let rows: Vec<String> = sqlx::query_scalar(
-                "SELECT source_uid FROM brain_sources WHERE kind = ?1 \
+                "SELECT source_uid FROM knowledge_sources WHERE kind = ?1 \
                  AND captured_at >= ?2 AND captured_at < ?3",
             )
             .bind(kind)
@@ -691,8 +691,8 @@ impl DatabaseManager {
         let mut protected = Vec::new();
         for uid in source_uids {
             let hit: Option<i64> = sqlx::query_scalar(
-                "SELECT 1 FROM brain_dependencies d \
-                 JOIN brain_knowledge_versions v ON v.knowledge_id = d.consumer_id \
+                "SELECT 1 FROM knowledge_dependencies d \
+                 JOIN knowledge_item_versions v ON v.knowledge_id = d.consumer_id \
                  WHERE d.consumer_kind = 'knowledge' AND d.source_uid = ?1 \
                  AND v.state = 'published' AND v.availability = 'valid' LIMIT 1",
             )
@@ -717,7 +717,7 @@ impl DatabaseManager {
         consumer_id: &str,
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        sqlx::query("DELETE FROM brain_dependencies WHERE consumer_kind = ?1 AND consumer_id = ?2")
+        sqlx::query("DELETE FROM knowledge_dependencies WHERE consumer_kind = ?1 AND consumer_id = ?2")
             .bind(consumer_kind)
             .bind(consumer_id)
             .execute(&mut **tx.conn())
@@ -727,7 +727,7 @@ impl DatabaseManager {
     }
 }
 
-/// `brain_sources.object_kind` string for a source kind (office only).
+/// `knowledge_sources.object_kind` string for a source kind (office only).
 fn object_kind_str(kind: SourceKind) -> &'static str {
     match kind {
         SourceKind::OfficeMessage => "message",

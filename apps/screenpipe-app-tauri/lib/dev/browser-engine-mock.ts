@@ -195,7 +195,7 @@ export function createMockKnowledgeState(): MockKnowledgeState {
     },
     taskDefinitions: [
       mockTaskDefinition("activity.summary", "builtin"),
-      mockTaskDefinition("brain.extract", "builtin"),
+      mockTaskDefinition("knowledge.extract", "builtin"),
       mockTaskDefinition("daily-review", "user"),
       mockTaskDefinition("pipe.user.daily-pipe", "user"),
       mockTaskDefinition("office.sync", "connection"),
@@ -240,7 +240,7 @@ function mockTaskDefinition(definitionId: string, origin: "builtin" | "user" | "
     ? "office_sync"
     : isUserPipe
       ? "pipe_run"
-      : definitionId === "brain.extract"
+      : definitionId === "knowledge.extract"
         ? "knowledge_extract"
         : "activity_summary";
   return {

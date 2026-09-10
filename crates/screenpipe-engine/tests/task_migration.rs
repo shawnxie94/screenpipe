@@ -110,7 +110,7 @@ async fn owner_generation_and_event_redaction_are_cas_and_deletion_safe() {
     assert!(db
         .task_set_owner_state(
             &screenpipe_db::TaskOwnerState {
-                kind: "brain".into(),
+                kind: "knowledge".into(),
                 owner_generation: 1,
                 migration_state: "cutover_ready".into(),
                 checkpoint: Some("job-7".into()),
@@ -122,7 +122,7 @@ async fn owner_generation_and_event_redaction_are_cas_and_deletion_safe() {
     assert!(!db
         .task_set_owner_state(
             &screenpipe_db::TaskOwnerState {
-                kind: "brain".into(),
+                kind: "knowledge".into(),
                 owner_generation: 2,
                 migration_state: "stale_writer".into(),
                 checkpoint: None,
@@ -249,7 +249,7 @@ async fn public_task_cancellation_closes_both_compatibility_rows() {
         .await
         .expect("enqueue");
     let claimed = db
-        .task_claim_next_for_definitions("public-owner", 30, &["brain.extract"])
+        .task_claim_next_for_definitions("public-owner", 30, &["knowledge.extract"])
         .await
         .expect("claim")
         .expect("run");

@@ -234,7 +234,7 @@ async fn call_model(ctx: &JobContext, user_prompt: &str) -> Result<String, JobFa
 /// Queue-depth helper for `/knowledge/status` (candidates awaiting review).
 pub async fn pending_candidate_count(db: &Arc<DatabaseManager>) -> u64 {
     sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM brain_knowledge_versions WHERE state = 'candidate'",
+        "SELECT COUNT(*) FROM knowledge_item_versions WHERE state = 'candidate'",
     )
     .fetch_one(&db.pool)
     .await

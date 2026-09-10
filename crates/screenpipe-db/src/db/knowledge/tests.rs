@@ -104,7 +104,7 @@ async fn office_identity_is_provider_scoped() {
     };
     let input = super::sources::KnowledgeSourceInput {
         kind: SourceKind::OfficeMessage,
-        locator: super::types::SourceLocator::new("brain_office_objects", 0),
+        locator: super::types::SourceLocator::new("knowledge_office_objects", 0),
         revision: "hash-1".into(),
         fingerprint_inputs: serde_json::json!({}),
         captured_at: Utc::now(),
@@ -203,12 +203,12 @@ async fn deletion_barrier_cancels_jobs_and_propagates_consumers() {
         "active jobs must not survive a deletion barrier"
     );
 
-    sqlx::query("INSERT INTO brain_work_units (id, scope_key) VALUES ('wu-1', 'scope-a')")
+    sqlx::query("INSERT INTO knowledge_work_units (id, scope_key) VALUES ('wu-1', 'scope-a')")
         .execute(&db.pool)
         .await
         .unwrap();
     sqlx::query(
-        "INSERT INTO brain_work_unit_revisions (work_unit_id, input_hash, extractor_schema_version, prompt_version, body) \
+        "INSERT INTO knowledge_work_unit_revisions (work_unit_id, input_hash, extractor_schema_version, prompt_version, body) \
          VALUES ('wu-1', 'ih-1', 'v1', 'p1', '{}')",
     )
     .execute(&db.pool)
@@ -224,7 +224,7 @@ async fn deletion_barrier_cancels_jobs_and_propagates_consumers() {
         .any(|h| h.consumer_kind == "knowledge" && h.consumer_id == "kn-1"));
 
     let wu_rev: (String,) =
-        sqlx::query_as("SELECT state FROM brain_work_unit_revisions WHERE work_unit_id = 'wu-1'")
+        sqlx::query_as("SELECT state FROM knowledge_work_unit_revisions WHERE work_unit_id = 'wu-1'")
             .fetch_one(&db.pool)
             .await
             .unwrap();
@@ -411,7 +411,7 @@ async fn expired_lease_is_reaped_with_attempts_preserved() {
         .await
         .unwrap());
     // Simulate a dead worker: lease in the past.
-    sqlx::query("UPDATE brain_jobs SET lease_expires_at = '2000-01-01T00:00:00Z' WHERE id = ?1")
+    sqlx::query("UPDATE knowledge_jobs SET lease_expires_at = '2000-01-01T00:00:00Z' WHERE id = ?1")
         .bind(id)
         .execute(&db.pool)
         .await

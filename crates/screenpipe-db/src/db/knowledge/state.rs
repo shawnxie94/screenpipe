@@ -12,7 +12,7 @@ enum EpochColumn {
     Deletion,
 }
 
-/// Row wrapper for `brain_state` (single-row dataset state).
+/// Row wrapper for `knowledge_state` (single-row dataset state).
 #[derive(Debug, sqlx::FromRow)]
 pub struct KnowledgeStateRow {
     pub dataset_id: String,
@@ -28,7 +28,7 @@ impl DatabaseManager {
     pub async fn knowledge_get_state(&self) -> Result<KnowledgeStateRow, SqlxError> {
         sqlx::query_as::<_, KnowledgeStateRow>(
             "SELECT dataset_id, enabled, enabled_at, source_epoch, change_epoch, \
-             publication_epoch, deletion_epoch FROM brain_state WHERE id = 1",
+             publication_epoch, deletion_epoch FROM knowledge_state WHERE id = 1",
         )
         .fetch_one(&self.pool)
         .await
@@ -36,7 +36,7 @@ impl DatabaseManager {
 
     pub async fn knowledge_set_enabled(&self, enabled: bool) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        sqlx::query("UPDATE brain_state SET enabled = ?1, updated_at = ?2 WHERE id = 1")
+        sqlx::query("UPDATE knowledge_state SET enabled = ?1, updated_at = ?2 WHERE id = 1")
             .bind(enabled)
             .bind(super::types::format_ts(super::types::now_utc()))
             .execute(&mut **tx.conn())
@@ -51,7 +51,7 @@ impl DatabaseManager {
         let mut tx = self.begin_immediate_with_retry().await?;
         let now = super::types::format_ts(super::types::now_utc());
         sqlx::query(
-            "UPDATE brain_state SET enabled = 1, \
+            "UPDATE knowledge_state SET enabled = 1, \
              enabled_at = COALESCE(enabled_at, ?1), updated_at = ?1 WHERE id = 1",
         )
         .bind(&now)
@@ -64,16 +64,16 @@ impl DatabaseManager {
     async fn bump_epoch_tx(tx: &mut ImmediateTx, column: EpochColumn) -> Result<(), SqlxError> {
         let sql = match column {
             EpochColumn::Source => {
-                "UPDATE brain_state SET source_epoch = source_epoch + 1 WHERE id = 1"
+                "UPDATE knowledge_state SET source_epoch = source_epoch + 1 WHERE id = 1"
             }
             EpochColumn::Change => {
-                "UPDATE brain_state SET change_epoch = change_epoch + 1 WHERE id = 1"
+                "UPDATE knowledge_state SET change_epoch = change_epoch + 1 WHERE id = 1"
             }
             EpochColumn::Publication => {
-                "UPDATE brain_state SET publication_epoch = publication_epoch + 1 WHERE id = 1"
+                "UPDATE knowledge_state SET publication_epoch = publication_epoch + 1 WHERE id = 1"
             }
             EpochColumn::Deletion => {
-                "UPDATE brain_state SET deletion_epoch = deletion_epoch + 1 WHERE id = 1"
+                "UPDATE knowledge_state SET deletion_epoch = deletion_epoch + 1 WHERE id = 1"
             }
         };
         sqlx::query(sql).execute(&mut **tx.conn()).await?;
@@ -90,7 +90,7 @@ impl DatabaseManager {
     pub async fn knowledge_bump_deletion_epoch(&self) -> Result<i64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         Self::bump_epoch_tx(&mut tx, EpochColumn::Deletion).await?;
-        let epoch: i64 = sqlx::query_scalar("SELECT deletion_epoch FROM brain_state WHERE id = 1")
+        let epoch: i64 = sqlx::query_scalar("SELECT deletion_epoch FROM knowledge_state WHERE id = 1")
             .fetch_one(&mut **tx.conn())
             .await?;
         tx.commit().await?;

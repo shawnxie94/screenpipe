@@ -79,7 +79,7 @@ impl DatabaseManager {
         let existing_unit: Option<String> = match (interval_start, interval_end) {
             (Some(s), Some(e)) => {
                 sqlx::query_scalar(
-                    "SELECT id FROM brain_work_units WHERE scope_key = ?1 \
+                    "SELECT id FROM knowledge_work_units WHERE scope_key = ?1 \
                      AND interval_start = ?2 AND interval_end = ?3 LIMIT 1",
                 )
                 .bind(scope_key)
@@ -95,7 +95,7 @@ impl DatabaseManager {
             None => {
                 let id = super::types::new_source_uid();
                 sqlx::query(
-                    "INSERT INTO brain_work_units (id, scope_key, task_key, interval_start, interval_end) \
+                    "INSERT INTO knowledge_work_units (id, scope_key, task_key, interval_start, interval_end) \
                      VALUES (?1, ?2, ?3, ?4, ?5)",
                 )
                 .bind(&id)
@@ -111,7 +111,7 @@ impl DatabaseManager {
         // Success product + progress in one transaction; duplicate completion
         // relies on the primary key and returns the existing revision.
         sqlx::query(
-            "INSERT INTO brain_work_unit_revisions \
+            "INSERT INTO knowledge_work_unit_revisions \
              (work_unit_id, input_hash, extractor_schema_version, prompt_version, body) \
              VALUES (?1, ?2, ?3, ?4, ?5) \
              ON CONFLICT (work_unit_id, input_hash) DO UPDATE SET body = ?5, state = 'valid'",
@@ -134,7 +134,7 @@ impl DatabaseManager {
     ) -> Result<ScopeWorkUnits, SqlxError> {
         let units: Vec<KnowledgeWorkUnitRow> = sqlx::query_as(
             "SELECT id, scope_key, task_key, interval_start, interval_end, state \
-             FROM brain_work_units WHERE scope_key = ?1 AND state = 'active' \
+             FROM knowledge_work_units WHERE scope_key = ?1 AND state = 'active' \
              ORDER BY interval_start LIMIT ?2",
         )
         .bind(scope_key)
@@ -145,7 +145,7 @@ impl DatabaseManager {
         for unit in units {
             let revision: Option<KnowledgeWorkUnitRevisionRow> = sqlx::query_as(
                 "SELECT work_unit_id, input_hash, extractor_schema_version, prompt_version, body, state \
-                 FROM brain_work_unit_revisions WHERE work_unit_id = ?1 AND state = 'valid' \
+                 FROM knowledge_work_unit_revisions WHERE work_unit_id = ?1 AND state = 'valid' \
                  ORDER BY created_at DESC LIMIT 1",
             )
             .bind(&unit.id)
@@ -167,7 +167,7 @@ impl DatabaseManager {
         let units: Vec<KnowledgeWorkUnitRow> = if let Some(scope_key) = scope_key {
             sqlx::query_as(
                 "SELECT id, scope_key, task_key, interval_start, interval_end, state \
-                 FROM brain_work_units WHERE scope_key = ?1 AND state = 'active' \
+                 FROM knowledge_work_units WHERE scope_key = ?1 AND state = 'active' \
                  ORDER BY interval_start DESC LIMIT ?2",
             )
             .bind(scope_key)
@@ -177,7 +177,7 @@ impl DatabaseManager {
         } else {
             sqlx::query_as(
                 "SELECT id, scope_key, task_key, interval_start, interval_end, state \
-                 FROM brain_work_units WHERE state = 'active' \
+                 FROM knowledge_work_units WHERE state = 'active' \
                  ORDER BY interval_start DESC LIMIT ?1",
             )
             .bind(limit)
@@ -188,7 +188,7 @@ impl DatabaseManager {
         for unit in units {
             let revision: Option<KnowledgeWorkUnitRevisionRow> = sqlx::query_as(
                 "SELECT work_unit_id, input_hash, extractor_schema_version, prompt_version, body, state \
-                 FROM brain_work_unit_revisions WHERE work_unit_id = ?1 AND state = 'valid' \
+                 FROM knowledge_work_unit_revisions WHERE work_unit_id = ?1 AND state = 'valid' \
                  ORDER BY created_at DESC LIMIT 1",
             )
             .bind(&unit.id)
@@ -209,7 +209,7 @@ impl DatabaseManager {
     ) -> Result<Option<KnowledgeKnowledgeRow>, SqlxError> {
         sqlx::query_as(
             "SELECT id, knowledge_type, scope_key, current_version_id, paused, created_at, updated_at \
-             FROM brain_knowledge WHERE scope_key = ?1 AND knowledge_type = ?2 LIMIT 1",
+             FROM knowledge_items WHERE scope_key = ?1 AND knowledge_type = ?2 LIMIT 1",
         )
         .bind(scope_key)
         .bind(knowledge_type)
@@ -232,7 +232,7 @@ impl DatabaseManager {
         let id = super::types::new_source_uid();
         let revision = super::types::new_source_uid();
         sqlx::query(
-            "INSERT INTO brain_knowledge (id, knowledge_type, scope_key) VALUES (?1, ?2, ?3)",
+            "INSERT INTO knowledge_items (id, knowledge_type, scope_key) VALUES (?1, ?2, ?3)",
         )
         .bind(&id)
         .bind(knowledge_type)
@@ -240,7 +240,7 @@ impl DatabaseManager {
         .execute(&mut **tx.conn())
         .await?;
         let version_id = sqlx::query(
-            "INSERT INTO brain_knowledge_versions \
+            "INSERT INTO knowledge_item_versions \
              (knowledge_id, version, state, availability, title, body, input_hash, revision) \
              VALUES (?1, 1, 'candidate', 'valid', ?2, ?3, ?4, ?5)",
         )
@@ -256,7 +256,7 @@ impl DatabaseManager {
         // candidate must not claim it.
         for wu in work_unit_ids {
             sqlx::query(
-                "INSERT OR IGNORE INTO brain_dependencies \
+                "INSERT OR IGNORE INTO knowledge_dependencies \
                  (consumer_kind, consumer_id, consumer_version, source_uid) \
                  VALUES ('knowledge_work_unit', ?1, ?2, ?3)",
             )
@@ -281,14 +281,14 @@ impl DatabaseManager {
     ) -> Result<i64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let next: i64 = sqlx::query_scalar(
-            "SELECT COALESCE(MAX(version), 0) + 1 FROM brain_knowledge_versions WHERE knowledge_id = ?1",
+            "SELECT COALESCE(MAX(version), 0) + 1 FROM knowledge_item_versions WHERE knowledge_id = ?1",
         )
         .bind(knowledge_id)
         .fetch_one(&mut **tx.conn())
         .await?;
         let revision = super::types::new_source_uid();
         let version_id = sqlx::query(
-            "INSERT INTO brain_knowledge_versions \
+            "INSERT INTO knowledge_item_versions \
              (knowledge_id, version, state, availability, title, body, input_hash, revision) \
              VALUES (?1, ?2, 'candidate', 'valid', ?3, ?4, ?5, ?6)",
         )
@@ -303,7 +303,7 @@ impl DatabaseManager {
         .last_insert_rowid();
         for wu in work_unit_ids {
             sqlx::query(
-                "INSERT OR IGNORE INTO brain_dependencies \
+                "INSERT OR IGNORE INTO knowledge_dependencies \
                  (consumer_kind, consumer_id, consumer_version, source_uid) \
                  VALUES ('knowledge_work_unit', ?1, ?2, ?3)",
             )
@@ -314,7 +314,7 @@ impl DatabaseManager {
             .await?;
         }
         sqlx::query(
-            "UPDATE brain_knowledge SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
+            "UPDATE knowledge_items SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
              WHERE id = ?1",
         )
         .bind(knowledge_id)
