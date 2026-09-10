@@ -28,6 +28,17 @@ pub struct ActivityLedgerObservation {
     pub speaker_name: Option<String>,
     pub is_input_device: Option<bool>,
     pub attention_rank: i64,
+    /// Content/state fingerprint used by the retention policy's change
+    /// detection: `frames.content_hash` for frames (falling back to a
+    /// lightweight text fingerprint computed in SQL when the hash is NULL),
+    /// the `(event_type, element_name, element_value, text_content)` tuple for
+    /// UI events, `None` for audio.
+    pub content_fingerprint: Option<String>,
+    /// The observation carries no retainable content at all — an empty
+    /// transcript, or a frame with no content hash and no text. Marked
+    /// truthfully by the loader; such candidates are dropped with reason
+    /// `empty` instead of being pre-filtered away.
+    pub content_empty: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -70,6 +81,10 @@ pub struct ActivityIntervalDraft {
     pub confidence: f64,
     pub actions: Vec<ActivityActionDraft>,
     pub evidence: Vec<ActivityEvidenceDraft>,
+    /// Retention bookkeeping per source type: `source_type -> (dropped, drop_reason)`.
+    /// `kept` is derived from the evidence rows persisted in the same
+    /// transaction, so the draft only reports what was considered and dropped.
+    pub retention: HashMap<String, (i64, Option<String>)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,6 +127,14 @@ pub struct ActivityIntervalRecord {
     pub evidence_count: i64,
     pub actions: Vec<ActivityActionRecord>,
     pub evidence: Vec<ActivityEvidenceRecord>,
+    /// Persisted interval summary, if the summarizer has produced one.
+    pub summary: Option<String>,
+    /// Keyword list stored as a JSON array next to the summary.
+    pub keywords: Option<Vec<String>>,
+    /// Summary length band (`short` | `medium` | `long`).
+    pub summary_band: Option<String>,
+    /// Per-source retention accounting: `(source_type, kept, dropped, drop_reason)`.
+    pub retention: Vec<(String, i64, i64, Option<String>)>,
 }
 
 #[derive(FromRow)]
@@ -134,6 +157,8 @@ struct RawObservation {
     speaker_name: Option<String>,
     is_input_device: Option<bool>,
     attention_rank: i64,
+    content_fingerprint: Option<String>,
+    content_empty: bool,
 }
 
 #[derive(FromRow)]
@@ -178,6 +203,61 @@ struct RawEvidence {
     browser_url: Option<String>,
 }
 
+/// Interval row joined with its summary (both nullable) for the retention-era
+/// read models; `into_record` normalizes the keyword JSON and attaches
+/// per-source retention counts.
+#[derive(FromRow)]
+struct RawIntervalDetail {
+    id: i64,
+    task_id: i64,
+    parent_task_id: Option<i64>,
+    kind: String,
+    title: String,
+    parent_title: Option<String>,
+    app_name: Option<String>,
+    start_at: String,
+    end_at: String,
+    state: String,
+    confidence: f64,
+    producer: String,
+    evidence_count: i64,
+    summary: Option<String>,
+    keywords: Option<String>,
+    band: Option<String>,
+}
+
+impl RawIntervalDetail {
+    fn into_record(
+        self,
+        retention: Vec<(String, i64, i64, Option<String>)>,
+    ) -> ActivityIntervalRecord {
+        let keywords = self
+            .keywords
+            .and_then(|keywords| serde_json::from_str::<Vec<String>>(&keywords).ok());
+        ActivityIntervalRecord {
+            id: self.id,
+            task_id: self.task_id,
+            parent_task_id: self.parent_task_id,
+            kind: self.kind,
+            title: self.title,
+            parent_title: self.parent_title,
+            app_name: self.app_name,
+            start_at: self.start_at,
+            end_at: self.end_at,
+            state: self.state,
+            confidence: self.confidence,
+            producer: self.producer,
+            evidence_count: self.evidence_count,
+            actions: Vec::new(),
+            evidence: Vec::new(),
+            summary: self.summary,
+            keywords,
+            summary_band: self.band,
+            retention,
+        }
+    }
+}
+
 impl From<RawObservation> for ActivityLedgerObservation {
     fn from(row: RawObservation) -> Self {
         Self {
@@ -200,6 +280,8 @@ impl From<RawObservation> for ActivityLedgerObservation {
             speaker_name: nonempty(row.speaker_name),
             is_input_device: row.is_input_device,
             attention_rank: row.attention_rank,
+            content_fingerprint: row.content_fingerprint,
+            content_empty: row.content_empty,
         }
     }
 }
@@ -268,7 +350,29 @@ impl DatabaseManager {
                       NULL AS event_type, NULL AS click_count,
                       NULL AS element_role, NULL AS element_name,
                       NULL AS device_name, NULL AS speaker_name, NULL AS is_input_device,
-                      CASE WHEN f.focused = 1 THEN 3 ELSE 2 END AS attention_rank
+                      CASE WHEN f.focused = 1 THEN 3 ELSE 2 END AS attention_rank,
+                      -- Retention fingerprint: prefer the capture-time content
+                      -- hash; when it is NULL fall back to a lightweight text
+                      -- fingerprint (length + head/tail bytes) so the raw text
+                      -- never has to enter this metadata query.
+                      CASE
+                        WHEN f.content_hash IS NOT NULL
+                          THEN CAST(f.content_hash AS TEXT)
+                        WHEN COALESCE(f.full_text, '') != ''
+                          OR COALESCE(f.accessibility_text, '') != ''
+                          THEN 't' || COALESCE(length(f.full_text), 0) || ':' ||
+                               hex(substr(COALESCE(f.full_text, ''), 1, 32)) || ':' ||
+                               hex(substr(COALESCE(f.accessibility_text, ''), 1, 32)) || ':' ||
+                               hex(substr(COALESCE(f.full_text, ''), -32)) || ':' ||
+                               hex(substr(COALESCE(f.accessibility_text, ''), -32))
+                        ELSE NULL
+                      END AS content_fingerprint,
+                      CASE
+                        WHEN f.content_hash IS NULL
+                             AND COALESCE(f.full_text, '') = ''
+                             AND COALESCE(f.accessibility_text, '') = ''
+                          THEN 1 ELSE 0
+                      END AS content_empty
                FROM sampled s JOIN frames f ON f.id = s.id"#,
         )
         .bind(&start)
@@ -286,7 +390,11 @@ impl DatabaseManager {
                       NULL AS semantic_kind, NULL AS semantic_title, NULL AS semantic_key,
                       u.event_type, u.click_count, u.element_role, u.element_name,
                       NULL AS device_name, NULL AS speaker_name, NULL AS is_input_device,
-                      4 AS attention_rank
+                      4 AS attention_rank,
+                      u.event_type || '|' || COALESCE(u.element_name, '') || '|' ||
+                        COALESCE(u.element_value, '') || '|' ||
+                        COALESCE(u.text_content, '') AS content_fingerprint,
+                      0 AS content_empty
                FROM ui_events u
                LEFT JOIN frames f ON f.id = u.frame_id
                WHERE u.timestamp >= ?1
@@ -308,12 +416,16 @@ impl DatabaseManager {
                       NULL AS click_count,
                       NULL AS element_role, NULL AS element_name,
                       a.device AS device_name, s.name AS speaker_name,
-                      a.is_input_device, 1 AS attention_rank
+                      a.is_input_device, 1 AS attention_rank,
+                      NULL AS content_fingerprint,
+                      -- Empty transcripts flow through so the retention policy
+                      -- can drop and account for them itself (plan §4.2).
+                      CASE WHEN length(trim(a.transcription)) = 0
+                           THEN 1 ELSE 0 END AS content_empty
                FROM audio_transcriptions a
                LEFT JOIN speakers s ON s.id = a.speaker_id
                WHERE a.timestamp >= ?1
                  AND a.timestamp < ?2
-                 AND length(trim(a.transcription)) >= 8
                ORDER BY a.timestamp, a.id"#,
         )
         .bind(&start)
@@ -557,6 +669,44 @@ impl DatabaseManager {
                 .execute(&mut **tx.conn())
                 .await?;
             }
+
+            // Retention accounting lands in the same transaction as the
+            // evidence it describes. `kept` counts the rows actually persisted
+            // for the interval — after a prefix merge that includes the
+            // preserved pre-range evidence — so reruns converge on the same
+            // numbers. Rewriting the interval's rows keeps stale sources from
+            // a previous policy lingering.
+            sqlx::query("DELETE FROM activity_interval_retention WHERE interval_id = ?1")
+                .bind(interval_id)
+                .execute(&mut **tx.conn())
+                .await?;
+            for (source_type, (dropped, drop_reason)) in &interval.retention {
+                let kept: i64 = sqlx::query_scalar(
+                    "SELECT COUNT(*) FROM activity_evidence \
+                     WHERE interval_id = ?1 AND source_type = ?2",
+                )
+                .bind(interval_id)
+                .bind(source_type)
+                .fetch_one(&mut **tx.conn())
+                .await?;
+                sqlx::query(
+                    r#"INSERT INTO activity_interval_retention
+                       (interval_id, source_type, kept, dropped, drop_reason)
+                       VALUES (?1, ?2, ?3, ?4, ?5)
+                       ON CONFLICT(interval_id, source_type) DO UPDATE SET
+                         kept = excluded.kept,
+                         dropped = excluded.dropped,
+                         drop_reason = excluded.drop_reason,
+                         updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')"#,
+                )
+                .bind(interval_id)
+                .bind(source_type)
+                .bind(kept)
+                .bind(dropped)
+                .bind(drop_reason)
+                .execute(&mut **tx.conn())
+                .await?;
+            }
         }
 
         sqlx::query(
@@ -703,8 +853,207 @@ impl DatabaseManager {
                 evidence_count: row.evidence_count,
                 actions: actions_by_interval.remove(&row.id).unwrap_or_default(),
                 evidence: evidence_by_interval.remove(&row.id).unwrap_or_default(),
+                summary: None,
+                keywords: None,
+                summary_band: None,
+                retention: Vec::new(),
             })
             .collect())
+    }
+
+    /// Meeting time spans overlapping `[start_at, end_at)`, clamped to the
+    /// range. An open meeting (NULL `meeting_end`) counts through `end_at`.
+    /// The ledger carries no meeting signal of its own, so the retention
+    /// policy decides meeting exemption purely from these spans.
+    pub async fn activity_meeting_spans(
+        &self,
+        start_at: DateTime<Utc>,
+        end_at: DateTime<Utc>,
+    ) -> Result<Vec<(DateTime<Utc>, DateTime<Utc>)>, SqlxError> {
+        let start = start_at.to_rfc3339();
+        let end = end_at.to_rfc3339();
+        let rows: Vec<(Option<String>, Option<String>)> = sqlx::query_as(
+            "SELECT meeting_start, meeting_end FROM meetings \
+             WHERE meeting_start < ?2 AND COALESCE(meeting_end, ?2) > ?1",
+        )
+        .bind(&start)
+        .bind(&end)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .filter_map(|(meeting_start, meeting_end)| {
+                let start = DateTime::parse_from_rfc3339(&meeting_start?)
+                    .ok()?
+                    .with_timezone(&Utc);
+                let end = match meeting_end {
+                    Some(end) => DateTime::parse_from_rfc3339(&end)
+                        .ok()?
+                        .with_timezone(&Utc),
+                    None => end_at,
+                };
+                Some((start.max(start_at), end.min(end_at)))
+            })
+            .filter(|(start, end)| end > start)
+            .collect())
+    }
+
+    /// Read model for the activity layer: intervals with task identity,
+    /// persisted summary and keywords when present, and per-source
+    /// retention/drop counts. Read-only; feeds B02/B03 and the skills.
+    pub async fn activity_intervals_between(
+        &self,
+        start_at: DateTime<Utc>,
+        end_at: DateTime<Utc>,
+    ) -> Result<Vec<ActivityIntervalRecord>, SqlxError> {
+        let start = start_at.to_rfc3339();
+        let end = end_at.to_rfc3339();
+        let rows = sqlx::query_as::<_, RawIntervalDetail>(
+            r#"SELECT i.id, t.id AS task_id, t.parent_task_id, t.kind, t.title,
+                      parent.title AS parent_title, t.app_name,
+                      i.start_at, i.end_at, i.state, i.confidence, i.producer,
+                      (SELECT COUNT(*) FROM activity_evidence e
+                        WHERE e.interval_id = i.id) AS evidence_count,
+                      s.summary, s.keywords, s.band
+               FROM activity_intervals i
+               JOIN activity_tasks t ON t.id = i.task_id
+               LEFT JOIN activity_tasks parent ON parent.id = t.parent_task_id
+               LEFT JOIN activity_interval_summaries s ON s.interval_id = i.id
+               WHERE i.end_at > ?1
+                 AND i.start_at < ?2
+               ORDER BY i.start_at, i.end_at, i.id"#,
+        )
+        .bind(&start)
+        .bind(&end)
+        .fetch_all(&self.pool)
+        .await?;
+        let retention = self.retention_counts_for_range(&start, &end).await?;
+        Ok(rows
+            .into_iter()
+            .map(|row| {
+                let interval_retention = retention.get(&row.id).cloned().unwrap_or_default();
+                row.into_record(interval_retention)
+            })
+            .collect())
+    }
+
+    /// On-demand raw evidence recall for one interval (the B03
+    /// "summarize first, recall later" reader), newest-range order preserved.
+    pub async fn activity_evidence_for_interval(
+        &self,
+        interval_id: i64,
+        limit: i64,
+    ) -> Result<Vec<ActivityEvidenceRecord>, SqlxError> {
+        let rows = sqlx::query_as::<_, RawEvidence>(
+            r#"SELECT e.interval_id, e.source_type, e.source_id, e.occurred_at,
+                      CASE
+                        WHEN e.source_type = 'frame' THEN source_frame.id
+                        WHEN e.source_type = 'ui_event' THEN event_frame.id
+                        ELSE NULL
+                      END AS frame_id,
+                      COALESCE(NULLIF(event.app_name, ''),
+                               NULLIF(source_frame.app_name, ''),
+                               NULLIF(event_frame.app_name, '')) AS app_name,
+                      COALESCE(NULLIF(event.window_title, ''),
+                               NULLIF(source_frame.window_name, ''),
+                               NULLIF(event_frame.window_name, '')) AS window_title,
+                      COALESCE(NULLIF(event.browser_url, ''),
+                               NULLIF(source_frame.browser_url, ''),
+                               NULLIF(event_frame.browser_url, '')) AS browser_url
+               FROM activity_evidence e
+               LEFT JOIN frames source_frame
+                 ON e.source_type = 'frame' AND source_frame.id = e.source_id
+               LEFT JOIN ui_events event
+                 ON e.source_type = 'ui_event' AND event.id = e.source_id
+               LEFT JOIN frames event_frame ON event_frame.id = event.frame_id
+               WHERE e.interval_id = ?1
+               ORDER BY e.occurred_at, e.id
+               LIMIT ?2"#,
+        )
+        .bind(interval_id)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|item| ActivityEvidenceRecord {
+                source_type: item.source_type,
+                source_id: item.source_id,
+                occurred_at: item.occurred_at,
+                frame_id: item.frame_id,
+                app_name: item.app_name,
+                window_title: item.window_title,
+                browser_url: item.browser_url,
+            })
+            .collect())
+    }
+
+    /// Intervals in range that have no summary yet, oldest first — the B02
+    /// summarizer backlog. Summary/keyword fields are always `None` here.
+    pub async fn activity_intervals_missing_summary(
+        &self,
+        start_at: DateTime<Utc>,
+        end_at: DateTime<Utc>,
+        limit: i64,
+    ) -> Result<Vec<ActivityIntervalRecord>, SqlxError> {
+        let start = start_at.to_rfc3339();
+        let end = end_at.to_rfc3339();
+        let rows = sqlx::query_as::<_, RawIntervalDetail>(
+            r#"SELECT i.id, t.id AS task_id, t.parent_task_id, t.kind, t.title,
+                      parent.title AS parent_title, t.app_name,
+                      i.start_at, i.end_at, i.state, i.confidence, i.producer,
+                      (SELECT COUNT(*) FROM activity_evidence e
+                        WHERE e.interval_id = i.id) AS evidence_count,
+                      NULL AS summary, NULL AS keywords, NULL AS band
+               FROM activity_intervals i
+               JOIN activity_tasks t ON t.id = i.task_id
+               LEFT JOIN activity_tasks parent ON parent.id = t.parent_task_id
+               WHERE i.end_at > ?1
+                 AND i.start_at < ?2
+                 AND NOT EXISTS (
+                     SELECT 1 FROM activity_interval_summaries s
+                     WHERE s.interval_id = i.id
+                 )
+               ORDER BY i.start_at, i.id
+               LIMIT ?3"#,
+        )
+        .bind(&start)
+        .bind(&end)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|row| row.into_record(Vec::new()))
+            .collect())
+    }
+
+    async fn retention_counts_for_range(
+        &self,
+        start: &str,
+        end: &str,
+    ) -> Result<HashMap<i64, Vec<(String, i64, i64, Option<String>)>>, SqlxError> {
+        let rows = sqlx::query_as::<_, (i64, String, i64, i64, Option<String>)>(
+            r#"SELECT r.interval_id, r.source_type, r.kept, r.dropped, r.drop_reason
+               FROM activity_interval_retention r
+               JOIN activity_intervals i ON i.id = r.interval_id
+               WHERE i.end_at > ?1
+                 AND i.start_at < ?2
+               ORDER BY r.interval_id, r.source_type"#,
+        )
+        .bind(start)
+        .bind(end)
+        .fetch_all(&self.pool)
+        .await?;
+        let mut by_interval: HashMap<i64, Vec<(String, i64, i64, Option<String>)>> =
+            HashMap::new();
+        for (interval_id, source_type, kept, dropped, drop_reason) in rows {
+            by_interval
+                .entry(interval_id)
+                .or_default()
+                .push((source_type, kept, dropped, drop_reason));
+        }
+        Ok(by_interval)
     }
 }
 
@@ -840,6 +1189,7 @@ mod tests {
                 occurred_at: at("2026-08-17T09:01:00Z"),
                 action_key: Some("action".to_string()),
             }],
+            retention: HashMap::from([("ui_event".to_string(), (0, None))]),
         };
         (vec![parent, task], vec![interval])
     }
@@ -1099,5 +1449,439 @@ mod tests {
             .await
             .unwrap();
         assert!(rows.is_empty());
+    }
+
+    async fn insert_summary(db: &DatabaseManager, interval_id: i64, keywords: &str) {
+        let sql = format!(
+            "INSERT INTO activity_interval_summaries \
+             (interval_id, summary, keywords, band, summary_chars, producer, \
+              prompt_version, model, input_hash) \
+             VALUES ({interval_id}, 'Worked on the ledger', '{keywords}', 'short', 20, \
+                     'summarizer-v1', 'prompt-v1', 'test-model', 'hash-1')"
+        );
+        db.execute_raw_sql_write(&sql).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn retention_bookkeeping_persisted_from_persisted_evidence() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (tasks, mut intervals) = drafts(source_id);
+        // The draft claims two drops; `kept` must still come from the single
+        // evidence row actually persisted for the interval.
+        intervals[0].retention = HashMap::from([(
+            "ui_event".to_string(),
+            (2, Some("unchanged".to_string())),
+        )]);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+
+        let (kept, dropped, reason): (i64, i64, Option<String>) = sqlx::query_as(
+            "SELECT kept, dropped, drop_reason FROM activity_interval_retention \
+             WHERE interval_id = (SELECT id FROM activity_intervals \
+                                   WHERE interval_key = 'interval') \
+               AND source_type = 'ui_event'",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(kept, 1);
+        assert_eq!(dropped, 2);
+        assert_eq!(reason.as_deref(), Some("unchanged"));
+    }
+
+    #[tokio::test]
+    async fn retention_rows_and_summaries_cascade_with_interval() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (tasks, intervals) = drafts(source_id);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+        let interval_id: i64 =
+            sqlx::query_scalar("SELECT id FROM activity_intervals WHERE interval_key = 'interval'")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        insert_summary(&db, interval_id, "[]").await;
+
+        // Deleting the interval must cascade both new tables away, exactly
+        // like the evidence they describe.
+        db.execute_raw_sql_write("DELETE FROM activity_intervals")
+            .await
+            .unwrap();
+        let retention: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_retention")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        let summaries: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_summaries")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        assert_eq!(retention, 0);
+        assert_eq!(summaries, 0);
+    }
+
+    #[tokio::test]
+    async fn reconcile_rerun_keeps_retention_and_evidence_stable() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (tasks, intervals) = drafts(source_id);
+        let range = (
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+        );
+        for _ in 0..2 {
+            db.reconcile_activity_ledger(
+                "deterministic-v1",
+                range.0,
+                range.1,
+                &tasks,
+                &intervals,
+            )
+            .await
+            .unwrap();
+        }
+
+        let evidence: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM activity_evidence \
+             WHERE interval_id = (SELECT id FROM activity_intervals \
+                                   WHERE interval_key = 'interval')",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(evidence, 1, "kept evidence must survive a rerun");
+        let rows: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM activity_interval_retention",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(rows, 1, "rerun must not duplicate retention rows");
+    }
+
+    #[tokio::test]
+    async fn intervals_between_returns_summary_keywords_and_retention() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (tasks, intervals) = drafts(source_id);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+        let interval_id: i64 =
+            sqlx::query_scalar("SELECT id FROM activity_intervals WHERE interval_key = 'interval'")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        insert_summary(&db, interval_id, r#"["ledger","retention"]"#).await;
+
+        let rows = db
+            .activity_intervals_between(
+                at("2026-08-17T08:00:00Z"),
+                at("2026-08-17T10:00:00Z"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].title, "Ticket 42");
+        assert_eq!(rows[0].summary.as_deref(), Some("Worked on the ledger"));
+        assert_eq!(
+            rows[0].keywords.as_deref(),
+            Some(&["ledger".to_string(), "retention".to_string()][..])
+        );
+        assert_eq!(rows[0].summary_band.as_deref(), Some("short"));
+        assert_eq!(
+            rows[0].retention,
+            vec![("ui_event".to_string(), 1, 0, None)]
+        );
+    }
+
+    #[tokio::test]
+    async fn evidence_for_interval_respects_limit_and_order() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (tasks, mut intervals) = drafts(source_id);
+        for (index, minute) in [2, 3, 4].into_iter().enumerate() {
+            intervals[0].evidence.push(ActivityEvidenceDraft {
+                source_type: "ui_event".to_string(),
+                source_id: source_id + index as i64 + 1,
+                occurred_at: at(&format!("2026-08-17T09:{minute:02}:00Z")),
+                action_key: None,
+            });
+        }
+        // The extra evidence references source rows that do not exist; the
+        // query joins enrich only, so insert matching ui_events first.
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        for index in 1..4 {
+            sqlx::query(
+                "INSERT INTO ui_events (id, timestamp, relative_ms, event_type, app_name) \
+                 VALUES (?1, ?2, 0, 'text', 'Browser')",
+            )
+            .bind(source_id + index)
+            .bind(&format!("2026-08-17T09:0{}:00Z", index + 1))
+            .execute(&mut **tx.conn())
+            .await
+            .unwrap();
+        }
+        tx.commit().await.unwrap();
+
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+        let interval_id: i64 =
+            sqlx::query_scalar("SELECT id FROM activity_intervals WHERE interval_key = 'interval'")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+
+        let evidence = db
+            .activity_evidence_for_interval(interval_id, 2)
+            .await
+            .unwrap();
+        assert_eq!(evidence.len(), 2);
+        assert_eq!(evidence[0].occurred_at, "2026-08-17T09:01:00+00:00");
+        assert_eq!(evidence[1].occurred_at, "2026-08-17T09:02:00+00:00");
+    }
+
+    #[tokio::test]
+    async fn missing_summary_excludes_summarized_intervals() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (tasks, mut intervals) = drafts(source_id);
+        let mut later = intervals[0].clone();
+        later.interval_key = "later-interval".to_string();
+        later.start_at = at("2026-08-17T09:20:00Z");
+        later.end_at = at("2026-08-17T09:25:00Z");
+        intervals.push(later);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:30:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+        let first_id: i64 =
+            sqlx::query_scalar("SELECT id FROM activity_intervals WHERE interval_key = 'interval'")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        insert_summary(&db, first_id, "[]").await;
+
+        let missing = db
+            .activity_intervals_missing_summary(
+                at("2026-08-17T08:00:00Z"),
+                at("2026-08-17T10:00:00Z"),
+                10,
+            )
+            .await
+            .unwrap();
+        assert_eq!(missing.len(), 1);
+        assert!(missing[0].summary.is_none());
+        assert_eq!(missing[0].start_at, "2026-08-17T09:20:00+00:00");
+    }
+
+    #[tokio::test]
+    async fn frame_fingerprint_prefers_content_hash_and_falls_back_to_text() {
+        let (db, _dir) = test_db().await;
+        db.execute_raw_sql_write(
+            "INSERT INTO frames \
+             (timestamp, app_name, window_name, focused, content_hash) \
+             VALUES ('2026-08-17T09:00:00Z', 'Editor', 'a', 1, 123456789)",
+        )
+        .await
+        .unwrap();
+        db.execute_raw_sql_write(
+            "INSERT INTO frames \
+             (timestamp, app_name, window_name, focused, full_text) \
+             VALUES ('2026-08-17T09:00:20Z', 'Editor', 'b', 1, 'hello world text')",
+        )
+        .await
+        .unwrap();
+        db.execute_raw_sql_write(
+            "INSERT INTO frames \
+             (timestamp, app_name, window_name, focused, accessibility_text) \
+             VALUES ('2026-08-17T09:00:40Z', 'Editor', 'c', 1, 'ax body')",
+        )
+        .await
+        .unwrap();
+        db.execute_raw_sql_write(
+            "INSERT INTO frames \
+             (timestamp, app_name, window_name, focused) \
+             VALUES ('2026-08-17T09:01:00Z', 'Editor', 'd', 1)",
+        )
+        .await
+        .unwrap();
+        db.execute_raw_sql_write(
+            "INSERT INTO audio_chunks (id, file_path) VALUES (1, 'test.wav')",
+        )
+        .await
+        .unwrap();
+        db.execute_raw_sql_write(
+            "INSERT INTO audio_transcriptions \
+             (audio_chunk_id, offset_index, timestamp, transcription, device, is_input_device) \
+             VALUES (1, 0, '2026-08-17T09:00:10Z', '  ', 'mic', 1)",
+        )
+        .await
+        .unwrap();
+
+        let rows = db
+            .load_activity_ledger_observations(
+                at("2026-08-17T09:00:00Z"),
+                at("2026-08-17T09:02:00Z"),
+            )
+            .await
+            .unwrap();
+
+        let by_key: HashMap<(String, i64), &ActivityLedgerObservation> = rows
+            .iter()
+            .map(|row| ((row.source_type.clone(), row.source_id), row))
+            .collect();
+        let hashed = by_key.get(&("frame".to_string(), 1)).unwrap();
+        assert_eq!(hashed.content_fingerprint.as_deref(), Some("123456789"));
+        assert!(!hashed.content_empty);
+
+        let from_full_text = by_key.get(&("frame".to_string(), 2)).unwrap();
+        let fingerprint = from_full_text.content_fingerprint.as_deref().unwrap();
+        assert!(fingerprint.starts_with("t16:"), "{fingerprint}");
+        assert!(!from_full_text.content_empty);
+
+        let from_accessibility = by_key.get(&("frame".to_string(), 3)).unwrap();
+        assert!(from_accessibility.content_fingerprint.is_some());
+        assert!(!from_accessibility.content_empty);
+
+        let blank = by_key.get(&("frame".to_string(), 4)).unwrap();
+        assert_eq!(blank.content_fingerprint, None);
+        assert!(blank.content_empty);
+
+        // The whitespace-only transcript now flows through, truthfully marked
+        // empty, instead of being pre-filtered by the loader.
+        let empty_audio = rows
+            .iter()
+            .find(|row| row.source_type == "audio")
+            .expect("empty transcript must reach the policy");
+        assert!(empty_audio.content_empty);
+        assert_eq!(empty_audio.content_fingerprint, None);
+    }
+
+    #[tokio::test]
+    async fn meeting_spans_clamp_to_range_and_include_open_meetings() {
+        let (db, _dir) = test_db().await;
+        db.execute_raw_sql_write(
+            "INSERT INTO meetings (meeting_start, meeting_end, meeting_app, title) \
+             VALUES ('2026-08-17T08:50:00Z', '2026-08-17T09:05:00Z', 'Meet', 'ended')",
+        )
+        .await
+        .unwrap();
+        db.execute_raw_sql_write(
+            "INSERT INTO meetings (meeting_start, meeting_end, meeting_app, title) \
+             VALUES ('2026-08-17T09:20:00Z', NULL, 'Zoom', 'open')",
+        )
+        .await
+        .unwrap();
+        db.execute_raw_sql_write(
+            "INSERT INTO meetings (meeting_start, meeting_end, meeting_app, title) \
+             VALUES ('2026-08-17T10:00:00Z', '2026-08-17T11:00:00Z', 'Meet', 'later')",
+        )
+        .await
+        .unwrap();
+
+        let spans = db
+            .activity_meeting_spans(
+                at("2026-08-17T09:00:00Z"),
+                at("2026-08-17T09:30:00Z"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            spans,
+            vec![
+                (at("2026-08-17T09:00:00Z"), at("2026-08-17T09:05:00Z")),
+                (at("2026-08-17T09:20:00Z"), at("2026-08-17T09:30:00Z")),
+            ]
+        );
     }
 }

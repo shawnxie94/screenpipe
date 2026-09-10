@@ -144,3 +144,11 @@ CREATE TABLE activity_interval_retention (
 | B02 | 单一总结器：间隔摘要生成（分档字数、关键字、自足口径）+ 前端读源切到数据库 + 旧叙事标 legacy | B01 的表与查询面 |
 | B03 | WorkUnit 先摘要后召回 + 流程/环境/细节字段 + 会话计数按活动去重 + 提取只从 WorkUnit 取数 | B02 的摘要 |
 | B04 | 四个 skill（共享取数 + 活动总结 / 工作单元 / 知识提炼，按 `AgentLayout` 注入） | B02、B03 |
+
+## 完成记录（B01）
+
+- 子任务：`zct_519a279dee454b3c`（两轮；首轮变化键退化，纠偏轮改为内容指纹）
+- 交付：迁移 `20260911130000_activity_retention_and_summaries.sql`；db 层记账与三个只读查询；engine 层七条保留规则；路由三个读接口（协调会话补挂载到 `server.rs`）
+- 证据：`docs/reviews/evidence/activity-retention-2026-09-11/`（子任务报告 + 协调会话复验）
+- 验收：协调会话实跑 10 条命令全绿（含 db lib 全量 171、真实库副本升级路径）
+- 带入 B02：ui_event 重复动作只留首条证据（actions 表全量）、audio 口径放宽、帧文本回退为代理指纹、摘要表待写入方、读接口待 HTTP 覆盖

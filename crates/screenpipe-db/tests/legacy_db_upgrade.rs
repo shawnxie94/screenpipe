@@ -169,6 +169,18 @@ async fn legacy_copy_upgrades_to_current_schema() {
         );
     }
 
+    // 1b. The B01 retention/summary tables exist on the upgraded copy.
+    for table in [
+        "activity_interval_summaries",
+        "activity_interval_retention",
+    ] {
+        assert_eq!(
+            name_count(&db.pool, table).await,
+            1,
+            "retention-era table missing: {table}"
+        );
+    }
+
     // 2. Persisted task identifiers point at the new namespace.
     for (label, sql) in [
         (

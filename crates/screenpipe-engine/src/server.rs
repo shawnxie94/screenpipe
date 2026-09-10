@@ -16,7 +16,10 @@ use crate::{
     history_access::HistoryAccessPolicy,
     hot_frame_cache::HotFrameCache,
     routes::{
-        activity_ledger::get_activity_ledger,
+        activity_ledger::{
+            get_activity_interval_evidence, get_activity_intervals,
+            get_activity_intervals_missing_summary, get_activity_ledger,
+        },
         activity_summary::get_activity_summary,
         artifacts::{
             delete_artifact_handler, list_artifacts_handler, register_artifact_handler,
@@ -806,6 +809,15 @@ impl SCServer {
             .get("/frames/:frame_id/elements", get_frame_elements)
             .get("/activity-summary", get_activity_summary)
             .get("/activity-ledger", get_activity_ledger)
+            .get("/activity-intervals", get_activity_intervals)
+            .get(
+                "/activity-intervals/missing-summary",
+                get_activity_intervals_missing_summary,
+            )
+            .get(
+                "/activity-intervals/:interval_id/evidence",
+                get_activity_interval_evidence,
+            )
             // Vault routes
             .get("/vault/status", crate::routes::vault::vault_status)
             .post("/vault/lock", crate::routes::vault::vault_lock)
