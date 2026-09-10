@@ -10,7 +10,7 @@ covers:
   - D-14 取数由执行体自查（本批只准备查询面，不写 skill）
   - D-15 WorkUnit 先摘要后召回（本批只落摘要，不动 WorkUnit）
 doc-covers: crates/screenpipe-db/src/db/activity_ledger.rs, crates/screenpipe-engine/src/activity_ledger.rs, crates/screenpipe-db/src/migrations
-doc-verified: f41999796
+doc-verified: 5ce76c304
 ```
 
 ## 1. 目标与非目标
@@ -85,8 +85,11 @@ CREATE TABLE activity_interval_retention (
 
 在 `crates/screenpipe-engine/src/activity_ledger.rs` 的证据选择处替换实现：
 
-1. **按变化去重**：同一间隔内按 `occurred_at` 排序，视觉证据（`frame`/`ui_event`）只在「(app_name, window/title, 活动状态) 发生变化」时保留，另**始终保留区间首条与末条**（用于边界定位）。连续相同观察丢弃，原因记 `unchanged`。
-2. **转写不限量**：`audio` 证据全部保留（仅丢弃空文本，原因 `empty`）。
+1. **按变化去重**：同一间隔内按 `occurred_at` 排序，**同类证据与上一条被保留的候选比较内容指纹**，只在变化点保留；另**始终保留区间首条与末条**（边界锚点，即使与相邻相同）。连续相同观察丢弃，原因记 `unchanged`。
+   - 内容指纹：`frame` 用 `frames.content_hash`（为空时退回 `full_text` / `accessibility_text` 的哈希）；`ui_event` 用 `(event_type, element_name, element_value, text_content)` 组合。
+   - **不能用 `(app_name, window_title)` 当变化键**：间隔本身已按任务身份切分，而任务身份就来自 app/window，因此该键在段内几乎不变（实测：某 106 帧间隔里该键只有 2 种取值，而 `content_hash` 有 75 种）——用它会让本规则退化成旧的首尾两条。
+   - 连续去重而非全局去重：`A→B→A` 应得到 3 行（两次变化都保留）。
+2. **转写不限量**：`audio` 证据全部保留（仅丢弃空文本，原因 `empty`；空文本须由 loader 如实标记，不允许该规则实际不可达）。
 3. **会议全留**：与 `meetings` 表时间区间重叠超过间隔时长一半的间隔视为会议间隔，豁免单来源上限与总量上限（只丢弃空文本），全部证据保留。台帐里没有会议信号，判定用时间重叠（`meetings.meeting_start`/`meeting_end`，见 `20260225000000_create_meetings.sql`）。
 4. **总量上限 800**：单个间隔保留证据总数上限 800（会议间隔除外）。超限时按**均匀采样**——按时间排序后以 `step = ceil(n / 800)` 取点，并优先保留变化点与首尾；丢弃原因记 `sample`。
 5. **单来源上限**：屏幕帧 120、界面事件 240（转写与会议不限）。超限走同一均匀采样，丢弃原因记 `cap`。
@@ -110,7 +113,7 @@ CREATE TABLE activity_interval_retention (
 | # | 命令 | 期望 |
 | --- | --- | --- |
 | 1 | `cargo test -p screenpipe-db --lib activity` | 全绿；新增：保留记账写入、级联删除、幂等重跑 |
-| 2 | `cargo test -p screenpipe-engine --lib activity_ledger` | 全绿；新增：变化去重、首尾保留、转写全留、上限采样与原因优先级 |
+| 2 | `cargo test -p screenpipe-engine --lib activity_ledger` | 全绿；新增：内容变化去重（N 个不同指纹 → N 行）、连续相同只留首条、`A→B→A` 保留 3 行、首尾保留、转写全留、上限采样与原因优先级 |
 | 3 | `cargo test -p screenpipe-engine --test knowledge_correctness` | 13 passed（输入仍为原始证据行，不受影响） |
 | 4 | `cargo test -p screenpipe-db --test legacy_db_upgrade` | 通过：新表在真实库副本升级路径上创建、`foreign_key_check` 空、`integrity_check` ok |
 | 5 | `cargo check -p screenpipe-db -p screenpipe-engine -p screenpipe-connect` | exit 0 |
@@ -130,7 +133,7 @@ CREATE TABLE activity_interval_retention (
 
 ## 8. 交付边界（子任务约束）
 
-- 允许路径：`crates/screenpipe-db/src/{db/activity_ledger.rs,migrations/}`、`crates/screenpipe-engine/src/{activity_ledger.rs,routes/activity_ledger.rs}`、对应 tests。
+- 允许路径：`crates/screenpipe-db/src/{db/activity_ledger.rs（含观察加载器，变化指纹字段由它取出）,migrations/}`、`crates/screenpipe-engine/src/{activity_ledger.rs,routes/activity_ledger.rs}`、对应 tests。
 - 禁止：`docs/**`、已存在的迁移文件、`crates/screenpipe-engine/src/knowledge/**`、前端与 `src-tauri/**`（本批无改动）。
 - 不做：模型调用、提示词、KV/DB 读源切换、WorkUnit 改造、顺手修与保留策略无关的 bug。
 
