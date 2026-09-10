@@ -52,3 +52,16 @@
 
 - src-tauri 原生测试未跑（本批无 src-tauri 代码改动）。
 - 持久化会话分类值 `brain-task` 未改（存于 SessionRecord，改名需数据迁移），已列入保留清单。
+
+## 端到端验证：新 build 在真实库副本上启动并完成迁移
+
+- 构建：`cd apps/screenpipe-app-tauri && bun run build:tauri:dev` → 成功（`debug-dev` profile，3m33s，机器级队列正常）
+- 运行：`SCREENPIPE_DATA_DIR=/tmp/upgrade-e2e SCREENPIPE_PORT=3199 SCREENPIPE_DEV_USE_PROD_DATA=1 ./src-tauri/target/debug-dev/screenpipe-app`
+  - 数据目录种子为 6 月版真实实例库副本（144 个对象、90 个迁移）
+  - 日志：`boot phase → migrating_database`，随后引擎、音频、采集、快照压缩全部正常启动；Pi 安装到隔离目录 `/tmp/upgrade-e2e/pi-agent`
+- 迁移后（应用退出后离线核对）：
+  - 对象 144 → 308；迁移数 90 → 123
+  - **0 个旧表、0 个旧索引**；45 个新对象（40 个改名目标 + 5 个 `knowledge_search_fts` 影子表）
+  - `task_definitions`/`task_runs` 残留旧 id：0
+  - `PRAGMA integrity_check` 需 sqlite-vec 扩展，CLI 无法执行；同一升级路径已由 `legacy_db_upgrade` 测试（走 sqlx + 扩展注册）断言 `integrity ok`
+- 结论：**新 build 可在真实库首次启动时自动完成迁移**；迁移只在副本上执行，真实库未受影响。

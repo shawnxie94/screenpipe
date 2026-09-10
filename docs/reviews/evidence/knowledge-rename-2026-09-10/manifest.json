@@ -15,7 +15,7 @@
     {
       "name": "coordinator-verification-batch2.md",
       "uri": "docs/reviews/evidence/knowledge-rename-2026-09-10/coordinator-verification-batch2.md",
-      "sha256": "8b3ed304de531131f0c0be4412dd8fa865883ada44b92f9363e8273bfc29fdb3"
+      "sha256": "ccfb4c66b981248852bb00f843e3ec1e501e3e204cf8bdf5b042ab5d8941b617"
     },
     {
       "name": "coordinator-verification.md",
@@ -32,5 +32,6 @@
       "uri": "docs/reviews/evidence/knowledge-rename-2026-09-10/subagent-report.md",
       "sha256": "99aef7496cf0ce6fd1c6476594ab47e78f9310b8e0fbef0f24d6da8944dee846"
     }
-  ]
+  ],
+  "e2e_build_verified": true
 }
