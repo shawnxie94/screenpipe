@@ -3,7 +3,7 @@ type: delivery_readiness
 mode: assess
 status: ready
 stage: trd_to_plan
-iteration: 4
+iteration: 8
 created_at: '2026-09-10'
 updated_at: '2026-09-10'
 owner: local_lead
@@ -20,10 +20,10 @@ decision_basis:
 source_artifacts:
 - name: personal-workbench-integration-framework.md
   uri: docs/trd/personal-workbench-integration-framework.md
-  sha256: d45309b7b891497a539cc4de83a4b39e9671a65c04738f81471ced79202a91c2
+  sha256: d52446979fb6fa558a681a291561326c83c1674a18077ea229dba131ea1e1fa1
 - name: roadmap.md
   uri: docs/roadmap.md
-  sha256: abf6df388ff62281c23e2e55f436b842a814c2e7a122dd1225d775a2fa02180e
+  sha256: ff33e7293e62a051cb30997082ed0a141ebd0f2c87ae8947e3cefd6cf7bf2880
 - name: personal-brain-local-first.md
   uri: docs/prd/personal-brain-local-first.md
   sha256: 8f23d662cd4ddeb274d61a20eb19eca5d69b0c737305778ddf3d9fa98d57df4d
@@ -99,6 +99,32 @@ iterations:
   new_findings:
   - DR-DATA-002
   note: 工作量来自实现核对（roadmap 声明 vs 代码）与命名收敛：框架 v1.3 统一领域名为 knowledge-pack（仅代码标识保留 brain*）、§2.2 增“落地解释”、§2.0 补两行、D-11 补对象级改判、新增 O-06 与对应冻结点；roadmap 修正过时“进行中”、去重冻结清单、补进度口径与顺序可调声明。详见 roadmap_audit。
+- iteration: 5
+  at: '2026-09-10'
+  mode: assess
+  result: ready
+  new_findings: []
+  note: 用户指出外部产品能力迁移应后置，而框架与 roadmap 均无此条款（原属 zhiji v0.5 的 S3 遗留）。已按 D-12 收口：框架 v1.4 新增“外部产品能力迁移后置、首个验证者用现有办公来源路径、延后期间 Lumina/Infinitum 不入事实链”，信封冻结触发条件改为“接入任何新来源类型或第二个领域包之前”；roadmap 的 P2 改为“建立 zh-local 核心能力”，Lumina 直采与 reading-pack 移入 P4。无新增发现。另按用户指正补开工门禁：ready 只代表框架可交接，P2 计划与实现等 P1 收口（写入 roadmap 后续阶段与本节 start_gate_for_p2）。
+- iteration: 6
+  at: '2026-09-10'
+  mode: assess
+  result: ready
+  new_findings:
+  - DR-EVID-001
+  - DR-EVID-002
+  note: 用户指定活动层重构（单一活动层、证据按变化保留、摘要必须自足、取数由执行体自查、WorkUnit 先摘要后召回、知识只从 WorkUnit），记为 D-13–D-15 与 O-07–O-11；本批判定为 P1 收尾遗留项（roadmap 已列），不新开阶段，因此 start_gate_for_p2 不变。两个新发现均按文档层收口，实现待 P1 收尾批。
+- iteration: 7
+  at: '2026-09-10'
+  mode: assess
+  result: ready
+  new_findings: []
+  note: 追加三条用户决定：O-07 取值收口（断开阈值 5 分钟可配；保留上限 屏幕 120 / 界面 240 / 转写不限 / 会议全留 / 总量 800，均匀采样）；brain 标识改名（提议 knowledge，记为 O-12，作为纯改名批次排在活动层改造前）；三个抽取阶段都改为 skill（共享取数 skill + 三个任务 skill，代码侧校验不外包）。无新增发现；P1 收尾归属与 start_gate_for_p2 不变。
+- iteration: 8
+  at: '2026-09-10'
+  mode: assess
+  result: ready
+  new_findings: []
+  note: 用户确认短名 `knowledge`（O-12 收口），并指出 skill 不应强依赖 Claude：新增 D-16（中性真源 + 按 Agent 适配注入，复用现有 AgentLayout 与 ACP/Pi 注入层；仓内来源目录改中性名；skill 哈希进指纹），四个 skill 全部实现不按成本分阶段。§6 计数更新为 16 决策 / 9 未决项 / 8 冻结点。
 
 roadmap_audit:
   at: '2026-09-10'
@@ -230,6 +256,32 @@ findings:
   resolution: "框架新增 §4 规则 7（不得进入采集/编码热路径，写入走既有 SQLite 协调入口）与规则 8（同一时刻一个调度所有者、停旧触发→收敛→原子切换 owner_state→启动新触发，可回退不双跑）；§5 冻结顺序表；§6 O-01–O-05 含最晚时点与判定方式；§8 恢复归档前身的『阶段计划携带项』适用范围。"
   next_action: "P2 计划按 §8 的携带项模板编写，并沿用 roadmap/plans 的既有验收编号，不另起一套。"
 
+- id: DR-EVID-001
+  severity: warning
+  priority: P1
+  status: resolved
+  title: "同一批原料并存两套总结逻辑，且事件证据只留每段首尾两条"
+  evidence:
+  - "activity_ledger.rs:160,173 按 5 分钟无观测切段；build_ledger 只把每段 first/last 两条写入 activity_evidence。"
+  - "活动历史（apps/.../activity_history.rs）另起一套模型叙事，存本地加密 store；brain_migration.rs 又把同一批 entries 镜像进 brain_history_entries，形成第三处副本。"
+  - "brain_work_unit_revisions 以 (scope_key, interval_start, interval_end) 定位工作单元（work_units.rs:79-83），间隔规则即工作单元身份。"
+  impact: "办公高频切换下中间过程全丢；工作单元粒度受间隔切分左右；同一事实多处副本（D-02/§4 规则 2 禁止）。"
+  resolution: "D-13：两套总结合并为唯一活动层（间隔 → 摘要 + 关键字 + 原始引用）；证据按变化采样、丢弃记录原因；会话计数按活动去重；旧叙事标 legacy；读源收敛到数据库。O-07/O-09/O-11 记录取值与验证方式。"
+  next_action: "并入 P1 收尾遗留项；实现前先定 O-07（阈值与上限）。"
+
+- id: DR-EVID-002
+  severity: warning
+  priority: P1
+  status: resolved
+  title: "摘要作为下游唯一入口却过短，且取数方式禁止执行体自查"
+  evidence:
+  - "activity_history.rs:661-703 的活动生成提示词把带有限证据一次性内联，并明确要求“不要调用工具、使用终端、运行 Shell 命令或再次查询 API”。"
+  - "同文件 SYSTEM_PROMPT:53-56 却写“只读使用本地 Screenpipe API”，两条指令自相矛盾。"
+  - "现有 Agent 工具只有 brain_answer 与 brain_source（assets/extensions/brain-tools.ts），没有按时间窗查观测的工具。"
+  impact: "以一次性快照为准的生成方式既不可复现也不可扩展；摘要过短会让后续 WorkUnit 与知识提炼建立在不充分的理解上。"
+  resolution: "D-14：任务只给时间范围/目标/输出契约与铁律，取数由执行体通过只读工具自查，取数方法沉淀为内部 skill，并记录查询轨迹与结果指纹；D-13 规定摘要自足口径（分档长度 + 必含要素 + 关键字）。O-11 记录可复现验证方式。"
+  next_action: "并入 P1 收尾遗留项；先补“按时间窗查观测”的只读工具，再改活动生成提示词。"
+
 - id: DR-DOC-001
   severity: info
   priority: P3
@@ -241,10 +293,10 @@ findings:
   next_action: "无需后续动作；P2 计划引用该表作为范围依据。"
 
 traceability_counts:
-  decisions: 10
-  decisions_recorded: 10
-  open_items_declared: 5
-  freeze_points_declared: 5
+  decisions: 16
+  decisions_recorded: 16
+  open_items_declared: 9
+  freeze_points_declared: 8
   phases_owned_by_this_doc: 0
   phases_owned_by_roadmap: 5
 
@@ -326,9 +378,13 @@ not_executed:
 - 未验证 scope 迁移在真实数据上的回填与放行效果（O-01 未决）。
 
 next_action:
-  owner: plan_author
-  action: proceed
-  handoff: "stage trd_to_plan 已 ready：允许为 P2『Lumina 直采与通用扩展契约』编制执行计划（execution-delivery plan 模式）。P1 不受影响，继续按 docs/plans/personal-brain-correctness-execution-plan.md 执行（真实样本验收 + B01 收口）。"
+  owner: local_lead
+  action: wait_p1_closure
+  handoff: "stage trd_to_plan 的 ready 只表示框架本身可交接，不表示现在开工。P1（docs/plans/personal-brain-correctness-execution-plan.md）收口前不建 P2 计划、不开 P2 实现；P2 计划在门禁满足后再按 execution-delivery plan 模式编制（首个验证者用现有办公来源路径）。"
+  start_gate_for_p2:
+  - "P1 的 45 项验收全部有真实证据或用户具名 accepted_risk（当前 passed=1 / unverified=44）"
+  - "B01 收口审查完成，计划的 implementation 状态与 completed_units 回写"
+  - "F13/F14 的 task_owner_state 所有权切换无遗留兼容桥（P2 会动任务注册面）"
   must_close_in_p2:
   - "O-02 通用 Relation 最小范围（冻结信封前，带 reading/radar 各一条路径验证）"
   - "O-05 出口清单与撤回/删除边界（任何新出口或公开发布前）"
