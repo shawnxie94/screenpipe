@@ -47,16 +47,16 @@ export {
 } from "@/lib/generated/screenpipe-skills";
 
 // ---------------------------------------------------------------------------
-// Second-brain prompt — paste-once automation that turns the agent into a
+// Second-knowledge prompt — paste-once automation that turns the agent into a
 // digital clone of the user's working context: it segments workflows,
 // summarizes processes, and maintains a durable memory in the background.
 // This prompt is the local starting point for building a personal knowledge
 // base from screenpipe context.
 // ---------------------------------------------------------------------------
 
-export const SECOND_BRAIN_PROMPT = `you have access to screenpipe, a local tool that records everything i see, say, and
+export const SECOND_KNOWLEDGE_PROMPT = `you have access to screenpipe, a local tool that records everything i see, say, and
 hear on my computer and makes it searchable. i want you to build and maintain a
-"second brain" about me — a living memory of who i am, what i'm working on, and how
+"second knowledge" about me — a living memory of who i am, what i'm working on, and how
 i work — by watching my activity through screenpipe in the background, so i never
 have to re-explain my context. think of it as a digital clone of my working context.
 
@@ -84,7 +84,7 @@ so you don't pull too much. if screenpipe skills are available, load them first.
    took, the tools/inputs/outputs, the decisions i made, and whether it's repeatable.
    if it looks repeatable, capture it as a numbered SOP i could hand off or automate.
 
-3. REMEMBER — update my second brain with anything durable and reusable:
+3. REMEMBER — update my second knowledge with anything durable and reusable:
    - who i am: role, goals, preferences, recurring tools
    - people i interact with and about what       (tag person:NAME)
    - projects in flight, their status, open loops (tag project:NAME)
@@ -92,19 +92,19 @@ so you don't pull too much. if screenpipe skills are available, load them first.
    store only stable, reusable facts. never store secrets — passwords, API keys, tokens,
    financial or health data, or anything clearly private. skip one-off noise.
 
-## where to store the second brain
+## where to store the second knowledge
 
 - if you have the screenpipe update-memory tool: write each durable fact as a memory
   with namespaced tags (person:, project:, topic:) and importance 0-1. retrieve later
   with search-content content_type='memory'. this is the same memory the screenpipe
   digital-clone pipe builds, so it stays queryable from any agent.
 - also (or instead, if you lack that tool) keep markdown files i can read:
-    second-brain/profile.md          - who i am, goals, preferences
-    second-brain/people/NAME.md      - one file per person
-    second-brain/projects/NAME.md    - one file per project, with open loops
-    second-brain/workflows/NAME.md   - repeatable SOPs
-    second-brain/log/DATE.md         - the hourly session summaries (append-only)
-    second-brain/now.md              - what i'm doing right now and over the last
+    second-knowledge/profile.md          - who i am, goals, preferences
+    second-knowledge/people/NAME.md      - one file per person
+    second-knowledge/projects/NAME.md    - one file per project, with open loops
+    second-knowledge/workflows/NAME.md   - repeatable SOPs
+    second-knowledge/log/DATE.md         - the hourly session summaries (append-only)
+    second-knowledge/now.md              - what i'm doing right now and over the last
                                        ~30/120 min, refreshed every run
 
 always APPEND and DEDUPE: update existing entries instead of duplicating them, and
@@ -960,18 +960,18 @@ export function ConnectSection({ integrationId, fields }: { integrationId: strin
 }
 
 // ---------------------------------------------------------------------------
-// Second-brain callout — the headline action on every agent card: copy a
+// Second-knowledge callout — the headline action on every agent card: copy a
 // single prompt that makes the agent build a digital-clone-style memory of you.
 // ---------------------------------------------------------------------------
 
-function SecondBrainCallout({ name }: { name: string }) {
+function SecondKnowledgeCallout({ name }: { name: string }) {
   const [copied, setCopied] = useState(false);
   const [savedPath, setSavedPath] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const copyPrompt = useCallback(async () => {
     try {
-      await commands.copyTextToClipboard(SECOND_BRAIN_PROMPT);
+      await commands.copyTextToClipboard(SECOND_KNOWLEDGE_PROMPT);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast({ title: "已复制个人知识库提示词", description: `粘贴到 ${name} 中` });
@@ -983,12 +983,12 @@ function SecondBrainCallout({ name }: { name: string }) {
   const saveMd = useCallback(async () => {
     setIsSaving(true);
     try {
-      await writeTextFile("screenpipe-second-brain.md", SECOND_BRAIN_PROMPT, {
+      await writeTextFile("screenpipe-second-knowledge.md", SECOND_KNOWLEDGE_PROMPT, {
         baseDir: BaseDirectory.Download,
       });
       const dir = await downloadDir();
-      setSavedPath(await join(dir, "screenpipe-second-brain.md"));
-      toast({ title: "已保存到下载文件夹", description: "screenpipe-second-brain.md" });
+      setSavedPath(await join(dir, "screenpipe-second-knowledge.md"));
+      toast({ title: "已保存到下载文件夹", description: "screenpipe-second-knowledge.md" });
     } catch (e) {
       toast({ title: "保存失败", description: String(e), variant: "destructive" });
     } finally {
@@ -1030,7 +1030,7 @@ function SecondBrainCallout({ name }: { name: string }) {
         </Button>
         <a
           href="#"
-          onClick={(e) => { e.preventDefault(); openUrl("https://docs.screenpi.pe/second-brain"); }}
+          onClick={(e) => { e.preventDefault(); openUrl("https://docs.screenpi.pe/second-knowledge"); }}
           className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground ml-auto"
         >
           <ExternalLink className="h-3 w-3" /> learn more
@@ -1079,7 +1079,7 @@ export function AgentCard({
         </div>
 
         <div className="px-4 pb-3">
-          <SecondBrainCallout name={name} />
+          <SecondKnowledgeCallout name={name} />
         </div>
 
         <div className="px-4 pb-4">

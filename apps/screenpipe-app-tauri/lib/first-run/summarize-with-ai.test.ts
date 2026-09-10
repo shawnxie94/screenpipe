@@ -19,10 +19,10 @@ const activity: ActivitySnapshot = {
     { name: "Arc", frame_count: 22 },
   ],
   windows: [
-    { app_name: "Obsidian", window_name: "080726 - brain", minutes: 4 },
+    { app_name: "Obsidian", window_name: "080726 - knowledge", minutes: 4 },
     { app_name: "Arc", window_name: "• Discord", minutes: 2 },
   ],
-  edited_files: [{ path: "/Users/x/brain/080726.md" }],
+  edited_files: [{ path: "/Users/x/knowledge/080726.md" }],
   audio_summary: { segment_count: 3, speakers: [{}, {}] },
 };
 
@@ -38,8 +38,8 @@ describe("buildActivityFacts", () => {
     const facts = buildActivityFacts(activity, 60_000);
     expect(facts).toContain("screens_indexed: 42");
     expect(facts).toContain("Obsidian (20 screens)");
-    expect(facts).toContain('"080726 - brain" in Obsidian');
-    expect(facts).toContain("/Users/x/brain/080726.md");
+    expect(facts).toContain('"080726 - knowledge" in Obsidian');
+    expect(facts).toContain("/Users/x/knowledge/080726.md");
     expect(facts).toContain("audio_transcripts: 3 (2 speakers)");
   });
 

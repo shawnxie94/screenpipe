@@ -362,19 +362,19 @@ pub(crate) async fn delete_memory_handler(
     // If this row was already published to the cloud sync, remember the
     // sync_uuid before we drop the row so the next push can publish a
     // tombstone. Reads should never block the delete on failure — a
-    // Record and apply the Brain deletion first. The raw memory row is the
+    // Record and apply the Knowledge deletion first. The raw memory row is the
     // locator used by recovery, so deleting it first would make propagation
     // best-effort and could leave derived text searchable.
     let deletion_id = {
-        let brain = &state.brain;
-        Some(brain.deletion().delete_memory(id).await.map_err(|e| (
+        let knowledge = &state.knowledge;
+        Some(knowledge.deletion().delete_memory(id).await.map_err(|e| (
             StatusCode::INTERNAL_SERVER_ERROR,
             JsonResponse(json!({"error": e.to_string()})),
         ))?.deletion_id)
     };
     if let Err(e) = state.db.delete_memory(id).await {
         if let Some(deletion_id) = deletion_id {
-            let _ = state.db.brain_update_deletion_state(deletion_id, "failed").await;
+            let _ = state.db.knowledge_update_deletion_state(deletion_id, "failed").await;
         }
         return Err((
             StatusCode::INTERNAL_SERVER_ERROR,

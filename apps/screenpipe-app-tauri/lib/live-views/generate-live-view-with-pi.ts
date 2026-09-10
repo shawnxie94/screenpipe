@@ -6,9 +6,9 @@ import { homeDir, join } from "@tauri-apps/api/path";
 import {
   commands,
   type AIPreset,
-  type BrainViewComponent,
-  type BrainViewPeriodPolicy,
-  type BrainViewTimeRange,
+  type KnowledgeViewComponent,
+  type KnowledgeViewPeriodPolicy,
+  type KnowledgeViewTimeRange,
   type PiProviderConfig,
 } from "@/lib/utils/tauri";
 import { mountAgentEventBus, registerForeground } from "@/lib/events/bus";
@@ -21,7 +21,7 @@ const GENERATION_TIMEOUT_MS = 90_000;
 const PROJECT_DIR = "pi-live-views";
 const PROPOSE_TOOL = "screenpipe_live_view_propose";
 const READ_ACTIONS = new Set(["get", "list", "pipes", "values"]);
-const COMPONENTS = new Set<BrainViewComponent>([
+const COMPONENTS = new Set<KnowledgeViewComponent>([
   "metric.v1",
   "list.v1",
   "bar-chart.v1",
@@ -30,7 +30,7 @@ const COMPONENTS = new Set<BrainViewComponent>([
   "timeline.v1",
   "markdown.v1",
 ]);
-const TIME_RANGES = new Set<BrainViewTimeRange>(["today", "24h", "7d", "30d"]);
+const TIME_RANGES = new Set<KnowledgeViewTimeRange>(["today", "24h", "7d", "30d"]);
 
 export type LiveViewGenerationScope = "dashboard" | "block";
 
@@ -46,15 +46,15 @@ export type GeneratedLiveViewBlock = {
   id?: string;
   title: string;
   intent: string;
-  component: BrainViewComponent;
+  component: KnowledgeViewComponent;
   width: 3 | 6 | 12;
   pipeName: string | null;
 };
 
 export type GeneratedLiveView = {
   title: string;
-  timeRange: BrainViewTimeRange;
-  periodPolicy?: BrainViewPeriodPolicy;
+  timeRange: KnowledgeViewTimeRange;
+  periodPolicy?: KnowledgeViewPeriodPolicy;
   blocks: GeneratedLiveViewBlock[];
   note: string;
 };
@@ -70,8 +70,8 @@ type GenerateLiveViewOptions = {
   requirePipeBinding?: boolean;
   currentView?: {
     title: string;
-    timeRange: BrainViewTimeRange;
-    periodPolicy?: BrainViewPeriodPolicy;
+    timeRange: KnowledgeViewTimeRange;
+    periodPolicy?: KnowledgeViewPeriodPolicy;
     blocks: GeneratedLiveViewBlock[];
   } | null;
   currentViewRef?: {
@@ -93,10 +93,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 // The Pi tool schema is the contract. These checks exist so a violation that
 // slipped past it fails loudly here instead of being coerced into a silently
 // different dashboard than the one the model described.
-function componentValue(value: unknown): BrainViewComponent | null {
+function componentValue(value: unknown): KnowledgeViewComponent | null {
   return typeof value === "string" &&
-    COMPONENTS.has(value as BrainViewComponent)
-    ? (value as BrainViewComponent)
+    COMPONENTS.has(value as KnowledgeViewComponent)
+    ? (value as KnowledgeViewComponent)
     : null;
 }
 
@@ -105,20 +105,20 @@ function widthValue(value: unknown): 3 | 6 | 12 {
   throw new Error("AI 返回了超出 3、6 或 12 的区块宽度");
 }
 
-function timeRangeValue(value: unknown): BrainViewTimeRange {
+function timeRangeValue(value: unknown): KnowledgeViewTimeRange {
   if (
     typeof value === "string" &&
-    TIME_RANGES.has(value as BrainViewTimeRange)
+    TIME_RANGES.has(value as KnowledgeViewTimeRange)
   ) {
-    return value as BrainViewTimeRange;
+    return value as KnowledgeViewTimeRange;
   }
   throw new Error("AI 返回了不支持的时间范围");
 }
 
 function periodPolicyValue(
   value: unknown,
-  timeRange: BrainViewTimeRange,
-): BrainViewPeriodPolicy {
+  timeRange: KnowledgeViewTimeRange,
+): KnowledgeViewPeriodPolicy {
   if (typeof value === "string" && value.trim().toLowerCase() === "fixed") {
     return { type: "fixed.v1", value: timeRange };
   }

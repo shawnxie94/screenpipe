@@ -25,20 +25,20 @@ use tracing::{error, info, warn};
 
 const STORE_KEY: &str = "activityHistory:activity-history-pi-v9";
 
-// Brain history migration state. While migrating, the writer pauses (single
-// writer). Once active, the brain DB is the read source and the writer
+// Knowledge history migration state. While migrating, the writer pauses (single
+// writer). Once active, the knowledge DB is the read source and the writer
 // mirrors new entries into it via the engine.
 static MIGRATION_IN_PROGRESS: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
-static BRAIN_HISTORY_ACTIVE: std::sync::atomic::AtomicBool =
+static KNOWLEDGE_HISTORY_ACTIVE: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 
 pub fn migration_in_progress() -> &'static std::sync::atomic::AtomicBool {
     &MIGRATION_IN_PROGRESS
 }
 
-pub fn brain_history_active() -> &'static std::sync::atomic::AtomicBool {
-    &BRAIN_HISTORY_ACTIVE
+pub fn knowledge_history_active() -> &'static std::sync::atomic::AtomicBool {
+    &KNOWLEDGE_HISTORY_ACTIVE
 }
 const DEFAULT_INTERVAL_MINUTES: u64 = 15;
 const COVERAGE_SLOP_MS: i64 = 1_000;
@@ -1341,7 +1341,7 @@ async fn begin_activity_task(
     source: &str,
     idempotency_key: &str,
 ) -> Result<Option<ActivityTaskLease>, String> {
-    let Some(shared) = screenpipe_engine::brain::shared() else {
+    let Some(shared) = screenpipe_engine::knowledge::shared() else {
         // The activity projection can still be read during very early native
         // startup, before the engine publishes its shared database.
         return Ok(None);
@@ -1677,8 +1677,8 @@ async fn generate_inner(
         degraded_error,
     } = generated;
     let generated_activity_count = entries.len();
-    let entries_for_brain: Vec<ActivityHistoryEntry> =
-        if BRAIN_HISTORY_ACTIVE.load(std::sync::atomic::Ordering::SeqCst) {
+    let entries_for_knowledge: Vec<ActivityHistoryEntry> =
+        if KNOWLEDGE_HISTORY_ACTIVE.load(std::sync::atomic::Ordering::SeqCst) {
             entries.clone()
         } else {
             Vec::new()
@@ -1703,8 +1703,8 @@ async fn generate_inner(
     }
     stored.coverage = merge_coverage(stored.coverage);
     write_all(app, &stored)?;
-    if !entries_for_brain.is_empty() {
-        mirror_new_entries_to_brain(app, &entries_for_brain, start, end);
+    if !entries_for_knowledge.is_empty() {
+        mirror_new_entries_to_knowledge(app, &entries_for_knowledge, start, end);
     }
     if source == "manual" {
         let settings = SettingsStore::get(app)?.ok_or("Settings are not available")?;
@@ -2701,10 +2701,10 @@ mod tests {
 
 }
 
-/// Post-activation mirror: new history entries go into the brain DB through
+/// Post-activation mirror: new history entries go into the knowledge DB through
 /// the engine. Best-effort with visible warnings — the store copy stays as a
-/// legacy cache, the brain DB is authoritative.
-fn mirror_new_entries_to_brain(
+/// legacy cache, the knowledge DB is authoritative.
+fn mirror_new_entries_to_knowledge(
     app: &AppHandle,
     entries: &[ActivityHistoryEntry],
     start: DateTime<Utc>,
@@ -2721,7 +2721,7 @@ fn mirror_new_entries_to_brain(
                 .get("id")
                 .cloned()
                 .unwrap_or_else(|| json!(uuid::Uuid::new_v4().to_string()));
-            let body = crate::brain_migration::upsert_history_entry(
+            let body = crate::knowledge_migration::upsert_history_entry(
                 &app,
                 id.as_str().unwrap_or_default().to_string(),
                 entry.to_string(),
@@ -2730,7 +2730,7 @@ fn mirror_new_entries_to_brain(
             )
             .await;
             if let Err(error) = body {
-                tracing::warn!("brain history mirror failed: {error}");
+                tracing::warn!("knowledge history mirror failed: {error}");
             }
         }
     });

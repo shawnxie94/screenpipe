@@ -318,7 +318,7 @@ mod tests {
 }
 
 // ---------------------------------------------------------------------------
-// Local Brain Chinese projection (brain_search_* index). unicode61 cannot
+// Local Knowledge Chinese projection (knowledge_search_* index). unicode61 cannot
 // match two-character Chinese substrings inside continuous CJK runs, so the
 // projection pre-tokenizes: every CJK run emits prefixed unigrams (`cu字`)
 // and bigrams (`cb词汇`); latin/code tokens pass through unchanged. Queries
@@ -326,7 +326,7 @@ mod tests {
 // Version bump invalidates the whole index (index_version column).
 // ---------------------------------------------------------------------------
 
-pub const BRAIN_SEARCH_INDEX_VERSION: i64 = 1;
+pub const KNOWLEDGE_SEARCH_INDEX_VERSION: i64 = 1;
 
 /// Question/function words stripped before candidate generation.
 const CJK_STOPWORDS: &[&str] = &[
@@ -471,7 +471,7 @@ pub fn chinese_query_candidates(query: &str) -> Vec<String> {
 }
 
 #[cfg(test)]
-mod brain_chinese_tests {
+mod knowledge_chinese_tests {
     use super::*;
 
     #[test]

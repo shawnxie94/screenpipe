@@ -45,7 +45,7 @@ interface CanvasDocument {
   viewport: CanvasViewport;
 }
 
-/** Brain sits behind the entitlement gate, so open Home with an entitled account. */
+/** Knowledge sits behind the entitlement gate, so open Home with an entitled account. */
 async function seedEntitledAccount(): Promise<void> {
   const windowPayload: ShowWindowPayload = { Home: { page: null } };
   await browser.executeAsync(
@@ -265,7 +265,7 @@ async function dispatchWheel(
 
 async function savedViewport(): Promise<CanvasViewport | null> {
   const saved = await invokeOrThrow<CanvasDocument | null>(
-    "load_brain_view_canvas",
+    "load_knowledge_view_canvas",
     { viewId: VIEW_ID },
   ).catch(() => null);
   return saved?.viewport ?? null;
@@ -280,12 +280,12 @@ describe("Live View canvas pinch zoom", function () {
     await openHomeWindow();
 
     const existing = await invokeOrThrow<Array<{ id: string }>>(
-      "list_brain_views",
+      "list_knowledge_views",
     );
     if (existing.some((view) => view.id === VIEW_ID)) {
-      await invokeOrThrow("delete_brain_view", { id: VIEW_ID });
+      await invokeOrThrow("delete_knowledge_view", { id: VIEW_ID });
     }
-    await invokeOrThrow("save_brain_view", {
+    await invokeOrThrow("save_knowledge_view", {
       request: {
         id: VIEW_ID,
         title: "Pinch zoom",
@@ -310,9 +310,9 @@ describe("Live View canvas pinch zoom", function () {
     });
 
     await browser.execute(() => {
-      window.location.href = "/home?section=brain";
+      window.location.href = "/home?section=knowledge";
     });
-    await waitForTestId("section-brain", 15_000);
+    await waitForTestId("section-knowledge", 15_000);
     await waitForTestId("overview-dashboard-selector", 15_000);
     await browser.execute((nextViewId: string) => {
       const selector = document.querySelector<HTMLSelectElement>(
@@ -327,7 +327,7 @@ describe("Live View canvas pinch zoom", function () {
   });
 
   after(async () => {
-    await invokeOrThrow("delete_brain_view", { id: VIEW_ID }).catch(() => {});
+    await invokeOrThrow("delete_knowledge_view", { id: VIEW_ID }).catch(() => {});
   });
 
   // Runs first on purpose: the canvas latches "this platform has a gesture

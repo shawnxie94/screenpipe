@@ -7,8 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   localFetch: vi.fn(),
   generateLiveViewWithPi: vi.fn(),
-  listBrainViews: vi.fn(),
-  saveBrainView: vi.fn(),
+  listKnowledgeViews: vi.fn(),
+  saveKnowledgeView: vi.fn(),
 }));
 
 const localStorageMock = (() => {
@@ -33,8 +33,8 @@ vi.mock("@/lib/live-views/generate-live-view-with-pi", () => ({
 }));
 vi.mock("@/lib/utils/tauri", () => ({
   commands: {
-    listBrainViews: mocks.listBrainViews,
-    saveBrainView: mocks.saveBrainView,
+    listKnowledgeViews: mocks.listKnowledgeViews,
+    saveKnowledgeView: mocks.saveKnowledgeView,
   },
 }));
 
@@ -178,7 +178,7 @@ describe("createOnboardingLiveView", () => {
       value: localStorageMock,
     });
     localStorageMock.clear();
-    mocks.listBrainViews.mockResolvedValue({ status: "ok", data: [] });
+    mocks.listKnowledgeViews.mockResolvedValue({ status: "ok", data: [] });
     mocks.generateLiveViewWithPi.mockResolvedValue({
       title: "Meeting follow-through",
       timeRange: "today",
@@ -200,7 +200,7 @@ describe("createOnboardingLiveView", () => {
         },
       ],
     });
-    mocks.saveBrainView.mockImplementation(async (request) => ({
+    mocks.saveKnowledgeView.mockImplementation(async (request) => ({
       status: "ok",
       data: {
         id: request.id,
@@ -303,7 +303,7 @@ describe("createOnboardingLiveView", () => {
         pipes: [expect.objectContaining({ name: "meeting-intel" })],
       }),
     );
-    expect(mocks.saveBrainView).toHaveBeenCalledWith(
+    expect(mocks.saveKnowledgeView).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "first-dashboard",
         expectedRevision: 1,
@@ -387,7 +387,7 @@ describe("createOnboardingLiveView", () => {
 
     // The saved dashboard must have real bound slots, not the empty shell the
     // user used to be left with.
-    const savedSlots = mocks.saveBrainView.mock.calls.at(-1)?.[0].slots;
+    const savedSlots = mocks.saveKnowledgeView.mock.calls.at(-1)?.[0].slots;
     expect(savedSlots.length).toBeGreaterThan(0);
     for (const slot of savedSlots) {
       expect(slot.binding).toEqual({ pipeName: "meeting-intel" });
@@ -452,7 +452,7 @@ describe("createOnboardingLiveView", () => {
   });
 
   it("updates the stable first dashboard on retry instead of creating a duplicate", async () => {
-    mocks.listBrainViews.mockResolvedValue({
+    mocks.listKnowledgeViews.mockResolvedValue({
       status: "ok",
       data: [
         {
@@ -484,7 +484,7 @@ describe("createOnboardingLiveView", () => {
       userToken: "user-token",
     });
 
-    expect(mocks.saveBrainView).toHaveBeenCalledWith(
+    expect(mocks.saveKnowledgeView).toHaveBeenCalledWith(
       expect.objectContaining({
         id: "first-dashboard",
         expectedRevision: 4,

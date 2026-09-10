@@ -43,8 +43,8 @@ pub use cancellable_query::{
     is_sqlite_interrupt, CancellableReadConnection, SqliteInterruptReason, SEARCH_QUERY_TIMEOUT,
     SQLITE_PROGRESS_CHECK_OPS,
 };
-pub use db::brain::types::{
-    BrainJobKind, BrainJobState, DeletionCause, KnowledgeAvailability, KnowledgeState,
+pub use db::knowledge::types::{
+    KnowledgeJobKind, KnowledgeJobState, DeletionCause, KnowledgeAvailability, KnowledgeState,
     KnowledgeType, SourceKind,
 };
 pub use db::tasks::{
@@ -56,17 +56,17 @@ pub use db::{
     compute_input_hash, find_matching_a11y_positions, fingerprint, new_source_uid,
     parse_all_text_positions, ActivityActionDraft, ActivityActionRecord, ActivityEvidenceDraft,
     ActivityEvidenceRecord, ActivityIntervalDraft, ActivityIntervalRecord,
-    ActivityLedgerObservation, ActivityTaskDraft, BrainHistoryBatch, BrainHistoryCoverageInput,
-    BrainHistoryEntryInput, BrainHistoryEntryRow, BrainKnowledgeRow, BrainKnowledgeVersionRow,
-    BrainOfficeConnectionRow, BrainOfficeConnectionUpdate, BrainOfficeObjectRow, BrainSourceInput,
-    BrainSourceRegistration, BrainSourceRow, BrainWorkUnitRevisionRow, BrainWorkUnitRow,
-    ClaimedBrainJob, DatabaseManager, DeleteTimeRangeResult, ImmediateTx,
+    ActivityLedgerObservation, ActivityTaskDraft, KnowledgeHistoryBatch, KnowledgeHistoryCoverageInput,
+    KnowledgeHistoryEntryInput, KnowledgeHistoryEntryRow, KnowledgeKnowledgeRow, KnowledgeKnowledgeVersionRow,
+    KnowledgeOfficeConnectionRow, KnowledgeOfficeConnectionUpdate, KnowledgeOfficeObjectRow, KnowledgeSourceInput,
+    KnowledgeSourceRegistration, KnowledgeSourceRow, KnowledgeWorkUnitRevisionRow, KnowledgeWorkUnitRow,
+    ClaimedKnowledgeJob, DatabaseManager, DeleteTimeRangeResult, ImmediateTx,
     NewMeetingTranscriptSegment, OfficeSourceMeta, SemanticActor, SemanticActorAlias,
     SemanticActorReference, SemanticAttachResult, SemanticCleanupResult, SemanticContextQuery,
     SemanticFrameContext, SemanticProjectionWriteResult, SourceLocator, SourceRef,
     MEETING_END_REASON_AUTO_END, MEETING_END_REASON_EXPLICIT_STOP, MEETING_END_REASON_SHUTDOWN,
 };
-pub use db::{BrainReviewUpdate, BrainSearchDocInput, BrainSearchHit};
+pub use db::{KnowledgeReviewUpdate, KnowledgeSearchDocInput, KnowledgeSearchHit};
 pub use recovery::{
     probe_quarantined_generation_health, rebuild_recovered_fts5_indexes,
     verify_fresh_sqlite_recovery_candidate, QuarantineHealthProbe, RecoveryVerification,

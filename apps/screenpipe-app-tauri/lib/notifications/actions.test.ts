@@ -55,7 +55,7 @@ describe("notification file links", () => {
     expect(viewerPathFromNotificationUrl("https://example.com/report.md")).toBeNull();
   });
 
-  it("recovers legacy file links into the Brain artifact detail", async () => {
+  it("recovers legacy file links into the Knowledge artifact detail", async () => {
     const showWindowActivated = vi.fn().mockResolvedValue(undefined);
     const emitEvent = vi.fn().mockResolvedValue(undefined);
 
@@ -69,9 +69,9 @@ describe("notification file links", () => {
     );
 
     expect(showWindowActivated).toHaveBeenCalledWith({
-      Home: { page: "brain" },
+      Home: { page: "knowledge" },
     });
-    expect(emitEvent).toHaveBeenCalledWith("open-brain-artifact", {
+    expect(emitEvent).toHaveBeenCalledWith("open-knowledge-artifact", {
       path: "/Users/louis/report.md",
       source: "notification",
     });
@@ -92,9 +92,9 @@ describe("notification file links", () => {
     });
 
     expect(showWindowActivated).toHaveBeenCalledWith({
-      Home: { page: "brain" },
+      Home: { page: "knowledge" },
     });
-    expect(emitEvent).toHaveBeenCalledWith("open-brain-artifact", {
+    expect(emitEvent).toHaveBeenCalledWith("open-knowledge-artifact", {
       registeredId: 42,
       source: "notification",
     });

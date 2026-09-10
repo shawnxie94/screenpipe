@@ -10,13 +10,13 @@ import {
 } from "@/lib/live-views/onboarding-activation";
 import { buildLiveViewTimeContext } from "@/lib/live-views/time-range";
 import { appServerFetch } from "@/lib/notifications/app-server";
-import { commands, type BrainViewDefinition } from "@/lib/utils/tauri";
+import { commands, type KnowledgeViewDefinition } from "@/lib/utils/tauri";
 
 const FOLLOW_UP_RETRY_DELAY_MS = 5 * 60 * 1_000;
 
 type FollowUpDependencies = {
   now?: () => Date;
-  listViews?: () => Promise<BrainViewDefinition[]>;
+  listViews?: () => Promise<KnowledgeViewDefinition[]>;
   engineFetch?: typeof localFetch;
   notificationFetch?: typeof appServerFetch;
 };
@@ -108,7 +108,7 @@ function goalFallback(activation: OnboardingLiveViewActivation): string {
 }
 
 function followUpNotification(
-  view: BrainViewDefinition,
+  view: KnowledgeViewDefinition,
   activation: OnboardingLiveViewActivation,
 ) {
   const deepLink = liveViewDeepLink(view.id);
@@ -137,7 +137,7 @@ function followUpNotification(
 }
 
 async function startDashboardPipes(
-  view: BrainViewDefinition,
+  view: KnowledgeViewDefinition,
   fetch: typeof localFetch,
 ): Promise<number> {
   const pipeNames = Array.from(
@@ -199,7 +199,7 @@ export async function runDueOnboardingLiveViewFollowUp(
     const listViews =
       dependencies.listViews ??
       (async () => {
-        const result = await commands.listBrainViews();
+        const result = await commands.listKnowledgeViews();
         if (result.status === "error") throw new Error(result.error);
         return result.data;
       });

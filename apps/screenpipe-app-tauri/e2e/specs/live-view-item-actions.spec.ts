@@ -29,7 +29,7 @@ interface OutputTarget {
   };
 }
 
-interface BrainView {
+interface KnowledgeView {
   id: string;
 }
 
@@ -159,9 +159,9 @@ function apiHeaders(config: LocalApiConfig): Record<string, string> {
 }
 
 async function deleteViewIfPresent(id: string) {
-  const views = await invokeOrThrow<BrainView[]>("list_brain_views");
+  const views = await invokeOrThrow<KnowledgeView[]>("list_knowledge_views");
   if (views.some((view) => view.id === id)) {
-    await invokeOrThrow("delete_brain_view", { id });
+    await invokeOrThrow("delete_knowledge_view", { id });
   }
 }
 
@@ -181,7 +181,7 @@ async function installAndFillKit({
   payloads: Record<string, object>;
 }) {
   await deleteViewIfPresent(viewId);
-  await invokeOrThrow("install_brain_view_template_kit", {
+  await invokeOrThrow("install_knowledge_view_template_kit", {
     request: {
       kitId,
       targetViewId: viewId,
@@ -300,9 +300,9 @@ describe("Live View reusable item actions", function () {
 
   it("snoozes, corrects, resolves, removes, reopens, and rehydrates the same generic list", async () => {
     await browser.execute(() => {
-      window.location.href = "/home?section=brain";
+      window.location.href = "/home?section=knowledge";
     });
-    await waitForTestId("section-brain", 15_000);
+    await waitForTestId("section-knowledge", 15_000);
     await setDesktopSize();
     await selectDashboard(COMMITMENTS_VIEW);
     await waitForTestId("live-view-item-customer-recap", 10_000);
@@ -351,7 +351,7 @@ describe("Live View reusable item actions", function () {
     await saveScreenshot("living-commitments-04-handled-receipts");
 
     await reloadAndWaitForHome();
-    await waitForTestId("section-brain", 15_000);
+    await waitForTestId("section-knowledge", 15_000);
     await selectDashboard(COMMITMENTS_VIEW);
     await waitForItemState("customer-recap", "snoozed");
     await waitForItemState("recording-control-followup", "resolved");

@@ -45,13 +45,13 @@ const seedFlags = E2E_SEED_FLAGS.split(",")
   .map((flag) => flag.trim().toLowerCase())
   .filter(Boolean);
 
-// Without the onboarding seed there is no account, Brain renders the sign-in
+// Without the onboarding seed there is no account, Knowledge renders the sign-in
 // wall instead of the section, and every assertion below would false-fail.
 const canRun = seedFlags.includes("onboarding");
 
 const LEARNING_STORAGE_KEY = "screenpipe.first-run.learning-window.v1";
 // The app's own E2E account hook (components/app-entitlement-gate.tsx), compiled
-// in only for e2e builds. Brain sits behind the account gate, and no seed flag
+// in only for e2e builds. Knowledge sits behind the account gate, and no seed flag
 // creates a signed-in user, so without this the section never renders.
 const E2E_ACCOUNT_USER_KEY = "screenpipe_e2e_account_user";
 const BANNER = '[data-testid="first-run-learning-banner"]';

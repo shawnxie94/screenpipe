@@ -22,7 +22,7 @@ export const INTERNAL_WORKTREE_PREFIX = "__worktree-route:";
  * Currently user-visible:
  *  - `activity-history` — background activity timeline generation.
  *  - `live-view`       — natural-language Live View dashboard generation.
- *  - `brain-task`      — Brain 沉淀 runs (extraction / compile / backfill).
+ *  - `brain-task`      — Knowledge 沉淀 runs (extraction / compile / backfill).
  *
  * Still hidden by design (see comment on `getInternalSessionCategory`):
  *  - title generation, first-run summaries, meeting side chats, worktree
@@ -34,7 +34,7 @@ export type InternalSessionCategory =
   | "brain-task";
 export const INTERNAL_ACTIVITY_HISTORY_PREFIX = `${INTERNAL_TITLE_PREFIX}activity-history-`;
 export const INTERNAL_LIVE_VIEW_PREFIX = `${INTERNAL_TITLE_PREFIX}live-view-`;
-export const INTERNAL_BRAIN_TASK_PREFIX = `${INTERNAL_TITLE_PREFIX}brain-`;
+export const INTERNAL_KNOWLEDGE_TASK_PREFIX = `${INTERNAL_TITLE_PREFIX}brain-`;
 
 /** Returns true when a session ID belongs to an internal title-gen session. */
 export function isInternalTitleSession(sessionId: string): boolean {
@@ -67,7 +67,7 @@ export function getInternalSessionCategory(
   if (sessionId.startsWith(INTERNAL_LIVE_VIEW_PREFIX)) {
     return "live-view";
   }
-  if (sessionId.startsWith(INTERNAL_BRAIN_TASK_PREFIX)) {
+  if (sessionId.startsWith(INTERNAL_KNOWLEDGE_TASK_PREFIX)) {
     return "brain-task";
   }
   return null;

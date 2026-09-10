@@ -22,7 +22,7 @@ export const SIDEBAR_NAV_ORDER = [
   "meetings",
   "timeline",
   "activity",
-  "brain",
+  "knowledge",
   "pipes",
   "connections",
 ] as const;
@@ -31,7 +31,7 @@ export type SidebarNavId = (typeof SIDEBAR_NAV_ORDER)[number];
 
 const PREVIOUS_DEFAULT_SIDEBAR_NAV_ORDER = [
   "home",
-  "brain",
+  "knowledge",
   "meetings",
   "pipes",
   "timeline",

@@ -7,7 +7,7 @@
 //! Consumers such as the desktop app define targets with JSON schemas and a
 //! bound pipe. The engine authenticates and validates submissions, then keeps
 //! the latest source-backed value. It intentionally knows nothing about cards,
-//! charts, layouts, Brain, or any other presentation concern.
+//! charts, layouts, Knowledge, or any other presentation concern.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

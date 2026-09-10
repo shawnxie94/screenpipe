@@ -296,11 +296,11 @@ const TOOLS: Tool[] = [
   {
     name: "answer",
     description:
-      "Ask a grounded question over local work history and published knowledge (知迹 Local Brain). " +
+      "Ask a grounded question over local work history and published knowledge (知迹 Local Knowledge). " +
       "Returns an answer with per-claim evidence citations, source references, and retrieval diagnostics. " +
       "Answers only from locally imported/recorded content; no evidence means an explicit 'insufficient evidence' result. " +
       "USE WHEN: the user asks what happened, why a decision was made, how an exception was handled, or for SOPs/rules with citations.",
-    annotations: { title: "Answer (Local Brain)", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Answer (Local Knowledge)", readOnlyHint: true, openWorldHint: false },
     inputSchema: {
       type: "object",
       properties: {
@@ -318,11 +318,11 @@ const TOOLS: Tool[] = [
     },
   },
   {
-    name: "get-brain-source",
+    name: "get-knowledge-source",
     description:
-      "Fetch one Local Brain evidence source by id: readable text, capture time, media availability, and current state. " +
+      "Fetch one Local Knowledge evidence source by id: readable text, capture time, media availability, and current state. " +
       "Deleted sources return gone (no body). USE WHEN: verifying an answer citation before acting on it.",
-    annotations: { title: "Get Brain Source", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Get Knowledge Source", readOnlyHint: true, openWorldHint: false },
     inputSchema: {
       type: "object",
       properties: {
@@ -1408,10 +1408,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
-      case "get-brain-source": {
+      case "get-knowledge-source": {
         const sourceUid = String(args.source_uid || "").trim();
         if (!sourceUid) throw new Error("source_uid is required");
-        const res = await callAPI(`/brain/sources/${encodeURIComponent(sourceUid)}`);
+        const res = await callAPI(`/knowledge/sources/${encodeURIComponent(sourceUid)}`);
         const data = await res.json().catch(() => ({}));
         if (res.status === 410) {
           return {

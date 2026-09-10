@@ -210,7 +210,7 @@ function internalSessionTitle(
     case "live-view":
       return `仪表盘生成 · ${hh}:${mm}`;
     case "brain-task":
-      return `Brain 沉淀 · ${hh}:${mm}`;
+      return `Knowledge 沉淀 · ${hh}:${mm}`;
   }
 }
 

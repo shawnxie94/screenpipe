@@ -8,7 +8,7 @@ import { localFetch, isLocalApiUrl } from "@/lib/api";
 import { showChatWithPrefill } from "@/lib/chat-utils";
 import {
   artifactOpenRequestFromUrl,
-  OPEN_BRAIN_ARTIFACT_EVENT,
+  OPEN_KNOWLEDGE_ARTIFACT_EVENT,
 } from "@/lib/artifact-deeplink";
 
 const GENERIC_DEEPLINK_MOUNT_DELAY_MS = 150;
@@ -93,7 +93,7 @@ export function parseMeetingDeeplink(url: string): {
 
 export function windowForDeeplink(url: string) {
   if (artifactOpenRequestFromUrl(url, "notification")) {
-    return { Home: { page: "brain" } };
+    return { Home: { page: "knowledge" } };
   }
   if (isMeetingDeeplink(url)) return { Home: { page: "meetings" } };
   if (isActivityDeeplink(url)) return { Home: { page: "activity" } };
@@ -105,7 +105,7 @@ export function windowForDeeplink(url: string) {
  * producers use: `screenpipe://view?path=…` (what the /notify body rewriter
  * emits) and raw `file://` URLs (what pipes tend to put in link actions).
  *
- * Notification file links recover into the Brain artifact detail. This helper
+ * Notification file links recover into the Knowledge artifact detail. This helper
  * remains exported for callers that only need to detect or inspect the legacy
  * path form.
  */
@@ -157,13 +157,13 @@ export async function routeNotificationDeeplink(
 
   const artifactRequest = artifactOpenRequestFromUrl(url, "notification");
   if (artifactRequest) {
-    await showWindowActivated({ Home: { page: "brain" } });
+    await showWindowActivated({ Home: { page: "knowledge" } });
     for (const delayMs of ARTIFACT_DEEPLINK_RETRY_DELAYS_MS) {
       if (delayMs > 0) {
         await sleepMs(delayMs);
       }
-      await emitEvent("navigate", { url: "/home?section=brain" });
-      await emitEvent(OPEN_BRAIN_ARTIFACT_EVENT, artifactRequest);
+      await emitEvent("navigate", { url: "/home?section=knowledge" });
+      await emitEvent(OPEN_KNOWLEDGE_ARTIFACT_EVENT, artifactRequest);
     }
     return;
   }

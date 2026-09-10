@@ -36,7 +36,7 @@ import {
 import { trackFirstRunSummaryNotificationOpened } from "@/lib/first-run/telemetry";
 import {
   artifactOpenRequestFromUrl,
-  OPEN_BRAIN_ARTIFACT_EVENT,
+  OPEN_KNOWLEDGE_ARTIFACT_EVENT,
 } from "@/lib/artifact-deeplink";
 
 const DEEPLINK_RECENT_TTL_MS = 1_000;
@@ -259,7 +259,7 @@ export function DeeplinkHandler() {
         );
         if (viewId) {
           rememberSelectedLiveViewDashboard(viewId);
-          await openSettingsWindow("brain");
+          await openSettingsWindow("knowledge");
         }
       }
 
@@ -368,19 +368,19 @@ export function DeeplinkHandler() {
         return;
       }
 
-      // Stable artifact links recover the exact saved result in Brain. The
+      // Stable artifact links recover the exact saved result in Knowledge. The
       // repeated event makes a cold-started Home webview reliable while the
-      // request key in Brain keeps delivery idempotent.
+      // request key in Knowledge keeps delivery idempotent.
       if (parsedUrl.host === "artifact") {
         const request = artifactOpenRequestFromUrl(url, "deeplink");
         if (!request) return;
-        await commands.showWindowActivated({ Home: { page: "brain" } });
+        await commands.showWindowActivated({ Home: { page: "knowledge" } });
         for (const delayMs of [0, 250, 750, 1500]) {
           if (delayMs > 0) {
             await new Promise((resolve) => setTimeout(resolve, delayMs));
           }
-          await emit("navigate", { url: "/home?section=brain" });
-          await emit(OPEN_BRAIN_ARTIFACT_EVENT, request);
+          await emit("navigate", { url: "/home?section=knowledge" });
+          await emit(OPEN_KNOWLEDGE_ARTIFACT_EVENT, request);
         }
         return;
       }

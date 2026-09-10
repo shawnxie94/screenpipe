@@ -21,14 +21,14 @@ import { Input } from "@/components/ui/input";
 import { allowedLiveViewTimeRanges } from "@/lib/live-views/time-range";
 import { cn } from "@/lib/utils";
 import type {
-  BrainViewComponent,
-  BrainViewDefinition,
-  BrainViewSlot,
-  BrainViewTimeRange,
+  KnowledgeViewComponent,
+  KnowledgeViewDefinition,
+  KnowledgeViewSlot,
+  KnowledgeViewTimeRange,
 } from "@/lib/utils/tauri";
 
 type ComponentOption = {
-  value: BrainViewComponent;
+  value: KnowledgeViewComponent;
   label: string;
   schema: string;
 };
@@ -56,7 +56,7 @@ const WIDTH_LABELS: Record<(typeof WIDTHS)[number], string> = {
   12: "完整",
 };
 
-function normalizedSlots(slots: BrainViewSlot[]): BrainViewSlot[] {
+function normalizedSlots(slots: KnowledgeViewSlot[]): KnowledgeViewSlot[] {
   return [...slots]
     .sort((a, b) => a.order - b.order)
     .map((slot, order) => ({ ...slot, order }));
@@ -86,7 +86,7 @@ function closestWidth(width: number) {
 }
 
 function reorderSlots(
-  slots: BrainViewSlot[],
+  slots: KnowledgeViewSlot[],
   activeId: string,
   targetId: string,
 ) {
@@ -99,7 +99,7 @@ function reorderSlots(
   return ordered.map((slot, order) => ({ ...slot, order }));
 }
 
-function moveSlot(slots: BrainViewSlot[], id: string, direction: -1 | 1) {
+function moveSlot(slots: KnowledgeViewSlot[], id: string, direction: -1 | 1) {
   const ordered = normalizedSlots(slots);
   const index = ordered.findIndex((slot) => slot.id === id);
   const next = index + direction;
@@ -117,11 +117,11 @@ export function LiveViewLayoutEditor({
   onCancel,
   onSave,
 }: {
-  draft: BrainViewDefinition;
+  draft: KnowledgeViewDefinition;
   saving: boolean;
   componentOptions: ComponentOption[];
   pipeNames: string[];
-  onChange: (draft: BrainViewDefinition) => void;
+  onChange: (draft: KnowledgeViewDefinition) => void;
   onCancel: () => void;
   onSave: () => void;
 }) {
@@ -144,13 +144,13 @@ export function LiveViewLayoutEditor({
     if (selectedSlotId && !selectedSlot) setSelectedSlotId(null);
   }, [selectedSlot, selectedSlotId]);
 
-  const changeSlots = (nextSlots: BrainViewSlot[]) => {
+  const changeSlots = (nextSlots: KnowledgeViewSlot[]) => {
     onChange({ ...draft, slots: normalizedSlots(nextSlots) });
   };
 
   const updateSlot = (
     id: string,
-    update: (slot: BrainViewSlot) => BrainViewSlot,
+    update: (slot: KnowledgeViewSlot) => KnowledgeViewSlot,
   ) => {
     changeSlots(slots.map((slot) => (slot.id === id ? update(slot) : slot)));
   };
@@ -162,7 +162,7 @@ export function LiveViewLayoutEditor({
       id = `block-${Date.now().toString(36)}-${suffix}`;
       suffix += 1;
     }
-    const nextSlot: BrainViewSlot = {
+    const nextSlot: KnowledgeViewSlot = {
       id,
       title: "新区块",
       component: "metric.v1",
@@ -205,7 +205,7 @@ export function LiveViewLayoutEditor({
 
   return (
     <div
-      data-testid="brain-overview-editor"
+      data-testid="knowledge-overview-editor"
       className="min-h-0 flex-1 overflow-y-auto pb-8 pr-4 [scrollbar-gutter:stable]"
     >
       <div className="mb-4 grid gap-4 border-b border-border pb-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
@@ -298,7 +298,7 @@ export function LiveViewLayoutEditor({
               onChange={(event) =>
                 onChange({
                   ...draft,
-                  timeRange: event.target.value as BrainViewTimeRange,
+                  timeRange: event.target.value as KnowledgeViewTimeRange,
                 })
               }
             >
@@ -365,7 +365,7 @@ export function LiveViewLayoutEditor({
                 onChange={(event) =>
                   updateSlot(selectedSlot.id, (slot) => ({
                     ...slot,
-                    component: event.target.value as BrainViewComponent,
+                    component: event.target.value as KnowledgeViewComponent,
                     value: null,
                   }))
                 }

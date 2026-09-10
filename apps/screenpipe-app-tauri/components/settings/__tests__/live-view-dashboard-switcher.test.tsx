@@ -5,12 +5,12 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import type { BrainViewDefinition } from "@/lib/utils/tauri";
+import type { KnowledgeViewDefinition } from "@/lib/utils/tauri";
 import { LiveViewDashboardSwitcher } from "../live-view-dashboard-switcher";
 
 globalThis.PointerEvent ||= MouseEvent as typeof PointerEvent;
 
-const dashboards: BrainViewDefinition[] = [
+const dashboards: KnowledgeViewDefinition[] = [
   {
     id: "daily-focus",
     title: "Daily focus",

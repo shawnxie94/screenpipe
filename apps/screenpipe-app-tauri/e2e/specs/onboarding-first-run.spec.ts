@@ -21,7 +21,7 @@
 //      when an older build persisted the plan step.
 //
 // The post-setup learning window lives in first-run-learning-window.spec.ts:
-// it renders on Brain, which is behind the account gate, so it needs the
+// it renders on Knowledge, which is behind the account gate, so it needs the
 // authenticated seed that this fresh-install spec deliberately omits.
 
 import { existsSync } from "node:fs";

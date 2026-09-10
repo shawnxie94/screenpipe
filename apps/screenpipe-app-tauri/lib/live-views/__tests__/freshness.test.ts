@@ -7,7 +7,7 @@ import {
   liveViewTimeAgo,
   summarizeLiveViewFreshness,
 } from "@/lib/live-views/freshness";
-import type { BrainViewSlot } from "@/lib/utils/tauri";
+import type { KnowledgeViewSlot } from "@/lib/utils/tauri";
 
 const NOW = Date.parse("2026-08-07T12:00:00Z");
 
@@ -15,7 +15,7 @@ function slot(
   id: string,
   updatedAt: string | null,
   bound = true,
-): BrainViewSlot {
+): KnowledgeViewSlot {
   return {
     id,
     title: id,
@@ -35,7 +35,7 @@ function slot(
           updatedAt,
         }
       : null,
-  } as unknown as BrainViewSlot;
+  } as unknown as KnowledgeViewSlot;
 }
 
 describe("summarizeLiveViewFreshness", () => {

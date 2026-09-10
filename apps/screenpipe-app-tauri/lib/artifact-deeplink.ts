@@ -4,9 +4,9 @@
 
 import type { UnifiedArtifact } from "@/lib/hooks/use-unified-artifacts";
 
-export const OPEN_BRAIN_ARTIFACT_EVENT = "open-brain-artifact";
+export const OPEN_KNOWLEDGE_ARTIFACT_EVENT = "open-knowledge-artifact";
 
-export type BrainArtifactOpenRequest = {
+export type KnowledgeArtifactOpenRequest = {
   registeredId?: number;
   path?: string;
   source: "notification" | "deeplink";
@@ -26,8 +26,8 @@ function filePathFromUrl(parsed: URL): string | null {
 
 export function artifactOpenRequestFromUrl(
   href: string,
-  source: BrainArtifactOpenRequest["source"],
-): BrainArtifactOpenRequest | null {
+  source: KnowledgeArtifactOpenRequest["source"],
+): KnowledgeArtifactOpenRequest | null {
   let parsed: URL;
   try {
     parsed = new URL(href);
@@ -61,7 +61,7 @@ export function artifactOpenRequestFromUrl(
   return null;
 }
 
-export function artifactOpenRequestKey(request: BrainArtifactOpenRequest): string {
+export function artifactOpenRequestKey(request: KnowledgeArtifactOpenRequest): string {
   return request.registeredId != null
     ? `registered:${request.registeredId}`
     : `path:${request.path ?? ""}`;
@@ -69,7 +69,7 @@ export function artifactOpenRequestKey(request: BrainArtifactOpenRequest): strin
 
 export function artifactMatchesOpenRequest(
   artifact: UnifiedArtifact,
-  request: BrainArtifactOpenRequest,
+  request: KnowledgeArtifactOpenRequest,
 ): boolean {
   if (
     request.registeredId != null &&

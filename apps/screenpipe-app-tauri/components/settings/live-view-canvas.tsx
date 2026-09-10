@@ -66,12 +66,12 @@ import {
   uniqueCanvasId,
 } from "@/lib/live-views/canvas-layout";
 import type {
-  BrainViewCanvasDocument,
-  BrainViewCanvasNote,
-  BrainViewCanvasPoint,
-  BrainViewCanvasStroke,
-  BrainViewSlot,
-  BrainViewTimeRange,
+  KnowledgeViewCanvasDocument,
+  KnowledgeViewCanvasNote,
+  KnowledgeViewCanvasPoint,
+  KnowledgeViewCanvasStroke,
+  KnowledgeViewSlot,
+  KnowledgeViewTimeRange,
 } from "@/lib/utils/tauri";
 
 type CanvasTool = "select" | "pan" | "note" | "arrow" | "draw";
@@ -91,8 +91,8 @@ type CanvasNodeActions = {
 };
 
 type LiveViewFlowNodeData = CanvasNodeActions & {
-  slot: BrainViewSlot;
-  timeRange: BrainViewTimeRange;
+  slot: KnowledgeViewSlot;
+  timeRange: KnowledgeViewTimeRange;
   sourceStatus: LiveViewSourceStatus;
   refreshing: boolean;
   feedback: "up" | "down" | null;
@@ -114,7 +114,7 @@ type LiveViewFlowNodeData = CanvasNodeActions & {
 };
 
 type NoteFlowNodeData = CanvasNodeActions & {
-  note: BrainViewCanvasNote;
+  note: KnowledgeViewCanvasNote;
   onTextChange: (noteId: string, text: string, persist: boolean) => void;
 };
 
@@ -125,7 +125,7 @@ type CanvasFlowEdge = Edge<Record<string, never>, "smoothstep">;
 
 type DrawSession = {
   pointerId: number;
-  stroke: BrainViewCanvasStroke;
+  stroke: KnowledgeViewCanvasStroke;
 };
 
 const TOOL_OPTIONS: Array<{
@@ -177,7 +177,7 @@ function sameSelection(left: string[], right: string[]): boolean {
   return left.every((id) => rightIds.has(id));
 }
 
-function strokePath(points: BrainViewCanvasPoint[]): string {
+function strokePath(points: KnowledgeViewCanvasPoint[]): string {
   if (points.length === 0) return "";
   return points
     .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
@@ -443,26 +443,26 @@ export function LiveViewCanvas({
   focusSlotId = null,
   onProposalDecision = () => {},
 }: {
-  document: BrainViewCanvasDocument;
-  slots: BrainViewSlot[];
-  timeRange: BrainViewTimeRange;
+  document: KnowledgeViewCanvasDocument;
+  slots: KnowledgeViewSlot[];
+  timeRange: KnowledgeViewTimeRange;
   refreshingSlotIds: Set<string>;
   /** How the Block's scheduled task refreshes it, if at all. */
-  sourceStatusFor?: (slot: BrainViewSlot) => LiveViewSourceStatus;
+  sourceStatusFor?: (slot: KnowledgeViewSlot) => LiveViewSourceStatus;
   aiEditingSlotId: string | null;
-  onChange: (document: BrainViewCanvasDocument, options: ChangeOptions) => void;
+  onChange: (document: KnowledgeViewCanvasDocument, options: ChangeOptions) => void;
   onFeedback: (
-    slot: BrainViewSlot,
+    slot: KnowledgeViewSlot,
     rating: "up" | "down" | null,
     correction?: string,
   ) => Promise<boolean>;
-  onRegenerate: (slot: BrainViewSlot) => void;
-  onAiEdit: (slot: BrainViewSlot, prompt: string) => Promise<boolean>;
+  onRegenerate: (slot: KnowledgeViewSlot) => void;
+  onAiEdit: (slot: KnowledgeViewSlot, prompt: string) => Promise<boolean>;
   onItemAction: (
-    slot: BrainViewSlot,
+    slot: KnowledgeViewSlot,
     request: LiveViewItemActionRequest,
   ) => Promise<boolean>;
-  onItemHandoff: (slot: BrainViewSlot, item: LiveViewListItem) => void;
+  onItemHandoff: (slot: KnowledgeViewSlot, item: LiveViewListItem) => void;
   proposals?: Map<
     string,
     {
@@ -480,13 +480,13 @@ export function LiveViewCanvas({
   const [toolsOpen, setToolsOpen] = useState(false);
   const [selection, setSelection] = useState<string[]>([]);
   const [arrowSource, setArrowSource] = useState<string | null>(null);
-  const [draftStroke, setDraftStroke] = useState<BrainViewCanvasStroke | null>(
+  const [draftStroke, setDraftStroke] = useState<KnowledgeViewCanvasStroke | null>(
     null,
   );
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const drawSessionRef = useRef<DrawSession | null>(null);
   const canvasActiveRef = useRef(false);
-  const pointerAnchorRef = useRef<BrainViewCanvasPoint | null>(null);
+  const pointerAnchorRef = useRef<KnowledgeViewCanvasPoint | null>(null);
   const nativeZoomEndRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const nativeMagnifySeenRef = useRef(false);
   const focusAnimationFrameRef = useRef<number | null>(null);
@@ -540,7 +540,7 @@ export function LiveViewCanvas({
   }, []);
 
   const applyDocument = useCallback(
-    (next: BrainViewCanvasDocument, persist: boolean) => {
+    (next: KnowledgeViewCanvasDocument, persist: boolean) => {
       if (!isMountedRef.current) return;
       latestDocumentRef.current = next;
       callbacksRef.current.onChange(next, { persist });
@@ -717,7 +717,7 @@ export function LiveViewCanvas({
   );
 
   const updateNodePosition = useCallback(
-    (nodeId: string, position: BrainViewCanvasPoint, persist: boolean) => {
+    (nodeId: string, position: KnowledgeViewCanvasPoint, persist: boolean) => {
       const current = latestDocumentRef.current;
       const geometry = nodeId.startsWith("block:")
         ? current.blocks.find(
@@ -1033,7 +1033,7 @@ export function LiveViewCanvas({
   }, []);
 
   const addNote = useCallback(
-    (point: BrainViewCanvasPoint) => {
+    (point: KnowledgeViewCanvasPoint) => {
       const current = latestDocumentRef.current;
       const used = new Set(current.notes.map((note) => note.id));
       const id = uniqueCanvasId("note", used);
@@ -1188,7 +1188,7 @@ export function LiveViewCanvas({
   const zoomCanvas = useCallback(
     (
       factor: number,
-      anchor: BrainViewCanvasPoint | null = null,
+      anchor: KnowledgeViewCanvasPoint | null = null,
       persist = true,
     ) => {
       const current = latestDocumentRef.current;

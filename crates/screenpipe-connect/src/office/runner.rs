@@ -374,7 +374,7 @@ mod tests {
 
     #[tokio::test]
     async fn runs_fixed_argv_and_captures_output() {
-        let dir = std::env::temp_dir().join(format!("brain-runner-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("knowledge-runner-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let cli = fake_cli(
             &dir,
@@ -395,7 +395,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_unsupported_versions() {
-        let dir = std::env::temp_dir().join(format!("brain-runner-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("knowledge-runner-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let cli = fake_cli(&dir, "fake-cli", "#!/bin/sh\necho x\n");
         let runner = CliRunner::new(dir.clone());
@@ -410,7 +410,7 @@ mod tests {
 
     #[tokio::test]
     async fn cancel_kills_process_within_grace() {
-        let dir = std::env::temp_dir().join(format!("brain-runner-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("knowledge-runner-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let cli = fake_cli(&dir, "fake-cli", "#!/bin/sh\nsleep 30\necho done\n");
         let runner = CliRunner::new(dir.clone());
@@ -433,7 +433,7 @@ mod tests {
 
     #[tokio::test]
     async fn oversized_output_is_reported_truncated() {
-        let dir = std::env::temp_dir().join(format!("brain-runner-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("knowledge-runner-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         // 3 MiB of output exceeds the 2 MiB cap.
         let cli = fake_cli(&dir, "fake-cli", "#!/bin/sh\nhead -c 3145728 /dev/zero | tr '\\0' 'a'\n");

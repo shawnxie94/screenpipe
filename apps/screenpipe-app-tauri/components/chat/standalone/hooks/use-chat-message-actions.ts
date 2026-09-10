@@ -239,7 +239,7 @@ export function useChatMessageActions({
     }
     if (result.kind === "live-view" && result.id) {
       rememberSelectedLiveViewDashboard(result.id);
-      await commands.showWindowActivated({ Home: { page: "brain" } });
+      await commands.showWindowActivated({ Home: { page: "knowledge" } });
       return;
     }
     if (result.kind === "link" && result.url) {

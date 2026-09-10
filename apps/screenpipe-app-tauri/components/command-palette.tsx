@@ -55,7 +55,7 @@ export type CommandPaletteActionId =
   | "next_recent_chat"
   | "previous_recent_chat"
   | "go_chat"
-  | "go_brain"
+  | "go_knowledge"
   | "go_meetings"
   | "go_scheduled"
   | "go_timeline"
@@ -105,7 +105,7 @@ export interface PaletteEntry {
 
 const SECTION_ACTION_IDS: Record<SidebarNavId, CommandPaletteActionId> = {
   home: "go_chat",
-  brain: "go_brain",
+  knowledge: "go_knowledge",
   meetings: "go_meetings",
   pipes: "go_scheduled",
   timeline: "go_timeline",
@@ -115,7 +115,7 @@ const SECTION_ACTION_IDS: Record<SidebarNavId, CommandPaletteActionId> = {
 
 const SECTION_ICONS: Record<SidebarNavId, LucideIcon> = {
   home: MessageSquare,
-  brain: Brain,
+  knowledge: Brain,
   meetings: CalendarClock,
   pipes: TimerReset,
   timeline: MonitorPlay,

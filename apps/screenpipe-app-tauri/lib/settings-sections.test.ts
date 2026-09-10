@@ -35,7 +35,7 @@ describe("resolveSettingsSection", () => {
     },
   );
 
-  it.each([["brain"], ["timeline"], [""], [null], [undefined], [42]])(
+  it.each([["knowledge"], ["timeline"], [""], [null], [undefined], [42]])(
     "returns null for %s so the home sidebar keeps handling it",
     (value) => {
       expect(resolveSettingsSection(value)).toBeNull();

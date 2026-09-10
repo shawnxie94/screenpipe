@@ -6,7 +6,7 @@
 // user-facing product naming — never technical identifiers (CLI/包/API/MCP/
 // URL/scheme/事件/storage key/路径/生成绑定), external product names, or
 // upstream attribution. Each retained Screenpipe string is documented in
-// docs/reviews/personal-brain-brand-retained-identifiers.md.
+// docs/reviews/personal-knowledge-brand-retained-identifiers.md.
 
 export const PRODUCT_NAME = "知迹";
 export const PRODUCT_BILINGUAL_NAME = "知迹 · Screenpipe";

@@ -17,7 +17,7 @@ interface ArtifactHtmlBodyProps {
   expanded: boolean;
   /**
    * Collapses the row back to its title. Omit in surfaces that are always
-   * expanded (the Brain detail pane) — there is nothing to collapse into, so
+   * expanded (the Knowledge detail pane) — there is nothing to collapse into, so
    * rendering the toggle there would just look like a stray close button.
    */
   onToggleExpanded?: () => void;
@@ -32,7 +32,7 @@ interface ArtifactHtmlBodyProps {
 }
 
 /**
- * Artifact-row body for `.html` artifacts in the Brain view.
+ * Artifact-row body for `.html` artifacts in the Knowledge view.
  *
  * Critically, an HTML artifact is a full document whose `<style>`/`*` rules are
  * GLOBAL — CSS in a `<style>` tag is not scoped to a subtree. The old inline
@@ -78,7 +78,7 @@ export function ArtifactHtmlBody({
         <div className="flex shrink-0 items-center justify-between gap-2 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
           <span>HTML · 沙箱{showSource ? " · 源代码" : " · 已渲染"}</span>
           <button
-            data-testid="brain-html-render-toggle"
+            data-testid="knowledge-html-render-toggle"
             onClick={(e) => {
               e.stopPropagation();
               setShowSource((v) => !v);

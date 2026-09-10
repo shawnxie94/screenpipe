@@ -44,9 +44,9 @@ mod focus_handoff;
 mod icons;
 mod agent_event_emitter;
 mod audio_exclusions;
-mod brain_migration;
-mod brain_runtime;
-mod brain_views;
+mod knowledge_migration;
+mod knowledge_runtime;
+mod knowledge_views;
 mod office_runtime;
 mod calendar;
 mod capture_session;
@@ -1429,11 +1429,11 @@ async fn main() {
                 .unwrap_or(11435);
             let server_shutdown_tx = spawn_server(app_handle.clone(), focus_port);
             app.manage(server_shutdown_tx);
-            app.manage(brain_runtime::BrainRuntimeState::default());
+            app.manage(knowledge_runtime::KnowledgeRuntimeState::default());
             {
                 let handle = app_handle.clone();
                 tauri::async_runtime::spawn(async move {
-                    brain_runtime::start_brain_worker(&handle).await;
+                    knowledge_runtime::start_knowledge_worker(&handle).await;
                 });
             }
 
@@ -2029,12 +2029,12 @@ async fn main() {
                 tauri::RunEvent::Exit => {
                     info!("App exiting — running cleanup");
 
-                    // Cancel in-flight brain steps first: uncommitted results
+                    // Cancel in-flight knowledge steps first: uncommitted results
                     // must never be written after exit begins.
                     {
                         let app = app_handle.app_handle().clone();
                         tauri::async_runtime::block_on(
-                            async move { brain_runtime::stop_brain_worker(&app).await },
+                            async move { knowledge_runtime::stop_knowledge_worker(&app).await },
                         );
                     }
 

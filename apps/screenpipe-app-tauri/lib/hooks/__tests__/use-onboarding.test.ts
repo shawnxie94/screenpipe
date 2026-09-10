@@ -78,7 +78,7 @@ describe("useOnboarding measurement", () => {
       localStorage.getItem("screenpipe:first-run-guide-pending"),
     ).toBeNull();
     expect(mocks.emit).toHaveBeenCalledWith("navigate", {
-      url: "screenpipe://home?section=brain",
+      url: "screenpipe://home?section=knowledge",
     });
     expect(mocks.emit).not.toHaveBeenCalledWith("first-run-guide-pending");
   });
@@ -126,7 +126,7 @@ describe("useOnboarding measurement", () => {
     ).toBeNull();
     expect(localStorage.getItem("screenpipe:pipes-collapsed")).toBe("true");
     expect(mocks.emit).toHaveBeenCalledWith("navigate", {
-      url: "screenpipe://home?section=brain",
+      url: "screenpipe://home?section=knowledge",
     });
     expect(mocks.emit).not.toHaveBeenCalledWith("first-run-guide-pending");
   });
@@ -177,7 +177,7 @@ describe("useOnboarding measurement", () => {
     ).toBeNull();
     expect(mocks.emit).not.toHaveBeenCalledWith("first-run-guide-pending");
     expect(mocks.emit).toHaveBeenCalledWith("navigate", {
-      url: "screenpipe://home?section=brain",
+      url: "screenpipe://home?section=knowledge",
     });
   });
 });

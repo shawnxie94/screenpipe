@@ -11,14 +11,14 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import type { BrainViewSlot } from "@/lib/utils/tauri";
+import type { KnowledgeViewSlot } from "@/lib/utils/tauri";
 import { LiveViewCard } from "../live-view-card";
 
 const longTitle = "Apply the human readiness decision before merging";
 const longSubtitle =
   "If the pull request is still a draft, unresolved, or blocked, stop and explain why.";
 
-const listSlot: BrainViewSlot = {
+const listSlot: KnowledgeViewSlot = {
   id: "process-steps",
   title: "Process steps",
   component: "list.v1",
@@ -47,7 +47,7 @@ const listSlot: BrainViewSlot = {
   },
 };
 
-const lineChartSlot: BrainViewSlot = {
+const lineChartSlot: KnowledgeViewSlot = {
   id: "focus-trend",
   title: "Focus trend",
   component: "line-chart.v1",

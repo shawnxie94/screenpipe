@@ -39,7 +39,7 @@ pub(crate) mod agent_skills;
 mod atomic_file;
 pub mod auth_key;
 mod auto_destruct;
-pub mod brain;
+pub mod knowledge;
 pub mod calendar_speaker_id;
 mod capture_exclusions;
 pub mod cli;

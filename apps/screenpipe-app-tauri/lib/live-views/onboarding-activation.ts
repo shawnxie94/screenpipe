@@ -6,15 +6,15 @@ import type { OnboardingGoalCategory } from "@/lib/live-views/onboarding-goals";
 
 export const SELECTED_DASHBOARD_STORAGE_KEY =
   "screenpipe.live-view.selected-dashboard";
-export const ONBOARDING_BRAIN_HANDOFF_EVENT =
+export const ONBOARDING_KNOWLEDGE_HANDOFF_EVENT =
   "screenpipe:open-onboarding-live-view";
 export const ONBOARDING_LIVE_VIEW_FOLLOW_UP_EVENT =
   "screenpipe:onboarding-live-view-follow-up";
 
 const ACTIVATIONS_STORAGE_KEY =
   "screenpipe.live-view.onboarding-activations.v1";
-const BRAIN_HANDOFF_STORAGE_KEY =
-  "screenpipe.live-view.onboarding-brain-handoff.v1";
+const KNOWLEDGE_HANDOFF_STORAGE_KEY =
+  "screenpipe.live-view.onboarding-knowledge-handoff.v1";
 export const USER_GOAL_STORAGE_KEY = "screenpipe.user.goal-category.v1";
 const LEGACY_HOME_FOCUS_STORAGE_KEY = "screenpipe.home.focus.v1";
 const MAX_STORED_ACTIVATIONS = 12;
@@ -262,7 +262,7 @@ export function startOnboardingLiveViewActivation(
   activations[viewId] = activation;
   writeActivations(activations);
   rememberSelectedLiveViewDashboard(viewId);
-  requestOnboardingBrainHandoff(viewId);
+  requestOnboardingKnowledgeHandoff(viewId);
   return activation;
 }
 
@@ -385,20 +385,20 @@ export function removeOnboardingLiveViewActivation(viewId: string): void {
   writeActivations(activations);
 }
 
-export function requestOnboardingBrainHandoff(viewId: string): void {
+export function requestOnboardingKnowledgeHandoff(viewId: string): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(BRAIN_HANDOFF_STORAGE_KEY, viewId);
+    window.localStorage.setItem(KNOWLEDGE_HANDOFF_STORAGE_KEY, viewId);
   } catch {
-    // The direct Brain route still works if this one-time hint cannot persist.
+    // The direct Knowledge route still works if this one-time hint cannot persist.
   }
 }
 
-export function consumeOnboardingBrainHandoff(): string | null {
+export function consumeOnboardingKnowledgeHandoff(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const viewId = window.localStorage.getItem(BRAIN_HANDOFF_STORAGE_KEY);
-    if (viewId) window.localStorage.removeItem(BRAIN_HANDOFF_STORAGE_KEY);
+    const viewId = window.localStorage.getItem(KNOWLEDGE_HANDOFF_STORAGE_KEY);
+    if (viewId) window.localStorage.removeItem(KNOWLEDGE_HANDOFF_STORAGE_KEY);
     return viewId;
   } catch {
     return null;

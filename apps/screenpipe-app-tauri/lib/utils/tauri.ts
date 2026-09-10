@@ -344,17 +344,17 @@ async copyTextToClipboard(text: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async deleteBrainView(id: string) : Promise<Result<null, string>> {
+async deleteCacheFiles(paths: string[]) : Promise<Result<number, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("delete_brain_view", { id }) };
+    return { status: "ok", data: await TAURI_INVOKE("delete_cache_files", { paths }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async deleteCacheFiles(paths: string[]) : Promise<Result<number, string>> {
+async deleteKnowledgeView(id: string) : Promise<Result<null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("delete_cache_files", { paths }) };
+    return { status: "ok", data: await TAURI_INVOKE("delete_knowledge_view", { id }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -715,14 +715,6 @@ async importSkill(sourcePath: string) : Promise<Result<ImportedSkill, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async installBrainViewTemplateKit(request: InstallBrainViewTemplateKitRequest) : Promise<Result<BrainViewDefinition, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("install_brain_view_template_kit", { request }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 /**
  * Install the two built-in screenpipe skills into a supported external agent.
  * Explicit Settings actions still call this narrow command; native launch
@@ -731,6 +723,14 @@ async installBrainViewTemplateKit(request: InstallBrainViewTemplateKitRequest) :
 async installExternalAgentSkills(target: string) : Promise<Result<string[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("install_external_agent_skills", { target }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async installKnowledgeViewTemplateKit(request: InstallKnowledgeViewTemplateKitRequest) : Promise<Result<KnowledgeViewDefinition, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("install_knowledge_view_template_kit", { request }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -782,22 +782,6 @@ async isServerRunning() : Promise<Result<boolean, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async listBrainViewTemplateKits() : Promise<Result<BrainViewTemplateKit[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("list_brain_view_template_kits") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async listBrainViews() : Promise<Result<BrainViewDefinition[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("list_brain_views") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async listCacheFiles() : Promise<Result<CacheFile[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_cache_files") };
@@ -832,6 +816,22 @@ async listChatEntriesByMtime(dir: string) : Promise<Result<ChatDirEntry[], strin
 async listImportedSkills() : Promise<Result<ImportedSkill[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("list_imported_skills") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async listKnowledgeViewTemplateKits() : Promise<Result<KnowledgeViewTemplateKit[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_knowledge_view_template_kits") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async listKnowledgeViews() : Promise<Result<KnowledgeViewDefinition[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_knowledge_views") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -936,9 +936,9 @@ async livetextUpdatePosition(frameId: string, x: number, y: number, w: number, h
     else return { status: "error", error: e  as any };
 }
 },
-async loadBrainViewCanvas(viewId: string) : Promise<Result<BrainViewCanvasDocument | null, string>> {
+async loadKnowledgeViewCanvas(viewId: string) : Promise<Result<KnowledgeViewCanvasDocument | null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("load_brain_view_canvas", { viewId }) };
+    return { status: "ok", data: await TAURI_INVOKE("load_knowledge_view_canvas", { viewId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1977,17 +1977,17 @@ async revealInDefaultBrowser(path: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async saveBrainView(request: SaveBrainViewRequest) : Promise<Result<BrainViewDefinition, string>> {
+async saveKnowledgeView(request: SaveKnowledgeViewRequest) : Promise<Result<KnowledgeViewDefinition, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("save_brain_view", { request }) };
+    return { status: "ok", data: await TAURI_INVOKE("save_knowledge_view", { request }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async saveBrainViewCanvas(request: SaveBrainViewCanvasRequest) : Promise<Result<BrainViewCanvasDocument, string>> {
+async saveKnowledgeViewCanvas(request: SaveKnowledgeViewCanvasRequest) : Promise<Result<KnowledgeViewCanvasDocument, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("save_brain_view_canvas", { request }) };
+    return { status: "ok", data: await TAURI_INVOKE("save_knowledge_view_canvas", { request }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2596,31 +2596,6 @@ sinceEpochSecs: number;
  * "compatibility mode" notice in onboarding/settings.
  */
 cpuCompatMode: boolean }
-export type BrainViewBinding = { pipeName: string }
-export type BrainViewCanvasArrow = { id: string; fromId: string; toId: string; label: string | null }
-export type BrainViewCanvasBlock = { slotId: string; x: number; y: number; width: number; height: number }
-export type BrainViewCanvasDocument = { schema: string; viewId: string; revision: number; mode: BrainViewDisplayMode; viewport: BrainViewCanvasViewport; blocks: BrainViewCanvasBlock[]; notes: BrainViewCanvasNote[]; arrows: BrainViewCanvasArrow[]; strokes: BrainViewCanvasStroke[]; updatedAt: string }
-export type BrainViewCanvasNote = { id: string; text: string; x: number; y: number; width: number; height: number }
-export type BrainViewCanvasPoint = { x: number; y: number }
-export type BrainViewCanvasStroke = { id: string; points: BrainViewCanvasPoint[] }
-export type BrainViewCanvasViewport = { x: number; y: number; zoom: number }
-export type BrainViewComponent = "metric.v1" | "list.v1" | "bar-chart.v1" | "line-chart.v1" | "table.v1" | "timeline.v1" | "markdown.v1"
-export type BrainViewDefinition = { id: string; title: string; revision: number; timeRange: BrainViewTimeRange; periodPolicy: BrainViewPeriodPolicy; slots: BrainViewSlot[]; createdAt: string; updatedAt: string }
-export type BrainViewDisplayMode = "dashboard" | "canvas"
-export type BrainViewEvidenceRef = { eventId: number | null; frameId: number | null; transcriptionId: number | null; ts: string | null; deviceId: string | null }
-export type BrainViewFeedback = { rating: BrainViewFeedbackRating; artifactOutputId: number; artifactVersion: number; correction: string | null; createdAt: string }
-export type BrainViewFeedbackRating = "up" | "down"
-export type BrainViewFeedbackSummary = { upCount: number; downCount: number; current: BrainViewFeedback | null }
-export type BrainViewItemActionSummary = { items: BrainViewItemState[] }
-export type BrainViewItemDisposition = "active" | "resolved" | "snoozed" | "dismissed"
-export type BrainViewItemState = { itemId: string; disposition: BrainViewItemDisposition; snoozedUntil: string | null; correction: string | null; updatedAt: string }
-export type BrainViewPeriodPolicy = { type: "fixed.v1"; value: BrainViewTimeRange } | { type: "selectable.v1"; values: BrainViewTimeRange[] }
-export type BrainViewSlot = { id: string; title: string; component: BrainViewComponent; width: number; order: number; intent: string | null; binding: BrainViewBinding | null; value: BrainViewValue | null; feedback: BrainViewFeedbackSummary; itemActions: BrainViewItemActionSummary }
-export type BrainViewSlotInput = { id: string; title: string; component: BrainViewComponent; width: number; order: number; intent: string | null; binding: BrainViewBinding | null }
-export type BrainViewTemplateKit = { id: string; title: string; description: string; version: number; timeRange: BrainViewTimeRange; periodPolicy: BrainViewPeriodPolicy; pipes: BrainViewTemplatePipe[]; slots: BrainViewSlotInput[] }
-export type BrainViewTemplatePipe = { name: string; distribution: string }
-export type BrainViewTimeRange = "today" | "24h" | "7d" | "30d"
-export type BrainViewValue = { payload: JsonValue; evidence: BrainViewEvidenceRef[]; sourcePipe: string; artifactOutputId: number; artifactVersion: number; updatedAt: string }
 /**
  * Per-browser automation status: "granted", "denied", or "not_asked".
  * Also includes whether the browser is currently running.
@@ -2721,10 +2696,35 @@ export type ImportedSkill = { name: string; description: string;
  * Absolute path inside `<data_dir>/skills/`.
  */
 path: string }
-export type InstallBrainViewTemplateKitRequest = { kitId: string; targetViewId: string; expectedRevision: number | null }
+export type InstallKnowledgeViewTemplateKitRequest = { kitId: string; targetViewId: string; expectedRevision: number | null }
 export type JobEvent = { kind: "started"; jobId: string; label: string; message: string | null } | { kind: "progress"; jobId: string; label: string; progress: number; message: string | null } | { kind: "completed"; jobId: string; label: string; outputPath: string | null; message: string | null } | { kind: "failed"; jobId: string; label: string; error: string }
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key in string]: JsonValue }
 export type KeychainStatus = { state: string }
+export type KnowledgeViewBinding = { pipeName: string }
+export type KnowledgeViewCanvasArrow = { id: string; fromId: string; toId: string; label: string | null }
+export type KnowledgeViewCanvasBlock = { slotId: string; x: number; y: number; width: number; height: number }
+export type KnowledgeViewCanvasDocument = { schema: string; viewId: string; revision: number; mode: KnowledgeViewDisplayMode; viewport: KnowledgeViewCanvasViewport; blocks: KnowledgeViewCanvasBlock[]; notes: KnowledgeViewCanvasNote[]; arrows: KnowledgeViewCanvasArrow[]; strokes: KnowledgeViewCanvasStroke[]; updatedAt: string }
+export type KnowledgeViewCanvasNote = { id: string; text: string; x: number; y: number; width: number; height: number }
+export type KnowledgeViewCanvasPoint = { x: number; y: number }
+export type KnowledgeViewCanvasStroke = { id: string; points: KnowledgeViewCanvasPoint[] }
+export type KnowledgeViewCanvasViewport = { x: number; y: number; zoom: number }
+export type KnowledgeViewComponent = "metric.v1" | "list.v1" | "bar-chart.v1" | "line-chart.v1" | "table.v1" | "timeline.v1" | "markdown.v1"
+export type KnowledgeViewDefinition = { id: string; title: string; revision: number; timeRange: KnowledgeViewTimeRange; periodPolicy: KnowledgeViewPeriodPolicy; slots: KnowledgeViewSlot[]; createdAt: string; updatedAt: string }
+export type KnowledgeViewDisplayMode = "dashboard" | "canvas"
+export type KnowledgeViewEvidenceRef = { eventId: number | null; frameId: number | null; transcriptionId: number | null; ts: string | null; deviceId: string | null }
+export type KnowledgeViewFeedback = { rating: KnowledgeViewFeedbackRating; artifactOutputId: number; artifactVersion: number; correction: string | null; createdAt: string }
+export type KnowledgeViewFeedbackRating = "up" | "down"
+export type KnowledgeViewFeedbackSummary = { upCount: number; downCount: number; current: KnowledgeViewFeedback | null }
+export type KnowledgeViewItemActionSummary = { items: KnowledgeViewItemState[] }
+export type KnowledgeViewItemDisposition = "active" | "resolved" | "snoozed" | "dismissed"
+export type KnowledgeViewItemState = { itemId: string; disposition: KnowledgeViewItemDisposition; snoozedUntil: string | null; correction: string | null; updatedAt: string }
+export type KnowledgeViewPeriodPolicy = { type: "fixed.v1"; value: KnowledgeViewTimeRange } | { type: "selectable.v1"; values: KnowledgeViewTimeRange[] }
+export type KnowledgeViewSlot = { id: string; title: string; component: KnowledgeViewComponent; width: number; order: number; intent: string | null; binding: KnowledgeViewBinding | null; value: KnowledgeViewValue | null; feedback: KnowledgeViewFeedbackSummary; itemActions: KnowledgeViewItemActionSummary }
+export type KnowledgeViewSlotInput = { id: string; title: string; component: KnowledgeViewComponent; width: number; order: number; intent: string | null; binding: KnowledgeViewBinding | null }
+export type KnowledgeViewTemplateKit = { id: string; title: string; description: string; version: number; timeRange: KnowledgeViewTimeRange; periodPolicy: KnowledgeViewPeriodPolicy; pipes: KnowledgeViewTemplatePipe[]; slots: KnowledgeViewSlotInput[] }
+export type KnowledgeViewTemplatePipe = { name: string; distribution: string }
+export type KnowledgeViewTimeRange = "today" | "24h" | "7d" | "30d"
+export type KnowledgeViewValue = { payload: JsonValue; evidence: KnowledgeViewEvidenceRef[]; sourcePipe: string; artifactOutputId: number; artifactVersion: number; updatedAt: string }
 export type LogFile = { name: string; path: string; modified_at: number }
 /**
  * Stable low-disk safety values shared with the settings UI.
@@ -2964,8 +2964,8 @@ export type RemoteSyncConfig = { host: string; port: number; user: string; key_p
  * Result of a sync operation.
  */
 export type RemoteSyncResult = { ok: boolean; files_transferred: number; bytes_transferred: number; error: string | null }
-export type SaveBrainViewCanvasRequest = { viewId: string; expectedRevision: number | null; mode: BrainViewDisplayMode; viewport: BrainViewCanvasViewport; blocks: BrainViewCanvasBlock[]; notes: BrainViewCanvasNote[]; arrows: BrainViewCanvasArrow[]; strokes: BrainViewCanvasStroke[] }
-export type SaveBrainViewRequest = { id: string; title: string; expectedRevision: number | null; timeRange: BrainViewTimeRange; periodPolicy: BrainViewPeriodPolicy; slots: BrainViewSlotInput[] }
+export type SaveKnowledgeViewCanvasRequest = { viewId: string; expectedRevision: number | null; mode: KnowledgeViewDisplayMode; viewport: KnowledgeViewCanvasViewport; blocks: KnowledgeViewCanvasBlock[]; notes: KnowledgeViewCanvasNote[]; arrows: KnowledgeViewCanvasArrow[]; strokes: KnowledgeViewCanvasStroke[] }
+export type SaveKnowledgeViewRequest = { id: string; title: string; expectedRevision: number | null; timeRange: KnowledgeViewTimeRange; periodPolicy: KnowledgeViewPeriodPolicy; slots: KnowledgeViewSlotInput[] }
 /**
  * A single schedule rule: a day-of-week + time range + what to record.
  */

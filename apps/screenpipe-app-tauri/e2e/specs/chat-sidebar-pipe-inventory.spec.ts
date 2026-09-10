@@ -12,7 +12,7 @@
  * 3. expanding one pipe omits the running execution;
  * 4. the first page contains exactly 10 completed executions; and
  * 5. older executions paginate only when requested; and
- * 6. a newly completed Brain/background run invalidates an expanded group; and
+ * 6. a newly completed Knowledge/background run invalidates an expanded group; and
  * 7. pinning then archiving an automation stays archived after reload.
  */
 
@@ -536,7 +536,7 @@ describe("chat sidebar pipe inventory", function () {
       },
     );
 
-    // Model a Brain-triggered background completion after this group has
+    // Model a Knowledge-triggered background completion after this group has
     // already loaded. The activity heartbeat must notice the newer terminal
     // execution and replace the cached first page without a collapse/reopen.
     await browser.execute(() => {

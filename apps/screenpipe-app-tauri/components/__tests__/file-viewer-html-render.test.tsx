@@ -33,7 +33,7 @@ function htmlContent(
   };
 }
 
-// A full styled document — the exact shape that crashed the Brain view: a
+// A full styled document — the exact shape that crashed the Knowledge view: a
 // global <style> that, if injected into the app DOM, repaints the whole window.
 const FULL_DOC =
   "<!doctype html><html><head><style>" +

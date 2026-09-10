@@ -41,9 +41,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { MAX_DASHBOARDS } from "@/lib/live-views/constants";
-import type { BrainViewDefinition } from "@/lib/utils/tauri";
+import type { KnowledgeViewDefinition } from "@/lib/utils/tauri";
 
-function displayDashboardTitle(view: BrainViewDefinition): string {
+function displayDashboardTitle(view: KnowledgeViewDefinition): string {
   // Older installs persisted the starter dashboard in English. Localize only
   // that untouched default; user-renamed dashboards must remain unchanged.
   return view.id === "my-dashboard" && view.title === "My dashboard"
@@ -64,8 +64,8 @@ export function LiveViewDashboardSwitcher({
   onDuplicate,
   onDelete,
 }: {
-  views: BrainViewDefinition[];
-  current: BrainViewDefinition;
+  views: KnowledgeViewDefinition[];
+  current: KnowledgeViewDefinition;
   busy: boolean;
   selectionDisabled?: boolean;
   onSelect: (id: string) => void;

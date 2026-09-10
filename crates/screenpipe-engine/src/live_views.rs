@@ -815,7 +815,7 @@ fn read_legacy_store(path: &Path) -> Result<LiveViewStore, LiveViewError> {
     })?;
     if legacy.version != 1 {
         return Err(LiveViewError::io(format!(
-            "unsupported legacy Brain view store version {}",
+            "unsupported legacy Knowledge view store version {}",
             legacy.version
         )));
     }

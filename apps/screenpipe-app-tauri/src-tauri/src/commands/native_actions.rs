@@ -390,30 +390,30 @@ fn artifact_request_from_notification_url(url: &str) -> Option<serde_json::Value
     })
 }
 
-/// Recover a notification result into Brain. The event is repeated because a
+/// Recover a notification result into Knowledge. The event is repeated because a
 /// notification can cold-create Home before React has mounted its listener;
-/// Brain deduplicates the stable request while preserving the artifact list.
-fn open_brain_artifact_from_notification(app: &tauri::AppHandle, request: serde_json::Value) {
+/// Knowledge deduplicates the stable request while preserving the artifact list.
+fn open_knowledge_artifact_from_notification(app: &tauri::AppHandle, request: serde_json::Value) {
     let app = app.clone();
     std::thread::spawn(move || {
         let app_for_show = app.clone();
         if let Err(error) = app.run_on_main_thread(move || {
             if let Err(error) = (ShowRewindWindow::Home {
-                page: Some("brain".to_string()),
+                page: Some("knowledge".to_string()),
             })
             .show(&app_for_show)
             {
-                error!("failed to show Brain for notification artifact: {error}");
+                error!("failed to show Knowledge for notification artifact: {error}");
             }
         }) {
-            error!("failed to schedule Brain notification artifact open: {error}");
+            error!("failed to schedule Knowledge notification artifact open: {error}");
         }
 
-        let navigation = serde_json::json!({ "url": "/home?section=brain" });
+        let navigation = serde_json::json!({ "url": "/home?section=knowledge" });
         for delay_ms in [150_u64, 500, 1200, 2200] {
             std::thread::sleep(std::time::Duration::from_millis(delay_ms));
             let _ = app.emit("navigate", navigation.clone());
-            let _ = app.emit("open-brain-artifact", request.clone());
+            let _ = app.emit("open-knowledge-artifact", request.clone());
         }
     });
 }
@@ -755,7 +755,7 @@ pub(crate) fn dispatch_notification_action(json: String) {
         };
 
         if let Some(request) = artifact_request_from_notification_url(&url) {
-            open_brain_artifact_from_notification(app, request);
+            open_knowledge_artifact_from_notification(app, request);
             return;
         }
 
@@ -867,10 +867,10 @@ pub(crate) fn dispatch_notification_action(json: String) {
             return;
         };
 
-        // Saved result links recover into Brain. Legacy view/file links carry
+        // Saved result links recover into Knowledge. Legacy view/file links carry
         // a path; new artifact links carry only a registered local id.
         if let Some(request) = artifact_request_from_notification_url(&url) {
-            open_brain_artifact_from_notification(app, request);
+            open_knowledge_artifact_from_notification(app, request);
             return;
         }
 
@@ -1039,7 +1039,7 @@ fn is_first_run_deeplink(url: &str) -> bool {
 fn notification_deeplink_target(url: &str) -> ShowRewindWindow {
     if url.starts_with("screenpipe://artifact") {
         ShowRewindWindow::Home {
-            page: Some("brain".to_string()),
+            page: Some("knowledge".to_string()),
         }
     } else if is_meeting_deeplink(url) {
         ShowRewindWindow::Home {
@@ -1631,11 +1631,11 @@ mod tests {
     }
 
     #[test]
-    fn artifact_notification_deeplink_targets_brain_home() {
+    fn artifact_notification_deeplink_targets_knowledge_home() {
         assert!(matches!(
             notification_deeplink_target("screenpipe://artifact/42"),
             crate::window::ShowRewindWindow::Home { page: Some(page) }
-                if page == "brain"
+                if page == "knowledge"
         ));
     }
 

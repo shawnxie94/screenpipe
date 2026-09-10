@@ -9,7 +9,7 @@ import {
   sourceCadenceConfigBody,
 } from "@/lib/live-views/source-cadence";
 import { parsePipeScheduleSnapshots } from "@/lib/live-views/source-status";
-import type { BrainViewSlot, BrainViewTimeRange } from "@/lib/utils/tauri";
+import type { KnowledgeViewSlot, KnowledgeViewTimeRange } from "@/lib/utils/tauri";
 
 const SNAPSHOTS = parsePipeScheduleSnapshots({
   data: [
@@ -26,14 +26,14 @@ const SNAPSHOTS = parsePipeScheduleSnapshots({
   ],
 });
 
-function slots(...pipeNames: string[]): BrainViewSlot[] {
+function slots(...pipeNames: string[]): KnowledgeViewSlot[] {
   return pipeNames.map(
     (pipeName, index) =>
-      ({ id: `b${index}`, binding: { pipeName } }) as unknown as BrainViewSlot,
+      ({ id: `b${index}`, binding: { pipeName } }) as unknown as KnowledgeViewSlot,
   );
 }
 
-function view(timeRange: BrainViewTimeRange, ...pipeNames: string[]) {
+function view(timeRange: KnowledgeViewTimeRange, ...pipeNames: string[]) {
   return { slots: slots(...pipeNames), timeRange };
 }
 
@@ -95,7 +95,7 @@ describe("planSourceCadence", () => {
   it("ignores blocks with no source", () => {
     expect(
       planSourceCadence(
-        [{ slots: [{ id: "b0", binding: null } as unknown as BrainViewSlot], timeRange: "today" }],
+        [{ slots: [{ id: "b0", binding: null } as unknown as KnowledgeViewSlot], timeRange: "today" }],
         SNAPSHOTS,
       ),
     ).toEqual([]);

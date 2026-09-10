@@ -4,11 +4,11 @@
 
 import { describe, expect, it, vi } from "vitest";
 import type {
-  BrainViewCanvasDocument,
-  BrainViewDefinition,
+  KnowledgeViewCanvasDocument,
+  KnowledgeViewDefinition,
 } from "@/lib/utils/tauri";
 import {
-  createMockBrainState,
+  createMockKnowledgeState,
   mockLocalApiResponse,
   createMockHealth,
 } from "./browser-engine-mock";
@@ -106,10 +106,10 @@ describe("browser development runtime", () => {
 
   it("provides stateful Live View fixtures", () => {
     const invoke = createBrowserIpcMock({ mode: "mock", apiPort: 3030 });
-    const [view] = invoke("list_brain_views") as BrainViewDefinition[];
-    const canvas = invoke("load_brain_view_canvas", {
+    const [view] = invoke("list_knowledge_views") as KnowledgeViewDefinition[];
+    const canvas = invoke("load_knowledge_view_canvas", {
       viewId: view.id,
-    }) as BrainViewCanvasDocument;
+    }) as KnowledgeViewCanvasDocument;
 
     expect(view.title).toBe("今天的时间花在了哪里");
     expect(view.slots[0].value).not.toBeNull();
@@ -119,7 +119,7 @@ describe("browser development runtime", () => {
       revision: 1,
     });
 
-    const savedCanvas = invoke("save_brain_view_canvas", {
+    const savedCanvas = invoke("save_knowledge_view_canvas", {
       request: {
         viewId: canvas.viewId,
         expectedRevision: canvas.revision,
@@ -130,10 +130,10 @@ describe("browser development runtime", () => {
         arrows: canvas.arrows,
         strokes: canvas.strokes,
       },
-    }) as BrainViewCanvasDocument;
+    }) as KnowledgeViewCanvasDocument;
     expect(savedCanvas).toMatchObject({ mode: "canvas", revision: 2 });
 
-    const savedView = invoke("save_brain_view", {
+    const savedView = invoke("save_knowledge_view", {
       request: {
         id: view.id,
         title: view.title,
@@ -152,10 +152,10 @@ describe("browser development runtime", () => {
           }),
         ),
       },
-    }) as BrainViewDefinition;
+    }) as KnowledgeViewDefinition;
     expect(savedView).toMatchObject({ timeRange: "24h", revision: 2 });
     expect(savedView.slots[0].value).toEqual(view.slots[0].value);
-    expect(invoke("list_brain_views")).toEqual([savedView]);
+    expect(invoke("list_knowledge_views")).toEqual([savedView]);
   });
 
   it("provides external schedules for browser design review", () => {
@@ -290,8 +290,8 @@ describe("browser development runtime", () => {
     });
   });
 
-  it("runs the correction loop against the stateful browser brain mock", async () => {
-    const state = createMockBrainState();
+  it("runs the correction loop against the stateful browser knowledge mock", async () => {
+    const state = createMockKnowledgeState();
     const request = async (path: string, init?: RequestInit) =>
       mockLocalApiResponse(
         new URL(`http://localhost:3030${path}`),
@@ -300,25 +300,25 @@ describe("browser development runtime", () => {
         state,
       );
 
-    expect(await (await request("/brain/knowledge")).json()).toMatchObject({
+    expect(await (await request("/knowledge/knowledge")).json()).toMatchObject({
       items: [expect.objectContaining({ current_version: 1, paused: false })],
     });
 
-    await request("/brain/feedback", {
+    await request("/knowledge/feedback", {
       method: "POST",
       body: JSON.stringify({ knowledge_version_id: 10, kind: "incorrect" }),
     });
-    let detail = (await (await request("/brain/knowledge/knowledge-1")).json()) as {
+    let detail = (await (await request("/knowledge/knowledge/knowledge-1")).json()) as {
       paused: boolean;
       versions: Array<{ id: number; version: number; state: string; revision: string; body: Record<string, unknown> }>;
     };
     expect(detail.paused).toBe(true);
 
-    await request("/brain/knowledge/knowledge-1/versions/1/review", {
+    await request("/knowledge/knowledge/knowledge-1/versions/1/review", {
       method: "POST",
       body: JSON.stringify({ action: "pause", expected_revision: "rev-1" }),
     });
-    const candidateResponse = await request("/brain/knowledge/knowledge-1/versions", {
+    const candidateResponse = await request("/knowledge/knowledge/knowledge-1/versions", {
       method: "POST",
       body: JSON.stringify({
         expected_current_version_id: 10,
@@ -328,19 +328,19 @@ describe("browser development runtime", () => {
     });
     expect(candidateResponse.status).toBe(200);
 
-    detail = (await (await request("/brain/knowledge/knowledge-1")).json()) as typeof detail;
+    detail = (await (await request("/knowledge/knowledge/knowledge-1")).json()) as typeof detail;
     const candidate = detail.versions.find((version) => version.state === "candidate");
     expect(candidate).toMatchObject({ id: 11, version: 2 });
-    await request("/brain/knowledge/knowledge-1/versions/2", {
+    await request("/knowledge/knowledge/knowledge-1/versions/2", {
       method: "PATCH",
       body: JSON.stringify({
         expected_revision: candidate!.revision,
         body: { title: "发布流程 v2", steps: [{ name: "检查", detail: "运行新测试" }] },
       }),
     });
-    detail = (await (await request("/brain/knowledge/knowledge-1")).json()) as typeof detail;
+    detail = (await (await request("/knowledge/knowledge/knowledge-1")).json()) as typeof detail;
     const edited = detail.versions.find((version) => version.version === 2)!;
-    await request("/brain/knowledge/knowledge-1/versions/2/review", {
+    await request("/knowledge/knowledge/knowledge-1/versions/2/review", {
       method: "POST",
       body: JSON.stringify({
         action: "publish",
@@ -358,7 +358,7 @@ describe("browser development runtime", () => {
   });
 
   it("covers the five-entry browser contract: tasks, activity replay, connections, knowledge and chat answer", async () => {
-    const state = createMockBrainState();
+    const state = createMockKnowledgeState();
     const request = (path: string, init?: RequestInit) =>
       mockLocalApiResponse(new URL(`http://localhost:3030${path}`), init, "ready", state);
 
@@ -499,9 +499,9 @@ describe("browser development runtime", () => {
     expect(officeEvents.events[0]).toMatchObject({ event_type: "office_sync_started", phase: "io" });
     expect(officeEvents.events[0].event_type).not.toContain("message");
 
-    expect((await request("/brain/work-units/wu-expired")).status).toBe(410);
-    expect((await request("/brain/work-units/wu-deleted")).status).toBe(410);
-    expect((await request("/brain/work-units/unknown")).status).toBe(404);
+    expect((await request("/knowledge/work-units/wu-expired")).status).toBe(410);
+    expect((await request("/knowledge/work-units/wu-deleted")).status).toBe(410);
+    expect((await request("/knowledge/work-units/unknown")).status).toBe(404);
 
     const office = (await (await request("/connections/office")).json()) as { connections: Array<{ provider: string; auth_status: string }> };
     expect(office.connections.map((connection) => connection.provider)).toEqual(["feishu", "tencent-meeting"]);
@@ -510,7 +510,7 @@ describe("browser development runtime", () => {
       body: JSON.stringify({ expected_revision: 1, document_ids: ["doc-v2"], chat_ids: [], meeting_ids: [], all_accessible_meetings: false, window_start_ms: 1, window_end_ms: 2, auto_sync: true }),
     });
     expect(await (await request("/connections/office/feishu/sync", { method: "POST", body: JSON.stringify({ idempotency_key: "sync-1" }) })).json()).toMatchObject({ job_id: 101 });
-    expect(await (await request("/brain/knowledge")).json()).toMatchObject({ items: [expect.any(Object)] });
+    expect(await (await request("/knowledge/knowledge")).json()).toMatchObject({ items: [expect.any(Object)] });
     expect(await (await request("/answer", { method: "POST", body: JSON.stringify({ question: "怎么发布？" }) })).json()).toMatchObject({ status: "answered" });
   });
 
@@ -523,8 +523,8 @@ describe("browser development runtime", () => {
       scenario: "empty",
       apiPort: 3030,
     });
-    expect(invoke("list_brain_views")).toEqual([]);
-    expect(invoke("list_brain_view_template_kits")).toEqual(
+    expect(invoke("list_knowledge_views")).toEqual([]);
+    expect(invoke("list_knowledge_view_template_kits")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "daily-memory" }),
         expect.objectContaining({ id: "meeting-follow-ups" }),

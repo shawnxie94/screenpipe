@@ -90,7 +90,7 @@ export const useOnboarding = create<OnboardingState>((set, get) => ({
     const firstRunGuideWasPending = isFirstRunGuidePending();
     try {
       set({ isLoading: true, error: null });
-      // The personalized Brain dashboard owns activation after onboarding.
+      // The personalized Knowledge dashboard owns activation after onboarding.
       // The generic app tour remains available explicitly from Help.
       setFirstRunGuidePending(false);
       const result = await commands.completeOnboarding();
@@ -116,7 +116,7 @@ export const useOnboarding = create<OnboardingState>((set, get) => ({
         // down, so a queued event never gets flushed: `engine_completed` (a
         // tick earlier, same handler) landed while `onboarding_completed` was
         // lost for essentially every user.
-        // Setup no longer builds a dashboard, so Brain would open on an empty
+        // Setup no longer builds a dashboard, so Knowledge would open on an empty
         // container. Land on Home instead: it always has something to render,
         // it is where the learning window runs, and it is where the summary
         // chat appears when the window resolves.
@@ -125,8 +125,8 @@ export const useOnboarding = create<OnboardingState>((set, get) => ({
             ? "connections"
             : context.method === "setup_finished"
               ? "home"
-              : "brain";
-        // Rust routes a newly created Home to Brain. This covers a reused Home
+              : "knowledge";
+        // Rust routes a newly created Home to Knowledge. This covers a reused Home
         // and sends the explicit AI-context path to Connections instead.
         try {
           void emit("navigate", {

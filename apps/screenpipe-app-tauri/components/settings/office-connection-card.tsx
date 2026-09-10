@@ -291,7 +291,7 @@ async function pollSyncDone(provider: OfficeProvider, jobId: number) {
   for (let i = 0; i < 30; i++) {
     await new Promise((r) => setTimeout(r, 2000));
     try {
-      const res = await localFetch(`/brain/jobs?kind=office_sync&limit=5`);
+      const res = await localFetch(`/knowledge/jobs?kind=office_sync&limit=5`);
       if (res.ok) {
         const body = (await res.json()) as {
           jobs: Array<{ id: number; state: string }>;

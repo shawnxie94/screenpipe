@@ -34,9 +34,9 @@ import type {
   LiveViewListItem,
 } from "@/lib/live-views/item-actions";
 import type {
-  BrainViewComponent,
-  BrainViewSlot,
-  BrainViewTimeRange,
+  KnowledgeViewComponent,
+  KnowledgeViewSlot,
+  KnowledgeViewTimeRange,
   JsonValue,
 } from "@/lib/utils/tauri";
 
@@ -64,7 +64,7 @@ const SOURCE_STATUS_TITLES: Record<LiveViewSourceStatus, string | null> = {
   unknown: null,
 };
 
-const COMPONENT_LABELS: Record<BrainViewComponent, string> = {
+const COMPONENT_LABELS: Record<KnowledgeViewComponent, string> = {
   "metric.v1": "指标",
   "list.v1": "列表",
   "bar-chart.v1": "柱状图",
@@ -111,7 +111,7 @@ function LiveViewCardBody({
   onItemAction,
   onItemHandoff,
 }: {
-  slot: BrainViewSlot;
+  slot: KnowledgeViewSlot;
   preview?: boolean;
   refreshing?: boolean;
   onItemAction?: (request: LiveViewItemActionRequest) => Promise<boolean>;
@@ -407,8 +407,8 @@ export function LiveViewCard({
   onItemAction,
   onItemHandoff,
 }: {
-  slot: BrainViewSlot;
-  timeRange?: BrainViewTimeRange;
+  slot: KnowledgeViewSlot;
+  timeRange?: KnowledgeViewTimeRange;
   /**
    * Whether this Block's scheduled task refreshes it on its own. A paused or
    * manual-only task leaves the value frozen at the last refresh click, which

@@ -4,7 +4,7 @@
 //! Durable storage for the unified task contract.
 //!
 //! Every mutating method uses `begin_immediate_with_retry`, so task state,
-//! attempts and ordered events share the same SQLite writer as Brain, Pipes,
+//! attempts and ordered events share the same SQLite writer as Knowledge, Pipes,
 //! and capture data. Payloads are references only; arbitrary model/office
 //! bodies never enter the task event table.
 
@@ -611,7 +611,7 @@ impl DatabaseManager {
             tx.commit().await?;
             return Ok(false);
         }
-        // Brain's public run is temporarily backed by a compatibility row.
+        // Knowledge's public run is temporarily backed by a compatibility row.
         // Keep queued controls in the same transaction so a cancelled or
         // retried public run cannot leave the legacy dedupe row stuck.
         if let Some(job_id) = run_id
@@ -622,7 +622,7 @@ impl DatabaseManager {
                 (TaskControl::Pause, "running", "paused") => {
                     // The worker still owns the legacy lease. It observes the
                     // paused public state and closes both rows at a safe
-                    // handler boundary via brain_pause_claimed_job.
+                    // handler boundary via knowledge_pause_claimed_job.
                 }
                 (TaskControl::Pause, _, "paused") => {
                     sqlx::query("UPDATE brain_jobs SET state='paused',updated_at=?1 WHERE id=?2 AND state IN ('pending','paused')")

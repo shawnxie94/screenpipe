@@ -4,15 +4,15 @@
 
 import type { InvokeArgs } from "@tauri-apps/api/core";
 import type {
-  BrainViewCanvasDocument,
-  BrainViewDefinition,
-  BrainViewTemplateKit,
+  KnowledgeViewCanvasDocument,
+  KnowledgeViewDefinition,
+  KnowledgeViewTemplateKit,
   ImportedSkill,
   PiExtensionPackage,
   ProviderAutomation,
   RegistrySkill,
-  SaveBrainViewCanvasRequest,
-  SaveBrainViewRequest,
+  SaveKnowledgeViewCanvasRequest,
+  SaveKnowledgeViewRequest,
 } from "@/lib/utils/tauri";
 import type { BrowserDevScenario } from "./browser-engine-mock";
 
@@ -34,7 +34,7 @@ export interface BrowserIpcMockOptions {
   warn?: (message: string) => void;
 }
 
-const BROWSER_DEV_TEMPLATE_KITS: BrainViewTemplateKit[] = [
+const BROWSER_DEV_TEMPLATE_KITS: KnowledgeViewTemplateKit[] = [
   {
     id: "daily-memory",
     title: "Daily memory",
@@ -246,7 +246,7 @@ const GRANTED_PERMISSION_COMMANDS = new Set([
   "check_screen_recording_permission",
 ]);
 
-function createBrowserDevLiveView(now: string): BrainViewDefinition {
+function createBrowserDevLiveView(now: string): KnowledgeViewDefinition {
   const dataTimestamp = new Date(
     Date.parse(now) - 6 * 24 * 60 * 60 * 1_000,
   ).toISOString();
@@ -305,7 +305,7 @@ function createBrowserDevLiveView(now: string): BrainViewDefinition {
 function createBrowserDevLiveViewCanvas(
   viewId: string,
   now: string,
-): BrainViewCanvasDocument {
+): KnowledgeViewCanvasDocument {
   return {
     schema: "live-view-canvas.v1",
     viewId,
@@ -809,9 +809,9 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
         piExtensionPackages = piExtensionPackages.filter((pkg) => pkg.source !== source);
         return piExtensionPackages.map((pkg) => ({ ...pkg }));
       }
-      case "list_brain_views":
+      case "list_knowledge_views":
         return liveViews;
-      case "list_brain_view_template_kits":
+      case "list_knowledge_view_template_kits":
         return BROWSER_DEV_TEMPLATE_KITS;
       case "list_provider_automations":
         return browserDevProviderAutomations.map((task) => ({
@@ -870,10 +870,10 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
         }
         return null;
       }
-      case "save_brain_view": {
-        const request = input.request as SaveBrainViewRequest;
+      case "save_knowledge_view": {
+        const request = input.request as SaveKnowledgeViewRequest;
         const existing = liveViews.find((view) => view.id === request.id);
-        const savedView: BrainViewDefinition = {
+        const savedView: KnowledgeViewDefinition = {
           id: request.id,
           title: request.title,
           revision: (request.expectedRevision ?? existing?.revision ?? 0) + 1,
@@ -904,14 +904,14 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
           : [...liveViews, savedView];
         return savedView;
       }
-      case "delete_brain_view":
+      case "delete_knowledge_view":
         liveViews = liveViews.filter((view) => view.id !== String(input.id));
         return null;
-      case "load_brain_view_canvas":
+      case "load_knowledge_view_canvas":
         return input.viewId === liveViewCanvas.viewId ? liveViewCanvas : null;
-      case "save_brain_view_canvas": {
+      case "save_knowledge_view_canvas": {
         const { expectedRevision, ...document } =
-          input.request as SaveBrainViewCanvasRequest;
+          input.request as SaveKnowledgeViewCanvasRequest;
         liveViewCanvas = {
           ...document,
           schema: "live-view-canvas.v1",

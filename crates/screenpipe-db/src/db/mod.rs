@@ -449,25 +449,25 @@ async fn flush_ax_bulk(
 mod accessibility;
 mod activity_ledger;
 mod audio;
-pub(crate) mod brain;
+pub(crate) mod knowledge;
 pub mod tasks;
-pub use self::brain::history::{
-    BrainHistoryBatch, BrainHistoryCoverageInput, BrainHistoryEntryInput, BrainHistoryEntryRow,
+pub use self::knowledge::history::{
+    KnowledgeHistoryBatch, KnowledgeHistoryCoverageInput, KnowledgeHistoryEntryInput, KnowledgeHistoryEntryRow,
 };
-pub use self::brain::jobs::ClaimedBrainJob;
-pub use self::brain::knowledge::BrainReviewUpdate;
-pub use self::brain::office::{
-    BrainOfficeConnectionRow, BrainOfficeConnectionUpdate, BrainOfficeObjectRow,
+pub use self::knowledge::jobs::ClaimedKnowledgeJob;
+pub use self::knowledge::items::KnowledgeReviewUpdate;
+pub use self::knowledge::office::{
+    KnowledgeOfficeConnectionRow, KnowledgeOfficeConnectionUpdate, KnowledgeOfficeObjectRow,
 };
-pub use self::brain::search::{BrainSearchDocInput, BrainSearchHit};
-pub use self::brain::sources::{BrainSourceInput, BrainSourceRegistration, BrainSourceRow};
-pub use self::brain::types::{
-    compute_input_hash, fingerprint, format_ts as brain_format_ts, new_source_uid, now_utc,
-    BrainJobKind, BrainJobState, DeletionCause, KnowledgeAvailability, KnowledgeState,
+pub use self::knowledge::search::{KnowledgeSearchDocInput, KnowledgeSearchHit};
+pub use self::knowledge::sources::{KnowledgeSourceInput, KnowledgeSourceRegistration, KnowledgeSourceRow};
+pub use self::knowledge::types::{
+    compute_input_hash, fingerprint, format_ts as knowledge_format_ts, new_source_uid, now_utc,
+    KnowledgeJobKind, KnowledgeJobState, DeletionCause, KnowledgeAvailability, KnowledgeState,
     KnowledgeType, OfficeSourceMeta, SourceKind, SourceLocator, SourceRef,
 };
-pub use self::brain::work_units::{
-    BrainKnowledgeRow, BrainKnowledgeVersionRow, BrainWorkUnitRevisionRow, BrainWorkUnitRow,
+pub use self::knowledge::work_units::{
+    KnowledgeKnowledgeRow, KnowledgeKnowledgeVersionRow, KnowledgeWorkUnitRevisionRow, KnowledgeWorkUnitRow,
 };
 pub use self::tasks::{ClaimedTaskRun, TaskRunRequest};
 mod display_layout;

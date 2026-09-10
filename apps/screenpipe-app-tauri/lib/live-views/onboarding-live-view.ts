@@ -30,8 +30,8 @@ import {
 import {
   commands,
   type AIPreset,
-  type BrainViewDefinition,
-  type BrainViewSlotInput,
+  type KnowledgeViewDefinition,
+  type KnowledgeViewSlotInput,
 } from "@/lib/utils/tauri";
 
 const FIRST_DASHBOARD_ID = "first-dashboard";
@@ -80,7 +80,7 @@ export type OnboardingLiveViewProgress = {
 
 const GOAL_SHELLS: Record<
   OnboardingGoalCategory,
-  { title: string; timeRange: BrainViewDefinition["timeRange"] }
+  { title: string; timeRange: KnowledgeViewDefinition["timeRange"] }
 > = {
   work_memory: { title: "工作记忆", timeRange: "today" },
   meeting_follow_through: {
@@ -93,7 +93,7 @@ const GOAL_SHELLS: Record<
 };
 
 export type OnboardingLiveViewResult = {
-  view: BrainViewDefinition;
+  view: KnowledgeViewDefinition;
   pipeSlugs: string[];
   blockCount: number;
   refreshStartedCount: number;
@@ -483,7 +483,7 @@ function boundPipeSlugs(generated: GeneratedLiveView): string[] {
 function slotInputs(
   generated: GeneratedLiveView,
   readyPipeNames: Map<string, string>,
-): BrainViewSlotInput[] {
+): KnowledgeViewSlotInput[] {
   const usedIds = new Set<string>();
   return generated.blocks.map((block, order) => {
     const stem =
@@ -519,9 +519,9 @@ export async function prepareOnboardingLiveViewShell(options: {
   goal: string;
   goalCategory: OnboardingGoalCategory;
   resetProgress?: boolean;
-}): Promise<BrainViewDefinition> {
+}): Promise<KnowledgeViewDefinition> {
   const dashboardId = options.dashboardId ?? FIRST_DASHBOARD_ID;
-  const listed = await commands.listBrainViews();
+  const listed = await commands.listKnowledgeViews();
   if (listed.status === "error") {
     throw new OnboardingLiveViewSetupError(
       "dashboard_save_failed",
@@ -551,7 +551,7 @@ export async function prepareOnboardingLiveViewShell(options: {
       title = `${shell.title} ${suffix}`;
       suffix += 1;
     }
-    const saved = await commands.saveBrainView({
+    const saved = await commands.saveKnowledgeView({
       id: dashboardId,
       title,
       expectedRevision: null,
@@ -581,9 +581,9 @@ async function saveFirstDashboard(
   generated: GeneratedLiveView,
   readyPipeNames: Map<string, string>,
   dashboardId: string,
-  preparedView?: BrainViewDefinition,
-): Promise<BrainViewDefinition> {
-  const listed = await commands.listBrainViews();
+  preparedView?: KnowledgeViewDefinition,
+): Promise<KnowledgeViewDefinition> {
+  const listed = await commands.listKnowledgeViews();
   if (listed.status === "error") {
     throw new OnboardingLiveViewSetupError(
       "dashboard_save_failed",
@@ -612,7 +612,7 @@ async function saveFirstDashboard(
     title = `${generated.title} ${titleSuffix}`;
     titleSuffix += 1;
   }
-  const saved = await commands.saveBrainView({
+  const saved = await commands.saveKnowledgeView({
     id: dashboardId,
     title,
     expectedRevision: existing?.revision ?? null,
@@ -631,7 +631,7 @@ async function saveFirstDashboard(
   return saved.data;
 }
 
-async function refreshDashboard(view: BrainViewDefinition): Promise<number> {
+async function refreshDashboard(view: KnowledgeViewDefinition): Promise<number> {
   const pipeNames = Array.from(
     new Set(
       view.slots
@@ -684,7 +684,7 @@ export async function createOnboardingLiveView(options: {
   goal: string;
   goalCategory: OnboardingGoalCategory;
   dashboardId?: string;
-  preparedView?: BrainViewDefinition;
+  preparedView?: KnowledgeViewDefinition;
   preset: AIPreset;
   userToken: string | null;
   onProgress?: (progress: OnboardingLiveViewProgress) => void;

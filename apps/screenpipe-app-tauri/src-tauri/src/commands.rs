@@ -1617,7 +1617,7 @@ pub async fn complete_onboarding(app_handle: tauri::AppHandle) -> Result<(), Str
     }
 
     // Setup ends at Home. It no longer builds a first Live View, so opening
-    // Brain would land the user on an empty container before anything has been
+    // Knowledge would land the user on an empty container before anything has been
     // captured. Home always has something to render, and it is where the
     // first-run learning window runs and where its summary chat appears.
     show_window(

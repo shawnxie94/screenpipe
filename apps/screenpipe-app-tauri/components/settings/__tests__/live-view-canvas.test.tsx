@@ -12,8 +12,8 @@ import {
 } from "../live-view-canvas";
 import { createCanvasDocument } from "@/lib/live-views/canvas-layout";
 import type {
-  BrainViewCanvasDocument,
-  BrainViewDefinition,
+  KnowledgeViewCanvasDocument,
+  KnowledgeViewDefinition,
 } from "@/lib/utils/tauri";
 
 const eventMocks = vi.hoisted(() => ({
@@ -25,7 +25,7 @@ vi.mock("@tauri-apps/api/event", () => ({
   listen: eventMocks.listen,
 }));
 
-const view: BrainViewDefinition = {
+const view: KnowledgeViewDefinition = {
   id: "canvas-component-view",
   title: "Canvas component",
   revision: 1,
@@ -100,8 +100,8 @@ function CanvasHarness({
   onPersist = vi.fn(),
   focusSlotId = null,
 }: {
-  initialDocument?: BrainViewCanvasDocument;
-  onPersist?: (document: BrainViewCanvasDocument) => void;
+  initialDocument?: KnowledgeViewCanvasDocument;
+  onPersist?: (document: KnowledgeViewCanvasDocument) => void;
   focusSlotId?: string | null;
 }) {
   const [document, setDocument] = useState(initialDocument);
@@ -779,7 +779,7 @@ describe("LiveViewCanvas", () => {
     expect(screen.getByText("100%")).toBeTruthy();
 
     await waitFor(() => expect(onPersist).toHaveBeenCalledTimes(1));
-    const persisted = onPersist.mock.calls[0][0] as BrainViewCanvasDocument;
+    const persisted = onPersist.mock.calls[0][0] as KnowledgeViewCanvasDocument;
     expect(persisted.viewport.zoom).toBeCloseTo(
       initialDocument.viewport.zoom,
     );

@@ -21,7 +21,7 @@ use std::time::Duration;
 pub const PROVIDER_FEISHU: &str = "feishu";
 pub const PROVIDER_TENCENT_MEETING: &str = "tencent-meeting";
 
-/// Pinned upstream CLI versions (see docs/research/personal-brain-office-connectors.md).
+/// Pinned upstream CLI versions (see docs/research/personal-knowledge-office-connectors.md).
 /// Other versions are reported as `unsupported`, never run blindly.
 pub const FEISHU_CLI_VERSION: &str = "1.0.65";
 pub const TENCENT_MEETING_CLI_VERSION: &str = "1.0.16";
@@ -407,7 +407,7 @@ pub enum OfficeCompleteness {
 
 /// Normalized, provider-neutral content object produced by an adapter.
 /// `body_text` is plain text for indexing; structure lives in provider
-/// fixtures/tests, not in the brain schema.
+/// fixtures/tests, not in the knowledge schema.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OfficeObject {
     pub provider: OfficeProvider,

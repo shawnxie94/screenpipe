@@ -61,7 +61,7 @@ import { usePlatform } from "@/lib/hooks/use-platform";
 import { useIsFullscreen } from "@/lib/hooks/use-is-fullscreen";
 import { FeedbackSection } from "@/components/settings/feedback-section";
 import { PipeStoreView } from "@/components/pipe-store";
-import { KnowledgeHub } from "@/components/brain/knowledge-hub";
+import { KnowledgeHub } from "@/components/knowledge/knowledge-hub";
 import { ConnectionsSection } from "@/components/settings/connections-section";
 import { MeetingNotesSection } from "@/components/meeting-notes";
 import { StandaloneChat } from "@/components/standalone-chat";
@@ -109,7 +109,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ONBOARDING_BRAIN_HANDOFF_EVENT } from "@/lib/live-views/onboarding-activation";
+import { ONBOARDING_KNOWLEDGE_HANDOFF_EVENT } from "@/lib/live-views/onboarding-activation";
 import { ActivityLedger } from "@/components/activity-ledger";
 import { ShortcutKeycap } from "@/components/shortcut-keycap";
 import { ExperimentalShortcutGuide } from "@/components/shortcut-guide";
@@ -121,7 +121,7 @@ import {
 } from "@/lib/shortcuts";
 import { useFirstRunLearningWindow } from "@/components/first-run/learning-window-provider";
 
-type MainSection = "home" | "timeline" | "activity" | "brain" | "pipes" | "connections" | "meetings" | "help";
+type MainSection = "home" | "timeline" | "activity" | "knowledge" | "pipes" | "connections" | "meetings" | "help";
 type ConnectionFocusRequest = {
   id: string | null;
   category: string | null;
@@ -131,10 +131,10 @@ type ConnectionFocusRequest = {
 
 // All valid URL sections for the home page
 const ALL_SECTIONS = [
-  "home", "timeline", "activity", "pipes", "help", "brain", "connections", "meetings", "history",
+  "home", "timeline", "activity", "pipes", "help", "knowledge", "connections", "meetings", "history",
   "feedback", // backwards compat → maps to "help"
-  "memories", // backwards compat → maps to "brain"
-  "artifacts", // backwards compat → maps to "brain"
+  "memories", // backwards compat → maps to "knowledge"
+  "artifacts", // backwards compat → maps to "knowledge"
 ];
 
 // Settings sections that should redirect to /settings. Sourced from
@@ -163,8 +163,8 @@ function HomeContent() {
     history: "push",
     parse: (value) => {
       if (value === "feedback") return "help"; // backwards compat
-      if (value === "memories") return "brain"; // backwards compat — renamed to brain
-      if (value === "artifacts") return "brain"; // backwards compat — artifacts merged into brain
+      if (value === "memories") return "knowledge"; // backwards compat — renamed to knowledge
+      if (value === "artifacts") return "knowledge"; // backwards compat — artifacts merged into knowledge
       // Settings sections redirect to /settings page
       if (isSettingsRoute(value)) return value; // handled by redirect effect below
       return ALL_SECTIONS.includes(value) ? value : "home";
@@ -1007,7 +1007,7 @@ function HomeContent() {
             onOpenArtifact={() => setActivityReturnVisible(true)}
           />
         );
-      case "brain":
+      case "knowledge":
         return <KnowledgeHub />;
       case "pipes":
         return <PipeStoreView />;
@@ -1065,7 +1065,7 @@ function HomeContent() {
     meetings: { label: "会议", icon: <CalendarClock className="h-3.5 w-3.5" /> },
     timeline: { label: "时间线", icon: <MonitorPlay className="h-3.5 w-3.5" /> },
     activity: { label: "活动", icon: <ListTree className="h-3.5 w-3.5" /> },
-    brain: { label: "知识库", icon: <Brain className="h-3.5 w-3.5" /> },
+    knowledge: { label: "知识库", icon: <Brain className="h-3.5 w-3.5" /> },
     pipes: { label: "自动化", icon: <TimerReset className="h-3.5 w-3.5" /> },
     connections: { label: "连接", icon: <Plug className="h-3.5 w-3.5" /> },
   };
@@ -1153,8 +1153,8 @@ function HomeContent() {
       const mapped = section === "feedback" ? "help" : section;
       if (ALL_SECTIONS.includes(mapped)) {
         setActiveSection(mapped);
-        if (mapped === "brain") {
-          window.dispatchEvent(new Event(ONBOARDING_BRAIN_HANDOFF_EVENT));
+        if (mapped === "knowledge") {
+          window.dispatchEvent(new Event(ONBOARDING_KNOWLEDGE_HANDOFF_EVENT));
         }
       }
     }
@@ -1166,7 +1166,7 @@ function HomeContent() {
     activeSection === "activity" ||
     activeSection === "meetings" ||
     activeSection === "history" ||
-    activeSection === "brain";
+    activeSection === "knowledge";
 
   // The outer flex row (sidebar shell + content column) lives in the shared
   // (main)/layout.tsx so the sidebar width survives navigation to /settings.

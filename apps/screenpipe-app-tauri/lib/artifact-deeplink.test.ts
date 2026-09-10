@@ -42,7 +42,7 @@ describe("artifact notification deeplinks", () => {
     ).toBeNull();
   });
 
-  it("maps legacy view and file links into Brain path requests", () => {
+  it("maps legacy view and file links into Knowledge path requests", () => {
     expect(
       artifactOpenRequestFromUrl(
         "screenpipe://view?path=%2FUsers%2Fme%2Fresult.md",

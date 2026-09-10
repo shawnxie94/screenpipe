@@ -20,12 +20,12 @@ import {
   toSaveCanvasRequest,
 } from "../canvas-layout";
 import type {
-  BrainViewCanvasDocument,
-  BrainViewDefinition,
-  BrainViewSlot,
+  KnowledgeViewCanvasDocument,
+  KnowledgeViewDefinition,
+  KnowledgeViewSlot,
 } from "@/lib/utils/tauri";
 
-function slot(index: number, width: 3 | 6 | 12 = 6): BrainViewSlot {
+function slot(index: number, width: 3 | 6 | 12 = 6): KnowledgeViewSlot {
   return {
     id: `block-${index}`,
     title: `Block ${index}`,
@@ -47,7 +47,7 @@ function slot(index: number, width: 3 | 6 | 12 = 6): BrainViewSlot {
   };
 }
 
-function view(slots: BrainViewSlot[]): BrainViewDefinition {
+function view(slots: KnowledgeViewSlot[]): KnowledgeViewDefinition {
   return {
     id: "canvas-eval-view",
     title: "Canvas eval",
@@ -64,8 +64,8 @@ function view(slots: BrainViewSlot[]): BrainViewDefinition {
 }
 
 function overlap(
-  left: BrainViewCanvasDocument["blocks"][number],
-  right: BrainViewCanvasDocument["blocks"][number],
+  left: KnowledgeViewCanvasDocument["blocks"][number],
+  right: KnowledgeViewCanvasDocument["blocks"][number],
 ): boolean {
   return !(
     left.x + left.width <= right.x ||
@@ -140,7 +140,7 @@ describe("Live View Canvas layout evals", () => {
 
   it("preserves manual positions, notes, arrows, strokes, and viewport on refresh", () => {
     const original = createCanvasDocument(view([slot(0), slot(1)]));
-    const saved: BrainViewCanvasDocument = {
+    const saved: KnowledgeViewCanvasDocument = {
       ...original,
       revision: 7,
       mode: "canvas",
@@ -207,7 +207,7 @@ describe("Live View Canvas layout evals", () => {
 
   it("removes deleted Blocks and only their dangling connections", () => {
     const original = createCanvasDocument(view([slot(0), slot(1), slot(2)]));
-    const saved: BrainViewCanvasDocument = {
+    const saved: KnowledgeViewCanvasDocument = {
       ...original,
       notes: [
         { id: "note-one", text: "keep", x: 40, y: 40, width: 240, height: 160 },
@@ -253,7 +253,7 @@ describe("Live View Canvas layout evals", () => {
 
   it("migrates the removed dashboard mode to Canvas", () => {
     const target = view([slot(0)]);
-    const dashboardDocument: BrainViewCanvasDocument = {
+    const dashboardDocument: KnowledgeViewCanvasDocument = {
       ...createCanvasDocument(target),
       revision: 4,
       mode: "dashboard",

@@ -14,7 +14,7 @@ import {
   nextOnboardingLiveViewFollowUpAt,
   runDueOnboardingLiveViewFollowUp,
 } from "../onboarding-follow-up";
-import type { BrainViewDefinition } from "@/lib/utils/tauri";
+import type { KnowledgeViewDefinition } from "@/lib/utils/tauri";
 
 const localStorageMock = (() => {
   const values = new Map<string, string>();
@@ -41,7 +41,7 @@ const dashboard = {
     { id: "focus", binding: { pipeName: "daily-summary" } },
     { id: "follow-through", binding: { pipeName: "follow-through" } },
   ],
-} as BrainViewDefinition;
+} as KnowledgeViewDefinition;
 
 function okResponse() {
   return { ok: true } as Response;

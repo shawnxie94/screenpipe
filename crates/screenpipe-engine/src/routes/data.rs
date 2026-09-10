@@ -54,19 +54,19 @@ pub(crate) async fn delete_time_range_handler(
         ));
     }
 
-    // The Brain wave is the durable deletion boundary. It must be recorded
+    // The Knowledge wave is the durable deletion boundary. It must be recorded
     // before raw capture rows are removed so derived text is unavailable even
     // if the maintenance transaction or file cleanup fails afterward.
     let source_uids = state
-        .brain
+        .knowledge
         .db
-        .brain_source_uids_captured_between(&["frame", "audio", "ui_event", "office_message", "office_document", "office_transcript", "office_summary"], payload.start, payload.end)
+        .knowledge_source_uids_captured_between(&["frame", "audio", "ui_event", "office_message", "office_document", "office_transcript", "office_summary"], payload.start, payload.end)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, JsonResponse(json!({"error": e.to_string()}))))?;
     let deletion_id = if source_uids.is_empty() {
         None
     } else {
-        Some(state.brain.deletion().delete_sources(source_uids, screenpipe_db::DeletionCause::UserErase)
+        Some(state.knowledge.deletion().delete_sources(source_uids, screenpipe_db::DeletionCause::UserErase)
             .await
             .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, JsonResponse(json!({"error": e.to_string()}))))?
             .deletion_id)
@@ -82,9 +82,9 @@ pub(crate) async fn delete_time_range_handler(
     }
     .map_err(|e| {
         if let Some(id) = deletion_id {
-            let db = state.brain.db.clone();
+            let db = state.knowledge.db.clone();
             tokio::spawn(async move {
-                let _ = db.brain_update_deletion_state(id, "failed").await;
+                let _ = db.knowledge_update_deletion_state(id, "failed").await;
             });
         }
         (
@@ -103,7 +103,7 @@ pub(crate) async fn delete_time_range_handler(
                 file_cleanup_failed = true;
                 warn!("failed to delete video file {}: {}", path, e);
                 if let Some(id) = deletion_id {
-                    let _ = state.brain.db.brain_add_cleanup_item(id, "file", path).await;
+                    let _ = state.knowledge.db.knowledge_add_cleanup_item(id, "file", path).await;
                 }
             }
         }
@@ -117,7 +117,7 @@ pub(crate) async fn delete_time_range_handler(
                 file_cleanup_failed = true;
                 warn!("failed to delete audio file {}: {}", path, e);
                 if let Some(id) = deletion_id {
-                    let _ = state.brain.db.brain_add_cleanup_item(id, "file", path).await;
+                    let _ = state.knowledge.db.knowledge_add_cleanup_item(id, "file", path).await;
                 }
             }
         }
@@ -129,13 +129,13 @@ pub(crate) async fn delete_time_range_handler(
             file_cleanup_failed = true;
             warn!("failed to delete snapshot file {}: {}", path, e);
             if let Some(id) = deletion_id {
-                let _ = state.brain.db.brain_add_cleanup_item(id, "file", path).await;
+                let _ = state.knowledge.db.knowledge_add_cleanup_item(id, "file", path).await;
             }
         }
     }
     if file_cleanup_failed {
         if let Some(id) = deletion_id {
-            let _ = state.brain.db.brain_update_deletion_state(id, "failed").await;
+            let _ = state.knowledge.db.knowledge_update_deletion_state(id, "failed").await;
         }
     }
 

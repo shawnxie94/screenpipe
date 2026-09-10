@@ -13,7 +13,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use screenpipe_db::{
-    BrainJobKind, DatabaseManager, TaskControl, TaskDefinition, TaskKind, TaskOrigin,
+    KnowledgeJobKind, DatabaseManager, TaskControl, TaskDefinition, TaskKind, TaskOrigin,
     TaskResourceClass, TaskRetryPolicy, TaskRunRequest, TaskState, TaskTrigger,
 };
 use serde::Deserialize;
@@ -118,17 +118,17 @@ impl TaskService {
         for (id, kind, resource) in [
             (
                 "brain.extract",
-                TaskKind::BrainExtract,
+                TaskKind::KnowledgeExtract,
                 TaskResourceClass::Extract,
             ),
             (
                 "brain.compile",
-                TaskKind::BrainCompile,
+                TaskKind::KnowledgeCompile,
                 TaskResourceClass::Extract,
             ),
             (
                 "brain.backfill",
-                TaskKind::BrainBackfill,
+                TaskKind::KnowledgeBackfill,
                 TaskResourceClass::Backfill,
             ),
             (
@@ -296,8 +296,8 @@ impl std::error::Error for TaskServiceError {
 fn task_priority(kind: TaskKind) -> i32 {
     match kind {
         TaskKind::ActivitySummary | TaskKind::HistoryMigration => 5,
-        TaskKind::BrainExtract => 10,
-        TaskKind::BrainCompile | TaskKind::BrainBackfill => 20,
+        TaskKind::KnowledgeExtract => 10,
+        TaskKind::KnowledgeCompile | TaskKind::KnowledgeBackfill => 20,
         TaskKind::PipeRun => 15,
         TaskKind::OfficeSync => 30,
     }
@@ -307,13 +307,13 @@ pub fn user_pipe_definition_id(name: &str) -> String {
     format!("pipe.user.{}", screenpipe_db::fingerprint(&[name]))
 }
 
-fn brain_kind_for_task(kind: TaskKind) -> Option<BrainJobKind> {
+fn knowledge_kind_for_task(kind: TaskKind) -> Option<KnowledgeJobKind> {
     Some(match kind {
-        TaskKind::BrainExtract => BrainJobKind::Extract,
-        TaskKind::BrainCompile => BrainJobKind::Compile,
-        TaskKind::BrainBackfill => BrainJobKind::BackfillExtract,
-        TaskKind::OfficeSync => BrainJobKind::OfficeSync,
-        TaskKind::HistoryMigration => BrainJobKind::HistoryMigration,
+        TaskKind::KnowledgeExtract => KnowledgeJobKind::Extract,
+        TaskKind::KnowledgeCompile => KnowledgeJobKind::Compile,
+        TaskKind::KnowledgeBackfill => KnowledgeJobKind::BackfillExtract,
+        TaskKind::OfficeSync => KnowledgeJobKind::OfficeSync,
+        TaskKind::HistoryMigration => KnowledgeJobKind::HistoryMigration,
         TaskKind::ActivitySummary | TaskKind::PipeRun => return None,
     })
 }
@@ -766,7 +766,7 @@ async fn start_run(
     } else {
         request.input_hash
     };
-    if let Some(kind) = brain_kind_for_task(definition.kind) {
+    if let Some(kind) = knowledge_kind_for_task(definition.kind) {
         let scope_key = request.input_refs.get("scope_key").and_then(Value::as_str);
         let deadline = request
             .deadline
@@ -776,7 +776,7 @@ async fn start_run(
         let payload = request.input_refs.to_string();
         let (job_id, created) = state
             .db
-            .brain_enqueue_job(
+            .knowledge_enqueue_job(
                 kind,
                 scope_key,
                 Some(&input_hash),

@@ -16,9 +16,9 @@ pub const TASK_MESSAGE_RETENTION_LIMIT: usize = 1000;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskKind {
-    BrainExtract,
-    BrainCompile,
-    BrainBackfill,
+    KnowledgeExtract,
+    KnowledgeCompile,
+    KnowledgeBackfill,
     HistoryMigration,
     ActivitySummary,
     OfficeSync,
@@ -28,9 +28,9 @@ pub enum TaskKind {
 impl TaskKind {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::BrainExtract => "brain_extract",
-            Self::BrainCompile => "brain_compile",
-            Self::BrainBackfill => "brain_backfill",
+            Self::KnowledgeExtract => "knowledge_extract",
+            Self::KnowledgeCompile => "knowledge_compile",
+            Self::KnowledgeBackfill => "knowledge_backfill",
             Self::HistoryMigration => "history_migration",
             Self::ActivitySummary => "activity_summary",
             Self::OfficeSync => "office_sync",
@@ -44,9 +44,9 @@ impl std::str::FromStr for TaskKind {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         Ok(match value {
-            "brain_extract" => Self::BrainExtract,
-            "brain_compile" => Self::BrainCompile,
-            "brain_backfill" => Self::BrainBackfill,
+            "knowledge_extract" => Self::KnowledgeExtract,
+            "knowledge_compile" => Self::KnowledgeCompile,
+            "knowledge_backfill" => Self::KnowledgeBackfill,
             "history_migration" => Self::HistoryMigration,
             "activity_summary" => Self::ActivitySummary,
             "office_sync" => Self::OfficeSync,

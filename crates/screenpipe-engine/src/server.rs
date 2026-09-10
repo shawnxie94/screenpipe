@@ -156,7 +156,7 @@ fn search_query_concurrency(read_pool_max: u32) -> usize {
 
 pub struct AppState {
     pub db: Arc<DatabaseManager>,
-    pub brain: Arc<crate::brain::BrainShared>,
+    pub knowledge: Arc<crate::knowledge::KnowledgeShared>,
     pub history_access: HistoryAccessPolicy,
     pub audio_manager: Arc<AudioManager>,
     pub app_start_time: DateTime<Utc>,
@@ -238,7 +238,7 @@ pub struct SCServer {
     addr: SocketAddr,
     audio_manager: Arc<AudioManager>,
     screenpipe_dir: PathBuf,
-    brain: Option<Arc<crate::brain::BrainShared>>,
+    knowledge: Option<Arc<crate::knowledge::KnowledgeShared>>,
     vision_disabled: bool,
     audio_disabled: bool,
     use_pii_removal: bool,
@@ -354,9 +354,9 @@ impl SCServer {
         video_quality: String,
     ) -> Self {
         let audio_metrics = audio_manager.metrics.clone();
-        let brain = {
-            let shared = crate::brain::BrainShared::new(db.clone(), screenpipe_dir.clone());
-            crate::brain::set_shared(shared.clone());
+        let knowledge = {
+            let shared = crate::knowledge::KnowledgeShared::new(db.clone(), screenpipe_dir.clone());
+            crate::knowledge::set_shared(shared.clone());
             Some(shared)
         };
         SCServer {
@@ -386,7 +386,7 @@ impl SCServer {
             vision_manager: Arc::new(ArcSwap::from_pointee(None)),
             timeline_disabled: false,
             advertise_mdns: should_advertise_mdns(addr),
-            brain,
+            knowledge,
         }
     }
 
@@ -541,9 +541,9 @@ impl SCServer {
     /// so that invariant violation must become a recoverable startup error,
     /// never a process abort that prevents the user from updating.
     pub async fn try_create_router(&self) -> Result<Router, std::io::Error> {
-        if let Some(brain) = &self.brain {
-            brain.ensure_recovered().await.map_err(|error| {
-                std::io::Error::new(std::io::ErrorKind::Other, format!("brain startup recovery failed: {error}"))
+        if let Some(knowledge) = &self.knowledge {
+            knowledge.ensure_recovered().await.map_err(|error| {
+                std::io::Error::new(std::io::ErrorKind::Other, format!("knowledge startup recovery failed: {error}"))
             })?;
         }
         catch_router_build_panic(self.create_router_inner()).await
@@ -602,11 +602,11 @@ impl SCServer {
 
         let app_state = Arc::new(AppState {
             db: self.db.clone(),
-            brain: self
-                .brain
+            knowledge: self
+                .knowledge
                 .clone()
                 .unwrap_or_else(|| {
-                    crate::brain::BrainShared::new(self.db.clone(), self.screenpipe_dir.clone())
+                    crate::knowledge::KnowledgeShared::new(self.db.clone(), self.screenpipe_dir.clone())
                 }),
             history_access: self.history_access.clone(),
             audio_manager: self.audio_manager.clone(),
@@ -1124,16 +1124,16 @@ impl SCServer {
 
         let router = router.route(
             "/answer",
-            crate::brain::answer::answer_route(),
+            crate::knowledge::answer::answer_route(),
         );
         let router = router.nest(
-            "/brain",
-            crate::brain::migration::migration_routes()
-                .merge(crate::brain::routes::brain_routes()),
+            "/knowledge",
+            crate::knowledge::migration::migration_routes()
+                .merge(crate::knowledge::routes::knowledge_routes()),
         );
         let router = router.nest(
             "/connections/office",
-            crate::brain::office_routes::office_routes(),
+            crate::knowledge::office_routes::office_routes(),
         );
         let router = router.nest("/tasks", crate::tasks::routes());
         let router = router.nest(

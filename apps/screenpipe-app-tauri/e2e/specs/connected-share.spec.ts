@@ -26,7 +26,7 @@ interface OutputTarget {
   revision: number;
 }
 
-interface BrainView {
+interface KnowledgeView {
   id: string;
 }
 
@@ -364,9 +364,9 @@ describe("connected snapshot sharing", function () {
       body: JSON.stringify({ id: meeting.id }),
     });
 
-    const existingViews = await invokeOrThrow<BrainView[]>("list_brain_views");
+    const existingViews = await invokeOrThrow<KnowledgeView[]>("list_knowledge_views");
     if (existingViews.some((view) => view.id === VIEW_ID)) {
-      await invokeOrThrow("delete_brain_view", { id: VIEW_ID });
+      await invokeOrThrow("delete_knowledge_view", { id: VIEW_ID });
     }
     await fetch(`${apiBase}/pipes/${encodeURIComponent(PIPE_NAME)}`, {
       method: "DELETE",
@@ -387,7 +387,7 @@ describe("connected snapshot sharing", function () {
     });
     expect(installPipe.ok).toBe(true);
 
-    await invokeOrThrow("save_brain_view", {
+    await invokeOrThrow("save_knowledge_view", {
       request: {
         id: VIEW_ID,
         title: "Weekly product pulse",
@@ -457,7 +457,7 @@ describe("connected snapshot sharing", function () {
   });
 
   after(async () => {
-    await invokeOrThrow("delete_brain_view", { id: VIEW_ID }).catch(
+    await invokeOrThrow("delete_knowledge_view", { id: VIEW_ID }).catch(
       () => undefined,
     );
     if (apiBase) {
@@ -711,10 +711,10 @@ describe("connected snapshot sharing", function () {
     const backToMeetings = await $(`[aria-label="back to meetings"]`);
     await backToMeetings.waitForExist({ timeout: t(10_000) });
     await backToMeetings.click();
-    const brainNav = await waitForTestId("nav-brain", 10_000);
-    await brainNav.click();
-    await waitForTestId("section-brain", 25_000);
-    await waitForTestId("brain-overview-scroll", 25_000);
+    const knowledgeNav = await waitForTestId("nav-knowledge", 10_000);
+    await knowledgeNav.click();
+    await waitForTestId("section-knowledge", 25_000);
+    await waitForTestId("knowledge-overview-scroll", 25_000);
     await selectDashboard(VIEW_ID);
     await waitForTestId("overview-send", 15_000);
     await installShareFixture("connected", false);

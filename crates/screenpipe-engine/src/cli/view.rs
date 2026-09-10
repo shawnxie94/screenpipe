@@ -19,7 +19,7 @@ pub fn handle_view_command(command: &ViewCommand) -> anyhow::Result<()> {
                 println!("{}", serde_json::to_string_pretty(&views)?);
             } else if views.is_empty() {
                 println!("no Live Views yet");
-                println!("hint: create one in Brain, or import a Template with `screenpipe view apply <file>`");
+                println!("hint: create one in Knowledge, or import a Template with `screenpipe view apply <file>`");
             } else {
                 println!("{:<24} {:<32} {:<8} BLOCKS", "ID", "TITLE", "REV");
                 for view in views {

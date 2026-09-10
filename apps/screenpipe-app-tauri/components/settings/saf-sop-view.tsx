@@ -168,7 +168,7 @@ interface SafArtifactBodyProps {
   expanded: boolean;
   /**
    * Collapses the row back to its title. Omit in surfaces that are always
-   * expanded (the Brain detail pane) — there is nothing to collapse into, so
+   * expanded (the Knowledge detail pane) — there is nothing to collapse into, so
    * rendering the toggle there would just look like a stray close button.
    */
   onToggleExpanded?: () => void;

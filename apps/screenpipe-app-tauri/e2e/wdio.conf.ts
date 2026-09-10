@@ -32,7 +32,7 @@ const isDestructiveDbFaultRun = (process.env.SCREENPIPE_E2E_SEED ?? '')
   .some((flag) => flag.trim().toLowerCase() === 'db-hard-fault');
 const allSpecs = [resolve(__dirname, 'specs', '**', '*.spec.ts')];
 const windowsCiSpecs = [
-  'brain-overview.spec.ts',
+  'knowledge-overview.spec.ts',
   'acp-backend.spec.ts',
   'history-swipe-navigation.spec.ts',
   'search/search-bugs-4645.spec.ts',
@@ -70,7 +70,7 @@ export const config: TestrunnerConfig = {
 
   // Recursive on macOS/Linux. Windows CI repeatedly loses the WebDriver session
   // in generic cross-platform window specs and can burn the full E2E timeout;
-  // keep broad coverage on macOS/Linux while Windows runs its focused Brain
+  // keep broad coverage on macOS/Linux while Windows runs its focused Knowledge
   // layout, journey/system specs, plus the workflow's separate core-recording spec.
   specs: isWindowsCi ? windowsCiSpecs : allSpecs,
   maxInstances: 1,

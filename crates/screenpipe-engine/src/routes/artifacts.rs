@@ -2100,7 +2100,7 @@ mod tests {
     // ── Chat artifact visibility ──────────────────────────────────────────
     // Verifies that artifacts saved from chat (source_type="chat",
     // source=<session_id>) appear in the unified listing and are grouped
-    // under display_source "chat" so they are visible in the Brain UI.
+    // under display_source "chat" so they are visible in the Knowledge UI.
 
     #[tokio::test]
     async fn chat_artifacts_visible_in_unified_listing() {

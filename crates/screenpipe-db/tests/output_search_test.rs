@@ -15,16 +15,16 @@ async fn output_search_finds_text_beyond_preview() {
     let db = setup_test_db().await;
     let deep_token = "ARTIFACT_DEEP_SEARCH_12345";
     let body = format!("{} {}", "ordinary artifact prose ".repeat(80), deep_token);
-    let preview = "# Brain Artifact Repro\n\nordinary artifact prose";
+    let preview = "# Knowledge Artifact Repro\n\nordinary artifact prose";
 
     let id = db
         .insert_output(
             "chat-session-1",
             "chat",
-            "Brain Artifact Repro",
+            "Knowledge Artifact Repro",
             "markdown",
-            Some("/tmp/brain-artifact-repro.md"),
-            "/tmp/screenpipe/outputs/chat/session/brain-artifact-repro.md",
+            Some("/tmp/knowledge-artifact-repro.md"),
+            "/tmp/screenpipe/outputs/chat/session/knowledge-artifact-repro.md",
             body.len() as i64,
             Some(preview),
             None,
@@ -37,7 +37,7 @@ async fn output_search_finds_text_beyond_preview() {
 
     db.upsert_output_search_document(
         id,
-        "Brain Artifact Repro",
+        "Knowledge Artifact Repro",
         &body,
         "chat-session-1",
         "chat",
@@ -56,7 +56,7 @@ async fn output_search_finds_text_beyond_preview() {
     assert_eq!(total, 1);
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].id, id);
-    assert_eq!(rows[0].title, "Brain Artifact Repro");
+    assert_eq!(rows[0].title, "Knowledge Artifact Repro");
 }
 
 #[tokio::test]

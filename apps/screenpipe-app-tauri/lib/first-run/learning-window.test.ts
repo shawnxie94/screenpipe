@@ -295,12 +295,12 @@ describe("deterministic summary", () => {
     const summary = buildLearningSummary(
       ok({
         windows: [
-          { app_name: "Arc", window_name: "080726 - brain", minutes: 3 },
-          { app_name: "Obsidian", window_name: "080726 - brain", minutes: 2 },
+          { app_name: "Arc", window_name: "080726 - knowledge", minutes: 3 },
+          { app_name: "Obsidian", window_name: "080726 - knowledge", minutes: 2 },
         ],
       }),
     );
-    expect(summary.match(/080726 - brain/g)).toHaveLength(1);
+    expect(summary.match(/080726 - knowledge/g)).toHaveLength(1);
   });
 
   it("strips another app's status glyphs from a title", () => {

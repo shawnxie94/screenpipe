@@ -196,8 +196,8 @@ describe("archive all recent chats", () => {
       }),
     );
     useChatStore.getState().actions.upsert(
-      session("__title:brain-extraction-run", {
-        title: "Brain 沉淀 · 13:05",
+      session("__title:knowledge-extraction-run", {
+        title: "Knowledge 沉淀 · 13:05",
         internalCategory: "brain-task",
       }),
     );

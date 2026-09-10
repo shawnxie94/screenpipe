@@ -837,7 +837,7 @@ export function ChatSidebar({
     }> = [
       { key: "activity-history", title: "活动时间线", sessions: [] },
       { key: "live-view", title: "仪表盘生成", sessions: [] },
-      { key: "brain-task", title: "Brain 沉淀", sessions: [] },
+      { key: "brain-task", title: "Knowledge 沉淀", sessions: [] },
     ];
     for (const session of internalActivitySessions) {
       groups

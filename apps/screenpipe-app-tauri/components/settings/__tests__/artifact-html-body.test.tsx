@@ -25,7 +25,7 @@ function hostStyleLeaked(): boolean {
   );
 }
 
-describe("ArtifactHtmlBody (Brain html artifact)", () => {
+describe("ArtifactHtmlBody (Knowledge html artifact)", () => {
   beforeEach(() => {
     vi.stubGlobal(
       "matchMedia",
@@ -86,7 +86,7 @@ describe("ArtifactHtmlBody (Brain html artifact)", () => {
     );
 
     expect(container.querySelector("iframe")).not.toBeNull();
-    expect(screen.getByTestId("brain-html-render-toggle").textContent).toContain(
+    expect(screen.getByTestId("knowledge-html-render-toggle").textContent).toContain(
       "查看源代码",
     );
   });
@@ -103,7 +103,7 @@ describe("ArtifactHtmlBody (Brain html artifact)", () => {
     // full doc opens rendered
     expect(document.querySelector("iframe")).not.toBeNull();
 
-    fireEvent.click(screen.getByTestId("brain-html-render-toggle"));
+    fireEvent.click(screen.getByTestId("knowledge-html-render-toggle"));
     // now source: a <pre> with the raw text, no iframe, and still no host leak
     expect(document.querySelector("iframe")).toBeNull();
     const pre = document.querySelector("pre");

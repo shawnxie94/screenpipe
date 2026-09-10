@@ -11,7 +11,7 @@ import {
   renderConnectedShareArtifact,
   shareConnectionAvailability,
 } from "@/lib/connected-share";
-import type { BrainViewDefinition } from "@/lib/utils/tauri";
+import type { KnowledgeViewDefinition } from "@/lib/utils/tauri";
 
 describe("connected share artifacts", () => {
   it("shares meeting notes without private transcript or inline image data", () => {
@@ -74,7 +74,7 @@ describe("connected share artifacts", () => {
           feedback: { upCount: 0, downCount: 0, current: null },
         },
       ],
-    } satisfies BrainViewDefinition;
+    } satisfies KnowledgeViewDefinition;
     const artifact = createLiveViewShareArtifact(view);
     const markdown = renderConnectedShareArtifact(artifact, ["wins"]);
 

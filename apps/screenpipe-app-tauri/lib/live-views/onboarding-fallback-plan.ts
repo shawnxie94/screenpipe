@@ -10,7 +10,7 @@ import {
   preferredStorePipeSlugs,
   type OnboardingGoalCategory,
 } from "@/lib/live-views/onboarding-goals";
-import type { BrainViewComponent, BrainViewTimeRange } from "@/lib/utils/tauri";
+import type { KnowledgeViewComponent, KnowledgeViewTimeRange } from "@/lib/utils/tauri";
 
 /**
  * Why the deterministic plan replaced the AI plan.
@@ -29,13 +29,13 @@ export type OnboardingPlanSource = "ai" | "fallback";
 type FallbackBlockTemplate = {
   title: string;
   intent: string;
-  component: BrainViewComponent;
+  component: KnowledgeViewComponent;
   width: GeneratedLiveViewBlock["width"];
 };
 
 type FallbackShape = {
   title: string;
-  timeRange: BrainViewTimeRange;
+  timeRange: KnowledgeViewTimeRange;
   blocks: FallbackBlockTemplate[];
 };
 

@@ -1,13 +1,13 @@
 // screenpipe — AI that knows everything you've seen, said, or heard
 // https://screenpipe.com
 
-//! Compatibility/ownership checks for the Brain -> public-task migration.
+//! Compatibility/ownership checks for the Knowledge -> public-task migration.
 //! These tests deliberately use an isolated SQLite database and never touch a
 //! user's recording store.
 
 use std::sync::Arc;
 
-use screenpipe_db::{BrainJobKind, DatabaseManager, TaskState};
+use screenpipe_db::{KnowledgeJobKind, DatabaseManager, TaskState};
 
 async fn db() -> Arc<DatabaseManager> {
     Arc::new(
@@ -18,11 +18,11 @@ async fn db() -> Arc<DatabaseManager> {
 }
 
 #[tokio::test]
-async fn brain_enqueue_claim_model_budget_and_completion_share_one_run() {
+async fn knowledge_enqueue_claim_model_budget_and_completion_share_one_run() {
     let db = db().await;
     let (job_id, created) = db
-        .brain_enqueue_job(
-            BrainJobKind::Extract,
+        .knowledge_enqueue_job(
+            KnowledgeJobKind::Extract,
             Some("scope-a"),
             Some("input-a"),
             Some("{\"interval\":\"synthetic\"}"),
@@ -50,7 +50,7 @@ async fn brain_enqueue_claim_model_budget_and_completion_share_one_run() {
     );
 
     let claimed = db
-        .brain_claim_next_job(&[BrainJobKind::Extract], "migration-test", 30_000)
+        .knowledge_claim_next_job(&[KnowledgeJobKind::Extract], "migration-test", 30_000)
         .await
         .expect("claim")
         .expect("claimed job");
@@ -65,7 +65,7 @@ async fn brain_enqueue_claim_model_budget_and_completion_share_one_run() {
     assert_eq!(run.lease_owner.as_deref(), Some("migration-test"));
 
     assert!(db
-        .brain_job_model_call(job_id, &token)
+        .knowledge_job_model_call(job_id, &token)
         .await
         .expect("model call"));
     let attempt_calls: i64 = sqlx::query_scalar(
@@ -78,7 +78,7 @@ async fn brain_enqueue_claim_model_budget_and_completion_share_one_run() {
     assert_eq!(attempt_calls, 1);
 
     assert!(db
-        .brain_complete_job(job_id, &token, Some("wu-1"), Some("cursor-1"))
+        .knowledge_complete_job(job_id, &token, Some("wu-1"), Some("cursor-1"))
         .await
         .expect("complete"));
     let finished = db
@@ -99,7 +99,7 @@ async fn brain_enqueue_claim_model_budget_and_completion_share_one_run() {
     // A late result from the old owner cannot commit again after the lease
     // has been cleared by the public run completion transaction.
     assert!(!db
-        .brain_complete_job(job_id, &token, Some("late"), None)
+        .knowledge_complete_job(job_id, &token, Some("late"), None)
         .await
         .expect("late completion check"));
 }
@@ -181,11 +181,11 @@ async fn owner_generation_and_event_redaction_are_cas_and_deletion_safe() {
 }
 
 #[tokio::test]
-async fn public_task_claim_binds_the_legacy_brain_row_for_one_owner() {
+async fn public_task_claim_binds_the_legacy_knowledge_row_for_one_owner() {
     let db = db().await;
     let (job_id, created) = db
-        .brain_enqueue_job(
-            BrainJobKind::OfficeSync,
+        .knowledge_enqueue_job(
+            KnowledgeJobKind::OfficeSync,
             Some("feishu"),
             Some("office-input"),
             Some("{\"provider\":\"feishu\"}"),
@@ -203,10 +203,10 @@ async fn public_task_claim_binds_the_legacy_brain_row_for_one_owner() {
         .expect("task run");
     let token = claimed.run.lease_token.clone().expect("task lease");
     let bound = db
-        .brain_bind_public_task(
+        .knowledge_bind_public_task(
             job_id,
             &claimed.run.run_id,
-            BrainJobKind::OfficeSync,
+            KnowledgeJobKind::OfficeSync,
             "public-owner",
             &token,
             30_000,
@@ -217,11 +217,11 @@ async fn public_task_claim_binds_the_legacy_brain_row_for_one_owner() {
     assert_eq!(bound.lease_token, token);
 
     assert!(db
-        .brain_job_model_call(job_id, &token)
+        .knowledge_job_model_call(job_id, &token)
         .await
         .expect("shared model counter"));
     assert!(db
-        .brain_complete_job(job_id, &token, Some("office-result"), Some("cursor"))
+        .knowledge_complete_job(job_id, &token, Some("office-result"), Some("cursor"))
         .await
         .expect("completion"));
     assert_eq!(
@@ -238,8 +238,8 @@ async fn public_task_claim_binds_the_legacy_brain_row_for_one_owner() {
 async fn public_task_cancellation_closes_both_compatibility_rows() {
     let db = db().await;
     let (job_id, _) = db
-        .brain_enqueue_job(
-            BrainJobKind::Extract,
+        .knowledge_enqueue_job(
+            KnowledgeJobKind::Extract,
             Some("scope-cancel"),
             Some("cancel-input"),
             Some("{}"),
@@ -254,10 +254,10 @@ async fn public_task_cancellation_closes_both_compatibility_rows() {
         .expect("claim")
         .expect("run");
     let token = claimed.run.lease_token.clone().expect("lease");
-    db.brain_bind_public_task(
+    db.knowledge_bind_public_task(
         job_id,
         &claimed.run.run_id,
-        BrainJobKind::Extract,
+        KnowledgeJobKind::Extract,
         "public-owner",
         &token,
         30_000,
@@ -280,7 +280,7 @@ async fn public_task_cancellation_closes_both_compatibility_rows() {
         .await
         .expect("cancel request"));
     assert!(db
-        .brain_cancel_claimed_job(job_id, &token, "user_cancelled")
+        .knowledge_cancel_claimed_job(job_id, &token, "user_cancelled")
         .await
         .expect("cancel compatibility job"));
     assert_eq!(
@@ -292,7 +292,7 @@ async fn public_task_cancellation_closes_both_compatibility_rows() {
         TaskState::Cancelled
     );
     assert_eq!(
-        db.brain_get_job(job_id)
+        db.knowledge_get_job(job_id)
             .await
             .expect("job lookup")
             .expect("job")
@@ -305,8 +305,8 @@ async fn public_task_cancellation_closes_both_compatibility_rows() {
 async fn office_scope_cancellation_does_not_cross_provider_boundaries() {
     let db = db().await;
     let (feishu_id, _) = db
-        .brain_enqueue_job(
-            BrainJobKind::OfficeSync,
+        .knowledge_enqueue_job(
+            KnowledgeJobKind::OfficeSync,
             Some("feishu"),
             Some("feishu-input"),
             Some("{\"provider\":\"feishu\"}"),
@@ -316,8 +316,8 @@ async fn office_scope_cancellation_does_not_cross_provider_boundaries() {
         .await
         .expect("feishu enqueue");
     let (tencent_id, _) = db
-        .brain_enqueue_job(
-            BrainJobKind::OfficeSync,
+        .knowledge_enqueue_job(
+            KnowledgeJobKind::OfficeSync,
             Some("tencent-meeting"),
             Some("tencent-input"),
             Some("{\"provider\":\"tencent-meeting\"}"),
@@ -328,13 +328,13 @@ async fn office_scope_cancellation_does_not_cross_provider_boundaries() {
         .expect("tencent enqueue");
 
     assert_eq!(
-        db.brain_cancel_jobs_for_scope(BrainJobKind::OfficeSync, "feishu", "paused_by_user",)
+        db.knowledge_cancel_jobs_for_scope(KnowledgeJobKind::OfficeSync, "feishu", "paused_by_user",)
             .await
             .expect("scope cancellation"),
         1
     );
     assert_eq!(
-        db.brain_get_job(feishu_id)
+        db.knowledge_get_job(feishu_id)
             .await
             .expect("feishu lookup")
             .expect("feishu row")
@@ -342,7 +342,7 @@ async fn office_scope_cancellation_does_not_cross_provider_boundaries() {
         "cancelled"
     );
     assert_eq!(
-        db.brain_get_job(tencent_id)
+        db.knowledge_get_job(tencent_id)
             .await
             .expect("tencent lookup")
             .expect("tencent row")
@@ -352,11 +352,11 @@ async fn office_scope_cancellation_does_not_cross_provider_boundaries() {
 }
 
 #[tokio::test]
-async fn queued_public_controls_keep_legacy_brain_row_claimable() {
+async fn queued_public_controls_keep_legacy_knowledge_row_claimable() {
     let db = db().await;
     let (job_id, _) = db
-        .brain_enqueue_job(
-            BrainJobKind::Extract,
+        .knowledge_enqueue_job(
+            KnowledgeJobKind::Extract,
             Some("scope-control"),
             Some("control-input"),
             Some("{}"),
@@ -372,7 +372,7 @@ async fn queued_public_controls_keep_legacy_brain_row_claimable() {
         .await
         .expect("cancel queued run"));
     assert_eq!(
-        db.brain_get_job(job_id).await.unwrap().unwrap().state,
+        db.knowledge_get_job(job_id).await.unwrap().unwrap().state,
         "cancelled"
     );
     let cancelled = db.task_get_run(&run_id).await.unwrap().unwrap();
@@ -387,7 +387,7 @@ async fn queued_public_controls_keep_legacy_brain_row_claimable() {
         .await
         .expect("retry cancelled run"));
     assert_eq!(
-        db.brain_get_job(job_id).await.unwrap().unwrap().state,
+        db.knowledge_get_job(job_id).await.unwrap().unwrap().state,
         "pending"
     );
     assert_eq!(
@@ -401,7 +401,7 @@ async fn queued_public_controls_keep_legacy_brain_row_claimable() {
         .await
         .expect("pause queued run"));
     assert_eq!(
-        db.brain_get_job(job_id).await.unwrap().unwrap().state,
+        db.knowledge_get_job(job_id).await.unwrap().unwrap().state,
         "paused"
     );
     let paused = db.task_get_run(&run_id).await.unwrap().unwrap();
@@ -410,7 +410,7 @@ async fn queued_public_controls_keep_legacy_brain_row_claimable() {
         .await
         .expect("resume paused run"));
     assert_eq!(
-        db.brain_get_job(job_id).await.unwrap().unwrap().state,
+        db.knowledge_get_job(job_id).await.unwrap().unwrap().state,
         "pending"
     );
     assert_eq!(

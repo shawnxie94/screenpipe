@@ -5,10 +5,10 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { BrainViewSlot } from "@/lib/utils/tauri";
+import type { KnowledgeViewSlot } from "@/lib/utils/tauri";
 import { LiveViewCard } from "../live-view-card";
 
-const interactiveSlot: BrainViewSlot = {
+const interactiveSlot: KnowledgeViewSlot = {
   id: "commitments",
   title: "Needs attention",
   component: "list.v1",
@@ -188,7 +188,7 @@ describe("Live View interactive list decisions", () => {
 
   it("moves handled items into a plain-language reversible receipt", async () => {
     const onItemAction = vi.fn().mockResolvedValue(true);
-    const handledSlot: BrainViewSlot = {
+    const handledSlot: KnowledgeViewSlot = {
       ...interactiveSlot,
       itemActions: {
         items: [

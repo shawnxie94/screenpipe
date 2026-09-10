@@ -3513,7 +3513,7 @@ export function ConnectionsSection({
   const [mcpProviderConnected, setMcpProviderConnected] = useState<Record<string, boolean>>({});
   const [excalidrawConnected, setExcalidrawConnected] = useState(false);
   const [importedSkillsCount, setImportedSkillsCount] = useState(0);
-  // Office connections (知迹 Local Brain read-only imports)
+  // Office connections (知迹 Local Knowledge read-only imports)
   const [officeStatuses, setOfficeStatuses] = useState<Record<string, OfficeConnectionStatus>>({});
   const refreshOfficeStatuses = useCallback(() => {
     listOfficeConnections()

@@ -29,16 +29,16 @@ describe("normalizeSidebarNavLayout", () => {
   it("drops ids that no longer exist", () => {
     const layout = normalizeSidebarNavLayout({
       order: ["timeline", "ghost", "home"],
-      hidden: ["ghost", "brain"],
+      hidden: ["ghost", "knowledge"],
     });
     expect(layout.order).not.toContain("ghost");
-    expect(layout.hidden).toEqual(["brain"]);
+    expect(layout.hidden).toEqual(["knowledge"]);
   });
 
   it("keeps the user order and splices unknown-to-them ids at canonical spots", () => {
     // A layout stored before "meetings", "activity", and "connections" joined the set.
     const layout = normalizeSidebarNavLayout({
-      order: ["timeline", "home", "brain", "pipes"],
+      order: ["timeline", "home", "knowledge", "pipes"],
       hidden: [],
     });
     expect(layout.order.slice(0, 2)).toEqual(["timeline", "home"]);
@@ -54,7 +54,7 @@ describe("normalizeSidebarNavLayout", () => {
 
   it("moves the previous untouched default to the new shipped order", () => {
     const layout = normalizeSidebarNavLayout({
-      order: ["home", "brain", "meetings", "pipes", "timeline", "connections"],
+      order: ["home", "knowledge", "meetings", "pipes", "timeline", "connections"],
       hidden: ["connections"],
     });
     expect(layout.order).toEqual(ALL);
@@ -63,7 +63,7 @@ describe("normalizeSidebarNavLayout", () => {
 
   it("never duplicates an id", () => {
     const layout = normalizeSidebarNavLayout({
-      order: ["home", "home", "brain"],
+      order: ["home", "home", "knowledge"],
       hidden: ["meetings", "meetings"],
     });
     expect(new Set(layout.order).size).toBe(layout.order.length);
@@ -98,7 +98,7 @@ describe("resolveVisibleSidebarNavIds", () => {
     expect(resolveHiddenSidebarNavIds(meetingsHidden, ALL)).toEqual(["meetings"]);
     // Policy-hidden ids are not offered as "show" targets.
     expect(
-      resolveHiddenSidebarNavIds(meetingsHidden, ["home", "brain"]),
+      resolveHiddenSidebarNavIds(meetingsHidden, ["home", "knowledge"]),
     ).toEqual([]);
   });
 });
@@ -107,7 +107,7 @@ describe("reordering", () => {
   it("moves an item to an index among the visible rows", () => {
     const next = moveSidebarNavItem(DEFAULT_SIDEBAR_NAV_LAYOUT, ALL, "connections", 0);
     expect(resolveVisibleSidebarNavIds(next, ALL)).toEqual([
-      "connections", "home", "meetings", "timeline", "activity", "brain", "pipes",
+      "connections", "home", "meetings", "timeline", "activity", "knowledge", "pipes",
     ]);
   });
 
@@ -117,7 +117,7 @@ describe("reordering", () => {
       hidden: ["meetings"],
     });
     const next = moveSidebarNavItem(meetingsHidden, ALL, "connections", 0);
-    // meetings stays hidden and still sits between brain and pipes slots.
+    // meetings stays hidden and still sits between knowledge and pipes slots.
     expect(next.hidden).toEqual(["meetings"]);
     expect(next.order).toContain("meetings");
     expect(new Set(next.order)).toEqual(new Set(ALL));

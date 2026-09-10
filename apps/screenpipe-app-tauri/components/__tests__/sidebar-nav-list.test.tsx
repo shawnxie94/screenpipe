@@ -13,7 +13,7 @@ import type { SidebarNavId } from "@/lib/utils/sidebar-nav-layout";
 
 const ITEMS: SidebarNavItem[] = [
   { id: "home", label: "Chat", icon: <span /> },
-  { id: "brain", label: "Library", icon: <span /> },
+  { id: "knowledge", label: "Library", icon: <span /> },
   { id: "pipes", label: "Automations", icon: <span /> },
 ];
 
@@ -92,15 +92,15 @@ describe("SidebarNavList", () => {
       "page",
     );
     expect(screen.getByTestId("nav-home")).toHaveClass("before:bg-signal");
-    expect(screen.getByTestId("nav-brain")).not.toHaveClass(
+    expect(screen.getByTestId("nav-knowledge")).not.toHaveClass(
       "before:bg-signal",
     );
   });
 
   it("selects a section on click", () => {
     const handlers = renderList();
-    fireEvent.click(screen.getByTestId("nav-brain"));
-    expect(handlers.onSelect).toHaveBeenCalledWith("brain");
+    fireEvent.click(screen.getByTestId("nav-knowledge"));
+    expect(handlers.onSelect).toHaveBeenCalledWith("knowledge");
   });
 
   it("disables selection, intent, dragging, and row options together", () => {
@@ -109,7 +109,7 @@ describe("SidebarNavList", () => {
       items: [{ ...ITEMS[1], disabled: true }],
       onIntent,
     });
-    const row = screen.getByTestId("nav-brain");
+    const row = screen.getByTestId("nav-knowledge");
 
     fireEvent.click(row);
     fireEvent.mouseEnter(row);
@@ -118,8 +118,8 @@ describe("SidebarNavList", () => {
     expect(row).toBeDisabled();
     expect(row).toHaveClass("cursor-not-allowed");
     expect(row).not.toHaveClass("opacity-40");
-    expect(screen.getByTestId("nav-brain-disabled")).toBeInTheDocument();
-    expect(screen.getByTestId("nav-brain-options")).toBeDisabled();
+    expect(screen.getByTestId("nav-knowledge-disabled")).toBeInTheDocument();
+    expect(screen.getByTestId("nav-knowledge-options")).toBeDisabled();
     expect(handlers.onSelect).not.toHaveBeenCalled();
     expect(onIntent).not.toHaveBeenCalled();
   });
@@ -128,10 +128,10 @@ describe("SidebarNavList", () => {
     const onIntent = vi.fn();
     renderList({ onIntent });
 
-    fireEvent.mouseEnter(screen.getByTestId("nav-brain"));
+    fireEvent.mouseEnter(screen.getByTestId("nav-knowledge"));
     fireEvent.focus(screen.getByTestId("nav-pipes"));
 
-    expect(onIntent).toHaveBeenNthCalledWith(1, "brain");
+    expect(onIntent).toHaveBeenNthCalledWith(1, "knowledge");
     expect(onIntent).toHaveBeenNthCalledWith(2, "pipes");
   });
 
@@ -150,9 +150,9 @@ describe("SidebarNavList", () => {
 
   it("moves a row from the right-click menu", () => {
     const handlers = renderList();
-    rightClick("nav-brain");
+    rightClick("nav-knowledge");
     fireEvent.click(screen.getByText("上移"));
-    expect(handlers.onShift).toHaveBeenCalledWith("brain", -1);
+    expect(handlers.onShift).toHaveBeenCalledWith("knowledge", -1);
   });
 
   it("cannot move the first row up or the last row down", () => {
@@ -198,9 +198,9 @@ describe("SidebarNavList", () => {
   // every row exposes a menu button on hover/focus that opens the same menu.
   it("exposes the same menu from the row options button", () => {
     const handlers = renderList();
-    openDropdown("nav-brain-options");
+    openDropdown("nav-knowledge-options");
     fireEvent.click(screen.getByText("下移"));
-    expect(handlers.onShift).toHaveBeenCalledWith("brain", 1);
+    expect(handlers.onShift).toHaveBeenCalledWith("knowledge", 1);
   });
 
   it("refuses to hide the only remaining row", () => {

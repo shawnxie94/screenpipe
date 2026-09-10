@@ -127,7 +127,7 @@ describe("H1 onboarding follow-up", function () {
       ].join("\n"),
     );
 
-    await invokeOrThrow("save_brain_view", {
+    await invokeOrThrow("save_knowledge_view", {
       request: {
         id: VIEW_ID,
         title: "H1 context",
@@ -151,7 +151,7 @@ describe("H1 onboarding follow-up", function () {
 
   after(async () => {
     await deleteNotification();
-    await invokeOrThrow("delete_brain_view", { id: VIEW_ID }).catch(() => {});
+    await invokeOrThrow("delete_knowledge_view", { id: VIEW_ID }).catch(() => {});
     rmSync(PIPE_DIR, { recursive: true, force: true });
     await browser.execute((storageKey: string) => {
       window.localStorage.removeItem(storageKey);

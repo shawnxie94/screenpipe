@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   clearLegacyUserGoalCategory,
   completeOnboardingLiveViewActivation,
-  consumeOnboardingBrainHandoff,
+  consumeOnboardingKnowledgeHandoff,
   getOnboardingLiveViewActivation,
   markOnboardingLiveViewFirstResult,
   markOnboardingLiveViewSetupNeedsRetry,
@@ -43,15 +43,15 @@ describe("onboarding Live View activation", () => {
     localStorageMock.clear();
   });
 
-  it("persists the selected dashboard and one-time Brain handoff", () => {
+  it("persists the selected dashboard and one-time Knowledge handoff", () => {
     startOnboardingLiveViewActivation("first-dashboard-1", "work_memory", {
       goal: "Help me resume my work",
       setupStatus: "building",
     });
 
     expect(selectedLiveViewDashboardId()).toBe("first-dashboard-1");
-    expect(consumeOnboardingBrainHandoff()).toBe("first-dashboard-1");
-    expect(consumeOnboardingBrainHandoff()).toBeNull();
+    expect(consumeOnboardingKnowledgeHandoff()).toBe("first-dashboard-1");
+    expect(consumeOnboardingKnowledgeHandoff()).toBeNull();
     expect(getOnboardingLiveViewActivation("first-dashboard-1")).toEqual(
       expect.objectContaining({
         goalCategory: "work_memory",
@@ -68,7 +68,7 @@ describe("onboarding Live View activation", () => {
     selectExistingLiveViewForOnboarding("weekly-review");
 
     expect(selectedLiveViewDashboardId()).toBe("weekly-review");
-    expect(consumeOnboardingBrainHandoff()).toBe("weekly-review");
+    expect(consumeOnboardingKnowledgeHandoff()).toBe("weekly-review");
     expect(getOnboardingLiveViewActivation("weekly-review")).toEqual(
       expect.objectContaining({
         viewId: "weekly-review",

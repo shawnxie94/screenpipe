@@ -6,19 +6,19 @@
 import { Check, Download, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getLiveViewTimeRangeOption } from "@/lib/live-views/time-range";
-import type { BrainViewTemplateKit } from "@/lib/utils/tauri";
+import type { KnowledgeViewTemplateKit } from "@/lib/utils/tauri";
 
 export type TemplatePipeReadiness = {
   state: "none" | "partial" | "ready";
   installed: number;
   required: number;
-  missingPipes: BrainViewTemplateKit["pipes"];
+  missingPipes: KnowledgeViewTemplateKit["pipes"];
   label: string;
   explanation: string;
 };
 
 export function getTemplatePipeReadiness(
-  kit: BrainViewTemplateKit,
+  kit: KnowledgeViewTemplateKit,
   installedPipeNames: Set<string>,
 ): TemplatePipeReadiness {
   const missingPipes = kit.pipes.filter(
@@ -66,9 +66,9 @@ export function LiveViewTemplateGallery({
   installedPipeNames,
   onPreview,
 }: {
-  kits: BrainViewTemplateKit[];
+  kits: KnowledgeViewTemplateKit[];
   installedPipeNames: Set<string>;
-  onPreview: (kit: BrainViewTemplateKit) => void;
+  onPreview: (kit: KnowledgeViewTemplateKit) => void;
 }) {
   return (
     <section data-testid="live-view-template-gallery" className="w-full">

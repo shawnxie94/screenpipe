@@ -3,9 +3,9 @@
 
 /** Hand-mirrored public task REST contract (screenpipe-core/src/tasks). */
 export type TaskKind =
-  | "brain_extract"
-  | "brain_compile"
-  | "brain_backfill"
+  | "knowledge_extract"
+  | "knowledge_compile"
+  | "knowledge_backfill"
   | "history_migration"
   | "activity_summary"
   | "office_sync"
