@@ -1,0 +1,19 @@
+{
+  "batch": "knowledge-rename-1",
+  "git_head": "800aa2029",
+  "base_commit": "206bb07e0",
+  "date": "2026-09-10",
+  "plan": "docs/plans/knowledge-rename-execution-plan.md",
+  "files": [
+    {
+      "name": "coordinator-verification.md",
+      "uri": "docs/reviews/evidence/knowledge-rename-2026-09-10/coordinator-verification.md",
+      "sha256": "a6f33e5f0ebda1606af8e10d537eb32cd217d1abc86492ab9841b778d5f45e5d"
+    },
+    {
+      "name": "subagent-report.md",
+      "uri": "docs/reviews/evidence/knowledge-rename-2026-09-10/subagent-report.md",
+      "sha256": "99aef7496cf0ce6fd1c6476594ab47e78f9310b8e0fbef0f24d6da8944dee846"
+    }
+  ]
+}
