@@ -38,6 +38,15 @@ screenpipe 负责保存事实和证据，AI 负责在用户配置的边界内进
 - Pipes：用 Markdown 描述定时或手动运行的个人 AI 工作流，结果保存在本机。
 - Tauri 桌面应用，以及可单独运行的 Rust CLI / 引擎。
 
+## 个人工作台整合方向
+
+后续产品开发统一在活跃的 `zh-local` 分支进行，不再维护独立的 MIT 拆分版 `zhiji`。zhihuan 的平台与研究设计、Personal OS 的行动协议，以及 Infinitum/Lumina 的领域能力，按 [个人工作台整合框架](docs/trd/personal-workbench-integration-framework.md) 通过内置 Domain Pack、Connector 和 Publication Adapter 接入。
+
+- `screenpipe`：唯一的本地事实、证据、知识、研究和行动中枢。
+- `Infinitum`：RSS、清洗、去重和基础聚合的上游雷达。
+- `Lumina`：新网页采集客户端，以及已审核内容的公众展示面。
+- `Personal OS`：保持文件真源，通过适配器接入 Goal、Quest 和 Review。
+
 ## Local Brain 演进方向
 
 当前改造围绕 `docs/prd/personal-brain-local-first.md` 展开，按小步闭环推进：
