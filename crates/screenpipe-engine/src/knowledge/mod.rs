@@ -32,6 +32,7 @@ pub mod migration;
 pub mod office;
 pub mod office_routes;
 pub mod sources;
+pub mod summarize;
 pub mod worker;
 
 pub use deletion::DeletionBarrier;

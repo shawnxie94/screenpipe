@@ -438,8 +438,9 @@ pub async fn start_knowledge_worker(app: &AppHandle) {
     shared.refresh_barrier().await;
 
     // Periodic discovery of settled final intervals → extract jobs, plus a
-    // five-minute office auto-sync is separate (office_runtime). Extraction
-    // discovery runs here every 5 minutes.
+    // five-minute office auto-sync is separate (office_runtime). Interval
+    // summaries (B02a) are discovered before extraction so the "summarize
+    // first, recall later" producer stays ahead of the readers.
     {
         let db = shared.db.clone();
         tokio::spawn(async move {
@@ -448,6 +449,12 @@ pub async fn start_knowledge_worker(app: &AppHandle) {
             loop {
                 ticker.tick().await;
                 let since = chrono::Utc::now() - chrono::Duration::hours(26);
+                match screenpipe_engine::knowledge::summarize::discover_and_enqueue(&db, since).await
+                {
+                    Ok(n) if n > 0 => tracing::info!("knowledge: enqueued {n} summarize jobs"),
+                    Ok(_) => {}
+                    Err(e) => tracing::warn!("knowledge: summarize discovery failed: {e}"),
+                }
                 match screenpipe_engine::knowledge::extract::discover_and_enqueue(&db, since).await {
                     Ok(n) if n > 0 => tracing::info!("knowledge: enqueued {n} extraction jobs"),
                     Ok(_) => {}
@@ -459,6 +466,10 @@ pub async fn start_knowledge_worker(app: &AppHandle) {
     let pi_version = detect_pi_version().await;
     let executor = Arc::new(KnowledgePiExecutor::new(app.clone(), pi_version));
     let mut handlers = crate::office_runtime::build_handlers_with_office(app).await;
+    handlers.register(
+        screenpipe_db::KnowledgeJobKind::Summarize,
+        screenpipe_engine::knowledge::summarize::summarize_handler(),
+    );
     handlers.register(
         screenpipe_db::KnowledgeJobKind::Extract,
         screenpipe_engine::knowledge::extract::extract_handler(),

@@ -142,6 +142,33 @@ async fn legacy_copy_upgrades_to_current_schema() {
             ));
         }
     }
+    // The durable job queue is renamed (brain_jobs → knowledge_jobs) and then
+    // rebuilt once to widen the kind CHECK: rows must survive both steps on a
+    // database that already carries queue rows.
+    let jobs_before = count(
+        &probe,
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('brain_jobs','knowledge_jobs')",
+    )
+    .await;
+    let jobs_rows_before = if count(
+        &probe,
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='brain_jobs'",
+    )
+    .await
+        > 0
+    {
+        Some(count(&probe, "SELECT count(*) FROM brain_jobs").await)
+    } else if count(
+        &probe,
+        "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='knowledge_jobs'",
+    )
+    .await
+        > 0
+    {
+        Some(count(&probe, "SELECT count(*) FROM knowledge_jobs").await)
+    } else {
+        None
+    };
     probe.close().await;
 
     // The application's own migration path: a bare filesystem path, exactly as
@@ -207,6 +234,25 @@ async fn legacy_copy_upgrades_to_current_schema() {
     for (table, expected) in &before {
         let actual = count(&db.pool, &format!("SELECT count(*) FROM {table}")).await;
         assert_eq!(&actual, expected, "row count changed for {table}");
+    }
+
+    // 3b. Queue rows survived the rename + CHECK-widening rebuild, and the
+    // rebuilt table accepts the new 'summarize' kind.
+    if jobs_before > 0 {
+        if let Some(expected) = jobs_rows_before {
+            let actual = count(&db.pool, "SELECT count(*) FROM knowledge_jobs").await;
+            assert_eq!(actual, expected, "job queue rows lost in the rebuild");
+        }
+        let ddl: String = sqlx::query_scalar(
+            "SELECT COALESCE(sql, '') FROM sqlite_master WHERE type='table' AND name='knowledge_jobs'",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .expect("knowledge_jobs DDL");
+        assert!(
+            ddl.contains("'summarize'"),
+            "knowledge_jobs kind CHECK must accept summarize: {ddl}"
+        );
     }
 
     // 4. The rebuilt search index matches the projection table.

@@ -877,6 +877,7 @@ impl DatabaseManager {
         let definition_ids: &[&str] = match kind {
             "knowledge" => &[
                 "knowledge.extract",
+                "knowledge.summarize",
                 "knowledge.compile",
                 "knowledge.backfill",
                 "office.sync",

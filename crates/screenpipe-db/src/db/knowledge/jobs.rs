@@ -8,6 +8,7 @@ use super::*;
 fn task_binding(kind: KnowledgeJobKind) -> Option<(&'static str, &'static str)> {
     match kind {
         KnowledgeJobKind::Extract => Some(("knowledge.extract", "extract")),
+        KnowledgeJobKind::Summarize => Some(("knowledge.summarize", "extract")),
         KnowledgeJobKind::Compile => Some(("knowledge.compile", "extract")),
         KnowledgeJobKind::BackfillExtract => Some(("knowledge.backfill", "backfill")),
         KnowledgeJobKind::OfficeSync => Some(("office.sync", "office_io")),
@@ -112,6 +113,7 @@ impl DatabaseManager {
             .bind(definition_id)
             .bind(match kind {
                 KnowledgeJobKind::Extract => "knowledge_extract",
+                KnowledgeJobKind::Summarize => "knowledge_summarize",
                 KnowledgeJobKind::Compile => "knowledge_compile",
                 KnowledgeJobKind::BackfillExtract => "knowledge_backfill",
                 KnowledgeJobKind::OfficeSync => "office_sync",

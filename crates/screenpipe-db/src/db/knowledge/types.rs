@@ -180,6 +180,7 @@ impl DeletionCause {
 #[serde(rename_all = "snake_case")]
 pub enum KnowledgeJobKind {
     Extract,
+    Summarize,
     Compile,
     Answer,
     BackfillExtract,
@@ -192,6 +193,7 @@ impl KnowledgeJobKind {
     pub fn as_str(&self) -> &'static str {
         match self {
             KnowledgeJobKind::Extract => "extract",
+            KnowledgeJobKind::Summarize => "summarize",
             KnowledgeJobKind::Compile => "compile",
             KnowledgeJobKind::Answer => "answer",
             KnowledgeJobKind::BackfillExtract => "backfill_extract",
@@ -204,6 +206,7 @@ impl KnowledgeJobKind {
     pub fn from_str(s: &str) -> Option<Self> {
         match s {
             "extract" => Some(KnowledgeJobKind::Extract),
+            "summarize" => Some(KnowledgeJobKind::Summarize),
             "compile" => Some(KnowledgeJobKind::Compile),
             "answer" => Some(KnowledgeJobKind::Answer),
             "backfill_extract" => Some(KnowledgeJobKind::BackfillExtract),
@@ -214,11 +217,13 @@ impl KnowledgeJobKind {
         }
     }
 
-    /// Scheduling priority: interactive answers first, then new-interval
-    /// extraction, then backfill/compile, then office sync, then repair work.
+    /// Scheduling priority: interactive answers first, then interval
+    /// summaries and new-interval extraction, then backfill/compile, then
+    /// office sync, then repair work.
     pub fn priority(&self) -> i32 {
         match self {
             KnowledgeJobKind::Answer => 0,
+            KnowledgeJobKind::Summarize => 8,
             KnowledgeJobKind::Extract => 10,
             KnowledgeJobKind::BackfillExtract => 20,
             KnowledgeJobKind::Compile => 20,
@@ -495,6 +500,15 @@ mod tests {
             assert_eq!(KnowledgeJobState::from_str(state.as_str()), Some(state));
         }
         assert_eq!(KnowledgeJobKind::Answer.priority(), 0);
+        assert_eq!(
+            KnowledgeJobKind::from_str("summarize"),
+            Some(KnowledgeJobKind::Summarize)
+        );
+        assert_eq!(KnowledgeJobKind::Summarize.as_str(), "summarize");
+        assert!(
+            KnowledgeJobKind::Summarize.priority() < KnowledgeJobKind::Extract.priority(),
+            "summaries outrank extraction"
+        );
         assert!(KnowledgeJobKind::Extract.priority() < KnowledgeJobKind::Compile.priority());
         assert!(KnowledgeJobKind::Answer.priority() < KnowledgeJobKind::Extract.priority());
         assert!(KnowledgeJobState::Succeeded.is_terminal());

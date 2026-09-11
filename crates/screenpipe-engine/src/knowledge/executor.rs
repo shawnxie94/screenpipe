@@ -118,6 +118,14 @@ impl BudgetedExecutor {
         self.calls.load(Ordering::Relaxed)
     }
 
+    /// Live model binding for input hashing (no secrets). The inner executor
+    /// re-resolves it on every call, so a preset switch changes the hash
+    /// family and summaries recompute instead of being swallowed by the old
+    /// idempotency.
+    pub fn identity(&self) -> ModelIdentity {
+        self.inner.identity()
+    }
+
     pub async fn complete(
         &self,
         request: CompletionRequest,

@@ -397,7 +397,7 @@ pub async fn get_activity_intervals_missing_summary(
     let limit = query.limit.clamp(1, 1000);
     let records = state
         .db
-        .activity_intervals_missing_summary(start_time, end_time, limit)
+        .activity_intervals_missing_summary(start_time, end_time, None, limit)
         .await
         .map_err(query_failed("activity missing-summary query failed"))?;
     let intervals: Vec<ActivityIntervalDetail> = records

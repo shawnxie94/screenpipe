@@ -100,7 +100,7 @@ CREATE INDEX idx_activity_summaries_input ON activity_interval_summaries(input_h
 
 ## 8. 交付边界（子任务约束）
 
-- 允许路径：`crates/screenpipe-db/src/{db/knowledge/,db/activity_ledger.rs,migrations/,tests/}`、`crates/screenpipe-engine/src/knowledge/`、`crates/screenpipe-engine/tests/`、`apps/screenpipe-app-tauri/src-tauri/src/knowledge_runtime.rs`。
+- 允许路径：`crates/screenpipe-db/src/{db/knowledge/,db/activity_ledger.rs,db/mod.rs,lib.rs,migrations/,tests/}`、`crates/screenpipe-engine/src/knowledge/`、`crates/screenpipe-engine/src/routes/activity_ledger.rs`、`crates/screenpipe-engine/tests/`、`apps/screenpipe-app-tauri/src-tauri/src/knowledge_runtime.rs`。
 - 禁止：`docs/**`、已存在的迁移文件、前端 `apps/screenpipe-app-tauri/{lib,components}/**`、旧活动历史路径（`activity_history.rs`、`activity-review-prompt.ts`）、`crates/screenpipe-engine/src/knowledge/extract.rs` 的取数逻辑（B03 才动）。
 - 不做：模型/凭据解析（必须走注入的 executor）、UI 读源切换、WorkUnit 字段扩展、顺手修无关 bug。
 - 真实库只读；模型调用只允许假执行体（测试），不得真调远程模型。
@@ -112,3 +112,12 @@ CREATE INDEX idx_activity_summaries_input ON activity_interval_summaries(input_h
 | B02b | 读源收敛：前端活动历史改读数据库摘要、旧 KV 叙事标 legacy、UI 与 Tauri 命令适配、两套总结逻辑下线 | B02a |
 | B03 | WorkUnit 先摘要后召回 + 流程/环境/细节字段 + 会话计数按活动去重 | B02a |
 | B04 | 四个 skill（共享取数 + 活动总结 / 工作单元 / 知识提炼，按 `AgentLayout` 注入） | B02b、B03 |
+
+## 完成记录（B02a）
+
+- 子任务：`zct_880cfcfc20d94b85`（单轮；判 scope_violation，越界三文件为计划漏列的必要改动，已修正允许路径）
+- 交付：迁移 `20260911140000_activity_summary_evidence_refs.sql` 与 `20260911150000_knowledge_jobs_allow_summarize.sql`；`knowledge/summarize.rs`（发现式入队 + 处理器 + 校验 + 落库 + 22 项测试）；提示词 `SUMMARY_*`；`KnowledgeJobKind::Summarize` 全链路；src-tauri 接线
+- 协调会话补：`task_activate_owner_generation("knowledge")` 加入 `knowledge.summarize`；`legacy_db_upgrade` 增补队列重建保行断言
+- 证据：`docs/reviews/evidence/activity-summary-b02a-2026-09-11/`
+- 验收：协调会话实跑 11 条命令全绿，含真实库副本集成测试（20/20 摘要成功）与 dev 库副本队列重建保行（715 行）
+- 带入 B02b：摘要质量人工评审、前端读源切换、旧叙事标 legacy、读接口 HTTP 覆盖

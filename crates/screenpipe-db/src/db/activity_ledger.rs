@@ -98,6 +98,29 @@ pub struct ActivityEvidenceRecord {
     pub browser_url: Option<String>,
 }
 
+/// One evidence citation stored with an interval summary: a pointer back to
+/// a retained `activity_evidence` row of the same interval.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ActivitySummaryEvidenceRef {
+    pub source_type: String,
+    pub source_id: i64,
+}
+
+/// A stored interval summary row (B02a producer read face).
+#[derive(Debug, Clone)]
+pub struct ActivitySummaryRow {
+    pub interval_id: i64,
+    pub summary: String,
+    pub keywords: Vec<String>,
+    pub band: String,
+    pub summary_chars: i64,
+    pub evidence_refs: Vec<ActivitySummaryEvidenceRef>,
+    pub producer: String,
+    pub prompt_version: String,
+    pub model: Option<String>,
+    pub input_hash: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActivityActionRecord {
     pub id: i64,
@@ -990,14 +1013,19 @@ impl DatabaseManager {
 
     /// Intervals in range that have no summary yet, oldest first — the B02
     /// summarizer backlog. Summary/keyword fields are always `None` here.
+    /// `settled_before` additionally requires `end_at <= settled_before` so
+    /// the discovery only offers intervals that already ended (the B02a
+    /// 5-minute grace window); `None` keeps the plain B01 behavior.
     pub async fn activity_intervals_missing_summary(
         &self,
         start_at: DateTime<Utc>,
         end_at: DateTime<Utc>,
+        settled_before: Option<DateTime<Utc>>,
         limit: i64,
     ) -> Result<Vec<ActivityIntervalRecord>, SqlxError> {
         let start = start_at.to_rfc3339();
         let end = end_at.to_rfc3339();
+        let settled = settled_before.map(|t| t.to_rfc3339());
         let rows = sqlx::query_as::<_, RawIntervalDetail>(
             r#"SELECT i.id, t.id AS task_id, t.parent_task_id, t.kind, t.title,
                       parent.title AS parent_title, t.app_name,
@@ -1010,15 +1038,17 @@ impl DatabaseManager {
                LEFT JOIN activity_tasks parent ON parent.id = t.parent_task_id
                WHERE i.end_at > ?1
                  AND i.start_at < ?2
+                 AND (?3 IS NULL OR i.end_at <= ?3)
                  AND NOT EXISTS (
                      SELECT 1 FROM activity_interval_summaries s
                      WHERE s.interval_id = i.id
                  )
                ORDER BY i.start_at, i.id
-               LIMIT ?3"#,
+               LIMIT ?4"#,
         )
         .bind(&start)
         .bind(&end)
+        .bind(settled)
         .bind(limit)
         .fetch_all(&self.pool)
         .await?;
@@ -1026,6 +1056,158 @@ impl DatabaseManager {
             .into_iter()
             .map(|row| row.into_record(Vec::new()))
             .collect())
+    }
+
+    /// The stored summary for one interval when its `input_hash` still
+    /// matches — the summarizer's idempotency read. `Some` means the exact
+    /// same prompt/evidence/model inputs were already summarized and the
+    /// model must not be called again; `None` (missing row or a different
+    /// hash, e.g. after an evidence/prompt/model change) means the summary
+    /// is still to be generated.
+    pub async fn activity_summary_by_input_hash(
+        &self,
+        interval_id: i64,
+        input_hash: &str,
+    ) -> Result<Option<ActivitySummaryRow>, SqlxError> {
+        let row: Option<(i64, String, String, String, i64, String, String, String, Option<String>, String)> =
+            sqlx::query_as(
+                "SELECT interval_id, summary, keywords, band, summary_chars, evidence_refs, \
+                        producer, prompt_version, model, input_hash \
+                 FROM activity_interval_summaries \
+                 WHERE interval_id = ?1 AND input_hash = ?2",
+            )
+            .bind(interval_id)
+            .bind(input_hash)
+            .fetch_optional(&self.pool)
+            .await?;
+        let Some((
+            interval_id,
+            summary,
+            keywords,
+            band,
+            summary_chars,
+            evidence_refs,
+            producer,
+            prompt_version,
+            model,
+            input_hash,
+        )) = row
+        else {
+            return Ok(None);
+        };
+        Ok(Some(ActivitySummaryRow {
+            interval_id,
+            summary,
+            keywords: serde_json::from_str(&keywords).unwrap_or_default(),
+            band,
+            summary_chars,
+            evidence_refs: serde_json::from_str(&evidence_refs).unwrap_or_default(),
+            producer,
+            prompt_version,
+            model,
+            input_hash,
+        }))
+    }
+
+    /// Insert or replace the summary of one interval. Citations must be 1–3
+    /// rows that all exist in the interval's retained evidence — anything
+    /// else is rejected before any write. An existing row with the same
+    /// `input_hash` is returned untouched (idempotent re-run); a different
+    /// hash replaces the row in place.
+    pub async fn activity_summary_upsert(
+        &self,
+        interval_id: i64,
+        summary: &str,
+        keywords: &[String],
+        band: &str,
+        producer: &str,
+        prompt_version: &str,
+        model: Option<&str>,
+        input_hash: &str,
+        evidence_refs: &[ActivitySummaryEvidenceRef],
+    ) -> Result<i64, SqlxError> {
+        if summary.trim().is_empty() {
+            return Err(SqlxError::Protocol(
+                "activity summary must not be empty".into(),
+            ));
+        }
+        if !matches!(band, "short" | "medium" | "long") {
+            return Err(SqlxError::Protocol(format!(
+                "invalid activity summary band {band}"
+            )));
+        }
+        if evidence_refs.is_empty() || evidence_refs.len() > 3 {
+            return Err(SqlxError::Protocol(format!(
+                "activity summary must cite 1–3 evidence rows, got {}",
+                evidence_refs.len()
+            )));
+        }
+        let mut tx = self.begin_immediate_with_retry().await?;
+        let existing: Option<i64> = sqlx::query_scalar(
+            "SELECT interval_id FROM activity_interval_summaries \
+             WHERE interval_id = ?1 AND input_hash = ?2",
+        )
+        .bind(interval_id)
+        .bind(input_hash)
+        .fetch_optional(&mut **tx.conn())
+        .await?;
+        if let Some(id) = existing {
+            tx.commit().await?;
+            return Ok(id);
+        }
+        for reference in evidence_refs {
+            let retained: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM activity_evidence \
+                 WHERE interval_id = ?1 AND source_type = ?2 AND source_id = ?3",
+            )
+            .bind(interval_id)
+            .bind(&reference.source_type)
+            .bind(reference.source_id)
+            .fetch_one(&mut **tx.conn())
+            .await?;
+            if retained == 0 {
+                return Err(SqlxError::Protocol(format!(
+                    "evidence ref {}/{} is not retained evidence of interval {}",
+                    reference.source_type, reference.source_id, interval_id
+                )));
+            }
+        }
+        let summary_chars = summary.chars().filter(|c| !c.is_whitespace()).count() as i64;
+        let keywords_json = serde_json::to_string(&keywords.to_vec()).unwrap_or_else(|_| "[]".into());
+        let evidence_json =
+            serde_json::to_string(&evidence_refs.to_vec()).unwrap_or_else(|_| "[]".into());
+        let id: i64 = sqlx::query_scalar(
+            r#"INSERT INTO activity_interval_summaries
+               (interval_id, summary, keywords, band, summary_chars, evidence_refs,
+                producer, prompt_version, model, input_hash)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+               ON CONFLICT(interval_id) DO UPDATE SET
+                 summary = excluded.summary,
+                 keywords = excluded.keywords,
+                 band = excluded.band,
+                 summary_chars = excluded.summary_chars,
+                 evidence_refs = excluded.evidence_refs,
+                 producer = excluded.producer,
+                 prompt_version = excluded.prompt_version,
+                 model = excluded.model,
+                 input_hash = excluded.input_hash,
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+               RETURNING interval_id"#,
+        )
+        .bind(interval_id)
+        .bind(summary)
+        .bind(&keywords_json)
+        .bind(band)
+        .bind(summary_chars)
+        .bind(&evidence_json)
+        .bind(producer)
+        .bind(prompt_version)
+        .bind(model)
+        .bind(input_hash)
+        .fetch_one(&mut **tx.conn())
+        .await?;
+        tx.commit().await?;
+        Ok(id)
     }
 
     async fn retention_counts_for_range(
@@ -1755,6 +1937,7 @@ mod tests {
             .activity_intervals_missing_summary(
                 at("2026-08-17T08:00:00Z"),
                 at("2026-08-17T10:00:00Z"),
+                None,
                 10,
             )
             .await
@@ -1762,6 +1945,329 @@ mod tests {
         assert_eq!(missing.len(), 1);
         assert!(missing[0].summary.is_none());
         assert_eq!(missing[0].start_at, "2026-08-17T09:20:00+00:00");
+    }
+
+    #[tokio::test]
+    async fn activity_missing_summary_settled_before_excludes_open_intervals() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (tasks, mut intervals) = drafts(source_id);
+        // Ended well before the watermark: ready for summarization.
+        intervals[0].start_at = at("2026-08-17T09:00:00Z");
+        intervals[0].end_at = at("2026-08-17T09:05:00Z");
+        // Still running: ends inside the grace window.
+        let mut live = intervals[0].clone();
+        live.interval_key = "live-interval".to_string();
+        live.start_at = at("2026-08-17T09:20:00Z");
+        live.end_at = at("2026-08-17T09:28:00Z");
+        intervals.push(live);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:30:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+
+        let ready = db
+            .activity_intervals_missing_summary(
+                at("2026-08-17T08:00:00Z"),
+                at("2026-08-17T09:25:00Z"),
+                Some(at("2026-08-17T09:25:00Z")),
+                10,
+            )
+            .await
+            .unwrap();
+        assert_eq!(ready.len(), 1);
+        assert_eq!(ready[0].end_at, "2026-08-17T09:05:00+00:00");
+    }
+
+    #[tokio::test]
+    async fn activity_summary_upsert_rejects_out_of_range_evidence_refs() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (tasks, intervals) = drafts(source_id);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+        let interval_id: i64 =
+            sqlx::query_scalar("SELECT id FROM activity_intervals WHERE interval_key = 'interval'")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        let reference = |source_type: &str, source_id: i64| ActivitySummaryEvidenceRef {
+            source_type: source_type.to_string(),
+            source_id,
+        };
+        let valid = vec![reference("ui_event", source_id)];
+
+        // No citation at all.
+        let error = db
+            .activity_summary_upsert(
+                interval_id, "摘要正文", &["关键字".to_string()], "short", "summarizer-v1",
+                "prompt-v1", Some("test-model"), "hash-a", &[],
+            )
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("1–3"));
+
+        // More than three citations.
+        let four = vec![
+            reference("ui_event", source_id),
+            reference("ui_event", source_id),
+            reference("ui_event", source_id),
+            reference("ui_event", source_id),
+        ];
+        let error = db
+            .activity_summary_upsert(
+                interval_id, "摘要正文", &["关键字".to_string()], "short", "summarizer-v1",
+                "prompt-v1", Some("test-model"), "hash-a", &four,
+            )
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("1–3"));
+
+        // Citation pointing at evidence that was never retained for the
+        // interval (wrong source id and wrong source type).
+        for forged in [
+            vec![reference("ui_event", source_id + 999)],
+            vec![reference("frame", source_id)],
+        ] {
+            let error = db
+                .activity_summary_upsert(
+                    interval_id, "摘要正文", &["关键字".to_string()], "short", "summarizer-v1",
+                    "prompt-v1", Some("test-model"), "hash-a", &forged,
+                )
+                .await
+                .unwrap_err();
+            assert!(
+                error.to_string().contains("not retained evidence"),
+                "forged citation must be rejected: {error}"
+            );
+        }
+
+        // Invalid band is rejected as well.
+        let error = db
+            .activity_summary_upsert(
+                interval_id, "摘要正文", &["关键字".to_string()], "epic", "summarizer-v1",
+                "prompt-v1", Some("test-model"), "hash-a", &valid,
+            )
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("band"));
+
+        // Nothing was written by any rejected call.
+        let rows: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_summaries")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        assert_eq!(rows, 0);
+
+        // One retained citation passes.
+        db.activity_summary_upsert(
+            interval_id, "在 Browser 里修复 Ticket 42 的回复流程", &["Ticket 42".to_string()],
+            "short", "summarizer-v1", "prompt-v1", Some("test-model"), "hash-a", &valid,
+        )
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn activity_summary_upsert_is_idempotent_per_input_hash() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (tasks, intervals) = drafts(source_id);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+        let interval_id: i64 =
+            sqlx::query_scalar("SELECT id FROM activity_intervals WHERE interval_key = 'interval'")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        let refs = vec![ActivitySummaryEvidenceRef {
+            source_type: "ui_event".to_string(),
+            source_id,
+        }];
+        let keywords = vec!["Ticket 42".to_string(), "Browser".to_string()];
+
+        let first_id = db
+            .activity_summary_upsert(
+                interval_id, "在 Browser 中回复 Ticket 42 并检查附件", &keywords, "short",
+                "summarizer-v1", "prompt-v1", Some("test-model"), "hash-1", &refs,
+            )
+            .await
+            .unwrap();
+        let first_row = db
+            .activity_summary_by_input_hash(interval_id, "hash-1")
+            .await
+            .unwrap()
+            .expect("row stored");
+        assert_eq!(
+            first_row.summary_chars as usize,
+            "在 Browser 中回复 Ticket 42 并检查附件"
+                .chars()
+                .filter(|c| !c.is_whitespace())
+                .count()
+        );
+
+        // Same input hash: nothing is rewritten.
+        let second_id = db
+            .activity_summary_upsert(
+                interval_id, "完全不同的另一段摘要内容也无所谓", &keywords, "short",
+                "summarizer-v1", "prompt-v1", Some("test-model"), "hash-1", &refs,
+            )
+            .await
+            .unwrap();
+        assert_eq!(first_id, second_id);
+        let unchanged = db
+            .activity_summary_by_input_hash(interval_id, "hash-1")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(unchanged.summary, first_row.summary);
+        assert_eq!(unchanged.summary_chars, first_row.summary_chars);
+
+        // A different hash replaces the row in place — still one row.
+        let replaced_id = db
+            .activity_summary_upsert(
+                interval_id, "证据变化后重新生成的摘要正文内容", &keywords, "short",
+                "summarizer-v1", "prompt-v2", Some("test-model-2"), "hash-2", &refs,
+            )
+            .await
+            .unwrap();
+        assert_eq!(replaced_id, first_id);
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_summaries")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        assert_eq!(count, 1);
+        let old_hash = db
+            .activity_summary_by_input_hash(interval_id, "hash-1")
+            .await
+            .unwrap();
+        assert!(old_hash.is_none(), "stale input hash must not match");
+    }
+
+    #[tokio::test]
+    async fn activity_summary_by_input_hash_reports_pending_generation() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (tasks, intervals) = drafts(source_id);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+        let interval_id: i64 =
+            sqlx::query_scalar("SELECT id FROM activity_intervals WHERE interval_key = 'interval'")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+
+        // No row at all: to be generated.
+        assert!(db
+            .activity_summary_by_input_hash(interval_id, "hash-1")
+            .await
+            .unwrap()
+            .is_none());
+
+        db.activity_summary_upsert(
+            interval_id,
+            "在 Browser 中回复 Ticket 42 并检查附件",
+            &["Ticket 42".to_string()],
+            "short",
+            "summarizer-v1",
+            "prompt-v1",
+            Some("test-model"),
+            "hash-1",
+            &[ActivitySummaryEvidenceRef {
+                source_type: "ui_event".to_string(),
+                source_id,
+            }],
+        )
+        .await
+        .unwrap();
+
+        // Same hash: already generated; different hash (e.g. evidence or
+        // model changed): to be generated again.
+        assert!(db
+            .activity_summary_by_input_hash(interval_id, "hash-1")
+            .await
+            .unwrap()
+            .is_some());
+        assert!(db
+            .activity_summary_by_input_hash(interval_id, "hash-2")
+            .await
+            .unwrap()
+            .is_none());
+
+        let row = db
+            .activity_summary_by_input_hash(interval_id, "hash-1")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(row.evidence_refs.len(), 1);
+        assert_eq!(row.evidence_refs[0].source_type, "ui_event");
+        assert_eq!(row.evidence_refs[0].source_id, source_id);
+        assert_eq!(row.band, "short");
+        assert_eq!(row.model.as_deref(), Some("test-model"));
     }
 
     #[tokio::test]

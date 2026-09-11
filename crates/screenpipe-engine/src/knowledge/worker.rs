@@ -5,7 +5,7 @@
 //! Serial KnowledgeWorker implementations: one public-task owner is used by the
 //! desktop, while the legacy queue entrypoint remains for compatibility and
 //! isolated callers. Each instance runs one bounded step at a time. Priority: answer >
-//! new-interval extraction > backfill/compile > office sync > cleanup.
+//! interval summaries > new-interval extraction > backfill/compile > office sync > cleanup.
 //! Retries, leasing and attempt budgets live in the DB; this loop only
 //! orchestrates claims, heartbeats and cancellation.
 
@@ -198,6 +198,7 @@ pub fn start_public(
 fn definition_for_kind(kind: KnowledgeJobKind) -> &'static str {
     match kind {
         KnowledgeJobKind::Extract => "knowledge.extract",
+        KnowledgeJobKind::Summarize => "knowledge.summarize",
         KnowledgeJobKind::Compile => "knowledge.compile",
         KnowledgeJobKind::BackfillExtract => "knowledge.backfill",
         KnowledgeJobKind::OfficeSync => "office.sync",
@@ -209,6 +210,7 @@ fn definition_for_kind(kind: KnowledgeJobKind) -> &'static str {
 
 fn kind_for_definition(definition_id: &str) -> Option<KnowledgeJobKind> {
     [
+        KnowledgeJobKind::Summarize,
         KnowledgeJobKind::Extract,
         KnowledgeJobKind::Compile,
         KnowledgeJobKind::BackfillExtract,
@@ -226,6 +228,7 @@ async fn run_public_loop(
     handle: Arc<WorkerHandle>,
 ) {
     let definitions = [
+        KnowledgeJobKind::Summarize,
         KnowledgeJobKind::Extract,
         KnowledgeJobKind::Compile,
         KnowledgeJobKind::BackfillExtract,

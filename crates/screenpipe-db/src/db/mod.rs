@@ -488,7 +488,8 @@ mod write_ops;
 
 pub use self::activity_ledger::{
     ActivityActionDraft, ActivityActionRecord, ActivityEvidenceDraft, ActivityEvidenceRecord,
-    ActivityIntervalDraft, ActivityIntervalRecord, ActivityLedgerObservation, ActivityTaskDraft,
+    ActivityIntervalDraft, ActivityIntervalRecord, ActivityLedgerObservation, ActivitySummaryRow,
+    ActivitySummaryEvidenceRef, ActivityTaskDraft,
 };
 pub use self::semantic::{
     SemanticActor, SemanticActorAlias, SemanticActorReference, SemanticAttachResult,
