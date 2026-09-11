@@ -1,0 +1,18 @@
+{
+  "batch": "activity-read-source-b02b1",
+  "date": "2026-09-11",
+  "plan": "docs/plans/activity-read-source-convergence-execution-plan.md",
+  "zcode_task": "zct_719c35e0d33647a6",
+  "files": [
+    {
+      "name": "coordinator-verification.md",
+      "uri": "docs/reviews/evidence/activity-read-source-b02b1-2026-09-11/coordinator-verification.md",
+      "sha256": "b407ca2127e2665de35558d695918bac17ec84022edb5ef017675c968cc6cc0f"
+    },
+    {
+      "name": "subagent-report.md",
+      "uri": "docs/reviews/evidence/activity-read-source-b02b1-2026-09-11/subagent-report.md",
+      "sha256": "11618611b846d006cb562130eece9941f9c63484223abb7bc565ae28f9a14736"
+    }
+  ]
+}

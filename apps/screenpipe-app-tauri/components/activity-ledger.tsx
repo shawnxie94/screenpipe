@@ -53,6 +53,7 @@ import {
   type ActivityReviewMeeting,
 } from "@/lib/activity-review-prompt";
 import {
+  loadActivitySummariesFromDb,
   nextActivityHistoryRange,
   type ActivityHistoryCoverage,
 } from "@/lib/activity-history-persistence";
@@ -1620,6 +1621,49 @@ export function ActivityLedger({
     return () => controller.abort();
   }, [activityHistoryAccessStart, range]);
 
+  // 读源收敛（B02b-1）：优先显示数据库里的间隔摘要；KV 叙事降级为兜底。
+  // Coverage 始终取自 KV，旧生成器的补洞调度行为保持不变（B02b-2 再收口）。
+  const loadHistorySnapshot = useCallback(
+    async (
+      viewRange: TimeRange,
+    ): Promise<{
+      entries: unknown[];
+      coverage: ActivityHistoryCoverage[];
+    } | null> => {
+      let stored: {
+        entries: unknown[];
+        coverage: ActivityHistoryCoverage[];
+      };
+      try {
+        const result = await commands.getActivityHistory(
+          viewRange.start.toISOString(),
+          viewRange.end.toISOString(),
+        );
+        if (result.status === "error") throw new Error(result.error);
+        stored = result.data;
+      } catch {
+        // The tab remains usable in memory if encrypted-store access fails.
+        return null;
+      }
+      try {
+        const fromDb = await loadActivitySummariesFromDb(viewRange);
+        if (fromDb.entries.length > 0) {
+          return { entries: fromDb.entries, coverage: stored.coverage };
+        }
+        console.warn(
+          "activity history: no database summaries in range; falling back to stored history",
+        );
+      } catch (reason) {
+        console.warn(
+          "activity history: database summaries unavailable; falling back to stored history",
+          reason,
+        );
+      }
+      return stored;
+    },
+    [],
+  );
+
   useEffect(() => {
     historyAbortRef.current?.abort();
     historyLoadingRef.current = false;
@@ -1628,17 +1672,11 @@ export function ActivityLedger({
     setCacheReady(false);
     if (!range) return;
     let cancelled = false;
-    void commands
-      .getActivityHistory(range.start.toISOString(), range.end.toISOString())
-      .then((result) => {
-        if (cancelled) return;
-        if (result.status === "error") throw new Error(result.error);
-        const snapshot = result.data;
+    void loadHistorySnapshot(range)
+      .then((snapshot) => {
+        if (cancelled || !snapshot) return;
         setHistory(historyDocumentFromNative(snapshot.entries));
         setHistoryCoverage(snapshot.coverage);
-      })
-      .catch(() => {
-        // The tab remains usable in memory if encrypted-store access fails.
       })
       .finally(() => {
         if (!cancelled) setCacheReady(true);
@@ -1648,22 +1686,15 @@ export function ActivityLedger({
       // History generation must outlive this page so its result is persisted
       // even when the user navigates elsewhere while Pi is still working.
     };
-  }, [preset, range]);
+  }, [loadHistorySnapshot, preset, range]);
 
   useTauriEvent("activity-history-updated", () => {
     if (!range) return;
-    void commands
-      .getActivityHistory(range.start.toISOString(), range.end.toISOString())
-      .then((result) => {
-        if (result.status === "error") throw new Error(result.error);
-        const snapshot = result.data;
-        setHistory(historyDocumentFromNative(snapshot.entries));
-        setHistoryCoverage(snapshot.coverage);
-      })
-      .catch(() => {
-        // The completion notification still opens the persisted history if
-        // this window is closing while the update event arrives.
-      });
+    void loadHistorySnapshot(range).then((snapshot) => {
+      if (!snapshot) return;
+      setHistory(historyDocumentFromNative(snapshot.entries));
+      setHistoryCoverage(snapshot.coverage);
+    });
   });
 
   useEffect(() => {

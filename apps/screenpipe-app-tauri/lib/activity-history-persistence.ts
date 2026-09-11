@@ -17,6 +17,25 @@ export type PersistedActivityHistory = {
   coverage: ActivityHistoryCoverage[];
 };
 
+/** One evidence citation as served by `get_activity_interval_summaries`. */
+export type ActivityIntervalSummaryEvidence = {
+  source_type: string;
+  source_id: number;
+  occurred_at: string;
+};
+
+/** One interval summary row served from the activity database (B02a). */
+export type ActivityIntervalSummaryEntry = {
+  id: string;
+  kind: string;
+  start_at: string;
+  end_at: string;
+  title: string;
+  summary: string;
+  keywords: string[];
+  evidence: ActivityIntervalSummaryEvidence[];
+};
+
 type StoredActivityHistory = PersistedActivityHistory & {
   schema: 1;
   updated_at: string;
@@ -222,6 +241,61 @@ export async function loadPersistedActivityHistory(
   return {
     entries: entriesInside(stored.entries, range),
     coverage: stored.coverage,
+  };
+}
+
+function summaryEvidenceKind(sourceType: string): "screen" | "audio" {
+  return sourceType === "audio" ? "audio" : "screen";
+}
+
+export function mapActivitySummaryEntry(
+  entry: ActivityIntervalSummaryEntry,
+): ActivityHistoryEntry {
+  const historyEntry: ActivityHistoryEntry = {
+    id: entry.id,
+    kind: entry.kind === "meeting" ? "meeting" : "work",
+    meeting_id: null,
+    start_at: entry.start_at,
+    end_at: entry.end_at,
+    title: entry.title,
+    summary: entry.summary,
+    evidence: entry.evidence.map((item) => ({
+      kind: summaryEvidenceKind(item.source_type),
+      at: item.occurred_at,
+      // Frame evidence keeps its source id so the artifact opens the frame;
+      // audio/ui_event citations fall back to the timestamp link.
+      frame_id: item.source_type === "frame" ? item.source_id : null,
+      meeting_id: null,
+      app_name: null,
+      label: item.source_type === "audio" ? "音频记录" : "屏幕记录",
+    })),
+  };
+  // Keywords ride along for future renderers; the current UI ignores them and
+  // they are never written back into the KV store.
+  return { ...historyEntry, keywords: entry.keywords } as ActivityHistoryEntry;
+}
+
+/**
+ * Read the interval summaries the B02a producer wrote into the activity
+ * database. Throws on failure so the caller can decide how to fall back —
+ * this path is never silently skipped.
+ */
+export async function loadActivitySummariesFromDb(range: {
+  start: Date;
+  end: Date;
+}): Promise<PersistedActivityHistory> {
+  const { commands } = await import("@/lib/utils/tauri");
+  const result = await commands.getActivityIntervalSummaries(
+    range.start.toISOString(),
+    range.end.toISOString(),
+    null,
+  );
+  if (result.status === "error") throw new Error(result.error);
+  return {
+    entries: result.data.entries.map(mapActivitySummaryEntry),
+    coverage: [
+      { start: result.data.coverage.start, end: result.data.coverage.end },
+    ],
   };
 }
 

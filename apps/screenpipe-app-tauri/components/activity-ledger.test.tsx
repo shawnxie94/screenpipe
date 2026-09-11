@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => ({
   generateActivityHistory: vi.fn(),
   getAppServerBaseUrl: vi.fn(),
   getActivityHistory: vi.fn(),
+  getActivityIntervalSummaries: vi.fn(),
+  loadActivitySummariesFromDb: vi.fn(),
   loadPersistedActivityHistory: vi.fn(),
   localFetch: vi.fn(),
   posthogCapture: vi.fn(),
@@ -101,6 +103,7 @@ vi.mock("@/lib/utils/tauri", async (importOriginal) => {
       ...actual.commands,
       generateActivityHistory: mocks.generateActivityHistory,
       getActivityHistory: mocks.getActivityHistory,
+      getActivityIntervalSummaries: mocks.getActivityIntervalSummaries,
     },
   };
 });
@@ -118,6 +121,7 @@ vi.mock("@/lib/activity-history-persistence", async (importOriginal) => {
     await importOriginal<typeof import("@/lib/activity-history-persistence")>();
   return {
     ...actual,
+    loadActivitySummariesFromDb: mocks.loadActivitySummariesFromDb,
     loadPersistedActivityHistory: mocks.loadPersistedActivityHistory,
     reconcilePersistedActivityHistory: mocks.reconcilePersistedActivityHistory,
   };
@@ -390,6 +394,10 @@ beforeEach(() => {
   );
   mocks.runDailySummaryWithPi.mockResolvedValue(HISTORY_RESPONSE);
   mocks.loadPersistedActivityHistory.mockResolvedValue({
+    entries: [],
+    coverage: [],
+  });
+  mocks.loadActivitySummariesFromDb.mockResolvedValue({
     entries: [],
     coverage: [],
   });
@@ -1319,6 +1327,114 @@ describe("activity history helpers", () => {
 });
 
 describe("ActivityLedger", () => {
+  const KV_HISTORY_RANGE = {
+    start: new Date("2026-08-17T07:00:00Z"),
+    end: new Date("2026-08-17T20:00:00Z"),
+  };
+
+  const DB_SUMMARY_ENTRIES = [
+    {
+      id: "work:12",
+      kind: "work",
+      meeting_id: null,
+      start_at: "2026-08-17T16:00:00Z",
+      end_at: "2026-08-17T17:05:00Z",
+      title: "数据库摘要里的修复工作",
+      summary: "数据库路径直接服务时间线，不再必经 KV 叙事。",
+      evidence: [
+        {
+          kind: "screen",
+          at: "2026-08-17T16:35:00Z",
+          frame_id: 12345,
+          meeting_id: null,
+          app_name: null,
+          label: "屏幕记录",
+        },
+      ],
+    },
+  ];
+
+  it("renders database summaries in range instead of the stored narrative", async () => {
+    mocks.loadActivitySummariesFromDb.mockResolvedValue({
+      entries: DB_SUMMARY_ENTRIES,
+      coverage: [
+        {
+          start: KV_HISTORY_RANGE.start.toISOString(),
+          end: KV_HISTORY_RANGE.end.toISOString(),
+        },
+      ],
+    });
+    mocks.loadPersistedActivityHistory.mockResolvedValue({
+      entries: parseActivityHistoryResponse(HISTORY_RESPONSE, KV_HISTORY_RANGE)
+        .entries,
+      coverage: [],
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    render(<ActivityLedger />);
+
+    expect(await screen.findByText("数据库摘要里的修复工作")).toBeVisible();
+    expect(
+      screen.queryByText("Fixed a capture reliability regression"),
+    ).toBeNull();
+    expect(warn).not.toHaveBeenCalledWith(
+      expect.stringContaining("falling back to stored history"),
+    );
+  });
+
+  it("falls back to the stored narrative when the database has no summaries", async () => {
+    mocks.loadActivitySummariesFromDb.mockResolvedValue({
+      entries: [],
+      coverage: [],
+    });
+    mocks.loadPersistedActivityHistory.mockResolvedValue({
+      entries: parseActivityHistoryResponse(HISTORY_RESPONSE, KV_HISTORY_RANGE)
+        .entries,
+      coverage: [
+        {
+          start: KV_HISTORY_RANGE.start.toISOString(),
+          end: KV_HISTORY_RANGE.end.toISOString(),
+        },
+      ],
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    render(<ActivityLedger />);
+
+    expect(
+      await screen.findByText("Fixed a capture reliability regression"),
+    ).toBeVisible();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "no database summaries in range; falling back to stored history",
+      ),
+    );
+  });
+
+  it("falls back to the stored narrative when the database read fails", async () => {
+    mocks.loadActivitySummariesFromDb.mockRejectedValue(
+      new Error("activity database is not available yet"),
+    );
+    mocks.loadPersistedActivityHistory.mockResolvedValue({
+      entries: parseActivityHistoryResponse(HISTORY_RESPONSE, KV_HISTORY_RANGE)
+        .entries,
+      coverage: [],
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    render(<ActivityLedger />);
+
+    expect(
+      await screen.findByText("Fixed a capture reliability regression"),
+    ).toBeVisible();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "database summaries unavailable; falling back to stored history",
+      ),
+      expect.any(Error),
+    );
+  });
+
   it("keeps artifact icons mounted across unrelated settings refreshes", async () => {
     const originalUser = mocks.settings.user;
     const { rerender } = render(<ActivityLedger />);

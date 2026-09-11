@@ -110,3 +110,11 @@ pub async fn get_activity_interval_summaries(
 | B02b-2 | 下线旧生成器与 KV 读源，清理 `activity-review-prompt.ts` 残留 |
 | B03 | WorkUnit 先摘要后召回 + 流程/环境/细节字段 + 会话计数按活动去重 |
 | B04 | 四个 skill（共享取数 + 活动总结 / 工作单元 / 知识提炼） |
+
+## 完成记录（B02b-1）
+
+- 子任务：`zct_719c35e0d33647a6`（completed，无越界）
+- 交付：`src-tauri/src/activity_summaries.rs`（新命令 + 9 单测）、`lib/activity-history-persistence.ts`（DB 读取与映射）、`components/activity-ledger.tsx`（DB 优先 + KV 兜底 + 回落告警）、`lib/utils/tauri.ts`（生成物）
+- 证据：`docs/reviews/evidence/activity-read-source-b02b1-2026-09-11/`
+- 验收：协调会话实跑 8 条命令；bindings 检查通过；前端 60 passed / 2 failed 且**基线复现证明两项失败为既有**（stash 后同样 2 failed / 49 passed）；test:tauri 9 passed；数据层 17 / 13 回归通过
+- 带入 B02b-2：真机数据流验证、下线旧生成器与 KV 读源、两项既有英文断言失败（与本工作无关）

@@ -473,6 +473,14 @@ async getActivityHistory(start: string, end: string) : Promise<Result<PersistedA
     else return { status: "error", error: e  as any };
 }
 },
+async getActivityIntervalSummaries(start: string, end: string, limit: number | null) : Promise<Result<ActivityIntervalSummariesResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_activity_interval_summaries", { start, end, limit }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 /**
  * Return the macOS bundle identifier of the running app
  * (e.g. `screenpi.pe`, `screenpi.pe.beta`, `screenpi.pe.dev`,
@@ -2555,6 +2563,10 @@ approvalMode?: string | null }
 export type ActivityHistoryCoverage = { start: string; end: string }
 export type ActivityHistoryEntry = { id: string; kind: string; meeting_id: number | null; start_at: string; end_at: string; title: string; summary: string; evidence: ActivityHistoryEvidence[] }
 export type ActivityHistoryEvidence = { kind: string; at: string; frame_id: number | null; meeting_id: number | null; app_name: string | null; label: string }
+export type ActivityIntervalSummariesCoverage = { start: string; end: string; truncated: boolean }
+export type ActivityIntervalSummariesResponse = { entries: ActivityIntervalSummaryEntry[]; coverage: ActivityIntervalSummariesCoverage }
+export type ActivityIntervalSummaryEntry = { id: string; kind: string; start_at: string; end_at: string; title: string; summary: string; keywords: string[]; evidence: ActivityIntervalSummaryEvidence[] }
+export type ActivityIntervalSummaryEvidence = { source_type: string; source_id: number; occurred_at: string }
 export type AecMode = "off" | "screenpipe" | "macos" | "windows"
 export type AudioDeviceInfo = { name: string; isDefault: boolean;
 /**

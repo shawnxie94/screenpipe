@@ -38,6 +38,7 @@ use tracing_oslog::OsLogger;
 use window::ShowRewindWindow;
 
 mod activity_history;
+mod activity_summaries;
 mod first_run_summary;
 mod focus_handoff;
 #[allow(deprecated)]
