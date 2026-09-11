@@ -1,0 +1,6 @@
+skills: exit=0 | test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 566 filtered out; finished in 0.01s
+pi: exit=0 | test result: ok. 405 passed; 0 failed; 0 ignored; 0 measured; 165 filtered out; finished in 0.28s
+agent: exit=0 | test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 1435 filtered out; finished in 4.03s
+routes: exit=0 | test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+knowledge: exit=0 | test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 1435 filtered out; finished in 3.70s
+check: exit=0 | 

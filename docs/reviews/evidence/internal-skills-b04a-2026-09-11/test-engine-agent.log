@@ -1,0 +1,243 @@
+   Compiling screenpipe-core v0.4.46 (/Users/shawn/Developer/GitHub/products/screenpipe/crates/screenpipe-core)
+   Compiling screenpipe-db v0.4.46 (/Users/shawn/Developer/GitHub/products/screenpipe/crates/screenpipe-db)
+   Compiling screenpipe-connect v0.4.46 (/Users/shawn/Developer/GitHub/products/screenpipe/crates/screenpipe-connect)
+warning: unused imports: `DeletionCause`, `KnowledgeAvailability`, `KnowledgeJobKind`, `KnowledgeJobState`, `KnowledgeState`, `KnowledgeType`, `SourceKind`, `format_ts as knowledge_format_ts`, and `now_utc`
+   --> crates/screenpipe-db/src/db/mod.rs:465:38
+    |
+465 |     compute_input_hash, fingerprint, format_ts as knowledge_format_ts, new_source_uid, now_utc,
+    |                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                  ^^^^^^^
+466 |     KnowledgeJobKind, KnowledgeJobState, DeletionCause, KnowledgeAvailability, KnowledgeState,
+    |     ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+467 |     KnowledgeType, OfficeSourceMeta, SourceKind, SourceLocator, SourceRef,
+    |     ^^^^^^^^^^^^^                    ^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `ClaimedTaskRun` and `TaskRunRequest`
+   --> crates/screenpipe-db/src/db/mod.rs:472:23
+    |
+472 | pub use self::tasks::{ClaimedTaskRun, TaskRunRequest};
+    |                       ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> crates/screenpipe-connect/src/office/runner.rs:139:13
+    |
+139 |         let mut stdout = child.stdout.take().expect("stdout piped");
+    |             ----^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> crates/screenpipe-connect/src/office/runner.rs:140:13
+    |
+140 |         let mut stderr = child.stderr.take().expect("stderr piped");
+    |             ----^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused variable: `kind`
+   --> crates/screenpipe-db/src/db/knowledge/search.rs:157:19
+    |
+157 |         for (uid, kind, title, url, revision, excerpt) in office_rows {
+    |                   ^^^^ help: if this is intentional, prefix it with an underscore: `_kind`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `KnowledgeHistoryCoverageRow` is never constructed
+  --> crates/screenpipe-db/src/db/knowledge/history.rs:18:12
+   |
+18 | pub struct KnowledgeHistoryCoverageRow {
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `LOCAL_DATASET_ID` is never used
+  --> crates/screenpipe-db/src/db/knowledge/types.rs:20:11
+   |
+20 | pub const LOCAL_DATASET_ID: &str = "local";
+   |           ^^^^^^^^^^^^^^^^
+
+warning: enum `MigrationPhase` is never used
+   --> crates/screenpipe-db/src/db/knowledge/types.rs:386:10
+    |
+386 | pub enum MigrationPhase {
+    |          ^^^^^^^^^^^^^^
+
+warning: method `as_str` is never used
+   --> crates/screenpipe-db/src/db/knowledge/types.rs:395:12
+    |
+394 | impl MigrationPhase {
+    | ------------------- method in this implementation
+395 |     pub fn as_str(&self) -> &'static str {
+    |            ^^^^^^
+
+   Compiling screenpipe-a11y v0.1.0 (/Users/shawn/Developer/GitHub/products/screenpipe/crates/screenpipe-a11y)
+   Compiling screenpipe-audio v0.4.46 (/Users/shawn/Developer/GitHub/products/screenpipe/crates/screenpipe-audio)
+warning: `screenpipe-connect` (lib) generated 2 warnings (run `cargo fix --lib -p screenpipe-connect` to apply 2 suggestions)
+warning: `screenpipe-db` (lib) generated 7 warnings (run `cargo fix --lib -p screenpipe-db` to apply 3 suggestions)
+   Compiling screenpipe-screen v0.4.46 (/Users/shawn/Developer/GitHub/products/screenpipe/crates/screenpipe-screen)
+   Compiling screenpipe-capture v0.1.0 (/Users/shawn/Developer/GitHub/products/screenpipe/crates/screenpipe-capture)
+   Compiling screenpipe-engine v0.4.46 (/Users/shawn/Developer/GitHub/products/screenpipe/crates/screenpipe-engine)
+warning: unused import: `serde::Deserialize`
+  --> crates/screenpipe-engine/src/knowledge/answer.rs:18:5
+   |
+18 | use serde::Deserialize;
+   |     ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Serialize`
+  --> crates/screenpipe-engine/src/knowledge/routes.rs:18:26
+   |
+18 | use serde::{Deserialize, Serialize};
+   |                          ^^^^^^^^^
+
+warning: unused import: `super::worker::JobHandlers`
+  --> crates/screenpipe-engine/src/knowledge/routes.rs:33:5
+   |
+33 | use super::worker::JobHandlers;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `KnowledgeHistoryCoverageInput`, `KnowledgeHistoryEntryInput`, and `KnowledgeHistoryEntryRow`
+  --> crates/screenpipe-engine/src/knowledge/migration.rs:26:44
+   |
+26 | use screenpipe_db::{KnowledgeHistoryBatch, KnowledgeHistoryCoverageInput, KnowledgeHistoryEntryInput, KnowledgeHistoryEntryRow};
+   |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `serde_json::json`
+  --> crates/screenpipe-engine/src/knowledge/office.rs:16:5
+   |
+16 | use serde_json::json;
+   |     ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `KnowledgeSourceInput` and `KnowledgeSourceRegistration`
+  --> crates/screenpipe-engine/src/knowledge/sources.rs:11:38
+   |
+11 |     compute_input_hash, fingerprint, KnowledgeSourceInput, KnowledgeSourceRegistration, OfficeSourceMeta,
+   |                                      ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `uids`
+   --> crates/screenpipe-engine/src/knowledge/deletion.rs:465:21
+    |
+465 |             let (_, uids) = validate_scope(&entry.scope)?;
+    |                     ^^^^ help: if this is intentional, prefix it with an underscore: `_uids`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `cited_knowledge`
+   --> crates/screenpipe-engine/src/knowledge/answer.rs:257:9
+    |
+257 |     let cited_knowledge: Vec<super::types::KnowledgeVersionRefDto> = Vec::new();
+    |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cited_knowledge`
+
+warning: unused variable: `any_ok`
+  --> crates/screenpipe-engine/src/knowledge/search.rs:57:9
+   |
+57 |     let any_ok = routes.iter().any(|r| matches!(r.status, RouteStatus::Ok));
+   |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_any_ok`
+
+warning: unused variable: `task_key`
+  --> crates/screenpipe-engine/src/knowledge/extract.rs:73:19
+   |
+73 | fn interval_scope(task_key: &Option<String>, task_title: &Option<String>, app: &Option<String>) -> String {
+   |                   ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_task_key`
+
+warning: unused variable: `created_at`
+   --> crates/screenpipe-engine/src/knowledge/routes.rs:399:5
+    |
+399 |     created_at: &str,
+    |     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_created_at`
+
+warning: variable does not need to be mutable
+   --> crates/screenpipe-engine/src/knowledge/summarize.rs:522:9
+    |
+522 |     let mut keywords: Vec<String> = body
+    |         ----^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `reject_office_provider` is never used
+   --> crates/screenpipe-engine/src/knowledge/office.rs:411:15
+    |
+411 | pub(crate) fn reject_office_provider(id: &str) -> Option<KnowledgeError> {
+    |               ^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `read_store_for_with_key` is never used
+  --> crates/screenpipe-engine/src/cli/store_file.rs:49:15
+   |
+49 | pub(crate) fn read_store_for_with_key(
+   |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `write_store_for_with_key` is never used
+  --> crates/screenpipe-engine/src/cli/store_file.rs:60:15
+   |
+60 | pub(crate) fn write_store_for_with_key(
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `CapturedLogs` is never constructed
+    --> crates/screenpipe-engine/src/connections_api.rs:2112:12
+     |
+2112 |     struct CapturedLogs(Arc<StdMutex<Vec<u8>>>);
+     |            ^^^^^^^^^^^^
+
+warning: `screenpipe-engine` (lib test) generated 16 warnings (run `cargo fix --lib -p screenpipe-engine --tests` to apply 12 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 09s
+     Running unittests src/lib.rs (target/debug/deps/screenpipe_engine-55d53cab905f5494)
+
+running 46 tests
+test agent_profile::tests::rejects_invisible_controls_and_deduplicates_profile_tags ... ok
+test agent_profile::tests::blocks_instruction_like_profile_content_from_prompt_snapshots ... ok
+test agent_profile::tests::renders_one_bounded_non_authoritative_snapshot ... ok
+test cli::agent::tests::test_api_skill_does_not_embed_agent_self_improvement_policy ... ok
+test cli::agent::tests::test_codex_claude_code_and_gemini_have_skill_directories ... ok
+test cli::agent::tests::test_claude_skills_directory_alone_does_not_invent_claude_code ... ok
+test cli::agent::tests::test_authenticated_config_replacement_is_owner_only ... ok
+test agent_profile::tests::authoritative_profile_writes_preserve_metadata_and_reject_other_memories ... ok
+test agent_skills::tests::creates_and_reads_agent_owned_skill_with_provenance ... ok
+test cli::agent::tests::test_agent_builtin_skills_carry_internal_knowledge_set ... ok
+test agent_skills::tests::protects_bundled_names_and_existing_skills ... ok
+test cli::agent::tests::test_agent_is_connected_only_with_mcp_and_required_skills ... ok
+test cli::agent::tests::test_host_port ... ok
+test agent_skills::tests::patch_requires_current_hash_and_agent_provenance ... ok
+test agent_skills::tests::manual_changes_revoke_agent_write_provenance ... ok
+test cli::agent::tests::test_merge_mcp_json_refuses_invalid_and_leaves_file_untouched ... ok
+test cli::agent::tests::test_detect_agents_from_the_same_config_directories_as_desktop ... ok
+test cli::agent::tests::test_merge_and_remove_mcp_yaml_preserves_existing_servers ... ok
+test cli::agent::tests::test_merge_mcp_json_fresh_and_idempotent ... ok
+test cli::agent::tests::test_merge_mcp_yaml_rejects_non_standard_mapping_without_changes ... ok
+test cli::agent::tests::test_desktop_background_setup_repairs_a_stale_mcp_entry ... ok
+test cli::agent::tests::test_desktop_background_setup_removes_stale_key_when_auth_is_disabled ... ok
+test cli::agent::tests::test_prompt_state_remembers_targets_without_dropping_previous_choices ... ok
+test cli::agent::tests::test_merge_mcp_toml ... ok
+test cli::agent::tests::test_remove_mcp_json_preserves_other_servers ... ok
+test cli::agent::tests::test_merge_mcp_yaml_ignores_commented_example_block ... ok
+test cli::agent::tests::test_remove_mcp_toml_preserves_following_table ... ok
+test cli::agent::tests::test_remove_mcp_yaml_leaves_foreign_block ... ok
+test cli::agent::tests::test_remove_mcp_json_roundtrip ... ok
+test cli::agent::tests::test_desktop_reconcile_detects_claude_code_without_desktop ... ok
+test cli::agent::tests::test_setup_all_cli_flag_is_explicit_and_conflicts_with_target ... ok
+test cli::agent::tests::test_skill_host_substitution ... ok
+test cli::agent::tests::test_replace_config_rejects_a_concurrent_edit ... ok
+test cli::agent::tests::test_runner_is_connected_only_with_stdio_type ... ok
+test external_memory_sync::tests::malformed_non_null_tags_fail_closed_for_agent_copy ... ok
+test cli::agent::tests::test_desktop_reconcile_respects_per_target_opt_out ... ok
+test meeting_summary::extract::tests::agent_end_messages_are_a_source ... ok
+test cli::agent::tests::test_remove_mcp_toml_strips_table_and_env ... ok
+test external_memory_sync::tests::agent_copy_is_unchanged_when_memory_entries_shift ... ok
+test cli::agent::tests::test_remove_mcp_yaml_roundtrip ... ok
+test cli::agent::tests::test_desktop_background_setup_isolates_invalid_config_failure ... ok
+test external_memory_sync::tests::apply_migrates_v2_agent_files_to_static_recall_guidance ... ok
+test live_views::tests::agent_reads_one_editable_template_without_hydrated_values ... ok
+test cli::agent::tests::test_remove_skills_deletes_only_screenpipe_dirs ... ok
+test cli::agent::tests::test_desktop_background_setup_connects_detected_tools_end_to_end ... ok
+test cli::agent::tests::test_replace_config_backs_up_prunes_and_leaves_no_tmp ... ok
+
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 1435 filtered out; finished in 4.37s
+
+EXIT=0

@@ -1,0 +1,8 @@
+probe exit=101
+thread 'internal_skill_endpoints_exist_in_the_engine_router' (26363624) panicked at crates/screenpipe-engine/tests/internal_skill_routes.rs:598:5:
+skills cite endpoints the engine does not serve:
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+---- after restore ----
+restore exit=0
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+RESTORED_OK
