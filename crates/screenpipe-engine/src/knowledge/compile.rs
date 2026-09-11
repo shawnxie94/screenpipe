@@ -23,6 +23,22 @@ pub fn compile_handler() -> super::worker::HandlerFn {
     Arc::new(|ctx: JobContext| Box::pin(run_compile(ctx)))
 }
 
+/// 活动键口径：与活动层的间隔一一对应（`interval_start|interval_end`）。
+/// 同一间隔重算产生的多个 WorkUnit 共享一个键，SOP 会话数因此只计一个；
+/// 缺边界的（历史）WorkUnit 退化为 `wu:<work_unit_id>`，各自计一个会话。
+fn activity_key(
+    work_unit_id: &str,
+    interval_start: Option<&str>,
+    interval_end: Option<&str>,
+) -> String {
+    match (interval_start, interval_end) {
+        (Some(start), Some(end)) if !start.is_empty() && !end.is_empty() => {
+            format!("{start}|{end}")
+        }
+        _ => format!("wu:{work_unit_id}"),
+    }
+}
+
 async fn run_compile(ctx: JobContext) -> Result<JobOutcome, JobFailure> {
     let scope = ctx.scope_key.clone().unwrap_or_default();
 
@@ -40,10 +56,19 @@ async fn run_compile(ctx: JobContext) -> Result<JobOutcome, JobFailure> {
 
     // Build u1..uN reference map for the prompt + validation.
     let mut ref_map = std::collections::HashMap::new();
+    let mut work_unit_activities = std::collections::HashMap::new();
     let mut work_unit_lines = Vec::new();
     for (i, (unit, revision)) in scope_units.units.iter().enumerate() {
         let ref_id = format!("u{}", i + 1);
         ref_map.insert(ref_id.clone(), unit.id.clone());
+        work_unit_activities.insert(
+            ref_id.clone(),
+            activity_key(
+                &unit.id,
+                unit.interval_start.as_deref(),
+                unit.interval_end.as_deref(),
+            ),
+        );
         let body: Value = serde_json::from_str(&revision.body).unwrap_or(Value::Null);
         work_unit_lines.push(format!(
             "[{ref_id}] ({})\n{}",
@@ -75,7 +100,10 @@ async fn run_compile(ctx: JobContext) -> Result<JobOutcome, JobFailure> {
     }
     let body = parsed.ok_or_else(|| JobFailure::permanent("invalid_output"))?;
 
-    let reg_ctx = RegistryContext { work_unit_refs: &ref_map };
+    let reg_ctx = RegistryContext {
+        work_unit_refs: &ref_map,
+        work_unit_activities: &work_unit_activities,
+    };
     let mut saved: Vec<String> = Vec::new();
 
     // SOP candidate: strict 3-session gate at the registry level.
@@ -243,3 +271,26 @@ pub async fn pending_candidate_count(db: &Arc<DatabaseManager>) -> u64 {
 
 #[allow(dead_code)]
 fn keep_imports(_: KnowledgeJobKind) {}
+
+#[cfg(test)]
+mod tests {
+    use super::activity_key;
+
+    #[test]
+    fn activity_key_binds_to_interval_and_degrades_without_bounds() {
+        assert_eq!(
+            activity_key(
+                "wu-1",
+                Some("2026-09-01T09:00:00Z"),
+                Some("2026-09-01T10:00:00Z")
+            ),
+            "2026-09-01T09:00:00Z|2026-09-01T10:00:00Z"
+        );
+        // 缺任一边界或空串：退化为 wu:<id>，各自计一个会话。
+        assert_eq!(
+            activity_key("wu-2", None, Some("2026-09-01T10:00:00Z")),
+            "wu:wu-2"
+        );
+        assert_eq!(activity_key("wu-3", Some(""), Some("")), "wu:wu-3");
+    }
+}

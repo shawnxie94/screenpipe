@@ -232,12 +232,15 @@ async fn indexed_knowledge(db: &Arc<DatabaseManager>, due: &str) -> String {
         "evidence_refs": ["u1"]
     });
     let refs = HashMap::from([(String::from("u1"), work_unit.clone())]);
+    // DecisionRule 校验不读活动键；按缺边界口径补齐以满足上下文契约。
+    let activities = HashMap::from([(String::from("u1"), format!("wu:{work_unit}"))]);
     assert!(
         validate(
             KnowledgeType::DecisionRule,
             &knowledge_body,
             &RegistryContext {
                 work_unit_refs: &refs,
+                work_unit_activities: &activities,
             },
         )
         .is_ok(),
@@ -514,6 +517,8 @@ async fn office_control_office_evidence_p09_erased_office_object_must_not_reimpo
 #[test]
 fn extraction_p10_sop_session_count_must_be_evidence_derived() {
     let refs = HashMap::from([("u1".into(), "one-real-session".into())]);
+    // 单一活动（缺边界退化键）：1 个互不相同活动 < 3，必须被拒。
+    let activities = HashMap::from([("u1".into(), "wu:one-real-session".into())]);
     let body = json!({
         "schema_version": 1,
         "title": "synthetic SOP",
@@ -526,7 +531,8 @@ fn extraction_p10_sop_session_count_must_be_evidence_derived() {
             KnowledgeType::Sop,
             &body,
             &RegistryContext {
-                work_unit_refs: &refs
+                work_unit_refs: &refs,
+                work_unit_activities: &activities,
             }
         )
         .is_err(),

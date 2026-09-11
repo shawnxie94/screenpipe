@@ -704,14 +704,20 @@ async fn create_candidate_version(
         req.work_unit_ids.clone()
     };
     let mut ref_map = std::collections::HashMap::new();
+    let mut work_unit_activities = std::collections::HashMap::new();
     for (index, work_unit_id) in work_units.iter().enumerate() {
-        ref_map.insert(format!("u{}", index + 1), work_unit_id.clone());
+        let ref_id = format!("u{}", index + 1);
+        ref_map.insert(ref_id.clone(), work_unit_id.clone());
+        // 审阅链路只有 work unit id、没有活动间隔：按缺边界口径退化为
+        // wu:<id>，SOP 的 session_count 校验与旧引用计数行为一致。
+        work_unit_activities.insert(ref_id, format!("wu:{work_unit_id}"));
     }
     if let Err(error) = super::registry::validate(
         KnowledgeType::from_str(&item.knowledge_type).unwrap_or(KnowledgeType::Sop),
         &req.body,
         &super::registry::RegistryContext {
             work_unit_refs: &ref_map,
+            work_unit_activities: &work_unit_activities,
         },
     ) {
         return err_response(KnowledgeError::new(
@@ -780,11 +786,16 @@ async fn edit_version(
             // Registry validation with this version's work units.
             let wu_ids = version_work_units(&db, &id, row.id).await;
             let mut ref_map = std::collections::HashMap::new();
+            let mut work_unit_activities = std::collections::HashMap::new();
             for (i, wu) in wu_ids.iter().enumerate() {
-                ref_map.insert(format!("u{}", i + 1), wu.clone());
+                let ref_id = format!("u{}", i + 1);
+                ref_map.insert(ref_id.clone(), wu.clone());
+                // 同上：审阅链路按缺边界口径退化为 wu:<id>。
+                work_unit_activities.insert(ref_id, format!("wu:{wu}"));
             }
             let reg_ctx = super::registry::RegistryContext {
                 work_unit_refs: &ref_map,
+                work_unit_activities: &work_unit_activities,
             };
             let k_type = db
                 .knowledge_get_knowledge_item(&id)

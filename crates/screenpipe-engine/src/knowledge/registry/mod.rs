@@ -31,6 +31,10 @@ fn fail(path: &str, reason: impl Into<String>) -> ValidationError {
 pub struct RegistryContext<'a> {
     /// WorkUnit ids visible to this body, by reference id (u1, u2, …).
     pub work_unit_refs: &'a std::collections::HashMap<String, String>,
+    /// 活动键 per reference id（uN → `interval_start|interval_end`；缺边界的
+    /// WorkUnit 退化为 `wu:<work_unit_id>`）。SOP 的 session_count 按这里的
+    /// 互不相同活动数校验，不按引用条数。
+    pub work_unit_activities: &'a std::collections::HashMap<String, String>,
 }
 
 fn check_refs(
@@ -64,12 +68,6 @@ fn validate_sop(body: &Value, ctx: &RegistryContext<'_>) -> ValidateResult {
         return Err(fail("title", "标题不能为空"));
     }
     let sessions = body.get("session_count").and_then(Value::as_i64).unwrap_or(0);
-    if sessions < 3 {
-        return Err(fail(
-            "session_count",
-            "SOP 必须来自至少 3 个相互独立的工作会话",
-        ));
-    }
     let applicability = body
         .get("applicability")
         .and_then(Value::as_array)
@@ -99,10 +97,30 @@ fn validate_sop(body: &Value, ctx: &RegistryContext<'_>) -> ValidateResult {
             }
         }
     }
-    if sessions != evidence_refs.len() as i64 {
+    // 会话数按互不相同的活动（时间段）去重，不按引用条数：同一活动因重算
+    // 产生的多个 WorkUnit 只算一个会话。上下文缺键时退化为 wu:<work_unit_id>
+    // （与缺边界口径一致），不会把漏填误判成同一活动。
+    let mut activities = std::collections::BTreeSet::new();
+    for r in evidence_refs.iter().copied() {
+        let key = match ctx.work_unit_activities.get(r) {
+            Some(key) => key.clone(),
+            None => format!(
+                "wu:{}",
+                ctx.work_unit_refs.get(r).map(String::as_str).unwrap_or(r)
+            ),
+        };
+        activities.insert(key);
+    }
+    if (activities.len() as i64) < 3 {
         return Err(fail(
             "session_count",
-            "session_count 必须由相互独立的证据引用推导，不能由模型自行声明",
+            "SOP 必须来自至少 3 个互不相同的活动（时间段）",
+        ));
+    }
+    if sessions != activities.len() as i64 {
+        return Err(fail(
+            "session_count",
+            "session_count 必须等于互不相同的活动数，不能由模型自行声明",
         ));
     }
     Ok(())
@@ -233,12 +251,17 @@ mod tests {
     use std::collections::HashMap;
 
     fn ctx() -> RegistryContext<'static> {
-        let mut map = HashMap::new();
-        map.insert("u1".to_string(), "wu-1".to_string());
-        map.insert("u2".to_string(), "wu-2".to_string());
-        map.insert("u3".to_string(), "wu-3".to_string());
+        let mut refs = HashMap::new();
+        refs.insert("u1".to_string(), "wu-1".to_string());
+        refs.insert("u2".to_string(), "wu-2".to_string());
+        refs.insert("u3".to_string(), "wu-3".to_string());
+        let mut activities = HashMap::new();
+        activities.insert("u1".to_string(), "2026-09-01T09:00|10:00".to_string());
+        activities.insert("u2".to_string(), "2026-09-02T09:00|10:00".to_string());
+        activities.insert("u3".to_string(), "2026-09-03T09:00|10:00".to_string());
         RegistryContext {
-            work_unit_refs: Box::leak(Box::new(map)),
+            work_unit_refs: Box::leak(Box::new(refs)),
+            work_unit_activities: Box::leak(Box::new(activities)),
         }
     }
 
@@ -268,6 +291,83 @@ mod tests {
             "session_count": 3
         });
         assert!(validate(KnowledgeType::Sop, &good, &c).is_ok());
+    }
+
+    #[test]
+    fn sop_session_count_dedupes_work_units_of_same_activity() {
+        let mut refs = HashMap::new();
+        let mut activities = HashMap::new();
+        for i in 1..=4 {
+            refs.insert(format!("u{i}"), format!("wu-{i}"));
+        }
+        // u1 与 u2 是同一活动（同一时间段重算出的两个 WorkUnit）。
+        activities.insert("u1".to_string(), "a-start|a-end".to_string());
+        activities.insert("u2".to_string(), "a-start|a-end".to_string());
+        activities.insert("u3".to_string(), "b-start|b-end".to_string());
+        activities.insert("u4".to_string(), "c-start|c-end".to_string());
+        let c = RegistryContext {
+            work_unit_refs: Box::leak(Box::new(refs)),
+            work_unit_activities: Box::leak(Box::new(activities)),
+        };
+        let body = |session_count: i64| {
+            serde_json::json!({
+                "schema_version": 1, "title": "部署流程", "applicability": ["web 项目"],
+                "steps": [{"name": "构建", "detail": "…", "evidence_refs": ["u1", "u2"]},
+                          {"name": "验证", "detail": "…", "evidence_refs": ["u3", "u4"]}],
+                "session_count": session_count
+            })
+        };
+        // 4 条引用只对应 3 个互不相同活动：session_count=3 通过（三个不同活动）。
+        assert!(validate(KnowledgeType::Sop, &body(3), &c).is_ok());
+        // session_count 与活动数不一致 → 拒绝（按引用条数会得到 4）。
+        let err = validate(KnowledgeType::Sop, &body(4), &c).unwrap_err();
+        assert!(err.reason.contains("必须等于互不相同的活动数"));
+    }
+
+    #[test]
+    fn sop_rejects_fewer_than_three_distinct_activities() {
+        let mut refs = HashMap::new();
+        let mut activities = HashMap::new();
+        for i in 1..=3 {
+            refs.insert(format!("u{i}"), format!("wu-{i}"));
+            activities.insert(format!("u{i}"), "same-start|same-end".to_string());
+        }
+        let c = RegistryContext {
+            work_unit_refs: Box::leak(Box::new(refs)),
+            work_unit_activities: Box::leak(Box::new(activities)),
+        };
+        let body = serde_json::json!({
+            "schema_version": 1, "title": "部署流程", "applicability": ["web 项目"],
+            "steps": [{"name": "构建", "detail": "…", "evidence_refs": ["u1", "u2", "u3"]}],
+            "session_count": 1
+        });
+        let err = validate(KnowledgeType::Sop, &body, &c).unwrap_err();
+        assert!(err.reason.contains("至少 3 个互不相同的活动"));
+    }
+
+    #[test]
+    fn sop_missing_boundary_units_each_count_as_one_session() {
+        // 缺边界的（历史）WorkUnit：活动键退化为 wu:<id>，各自计一个会话。
+        let mut refs = HashMap::new();
+        let mut activities = HashMap::new();
+        for i in 1..=3 {
+            refs.insert(format!("u{i}"), format!("wu-{i}"));
+            activities.insert(format!("u{i}"), format!("wu:wu-{i}"));
+        }
+        let c = RegistryContext {
+            work_unit_refs: Box::leak(Box::new(refs)),
+            work_unit_activities: Box::leak(Box::new(activities)),
+        };
+        let body = |refs: &[&str], session_count: i64| {
+            serde_json::json!({
+                "schema_version": 1, "title": "部署流程", "applicability": ["web 项目"],
+                "steps": [{"name": "构建", "detail": "…", "evidence_refs": refs}],
+                "session_count": session_count
+            })
+        };
+        assert!(validate(KnowledgeType::Sop, &body(&["u1", "u2", "u3"], 3), &c).is_ok());
+        let err = validate(KnowledgeType::Sop, &body(&["u1", "u2"], 2), &c).unwrap_err();
+        assert!(err.reason.contains("至少 3 个互不相同的活动"));
     }
 
     #[test]

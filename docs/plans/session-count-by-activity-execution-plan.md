@@ -56,6 +56,14 @@ SOP 的 `session_count` 必须等于**互不相同的活动（时间段）数**�
 
 ## 6. 交付边界
 
-- 允许路径：`crates/screenpipe-engine/src/knowledge/{registry/mod.rs,compile.rs,prompts/mod.rs}`、对应 `#[cfg(test)]` 单元测试。
+- 允许路径：`crates/screenpipe-engine/src/knowledge/{registry/mod.rs,compile.rs,prompts/mod.rs,routes.rs}`、`crates/screenpipe-engine/tests/`、对应 `#[cfg(test)]` 单元测试。（`tests/` 与 `routes.rs` 是 `RegistryContext` 加字段后的必要编译修复点，首版计划漏列，已修正。）
 - 禁止：改 db 层、前端、`docs/**`；不改 `extract.rs` 的输入构造；不做 B04 的 skill。
 - 不 commit / 不 push；不得真调远程模型。
+
+## 完成记录（B03b）
+
+- 子任务：`zct_74529bbd8c1e443d`（判 scope_violation，实为计划漏列 `tests/`）
+- 交付：`registry/mod.rs` 活动键去重校验、`compile.rs::activity_key`、`prompts/mod.rs` 规则 1 口径、`routes.rs` 与 `tests/knowledge_correctness.rs` 机械补齐上下文
+- 证据：`docs/reviews/evidence/session-count-b03b-2026-09-11/`
+- 验收：协调会话实跑 5 条命令全绿；测试文件 diff +7/−1 且无断言改动
+- 活动层至此全部收口（B01 / B02a / B02b-1 / B02b-2a / B03a / B03b）

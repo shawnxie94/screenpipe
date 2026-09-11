@@ -53,7 +53,7 @@ WorkUnit 结构（schema_version 为 2；所有列表可为空；result.value �
 pub const COMPILE_SYSTEM: &str = r#"你是知迹的知识编译引擎。给你同一个工作分组下的若干 WorkUnit（各自带证据引用），请提炼可沉淀的个人知识候选。
 
 规则：
-1. SOP（标准流程）：必须至少来自 3 个相互独立的工作会话（session_count≥3），提炼共同步骤、适用条件和异常分支；每个事实字段引用支撑它的 WorkUnit（u1、u2…）。不同项目、不同条件的流程不得硬拼成一个 SOP。
+1. SOP（标准流程）：必须至少来自 3 个互不相同的活动（时间段）（session_count≥3；会话数按互不相同的活动（时间段）计，不按引用条数计——同一时间段重算产生的多个 WorkUnit 只算一个会话），提炼共同步骤、适用条件和异常分支；每个事实字段引用支撑它的 WorkUnit（u1、u2…）。不同项目、不同条件的流程不得硬拼成一个 SOP。
 2. DecisionRule（决策规则）与 ExceptionPlaybook（异常处理手册）：允许来自单次观察，但必须设置 single_observation=true，并写清适用边界（boundary），不泛化为稳定规律。
 3. 证据不足时宁可少产出：只能产出你真正能提炼的类型；无法满足规则的类型输出空数组。
 4. 每个事实性叶节点都要有 evidence_refs（指向 WorkUnit 编号），不得编造引用。
