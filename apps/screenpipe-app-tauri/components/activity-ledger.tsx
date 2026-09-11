@@ -17,7 +17,6 @@ import {
   AudioLines,
   CalendarDays,
   CalendarRange,
-  RefreshCw,
   Users,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -62,7 +61,6 @@ import {
   getFramePreviewMediaUrl,
   getFramePreviewThumbnailUrl,
 } from "@/lib/frame-thumbnails";
-import { presentQuotaError } from "@/lib/chat/quota-errors";
 import { showChatWithPrefill } from "@/lib/chat-utils";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { useTauriEvent } from "@/lib/hooks/use-tauri-event";
@@ -72,7 +70,6 @@ import { cn } from "@/lib/utils";
 import { commands, type AIPreset } from "@/lib/utils/tauri";
 
 type RangePreset = "today" | "24h" | "7d" | "custom";
-type GenerationSource = "empty_state" | "refresh" | "enable";
 type ActivitySummaryResponse = {
   data_status: string;
   total_active_minutes: number;
@@ -116,19 +113,6 @@ type ActivityLedgerArtifactInterval = {
 type ActivityLedgerArtifactsResponse = {
   intervals?: ActivityLedgerArtifactInterval[];
 };
-
-function noActivityMessage(dataStatus: string): string {
-  switch (dataStatus) {
-    case "not_recording":
-      return "尚无录制的活动。请开始录制后再试。";
-    case "no_capture_in_range":
-      return "此范围内未找到录制的活动。请选择其他范围重试。";
-    case "empty_but_recording":
-      return "正在录制，但此范围内的活动还不够。请继续工作片刻后重试。";
-    default:
-      return "此范围内的录制活动不足以生成历史记录。";
-  }
-}
 
 type ActivityArtifact = ActivityHistoryEvidence & {
   browser_url?: string | null;
@@ -407,18 +391,6 @@ export function canAddRecentActivity(
     pending.end.getTime() - pending.start.getTime() >
     ACTIVITY_HISTORY_REFRESH_INTERVAL_MS
   );
-}
-
-function recentActivityUnlockDelay(
-  range: TimeRange,
-  coverage: ActivityHistoryCoverage[],
-): number | null {
-  const pending = nextActivityHistoryRange(range, coverage, 0);
-  if (!pending) return ACTIVITY_HISTORY_REFRESH_INTERVAL_MS + 1_001;
-  if (pending.end.getTime() < range.end.getTime() - 1_000) return null;
-  const uncoveredMs = pending.end.getTime() - pending.start.getTime();
-  if (uncoveredMs > ACTIVITY_HISTORY_REFRESH_INTERVAL_MS) return null;
-  return ACTIVITY_HISTORY_REFRESH_INTERVAL_MS - uncoveredMs + 1;
 }
 
 function formatEntryTime(entry: ActivityHistoryEntry): string {
@@ -1398,12 +1370,8 @@ export function ActivityLedger({
   >([]);
   const [loading, setLoading] = useState(true);
   const [cacheReady, setCacheReady] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState("");
-  const [recentEligibilityTick, setRecentEligibilityTick] = useState(0);
-  const historyAbortRef = useRef<AbortController | null>(null);
-  const historyLoadingRef = useRef(false);
   const legacyActivitiesActivationStartedRef = useRef(false);
   const [selectedReviewPresetId, setSelectedReviewPresetId] = useState<
     string | null
@@ -1466,44 +1434,6 @@ export function ActivityLedger({
       selectableReviewPresets[0],
     [selectableReviewPresets, selectedReviewPresetId],
   );
-  const recentRange = useMemo(() => {
-    const now = new Date();
-    return effectiveActivityRange(
-      rangeForPreset(preset, now, customStart, customEnd),
-      now,
-    );
-  }, [
-    customEnd,
-    customStart,
-    preset,
-    recentEligibilityTick,
-  ]);
-  const recentActivityAvailable = Boolean(
-    recentRange && canAddRecentActivity(recentRange, historyCoverage),
-  );
-
-  useEffect(() => {
-    if (
-      preset === "custom" ||
-      !recentRange ||
-      recentActivityAvailable ||
-      !cacheReady
-    )
-      return;
-    const delay = recentActivityUnlockDelay(recentRange, historyCoverage);
-    if (delay === null) return;
-    const timeout = window.setTimeout(
-      () => setRecentEligibilityTick((value) => value + 1),
-      delay,
-    );
-    return () => window.clearTimeout(timeout);
-  }, [
-    cacheReady,
-    historyCoverage,
-    preset,
-    recentActivityAvailable,
-    recentRange,
-  ]);
 
   useEffect(() => {
   }, []);
@@ -1622,7 +1552,7 @@ export function ActivityLedger({
   }, [activityHistoryAccessStart, range]);
 
   // 读源收敛（B02b-1）：优先显示数据库里的间隔摘要；KV 叙事降级为兜底。
-  // Coverage 始终取自 KV，旧生成器的补洞调度行为保持不变（B02b-2 再收口）。
+  // 旧叙事生成器的自动触发已停用（B02b-2a）；coverage 仍取自 KV（legacy）。
   const loadHistorySnapshot = useCallback(
     async (
       viewRange: TimeRange,
@@ -1665,9 +1595,6 @@ export function ActivityLedger({
   );
 
   useEffect(() => {
-    historyAbortRef.current?.abort();
-    historyLoadingRef.current = false;
-    setHistoryLoading(false);
     setHistoryError("");
     setCacheReady(false);
     if (!range) return;
@@ -1683,8 +1610,6 @@ export function ActivityLedger({
       });
     return () => {
       cancelled = true;
-      // History generation must outlive this page so its result is persisted
-      // even when the user navigates elsewhere while Pi is still working.
     };
   }, [loadHistorySnapshot, preset, range]);
 
@@ -1713,150 +1638,17 @@ export function ActivityLedger({
     });
   }, [cacheReady, legacyActivitiesEnabled, updateSettings]);
 
-  const generateHistory = useCallback(
-    async (
-      generationRange: TimeRange,
-      source: GenerationSource,
-      viewRange: TimeRange = range!,
-    ) => {
-      if (!range || historyLoadingRef.current) return;
-      historyAbortRef.current?.abort();
-      const controller = new AbortController();
-      historyAbortRef.current = controller;
-      historyLoadingRef.current = true;
-      setHistoryLoading(true);
-      setHistoryError("");
-      try {
-        const result = await commands.generateActivityHistory(
-          generationRange.start.toISOString(),
-          generationRange.end.toISOString(),
-          preset,
-        );
-        if (result.status === "error") throw new Error(result.error);
-        const persisted = result.data;
-        if (controller.signal.aborted) return;
-        setHistory(historyDocumentFromNative(persisted.entries));
-        setHistoryCoverage(persisted.coverage);
-      } catch (reason) {
-        if (controller.signal.aborted) return;
-        const rawError =
-          reason instanceof Error ? reason.message : String(reason);
-        const noDataStatus = rawError.match(/activity_no_data:([a-z_]+)/)?.[1];
-        const qualityFailure = rawError.includes("activity_quality_failed:");
-        // A coding agent preset fails for reasons only the user can fix — not
-        // signed in, CLI missing. The backend writes those for a person, so
-        // show them instead of the generic retry line.
-        const agentFailure = rawError
-          .split("activity_agent_error:")[1]
-          ?.trim();
-        const quota = presentQuotaError(rawError);
-        setHistoryError(
-          noDataStatus
-            ? noActivityMessage(noDataStatus)
-            : qualityFailure
-              ? "部分录制的活动无法验证。现有历史已保留；请重试。"
-              : rawError.toLowerCase().includes("hosted_ai_allowance_exceeded")
-                ? "此 AI 预设额度已用完。请选择其他 AI 预设后重试。"
-                : quota.kind !== "none"
-                  ? quota.message
-                  : agentFailure
-                    ? agentFailure
-                    : "无法更新历史记录，请重试。",
-        );
-        if (noDataStatus) {
-        } else {
-        }
-      } finally {
-        if (historyAbortRef.current === controller) {
-          historyLoadingRef.current = false;
-          setHistoryLoading(false);
-        }
-      }
-    },
-    [preset, range],
-  );
-
-  const regenerateSelectedRange = useCallback(
-    (source: GenerationSource) => {
-      const now = new Date();
-      const clickedRange = effectiveActivityRange(
-        rangeForPreset(preset, now, customStart, customEnd),
-        now,
-      );
-      if (!clickedRange) return;
-      void generateHistory(clickedRange, source, clickedRange);
-    },
-    [
-      customEnd,
-      customStart,
-      generateHistory,
-      preset,
-    ],
-  );
-
+  // 旧叙事生成器已停用（B02b-2a）：本页只读数据库摘要与 KV 兜底，
+  // 不再自动或手动触发后端生成；Rust 命令保号未删。
   const enableActivities = useCallback(async () => {
-    const now = new Date();
-    const clickedRange = effectiveActivityRange(
-      rangeForPreset(preset, now, customStart, customEnd),
-      now,
-    );
-    if (!clickedRange) return;
     try {
       await updateSettings({
         activitiesEnabled: true,
       });
     } catch {
       setHistoryError("无法启用自动活动记录，请重试。");
-      return;
     }
-    await generateHistory(clickedRange, "enable", clickedRange);
-  }, [
-    customEnd,
-    customStart,
-    generateHistory,
-    preset,
-    updateSettings,
-  ]);
-
-  const addRecentActivity = useCallback(() => {
-    const now = new Date();
-    const clickedRange = effectiveActivityRange(
-      rangeForPreset(preset, now, customStart, customEnd),
-      now,
-    );
-    const clickedHistoryRange = clickedRange
-      ? nextActivityHistoryRange(clickedRange, historyCoverage, 0)
-      : null;
-    if (
-      !clickedRange ||
-      !clickedHistoryRange ||
-      !canAddRecentActivity(clickedRange, historyCoverage) ||
-      loading ||
-      historyLoading ||
-      !cacheReady ||
-      invalidRange
-    ) {
-      return;
-    }
-    void generateHistory(clickedHistoryRange, "refresh", clickedRange);
-  }, [
-    cacheReady,
-    customEnd,
-    customStart,
-    generateHistory,
-    historyCoverage,
-    historyLoading,
-    invalidRange,
-    loading,
-    preset,
-  ]);
-
-  const recentActivityDisabled =
-    loading ||
-    historyLoading ||
-    !cacheReady ||
-    invalidRange ||
-    !recentActivityAvailable;
+  }, [updateSettings]);
 
   const makeSkill = (entry: ActivityHistoryEntry) => {
     void showChatWithPrefill({
@@ -1973,28 +1765,6 @@ export function ActivityLedger({
                   {reviewPreset.model || "auto"}
                 </Button>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  history
-                    ? addRecentActivity()
-                    : regenerateSelectedRange("refresh")
-                }
-                disabled={
-                  history
-                    ? recentActivityDisabled
-                    : loading || historyLoading || !cacheReady || invalidRange
-                }
-                aria-label="刷新历史记录"
-              >
-                <RefreshCw
-                  className={cn(
-                    "h-3.5 w-3.5",
-                    (loading || historyLoading) && "animate-spin",
-                  )}
-                />
-              </Button>
             </div>
           </div>
 
@@ -2071,14 +1841,6 @@ export function ActivityLedger({
 
       <main className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-4xl px-6 py-8">
-          {historyLoading ? (
-            <p
-              role="status"
-              className="mb-6 border-b border-border pb-4 text-sm text-muted-foreground"
-            >
-              你可以离开此页面。活动记录准备好后，我们会通知你。
-            </p>
-          ) : null}
           {invalidRange ? (
             <p className="text-sm text-muted-foreground">
               开始时间必须早于结束时间。
@@ -2088,8 +1850,6 @@ export function ActivityLedger({
               <ActivityLedgerSkeleton label="正在读取你的一天…" />
             ) : !cacheReady ? (
               <ActivityLedgerSkeleton label="正在生成活动…" />
-            ) : historyLoading ? (
-              <ActivityLedgerSkeleton label="正在理解你做了什么…" />
             ) : (
               <div className="flex min-h-[320px] items-center justify-center py-12 text-center">
                 <div className="max-w-sm">
@@ -2098,8 +1858,7 @@ export function ActivityLedger({
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
                     <span role={historyError ? "alert" : undefined}>
-                      {historyError ||
-                        "立即生成此时间范围，然后保持活动自动更新。"}
+                      {historyError || "开启后自动记录你的活动。"}
                     </span>
                   </p>
                   <Button
@@ -2192,27 +1951,15 @@ export function ActivityLedger({
             <p className="text-sm text-muted-foreground">{error}</p>
           ) : !cacheReady ? (
             <ActivityLedgerSkeleton label="正在生成活动…" />
-          ) : historyLoading && !history ? (
-            <ActivityLedgerSkeleton label="正在理解你做了什么…" />
           ) : (
             <div className="flex min-h-[320px] items-center justify-center py-12 text-center">
               <div className="max-w-sm">
                 <h2 className="font-sans text-xl font-medium tracking-tight">
-                  生成活动
+                  活动
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  <span role={historyError ? "alert" : undefined}>
-                    {historyError ||
-                      "准备好的时候，把这段时间变成一份私有的活动历史记录。"}
-                  </span>
+                  此范围内暂无活动记录。
                 </p>
-                <Button
-                  size="sm"
-                  className="mt-5 h-10 px-5 uppercase tracking-wide"
-                  onClick={() => regenerateSelectedRange("empty_state")}
-                >
-                  {historyError ? "重试" : "生成活动"}
-                </Button>
               </div>
             </div>
           )}

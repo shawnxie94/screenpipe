@@ -12,6 +12,7 @@ import {
   screen,
   waitFor,
   within,
+  type RenderResult,
 } from "@testing-library/react";
 
 Element.prototype.scrollIntoView ||= () => {};
@@ -425,38 +426,6 @@ beforeEach(() => {
       }),
     }),
   );
-  mocks.generateActivityHistory.mockImplementation(
-    async (start: string, end: string) => {
-      const range = { start: new Date(start), end: new Date(end) };
-      const summaryResponse = await mocks.localFetch(
-        buildActivitySummaryPath(range),
-      );
-      const summary = await summaryResponse.json();
-      if (summary.data_status !== "ok" || summary.total_active_minutes <= 0) {
-        throw new Error(`activity_no_data:${summary.data_status}`);
-      }
-      const raw = await mocks.runDailySummaryWithPi({
-        preset:
-          mocks.settings.aiPresets.find(
-            (candidate) =>
-              candidate.id ===
-              (mocks.settings as { activitiesAiPresetId?: string })
-                .activitiesAiPresetId,
-          ) ?? mocks.settings.aiPresets[0],
-        range: { start, end },
-        sessionPrefix: "activity-history",
-      });
-      return {
-        status: "ok",
-        data: await mocks.reconcilePersistedActivityHistory(
-          "activity-history-pi-v9",
-          range,
-          parseActivityHistoryResponse(raw, range),
-          range,
-        ),
-      };
-    },
-  );
   mocks.showChatWithPrefill.mockResolvedValue(undefined);
 });
 
@@ -466,10 +435,32 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-async function generateActivities(): Promise<void> {
-  fireEvent.click(
-    await screen.findByRole("button", { name: "生成活动" }),
+// B02b-2a：自动生成已停用，用例通过 KV 兜底快照（而非生成）让时间线出内容。
+function mockStoredHistory(response: string = HISTORY_RESPONSE): void {
+  mocks.loadActivitySummariesFromDb.mockResolvedValue({
+    entries: [],
+    coverage: [],
+  });
+  mocks.loadPersistedActivityHistory.mockImplementation(
+    async (_producer: string, range: { start: Date; end: Date }) => ({
+      entries: parseActivityHistoryResponse(response, range).entries,
+      coverage: [
+        {
+          start: range.start.toISOString(),
+          end: range.end.toISOString(),
+        },
+      ],
+    }),
   );
+}
+
+async function openLedgerWithStoredHistory(
+  text = "Fixed a capture reliability regression",
+): Promise<RenderResult> {
+  mockStoredHistory();
+  const view = render(<ActivityLedger />);
+  await screen.findByText(text);
+  return view;
 }
 
 describe("activity history helpers", () => {
@@ -1437,8 +1428,7 @@ describe("ActivityLedger", () => {
 
   it("keeps artifact icons mounted across unrelated settings refreshes", async () => {
     const originalUser = mocks.settings.user;
-    const { rerender } = render(<ActivityLedger />);
-    await generateActivities();
+    const { rerender } = await openLedgerWithStoredHistory();
 
     const appArtifact = await screen.findByRole("link", {
       name: /在时间线中打开 Arc（/,
@@ -1535,6 +1525,7 @@ describe("ActivityLedger", () => {
         activitiesEnabled: true,
       }),
     );
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
     expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
   });
 
@@ -1556,10 +1547,11 @@ describe("ActivityLedger", () => {
       await screen.findByRole("button", { name: "启用活动记录" }),
     ).toBeVisible();
     expect(mocks.updateSettings).not.toHaveBeenCalled();
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
     expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
   });
 
-  it("registers the first interval before generating the selected range", async () => {
+  it("enables activities without starting a generation", async () => {
     mocks.settings.activitiesEnabled = false;
     render(<ActivityLedger />);
 
@@ -1577,33 +1569,28 @@ describe("ActivityLedger", () => {
         activitiesEnabled: true,
       }),
     );
-    expect(mocks.runDailySummaryWithPi).toHaveBeenCalled();
-    expect(mocks.updateSettings.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.runDailySummaryWithPi.mock.invocationCallOrder[0],
-    );
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
+    expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
   });
 
-  it("enables activities after a failed first generation without overlapping it", async () => {
+  it("enables activities without surfacing a generation failure", async () => {
     mocks.settings.activitiesEnabled = false;
-    mocks.runDailySummaryWithPi.mockRejectedValueOnce(new Error("network"));
     render(<ActivityLedger />);
 
     fireEvent.click(
       await screen.findByRole("button", { name: "启用活动记录" }),
     );
 
-    expect(
-      await screen.findByText("无法更新历史记录，请重试。"),
-    ).toBeVisible();
-    expect(mocks.updateSettings).toHaveBeenCalledWith({
-      activitiesEnabled: true,
-    });
-    expect(mocks.updateSettings.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.runDailySummaryWithPi.mock.invocationCallOrder[0],
+    await waitFor(() =>
+      expect(mocks.updateSettings).toHaveBeenCalledWith({
+        activitiesEnabled: true,
+      }),
     );
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
   });
 
-  it("waits for the encrypted cache lookup before offering generation", async () => {
+  it("waits for the encrypted cache lookup without offering generation", async () => {
     let resolveCache!: (value: { entries: []; coverage: [] }) => void;
     mocks.loadPersistedActivityHistory.mockImplementation(
       () =>
@@ -1624,43 +1611,34 @@ describe("ActivityLedger", () => {
     expect(
       screen.queryByRole("button", { name: "生成活动" }),
     ).toBeNull();
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
     expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
 
     resolveCache({ entries: [], coverage: [] });
 
+    expect(await screen.findByText("此范围内暂无活动记录。")).toBeVisible();
     expect(
-      await screen.findByRole("button", { name: "生成活动" }),
-    ).toBeVisible();
+      screen.queryByRole("button", { name: "生成活动" }),
+    ).toBeNull();
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
   });
 
-  it("waits for explicit generation and starts with the default preset", async () => {
+  it("keeps the default preset and never generates on its own", async () => {
     render(<ActivityLedger />);
 
-    const generate = await screen.findByRole("button", {
-      name: "生成活动",
-    });
+    await screen.findByText("此范围内暂无活动记录。");
     expect(screen.getByTestId("shared-ai-preset-selector")).toBeVisible();
     expect(screen.getByLabelText("AI preset")).toHaveTextContent(
       "gpt-5.6-terra",
     );
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
     expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
-
-    fireEvent.click(generate);
-
-    await waitFor(() =>
-      expect(mocks.runDailySummaryWithPi).toHaveBeenCalledWith(
-        expect.objectContaining({
-          preset: expect.objectContaining({ id: "chat" }),
-          sessionPrefix: "activity-history",
-        }),
-      ),
-    );
   });
 
   it("keeps the controls but removes the redundant page heading", async () => {
     render(<ActivityLedger />);
 
-    await screen.findByRole("button", { name: "生成活动" });
+    await screen.findByText("此范围内暂无活动记录。");
     expect(screen.queryByRole("heading", { name: "Activity" })).toBeNull();
     const timeRange = screen.getByRole("combobox", {
       name: "时间范围：今天",
@@ -1673,7 +1651,7 @@ describe("ActivityLedger", () => {
     it("uses one popover trigger instead of two native custom-date inputs", async () => {
     render(<ActivityLedger />);
 
-    await screen.findByRole("button", { name: "生成活动" });
+    await screen.findByText("此范围内暂无活动记录。");
     fireEvent.click(
       screen.getByRole("combobox", { name: "时间范围：今天" }),
     );
@@ -1692,7 +1670,7 @@ describe("ActivityLedger", () => {
   it("returns from Custom range to Today", async () => {
     render(<ActivityLedger />);
 
-    await screen.findByRole("button", { name: "生成活动" });
+    await screen.findByText("此范围内暂无活动记录。");
     fireEvent.click(
       screen.getByRole("combobox", { name: "时间范围：今天" }),
     );
@@ -1712,47 +1690,20 @@ describe("ActivityLedger", () => {
     ).toBeNull();
   });
 
-  it("generates through click time when capture starts after Activity opens", async () => {
-    let summaryCalls = 0;
-    mocks.localFetch.mockImplementation((path: string) =>
-      Promise.resolve({
-        ok: true,
-        status: 200,
-        json: async () => {
-          if (path.startsWith("/meetings?")) return [];
-          if (path.startsWith("/activity-ledger?")) {
-            return LEDGER_ARTIFACTS_RESPONSE;
-          }
-          summaryCalls += 1;
-          return summaryCalls === 1
-            ? { data_status: "unknown", total_active_minutes: 0 }
-            : { data_status: "ok", total_active_minutes: 8 };
-        },
-      }),
-    );
-
+  it("does not generate when capture starts after Activity opens", async () => {
     render(<ActivityLedger />);
 
-    const generate = await screen.findByRole("button", {
-      name: "生成活动",
-    });
+    await screen.findByText("此范围内暂无活动记录。");
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
-    fireEvent.click(generate);
 
-    await waitFor(() =>
-      expect(mocks.runDailySummaryWithPi).toHaveBeenCalledWith(
-        expect.objectContaining({
-          range: expect.objectContaining({
-            end: expect.stringMatching(/^2026-08-17T20:00:30\.\d{3}Z$/),
-          }),
-        }),
-      ),
-    );
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
+    expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
+    expect(screen.queryByText("正在理解你做了什么…")).toBeNull();
   });
 
-  it("keeps the generate action after a previously empty covered range", async () => {
+  it("keeps the empty state after a previously empty covered range", async () => {
     mocks.loadPersistedActivityHistory.mockImplementation(
       async (_producer: string, range: { start: Date; end: Date }) => ({
         entries: [],
@@ -1768,50 +1719,36 @@ describe("ActivityLedger", () => {
     render(<ActivityLedger />);
 
     expect(
-      await screen.findByRole("button", { name: "生成活动" }),
+      await screen.findByText("此范围内暂无活动记录。"),
     ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "生成活动" }),
+    ).toBeNull();
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
   });
 
-  it("refreshes only uncovered time without overwriting stored activity", async () => {
+  it("does not regenerate uncovered time from the header", async () => {
     window.localStorage.setItem("screenpipe:activity-history:range", "7d");
-    let coveredThrough = "";
     mocks.loadPersistedActivityHistory.mockImplementation(
-      async (_producer: string, range: { start: Date; end: Date }) => {
-        coveredThrough = new Date(
-          range.end.getTime() - 11 * 60_000,
-        ).toISOString();
-        return {
-          entries: parseActivityHistoryResponse(HISTORY_RESPONSE, range)
-            .entries,
-          coverage: [
-            {
-              start: range.start.toISOString(),
-              end: coveredThrough,
-            },
-          ],
-        };
-      },
+      async (_producer: string, range: { start: Date; end: Date }) => ({
+        entries: parseActivityHistoryResponse(HISTORY_RESPONSE, range)
+          .entries,
+        coverage: [
+          {
+            start: range.start.toISOString(),
+            end: new Date(range.end.getTime() - 11 * 60_000).toISOString(),
+          },
+        ],
+      }),
     );
 
     render(<ActivityLedger />);
 
     await screen.findByText("Fixed a capture reliability regression");
-    fireEvent.change(screen.getByLabelText("AI preset"), {
-      target: { value: "pipes" },
-    });
-    const refresh = screen.getByRole("button", { name: "刷新历史记录" });
-    await waitFor(() => expect(refresh).toBeEnabled());
-    fireEvent.click(refresh);
-
-    await waitFor(() =>
-      expect(mocks.runDailySummaryWithPi).toHaveBeenCalledWith(
-        expect.objectContaining({
-          preset: expect.objectContaining({ id: "pipes" }),
-          sessionPrefix: "activity-history",
-          range: expect.objectContaining({ start: coveredThrough }),
-        }),
-      ),
-    );
+    expect(
+      screen.queryByRole("button", { name: "刷新历史记录" }),
+    ).toBeNull();
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
   });
 
   it("does not show a bottom append control", async () => {
@@ -1836,127 +1773,6 @@ describe("ActivityLedger", () => {
     expect(
       screen.queryByText("Include activity recorded since your last update."),
     ).toBeNull();
-  });
-
-  it("shows a coding agent's own failure instead of a generic one", async () => {
-    mocks.settings.enhancedAI = false;
-    mocks.runDailySummaryWithPi.mockRejectedValue(
-      new Error(
-        "activity_agent_error:authentication required: cursor is not signed in. Open Chat, select this coding-agent preset, and sign in first.",
-      ),
-    );
-
-    render(<ActivityLedger />);
-
-    await generateActivities();
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "authentication required: cursor is not signed in. Open Chat, select this coding-agent preset, and sign in first.",
-    );
-    expect(document.body.textContent).not.toContain("activity_agent_error:");
-    expect(
-      screen.queryByText("无法更新历史记录，请重试。"),
-    ).toBeNull();
-  });
-
-  it("shows the exhausted AI preset instead of a generic failure", async () => {
-    mocks.settings.enhancedAI = false;
-    mocks.runDailySummaryWithPi.mockRejectedValue(
-      new Error("hosted_ai_allowance_exceeded"),
-    );
-
-    render(<ActivityLedger />);
-
-    await generateActivities();
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "此 AI 预设额度已用完。请选择其他 AI 预设后重试。",
-    );
-    expect(screen.getByRole("button", { name: "重试" })).toBeVisible();
-    expect(document.body.textContent).not.toContain(
-      "hosted_ai_allowance_exceeded",
-    );
-    expect(mocks.runDailySummaryWithPi).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionPrefix: "activity-history" }),
-    );
-    expect(mocks.reconcilePersistedActivityHistory).not.toHaveBeenCalled();
-    expect(screen.queryByText("activity-ledger.tsx")).toBeNull();
-    expect(screen.queryByText(/Using Unknown app/i)).toBeNull();
-    expect(
-      screen.queryByText(/Turn on Enhanced AI|Choose an AI model/i),
-    ).toBeNull();
-  });
-
-  it("explains an empty recording range instead of silently returning", async () => {
-    mocks.localFetch.mockImplementation((path: string) =>
-      Promise.resolve({
-        ok: true,
-        status: 200,
-        json: async () =>
-          path.startsWith("/meetings?")
-            ? []
-            : path.startsWith("/activity-ledger?")
-              ? { intervals: [] }
-              : {
-                  data_status: "empty_but_recording",
-                  total_active_minutes: 0,
-                },
-      }),
-    );
-
-    render(<ActivityLedger />);
-    await generateActivities();
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "正在录制，但此范围内的活动还不够。请继续工作片刻后重试。",
-    );
-    expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "重试" })).toBeVisible();
-  });
-
-  it("keeps a slow backend generation running past two minutes", async () => {
-    let finishGeneration!: (value: {
-      status: "ok";
-      data: { entries: []; coverage: [] };
-    }) => void;
-    mocks.generateActivityHistory.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          finishGeneration = resolve;
-        }),
-    );
-
-    render(<ActivityLedger />);
-    await generateActivities();
-    expect(
-      await screen.findByText("正在理解你做了什么…"),
-    ).toBeVisible();
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(120_000);
-    });
-
-    expect(
-      await screen.findByText("正在理解你做了什么…"),
-    ).toBeVisible();
-
-    await act(async () => {
-      finishGeneration({
-        status: "ok",
-        data: { entries: [], coverage: [] },
-      });
-    });
-    await waitFor(() =>
-      expect(mocks.generateActivityHistory).toHaveBeenCalledOnce(),
-    );
-  });
-
-  it("tracks page reach and the activity generation funnel", async () => {
-    render(<ActivityLedger />);
-
-    await generateActivities();
-    await screen.findByText("Fixed a capture reliability regression");
-
   });
 
   it("loads a completed encrypted ledger without regenerating it", async () => {
@@ -2000,56 +1816,8 @@ describe("ActivityLedger", () => {
     expect(mocks.runDailySummaryWithPi).not.toHaveBeenCalled();
   });
 
-  it("leaves an in-flight backend generation running after unmount", async () => {
-    let resolveHistory!: (value: {
-      status: "ok";
-      data: { entries: []; coverage: [] };
-    }) => void;
-    mocks.generateActivityHistory.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveHistory = resolve;
-        }),
-    );
-
-    const view = render(<ActivityLedger />);
-
-    await generateActivities();
-    await waitFor(() =>
-      expect(mocks.generateActivityHistory).toHaveBeenCalledOnce(),
-    );
-
-    view.unmount();
-
-    resolveHistory({ status: "ok", data: { entries: [], coverage: [] } });
-    expect(mocks.generateActivityHistory).toHaveBeenCalledOnce();
-  });
-
-  it("lets the user leave while generation continues", async () => {
-    let resolveHistory!: (value: string) => void;
-    mocks.runDailySummaryWithPi.mockImplementation(
-      () =>
-        new Promise<string>((resolve) => {
-          resolveHistory = resolve;
-        }),
-    );
-
-    render(<ActivityLedger />);
-    await generateActivities();
-
-    expect(
-      await screen.findByText(
-        "你可以离开此页面。活动记录准备好后，我们会通知你。",
-      ),
-    ).toBeVisible();
-
-    resolveHistory(HISTORY_RESPONSE);
-    await screen.findByText("Fixed a capture reliability regression");
-  });
-
   it("keeps rows concise while exposing artifact icons and episode actions", async () => {
-    render(<ActivityLedger />);
-    await generateActivities();
+    await openLedgerWithStoredHistory();
 
     expect(
       await screen.findByRole("heading", {
@@ -2122,87 +1890,55 @@ describe("ActivityLedger", () => {
       }
     }
 
-    expect(mocks.generateActivityHistory).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      "today",
-    );
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
   });
 
   it("renders a backend-repaired activity document", async () => {
-    const range = {
-      start: new Date("2026-08-17T07:00:00Z"),
-      end: new Date("2026-08-17T20:00:00Z"),
-    };
-    mocks.generateActivityHistory.mockResolvedValue({
-      status: "ok",
-      data: {
-        entries: parseActivityHistoryResponse(REPAIRED_HISTORY_RESPONSE, range)
-          .entries,
-        coverage: [
-          { start: range.start.toISOString(), end: range.end.toISOString() },
-        ],
-      },
+    const range = KV_HISTORY_RANGE;
+    mocks.loadPersistedActivityHistory.mockResolvedValue({
+      entries: parseActivityHistoryResponse(REPAIRED_HISTORY_RESPONSE, range)
+        .entries,
+      coverage: [
+        { start: range.start.toISOString(), end: range.end.toISOString() },
+      ],
     });
 
     render(<ActivityLedger />);
-    await generateActivities();
 
     expect(
       await screen.findByRole("heading", { name: "Recovered task 1" }),
     ).toBeVisible();
-    expect(mocks.generateActivityHistory).toHaveBeenCalledOnce();
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
   });
 
-  it("surfaces and tracks an unrecoverable backend quality failure", async () => {
-    mocks.generateActivityHistory.mockResolvedValue({
-      status: "error",
-      error:
-        "activity_quality_failed:parse_error=false, rejected_entries=1, rejected_evidence=0, entries=4/7, missing_observed_windows=3, missing_meetings=0",
-    });
-
-    render(<ActivityLedger />);
-    await generateActivities();
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "部分录制的活动无法验证。现有历史已保留；请重试。",
-    );
-    expect(mocks.reconcilePersistedActivityHistory).not.toHaveBeenCalled();
-  });
-
-  it("renders the valid document returned by the backend", async () => {
-    render(<ActivityLedger />);
-    await generateActivities();
+  it("renders the stored document without a backend generation", async () => {
+    await openLedgerWithStoredHistory();
 
     expect(
       await screen.findByRole("heading", {
         name: "Fixed a capture reliability regression",
       }),
     ).toBeVisible();
-    expect(mocks.generateActivityHistory).toHaveBeenCalledOnce();
+    expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
     expect(
       screen.queryByText("无法更新历史记录，请重试。"),
     ).toBeNull();
   });
 
   it("does not offer a header chat action", async () => {
-    render(<ActivityLedger />);
-    await generateActivities();
-    await screen.findByText("Fixed a capture reliability regression");
+    await openLedgerWithStoredHistory();
 
     expect(screen.queryByRole("button", { name: "Ask" })).toBeNull();
     expect(
-      screen.getByRole("button", { name: "刷新历史记录" }),
-    ).toBeVisible();
+      screen.queryByRole("button", { name: "刷新历史记录" }),
+    ).toBeNull();
     expect(
       screen.getByRole("combobox", { name: "时间范围：今天" }),
     ).toBeVisible();
   });
 
   it("opens app runs at their start and transcripts at their exact moments", async () => {
-    render(<ActivityLedger />);
-    await generateActivities();
-    await screen.findByText("Fixed a capture reliability regression");
+    await openLedgerWithStoredHistory();
 
     const appArtifact = screen.getByRole("link", {
       name: /在时间线中打开 Arc（/,
@@ -2266,9 +2002,7 @@ describe("ActivityLedger", () => {
   });
 
   it("retries app icons with bounded exponential backoff", async () => {
-    render(<ActivityLedger />);
-    await generateActivities();
-    await screen.findByText("Fixed a capture reliability regression");
+    await openLedgerWithStoredHistory();
 
     const appArtifact = screen.getByRole("link", {
       name: /在时间线中打开 Arc（/,
@@ -2333,10 +2067,20 @@ describe("ActivityLedger", () => {
             : { data_status: "ok", total_active_minutes: 30 },
       }),
     );
-    mocks.runDailySummaryWithPi.mockResolvedValue(MEETING_HISTORY_RESPONSE);
+    mocks.loadPersistedActivityHistory.mockResolvedValue({
+      entries: parseActivityHistoryResponse(
+        MEETING_HISTORY_RESPONSE,
+        KV_HISTORY_RANGE,
+      ).entries,
+      coverage: [
+        {
+          start: KV_HISTORY_RANGE.start.toISOString(),
+          end: KV_HISTORY_RANGE.end.toISOString(),
+        },
+      ],
+    });
 
     render(<ActivityLedger />);
-    await generateActivities();
     await screen.findByText("Aligned on Workflow Studio");
 
     const meetingArtifact = screen.getByRole("link", {
@@ -2357,8 +2101,7 @@ describe("ActivityLedger", () => {
   });
 
   it("can draft a skill from every activity interval", async () => {
-    render(<ActivityLedger />);
-    await generateActivities();
+    await openLedgerWithStoredHistory();
     await screen.findByText("Unblocked a customer's onboarding");
 
     fireEvent.click(
@@ -2379,8 +2122,7 @@ describe("ActivityLedger", () => {
   });
 
   it("can ask about every activity interval in chat", async () => {
-    render(<ActivityLedger />);
-    await generateActivities();
+    await openLedgerWithStoredHistory();
     await screen.findByText("Unblocked a customer's onboarding");
 
     fireEvent.click(

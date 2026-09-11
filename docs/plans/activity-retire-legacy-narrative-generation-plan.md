@@ -67,3 +67,11 @@ doc-verified: ad5c54155
 - 允许路径：`apps/screenpipe-app-tauri/components/activity-ledger.tsx`、`components/activity-ledger.test.tsx`、`lib/activity-history-persistence.ts`（仅注释）、`src-tauri/src/activity_history.rs`（仅注释）。
 - 禁止：删 Rust 生成器与其测试、改 `lib/utils/tauri.ts`、改 `crates/**`、改 `docs/**`、改 KV 数据结构、修既有失败用例。
 - 不 commit / 不 push；真实库只读。
+
+## 完成记录（B02b-2a）
+
+- 子任务：`zct_08e95e36341747f0`（completed，无越界）
+- 交付：`activity-ledger.tsx` 删除生成触发链与生成专用状态（−627/+121 含测试）；空态改被动文案；`activity-history-persistence.ts` 与 `activity_history.rs` 加 legacy 注释
+- 证据：`docs/reviews/evidence/activity-retire-legacy-b02b2a-2026-09-11/`
+- 验收：typecheck 通过、vitest 52 passed / 2 failed（两个失败与基线同名）、bindings:check 通过且 `tauri.ts` 零 diff、非测试文件仅剩生成绑定引用
+- 门禁（未做）：物理删除 Rust 生成器 / KV 读源 / 仅测试使用的提示词构造器 —— 等用户在 S1 用真实模型验证新摘要质量后执行

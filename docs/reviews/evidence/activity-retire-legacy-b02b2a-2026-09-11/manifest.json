@@ -1,0 +1,18 @@
+{
+  "batch": "activity-retire-legacy-b02b2a",
+  "date": "2026-09-11",
+  "plan": "docs/plans/activity-retire-legacy-narrative-generation-plan.md",
+  "zcode_task": "zct_08e95e36341747f0",
+  "files": [
+    {
+      "name": "coordinator-verification.md",
+      "uri": "docs/reviews/evidence/activity-retire-legacy-b02b2a-2026-09-11/coordinator-verification.md",
+      "sha256": "1b7e76d8b9dd19bd8c566a456f732bc43aa3b85fc3a9edb4da599c3f69095861"
+    },
+    {
+      "name": "subagent-report.md",
+      "uri": "docs/reviews/evidence/activity-retire-legacy-b02b2a-2026-09-11/subagent-report.md",
+      "sha256": "ccb8f097a0fa0833ee6041bd34e4c56c9bef695180dfae7b528b7bb8a75942d5"
+    }
+  ]
+}

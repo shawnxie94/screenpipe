@@ -6,6 +6,9 @@
 //!
 //! The native app owns both the schedule and generation lifecycle. React only
 //! reads the persisted projection or asks the backend for an immediate run.
+//!
+//! legacy（B02b-2a）：KV 叙事已停用自动生成（前端不再调用 generate_activity_history），
+//! 命令保号不删；物理下线待真实模型摘要验收后执行。
 
 use crate::pi::{self, AcpAgentConfig, PiBackend, PiProviderConfig, PiState};
 use crate::recording::{local_api_context_from_app, RecordingState};
