@@ -26,6 +26,28 @@ const API_SKILL_MD: &str =
     include_str!("../../../screenpipe-core/assets/skills/screenpipe-api/SKILL.md");
 const CLI_SKILL_MD: &str =
     include_str!("../../../screenpipe-core/assets/skills/screenpipe-cli/SKILL.md");
+const KNOWLEDGE_FETCH_SKILL_MD: &str =
+    include_str!("../../../screenpipe-core/assets/skills/knowledge-fetch/SKILL.md");
+const ACTIVITY_SUMMARY_SKILL_MD: &str =
+    include_str!("../../../screenpipe-core/assets/skills/activity-summary/SKILL.md");
+const WORK_UNIT_SKILL_MD: &str =
+    include_str!("../../../screenpipe-core/assets/skills/work-unit/SKILL.md");
+const KNOWLEDGE_DISTILL_SKILL_MD: &str =
+    include_str!("../../../screenpipe-core/assets/skills/knowledge-distill/SKILL.md");
+
+/// The built-in skill set delivered to every external agent: the always-on
+/// API/CLI skills plus the internal knowledge skills (shared retrieval,
+/// activity summary, work unit, knowledge distillation). Single source for
+/// install, remove, readiness, and the desktop refresh path so the set never
+/// drifts apart.
+const BUILTIN_SKILLS: [(&str, &str); 6] = [
+    ("screenpipe-api", API_SKILL_MD),
+    ("screenpipe-cli", CLI_SKILL_MD),
+    ("knowledge-fetch", KNOWLEDGE_FETCH_SKILL_MD),
+    ("activity-summary", ACTIVITY_SUMMARY_SKILL_MD),
+    ("work-unit", WORK_UNIT_SKILL_MD),
+    ("knowledge-distill", KNOWLEDGE_DISTILL_SKILL_MD),
+];
 
 #[derive(clap::Subcommand, Debug)]
 pub enum AgentCommand {
@@ -442,20 +464,15 @@ fn detected_desktop_agents_in(home: &Path) -> Vec<DesktopDetectedAgent> {
 
 fn skills_ready(layout: &AgentLayout) -> bool {
     layout.skills_dir.as_ref().is_none_or(|skills_dir| {
-        ["screenpipe-api", "screenpipe-cli"]
+        BUILTIN_SKILLS
             .iter()
-            .all(|name| skills_dir.join(name).join("SKILL.md").is_file())
+            .all(|(name, _)| skills_dir.join(name).join("SKILL.md").is_file())
     })
 }
 
 fn desktop_skills_current(layout: &AgentLayout) -> bool {
     layout.skills_dir.as_ref().is_none_or(|skills_dir| {
-        [
-            ("screenpipe-api", API_SKILL_MD),
-            ("screenpipe-cli", CLI_SKILL_MD),
-        ]
-        .iter()
-        .all(|(name, markdown)| {
+        BUILTIN_SKILLS.iter().all(|(name, markdown)| {
             std::fs::read_to_string(skills_dir.join(name).join("SKILL.md"))
                 .is_ok_and(|body| body == *markdown)
         })
@@ -466,10 +483,7 @@ fn refresh_desktop_skills(layout: &AgentLayout) -> Result<()> {
     let Some(skills_dir) = &layout.skills_dir else {
         return Ok(());
     };
-    for (name, markdown) in [
-        ("screenpipe-api", API_SKILL_MD),
-        ("screenpipe-cli", CLI_SKILL_MD),
-    ] {
+    for (name, markdown) in BUILTIN_SKILLS {
         let path = skills_dir.join(name).join("SKILL.md");
         if std::fs::read_to_string(&path).is_ok_and(|body| body == markdown) {
             continue;
@@ -562,10 +576,7 @@ fn install_missing_desktop_skills(layout: &AgentLayout) -> Result<Vec<DesktopSki
         return Ok(Vec::new());
     };
     let mut changes = Vec::new();
-    for (name, markdown) in [
-        ("screenpipe-api", API_SKILL_MD),
-        ("screenpipe-cli", CLI_SKILL_MD),
-    ] {
+    for (name, markdown) in BUILTIN_SKILLS {
         let dir = skills_dir.join(name);
         if dir.join("SKILL.md").is_file() {
             continue;
@@ -922,7 +933,8 @@ fn setup(target: &str, api_url: &str) -> Result<()> {
     Ok(())
 }
 
-/// Install the canonical screenpipe API and CLI skills for an external agent.
+/// Install the built-in screenpipe skills (API, CLI, and the internal
+/// knowledge skills) for an external agent.
 ///
 /// This is separate from [`setup`] so the desktop app can keep using its
 /// bundled-bun MCP configuration (including the local API key) while sharing
@@ -938,18 +950,18 @@ fn install_skills_in(target: &str, api_url: &str, home: &Path) -> Result<Vec<Pat
         return Ok(Vec::new());
     };
 
-    Ok(vec![
-        write_skill(skills_dir, "screenpipe-api", API_SKILL_MD, api_url)?,
-        write_skill(skills_dir, "screenpipe-cli", CLI_SKILL_MD, api_url)?,
-    ])
+    BUILTIN_SKILLS
+        .iter()
+        .map(|(name, markdown)| write_skill(skills_dir, name, markdown, api_url))
+        .collect()
 }
 
-/// Remove the two built-in screenpipe skills from an external agent.
+/// Remove the built-in screenpipe skills from an external agent.
 ///
-/// Mirror of [`install_skills`]: deletes only `<skills_dir>/screenpipe-api`
-/// and `<skills_dir>/screenpipe-cli`, never the parent skills directory or any
-/// sibling skill the user installed themselves. Missing folders are a no-op,
-/// so calling this twice (or on a machine that never installed) succeeds.
+/// Mirror of [`install_skills`]: deletes only the `BUILTIN_SKILLS`
+/// directories, never the parent skills directory or any sibling skill the
+/// user installed themselves. Missing folders are a no-op, so calling this
+/// twice (or on a machine that never installed) succeeds.
 pub fn remove_skills(target: &str) -> Result<Vec<PathBuf>> {
     let l = layout(target)?;
     let Some(skills_dir) = &l.skills_dir else {
@@ -961,7 +973,7 @@ pub fn remove_skills(target: &str) -> Result<Vec<PathBuf>> {
 
 fn remove_skills_from(skills_dir: &Path) -> Result<Vec<PathBuf>> {
     let mut removed = Vec::new();
-    for name in ["screenpipe-api", "screenpipe-cli"] {
+    for (name, _) in BUILTIN_SKILLS {
         let dir = skills_dir.join(name);
         if dir.exists() {
             std::fs::remove_dir_all(&dir).with_context(|| format!("remove {}", dir.display()))?;
@@ -1506,23 +1518,58 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("sp-agent-remove-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
 
-        // Two screenpipe skills plus a user skill that must survive.
-        write_skill(&dir, "screenpipe-api", "api", "http://localhost:3030").unwrap();
-        write_skill(&dir, "screenpipe-cli", "cli", "http://localhost:3030").unwrap();
+        // Every built-in skill plus a user skill that must survive.
+        for (name, markdown) in BUILTIN_SKILLS {
+            write_skill(&dir, name, markdown, "http://localhost:3030").unwrap();
+        }
         write_skill(&dir, "my-own-skill", "mine", "http://localhost:3030").unwrap();
 
         let removed = remove_skills_from(&dir).unwrap();
-        assert_eq!(
-            removed,
-            vec![dir.join("screenpipe-api"), dir.join("screenpipe-cli")]
-        );
-        assert!(!dir.join("screenpipe-api").exists());
-        assert!(!dir.join("screenpipe-cli").exists());
+        let expected: Vec<PathBuf> = BUILTIN_SKILLS
+            .iter()
+            .map(|(name, _)| dir.join(name))
+            .collect();
+        assert_eq!(removed, expected);
+        for (name, _) in BUILTIN_SKILLS {
+            assert!(!dir.join(name).exists());
+        }
         assert!(dir.join("my-own-skill/SKILL.md").exists());
 
         // Idempotent: nothing left to remove, still Ok.
         assert!(remove_skills_from(&dir).unwrap().is_empty());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_agent_builtin_skills_carry_internal_knowledge_set() {
+        let internal = [
+            ("knowledge-fetch", KNOWLEDGE_FETCH_SKILL_MD),
+            ("activity-summary", ACTIVITY_SUMMARY_SKILL_MD),
+            ("work-unit", WORK_UNIT_SKILL_MD),
+            ("knowledge-distill", KNOWLEDGE_DISTILL_SKILL_MD),
+        ];
+        for (name, markdown) in internal {
+            assert!(
+                BUILTIN_SKILLS.contains(&(name, markdown)),
+                "{name} must ship with the built-in agent skill set"
+            );
+            assert!(!markdown.trim().is_empty(), "{name} is empty");
+            assert!(markdown.starts_with("---\n"), "{name} lacks front-matter");
+            assert!(markdown.contains("\ndescription:"), "{name} lacks description");
+        }
+
+        // install_skills_in writes every built-in skill (temp home, never the
+        // real one), remove_skills_from undoes it.
+        let dir = tempfile::tempdir().unwrap();
+        let skills_dir = dir.path().join(".codex/skills");
+        let installed = install_skills_in("codex", "http://localhost:3030", dir.path()).unwrap();
+        assert_eq!(installed.len(), BUILTIN_SKILLS.len());
+        for (name, _) in BUILTIN_SKILLS {
+            assert!(skills_dir.join(name).join("SKILL.md").is_file());
+        }
+        let removed = remove_skills_from(&skills_dir).unwrap();
+        assert_eq!(removed.len(), BUILTIN_SKILLS.len());
+        assert!(skills_dir.exists());
     }
 
     #[test]
@@ -1935,20 +1982,15 @@ mod tests {
         .unwrap();
 
         assert!(!is_agent_setup_in("codex", home));
-        write_skill(
-            &home.join(".codex/skills"),
-            "screenpipe-api",
-            "api",
-            "http://localhost:3030",
-        )
-        .unwrap();
-        write_skill(
-            &home.join(".codex/skills"),
-            "screenpipe-cli",
-            "cli",
-            "http://localhost:3030",
-        )
-        .unwrap();
+        for (name, markdown) in BUILTIN_SKILLS {
+            write_skill(
+                &home.join(".codex/skills"),
+                name,
+                markdown,
+                "http://localhost:3030",
+            )
+            .unwrap();
+        }
         assert!(is_agent_setup_in("codex", home));
     }
 

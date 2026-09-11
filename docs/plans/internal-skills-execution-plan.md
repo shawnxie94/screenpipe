@@ -1,16 +1,33 @@
-# 活动层收口 B04a：四个内部 skill（共享取数 + 三个任务）执行计划
-
-```yaml
+---
+id: plan-internal-skills-b04a
 status: approved
 owner: shawn
 created: 2026-09-11
+updated_at: 2026-09-11
+plan_id: plan-internal-skills-b04a
+plan_unit_id: root
+base_commit: 0c2ccc796385b2238974eda7df971e0291791bbf
+orchestration_mode: batch
+execution_target: subagent
+execution_backend: pi_subagent
+runtime_adapter: zcode
+logical_role: worker
+subagent_role: zcode
+subagent_scope: user
+selected_subagent_model: builtin:bigmodel-coding-plan/GLM-5.3-Flash
+thinking: low
+fallback: false
+parallel_mode: serial_same_worktree
+acceptance_scope: batch
 framework: docs/trd/personal-workbench-integration-framework.md#d-14
 covers:
   - D-14 取数逻辑沉淀为内部 skill（查什么/顺序/时间对齐/去重/上限），铁律留在系统指令
   - D-16 真源中性 + 按 Agent 注入；四个 skill 全部实现
 doc-covers: crates/screenpipe-core/assets/skills, crates/screenpipe-core/src/agents, crates/screenpipe-engine/src/cli/agent.rs
 doc-verified: 9c7b8bff2
-```
+---
+
+# 活动层收口 B04a：四个内部 skill（共享取数 + 三个任务）执行计划
 
 ## 1. 目标与非目标
 
@@ -73,6 +90,22 @@ doc-verified: 9c7b8bff2
 | 4 | 静态核对：报告附「skill 接口 → `server.rs` 路由行」对照表 | 每个接口都能在路由表定位 |
 | 5 | `cargo check -p screenpipe-core -p screenpipe-engine` | exit 0 |
 | 6 | `cargo test -p screenpipe-engine --lib knowledge` | 全绿（提示词未改） |
+| 7 | `cargo test -p screenpipe-engine --test internal_skill_routes` | 正例全绿；必须拒绝未挂载 `/knowledge`、`/knowledge/:id`、虚构 `/knowledge/activity-intervals`，及错误 HTTP method |
+
+## 5.1 独立复核后的有界纠偏（同一 B04a，不重做已交付实现）
+
+按以下顺序串行执行，全部完成才交回：
+
+1. 保留已修正的三处知识接口引用（完整路径为 `/knowledge/knowledge` 与 `/knowledge/knowledge/:id`），替换协调者新增的过宽路由测试：按实际 nest 归属及 HTTP method 验证。禁止把所有子路由当顶层，也禁止 prefix × literal 任意组合；回归测试包含 §5 第 7 项负例。可用限定语法的 fail-closed 源码校验或复用实际 Router 的测试；不改生产路由，也不新增通用路由解析框架/依赖。
+2. 修正 `knowledge-fetch`：evidence 接口只有 `limit`（1–1000），无 offset/cursor；`truncated` 只表示返回条数触达 limit，不保证还有一条。提高 limit 仍触顶时报告缺口，不教虚构分页。
+3. 引用编号在整个任务唯一；建立 sN→interval_id、eN→interval_id/source_type/source_id、uN→WorkUnit id 映射，跨段不重用裸 eN。其余三个 skill 同步口径，保留 ≤120 行限制。
+4. 核对知识提炼 JSON 与引擎实际 prompt/registry，尤其 ExceptionPlaybook 的 boundary 表达；以现有代码为准，报告差异，不为迎合文档改变产品 schema。
+5. 执行 §5 全部检查；交付报告记录命令、退出码、路由完整挂载位置和受影响正文规则。所有 source/测试改动交回协调者独立验收。
+
+验收 ID：`skills`、`pi`、`agent`、`route-map`、`check`、`knowledge`、`internal-skill-routes`。
+证据：`.agent/tmp/b04a-independent-review/feedback.md` 与 `route-negative-probe.log`；新报告 `.agent/tmp/internal-skills-b04a-repair-report.md`。
+
+运行时说明：宿主是 Pi，调用原生 `subagent` 工具，故 backend 为 `pi_subagent`；工具更新后 `role=zcode` 显式选择 ZCode 外部运行时。用户已明确授权当前 GLM-5.3-Flash/low 配置，不再受之前的 gpt-5.6-luna 请求阻塞。调度及验收归协调者，执行者禁止递归委派。
 
 ## 6. 风险与回退
 
@@ -87,6 +120,8 @@ doc-verified: 9c7b8bff2
 
 ## 7. 交付边界
 
-- 允许路径：`crates/screenpipe-core/assets/skills/**`、`crates/screenpipe-core/src/agents/**`、`crates/screenpipe-engine/src/cli/agent.rs`。
+- 允许路径：`crates/screenpipe-core/assets/skills/**`、`crates/screenpipe-core/src/agents/**`、`crates/screenpipe-engine/src/cli/agent.rs`、`crates/screenpipe-engine/tests/internal_skill_routes.rs`；报告限 `.agent/tmp/internal-skills-b04a-repair-report.md` 与 `.agent/tmp/b04a-repair/`。
+- 当前纠偏不改上述清单以外代码；`RESERVED_SKILLS` 与桌面导入保留名单后续另行评估，不以此越界。既有 `docs/archive/` 为无关未跟踪内容，保留不动。
+- 单一 root/单一写者、无并行任务；调用前锁定计划哈希与 dirty 文件快照，协调者在子任务 terminal 前不改 HEAD、不写共享源码。
 - 禁止：改 `crates/screenpipe-engine/src/knowledge/**` 的提示词与校验、前端、`docs/**`、已存在迁移；不写 `<data_dir>/skills`；不做 B04b 的哈希进指纹与轨迹记录。
 - 不 commit / 不 push；不得真调远程模型。
