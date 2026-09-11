@@ -98,3 +98,12 @@ doc-verified: 5f5aeae6e
 - 允许路径：`crates/screenpipe-engine/src/knowledge/{extract.rs,prompts/mod.rs,sources.rs,registry/mod.rs,routes.rs,compile.rs,types.rs}`、`crates/screenpipe-engine/tests/`。
 - 禁止：改 `crates/screenpipe-db/**`、前端、`docs/**`、已存在的迁移；不做 B03b 的会话计数改造；不动 `activity_ledger.rs`（活动层数据面已定稿）。
 - 不 commit / 不 push；模型测试只用脚本执行体（禁止真调远程模型）；真实库只读。
+
+## 完成记录（B03a）
+
+- 子任务：`zct_deff1fd330514e5e`（completed，无越界）
+- 交付：`extract.rs` 摘要包 + 两阶段召回 + schema v2 校验；`prompts/mod.rs` 两阶段协议与三组新字段；`sources.rs` 版本升 `zh-extract-v2`
+- 协调会话修复：恢复被重写时丢掉的办公资料红线（铁律 3）
+- 证据：`docs/reviews/evidence/workunit-recall-b03a-2026-09-11/`
+- 验收：协调会话实跑 6 条命令全绿；`crates/screenpipe-engine/tests/` 零改动（13 项非放宽通过）
+- 带入 B03b：会话计数按活动去重；另记两条细节（历史 WorkUnit 不自动重算、第二阶段修复会撞预算硬闸）

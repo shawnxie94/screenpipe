@@ -1,0 +1,18 @@
+{
+  "batch": "workunit-recall-b03a",
+  "date": "2026-09-11",
+  "plan": "docs/plans/workunit-summary-first-recall-execution-plan.md",
+  "zcode_task": "zct_deff1fd330514e5e",
+  "files": [
+    {
+      "name": "coordinator-verification.md",
+      "uri": "docs/reviews/evidence/workunit-recall-b03a-2026-09-11/coordinator-verification.md",
+      "sha256": "2522a9200024f58fcc1805ac0f61de35f2c9bd706cd7e1f1dff2edf122dfc8b4"
+    },
+    {
+      "name": "subagent-report.md",
+      "uri": "docs/reviews/evidence/workunit-recall-b03a-2026-09-11/subagent-report.md",
+      "sha256": "54836c69c483c025bfb3fd57be896c77c99d04cfbd1f9bc1c0cd1c6988c6b537"
+    }
+  ]
+}

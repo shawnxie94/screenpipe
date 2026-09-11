@@ -19,7 +19,7 @@ use super::types::KnowledgeError;
 /// Extractor/schema identity — bump when the WorkUnit contract changes so
 /// inputs recompute instead of being swallowed by old idempotency.
 pub const EXTRACTOR_SCHEMA_VERSION: &str = "work_unit.v1";
-pub const EXTRACT_PROMPT_VERSION: &str = "zh-extract-v1";
+pub const EXTRACT_PROMPT_VERSION: &str = "zh-extract-v2";
 
 /// Register (or refresh) a capture/memory source from its original row.
 /// `text` is the canonical readable text; the revision fingerprint covers
