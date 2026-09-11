@@ -70,3 +70,15 @@
 **2026-09-09 凌晨桌面真机验证**：重新 `build:tauri:e2e` 构建成功并以 WebDriver 驱动真实桌面 WebView——计划冻结的 `local-brain-entry-split` 在真机上 **2/2 通过**（知识库入口名、工作单元/知识/画布三标签、无提问/运行状态残留、自动化独立入口）。另尝试的 4 个 legacy e2e（brain-overview/settings-sections/pi-extensions/chat-rich-result-cards）失败经归因均为基线前漂移：英文标签断言落后于汉化提交、`section-brain` 旧 DOM 落后于计划要求的入口拆分，全部在本批写归属之外。AC-R11-01/02 的证据列已由真机运行加强，但"错误/空状态完整画面核对"仍未执行，行状态保持 `unverified`。
 
 **2026-09-09 真机 dev 库纠错闭环（用户授权）**：重建应用后以 `SCREENPIPE_DATA_DIR=~/.screenpipe-dev` 启动真实应用，走真实模型（Pi→MiniMax-M3）在真实知识 `walkthrough-sop-1` 上完成 AC-R7-01 全链：提问只引 v3→有误反馈自动暂停→CAS 创建候选 v4→自审发布→再问只引 v4、无旧版召回；UI 可达性树与库状态一致；反馈表 `located` 可追溯。过程中发现并修复真实缺陷：发布纠正版不清除反馈暂停导致闭环无法收口（`brain_publish_version` 同事务置 `paused=0`，TDD 红绿验证+回归测试，修复后全套件绿、真机复跑闭环通过）。**AC-R7-01 升级为 `passed`**，其余 44 项保持 `unverified`。详见证据文件"Real-data correction loop"一节。
+
+## 2026-09-11 活动层收口与内部 skill（B01–B04b）实现记录
+
+P1 收尾遗留项的引擎侧全部完成；本节为代码级收口记录，不改变任何 `unverified` 行状态（真实环境判据见 runbook）：
+
+- **B01** 证据按变化保留 + 丢弃记账 + 摘要表与查询面（`9595528ea`）
+- **B02a/b** 单一总结器、摘要生产者、时间线 DB 摘要优先、停用旧叙事自动生成（`96fde4b0a`、`ad5c54155`、`5f5aeae6e`）
+- **B03a/b** WorkUnit 先摘要后召回（schema v2）、会话计数按活动去重（`ff920587c`、`9c7b8bff2`）
+- **B04a** 四个内部 skill（共享取数 + 活动总结/工作单元/知识提炼）：中性真源、无品牌、接口真实（nest+method 校验与 8 条负例回归）、Pi/ACP/AgentLayout 注入（`8dee0a5dd`、`9e64edd5c`）
+- **B04b** skill 哈希进输入指纹（`compute_input_hash` 增 `skill_revision` 成分，extract/compile/summarize 三处透传）；查询轨迹与强制上限（`knowledge_query_trace` 表、10 个读接口 opt-in `X-Screenpipe-Trace`、200/键 429、同窗口重跑结果指纹一致）（`beda105041b8`）
+
+对 R1/R2/R13 的影响：这些行描述的输入层已随活动层实现替换；按 roadmap 约定不为旧设计重复取证，真实环境判据（冻结语料、真实 UI、桌面联动）保持 `unverified`，执行入口：[p1-closure-runbook](evidence/p1-closure-runbook-2026-09-11.md)。证据目录：`evidence/activity-retention-2026-09-11/`（B01）、`evidence/activity-summary-b02a-2026-09-11/`、`evidence/activity-read-source-b02b1-2026-09-11/`、`evidence/activity-retire-legacy-b02b2a-2026-09-11/`、`evidence/workunit-recall-b03a-2026-09-11/`、`evidence/session-count-b03b-2026-09-11/`、`evidence/internal-skills-b04a-2026-09-11/`、`evidence/internal-skills-b04b-2026-09-11/`。
