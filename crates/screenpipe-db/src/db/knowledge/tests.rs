@@ -266,7 +266,7 @@ async fn job_lifecycle_dedupe_claim_and_token_guard() {
     let db = DatabaseManager::new("sqlite::memory:", Default::default())
         .await
         .unwrap();
-    let hash = compute_input_hash(&[("s1".into(), "r1".into())], "scope", "c", "v1", "p1");
+    let hash = compute_input_hash(&[("s1".into(), "r1".into())], "scope", "c", "v1", "p1", "skill-v1");
     let (id1, created1) = db
         .knowledge_enqueue_job(
             super::types::KnowledgeJobKind::Extract,

@@ -61,7 +61,7 @@ use crate::{
             update_memory_handler,
         },
         retranscribe::retranscribe_meeting_handler,
-        search::{keyword_search_handler, search},
+        search::keyword_search_handler,
         semantic::{
             create_semantic_actor, merge_semantic_actors, reassign_semantic_actor,
             reassign_semantic_actor_alias, search_semantic_actors, update_semantic_actor,
@@ -713,7 +713,10 @@ impl SCServer {
             .allow_headers(Any)
             .expose_headers(CORS_EXPOSED_HEADERS);
         let server = Server::axum()
-            .get("/search", search)
+            // Traced /search: same handler, wrapped at the mount point for the
+            // opt-in X-Screenpipe-Trace recording + 200-per-key cap. The
+            // route table itself is untouched.
+            .get("/search", crate::knowledge::trace::traced_search)
             .get("/semantic/actors/search", search_semantic_actors)
             .post("/semantic/actors/create", create_semantic_actor)
             .post("/semantic/actors/update", update_semantic_actor)

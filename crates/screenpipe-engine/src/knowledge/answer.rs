@@ -382,7 +382,16 @@ async fn answer_response(
     // here carries the idempotency mapping without full body duplication.
     let question_hash = match &req.idempotency_key {
         Some(key) => format!("idem:{key}"),
-        None => format!("q:{}", super::sources::input_hash_for(&[], &req.question)),
+        // Answers retrieve through the knowledge-fetch skill; its body hash
+        // rides along so a skill edit starts a fresh idempotency family.
+        None => format!(
+            "q:{}",
+            super::sources::input_hash_for(
+                &[],
+                &req.question,
+                &super::skill_revisions::KNOWLEDGE_FETCH_SKILL_REVISION,
+            )
+        ),
     };
     if let Ok(mut tx) = db.begin_immediate_with_retry().await {
         let _ = sqlx::query(

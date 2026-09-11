@@ -31,8 +31,10 @@ pub mod items;
 pub mod migration;
 pub mod office;
 pub mod office_routes;
+pub mod skill_revisions;
 pub mod sources;
 pub mod summarize;
+pub mod trace;
 pub mod worker;
 
 pub use deletion::DeletionBarrier;

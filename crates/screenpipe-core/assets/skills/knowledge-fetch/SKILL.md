@@ -81,6 +81,20 @@ to every call below.
 - Any response over ~50 KB: read only the fields you need, never paste it
   whole into context.
 
+## Query tracing (optional, per task)
+
+- Send `X-Screenpipe-Trace: <key>` on a read to opt into query tracing. Use
+  **one key per task** — never reuse a key across tasks.
+- Every successful traced read is recorded under that key: method, path,
+  query, row count, and a result fingerprint over the data rows only
+  (timestamps of the read itself are excluded), so re-running the same query
+  over the same window reproduces the same fingerprint.
+- A key is capped at **200 recorded queries**. Beyond that, reads fail with
+  **429** (`query_trace_limit_exceeded`) until you continue with a new key.
+- Omitting the header changes nothing: no recording, no cap. A 429 never
+  means the data is wrong — it only means this task's trace budget is used
+  up.
+
 ## Citation numbering (unique per task)
 
 Assign every citation a number that is unique across the whole task — never

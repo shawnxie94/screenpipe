@@ -43,7 +43,11 @@ pub async fn discover_and_enqueue(db: &Arc<DatabaseManager>, since: DateTime<Utc
             continue;
         }
         let scope = interval_scope(&None, &Some(interval.title.clone()), &interval.app_name);
-        let input_hash = input_hash_for(&[], &scope);
+        let input_hash = input_hash_for(
+            &[],
+            &scope,
+            &super::skill_revisions::WORK_UNIT_SKILL_REVISION,
+        );
         let payload = json!({
             "interval_start": interval.start_at,
             "interval_end": interval.end_at,
@@ -185,12 +189,14 @@ async fn extract_interval(
 
     // 2. Input identity comes from the ACTUAL sources — must match the job
     //    hash family; new evidence on the same interval creates a revision.
+    //    The work-unit skill body hash rides along so skill edits recompute.
     let input_hash = compute_input_hash(
         &pack.sources,
         scope,
         "activity-v1",
         EXTRACTOR_SCHEMA_VERSION,
         EXTRACT_PROMPT_VERSION,
+        &super::skill_revisions::WORK_UNIT_SKILL_REVISION,
     );
 
     // 3. Phase 1: summary pack + recall request (one repair pass, budget
@@ -258,8 +264,13 @@ async fn extract_interval(
             .await;
     }
 
-    // 8. Low-priority compile trigger for this scope.
-    let compile_hash = input_hash_for(&[], scope);
+    // 8. Low-priority compile trigger for this scope. Same hash family the
+    //    compile handler recomputes (knowledge-distill skill included).
+    let compile_hash = input_hash_for(
+        &[],
+        scope,
+        &super::skill_revisions::KNOWLEDGE_DISTILL_SKILL_REVISION,
+    );
     let _ = db
         .knowledge_enqueue_job(KnowledgeJobKind::Compile, Some(scope), Some(&compile_hash), None, None, None)
         .await;

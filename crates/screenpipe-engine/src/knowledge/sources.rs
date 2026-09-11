@@ -265,9 +265,13 @@ pub async fn load_evidence(
 }
 
 /// Input hash for an extraction/compilation unit over a source set.
+/// `skill_revision` is the sha256-based hash of the skill body driving the
+/// run (work-unit for extraction, knowledge-distill for compilation) so a
+/// skill edit recomputes like a prompt-version bump would.
 pub fn input_hash_for(
     sources: &[(String, String)],
     logical_scope: &str,
+    skill_revision: &str,
 ) -> String {
     compute_input_hash(
         sources,
@@ -275,6 +279,7 @@ pub fn input_hash_for(
         "activity-v1",
         EXTRACTOR_SCHEMA_VERSION,
         EXTRACT_PROMPT_VERSION,
+        skill_revision,
     )
 }
 

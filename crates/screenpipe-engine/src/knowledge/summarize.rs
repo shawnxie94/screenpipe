@@ -81,7 +81,14 @@ pub async fn discover_and_enqueue(
         let scope = format!("activity-interval:{}", interval.id);
         // Enqueue-time hash only serves active-input dedupe; the authoritative
         // run-time hash is recomputed from the actual evidence and model.
-        let input_hash = fingerprint(&[SUMMARY_PROMPT_VERSION, &scope]);
+        // Same skill-revision ingredients as `summary_input_hash` so a skill
+        // edit invalidates jobs still waiting in the queue.
+        let input_hash = fingerprint(&[
+            SUMMARY_PROMPT_VERSION,
+            &scope,
+            super::skill_revisions::ACTIVITY_SUMMARY_SKILL_REVISION.as_str(),
+            super::skill_revisions::KNOWLEDGE_FETCH_SKILL_REVISION.as_str(),
+        ]);
         let payload = json!({ "interval_id": interval.id }).to_string();
         match db
             .knowledge_enqueue_job(
@@ -456,8 +463,9 @@ async fn build_evidence_pack(
 }
 
 /// `input_hash` = hash(prompt version + interval identity + retained
-/// evidence id list + model identity). Any evidence, prompt or model change
-/// yields a different hash and triggers a recompute.
+/// evidence id list + model identity + activity-summary/knowledge-fetch
+/// skill body hashes). Any evidence, prompt, model or skill change yields a
+/// different hash and triggers a recompute.
 fn summary_input_hash(
     interval: &IntervalIdentity,
     evidence_pairs: &[(String, i64)],
@@ -488,6 +496,8 @@ fn summary_input_hash(
             model.pi_version,
             model.profile_version
         ),
+        super::skill_revisions::ACTIVITY_SUMMARY_SKILL_REVISION.as_str(),
+        super::skill_revisions::KNOWLEDGE_FETCH_SKILL_REVISION.as_str(),
     ])
 }
 

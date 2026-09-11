@@ -292,7 +292,11 @@ async fn create_backfill(
             i_start.to_rfc3339(),
             i_end.to_rfc3339()
         );
-        let input_hash = super::sources::input_hash_for(&[], &scope);
+        let input_hash = super::sources::input_hash_for(
+            &[],
+            &scope,
+            &super::skill_revisions::WORK_UNIT_SKILL_REVISION,
+        );
         match state
             .db
             .knowledge_enqueue_job(

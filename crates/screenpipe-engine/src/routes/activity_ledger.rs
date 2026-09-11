@@ -4,7 +4,7 @@
 
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode, Uri},
     response::Json as JsonResponse,
 };
 use chrono::{DateTime, Duration, Utc};
@@ -17,6 +17,7 @@ use std::sync::Arc;
 use tracing::error;
 
 use crate::history_access::HistoryAccessPolicy;
+use crate::knowledge::trace::{record_traced_read, rows_value, trace_admission};
 use crate::server::AppState;
 
 #[derive(Debug, Clone, Copy, Default, Deserialize, Serialize, OaSchema, PartialEq, Eq)]
@@ -265,18 +266,24 @@ pub struct ActivityIntervalsResponse {
 }
 
 /// Intervals in range with task identity, persisted summary and keywords when
-/// present, and per-source kept/dropped counts.
+/// present, and per-source kept/dropped counts. Opt-in tracing: a caller that
+/// sends `X-Screenpipe-Trace` gets the read recorded (data rows only) under
+/// its per-task key with a 200-query cap; without the header nothing changes.
 #[oasgen]
 pub async fn get_activity_intervals(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
     Query(query): Query<ActivityIntervalsQuery>,
 ) -> Result<JsonResponse<ActivityIntervalsResponse>, (StatusCode, JsonResponse<Value>)> {
+    let trace = trace_admission(&state.db, &headers).await.map_err(|r| r.into_parts())?;
     if query.start_time >= query.end_time {
         return Err(bad_request("start_time must be before end_time"));
     }
     let mut start_time = query.start_time;
     let mut end_time = query.end_time;
     if clamp_history_range(&state.history_access, &mut start_time, &mut end_time, Utc::now()) {
+        record_traced_read(&state.db, &trace, "GET", "/activity-intervals", uri.query(), &Value::Array(Vec::new())).await;
         return Ok(JsonResponse(empty_intervals_response(&query)));
     }
     if end_time - start_time > Duration::days(31) {
@@ -292,6 +299,15 @@ pub async fn get_activity_intervals(
         .map(ActivityIntervalDetail::from_record)
         .collect();
     let data_status = if intervals.is_empty() { "empty" } else { "ok" }.to_string();
+    record_traced_read(
+        &state.db,
+        &trace,
+        "GET",
+        "/activity-intervals",
+        uri.query(),
+        &rows_value(&intervals),
+    )
+    .await;
     Ok(JsonResponse(ActivityIntervalsResponse {
         intervals,
         data_status,
@@ -334,13 +350,17 @@ pub struct ActivityIntervalEvidenceResponse {
 }
 
 /// Raw evidence recall for one interval (the "summarize first, recall later"
-/// reader): sparse metadata refs in time order, capped by `limit`.
+/// reader): sparse metadata refs in time order, capped by `limit`. Opt-in
+/// tracing via `X-Screenpipe-Trace` (data rows only, 200-per-key cap).
 #[oasgen]
 pub async fn get_activity_interval_evidence(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
     Path(interval_id): Path<i64>,
     Query(query): Query<ActivityIntervalEvidenceQuery>,
 ) -> Result<JsonResponse<ActivityIntervalEvidenceResponse>, (StatusCode, JsonResponse<Value>)> {
+    let trace = trace_admission(&state.db, &headers).await.map_err(|r| r.into_parts())?;
     let limit = query.limit.clamp(1, 1000);
     let records = state
         .db
@@ -348,10 +368,19 @@ pub async fn get_activity_interval_evidence(
         .await
         .map_err(query_failed("activity interval evidence query failed"))?;
     let truncated = records.len() as i64 >= limit;
-    let evidence = records
+    let evidence: Vec<ActivityLedgerEvidence> = records
         .into_iter()
         .map(|record| map_evidence(record, true))
         .collect();
+    record_traced_read(
+        &state.db,
+        &trace,
+        "GET",
+        "/activity-intervals/:interval_id/evidence",
+        uri.query(),
+        &rows_value(&evidence),
+    )
+    .await;
     Ok(JsonResponse(ActivityIntervalEvidenceResponse {
         interval_id,
         evidence,
@@ -375,17 +404,22 @@ fn default_missing_summary_limit() -> i64 {
 }
 
 /// Intervals in range still missing a summary — the B02 summarizer backlog.
+/// Opt-in tracing via `X-Screenpipe-Trace` (data rows only, 200-per-key cap).
 #[oasgen]
 pub async fn get_activity_intervals_missing_summary(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
     Query(query): Query<ActivityMissingSummariesQuery>,
 ) -> Result<JsonResponse<ActivityIntervalsResponse>, (StatusCode, JsonResponse<Value>)> {
+    let trace = trace_admission(&state.db, &headers).await.map_err(|r| r.into_parts())?;
     if query.start_time >= query.end_time {
         return Err(bad_request("start_time must be before end_time"));
     }
     let mut start_time = query.start_time;
     let mut end_time = query.end_time;
     if clamp_history_range(&state.history_access, &mut start_time, &mut end_time, Utc::now()) {
+        record_traced_read(&state.db, &trace, "GET", "/activity-intervals/missing-summary", uri.query(), &Value::Array(Vec::new())).await;
         return Ok(JsonResponse(empty_intervals_response(&ActivityIntervalsQuery {
             start_time,
             end_time,
@@ -405,6 +439,15 @@ pub async fn get_activity_intervals_missing_summary(
         .map(ActivityIntervalDetail::from_record)
         .collect();
     let data_status = if intervals.is_empty() { "empty" } else { "ok" }.to_string();
+    record_traced_read(
+        &state.db,
+        &trace,
+        "GET",
+        "/activity-intervals/missing-summary",
+        uri.query(),
+        &rows_value(&intervals),
+    )
+    .await;
     Ok(JsonResponse(ActivityIntervalsResponse {
         intervals,
         data_status,

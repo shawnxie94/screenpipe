@@ -156,12 +156,14 @@ async fn try_save(
         .map_err(|e| SaveSkip::Invalid(format!("{}: {}", e.path, e.reason)))?;
 
     let title = body.get("title").and_then(Value::as_str).unwrap_or("未命名");
-    // Compile input identity: the scope's work-unit set + prompt version.
+    // Compile input identity: the scope's work-unit set + prompt version +
+    // the knowledge-distill skill body hash (skill edits recompute).
     let mut unit_ids: Vec<String> = ref_map.values().cloned().collect();
     unit_ids.sort();
     let input_hash = input_hash_for(
         &unit_ids.iter().map(|id| (id.clone(), String::new())).collect::<Vec<_>>(),
         &format!("{scope}:{}:{}", knowledge_type.as_str(), title),
+        &super::skill_revisions::KNOWLEDGE_DISTILL_SKILL_REVISION,
     );
 
     // The knowledge depends on its work units AND transitively on every

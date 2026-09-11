@@ -16,6 +16,7 @@ pub mod office;
 pub mod search;
 pub mod sources;
 pub mod state;
+pub mod trace;
 pub mod types;
 pub mod work_units;
 

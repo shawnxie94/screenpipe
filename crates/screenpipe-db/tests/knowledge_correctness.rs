@@ -180,6 +180,7 @@ async fn jobs_db_job_lifecycle_deduplicates_claims_and_guards_tokens() {
         "classification-v1",
         "extract-v1",
         "prompt-v1",
+        "skill-v1",
     );
     let (first_id, first_created) = db
         .knowledge_enqueue_job(

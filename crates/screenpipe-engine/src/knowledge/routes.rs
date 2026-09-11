@@ -9,15 +9,16 @@
 use std::sync::Arc;
 
 use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use chrono::{DateTime, Duration, Utc};
 use http_body_util::BodyExt;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 
+use crate::knowledge::trace::{record_traced_read, rows_value, trace_admission, TraceAdmission};
 use screenpipe_db::KnowledgeReviewUpdate;
 use screenpipe_db::DeletionCause;
 use screenpipe_db::{
@@ -66,18 +67,34 @@ fn default_work_unit_limit() -> u32 {
     50
 }
 
+/// Opt-in trace gate for the knowledge-domain GETs: with `X-Screenpipe-Trace`
+/// the per-key 200-query cap applies and successful reads are recorded;
+/// without it nothing changes.
+async fn knowledge_trace_admission(
+    db: &Arc<screenpipe_db::DatabaseManager>,
+    headers: &HeaderMap,
+) -> Result<TraceAdmission, Response> {
+    trace_admission(db, headers).await.map_err(IntoResponse::into_response)
+}
+
 async fn list_work_units(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
     Query(query): Query<WorkUnitQuery>,
 ) -> Response {
+    let trace = match knowledge_trace_admission(&state.db, &headers).await {
+        Ok(trace) => trace,
+        Err(response) => return response,
+    };
     match state
         .knowledge
         .db
         .knowledge_list_work_units(query.scope_key.as_deref(), query.limit)
         .await
     {
-        Ok(work_units) => Json(json!({
-            "work_units": work_units.units.into_iter().map(|(unit, revision)| json!({
+        Ok(work_units) => {
+            let rows: Vec<Value> = work_units.units.into_iter().map(|(unit, revision)| json!({
                 "id": unit.id,
                 "scope_key": unit.scope_key,
                 "task_key": unit.task_key,
@@ -88,9 +105,21 @@ async fn list_work_units(
                 "extractor_schema_version": revision.extractor_schema_version,
                 "prompt_version": revision.prompt_version,
                 "body": serde_json::from_str::<serde_json::Value>(&revision.body).unwrap_or(json!({"raw": revision.body})),
-            })).collect::<Vec<_>>(),
-        }))
-        .into_response(),
+            })).collect();
+            record_traced_read(
+                &state.db,
+                &trace,
+                "GET",
+                "/knowledge/work-units",
+                uri.query(),
+                &Value::Array(rows.clone()),
+            )
+            .await;
+            Json(json!({
+                "work_units": rows,
+            }))
+            .into_response()
+        }
         Err(error) => err_response(KnowledgeError::new("db_error", error.to_string(), true)),
     }
 }
@@ -99,7 +128,11 @@ async fn list_work_units(
 /// source evidence it consumed, and the knowledge versions that cite it.
 /// Work-unit bodies are derived data, so invalidated units use the same read
 /// barrier as knowledge and sources and never return stale正文.
-async fn get_work_unit(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+async fn get_work_unit(State(state): State<Arc<AppState>>, headers: HeaderMap, uri: Uri, Path(id): Path<String>) -> Response {
+    let trace = match knowledge_trace_admission(&state.db, &headers).await {
+        Ok(trace) => trace,
+        Err(response) => return response,
+    };
     let db = state.knowledge.db.clone();
     let result: Result<Response, KnowledgeError> = guarded_response(&state.knowledge, async {
         let unit: Option<(
@@ -191,7 +224,7 @@ async fn get_work_unit(State(state): State<Arc<AppState>>, Path(id): Path<String
         .await
         .map_err(|e| KnowledgeError::new("db_error", e.to_string(), true))?;
         let body = serde_json::from_str::<serde_json::Value>(&body).unwrap_or(json!({ "raw": body }));
-        Ok(Json(json!({
+        let payload = json!({
             "work_unit": {
                 "id": unit_id,
                 "scope_key": scope_key,
@@ -213,7 +246,9 @@ async fn get_work_unit(State(state): State<Arc<AppState>>, Path(id): Path<String
                 "availability": availability,
                 "title": title,
             })).collect::<Vec<_>>(),
-        })).into_response())
+        });
+        record_traced_read(&db, &trace, "GET", "/knowledge/work-units/:id", uri.query(), &payload).await;
+        Ok(Json(payload).into_response())
     })
     .await;
     match result {
@@ -345,8 +380,14 @@ struct KnowledgeListQuery {
 
 async fn list_knowledge(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
     Query(q): Query<KnowledgeListQuery>,
 ) -> Response {
+    let trace = match knowledge_trace_admission(&state.db, &headers).await {
+        Ok(trace) => trace,
+        Err(response) => return response,
+    };
     let db = &state.knowledge.db;
     let result = guarded_response(&state.knowledge, async {
         let rows: Vec<(String, String, String, Option<i64>, bool, String, String)> = sqlx::query_as(
@@ -379,7 +420,17 @@ async fn list_knowledge(
             items.push(item);
         }
         let limit = q.limit.unwrap_or(50).clamp(1, 100) as usize;
-        Ok(Json(json!({ "items": &items[..items.len().min(limit)] })).into_response())
+        let visible = &items[..items.len().min(limit)];
+        record_traced_read(
+            db,
+            &trace,
+            "GET",
+            "/knowledge/knowledge",
+            uri.query(),
+            &rows_value(&visible),
+        )
+        .await;
+        Ok(Json(json!({ "items": visible })).into_response())
     })
     .await;
     match result {
@@ -1111,7 +1162,11 @@ async fn submit_feedback(
 // Status, jobs, deletions, sources
 // ---------------------------------------------------------------------------
 
-async fn knowledge_status(State(state): State<Arc<AppState>>) -> Response {
+async fn knowledge_status(State(state): State<Arc<AppState>>, headers: HeaderMap, uri: Uri) -> Response {
+    let trace = match knowledge_trace_admission(&state.db, &headers).await {
+        Ok(trace) => trace,
+        Err(response) => return response,
+    };
     let db = &state.knowledge.db;
     let queues_raw = db.knowledge_queue_stats().await.unwrap_or_default();
     let queues: Vec<QueueStatusDto> = queues_raw
@@ -1191,6 +1246,15 @@ async fn knowledge_status(State(state): State<Arc<AppState>>) -> Response {
             phase: phase.clone(),
         },
     };
+    record_traced_read(
+        db,
+        &trace,
+        "GET",
+        "/knowledge/status",
+        uri.query(),
+        &rows_value(&status),
+    )
+    .await;
     Json(status).into_response()
 }
 

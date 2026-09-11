@@ -1,0 +1,210 @@
+warning: unused imports: `DeletionCause`, `KnowledgeAvailability`, `KnowledgeJobKind`, `KnowledgeJobState`, `KnowledgeState`, `KnowledgeType`, `SourceKind`, `format_ts as knowledge_format_ts`, and `now_utc`
+   --> crates/screenpipe-db/src/db/mod.rs:465:38
+    |
+465 |     compute_input_hash, fingerprint, format_ts as knowledge_format_ts, new_source_uid, now_utc,
+    |                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^                  ^^^^^^^
+466 |     KnowledgeJobKind, KnowledgeJobState, DeletionCause, KnowledgeAvailability, KnowledgeState,
+    |     ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+467 |     KnowledgeType, OfficeSourceMeta, SourceKind, SourceLocator, SourceRef,
+    |     ^^^^^^^^^^^^^                    ^^^^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `ClaimedTaskRun` and `TaskRunRequest`
+   --> crates/screenpipe-db/src/db/mod.rs:472:23
+    |
+472 | pub use self::tasks::{ClaimedTaskRun, TaskRunRequest};
+    |                       ^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^
+
+warning: unused variable: `kind`
+   --> crates/screenpipe-db/src/db/knowledge/search.rs:157:19
+    |
+157 |         for (uid, kind, title, url, revision, excerpt) in office_rows {
+    |                   ^^^^ help: if this is intentional, prefix it with an underscore: `_kind`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `KnowledgeHistoryCoverageRow` is never constructed
+  --> crates/screenpipe-db/src/db/knowledge/history.rs:18:12
+   |
+18 | pub struct KnowledgeHistoryCoverageRow {
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `LOCAL_DATASET_ID` is never used
+  --> crates/screenpipe-db/src/db/knowledge/types.rs:20:11
+   |
+20 | pub const LOCAL_DATASET_ID: &str = "local";
+   |           ^^^^^^^^^^^^^^^^
+
+warning: enum `MigrationPhase` is never used
+   --> crates/screenpipe-db/src/db/knowledge/types.rs:386:10
+    |
+386 | pub enum MigrationPhase {
+    |          ^^^^^^^^^^^^^^
+
+warning: method `as_str` is never used
+   --> crates/screenpipe-db/src/db/knowledge/types.rs:395:12
+    |
+394 | impl MigrationPhase {
+    | ------------------- method in this implementation
+395 |     pub fn as_str(&self) -> &'static str {
+    |            ^^^^^^
+
+warning: `screenpipe-db` (lib) generated 7 warnings (run `cargo fix --lib -p screenpipe-db` to apply 3 suggestions)
+warning: variable does not need to be mutable
+   --> crates/screenpipe-connect/src/office/runner.rs:139:13
+    |
+139 |         let mut stdout = child.stdout.take().expect("stdout piped");
+    |             ----^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> crates/screenpipe-connect/src/office/runner.rs:140:13
+    |
+140 |         let mut stderr = child.stderr.take().expect("stderr piped");
+    |             ----^^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: `screenpipe-connect` (lib) generated 2 warnings (run `cargo fix --lib -p screenpipe-connect` to apply 2 suggestions)
+warning: unused import: `serde::Deserialize`
+  --> crates/screenpipe-engine/src/knowledge/answer.rs:18:5
+   |
+18 | use serde::Deserialize;
+   |     ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Serialize`
+  --> crates/screenpipe-engine/src/knowledge/routes.rs:18:26
+   |
+18 | use serde::{Deserialize, Serialize};
+   |                          ^^^^^^^^^
+
+warning: unused import: `super::worker::JobHandlers`
+  --> crates/screenpipe-engine/src/knowledge/routes.rs:34:5
+   |
+34 | use super::worker::JobHandlers;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `KnowledgeHistoryCoverageInput`, `KnowledgeHistoryEntryInput`, and `KnowledgeHistoryEntryRow`
+  --> crates/screenpipe-engine/src/knowledge/migration.rs:26:44
+   |
+26 | use screenpipe_db::{KnowledgeHistoryBatch, KnowledgeHistoryCoverageInput, KnowledgeHistoryEntryInput, KnowledgeHistoryEntryRow};
+   |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `serde_json::json`
+  --> crates/screenpipe-engine/src/knowledge/office.rs:16:5
+   |
+16 | use serde_json::json;
+   |     ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `KnowledgeSourceInput` and `KnowledgeSourceRegistration`
+  --> crates/screenpipe-engine/src/knowledge/sources.rs:11:38
+   |
+11 |     compute_input_hash, fingerprint, KnowledgeSourceInput, KnowledgeSourceRegistration, OfficeSourceMeta,
+   |                                      ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `uids`
+   --> crates/screenpipe-engine/src/knowledge/deletion.rs:465:21
+    |
+465 |             let (_, uids) = validate_scope(&entry.scope)?;
+    |                     ^^^^ help: if this is intentional, prefix it with an underscore: `_uids`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `cited_knowledge`
+   --> crates/screenpipe-engine/src/knowledge/answer.rs:257:9
+    |
+257 |     let cited_knowledge: Vec<super::types::KnowledgeVersionRefDto> = Vec::new();
+    |         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cited_knowledge`
+
+warning: unused variable: `any_ok`
+  --> crates/screenpipe-engine/src/knowledge/search.rs:57:9
+   |
+57 |     let any_ok = routes.iter().any(|r| matches!(r.status, RouteStatus::Ok));
+   |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_any_ok`
+
+warning: unused variable: `task_key`
+  --> crates/screenpipe-engine/src/knowledge/extract.rs:77:19
+   |
+77 | fn interval_scope(task_key: &Option<String>, task_title: &Option<String>, app: &Option<String>) -> String {
+   |                   ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_task_key`
+
+warning: unused variable: `created_at`
+   --> crates/screenpipe-engine/src/knowledge/routes.rs:450:5
+    |
+450 |     created_at: &str,
+    |     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_created_at`
+
+warning: variable does not need to be mutable
+   --> crates/screenpipe-engine/src/knowledge/summarize.rs:532:9
+    |
+532 |     let mut keywords: Vec<String> = body
+    |         ----^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `reject_office_provider` is never used
+   --> crates/screenpipe-engine/src/knowledge/office.rs:411:15
+    |
+411 | pub(crate) fn reject_office_provider(id: &str) -> Option<KnowledgeError> {
+    |               ^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `read_store_for_with_key` is never used
+  --> crates/screenpipe-engine/src/cli/store_file.rs:49:15
+   |
+49 | pub(crate) fn read_store_for_with_key(
+   |               ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `write_store_for_with_key` is never used
+  --> crates/screenpipe-engine/src/cli/store_file.rs:60:15
+   |
+60 | pub(crate) fn write_store_for_with_key(
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `CapturedLogs` is never constructed
+    --> crates/screenpipe-engine/src/connections_api.rs:2112:12
+     |
+2112 |     struct CapturedLogs(Arc<StdMutex<Vec<u8>>>);
+     |            ^^^^^^^^^^^^
+
+warning: `screenpipe-engine` (lib test) generated 16 warnings (run `cargo fix --lib -p screenpipe-engine --tests` to apply 12 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.38s
+     Running unittests src/lib.rs (target/debug/deps/screenpipe_engine-55d53cab905f5494)
+
+running 22 tests
+test activity_ledger::tests::captured_labels_do_not_persist_url_credentials ... ok
+test activity_ledger::tests::pointer_down_is_literal_and_ax_enrichment_is_not_an_action ... ok
+test activity_ledger::tests::long_evidence_gap_is_explicitly_unobserved ... ok
+test activity_ledger::tests::audio_supports_recent_visual_task_without_copying_transcript ... ok
+test activity_ledger::tests::interval_of_only_empty_observations_is_skipped ... ok
+test activity_ledger::tests::policy_drops_empty_and_duplicate_transcripts ... ok
+test activity_ledger::tests::consecutive_identical_content_keeps_first_and_boundary_only ... ok
+test activity_ledger::tests::frames_without_any_content_are_dropped_as_empty ... ok
+test activity_ledger::tests::aba_content_sequence_keeps_all_three_rows ... ok
+test activity_ledger::tests::reliable_window_title_beats_page_content_projection ... ok
+test activity_ledger::tests::per_source_cap_samples_and_reports_cap_over_unchanged ... ok
+test activity_ledger::tests::meeting_intervals_exceed_per_source_and_total_caps ... ok
+test activity_ledger::tests::resumed_work_reuses_task_across_multiple_intervals ... ok
+test activity_ledger::tests::transcripts_are_all_kept_within_an_interval ... ok
+test activity_ledger::tests::total_cap_samples_transcripts_and_reports_sample ... ok
+test activity_ledger::tests::visual_evidence_keeps_only_content_change_points_and_boundaries ... ok
+test routes::activity_ledger::tests::interval_detail_carries_summary_keywords_and_retention ... ok
+test routes::activity_ledger::tests::category_depth_collapses_adjacent_child_tasks ... ok
+test routes::activity_ledger::tests::restricted_activity_ledger_clamps_partial_ranges_and_empties_old_ranges ... ok
+test routes::activity_ledger::tests::unrestricted_activity_ledger_preserves_paid_ranges ... ok
+test routes::activity_ledger::tests::restricted_projection_drops_evidence_before_the_accessible_range ... ok
+test routes::activity_ledger::tests::artifact_mode_returns_one_exact_anchor_per_app_or_site ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 1467 filtered out; finished in 0.00s
+

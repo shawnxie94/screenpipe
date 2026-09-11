@@ -416,15 +416,19 @@ pub fn fingerprint(parts: &[&str]) -> String {
 }
 
 /// `input_hash = hash(sorted(source_uid, revision) + logical_scope +
-/// classification_revision + extractor_schema_version + prompt_version)`.
-/// The same inputs must always map to the same job result; any change must
-/// produce a new revision instead of being swallowed by old idempotency.
+/// classification_revision + extractor_schema_version + prompt_version +
+/// skill_revision)`. The same inputs must always map to the same job result;
+/// any change must produce a new revision instead of being swallowed by old
+/// idempotency. `skill_revision` carries the sha256-based hash of the skill
+/// body the run is driven by, so editing a skill text recomputes instead of
+/// reusing cached results.
 pub fn compute_input_hash(
     sources: &[(String, String)],
     logical_scope: &str,
     classification_revision: &str,
     extractor_schema_version: &str,
     prompt_version: &str,
+    skill_revision: &str,
 ) -> String {
     let mut sorted: Vec<&(String, String)> = sources.iter().collect();
     sorted.sort();
@@ -438,6 +442,7 @@ pub fn compute_input_hash(
         classification_revision,
         extractor_schema_version,
         prompt_version,
+        skill_revision,
     ])
 }
 
@@ -525,13 +530,26 @@ mod tests {
             ("uid-2".to_string(), "rev-9".to_string()),
             ("uid-1".to_string(), "rev-1".to_string()),
         ];
-        let h1 = compute_input_hash(&a, "scope", "cls", "schema-v1", "prompt-v1");
-        let h2 = compute_input_hash(&b, "scope", "cls", "schema-v1", "prompt-v1");
+        let h1 = compute_input_hash(&a, "scope", "cls", "schema-v1", "prompt-v1", "skill-v1");
+        let h2 = compute_input_hash(&b, "scope", "cls", "schema-v1", "prompt-v1", "skill-v1");
         assert_eq!(h1, h2);
-        let h3 = compute_input_hash(&a, "scope", "cls", "schema-v1", "prompt-v2");
+        let h3 = compute_input_hash(&a, "scope", "cls", "schema-v1", "prompt-v2", "skill-v1");
         assert_ne!(h1, h3);
-        let h4 = compute_input_hash(&a, "scope2", "cls", "schema-v1", "prompt-v1");
+        let h4 = compute_input_hash(&a, "scope2", "cls", "schema-v1", "prompt-v1", "skill-v1");
         assert_ne!(h1, h4);
+    }
+
+    #[test]
+    fn skill_revision_is_part_of_the_input_hash() {
+        let a = vec![("uid-1".to_string(), "rev-1".to_string())];
+        let before = compute_input_hash(&a, "scope", "cls", "schema-v1", "prompt-v1", "skill text A");
+        let same = compute_input_hash(&a, "scope", "cls", "schema-v1", "prompt-v1", "skill text A");
+        let changed = compute_input_hash(&a, "scope", "cls", "schema-v1", "prompt-v1", "skill text B");
+        assert_eq!(before, same, "identical skill text must keep the hash stable");
+        assert_ne!(
+            before, changed,
+            "a skill text change must change the input fingerprint"
+        );
     }
 
     #[test]

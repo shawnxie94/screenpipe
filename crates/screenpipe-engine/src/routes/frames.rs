@@ -5,7 +5,7 @@
 use axum::{
     body::{Body, Bytes},
     extract::{Path, Query, State},
-    http::{header, HeaderMap, StatusCode},
+    http::{header, HeaderMap, StatusCode, Uri},
     response::{Json as JsonResponse, Response},
 };
 use image::{codecs::jpeg::JpegEncoder, DynamicImage, GenericImageView};
@@ -34,6 +34,7 @@ use tokio::{
 use tokio_util::io::ReaderStream;
 use tracing::{debug, error};
 
+use crate::knowledge::trace::{record_traced_read, rows_value, trace_admission};
 use crate::{server::AppState, video_utils::extract_frame_from_video};
 
 use tokio::time::timeout;
@@ -1370,11 +1371,15 @@ pub struct FrameContextResponse {
 
 /// Get frame context: accessibility text, tree nodes, and extracted URLs.
 /// Falls back to OCR data for legacy frames without accessibility data.
+/// Opt-in tracing via `X-Screenpipe-Trace` (data payload only, 200-per-key cap).
 #[oasgen]
 pub async fn get_frame_context(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
     Path(frame_id): Path<i64>,
 ) -> Result<JsonResponse<FrameContextResponse>, (StatusCode, JsonResponse<Value>)> {
+    let trace = trace_admission(&state.db, &headers).await.map_err(|r| r.into_parts())?;
     require_frame_history_access(&state, frame_id).await?;
     // Try to get accessibility data; gracefully handle missing columns (pre-migration DBs)
     let (a11y_text, a11y_tree_json) = match state.db.get_frame_accessibility_data(frame_id).await {
@@ -1481,13 +1486,23 @@ pub async fn get_frame_context(
             }
         }
 
-        return Ok(JsonResponse(FrameContextResponse {
+        let response = JsonResponse(FrameContextResponse {
             frame_id,
             text: a11y_text,
             nodes,
             urls,
             text_source: "accessibility".to_string(),
-        }));
+        });
+        record_traced_read(
+            &state.db,
+            &trace,
+            "GET",
+            "/frames/:frame_id/context",
+            uri.query(),
+            &rows_value(&response.0),
+        )
+        .await;
+        return Ok(response);
     }
 
     // Fallback: use OCR data for legacy frames
@@ -1518,13 +1533,23 @@ pub async fn get_frame_context(
         }
     }
 
-    Ok(JsonResponse(FrameContextResponse {
+    let response = JsonResponse(FrameContextResponse {
         frame_id,
         text,
         nodes: Vec::new(),
         urls,
         text_source: "ocr".to_string(),
-    }))
+    });
+    record_traced_read(
+        &state.db,
+        &trace,
+        "GET",
+        "/frames/:frame_id/context",
+        uri.query(),
+        &rows_value(&response.0),
+    )
+    .await;
+    Ok(response)
 }
 
 /// Extract a URL from text if it looks like one
@@ -1590,9 +1615,12 @@ pub struct FrameOcrQuery {
 #[oasgen]
 pub async fn get_frame_text_data(
     State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    uri: Uri,
     Path(frame_id): Path<i64>,
     Query(params): Query<FrameTextQuery>,
 ) -> Result<JsonResponse<FrameTextResponse>, (StatusCode, JsonResponse<Value>)> {
+    let trace = trace_admission(&state.db, &headers).await.map_err(|r| r.into_parts())?;
     require_frame_history_access(&state, frame_id).await?;
     // Get OCR data (bounding boxes from Apple Vision)
     let mut text_positions = match state.db.get_frame_text_positions(frame_id).await {
@@ -1689,10 +1717,20 @@ pub async fn get_frame_text_data(
         }
     }
 
-    Ok(JsonResponse(FrameTextResponse {
+    let response = JsonResponse(FrameTextResponse {
         frame_id,
         text_positions,
-    }))
+    });
+    record_traced_read(
+        &state.db,
+        &trace,
+        "GET",
+        "/frames/:frame_id/text",
+        uri.query(),
+        &rows_value(&response.0),
+    )
+    .await;
+    Ok(response)
 }
 
 /// Counts on-demand OCR jobs actually executing, for diagnosing CPU contention
