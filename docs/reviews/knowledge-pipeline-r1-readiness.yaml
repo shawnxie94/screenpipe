@@ -7,7 +7,7 @@ iteration: 3
 source_artifacts:
 - name: execution-plan
   uri: docs/plans/knowledge-pipeline-cadence-execution-plan.md
-  sha256: b5abd25d07371fa48e741004f0f7a17b4b22a1c5826d39eea35c3fc09585bcd5
+  sha256: 2df9e2b6a1ab99f2b33e9062ae2da3e729f976412ccd2fa237dd979e2222f05c
 findings:
 - id: DR-KP-004
   severity: blocker
@@ -140,3 +140,7 @@ iterations:
   status: ready
   result: 按用户要求把三项对话结论固化进计划：碎片目标确认移交 Plan B（附 112/112 跨身份切换证据）、桌面 UI 错误可见归入 R2（§4.2
     落地第 5 条）、v1 存量越界（34 实质 + 35 边界口径）登记为独立小批；新增 §2.3 后续批次登记表。
+- iteration: 13
+  status: ready
+  result: 用户确认使用 Pi subagent 的 zcode 角色；计划 handoff 更新为 execution_backend=zcode_subagent、runtime_adapter=zcode、logical_role/subagent_role=zcode、角色模型
+    builtin:bigmodel-coding-plan/GLM-5.3-Flash、thinking=low；R2 全套执行。
