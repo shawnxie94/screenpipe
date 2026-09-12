@@ -6,7 +6,7 @@ created: 2026-09-12
 updated_at: 2026-09-12
 plan_id: plan-knowledge-pipeline-cadence
 plan_unit_id: root
-base_commit: ee1f78dae
+base_commit: 040d3cc37
 orchestration_mode: batch
 execution_target: subagent
 execution_backend: pi_subagent
@@ -34,13 +34,15 @@ doc-verified: ee1f78dae
 
 ## 1. 背景（dev 真机冒烟证据）
 
-`docs/reviews/evidence/dev-smoke-2026-09-12.md` 记录：3,994 间隔 → 92 摘要 → 113 WorkUnit → 1 知识；knowledge_jobs 1,583 条，失败 700+；同一 `activity-interval:13469` 1 小时被投 29 次；模型额度被耗尽（**根因是任务洪泛，不是模型能力**）。worker 为串行取任务（`worker.rs:243` 单 loop），不存在并发打满问题。
+`docs/reviews/evidence/dev-smoke-2026-09-12.md` 的 dev 库副本记录：3,994 间隔、92 摘要、113 WorkUnit、1 知识，knowledge_jobs 1,583 条；这些是存量计数，不是漏斗转化率。用户确认额度耗尽与重复任务有关，不能归因模型能力。worker 为串行取任务。此前「一小时投 29 次」的时间筛选格式未经统一验证，撤回该速率判断。
+
+2026-09-12 首轮实现未通过独立复核，证据 `.agent/tmp/knowledge-pipeline-r1-review/feedback.md`。用户明确批准返工：关闭自动重试；合并保持证据时间归属；旧段保留追溯但重建窗口只启用一个版本。本次修订只恢复 Round 1（§4.1/§4.4）开工资格，Round 2（§4.2/§4.3）不得冒充已实现。
 
 ## 2. 目标与非目标
 
 ### 2.1 目标
 
-1. **失败即终态**：失败任务不再被下一轮扫描重建；只有输入变化（input_hash 变化）才会重新投递。
+1. **失败即终态**：内部失败/超时不自动重试，public task 与 knowledge job 同步终态；同输入不被发现扫描重建。只有真实输入变化才是新任务，原任务仅用户手动重试可重新打开。
 2. **input_hash 真实反映输入**：抽取的三元组必须含参与的活动集合（现在传 `&[]`，导致同 scope 恒定哈希、幂等失效）。
 3. **错误消息可见**：`knowledge_jobs` 增加错误消息列并写日志，用户可据此手动处理。
 4. **发现阶段预筛**：无证据（`no_evidence`）等不成熟目标不投递，不产生无效模型调用。
@@ -78,11 +80,16 @@ doc-verified: ee1f78dae
 
 ### 4.1 失败终态与幂等
 
-1. **去重语义**（`jobs.rs`）：`knowledge_enqueue_job` 的重复判定从 `state IN ('pending','running','paused')` 改为「同 `(kind, scope_key, input_hash)` 且 `state IN ('pending','running','paused','succeeded','failed')` 即视为已存在」——即终态（成功/失败）都拦重复投递；只有 **input_hash 变化**（输入真变了）才新建任务。语义注释写清楚：这正是"失败不重试、要人工处理"的落点。
+1. **失败策略与去重必须同时落地**：
+   - `knowledge_fail_job` 对 transient、permanent、模型错误、step timeout 均一次失败即 `failed`，不再设回 `pending/queued`。事务内同步 public run、attempt、event，保留 code/message。不是只改 max_attempts 默认值。
+   - knowledge owner 的 lease 回收不得自动再次执行模型：失联执行标为可人工处置的终态，旧 worker 返回不得写结果。保留心跳、token 围栏；不得改变非 knowledge owner 的重试策略。
+   - `knowledge_retry_job` 与 public 手动 retry 为显式用户通道；必须测试重开一次、并发手动重试不重复投递、历史错误仍可追溯。worker timeout 日志不再声称自动重试。
+   - 同 `(kind, scope_key, input_hash)` 的 pending/running/paused/succeeded/failed 拦重复投递。物理索引若采用 `(kind,input_hash)`，须证明所有自动路径哈希含 scope，并覆盖不同 scope 测试，不能只靠注释保证等价。
+   - 审核终态清理、cancelled 及 public lease recovery 对去重的影响；同输入失败不可因后台清理而自动复活（必要时保留轻量去重记录或保留自动任务终态）。不清理用户现有 failed 记录。
 2. **抽取 input_hash 含成员活动**（`extract.rs`）：scope 下的活动集合参与哈希（形如 `interval_id:start:end` 排序后拼接，参照 `summarize.rs::summary_input_hash` 的既有写法），使新增活动 → 新哈希 → 允许新任务。
 3. **错误消息落库**（新迁移 `20260912100000_knowledge_job_error_message.sql`）：`knowledge_jobs` 加 `last_error_message TEXT`；worker 失败路径写入消息（当前只写 code），同时 `tracing::warn!` 带 `message`。不改已应用迁移。
 4. **发现阶段预筛**（`extract.rs` / `summarize.rs`）：无证据引用、状态非 `final`、或未过静默 grace 的目标不投递；`no_evidence` 不再产生模型调用。
-5. 遗留清理：把现有 `failed` 任务保留为终态（不批量重置），但**新增一条 SQL 维护路径**：`input_hash` 变化时旧失败记录不阻塞（由 1 的哈希语义天然满足）。
+5. 发现预筛在 LIMIT 前完成，避免无证据/非 final/非活跃旧版本永久占满候选页。执行时再次确认活动版本有效；排队后被新版本替代的任务不再调用模型。R1 将错误透出 DTO/API；实际桌面错误展示与手动入口在 R2 验证，不把日志/API 透出宣称为 UI 已验收。旧行 NULL 错误不能事后恢复。
 
 ### 4.2 四层节拍配置化
 
@@ -117,16 +124,21 @@ doc-verified: ee1f78dae
 
 ### 4.4 ① 活动间隔切分优化（真实数据驱动）
 
-**问题证据**（dev 库，3,994 段）：92% 的段 <1 分钟（平均 40 秒，每段仅 1–2 条证据）；`google chrome` **297 个身份 / 1,060 段**（每个网页标题算一个身份）；`wechat` 11 身份 / 373 段（「微信 (聊天)」210 段 + 「Using WeChat」72 + 「Window」40 + 联系人名各算身份）；`chatgpt` 8 身份 / **355 段**（每次切走再回来就新开一段）。系统/通知类噪音仅占 1%（44 段）——**碎的根因是身份太细 + 切了不合并，不是噪音**。
+**问题证据**（dev 库副本）：3,994 段中约 92% <1 分钟；final 平均约 40 秒、provisional 约 24 秒，不是中位数；1–2 条证据的段占多数。Chrome 297 身份/1,060 段、WeChat 11/373、ChatGPT 8/355。枚举的系统应用名称命中 44 段，不代表全部噪音仅 1%。身份变化即时切段是已确认机制，但摘要质量与切分之间的完整因果尚未验证。
 
-四项改动（全部确定性、无模型、参数可配）：
+四项改动（确定性、无模型、参数可配；不得以段数下降替代正确性）：
 
-1. **换内容锚点**（`identity_for`）：浏览器身份改为「域名 + 路径首段」或用 `semantic_key`（现为整页标题）；桌面仍为 `document_path` > `semantic_key` > `app`；**窗口标题降级为段内标签**，不再参与身份键。
-2. **加相邻段合并**：同一身份的两段若间隔 < `activityMergeGapMinutes`（默认 10）则合并成一段（"回到刚才那件事"）；同 `app` 内的弱锚点切换（标题变化）不切段，仅记录为段内切换。
-3. **短段吸收**：段时长 < `activityMinDwellSeconds`（默认 30）且相邻存在更长的主段 → 吸收进主段；否则标记为 `short` 且不进摘要候选。
-4. **producer 升级 `deterministic-v2`**：新旧切分语义可区分、可回退；旧段保留，新窗口按新规则重建。
+1. **稳定内容锚点**：明确文档路径/语义对象优先于低精度网页分组；浏览器缺实体标识时才用 host+路径首段，窗口标题只作标签。不同明确文档、对话实体不可因同 app/域名被误并。无法识别对象时记录低置信兜底，不声称已经识别工作项。
+2. **合并资格**：仅时间相邻、同对象或可证实的弱标题变化可合并，`activityMergeGapMinutes` 是上限，不是同 app 即同任务的充分条件。A→B→A 中 B 是独立对象时三段保留；不跨明确会议/未观测边界吸收。无观测时长不得直接充当连续工作时长。
+3. **短段与证据不变量**：时长 < `activityMinDwellSeconds` 仅是候选条件。合并需保持对象归属，重新确定包含所有原证据/动作的时间范围，并保证不跨第三方段；每条证据时间属于持有它的间隔、源引用不丢不重复。最终合并段重新执行 retention 上限与记账，不能简单串接已截断证据或突破 B01 限额；会议豁免仍正确。不能证明安全时保留短段，允许查询派生 short 标志，不增造不合法 state；短且关键的事实不因时长被删除。
+4. **单活跃版本 + 历史追溯**：producer 可升 `deterministic-v2`，但必须增加明确的活跃选择规则；仅改常量不是迁移或回退方案。
+   - 一次重建覆盖窗口内只允许一个确定性版本参与默认列表、统计、摘要、WorkUnit 输入；旧段及其 evidence/actions/summary/既有引用保留，用历史 ID 查询仍可追溯。
+   - 新结果写入与活跃切换在同一事务中提交，失败保留旧版本；重跑幂等。空窗口也有已重建覆盖状态，不能回落到旧版本重复生成。
+   - 处理旧段跨越重建窗口边缘的情况：可扩大重建到完整边界或采用显式覆盖片段映射，但不能整段隐藏后丢失窗口外数据；不得靠新旧两套并排返回解决边缘。
+   - 所有生产/展示读入口复用统一活跃选择；历史详情读取保持按 ID 可用。排队后过期版本在执行前复检；回退显式切换已保留覆盖范围，不把版本字符串字典序当新旧关系。
+   - 新迁移承载活跃元数据/覆盖记录；不改已应用迁移、不手工操作真库。迁移后的旧段默认可见，只有成功重建覆盖部分才切换。
 
-验收观测（人工，写入报告）：重建后总段数、<1 分钟段占比、中位段时长、单位身份段数；目标为总段数降至 700–1,200、<1 分钟占比明显下降（预期 <20%）。
+验收：内存库/合成 fixture 必须证明失败不重试、A→B→A 不误并、证据时间范围、保留上限、v1→v2 同窗不重复、边缘不丢失、失败原子性、重复重建幂等、历史引用可查及显式回退。副本分布只作观测，不设未经实测的 700–1,200 段或 <20% 门槛；本轮不启动真机或调用远程产品模型。
 
 ## 5. 测试与验收命令
 
@@ -147,18 +159,20 @@ doc-verified: ee1f78dae
 | --- | --- |
 | 去重收紧导致真实输入变化被拦 | 哈希必须包含成员集合（4.1.2），测试覆盖「新增活动 → 放行」 |
 | 停 legacy 后间隔断流 | 严格顺序：先上 ① tick 并验证有间隔产出，再停 legacy；回退只需恢复 legacy 分支 |
-| 切分语义变化影响存量段 | producer 升 v2 保留旧段；新规则只重建新窗口；极端不适时回退锚点规则（参数可配） |
+| 切分语义变化影响存量段 | 历史留档与活跃选择分离，切换原子化并测试窗口边缘；回退走显式版本激活，不只改 producer 常量 |
 | 模型提名引入新输出字段 | 字段可选，缺失即视为未提名（不阻断抽取）；提名不改调用次数 |
 | 设置项过多 | 全部给默认值与范围校验，用户不改也能跑 |
-| 现有 failed 存量任务 | 保持终态不动；报告给出它们的原因分布（错误消息落库后首次可见） |
+| 现有 failed 存量任务 | 保持终态不动；新列只保证新增失败的消息，无法恢复历史丢失的错误正文 |
 
-**回退**：还原迁移（新列可留空）、恢复 legacy 分支、设置键回默认。
+**回退**：不逆改已应用迁移；保留兼容新列，以显式活跃版本切换恢复历史覆盖。legacy 回退必须关新自动 tick，避免双驱动；参数改回原值不能替代数据版本回退。
 
 ## 7. 交付边界
 
 - 允许路径：`crates/screenpipe-db/src/migrations/20260912100000_knowledge_job_error_message.sql`、`crates/screenpipe-db/src/migrations/20260912101000_knowledge_distill_state.sql`（记录 `last_distilled_input_hash` 与 `last_distilled_at`）、`crates/screenpipe-db/src/db/knowledge/**`、`crates/screenpipe-engine/src/knowledge/**`、`crates/screenpipe-engine/src/activity_ledger.rs`、`crates/screenpipe-db/src/db/activity_ledger.rs`（如需同步身份/合并写入）、`apps/screenpipe-app-tauri/src-tauri/src/knowledge_runtime.rs`、`apps/screenpipe-app-tauri/src-tauri/src/activity_history.rs`、`apps/screenpipe-app-tauri/components/settings/activity*-settings.tsx`、`docs/reviews/evidence/dev-smoke-2026-09-12.md`；报告限 `.agent/tmp/knowledge-pipeline-report.md` 与 `.agent/tmp/knowledge-pipeline/`。
 - 禁止：改已应用迁移、`agent_skills.rs`、用户技能 store、知识校验规则（`registry/mod.rs` 的 SOP/DecisionRule 门槛不动，本批只改触发与幂等）、真实库写入、D-14 流程改造、工作项身份（下一批）。
-- 本批不修改 `activity_interval_summaries` / `knowledge_work_units` 的表结构；切分优化只改 `identity_for`、合并与吸收规则及 producer 版本。
+- R1 返工补充允许路径：`crates/screenpipe-db/src/migrations/20260912102000_activity_ledger_active_versions.sql`、`crates/screenpipe-db/src/db/tasks/**`、`crates/screenpipe-engine/src/routes/activity_ledger.rs`、`crates/screenpipe-db/tests/knowledge_correctness.rs`；必要类型/re-export 限 `crates/screenpipe-db/src/db/mod.rs` 与 `crates/screenpipe-engine/src/lib.rs`，不可顺带改无关功能。
+- 不修改 `activity_interval_summaries` / `knowledge_work_units` 的既有表结构；允许新增活跃元数据表/视图及必要迁移以满足 §4.4，不再以迁移配额拒绝版本隔离。R1 报告及验收产物限 `.agent/tmp/knowledge-pipeline-r1*`；计划/readiness/roadmap 由协调者维护。
+- R1 增加验收：`cargo test -p screenpipe-db --lib activity_ledger`、`cargo test -p screenpipe-db --lib tasks`、`cargo test -p screenpipe-engine --lib routes::activity_ledger`。R2 原生测试只通过 `cd apps/screenpipe-app-tauri && bun run test:tauri`；真实模型/桌面验收另获用户许可，不以十分钟观察替代日/周调度的虚拟时钟测试。
 - 顺序硬约束：① 重建 tick 先落地并有产出 → 再停 legacy 自动叙事；④ 三机制先落地 → 再移除 `extract.rs:275` 的即时入队。
 - 不 commit / 不 push；不得真调远程产品模型；不得清理用户现有 failed 任务。
 - 单一 root、单一写者；子任务期间协调者不改 HEAD。

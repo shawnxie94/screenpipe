@@ -1,0 +1,71 @@
+schema_version: 1
+id: knowledge-pipeline-r1-readiness
+feature_id: knowledge-pipeline-cadence
+stage: plan_to_build
+status: ready
+iteration: 3
+source_artifacts:
+- name: execution-plan
+  uri: docs/plans/knowledge-pipeline-cadence-execution-plan.md
+  sha256: 028f96b80c63dadab87f9f03818d60e9841f109eb804af247d1a795cde15585f
+findings:
+- id: DR-KP-004
+  severity: blocker
+  status: resolved
+  title: 首轮实现复核暴露失败策略与切分契约缺口
+  evidence: 用户已批准返工；计划 §4.1 明确内部/public/lease 终态，§4.4 明确证据时间与 retention 不变量、单活跃版本及原子切换/窗口边缘/历史追溯，§7
+    补迁移与任务模块路径。
+  next_action: 仅解除 plan_to_build 阻塞；实际三个缺陷必须由返工测试证明修复，尚未通过 implementation_to_verify。
+- id: DR-KP-001
+  severity: blocker
+  status: resolved
+  title: 四层节拍与投递策略已按用户纠正定稿
+  evidence: 计划 §2.1/§4.2 改为模型优先（模型提名 + 变更驱动 + 冷却期），知识按天/周定时，取消数量阈值与全量投递；8 个节拍/阈值键全部可配。
+  next_action: 按轮次执行，Round 1 只做 §4.1 + §4.4。
+- id: DR-KP-002
+  severity: blocker
+  status: resolved
+  title: 切分优化有真实数据依据
+  evidence: 副本 3,994 段中约 92% <1 分钟支持调查切分；44 段只覆盖枚举系统名，不是全部噪音率。计划撤回全部质量问题归因及未经实测的段数目标。
+  next_action: §4.4 四项改动 + producer v2。
+- id: DR-KP-003
+  severity: warning
+  status: accepted_risk
+  title: 存量 failed 任务保留为终态
+  evidence: 保留存量终态且不重置；新错误列无法恢复已丢失的历史消息，仅新失败可记录。
+  next_action: Round 1 交付后由协调者统计原因分布。
+traceability:
+- requirement: 失败即终态、input_hash 真实、错误可见、发现预筛（§4.1）
+  plan: §4.1
+  acceptance: 命令 1/2/6 + 报告语义说明
+- requirement: 间隔切分优化（§4.4）
+  plan: §4.4
+  acceptance: 命令 3 + 人工观测量
+- requirement: 节拍配置化与 legacy 解耦（§4.2/§4.3）
+  plan: §4.2/§4.3
+  acceptance: Round 2 执行，不在本包范围
+decisions:
+- 同一计划分两轮：Round 1 = §4.1 + §4.4；Round 2 = §4.2 + §4.3。本 Task Pack 只覆盖 Round 1。
+- 用户批准旧段保留追溯、重建窗口单活跃版本；切换/回退原子化，不能只改 producer 常量。
+- R1 为本次授权返工边界，节拍/三机制/UI 仍属下一轮，分轮 checkpoint 不代表整份计划完成。
+assumptions: []
+evidence:
+- docs/reviews/evidence/dev-smoke-2026-09-12.md
+waiting_on: none
+next_action: R1 提交入库后，由用户决定是否启动 R2（节拍配置化/三机制投递/legacy 下线/UI）。
+notes: 这是返工开工门禁，不是代码验收；dev 保持停止。原 .agent/tmp/knowledge-pipeline-r1/task-pack.yaml
+  已过期，新包位于 .agent/runs/2026-09-12-knowledge-pipeline-r1-repair/。
+iterations:
+- iteration: 1
+  status: ready
+  result: 首次误将去重等同无重试，未定义切分版本选择。
+- iteration: 2
+  status: blocked
+  result: 独立复核发现三个阻塞，等待用户授权修订。
+- iteration: 3
+  status: ready
+  result: 用户同意修订契约与返工；增加反例、活跃版本/边缘/回退验收，不宣称缺陷已修复。
+- iteration: 4
+  status: ready
+  result: R1 返工完成（attempt=2/3）；协调者独立复验 canonical 9/9 pass、局部回退重叠与旧任务版本复检反例已修并有实质断言、scope
+    clean。仅证明 R1 实现可信，不等于整份 cadence 计划或 F11 产品验收完成。
