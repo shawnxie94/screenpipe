@@ -490,6 +490,7 @@ pub fn office_sync_handler(
                         }
                         OfficeErrorCode::TranscriptPending => Err(JobFailure {
                             code: err.code.as_str().to_string(),
+                            message: None,
                             transient: true,
                             backoff_ms: 15 * 60 * 1000, // retry on the next auto-sync tick
                         }),

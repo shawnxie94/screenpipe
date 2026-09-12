@@ -67,13 +67,24 @@ fn summary_char_count(text: &str) -> usize {
 /// Summarize job per interval. Called periodically by the desktop shell;
 /// safe to run concurrently (active-input uniqueness dedupes, and once a
 /// summary exists the interval no longer matches).
+///
+/// Discovery pre-screens (§4.1.4) all happen in SQL BEFORE the LIMIT: `final`
+/// state, settled grace, retained evidence, the ledger's short-segment dwell
+/// floor (§4.4) and the active-version rule — stale candidates cannot occupy
+/// the candidate page, and `no_evidence` never becomes a job or a model call.
 pub async fn discover_and_enqueue(
     db: &Arc<DatabaseManager>,
     since: DateTime<Utc>,
 ) -> Result<usize, KnowledgeError> {
     let horizon = Utc::now() - chrono::Duration::minutes(SETTLED_GRACE_MINUTES);
     let intervals = db
-        .activity_intervals_missing_summary(since, horizon, Some(horizon), DISCOVERY_BATCH)
+        .activity_intervals_missing_summary_min_dwell(
+            since,
+            horizon,
+            Some(horizon),
+            DISCOVERY_BATCH,
+            crate::activity_ledger::ACTIVITY_MIN_DWELL_SECONDS,
+        )
         .await
         .map_err(|e| KnowledgeError::new("db_error", e.to_string(), true))?;
     let mut created = 0usize;
@@ -126,6 +137,7 @@ async fn run_summarize(ctx: JobContext) -> Result<JobOutcome, JobFailure> {
         .map_err(|failure| JobFailure {
             backoff_ms: if failure.transient { 1_000 } else { 0 },
             code: failure.code,
+            message: failure.message,
             transient: failure.transient,
         })?;
     tracing::info!(
@@ -141,10 +153,12 @@ async fn run_summarize(ctx: JobContext) -> Result<JobOutcome, JobFailure> {
 
 /// Failure of one summarize step: `summary_invalid` (permanent) after the
 /// single repair retry; db and model errors pass through with their own
-/// retryability.
+/// retryability. `message` is the human-readable cause persisted to
+/// `knowledge_jobs.last_error_message` (§4.1.3).
 #[derive(Debug, Clone)]
 pub struct SummaryFailure {
     pub code: String,
+    pub message: Option<String>,
     pub transient: bool,
 }
 
@@ -152,7 +166,16 @@ impl SummaryFailure {
     fn db(error: sqlx::Error) -> Self {
         Self {
             code: format!("db_error:{error}"),
+            message: Some(error.to_string()),
             transient: true,
+        }
+    }
+
+    fn permanent(code: &str, message: impl Into<String>) -> Self {
+        Self {
+            code: code.to_string(),
+            message: Some(message.into()),
+            transient: false,
         }
     }
 }
@@ -179,19 +202,32 @@ pub async fn summarize_interval(
         .await
         .map_err(SummaryFailure::db)?
     else {
-        return Err(SummaryFailure {
-            code: "no_interval".into(),
-            transient: false,
-        });
+        return Err(SummaryFailure::permanent(
+            "no_interval",
+            "目标间隔不存在（可能已被台账重建或删除）",
+        ));
+    };
+    // Execution-time recheck (§4.1.4): a version superseded between enqueue
+    // and claim must not spend model budget; discovery re-enqueues the
+    // replacement version instead.
+    if !db
+        .activity_interval_is_active(interval_id)
+        .await
+        .map_err(SummaryFailure::db)?
+    {
+        return Err(SummaryFailure::permanent(
+            "superseded_interval",
+            "目标间隔已被更新的台账版本覆盖，任务作废；新版本会在后续发现中重新入队",
+        ));
     };
     let pack = build_evidence_pack(db, interval_id)
         .await
         .map_err(SummaryFailure::db)?;
     if pack.refs.is_empty() {
-        return Err(SummaryFailure {
-            code: "no_evidence".into(),
-            transient: false,
-        });
+        return Err(SummaryFailure::permanent(
+            "no_evidence",
+            "间隔内没有可用的证据行（原始内容可能已被保留策略删除或为空）",
+        ));
     }
 
     let model = executor.identity();
@@ -244,10 +280,10 @@ pub async fn summarize_interval(
                         %reason,
                         "summarize: output invalid after repair"
                     );
-                    return Err(SummaryFailure {
-                        code: "summary_invalid".into(),
-                        transient: false,
-                    });
+                    return Err(SummaryFailure::permanent(
+                        "summary_invalid",
+                        format!("输出在单次修复后仍不合规：{reason}"),
+                    ));
                 }
             }
         }
@@ -291,6 +327,7 @@ async fn attempt(
         .await
         .map_err(|e| SummaryFailure {
             code: e.code,
+            message: Some(e.message),
             transient: e.retryable,
         })?;
     Ok(parse_json_object(&text))
@@ -1314,5 +1351,58 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(created_again, 0);
+    }
+
+    #[tokio::test]
+    async fn discovery_skips_evidence_free_intervals() {
+        let db = test_db().await;
+        // A settled interval with no evidence rows at all: discovery must not
+        // enqueue it — `no_evidence` must never become a model call (§4.1.4).
+        let parent = ActivityTaskDraft {
+            task_key: "orphan-parent".into(),
+            parent_task_key: None,
+            kind: "category".into(),
+            title: "Browser".into(),
+            app_name: Some("Arc".into()),
+            confidence: 0.8,
+        };
+        let task = ActivityTaskDraft {
+            task_key: "orphan-task".into(),
+            parent_task_key: Some("orphan-parent".into()),
+            kind: "task".into(),
+            title: "Empty".into(),
+            app_name: Some("Arc".into()),
+            confidence: 0.8,
+        };
+        let interval = ActivityIntervalDraft {
+            interval_key: "orphan-interval".into(),
+            task_key: "orphan-task".into(),
+            start_at: Utc::now() - chrono::Duration::minutes(20),
+            end_at: Utc::now() - chrono::Duration::minutes(10),
+            state: "final".into(),
+            confidence: 0.8,
+            actions: Vec::new(),
+            evidence: Vec::new(),
+            retention: HashMap::new(),
+        };
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            Utc::now() - chrono::Duration::minutes(20),
+            Utc::now() - chrono::Duration::minutes(10),
+            &[parent, task],
+            &[interval],
+        )
+        .await
+        .unwrap();
+
+        let created = discover_and_enqueue(&db, Utc::now() - chrono::Duration::hours(26))
+            .await
+            .unwrap();
+        assert_eq!(created, 0, "evidence-free intervals are never enqueued");
+        let jobs: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM knowledge_jobs")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+        assert_eq!(jobs, 0);
     }
 }

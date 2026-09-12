@@ -238,37 +238,117 @@ async fn jobs_db_job_lifecycle_deduplicates_claims_and_guards_tokens() {
     );
 }
 
+/// §4.1.1 end to end across both stores: the FIRST failure (even one
+/// classified transient) is terminal in `knowledge_jobs` AND `task_runs`;
+/// lease reap and terminal pruning never resurrect the input; the explicit
+/// manual retry is the only path back and reopens exactly once.
 #[tokio::test]
-async fn jobs_db_expired_lease_reaps_while_preserving_model_call_count() {
+async fn jobs_db_failure_is_terminal_across_stores_until_manual_retry() {
     let db = db().await;
+    let hash = compute_input_hash(
+        &[("s1".into(), "r1".into())],
+        "scope",
+        "classification-v1",
+        "extract-v1",
+        "prompt-v1",
+        "skill-v1",
+    );
     let (job_id, _) = db
-        .knowledge_enqueue_job(KnowledgeJobKind::Answer, None, None, None, None, None)
+        .knowledge_enqueue_job(
+            KnowledgeJobKind::Extract,
+            Some("scope"),
+            Some(&hash),
+            None,
+            None,
+            None,
+        )
         .await
         .unwrap();
-    let claimed = db
-        .knowledge_claim_next_job(&[KnowledgeJobKind::Answer], "worker", 30_000)
+
+    // Claim through the public task face, exactly like the desktop worker.
+    let claimed_task = db
+        .task_claim_next_for_definitions("worker", 30, &["knowledge.extract"])
         .await
         .unwrap()
         .unwrap();
+    let run_id = claimed_task.run.run_id.clone();
+    let lease_token = claimed_task.run.lease_token.clone().unwrap();
+    let bound = db
+        .knowledge_bind_public_task(
+            job_id,
+            &run_id,
+            KnowledgeJobKind::Extract,
+            "worker",
+            &lease_token,
+            30_000,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(bound.id, job_id);
+
+    // A transient-classified model failure still lands both stores in failed.
     assert!(db
-        .knowledge_job_model_call(job_id, &claimed.lease_token)
+        .knowledge_fail_job(
+            job_id,
+            &lease_token,
+            "model_error",
+            Some("注入的模型失败"),
+            true,
+            1_000
+        )
         .await
         .unwrap());
-    let mut tx = db.begin_immediate_with_retry().await.unwrap();
-    sqlx::query("UPDATE knowledge_jobs SET lease_expires_at = '2000-01-01T00:00:00Z' WHERE id = ?")
-        .bind(job_id)
-        .execute(&mut **tx.conn())
+    assert_eq!(
+        db.knowledge_get_job(job_id).await.unwrap().unwrap().state,
+        "failed"
+    );
+    let run_state: String =
+        sqlx::query_scalar("SELECT state FROM task_runs WHERE run_id = ?1")
+            .bind(&run_id)
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+    assert_eq!(run_state, "failed");
+    assert!(db
+        .task_claim_next_for_definitions("worker", 30, &["knowledge.extract"])
+        .await
+        .unwrap()
+        .is_none(), "no automatic re-claim after a failure");
+
+    // Terminal cleanup keeps failed rows as dedup anchors.
+    db.knowledge_prune_terminal_jobs(10).await.unwrap();
+    let (_, recreated) = db
+        .knowledge_enqueue_job(
+            KnowledgeJobKind::Extract,
+            Some("scope"),
+            Some(&hash),
+            None,
+            None,
+            None,
+        )
         .await
         .unwrap();
-    tx.commit().await.unwrap();
-    assert_eq!(db.knowledge_reap_expired_leases().await.unwrap(), 1);
-    let row = db.knowledge_get_job(job_id).await.unwrap().unwrap();
-    assert_eq!(row.state, "pending");
-    assert_eq!(row.model_calls, 1, "call counters never reset");
-    assert!(!db
-        .knowledge_complete_job(job_id, &claimed.lease_token, None, None)
+    assert!(!recreated, "pruning must not revive a failed input");
+    let job = db.knowledge_get_job(job_id).await.unwrap().unwrap();
+    assert_eq!(job.state, "failed");
+    assert_eq!(job.last_error_message.as_deref(), Some("注入的模型失败"));
+
+    // The manual retry is the only path back, and it reopens exactly once.
+    assert!(db.knowledge_retry_job(job_id).await.unwrap());
+    assert!(!db.knowledge_retry_job(job_id).await.unwrap());
+    let run_state: String =
+        sqlx::query_scalar("SELECT state FROM task_runs WHERE run_id = ?1")
+            .bind(&run_id)
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+    assert_eq!(run_state, "queued", "manual retry requeues the public run");
+    assert!(db
+        .task_claim_next_for_definitions("worker", 30, &["knowledge.extract"])
         .await
-        .unwrap());
+        .unwrap()
+        .is_some(), "the manually retried job is claimable again");
 }
 
 #[tokio::test]

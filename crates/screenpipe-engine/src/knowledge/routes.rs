@@ -1285,6 +1285,7 @@ async fn list_jobs(State(state): State<Arc<AppState>>, Query(q): Query<JobsQuery
             attempts: row.attempts.max(0) as u32,
             input_hash: row.input_hash,
             last_error_code: row.last_error_code,
+            last_error_message: row.last_error_message,
             created_at: parse_ts(&row.created_at),
             updated_at: parse_ts(&row.updated_at),
             not_before: None,

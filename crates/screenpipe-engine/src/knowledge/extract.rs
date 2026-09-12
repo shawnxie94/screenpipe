@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
-use screenpipe_db::compute_input_hash;
+use screenpipe_db::{compute_input_hash, fingerprint};
 use screenpipe_db::{
     ActivitySummaryEvidenceRef, DatabaseManager, KnowledgeJobKind, KnowledgeSourceInput, SourceKind,
     SourceLocator,
@@ -31,23 +31,40 @@ use super::worker::{JobContext, JobFailure, JobOutcome};
 /// Scan for final intervals that have no extract job yet and enqueue them.
 /// Returns the number of jobs created. Called periodically by the desktop
 /// shell; safe to run concurrently (active-input uniqueness dedupes).
-pub async fn discover_and_enqueue(db: &Arc<DatabaseManager>, since: DateTime<Utc>) -> Result<usize, KnowledgeError> {
+///
+/// Discovery pre-screens (§4.1.4): immature targets never reach the queue.
+/// An interval must be `final`, settled past the same grace the summarizer
+/// uses, and carry retained evidence — so `no_evidence` can no longer be
+/// produced by discovery and never becomes a model call.
+pub async fn discover_and_enqueue(
+    db: &Arc<DatabaseManager>,
+    since: DateTime<Utc>,
+) -> Result<usize, KnowledgeError> {
     let intervals = db
         .list_activity_ledger(since, Utc::now() + chrono::Duration::hours(1), false, false)
         .await
         .map_err(|e| KnowledgeError::new("db_error", e.to_string(), true))?;
+    let settled_before =
+        Utc::now() - chrono::Duration::minutes(super::summarize::SETTLED_GRACE_MINUTES);
     let mut created = 0usize;
     for interval in intervals {
         // Only settled intervals compile into Work Units.
         if interval.state != "final" {
             continue;
         }
+        let window = parse_interval_window(&interval)?;
+        if window.end > settled_before {
+            // Still inside the settle grace: activity may keep landing here.
+            continue;
+        }
+        if interval.evidence_count == 0 {
+            // No retained evidence: extraction would fail with `no_evidence`
+            // before doing anything useful.
+            continue;
+        }
         let scope = interval_scope(&None, &Some(interval.title.clone()), &interval.app_name);
-        let input_hash = input_hash_for(
-            &[],
-            &scope,
-            &super::skill_revisions::WORK_UNIT_SKILL_REVISION,
-        );
+        let members = load_window_member_bounds(db, window.start, window.end).await?;
+        let input_hash = discovery_input_hash(&scope, &members);
         let payload = json!({
             "interval_start": interval.start_at,
             "interval_end": interval.end_at,
@@ -70,6 +87,64 @@ pub async fn discover_and_enqueue(db: &Arc<DatabaseManager>, since: DateTime<Utc
         }
     }
     Ok(created)
+}
+
+struct IntervalWindow {
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+}
+
+fn parse_interval_window(interval: &screenpipe_db::ActivityIntervalRecord) -> Result<IntervalWindow, KnowledgeError> {
+    let parse = |value: &str| {
+        DateTime::parse_from_rfc3339(value)
+            .map(|t| t.with_timezone(&Utc))
+            .map_err(|e| KnowledgeError::new("bad_interval_ts", e.to_string(), false))
+    };
+    Ok(IntervalWindow {
+        start: parse(&interval.start_at)?,
+        end: parse(&interval.end_at)?,
+    })
+}
+
+/// The job window's member-activity set: every interval the extract handler
+/// will actually read (`start_at` inside the window — the same predicate as
+/// `build_summary_pack`). §4.1.2: a new activity in the window must change
+/// the enqueued hash, otherwise terminal-state dedup would silence the scope
+/// forever after its first job finished.
+async fn load_window_member_bounds(
+    db: &DatabaseManager,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+) -> Result<Vec<(i64, String, String)>, KnowledgeError> {
+    let rows: Vec<(i64, String, String)> = sqlx::query_as(
+        "SELECT id, start_at, end_at FROM activity_intervals_active \
+         WHERE start_at >= ?1 AND start_at < ?2 ORDER BY id",
+    )
+    .bind(start.to_rfc3339())
+    .bind(end.to_rfc3339())
+    .fetch_all(&db.pool)
+    .await
+    .map_err(|e| KnowledgeError::new("db_error", e.to_string(), true))?;
+    Ok(rows)
+}
+
+/// Discovery-time input identity (§4.1.2), following
+/// `summary_input_hash`'s sorted-join pattern: prompt/schema versions +
+/// scope + the sorted `interval_id:start:end` member set + the work-unit
+/// skill revision (so a skill edit invalidates queued jobs too).
+fn discovery_input_hash(scope: &str, members: &[(i64, String, String)]) -> String {
+    let mut parts: Vec<String> = members
+        .iter()
+        .map(|(id, start, end)| format!("{id}:{start}:{end}"))
+        .collect();
+    parts.sort();
+    fingerprint(&[
+        EXTRACTOR_SCHEMA_VERSION,
+        EXTRACT_PROMPT_VERSION,
+        scope,
+        &parts.join(","),
+        super::skill_revisions::WORK_UNIT_SKILL_REVISION.as_str(),
+    ])
 }
 
 /// Explainable grouping key: task title + app. Same-flow sessions land in
@@ -111,11 +186,13 @@ async fn run_extract(ctx: JobContext) -> Result<JobOutcome, JobFailure> {
         &scope,
         interval_start,
         interval_end,
+        ctx.input_hash.as_deref(),
     )
     .await
     .map_err(|failure| JobFailure {
         backoff_ms: if failure.transient { 1_000 } else { 0 },
         code: failure.code,
+        message: failure.message,
         transient: failure.transient,
     })?;
 
@@ -134,10 +211,12 @@ pub struct ExtractCommitted {
 
 /// Failure of one extract step: `invalid_recall`/`invalid_work_unit`/
 /// `invalid_output`/`no_evidence`/`input_deleted` (permanent) vs db and model
-/// errors (retryable).
+/// errors (retryable). `message` is the human-readable cause that lands in
+/// `knowledge_jobs.last_error_message` (§4.1.3).
 #[derive(Debug, Clone)]
 pub struct ExtractFailure {
     pub code: String,
+    pub message: Option<String>,
     pub transient: bool,
 }
 
@@ -145,6 +224,15 @@ impl ExtractFailure {
     fn permanent(code: impl Into<String>) -> Self {
         Self {
             code: code.into(),
+            message: None,
+            transient: false,
+        }
+    }
+
+    fn with_message(code: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            code: code.into(),
+            message: Some(message.into()),
             transient: false,
         }
     }
@@ -152,6 +240,7 @@ impl ExtractFailure {
     fn db(error: sqlx::Error) -> Self {
         Self {
             code: format!("db_error:{error}"),
+            message: Some(error.to_string()),
             transient: true,
         }
     }
@@ -177,14 +266,56 @@ async fn extract_interval(
     scope: &str,
     start: &str,
     end: &str,
+    expected_input_hash: Option<&str>,
 ) -> Result<ExtractCommitted, ExtractFailure> {
+    // 0. Execution-time version recheck (§4.1.4, attempt 3): the job carries
+    //    the discovery input hash it was queued with. Recompute the CURRENT
+    //    active member hash for the same scope+window and refuse on mismatch
+    //    — a job queued against a superseded version must not spend model
+    //    budget on the new version's inputs (the replacement is discovered
+    //    and queued on its own). Without a queued hash (backfill callers),
+    //    fall back to requiring at least one active interval in the window.
+    let (start_ts, end_ts) = parse_window(start, end)?;
+    match expected_input_hash {
+        Some(expected) => {
+            let members = load_window_member_bounds(db, start_ts, end_ts)
+                .await
+                .map_err(|e| ExtractFailure {
+                    code: e.code,
+                    message: Some(e.message),
+                    transient: e.retryable,
+                })?;
+            let current = discovery_input_hash(scope, &members);
+            if current != expected {
+                return Err(ExtractFailure::with_message(
+                    "superseded_input",
+                    "排队的输入版本已被台账重建取代，任务作废；新版本会在后续发现中重新入队",
+                ));
+            }
+        }
+        None => {
+            if !db
+                .activity_window_has_active_intervals(start_ts, end_ts)
+                .await
+                .map_err(ExtractFailure::db)?
+            {
+                return Err(ExtractFailure::with_message(
+                    "superseded_window",
+                    "窗口内的活动已被更新的台账版本覆盖，任务作废；新版本会在后续发现中重新入队",
+                ));
+            }
+        }
+    }
     // 1. Summary-first pack over the window; intervals without a summary
     //    degrade to the raw evidence pack inside the same prompt. Sources are
     //    registered on the fly — identity AND deletion dependencies stay on
     //    the raw evidence even when the prompt shows only summaries.
     let pack = build_summary_pack(db, start, end).await?;
     if pack.sources.is_empty() {
-        return Err(ExtractFailure::permanent("no_evidence"));
+        return Err(ExtractFailure::with_message(
+            "no_evidence",
+            "窗口内没有可引用的证据行（原始内容可能已被保留策略删除或为空）",
+        ));
     }
 
     // 2. Input identity comes from the ACTUAL sources — must match the job
@@ -511,7 +642,7 @@ async fn load_window_intervals(
     let rows: Vec<(i64, String, String, Option<String>, String, Option<String>, Option<String>, Option<String>)> =
         sqlx::query_as(
             "SELECT i.id, i.start_at, i.end_at, t.app_name, t.title, s.summary, s.keywords, s.evidence_refs \
-             FROM activity_intervals i \
+             FROM activity_intervals_active i \
              JOIN activity_tasks t ON t.id = i.task_id \
              LEFT JOIN activity_interval_summaries s ON s.interval_id = i.id \
              WHERE i.start_at >= ?1 AND i.start_at < ?2 \
@@ -550,7 +681,7 @@ async fn load_retention_lines(
     let rows: Vec<(i64, String, i64, i64, Option<String>)> = sqlx::query_as(
         "SELECT r.interval_id, r.source_type, r.kept, r.dropped, r.drop_reason \
          FROM activity_interval_retention r \
-         JOIN activity_intervals i ON i.id = r.interval_id \
+         JOIN activity_intervals_active i ON i.id = r.interval_id \
          WHERE i.start_at >= ?1 AND i.start_at < ?2 \
          ORDER BY r.interval_id, r.source_type",
     )
@@ -591,7 +722,7 @@ async fn load_and_register_window_rows(
                 COALESCE(sf.app_name, ue.app_name, ef.app_name), \
                 COALESCE(sf.window_name, ue.window_title, ef.window_name) \
          FROM activity_evidence ae \
-         JOIN activity_intervals i ON i.id = ae.interval_id \
+         JOIN activity_intervals_active i ON i.id = ae.interval_id \
          LEFT JOIN frames sf ON ae.source_type = 'frame' AND sf.id = ae.source_id \
          LEFT JOIN ui_events ue ON ae.source_type = 'ui_event' AND ue.id = ae.source_id \
          LEFT JOIN frames ef ON ue.frame_id = ef.id \
@@ -810,6 +941,7 @@ async fn call_model(
         .await
         .map_err(|e| ExtractFailure {
             code: e.code,
+            message: Some(e.message),
             transient: true,
         })
 }
@@ -974,6 +1106,7 @@ fn suppressed_source_marker(_: KnowledgeSourceInput) {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::activity_ledger::ACTIVITY_LEDGER_PRODUCER;
     use crate::knowledge::executor::{KnowledgeModelExecutor, ModelIdentity};
     use screenpipe_config::DbConfig;
     use screenpipe_db::{ActivityEvidenceDraft, ActivityIntervalDraft, ActivityTaskDraft};
@@ -1281,6 +1414,450 @@ mod tests {
         interval_id
     }
 
+    /// One final interval with no evidence rows at all (settle grace
+    /// bypassed by past timestamps).
+    async fn seed_interval_without_evidence(
+        db: &DatabaseManager,
+        interval_key: &str,
+        start_at: &str,
+        end_at: &str,
+    ) -> i64 {
+        let parent = ActivityTaskDraft {
+            task_key: format!("{interval_key}-parent"),
+            parent_task_key: None,
+            kind: "category".into(),
+            title: "Browser".into(),
+            app_name: Some("Arc".into()),
+            confidence: 0.8,
+        };
+        let task = ActivityTaskDraft {
+            task_key: format!("{interval_key}-task"),
+            parent_task_key: Some(format!("{interval_key}-parent")),
+            kind: "task".into(),
+            title: "Empty".into(),
+            app_name: Some("Arc".into()),
+            confidence: 0.8,
+        };
+        let interval = ActivityIntervalDraft {
+            interval_key: interval_key.to_string(),
+            task_key: format!("{interval_key}-task"),
+            start_at: at(start_at),
+            end_at: at(end_at),
+            state: "final".into(),
+            confidence: 0.8,
+            actions: Vec::new(),
+            evidence: Vec::new(),
+            retention: HashMap::new(),
+        };
+        db.reconcile_activity_ledger(
+            ACTIVITY_LEDGER_PRODUCER,
+            at(start_at),
+            at(end_at),
+            &[parent, task],
+            &[interval],
+        )
+        .await
+        .unwrap();
+        sqlx::query_scalar("SELECT id FROM activity_intervals WHERE interval_key = ?1")
+            .bind(interval_key)
+            .fetch_one(&db.pool)
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn discovery_prescreens_unsettled_and_evidence_free_intervals() {
+        let db = test_db().await;
+        // One boundary-complete rebuild of the same producer over the whole
+        // scan window, carrying all three variants:
+        // - eligible: settled + evidence (the only eligible target)
+        // - hollow: settled but evidence-free (§4.1.4 pre-screen)
+        // - fresh: evidence but still inside the settle grace
+        let start = Utc::now() - chrono::Duration::minutes(20);
+        let end = Utc::now() - chrono::Duration::minutes(1);
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events \
+             (timestamp, relative_ms, event_type, app_name, window_title, element_value) \
+             VALUES (?1, 0, 'click', 'Arc', 'Pull request', 'Clicked Reply on Ticket 42') \
+             RETURNING id",
+        )
+        .bind(start.to_rfc3339())
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        let parent = ActivityTaskDraft {
+            task_key: "multi-parent".into(),
+            parent_task_key: None,
+            kind: "category".into(),
+            title: "Browser".into(),
+            app_name: Some("Arc".into()),
+            confidence: 0.8,
+        };
+        let task = ActivityTaskDraft {
+            task_key: "multi-task".into(),
+            parent_task_key: Some("multi-parent".into()),
+            kind: "task".into(),
+            title: "Ticket 42".into(),
+            app_name: Some("Arc".into()),
+            confidence: 0.8,
+        };
+        let evidence = vec![ActivityEvidenceDraft {
+            source_type: "ui_event".into(),
+            source_id,
+            occurred_at: start,
+            action_key: None,
+        }];
+        let mut eligible = ActivityIntervalDraft {
+            interval_key: "eligible".into(),
+            task_key: "multi-task".into(),
+            start_at: start,
+            end_at: Utc::now() - chrono::Duration::minutes(10),
+            state: "final".into(),
+            confidence: 0.8,
+            actions: Vec::new(),
+            evidence: evidence.clone(),
+            retention: HashMap::from([("ui_event".to_string(), (0, None))]),
+        };
+        let hollow = ActivityIntervalDraft {
+            interval_key: "hollow".into(),
+            task_key: "multi-task".into(),
+            start_at: Utc::now() - chrono::Duration::minutes(9),
+            end_at: Utc::now() - chrono::Duration::minutes(8),
+            state: "final".into(),
+            confidence: 0.8,
+            actions: Vec::new(),
+            evidence: Vec::new(),
+            retention: HashMap::new(),
+        };
+        let fresh = ActivityIntervalDraft {
+            interval_key: "fresh".into(),
+            task_key: "multi-task".into(),
+            start_at: Utc::now() - chrono::Duration::minutes(4),
+            end_at: Utc::now() - chrono::Duration::minutes(1),
+            state: "final".into(),
+            confidence: 0.8,
+            actions: Vec::new(),
+            evidence: evidence.clone(),
+            retention: HashMap::from([("ui_event".to_string(), (0, None))]),
+        };
+        db.reconcile_activity_ledger(
+            ACTIVITY_LEDGER_PRODUCER,
+            start,
+            end,
+            &[parent, task],
+            &[eligible, hollow, fresh],
+        )
+        .await
+        .unwrap();
+
+        let created = discover_and_enqueue(&db, Utc::now() - chrono::Duration::hours(26))
+            .await
+            .unwrap();
+        assert_eq!(
+            created, 1,
+            "only the settled, evidence-bearing interval gets a job"
+        );
+        let jobs: Vec<(String, Option<String>)> =
+            sqlx::query_as("SELECT kind, scope_key FROM knowledge_jobs")
+                .fetch_all(&db.pool)
+                .await
+                .unwrap();
+        assert_eq!(jobs.len(), 1);
+        assert_eq!(jobs[0].0, "extract");
+    }
+
+    #[tokio::test]
+    async fn new_activity_in_the_window_reenqueues_extraction() {
+        let db = test_db().await;
+        seed_interval(
+            &db,
+            "solo",
+            "2026-08-17T09:00:00Z",
+            "2026-08-17T09:05:00Z",
+            "在终端运行 cargo test 验证改动",
+            None,
+        )
+        .await;
+        let created = discover_and_enqueue(&db, at("2026-08-17T09:00:00Z"))
+            .await
+            .unwrap();
+        assert_eq!(created, 1);
+
+        // Drive the job to a terminal state: identical inputs must stay
+        // blocked (§4.1.1) even though discovery keeps seeing the interval.
+        let claimed = db
+            .knowledge_claim_next_job(&[KnowledgeJobKind::Extract], "w", 30_000)
+            .await
+            .unwrap()
+            .unwrap();
+        db.knowledge_complete_job(claimed.id, &claimed.lease_token, None, None)
+            .await
+            .unwrap();
+        let created = discover_and_enqueue(&db, at("2026-08-17T09:00:00Z"))
+            .await
+            .unwrap();
+        assert_eq!(
+            created, 0,
+            "a succeeded job blocks re-enqueueing for identical inputs"
+        );
+
+        // A new activity lands inside the same window: the member set changes
+        // → the hash changes → extraction is allowed again (§4.1.2), and the
+        // newcomer gets its own job for its own (narrower) window. The
+        // rebuild covers the whole window boundary-completely.
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let late_source: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events \
+             (timestamp, relative_ms, event_type, app_name, window_title, element_value) \
+             VALUES ('2026-08-17T09:01:30Z', 0, 'text', 'Arc', 'Pull request', '补充了新的证据内容') \
+             RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        let late_evidence = vec![ActivityEvidenceDraft {
+            source_type: "ui_event".into(),
+            source_id: late_source,
+            occurred_at: at("2026-08-17T09:01:30Z"),
+            action_key: None,
+        }];
+        let solo_task = ActivityTaskDraft {
+            task_key: "solo-task".into(),
+            parent_task_key: Some("solo-parent".into()),
+            kind: "task".into(),
+            title: "Ticket 42".into(),
+            app_name: Some("Arc".into()),
+            confidence: 0.8,
+        };
+        let solo_parent = ActivityTaskDraft {
+            task_key: "solo-parent".into(),
+            parent_task_key: None,
+            kind: "category".into(),
+            title: "Browser".into(),
+            app_name: Some("Arc".into()),
+            confidence: 0.8,
+        };
+        let mut solo = ActivityIntervalDraft {
+            interval_key: "solo".into(),
+            task_key: "solo-task".into(),
+            start_at: at("2026-08-17T09:00:00Z"),
+            end_at: at("2026-08-17T09:05:00Z"),
+            state: "final".into(),
+            confidence: 0.8,
+            actions: Vec::new(),
+            evidence: Vec::new(),
+            retention: HashMap::new(),
+        };
+        // Keep solo's original evidence so its member identity is stable.
+        let solo_id: i64 =
+            sqlx::query_scalar("SELECT id FROM activity_intervals WHERE interval_key = 'solo'")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        let (orig_source, orig_at): (i64, String) = sqlx::query_as(
+            "SELECT source_id, occurred_at FROM activity_evidence WHERE interval_id = ?1",
+        )
+        .bind(solo_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        solo.evidence = vec![ActivityEvidenceDraft {
+            source_type: "ui_event".into(),
+            source_id: orig_source,
+            occurred_at: DateTime::parse_from_rfc3339(&orig_at)
+                .map(|t| t.with_timezone(&Utc))
+                .unwrap(),
+            action_key: None,
+        }];
+        let late = ActivityIntervalDraft {
+            interval_key: "late-arrival".into(),
+            task_key: "solo-task".into(),
+            start_at: at("2026-08-17T09:01:00Z"),
+            end_at: at("2026-08-17T09:02:00Z"),
+            state: "final".into(),
+            confidence: 0.8,
+            actions: Vec::new(),
+            evidence: late_evidence,
+            retention: HashMap::from([("ui_event".to_string(), (0, None))]),
+        };
+        db.reconcile_activity_ledger(
+            ACTIVITY_LEDGER_PRODUCER,
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:05:00Z"),
+            &[solo_parent, solo_task],
+            &[solo, late],
+        )
+        .await
+        .unwrap();
+        let created = discover_and_enqueue(&db, at("2026-08-17T09:00:00Z"))
+            .await
+            .unwrap();
+        assert_eq!(
+            created, 2,
+            "widened window re-enqueues the original scope and queues the newcomer"
+        );
+    }
+
+    /// §4.1.4 attempt-3 counterexample: a job queued against the v1 ledger
+    /// version must NOT run the model after a v2 rebuild replaced the window
+    /// (the window still has active intervals — the OLD exists-check passed).
+    /// The queued discovery hash must match the current active inputs; the
+    /// replacement job runs normally.
+    #[tokio::test]
+    async fn stale_version_job_skips_the_model_and_new_version_runs() {
+        let db = test_db().await;
+        let (start, end) = ("2026-08-17T09:00:00Z", "2026-08-17T09:05:00Z");
+        seed_interval(
+            &db,
+            "v1-interval",
+            start,
+            end,
+            "在终端运行 cargo test 验证改动",
+            None,
+        )
+        .await;
+        let created = discover_and_enqueue(&db, at(start)).await.unwrap();
+        assert_eq!(created, 1);
+        let h1: String = sqlx::query_scalar(
+            "SELECT input_hash FROM knowledge_jobs ORDER BY id LIMIT 1",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+
+        // Rebuild the same window under v2: a new interval id becomes the
+        // active version.
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let v2_source: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events \
+             (timestamp, relative_ms, event_type, app_name, window_title, element_value) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'text', 'Arc', 'Pull request', 'v2 重建后的新证据') \
+             RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        let v2_parent = ActivityTaskDraft {
+            task_key: "v2-parent".into(),
+            parent_task_key: None,
+            kind: "category".into(),
+            title: "Browser".into(),
+            app_name: Some("Arc".into()),
+            confidence: 0.8,
+        };
+        let v2_task = ActivityTaskDraft {
+            task_key: "v2-task".into(),
+            parent_task_key: Some("v2-parent".into()),
+            kind: "task".into(),
+            title: "Ticket 42".into(),
+            app_name: Some("Arc".into()),
+            confidence: 0.8,
+        };
+        let v2_interval = ActivityIntervalDraft {
+            interval_key: "v2-interval".into(),
+            task_key: "v2-task".into(),
+            start_at: at(start),
+            end_at: at(end),
+            state: "final".into(),
+            confidence: 0.8,
+            actions: Vec::new(),
+            evidence: vec![ActivityEvidenceDraft {
+                source_type: "ui_event".into(),
+                source_id: v2_source,
+                occurred_at: at("2026-08-17T09:01:00Z"),
+                action_key: None,
+            }],
+            retention: HashMap::from([("ui_event".to_string(), (0, None))]),
+        };
+        db.reconcile_activity_ledger(
+            "deterministic-v2",
+            at(start),
+            at(end),
+            &[v2_parent, v2_task],
+            &[v2_interval],
+        )
+        .await
+        .unwrap();
+
+        // The replacement discovery enqueues a NEW hash for the new version.
+        let created = discover_and_enqueue(&db, at(start)).await.unwrap();
+        assert_eq!(created, 1, "the active v2 interval is discovered");
+        let h2: String = sqlx::query_scalar(
+            "SELECT input_hash FROM knowledge_jobs ORDER BY id DESC LIMIT 1",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_ne!(h1, h2, "the version change must change the input hash");
+
+        let scope = "Arc|ticket 42";
+        // The STALE job: hash mismatch → refused before any model call.
+        let stale_executor = ScriptedExecutor::new(vec![]);
+        let failure = extract_interval(
+            &db,
+            &executor_of(&stale_executor),
+            CancellationToken::new(),
+            scope,
+            start,
+            end,
+            Some(&h1),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(failure.code, "superseded_input");
+        assert!(!failure.transient);
+        assert_eq!(stale_executor.call_count(), 0, "zero model calls on stale input");
+
+        // The replacement job runs normally with exactly one call.
+        let fresh_executor = ScriptedExecutor::new(vec![Ok(json!({
+            "work_unit": {"schema_version": 2, "task": {"title": "v2 提取"}},
+            "recall": [],
+        })
+        .to_string())]);
+        let committed = extract_interval(
+            &db,
+            &executor_of(&fresh_executor),
+            CancellationToken::new(),
+            scope,
+            start,
+            end,
+            Some(&h2),
+        )
+        .await
+        .unwrap();
+        assert_eq!(fresh_executor.call_count(), 1);
+        assert!(!committed.unit_id.is_empty());
+    }
+
+    #[test]
+    fn discovery_input_hash_tracks_member_activities() {
+        let scope = "arc|ticket 42";
+        let a = vec![(7i64, "2026-08-17T09:00:00Z".into(), "2026-08-17T09:05:00Z".into())];
+        let same_members_reordered = vec![a[0].clone()];
+        let with_newcomer = vec![
+            a[0].clone(),
+            (9i64, "2026-08-17T09:01:00Z".into(), "2026-08-17T09:02:00Z".into()),
+        ];
+        assert_eq!(
+            discovery_input_hash(scope, &a),
+            discovery_input_hash(scope, &same_members_reordered)
+        );
+        assert_ne!(
+            discovery_input_hash(scope, &a),
+            discovery_input_hash(scope, &with_newcomer),
+            "a new activity in the window must change the hash"
+        );
+        assert_ne!(
+            discovery_input_hash(scope, &a),
+            discovery_input_hash("arc|other", &a),
+            "scope participates in the hash"
+        );
+    }
+
     #[tokio::test]
     async fn summary_pack_lists_summaries_and_cites_evidence() {
         let db = test_db().await;
@@ -1409,6 +1986,7 @@ mod tests {
             "arc|ticket 42",
             "2026-08-17T09:00:00Z",
             "2026-08-17T09:05:00Z",
+            None,
         )
         .await
         .unwrap();
@@ -1480,6 +2058,7 @@ mod tests {
             "arc|ticket 42",
             "2026-08-17T09:00:00Z",
             "2026-08-17T09:05:00Z",
+            None,
         )
         .await
         .unwrap();
@@ -1521,6 +2100,7 @@ mod tests {
                 "arc|ticket 42",
                 "2026-08-17T09:00:00Z",
                 "2026-08-17T09:05:00Z",
+                None,
             )
             .await
             .unwrap_err();

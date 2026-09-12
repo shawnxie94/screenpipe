@@ -44,14 +44,27 @@ pub struct KnowledgeJobRow {
     pub model_calls: i32,
     pub batch_id: Option<String>,
     pub last_error_code: Option<String>,
+    pub last_error_message: Option<String>,
     pub result_ref: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
 
 impl DatabaseManager {
-    /// Enqueue a job. When an active job with the same (kind, input_hash)
-    /// already exists, its id is returned and nothing is duplicated.
+    /// Enqueue a job. Dedup identity is `(kind, input_hash)` across EVERY
+    /// non-cancelled state — pending, running, paused, and the terminal
+    /// succeeded/failed (the same identity `knowledge_jobs`'s
+    /// `UNIQUE(kind, input_hash)` enforces at the storage layer; every hash
+    /// family embeds its scope, so scope needs no separate binding). A
+    /// finished job with the same inputs therefore blocks re-enqueueing:
+    /// **failure is a terminal state, not a retry loop**. A failed job is
+    /// only ever revisited when the input truly changes (a different
+    /// `input_hash` creates a new job) or when a user retries it explicitly
+    /// via `knowledge_retry_job`; handle terminal failures by hand.
+    /// `cancelled` deliberately does not block: cancellation means the scope
+    /// or its inputs were invalidated, so fresh work must be possible — the
+    /// cancelled row still owns the unique slot until pruned, so its comeback
+    /// goes through `knowledge_retry_job` rather than a second row.
     #[allow(clippy::too_many_arguments)]
     pub async fn knowledge_enqueue_job(
         &self,
@@ -66,7 +79,7 @@ impl DatabaseManager {
         if let Some(hash) = input_hash {
             let existing: Option<i64> = sqlx::query_scalar(
                 "SELECT id FROM knowledge_jobs WHERE kind = ?1 AND input_hash = ?2 \
-                 AND state IN ('pending', 'running', 'paused')",
+                 AND state IN ('pending', 'running', 'paused', 'succeeded', 'failed')",
             )
             .bind(kind.as_str())
             .bind(hash)
@@ -499,87 +512,97 @@ impl DatabaseManager {
         Ok(res.rows_affected() > 0)
     }
 
-    /// Record a failure. Transient failures requeue with backoff until
-    /// `max_attempts` is exhausted; `permanent` failures stop immediately.
-    /// Attempts/model call counters never reset on their own.
+    /// Record a failure. Owner-aware policy (plan §4.1.1, attempt 3):
+    /// knowledge MODEL kinds (extract/summarize/compile/backfill/answer) fail
+    /// TERMINALLY on the first failure — transient or permanent, model error
+    /// or step timeout — and their public run lands in `failed` in the same
+    /// transaction; nothing automatically re-queues model work and
+    /// `knowledge_retry_job` is the only path back (the recorded
+    /// code/message stay visible after a manual retry). Non-knowledge owners
+    /// keep their original bounded policy: transient failures requeue with
+    /// backoff until `max_attempts` is exhausted, permanent ones terminate —
+    /// unchanged, and they never call the product model. `error_message` is
+    /// persisted to `last_error_message` so terminal failures are actionable
+    /// without log access.
     pub async fn knowledge_fail_job(
         &self,
         job_id: i64,
         lease_token: &str,
         error_code: &str,
+        error_message: Option<&str>,
         transient: bool,
         backoff_ms: u64,
     ) -> Result<bool, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let now = super::types::format_ts(super::types::now_utc());
-        let (attempts, max_attempts): (i32, i32) = sqlx::query_as(
-            "SELECT attempts, max_attempts FROM knowledge_jobs WHERE id = ?1 AND lease_token = ?2 \
-             AND state = 'running'",
+        let (kind_str, attempts, max_attempts): (String, i32, i32) = sqlx::query_as(
+            "SELECT kind, attempts, max_attempts FROM knowledge_jobs \
+             WHERE id = ?1 AND lease_token = ?2 AND state = 'running'",
         )
         .bind(job_id)
         .bind(lease_token)
         .fetch_optional(&mut **tx.conn())
         .await?
-        .unwrap_or((0, 0));
-        if max_attempts == 0 && attempts == 0 {
+        .unwrap_or((String::new(), 0, 0));
+        if kind_str.is_empty() {
             tx.commit().await?;
             return Ok(false);
         }
-        let exhausted = !transient || attempts + 1 >= max_attempts;
-        let task_state = if exhausted { "failed" } else { "queued" };
-        let task_not_before = if exhausted {
-            None
-        } else {
+        let model_kind = matches!(
+            super::types::KnowledgeJobKind::from_str(&kind_str),
+            Some(
+                super::types::KnowledgeJobKind::Extract
+                    | super::types::KnowledgeJobKind::Summarize
+                    | super::types::KnowledgeJobKind::Compile
+                    | super::types::KnowledgeJobKind::BackfillExtract
+                    | super::types::KnowledgeJobKind::Answer
+            )
+        );
+        let requeue = !model_kind
+            && transient
+            && attempts + 1 < max_attempts;
+        let knowledge_state = if requeue { "pending" } else { "failed" };
+        let task_not_before = if requeue {
             Some(super::types::format_ts(
                 super::types::now_utc() + chrono::Duration::milliseconds(backoff_ms as i64),
             ))
-        };
-        let knowledge_changed = if exhausted {
-            sqlx::query(
-                "UPDATE knowledge_jobs SET state = 'failed', attempts = attempts + 1, \
-                 last_error_code = ?1, lease_token = NULL, lease_expires_at = NULL, \
-                 updated_at = ?2 WHERE id = ?3 AND lease_token = ?4 AND state = 'running'",
-            )
-            .bind(error_code)
-            .bind(&now)
-            .bind(job_id)
-            .bind(lease_token)
-            .execute(&mut **tx.conn())
-            .await?
-            .rows_affected()
         } else {
-            sqlx::query(
-                "UPDATE knowledge_jobs SET state = 'pending', attempts = attempts + 1, \
-                 last_error_code = ?1, not_before = ?2, lease_token = NULL, \
-                 lease_expires_at = NULL, updated_at = ?3 WHERE id = ?4 AND lease_token = ?5 \
-                 AND state = 'running'",
-            )
-            .bind(error_code)
-            .bind(task_not_before.as_deref())
-            .bind(&now)
-            .bind(job_id)
-            .bind(lease_token)
-            .execute(&mut **tx.conn())
-            .await?
-            .rows_affected()
+            None
         };
+        let knowledge_changed = sqlx::query(
+            "UPDATE knowledge_jobs SET state = ?1, attempts = attempts + 1, \
+             last_error_code = ?2, last_error_message = ?3, not_before = ?4, \
+             lease_token = NULL, lease_expires_at = NULL, updated_at = ?5 \
+             WHERE id = ?6 AND lease_token = ?7 AND state = 'running'",
+        )
+        .bind(knowledge_state)
+        .bind(error_code)
+        .bind(error_message)
+        .bind(task_not_before.as_deref())
+        .bind(&now)
+        .bind(job_id)
+        .bind(lease_token)
+        .execute(&mut **tx.conn())
+        .await?
+        .rows_affected();
         if knowledge_changed == 0 {
             tx.commit().await?;
             return Ok(false);
         }
+        let run_state = if requeue { "queued" } else { "failed" };
         let run_id = format!("brain-job-{job_id}");
         sqlx::query("UPDATE task_runs SET state=?1,error_code=?2,not_before=COALESCE(?3,not_before),lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL,revision=revision+1,updated_at=?4 WHERE run_id=?5 AND lease_token=?6 AND state IN ('running','cancelling')")
-            .bind(task_state).bind(error_code).bind(task_not_before.as_deref()).bind(&now).bind(&run_id).bind(lease_token)
+            .bind(run_state).bind(error_code).bind(task_not_before.as_deref()).bind(&now).bind(&run_id).bind(lease_token)
             .execute(&mut **tx.conn()).await?;
         sqlx::query("UPDATE task_attempts SET finished_at=?1,outcome=?2,retry_reason=?3,lease_token=NULL WHERE run_id=?4 AND lease_token=?5 AND finished_at IS NULL")
-            .bind(&now).bind(task_state).bind(error_code).bind(&run_id).bind(lease_token).execute(&mut **tx.conn()).await?;
+            .bind(&now).bind(run_state).bind(error_code).bind(&run_id).bind(lease_token).execute(&mut **tx.conn()).await?;
         let seq: i64 =
             sqlx::query_scalar("SELECT COALESCE(MAX(seq),0)+1 FROM task_events WHERE run_id=?1")
                 .bind(&run_id)
                 .fetch_one(&mut **tx.conn())
                 .await?;
         sqlx::query("INSERT INTO task_events(run_id,seq,phase,event_type,safe_metadata) VALUES (?1,?2,?3,'run_failed',?4)")
-            .bind(&run_id).bind(seq).bind(task_state).bind(serde_json::json!({"error_code":error_code,"transient":transient}).to_string()).execute(&mut **tx.conn()).await?;
+            .bind(&run_id).bind(seq).bind(run_state).bind(serde_json::json!({"error_code":error_code,"transient":transient,"auto_retry":requeue}).to_string()).execute(&mut **tx.conn()).await?;
         tx.commit().await?;
         Ok(true)
     }
@@ -733,42 +756,92 @@ impl DatabaseManager {
         Ok(res.rows_affected() > 0)
     }
 
-    /// Recover leases whose worker died: expired running jobs go back to
-    /// pending with their attempt count preserved.
+    /// Recover leases whose worker died, following the owner mapping
+    /// (§4.1.1, attempt 3): knowledge MODEL kinds (extract/summarize/
+    /// compile/backfill/answer) go to a terminal `failed` — a lost lease
+    /// means an unknown outcome and re-running the model without the user
+    /// asking is exactly what must not happen; the cleared lease token keeps
+    /// the stale worker fenced (a commit requires a matching token on a
+    /// still-running row) and `knowledge_retry_job` stays the manual way
+    /// back. Non-knowledge owners (office sync, internal maintenance) keep
+    /// the original requeue-on-expiry pair — job `pending` AND public run
+    /// `queued` in one transaction — so the stores stay consistent no matter
+    /// whether `task_reap_expired` or this method runs first.
     pub async fn knowledge_reap_expired_leases(&self) -> Result<u64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let now = super::types::format_ts(super::types::now_utc());
-        let expired: Vec<(i64, String)> = sqlx::query_as(
-            "SELECT id, lease_token FROM knowledge_jobs WHERE state='running' AND lease_expires_at IS NOT NULL AND lease_expires_at < ?1",
+        let expired: Vec<(i64, String, String)> = sqlx::query_as(
+            "SELECT id, lease_token, kind FROM knowledge_jobs \
+             WHERE state='running' AND lease_expires_at IS NOT NULL AND lease_expires_at < ?1",
         )
         .bind(&now)
         .fetch_all(&mut **tx.conn())
         .await?;
-        let res = sqlx::query(
-            "UPDATE knowledge_jobs SET state = 'pending', lease_token = NULL, \
-             lease_expires_at = NULL, updated_at = ?1 \
-             WHERE state = 'running' AND lease_expires_at IS NOT NULL AND lease_expires_at < ?1",
-        )
-        .bind(&now)
-        .execute(&mut **tx.conn())
-        .await?;
-        for (id, token) in &expired {
+        let mut reaped = 0u64;
+        for (id, token, kind_str) in expired {
+            let model_kind = matches!(
+                super::types::KnowledgeJobKind::from_str(&kind_str),
+                Some(
+                    super::types::KnowledgeJobKind::Extract
+                        | super::types::KnowledgeJobKind::Summarize
+                        | super::types::KnowledgeJobKind::Compile
+                        | super::types::KnowledgeJobKind::BackfillExtract
+                        | super::types::KnowledgeJobKind::Answer
+                )
+            );
+            let (job_state, run_state) = if model_kind {
+                ("failed", "failed")
+            } else {
+                ("pending", "queued")
+            };
+            let changed = sqlx::query(
+                "UPDATE knowledge_jobs SET state = ?1, \
+                 last_error_code = CASE WHEN ?2 THEN 'lease_expired' ELSE last_error_code END, \
+                 last_error_message = CASE WHEN ?2 \
+                   THEN '执行失联（lease 过期），已置为终态；如需重算请手动重试' \
+                   ELSE last_error_message END, \
+                 lease_token = NULL, lease_expires_at = NULL, updated_at = ?3 \
+                 WHERE id = ?4 AND state = 'running' AND lease_token = ?5",
+            )
+            .bind(job_state)
+            .bind(model_kind)
+            .bind(&now)
+            .bind(id)
+            .bind(&token)
+            .execute(&mut **tx.conn())
+            .await?
+            .rows_affected();
+            if changed == 0 {
+                continue;
+            }
+            reaped += 1;
             let run_id = format!("brain-job-{id}");
-            sqlx::query("UPDATE task_runs SET state='queued',lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL,revision=revision+1,updated_at=?1 WHERE run_id=?2 AND lease_token=?3 AND state='running'")
-                .bind(&now).bind(&run_id).bind(token).execute(&mut **tx.conn()).await?;
+            sqlx::query("UPDATE task_runs SET state=?1,error_code=?2,lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL,revision=revision+1,updated_at=?3 WHERE run_id=?4 AND lease_token=?5 AND state='running'")
+                .bind(run_state)
+                .bind("lease_expired")
+                .bind(&now)
+                .bind(&run_id)
+                .bind(&token)
+                .execute(&mut **tx.conn())
+                .await?;
             sqlx::query("UPDATE task_attempts SET finished_at=?1,outcome='lease_expired',lease_token=NULL WHERE run_id=?2 AND lease_token=?3 AND finished_at IS NULL")
-                .bind(&now).bind(&run_id).bind(token).execute(&mut **tx.conn()).await?;
+                .bind(&now).bind(&run_id).bind(&token).execute(&mut **tx.conn()).await?;
             let seq: i64 = sqlx::query_scalar(
                 "SELECT COALESCE(MAX(seq),0)+1 FROM task_events WHERE run_id=?1",
             )
             .bind(&run_id)
             .fetch_one(&mut **tx.conn())
             .await?;
-            sqlx::query("INSERT INTO task_events(run_id,seq,phase,event_type,safe_metadata) VALUES (?1,?2,'queued','lease_expired',?)")
-                .bind(&run_id).bind(seq).bind(serde_json::json!({"requeued":true}).to_string()).execute(&mut **tx.conn()).await?;
+            sqlx::query("INSERT INTO task_events(run_id,seq,phase,event_type,safe_metadata) VALUES (?1,?2,?3,'lease_expired',?)")
+                .bind(&run_id)
+                .bind(seq)
+                .bind(if model_kind { "failed" } else { "queued" })
+                .bind(serde_json::json!({"auto_retry": !model_kind}).to_string())
+                .execute(&mut **tx.conn())
+                .await?;
         }
         tx.commit().await?;
-        Ok(res.rows_affected())
+        Ok(reaped)
     }
 
     /// Cancel active jobs matching an input (deletion/scope change).
@@ -936,7 +1009,8 @@ impl DatabaseManager {
     pub async fn knowledge_get_job(&self, job_id: i64) -> Result<Option<KnowledgeJobRow>, SqlxError> {
         sqlx::query_as::<_, KnowledgeJobRow>(
             "SELECT id, kind, scope_key, input_hash, state, priority, attempts, model_calls, \
-             batch_id, last_error_code, result_ref, created_at, updated_at FROM knowledge_jobs WHERE id = ?1",
+             batch_id, last_error_code, last_error_message, result_ref, created_at, updated_at \
+             FROM knowledge_jobs WHERE id = ?1",
         )
         .bind(job_id)
         .fetch_optional(&self.pool)
@@ -951,7 +1025,8 @@ impl DatabaseManager {
     ) -> Result<Vec<KnowledgeJobRow>, SqlxError> {
         let mut sql = String::from(
             "SELECT id, kind, scope_key, input_hash, state, priority, attempts, model_calls, \
-             batch_id, last_error_code, result_ref, created_at, updated_at FROM knowledge_jobs WHERE 1=1",
+             batch_id, last_error_code, last_error_message, result_ref, created_at, updated_at \
+             FROM knowledge_jobs WHERE 1=1",
         );
         if state.is_some() {
             sql.push_str(" AND state = ?1");
@@ -990,13 +1065,18 @@ impl DatabaseManager {
         .await
     }
 
-    /// Keep terminal history bounded; never touches active jobs.
+    /// Keep terminal history bounded — but only for states that never gate
+    /// dedup: `succeeded` and `cancelled` rows may go, a `failed` row must
+    /// stay so its `(kind, input_hash)` keeps blocking automatic re-enqueue
+    /// after cleanup (§4.1.1: a failed input must not silently revive) and
+    /// so the human-review item stays visible. Failed rows leave only via a
+    /// manual retry (which flips them back into the active cycle).
     pub async fn knowledge_prune_terminal_jobs(&self, keep: u32) -> Result<u64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let res = sqlx::query(
-            "DELETE FROM knowledge_jobs WHERE state IN ('succeeded', 'failed', 'cancelled') \
+            "DELETE FROM knowledge_jobs WHERE state IN ('succeeded', 'cancelled') \
              AND id NOT IN (\
-             SELECT id FROM knowledge_jobs WHERE state IN ('succeeded', 'failed', 'cancelled') \
+             SELECT id FROM knowledge_jobs WHERE state IN ('succeeded', 'cancelled') \
              ORDER BY updated_at DESC LIMIT ?1)",
         )
         .bind(keep.clamp(10, 10000))

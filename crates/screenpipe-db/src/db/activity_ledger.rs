@@ -313,6 +313,76 @@ fn nonempty(value: Option<String>) -> Option<String> {
     value.filter(|value| !value.trim().is_empty())
 }
 
+// Active-version rule: every default read (list, stats, summary discovery,
+// WorkUnit evidence packs) goes through the `activity_intervals_active` view
+// created by 20260912102000_activity_ledger_active_versions.sql — the single
+// SQL source of truth for §4.4.4. Only deliberate by-id history reads bypass
+// it.
+
+/// Boundary-complete switch bounds for a coverage switch over
+/// `[start_text, end_text)` (§4.4.4, attempt 3): widen to the fixpoint of
+/// every interval that either is active-visible or belongs to the target
+/// producer and straddles an edge. Returns the final bounds and whether they
+/// grew. Runs on the caller's connection so the read happens inside the same
+/// transaction as the switch — no concurrent drift between expansion and
+/// commit. Non-convergence after 8 rounds is an error, never a partial
+/// switch.
+async fn expand_switch_bounds_tx(
+    conn: &mut sqlx::SqliteConnection,
+    target_producer: &str,
+    start_text: &str,
+    end_text: &str,
+) -> Result<(String, String, bool), SqlxError> {
+    let mut start = start_text.to_string();
+    let mut end = end_text.to_string();
+    let mut widened = false;
+    for _ in 0..8 {
+        let visible: Option<(Option<String>, Option<String>)> = sqlx::query_as(
+            r#"SELECT MIN(i.start_at), MAX(i.end_at)
+               FROM activity_intervals_active i
+               WHERE i.start_at < ?2 AND i.end_at > ?1
+                 AND (i.start_at < ?1 OR i.end_at > ?2)"#,
+        )
+        .bind(&start)
+        .bind(&end)
+        .fetch_optional(&mut *conn)
+        .await?;
+        let target: Option<(Option<String>, Option<String>)> = sqlx::query_as(
+            r#"SELECT MIN(start_at), MAX(end_at)
+               FROM activity_intervals
+               WHERE producer = ?3
+                 AND start_at < ?2 AND end_at > ?1
+                 AND (start_at < ?1 OR end_at > ?2)"#,
+        )
+        .bind(&start)
+        .bind(&end)
+        .bind(target_producer)
+        .fetch_optional(&mut *conn)
+        .await?;
+        let before = (start.clone(), end.clone());
+        for (min_start, max_end) in [visible, target].into_iter().flatten() {
+            if let Some(value) = min_start {
+                if value.as_str() < start.as_str() {
+                    start = value;
+                }
+            }
+            if let Some(value) = max_end {
+                if value.as_str() > end.as_str() {
+                    end = value;
+                }
+            }
+        }
+        if start == before.0 && end == before.1 {
+            return Ok((start, end, widened));
+        }
+        widened = true;
+    }
+    Err(SqlxError::Protocol(
+        "activity ledger coverage switch did not converge to boundary-complete bounds"
+            .to_string(),
+    ))
+}
+
 impl DatabaseManager {
     /// Load a bounded, metadata-only observation stream. Frames are sampled to
     /// one stable context row per ten seconds; raw AX JSON and transcript text
@@ -505,6 +575,25 @@ impl DatabaseManager {
         let range_start_text = range_start.to_rfc3339();
         let range_end_text = range_end.to_rfc3339();
         let mut tx = self.begin_immediate_with_retry().await?;
+
+        // §4.4.4 boundary guard (attempt 3), inside the same transaction as
+        // the switch: a rebuild range that bisects any active or same-producer
+        // segment must NOT switch coverage over a partial span. Callers widen
+        // via `activity_ledger_expand_range_to_active_bounds` and retry.
+        let (switch_start, switch_end, widened) = expand_switch_bounds_tx(
+            &mut **tx.conn(),
+            producer,
+            &range_start_text,
+            &range_end_text,
+        )
+        .await?;
+        if widened {
+            tx.rollback().await?;
+            return Err(SqlxError::Protocol(format!(
+                "activity ledger rebuild range is not boundary-complete; \
+                 rebuild over [{switch_start},{switch_end}) instead"
+            )));
+        }
 
         // Preserve the finalized prefix of a segment crossing the reconciliation
         // watermark, then replace everything beginning inside the trailing range.
@@ -744,8 +833,211 @@ impl DatabaseManager {
         .execute(&mut **tx.conn())
         .await?;
 
+        // Active-version switch (§4.4.4) commits in the SAME transaction as
+        // the rebuilt segments: a failed reconcile leaves the previous
+        // coverage — and therefore the previous active version — untouched.
+        // Same-producer rows fully inside the new range are superseded by the
+        // fresh row (keeps the tick from growing the table without bound);
+        // rows from other producers and any partially overlapping history are
+        // kept so explicit rollback and by-id history stay available.
+        sqlx::query(
+            "DELETE FROM activity_ledger_coverage \
+             WHERE producer = ?1 AND range_start >= ?2 AND range_end <= ?3",
+        )
+        .bind(producer)
+        .bind(&range_start_text)
+        .bind(&range_end_text)
+        .execute(&mut **tx.conn())
+        .await?;
+        sqlx::query(
+            "INSERT INTO activity_ledger_coverage (producer, range_start, range_end) \
+             VALUES (?1, ?2, ?3)",
+        )
+        .bind(producer)
+        .bind(&range_start_text)
+        .bind(&range_end_text)
+        .execute(&mut **tx.conn())
+        .await?;
+
         cleanup_orphaned_tasks(&mut tx).await?;
         tx.commit().await
+    }
+
+    /// Expand a rebuild range to boundary-complete switch bounds (§4.4.4):
+    /// the fixpoint of widening to every interval that either is currently
+    /// active-visible or belongs to `producer` and straddles an edge, so a
+    /// coverage switch can never leave one of their segments half-covered.
+    /// Errors when the fixpoint does not converge — no partial result.
+    pub async fn activity_ledger_expand_range_to_active_bounds(
+        &self,
+        start_at: DateTime<Utc>,
+        end_at: DateTime<Utc>,
+        producer: &str,
+    ) -> Result<(DateTime<Utc>, DateTime<Utc>), SqlxError> {
+        let mut conn = self.pool.acquire().await?;
+        let (start, end, _widened) = expand_switch_bounds_tx(
+            &mut conn,
+            producer,
+            &start_at.to_rfc3339(),
+            &end_at.to_rfc3339(),
+        )
+        .await?;
+        let parse = |value: &str| {
+            DateTime::parse_from_rfc3339(value)
+                .map(|value| value.with_timezone(&Utc))
+                .map_err(|error| SqlxError::Protocol(format!("bad coverage bound {value}: {error}")))
+        };
+        Ok((parse(&start)?, parse(&end)?))
+    }
+
+    /// Whether one interval is active-visible under the coverage rule.
+    /// Knowledge handlers re-check queued targets right before any model call
+    /// (§4.1.4): a version superseded after enqueueing must not spend model
+    /// budget.
+    pub async fn activity_interval_is_active(&self, interval_id: i64) -> Result<bool, SqlxError> {
+        let active: Option<i64> = sqlx::query_scalar(
+            "SELECT 1 FROM activity_intervals_active WHERE id = ?1",
+        )
+        .bind(interval_id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(active.is_some())
+    }
+
+    /// Whether the window still holds at least one active interval — the
+    /// extract handler's execution-time recheck for superseded jobs.
+    pub async fn activity_window_has_active_intervals(
+        &self,
+        start_at: DateTime<Utc>,
+        end_at: DateTime<Utc>,
+    ) -> Result<bool, SqlxError> {
+        let start = start_at.to_rfc3339();
+        let end = end_at.to_rfc3339();
+        let rows: i64 = sqlx::query_scalar(
+            r#"SELECT COUNT(*)
+               FROM activity_intervals_active
+               WHERE start_at >= ?1 AND start_at < ?2"#,
+        )
+        .bind(&start)
+        .bind(&end)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(rows > 0)
+    }
+
+    /// Explicit version switch (§4.4.4 rollback): makes `producer` the newest
+    /// authority for the requested range. The switch runs on
+    /// boundary-complete bounds (widened to the fixpoint of active and
+    /// target-producer straddlers, inside this transaction) and is refused
+    /// when the target producer's retained segments do not actually cover the
+    /// range — never activates into a hole. Recency is the coverage row id;
+    /// version strings are never compared lexically.
+    pub async fn activity_ledger_activate_version(
+        &self,
+        producer: &str,
+        range_start: DateTime<Utc>,
+        range_end: DateTime<Utc>,
+    ) -> Result<(), SqlxError> {
+        let mut tx = self.begin_immediate_with_retry().await?;
+        let (start_text, end_text, _widened) = expand_switch_bounds_tx(
+            &mut **tx.conn(),
+            producer,
+            &range_start.to_rfc3339(),
+            &range_end.to_rfc3339(),
+        )
+        .await?;
+        // Target coverage completeness: the retained segments of `producer`
+        // must tile [start_text, end_text) without gaps.
+        let segments: Vec<(String, String)> = sqlx::query_as(
+            "SELECT start_at, end_at FROM activity_intervals \
+             WHERE producer = ?1 AND end_at > ?2 AND start_at < ?3 \
+             ORDER BY start_at, end_at",
+        )
+        .bind(producer)
+        .bind(&start_text)
+        .bind(&end_text)
+        .fetch_all(&mut **tx.conn())
+        .await?;
+        let parse = |value: &str| {
+            DateTime::parse_from_rfc3339(value)
+                .map(|value| value.with_timezone(&Utc))
+                .map_err(|error| SqlxError::Protocol(format!("bad interval bound {value}: {error}")))
+        };
+        let mut cursor = parse(&start_text)?;
+        let switch_end = parse(&end_text)?;
+        for (start_at, end_at) in segments {
+            let segment_start = parse(&start_at)?;
+            let segment_end = parse(&end_at)?;
+            if segment_start > cursor {
+                return Err(SqlxError::Protocol(format!(
+                    "activity ledger coverage switch refused: producer {producer} \
+                     does not cover the requested range (gap before {start_at})"
+                )));
+            }
+            if segment_end > cursor {
+                cursor = segment_end;
+            }
+        }
+        if cursor < switch_end {
+            return Err(SqlxError::Protocol(format!(
+                "activity ledger coverage switch refused: producer {producer} \
+                 does not cover the requested range (ends at {cursor})"
+            )));
+        }
+        sqlx::query(
+            "INSERT INTO activity_ledger_coverage (producer, range_start, range_end) \
+             VALUES (?1, ?2, ?3)",
+        )
+        .bind(producer)
+        .bind(&start_text)
+        .bind(&end_text)
+        .execute(&mut **tx.conn())
+        .await?;
+        tx.commit().await
+    }
+
+    /// History exception: one interval by id regardless of active coverage.
+    /// Default lists/statistics/summaries use the active view; explicit
+    /// by-id lookups must keep superseded versions readable.
+    pub async fn activity_interval_record_by_id(
+        &self,
+        interval_id: i64,
+    ) -> Result<Option<ActivityIntervalRecord>, SqlxError> {
+        let row: Option<RawInterval> = sqlx::query_as(
+            r#"SELECT i.id, t.id AS task_id, t.parent_task_id, t.kind, t.title,
+                      parent.title AS parent_title, t.app_name,
+                      i.start_at, i.end_at, i.state, i.confidence, i.producer,
+                      (SELECT COUNT(*) FROM activity_evidence e
+                        WHERE e.interval_id = i.id) AS evidence_count
+               FROM activity_intervals i
+               JOIN activity_tasks t ON t.id = i.task_id
+               LEFT JOIN activity_tasks parent ON parent.id = t.parent_task_id
+               WHERE i.id = ?1"#,
+        )
+        .bind(interval_id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(|row| ActivityIntervalRecord {
+            id: row.id,
+            task_id: row.task_id,
+            parent_task_id: row.parent_task_id,
+            kind: row.kind,
+            title: row.title,
+            parent_title: row.parent_title,
+            app_name: row.app_name,
+            start_at: row.start_at,
+            end_at: row.end_at,
+            state: row.state,
+            confidence: row.confidence,
+            producer: row.producer,
+            evidence_count: row.evidence_count,
+            actions: Vec::new(),
+            evidence: Vec::new(),
+            summary: None,
+            keywords: None,
+            summary_band: None,
+            retention: Vec::new(),
+        }))
     }
 
     pub async fn list_activity_ledger(
@@ -763,7 +1055,7 @@ impl DatabaseManager {
                       i.start_at, i.end_at, i.state, i.confidence, i.producer,
                       (SELECT COUNT(*) FROM activity_evidence e
                         WHERE e.interval_id = i.id) AS evidence_count
-               FROM activity_intervals i
+               FROM activity_intervals_active i
                JOIN activity_tasks t ON t.id = i.task_id
                LEFT JOIN activity_tasks parent ON parent.id = t.parent_task_id
                WHERE i.end_at > ?1
@@ -938,7 +1230,7 @@ impl DatabaseManager {
                       (SELECT COUNT(*) FROM activity_evidence e
                         WHERE e.interval_id = i.id) AS evidence_count,
                       s.summary, s.keywords, s.band
-               FROM activity_intervals i
+               FROM activity_intervals_active i
                JOIN activity_tasks t ON t.id = i.task_id
                LEFT JOIN activity_tasks parent ON parent.id = t.parent_task_id
                LEFT JOIN activity_interval_summaries s ON s.interval_id = i.id
@@ -1023,6 +1315,31 @@ impl DatabaseManager {
         settled_before: Option<DateTime<Utc>>,
         limit: i64,
     ) -> Result<Vec<ActivityIntervalRecord>, SqlxError> {
+        self.activity_intervals_missing_summary_min_dwell(
+            start_at,
+            end_at,
+            settled_before,
+            limit,
+            0,
+        )
+        .await
+    }
+
+    /// Same candidate scan, excluding intervals shorter than
+    /// `min_dwell_seconds` — the ledger's short-segment floor (§4.4): absorbed
+    /// shorts vanish at build time, and isolated shorts (no adjacent same-object
+    /// main segment to absorb them) stay on the timeline but out of the summary
+    /// candidate pool. Every pre-screen (§4.1.4: `final` state, settled grace,
+    /// retained evidence, active version) is applied in SQL BEFORE the LIMIT,
+    /// so stale candidates cannot permanently occupy the candidate page.
+    pub async fn activity_intervals_missing_summary_min_dwell(
+        &self,
+        start_at: DateTime<Utc>,
+        end_at: DateTime<Utc>,
+        settled_before: Option<DateTime<Utc>>,
+        limit: i64,
+        min_dwell_seconds: i64,
+    ) -> Result<Vec<ActivityIntervalRecord>, SqlxError> {
         let start = start_at.to_rfc3339();
         let end = end_at.to_rfc3339();
         let settled = settled_before.map(|t| t.to_rfc3339());
@@ -1033,22 +1350,28 @@ impl DatabaseManager {
                       (SELECT COUNT(*) FROM activity_evidence e
                         WHERE e.interval_id = i.id) AS evidence_count,
                       NULL AS summary, NULL AS keywords, NULL AS band
-               FROM activity_intervals i
+               FROM activity_intervals_active i
                JOIN activity_tasks t ON t.id = i.task_id
                LEFT JOIN activity_tasks parent ON parent.id = t.parent_task_id
                WHERE i.end_at > ?1
                  AND i.start_at < ?2
                  AND (?3 IS NULL OR i.end_at <= ?3)
+                 AND (?4 <= 0 OR (julianday(i.end_at) - julianday(i.start_at)) * 86400.0 >= ?4)
+                 AND i.state = 'final'
+                 AND EXISTS (
+                     SELECT 1 FROM activity_evidence ae WHERE ae.interval_id = i.id
+                 )
                  AND NOT EXISTS (
                      SELECT 1 FROM activity_interval_summaries s
                      WHERE s.interval_id = i.id
                  )
                ORDER BY i.start_at, i.id
-               LIMIT ?4"#,
+               LIMIT ?5"#,
         )
         .bind(&start)
         .bind(&end)
         .bind(settled)
+        .bind(min_dwell_seconds)
         .bind(limit)
         .fetch_all(&self.pool)
         .await?;
@@ -1218,7 +1541,7 @@ impl DatabaseManager {
         let rows = sqlx::query_as::<_, (i64, String, i64, i64, Option<String>)>(
             r#"SELECT r.interval_id, r.source_type, r.kept, r.dropped, r.drop_reason
                FROM activity_interval_retention r
-               JOIN activity_intervals i ON i.id = r.interval_id
+               JOIN activity_intervals_active i ON i.id = r.interval_id
                WHERE i.end_at > ?1
                  AND i.start_at < ?2
                ORDER BY r.interval_id, r.source_type"#,
@@ -1991,6 +2314,829 @@ mod tests {
             .unwrap();
         assert_eq!(ready.len(), 1);
         assert_eq!(ready[0].end_at, "2026-08-17T09:05:00+00:00");
+    }
+
+    #[tokio::test]
+    async fn missing_summary_min_dwell_excludes_short_segments() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (tasks, mut intervals) = drafts(source_id);
+        // A main segment (5 minutes) and an isolated short blip (10 seconds):
+        // the dwell floor keeps only the main one as a summary candidate.
+        intervals[0].start_at = at("2026-08-17T09:00:00Z");
+        intervals[0].end_at = at("2026-08-17T09:05:00Z");
+        let mut short = intervals[0].clone();
+        short.interval_key = "short-blip".to_string();
+        short.start_at = at("2026-08-17T09:20:00Z");
+        short.end_at = at("2026-08-17T09:20:10Z");
+        intervals.push(short);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:30:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+
+        let ready = db
+            .activity_intervals_missing_summary_min_dwell(
+                at("2026-08-17T08:00:00Z"),
+                at("2026-08-17T10:00:00Z"),
+                None,
+                10,
+                30,
+            )
+            .await
+            .unwrap();
+        assert_eq!(ready.len(), 1, "the 10s blip must stay out of candidates");
+        assert_eq!(ready[0].start_at, "2026-08-17T09:00:00+00:00");
+
+        // The legacy wrapper (floor 0) still sees both intervals.
+        let all = db
+            .activity_intervals_missing_summary(
+                at("2026-08-17T08:00:00Z"),
+                at("2026-08-17T10:00:00Z"),
+                None,
+                10,
+            )
+            .await
+            .unwrap();
+        assert_eq!(all.len(), 2);
+    }
+
+    /// §4.4.4 attempt-3 counterexample (review JSON): rolling back HALF the
+    /// window must switch coverage on boundary-complete bounds. Direct
+    /// half-window activation previously left the preserved spanning v1
+    /// segment and the surviving v2 tail BOTH visible (overlap), or a hole.
+    #[tokio::test]
+    async fn partial_rollback_switches_full_boundaries_without_overlap() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-09-12T00:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        // v1: ONE spanning segment [00:00,00:10].
+        let (v1_tasks, mut v1_intervals) = drafts(source_id);
+        v1_intervals[0].interval_key = "v1-a".into();
+        v1_intervals[0].start_at = at("2026-09-12T00:00:00Z");
+        v1_intervals[0].end_at = at("2026-09-12T00:10:00Z");
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-09-12T00:00:00Z"),
+            at("2026-09-12T00:10:00Z"),
+            &v1_tasks,
+            &v1_intervals,
+        )
+        .await
+        .unwrap();
+
+        // v2 rebuilds the same window as TWO segments.
+        let (v2_tasks, v2_intervals) = two_segment_drafts(source_id, "v2");
+        db.reconcile_activity_ledger(
+            "deterministic-v2",
+            at("2026-09-12T00:00:00Z"),
+            at("2026-09-12T00:10:00Z"),
+            &v2_tasks,
+            &v2_intervals,
+        )
+        .await
+        .unwrap();
+        let before = db
+            .list_activity_ledger(
+                at("2026-09-11T23:00:00Z"),
+                at("2026-09-12T01:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(before.len(), 2, "v2 halves visible, v1 hidden");
+
+        // Roll back the FIRST half: must switch on the full [0,10] boundary.
+        db.activity_ledger_activate_version(
+            "deterministic-v1",
+            at("2026-09-12T00:00:00Z"),
+            at("2026-09-12T00:05:00Z"),
+        )
+        .await
+        .unwrap();
+        let list = db
+            .list_activity_ledger(
+                at("2026-09-11T23:00:00Z"),
+                at("2026-09-12T01:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1, "no overlap between versions: {list:?}");
+        assert_eq!(list[0].producer, "deterministic-v1");
+        assert_eq!(list[0].start_at, "2026-09-12T00:00:00+00:00");
+        assert_eq!(list[0].end_at, "2026-09-12T00:10:00+00:00");
+
+        // From the v2-active state, roll back the SECOND half: must widen to
+        // the same full boundary instead of leaving a hole in [5,10).
+        let (db2, _dir2) = test_db().await;
+        let mut tx = db2.begin_immediate_with_retry().await.unwrap();
+        let source_id2: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-09-12T00:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        let (v1_tasks, mut v1_intervals) = drafts(source_id2);
+        v1_intervals[0].interval_key = "v1-a".into();
+        v1_intervals[0].start_at = at("2026-09-12T00:00:00Z");
+        v1_intervals[0].end_at = at("2026-09-12T00:10:00Z");
+        db2.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-09-12T00:00:00Z"),
+            at("2026-09-12T00:10:00Z"),
+            &v1_tasks,
+            &v1_intervals,
+        )
+        .await
+        .unwrap();
+        let (v2_tasks, v2_intervals) = two_segment_drafts(source_id2, "v2");
+        db2.reconcile_activity_ledger(
+            "deterministic-v2",
+            at("2026-09-12T00:00:00Z"),
+            at("2026-09-12T00:10:00Z"),
+            &v2_tasks,
+            &v2_intervals,
+        )
+        .await
+        .unwrap();
+        db2.activity_ledger_activate_version(
+            "deterministic-v1",
+            at("2026-09-12T00:05:00Z"),
+            at("2026-09-12T00:10:00Z"),
+        )
+        .await
+        .unwrap();
+        let list = db2
+            .list_activity_ledger(
+                at("2026-09-11T23:00:00Z"),
+                at("2026-09-12T01:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1, "no hole: full boundary switch: {list:?}");
+        assert_eq!(list[0].producer, "deterministic-v1");
+        assert_eq!(list[0].start_at, "2026-09-12T00:00:00+00:00");
+        assert_eq!(list[0].end_at, "2026-09-12T00:10:00+00:00");
+    }
+
+    /// §4.4.4: activating a producer that does not actually cover the range
+    /// would punch a hole — it must be rejected and leave coverage untouched.
+    #[tokio::test]
+    async fn activate_rejects_target_coverage_holes() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-09-12T00:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        // v1 only ever covered [00:00,00:05].
+        let (v1_tasks, v1_intervals) = drafts(source_id);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-09-12T00:00:00Z"),
+            at("2026-09-12T00:05:00Z"),
+            &v1_tasks,
+            &v1_intervals,
+        )
+        .await
+        .unwrap();
+        // v2 covers [00:00,00:10].
+        let (v2_tasks, mut v2_intervals) = drafts(source_id);
+        v2_intervals[0].interval_key = "v2-a".into();
+        v2_intervals[0].end_at = at("2026-09-12T00:10:00Z");
+        db.reconcile_activity_ledger(
+            "deterministic-v2",
+            at("2026-09-12T00:00:00Z"),
+            at("2026-09-12T00:10:00Z"),
+            &v2_tasks,
+            &v2_intervals,
+        )
+        .await
+        .unwrap();
+
+        assert!(db
+            .activity_ledger_activate_version(
+                "deterministic-v1",
+                at("2026-09-12T00:00:00Z"),
+                at("2026-09-12T00:10:00Z"),
+            )
+            .await
+            .is_err(), "hole in target coverage must be rejected");
+        let list = db
+            .list_activity_ledger(
+                at("2026-09-11T23:00:00Z"),
+                at("2026-09-12T01:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].producer, "deterministic-v2", "coverage untouched");
+    }
+
+    /// §4.4.4 attempt-3: the DB reconcile entry itself guards boundaries — a
+    /// rebuild range that bisects an existing segment is rejected instead of
+    /// switching coverage over a partial span (engine pre-expansion alone is
+    /// not trustable).
+    #[tokio::test]
+    async fn reconcile_rejects_straddling_rebuild_range() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-09-12T00:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        let (v1_tasks, mut v1_intervals) = drafts(source_id);
+        v1_intervals[0].interval_key = "v1-a".into();
+        v1_intervals[0].start_at = at("2026-09-12T00:00:00Z");
+        v1_intervals[0].end_at = at("2026-09-12T00:30:00Z");
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-09-12T00:00:00Z"),
+            at("2026-09-12T00:30:00Z"),
+            &v1_tasks,
+            &v1_intervals,
+        )
+        .await
+        .unwrap();
+
+        // v2 rebuild over a range that bisects the v1 segment: rejected.
+        let (v2_tasks, v2_intervals) = drafts(source_id);
+        assert!(db
+            .reconcile_activity_ledger(
+                "deterministic-v2",
+                at("2026-09-12T00:10:00Z"),
+                at("2026-09-12T01:00:00Z"),
+                &v2_tasks,
+                &v2_intervals,
+            )
+            .await
+            .is_err());
+        let coverage: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM activity_ledger_coverage WHERE producer = 'deterministic-v2'",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(coverage, 0, "no coverage switch on a straddling rebuild");
+        let list = db
+            .list_activity_ledger(
+                at("2026-09-11T23:00:00Z"),
+                at("2026-09-12T02:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].producer, "deterministic-v1");
+
+        // Over the boundary-complete widened range the rebuild succeeds.
+        let (mut v2_tasks, mut v2_intervals) = drafts(source_id);
+        v2_intervals[0].interval_key = "v2-a".into();
+        v2_intervals[0].start_at = at("2026-09-12T00:00:00Z");
+        v2_intervals[0].end_at = at("2026-09-12T00:30:00Z");
+        db.reconcile_activity_ledger(
+            "deterministic-v2",
+            at("2026-09-12T00:00:00Z"),
+            at("2026-09-12T01:00:00Z"),
+            &v2_tasks,
+            &v2_intervals,
+        )
+        .await
+        .unwrap();
+        let list = db
+            .list_activity_ledger(
+                at("2026-09-11T23:00:00Z"),
+                at("2026-09-12T02:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].producer, "deterministic-v2");
+    }
+
+    /// Rolling back the MIDDLE third across multi-segment versions: the
+    /// switch must stay boundary-aligned (time-disjoint versions, no overlap,
+    /// no hole) even when neither side straddles.
+    #[tokio::test]
+    async fn middle_third_rollback_stays_boundary_aligned() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-09-12T00:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        let (v1_tasks, v1_intervals) = three_segment_drafts(source_id, "v1");
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-09-12T00:00:00Z"),
+            at("2026-09-12T00:09:00Z"),
+            &v1_tasks,
+            &v1_intervals,
+        )
+        .await
+        .unwrap();
+        let (v2_tasks, v2_intervals) = three_segment_drafts(source_id, "v2");
+        db.reconcile_activity_ledger(
+            "deterministic-v2",
+            at("2026-09-12T00:00:00Z"),
+            at("2026-09-12T00:09:00Z"),
+            &v2_tasks,
+            &v2_intervals,
+        )
+        .await
+        .unwrap();
+
+        db.activity_ledger_activate_version(
+            "deterministic-v1",
+            at("2026-09-12T00:03:00Z"),
+            at("2026-09-12T00:06:00Z"),
+        )
+        .await
+        .unwrap();
+        let list = db
+            .list_activity_ledger(
+                at("2026-09-11T23:00:00Z"),
+                at("2026-09-12T01:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 3, "three boundary-aligned segments: {list:?}");
+        // Time-disjoint, no overlap, no hole.
+        assert_eq!(list[0].start_at, "2026-09-12T00:00:00+00:00");
+        assert_eq!(list[1].start_at, "2026-09-12T00:03:00+00:00");
+        assert_eq!(list[2].start_at, "2026-09-12T00:06:00+00:00");
+        assert_eq!(list[0].end_at, "2026-09-12T00:03:00+00:00");
+        assert_eq!(list[1].end_at, "2026-09-12T00:06:00+00:00");
+        assert_eq!(list[2].end_at, "2026-09-12T00:09:00+00:00");
+        let producers: Vec<&str> = list.iter().map(|i| i.producer.as_str()).collect();
+        assert_eq!(
+            producers,
+            ["deterministic-v2", "deterministic-v1", "deterministic-v2"]
+        );
+    }
+
+    fn two_segment_drafts(
+        source_id: i64,
+        prefix: &str,
+    ) -> (Vec<ActivityTaskDraft>, Vec<ActivityIntervalDraft>) {
+        let (_, mut intervals) = drafts(source_id);
+        let mut first = intervals[0].clone();
+        let mut second = first.clone();
+        first.interval_key = format!("{prefix}-a");
+        first.start_at = at("2026-09-12T00:00:00Z");
+        first.end_at = at("2026-09-12T00:05:00Z");
+        second.interval_key = format!("{prefix}-b");
+        second.start_at = at("2026-09-12T00:05:00Z");
+        second.end_at = at("2026-09-12T00:10:00Z");
+        second.actions = Vec::new();
+        intervals = vec![first, second];
+        let tasks = vec![
+            ActivityTaskDraft {
+                task_key: "task".to_string(),
+                parent_task_key: Some("parent".to_string()),
+                kind: "task".to_string(),
+                title: "Ticket 42".to_string(),
+                app_name: Some("Browser".to_string()),
+                confidence: 0.8,
+            },
+        ];
+        (tasks, intervals)
+    }
+
+    fn three_segment_drafts(
+        source_id: i64,
+        prefix: &str,
+    ) -> (Vec<ActivityTaskDraft>, Vec<ActivityIntervalDraft>) {
+        let (_, intervals) = drafts(source_id);
+        let mut segments = Vec::new();
+        for (index, bounds) in [
+            ("2026-09-12T00:00:00Z", "2026-09-12T00:03:00Z"),
+            ("2026-09-12T00:03:00Z", "2026-09-12T00:06:00Z"),
+            ("2026-09-12T00:06:00Z", "2026-09-12T00:09:00Z"),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let mut segment = intervals[0].clone();
+            segment.interval_key = format!("{prefix}-{index}");
+            segment.start_at = at(bounds.0);
+            segment.end_at = at(bounds.1);
+            segment.actions = Vec::new();
+            segments.push(segment);
+        }
+        let tasks = vec![ActivityTaskDraft {
+            task_key: "task".to_string(),
+            parent_task_key: Some("parent".to_string()),
+            kind: "task".to_string(),
+            title: "Ticket 42".to_string(),
+            app_name: Some("Browser".to_string()),
+            confidence: 0.8,
+        }];
+        (tasks, segments)
+    }
+
+    /// §4.4.4: one active version per covered window — the default list and
+    /// the summary discovery only see the newest producer, superseded rows
+    /// stay queryable by id, and rollback is an explicit coverage switch.
+    #[tokio::test]
+    async fn active_version_switch_hides_superseded_producer_and_keeps_history() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+
+        // Both versions span the full window, so rollback coverage is real.
+        let (v1_tasks, mut v1_intervals) = drafts(source_id);
+        v1_intervals[0].start_at = at("2026-08-17T09:00:00Z");
+        v1_intervals[0].end_at = at("2026-08-17T09:10:00Z");
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &v1_tasks,
+            &v1_intervals,
+        )
+        .await
+        .unwrap();
+        // A v2 rebuild over the same window produces its own interval id.
+        let (v2_tasks, mut v2_intervals) = drafts(source_id);
+        v2_intervals[0].interval_key = "interval-v2".to_string();
+        v2_intervals[0].start_at = at("2026-08-17T09:00:00Z");
+        v2_intervals[0].end_at = at("2026-08-17T09:10:00Z");
+        db.reconcile_activity_ledger(
+            "deterministic-v2",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &v2_tasks,
+            &v2_intervals,
+        )
+        .await
+        .unwrap();
+
+        let list = db
+            .list_activity_ledger(
+                at("2026-08-17T08:00:00Z"),
+                at("2026-08-17T10:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1, "only the active version is listed");
+        assert_eq!(list[0].producer, "deterministic-v2");
+        let v2_key: String =
+            sqlx::query_scalar("SELECT interval_key FROM activity_intervals WHERE id = ?1")
+                .bind(list[0].id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        assert_eq!(v2_key, "interval-v2");
+
+        // Summary discovery is consistent with the default list.
+        let missing = db
+            .activity_intervals_missing_summary(
+                at("2026-08-17T08:00:00Z"),
+                at("2026-08-17T10:00:00Z"),
+                None,
+                10,
+            )
+            .await
+            .unwrap();
+        assert_eq!(missing.len(), 1);
+        assert_eq!(missing[0].producer, "deterministic-v2");
+
+        // History stays queryable by id; the active recheck distinguishes.
+        let v1_id: i64 =
+            sqlx::query_scalar("SELECT id FROM activity_intervals WHERE interval_key = 'interval'")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+        let v2_id: i64 = sqlx::query_scalar(
+            "SELECT id FROM activity_intervals WHERE interval_key = 'interval-v2'",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert!(!db.activity_interval_is_active(v1_id).await.unwrap());
+        assert!(db.activity_interval_is_active(v2_id).await.unwrap());
+        let history = db.activity_interval_record_by_id(v1_id).await.unwrap().unwrap();
+        assert_eq!(history.producer, "deterministic-v1");
+        assert_eq!(
+            db.activity_evidence_for_interval(v1_id, 10).await.unwrap().len(),
+            1,
+            "superseded evidence remains readable"
+        );
+
+        // Explicit rollback: the historical producer becomes active again by
+        // appending a coverage row (recency = id, never version strings).
+        db.activity_ledger_activate_version(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+        )
+        .await
+        .unwrap();
+        let list = db
+            .list_activity_ledger(
+                at("2026-08-17T08:00:00Z"),
+                at("2026-08-17T10:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].producer, "deterministic-v1", "rollback switched back");
+    }
+
+    /// §4.4.4 atomicity: a failed rebuild must leave the previous coverage —
+    /// and therefore the previous active version — untouched.
+    #[tokio::test]
+    async fn failed_reconcile_leaves_previous_active_version_intact() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        let (tasks, intervals) = drafts(source_id);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+
+        // A v2 rebuild whose interval references an unknown task errors
+        // mid-transaction.
+        let bad = ActivityIntervalDraft {
+            interval_key: "interval-bad".to_string(),
+            task_key: "missing-task".to_string(),
+            start_at: at("2026-08-17T09:00:00Z"),
+            end_at: at("2026-08-17T09:05:00Z"),
+            state: "final".to_string(),
+            confidence: 0.8,
+            actions: Vec::new(),
+            evidence: Vec::new(),
+            retention: HashMap::new(),
+        };
+        assert!(db
+            .reconcile_activity_ledger(
+                "deterministic-v2",
+                at("2026-08-17T09:00:00Z"),
+                at("2026-08-17T09:10:00Z"),
+                &[],
+                &[bad],
+            )
+            .await
+            .is_err());
+
+        let coverage: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM activity_ledger_coverage WHERE producer = 'deterministic-v2'",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(coverage, 0, "no coverage switch on a failed rebuild");
+        let list = db
+            .list_activity_ledger(
+                at("2026-08-17T08:00:00Z"),
+                at("2026-08-17T10:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].producer, "deterministic-v1", "old version intact");
+    }
+
+    /// §4.4.4: an empty rebuild still records coverage so the window cannot
+    /// fall back to an older version and regenerate.
+    #[tokio::test]
+    async fn empty_window_rebuild_records_coverage() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        let (tasks, intervals) = drafts(source_id);
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+        db.reconcile_activity_ledger(
+            "deterministic-v2",
+            at("2026-08-17T09:00:00Z"),
+            at("2026-08-17T09:10:00Z"),
+            &[],
+            &[],
+        )
+        .await
+        .unwrap();
+
+        let coverage: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM activity_ledger_coverage WHERE producer = 'deterministic-v2'",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(coverage, 1, "the empty window is covered");
+        let list = db
+            .list_activity_ledger(
+                at("2026-08-17T08:00:00Z"),
+                at("2026-08-17T10:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert!(list.is_empty(), "no fallback to the superseded version");
+    }
+
+    /// §4.4.4: repeated rebuilds of the same window converge — one visible
+    /// copy and one superseding coverage row.
+    #[tokio::test]
+    async fn rebuild_is_idempotent_over_the_same_window() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T09:01:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        for _ in 0..2 {
+            let (mut v2_tasks, mut v2_intervals) = drafts(source_id);
+            v2_intervals[0].interval_key = "interval-v2".to_string();
+            db.reconcile_activity_ledger(
+                "deterministic-v2",
+                at("2026-08-17T09:00:00Z"),
+                at("2026-08-17T09:10:00Z"),
+                &v2_tasks,
+                &v2_intervals,
+            )
+            .await
+            .unwrap();
+        }
+        let list = db
+            .list_activity_ledger(
+                at("2026-08-17T08:00:00Z"),
+                at("2026-08-17T10:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1, "no duplicate visible copies");
+        let coverage: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM activity_ledger_coverage WHERE producer = 'deterministic-v2'",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(coverage, 1, "the newer row supersedes the contained one");
+    }
+
+    /// §4.4.4 edge rule: a rebuild whose window bisects an existing segment
+    /// is widened to that segment's full bounds, so the coverage switch never
+    /// leaves a half-visible old segment nor loses the outside-window span.
+    #[tokio::test]
+    async fn expand_range_covers_straddling_interval() {
+        let (db, _dir) = test_db().await;
+        let mut tx = db.begin_immediate_with_retry().await.unwrap();
+        let source_id: i64 = sqlx::query_scalar(
+            "INSERT INTO ui_events (timestamp, relative_ms, event_type, app_name) \
+             VALUES ('2026-08-17T08:30:00Z', 0, 'click', 'Browser') RETURNING id",
+        )
+        .fetch_one(&mut **tx.conn())
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        let (tasks, mut intervals) = drafts(source_id);
+        intervals[0].start_at = at("2026-08-17T08:00:00Z");
+        intervals[0].end_at = at("2026-08-17T09:30:00Z");
+        db.reconcile_activity_ledger(
+            "deterministic-v1",
+            at("2026-08-17T08:00:00Z"),
+            at("2026-08-17T09:30:00Z"),
+            &tasks,
+            &intervals,
+        )
+        .await
+        .unwrap();
+
+        let (start, end) = db
+            .activity_ledger_expand_range_to_active_bounds(
+                at("2026-08-17T08:30:00Z"),
+                at("2026-08-17T10:30:00Z"),
+                "deterministic-v1",
+            )
+            .await
+            .unwrap();
+        assert_eq!(start, at("2026-08-17T08:00:00Z"));
+        assert_eq!(end, at("2026-08-17T10:30:00Z"));
+
+        // Rebuilding v2 over the widened window replaces the whole straddler.
+        let (mut v2_tasks, mut v2_intervals) = drafts(source_id);
+        v2_intervals[0].start_at = at("2026-08-17T08:00:00Z");
+        v2_intervals[0].end_at = at("2026-08-17T09:30:00Z");
+        v2_intervals[0].interval_key = "interval-v2".to_string();
+        db.reconcile_activity_ledger(
+            "deterministic-v2",
+            start,
+            end,
+            &v2_tasks,
+            &v2_intervals,
+        )
+        .await
+        .unwrap();
+        let list = db
+            .list_activity_ledger(
+                at("2026-08-17T07:00:00Z"),
+                at("2026-08-17T11:00:00Z"),
+                false,
+                false,
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1, "the straddler is fully replaced, not half-hidden");
+        assert_eq!(list[0].producer, "deterministic-v2");
+        assert_eq!(list[0].start_at, "2026-08-17T08:00:00+00:00");
     }
 
     #[tokio::test]

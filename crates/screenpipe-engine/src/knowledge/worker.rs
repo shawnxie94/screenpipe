@@ -43,6 +43,9 @@ pub struct JobOutcome {
 
 pub struct JobFailure {
     pub code: String,
+    /// Human-readable cause persisted to `knowledge_jobs.last_error_message`
+    /// (§4.1.3) so terminal failures are actionable without log access.
+    pub message: Option<String>,
     pub transient: bool,
     pub backoff_ms: u64,
 }
@@ -51,6 +54,7 @@ impl JobFailure {
     pub fn transient(code: impl Into<String>) -> Self {
         Self {
             code: code.into(),
+            message: None,
             transient: true,
             backoff_ms: 1_000,
         }
@@ -59,6 +63,7 @@ impl JobFailure {
     pub fn permanent(code: impl Into<String>) -> Self {
         Self {
             code: code.into(),
+            message: None,
             transient: false,
             backoff_ms: 0,
         }
@@ -550,20 +555,40 @@ async fn run_one_job(
         }
         Ok(Err(failure)) => {
             let ok = db
-                .knowledge_fail_job(job.id, &job.lease_token, &failure.code, failure.transient, failure.backoff_ms)
+                .knowledge_fail_job(
+                    job.id,
+                    &job.lease_token,
+                    &failure.code,
+                    failure.message.as_deref(),
+                    failure.transient,
+                    failure.backoff_ms,
+                )
                 .await
                 .unwrap_or(false);
             if ok {
-                tracing::warn!(job = job.id, code = %failure.code, "knowledge worker: job failed");
+                tracing::warn!(
+                    job = job.id,
+                    code = %failure.code,
+                    message = failure.message.as_deref().unwrap_or(""),
+                    "knowledge worker: job failed"
+                );
             }
         }
         Err(_elapsed) => {
-            // Step timeout: treat as transient failure with the standard backoff.
+            // Step timeout: terminal, like every other failure (§4.1.1) —
+            // the log must not imply an automatic retry.
             let _ = db
-                .knowledge_fail_job(job.id, &job.lease_token, "step_timeout", true, 1_000)
+                .knowledge_fail_job(
+                    job.id,
+                    &job.lease_token,
+                    "step_timeout",
+                    Some("单步执行超出时限，已置为终态；如需重算请在界面手动重试"),
+                    false,
+                    0,
+                )
                 .await;
             job_cancel.cancel();
-            tracing::warn!(job = job.id, "knowledge worker: step timed out");
+            tracing::warn!(job = job.id, "knowledge worker: step timed out; job failed terminally (manual retry available)");
         }
     }
 }
@@ -698,8 +723,10 @@ mod tests {
         panic!("job never succeeded");
     }
 
+    /// §4.1.1: a model failure fails the job terminally — no second model
+    /// call until a human retries, and the manual retry does run again.
     #[tokio::test]
-    async fn transient_failure_retries_then_succeeds() {
+    async fn model_failure_is_terminal_until_manual_retry() {
         let db = Arc::new(
             screenpipe_db::DatabaseManager::new("sqlite::memory:", Default::default())
                 .await
@@ -731,23 +758,60 @@ mod tests {
                 })
             }),
         );
-        let exec = MockExecutor::new(1); // first call fails, second succeeds
+        let exec = MockExecutor::new(1); // the first model call fails
         let handle = start(
             db.clone(),
             exec,
             handlers,
             WorkerConfig { idle_sleep_ms: 40, ..Default::default() },
         );
+        // The job must settle in `failed` without any automatic second round.
+        let mut settled = false;
+        for _ in 0..150 {
+            let job = db.knowledge_get_job(job_id).await.unwrap().unwrap();
+            if job.state == "failed" {
+                assert_eq!(job.attempts, 1, "one attempt, no hidden retries");
+                assert_eq!(job.last_error_code.as_deref(), Some("model_error"));
+                settled = true;
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(40)).await;
+        }
+        assert!(settled, "job never reached the terminal failed state");
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        let job = db.knowledge_get_job(job_id).await.unwrap().unwrap();
+        assert_eq!(job.state, "failed", "still failed; nothing auto-retries");
+        assert!(db.knowledge_claim_next_job(&[KnowledgeJobKind::Compile], "w", 30_000).await.unwrap().is_none());
+        handle.cancel();
+
+        // The explicit manual retry is the only way back — and it runs.
+        assert!(db.knowledge_retry_job(job_id).await.unwrap());
+        let handle = start(
+            db.clone(),
+            MockExecutor::new(0),
+            {
+                let mut handlers = JobHandlers::default();
+                handlers.register(
+                    KnowledgeJobKind::Compile,
+                    Arc::new(|_ctx| {
+                        Box::pin(async move {
+                            Ok(JobOutcome { result_ref: None, cursor: None })
+                        })
+                    }),
+                );
+                handlers
+            },
+            WorkerConfig { idle_sleep_ms: 40, ..Default::default() },
+        );
         for _ in 0..150 {
             let job = db.knowledge_get_job(job_id).await.unwrap().unwrap();
             if job.state == "succeeded" {
-                assert_eq!(job.attempts, 1, "one transient failure recorded");
                 handle.cancel();
                 return;
             }
             tokio::time::sleep(Duration::from_millis(40)).await;
         }
-        panic!("job never recovered from transient failure");
+        panic!("manual retry never succeeded");
     }
 
     #[tokio::test]
