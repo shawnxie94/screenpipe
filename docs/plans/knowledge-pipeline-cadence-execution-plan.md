@@ -6,15 +6,15 @@ created: 2026-09-12
 updated_at: 2026-09-12
 plan_id: plan-knowledge-pipeline-cadence
 plan_unit_id: root
-base_commit: 040d3cc37
+base_commit: 2378f3ec4
 orchestration_mode: batch
 execution_target: subagent
 execution_backend: pi_subagent
-runtime_adapter: zcode
+runtime_adapter: pi
 logical_role: worker
-subagent_role: zcode
+subagent_role: worker
 subagent_scope: user
-selected_subagent_model: builtin:bigmodel-coding-plan/GLM-5.3-Flash
+selected_subagent_model: openai-codex/gpt-5.6-luna
 thinking: low
 fallback: false
 parallel_mode: serial_same_worktree
@@ -48,7 +48,7 @@ doc-verified: ee1f78dae
 4. **发现阶段预筛**：无证据（`no_evidence`）等不成熟目标不投递，不产生无效模型调用。
 5. **四层节拍全部可配置**（不再写死）：间隔重建、间隔摘要、WorkUnit 抽取、知识蒸馏。
 6. **知识按粗粒度定时 + 三机制投递**（默认 1 天，可配 7 天）：**不做数量阈值**，也不全量投递，改用「模型提名 + 变更驱动 + 冷却期」——模型决定值不值得、输入变化决定有没有新料、冷却决定别重复烧钱。
-7. **① 活动间隔切分优化**（确定性、可配）：换内容锚点（窗口标题降级为段内标签）、加相邻段合并规则、细段吸收，把 92% 的 <1 分钟碎片降到合理水平。详见 §4.4。
+7. **① 活动间隔切分优化**（确定性、可配）：换内容锚点（窗口标题降级为段内标签）、加相邻段合并规则、细段吸收。**2026-09-12 真机副本实测已证伪原目标**：真实窗口 112/112 个相邻边界均为跨身份切换（semantic 68 / site 40 / document_path 0），"把 <1 分钟碎片降到合理水平"不能由锚点与合并规则达成，须改由工作项层（Plan B）解决；本项保留锚点稳定性、证据不变量与单活跃版本三项已实现能力。详见 §4.4。
 8. **间隔重建独立成节拍**：新增 app 侧 tick 调 `activity_ledger::reconcile_range`，不再依赖 legacy 生成路径「读台账顺带 refresh」的副作用。
 9. **legacy 后端自动叙事下线**：`activity_history::start` 的自动生成分支停用（手动命令与物理代码保留）。
 
@@ -138,7 +138,9 @@ doc-verified: ee1f78dae
    - 所有生产/展示读入口复用统一活跃选择；历史详情读取保持按 ID 可用。排队后过期版本在执行前复检；回退显式切换已保留覆盖范围，不把版本字符串字典序当新旧关系。
    - 新迁移承载活跃元数据/覆盖记录；不改已应用迁移、不手工操作真库。迁移后的旧段默认可见，只有成功重建覆盖部分才切换。
 
-验收：内存库/合成 fixture 必须证明失败不重试、A→B→A 不误并、证据时间范围、保留上限、v1→v2 同窗不重复、边缘不丢失、失败原子性、重复重建幂等、历史引用可查及显式回退。副本分布只作观测，不设未经实测的 700–1,200 段或 <20% 门槛；本轮不启动真机或调用远程产品模型。
+验收（两层）：
+- **合成层**：内存库/合成 fixture 必须证明失败不重试、A→B→A 不误并、证据时间范围、保留上限、v1→v2 同窗不重复、边缘不丢失、失败原子性、重复重建幂等、历史引用可查及显式回退。
+- **真实副本层**（2026-09-12 新增，因合成层放过了两处真实缺陷）：在 dev 库副本上对 **v2 产出**独立断言区间不重叠、每条证据 `occurred_at` 落在所属区间内、无孤儿证据、**同窗重复 reconcile 的 interval id 集合稳定**、被覆盖 v1 仍可按 id 查、覆盖范围单活跃版本；v1 存量越界单独统计，不并入 v2 判定。副本分布只作观测，不设未经实测的 700–1,200 段或 <20% 门槛；本轮不启动真机或调用远程产品模型。
 
 ## 5. 测试与验收命令
 
@@ -151,6 +153,7 @@ doc-verified: ee1f78dae
 | 5 | `cd apps/screenpipe-app-tauri && bun run typecheck` | exit 0（设置页新增字段） |
 | 6 | `cargo test -p screenpipe-db --test knowledge_correctness` | 全绿 |
 | 7 | 静态核对：报告附「设置键 → 读取位置 → 默认值」表与「失败终态」语义说明 | 每项可定位 |
+| 9 | `SP_REAL_DB_COPY=<副本> cargo test -p screenpipe-engine --test real_db_resegmentation -- --ignored --nocapture` | exit 0；v2 产出不变量全过（含幂等与证据时间归属）。v1 存量越界单独统计 |
 | 8 | 人工验收（协调者）：dev 端重启后观察 10 分钟——失败任务不再被重建；无 legacy 自动叙事日志；间隔按新节拍出现；执行 §4.4 的验收观测 | 观察记录写入报告 |
 
 ## 6. 风险与回退

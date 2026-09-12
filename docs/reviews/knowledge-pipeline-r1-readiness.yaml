@@ -2,12 +2,12 @@ schema_version: 1
 id: knowledge-pipeline-r1-readiness
 feature_id: knowledge-pipeline-cadence
 stage: plan_to_build
-status: ready
+status: blocked
 iteration: 3
 source_artifacts:
 - name: execution-plan
   uri: docs/plans/knowledge-pipeline-cadence-execution-plan.md
-  sha256: 028f96b80c63dadab87f9f03818d60e9841f109eb804af247d1a795cde15585f
+  sha256: 944aa18bef7c3065cb5a35abf25f7e33ff917c2148d1c489fffc64f9180b66c3
 findings:
 - id: DR-KP-004
   severity: blocker
@@ -34,6 +34,41 @@ findings:
   title: 存量 failed 任务保留为终态
   evidence: 保留存量终态且不重置；新错误列无法恢复已丢失的历史消息，仅新失败可记录。
   next_action: Round 1 交付后由协调者统计原因分布。
+- id: DR-KP-005
+  severity: blocker
+  status: resolved
+  title: v2 产出有 2 条证据时间越界
+  evidence: 计划 §4.4 新增"真实副本层"验收：v2 产出必须独立断言证据 occurred_at 落于所属区间内并明确 [start,end) 边界策略；计划
+    §5 增加第 9 条真实副本命令。
+  next_action: 由 fix 轮实现并在 dev 库副本上证明 v2 产出零越界。
+- id: DR-KP-006
+  severity: blocker
+  status: resolved
+  title: 同窗重复 reconcile 不幂等
+  evidence: 计划 §4.4 新增"真实副本层"验收：同窗重复 reconcile 的 interval id 集合必须稳定；§5 第 9 条覆盖该断言。
+  next_action: 由 fix 轮修稳定 interval identity 并在副本上证明幂等。
+- id: DR-KP-007
+  severity: warning
+  status: accepted_risk
+  title: §4.4 原定"降低碎片"目标经实测不可达
+  evidence: '真实窗口 112/112 个相邻边界均为跨身份切换（semantic 68 / site 40 / app 兜底 5 / document_path
+    0），跨身份不能合并；锚点与合并规则无法达成该目标。（decision owner: user；revisit: R2 开工前）'
+  next_action: '已就地标注于计划 §2.1 #7；本轮返工不依赖该决定。待用户确认把碎片目标移交工作项层（Plan B），确认时点在 R2 开工前。'
+- id: DR-KP-008
+  severity: info
+  status: accepted_risk
+  title: 版本切换引发的重复模型调用量未验证
+  evidence: 归因轮发现候选 91 条、与既有终态任务重复 0 条；但比对是数据库快照口径，未运行 worker/模型调用，实际重复调用量未验证。
+  next_action: 幂等修复后用切换前后快照 + model_calls 计数闭合。
+- id: DR-KP-009
+  severity: warning
+  status: open
+  title: 建议把幂等验收口径从"行 id 稳定"改为"输入指纹稳定 + 不重复投递"
+  evidence: 第 4 轮后：evidence 删除路径已改为 upsert 后差集重写，113 个 interval_key 稳定，但真实副本仍有 fresh-insert，行
+    id 集合不稳定（残留路径未定位）。而用户可感知的要求是"同一内容不重复消耗模型额度"，其载体是 discovery_input_hash —— 当前成员用
+    interval_id:start:end，行 id 是内部产物，且保留策略/触发器会按设计删除空区间。
+  next_action: 待用户批准：把发现哈希成员改为 interval_key:start:end（interval_key 已确定性且跨重建稳定），验收改为"重复
+    reconcile ⇒ key 集合稳定 + 输入哈希不变 + 该窗口零新增投递"，仍保留不重叠/证据归属/孤儿 0/单活跃版本/历史按 id 可查。
 traceability:
 - requirement: 失败即终态、input_hash 真实、错误可见、发现预筛（§4.1）
   plan: §4.1
@@ -51,10 +86,12 @@ decisions:
 assumptions: []
 evidence:
 - docs/reviews/evidence/dev-smoke-2026-09-12.md
-waiting_on: none
-next_action: R1 提交入库后，由用户决定是否启动 R2（节拍配置化/三机制投递/legacy 下线/UI）。
+waiting_on: human
+next_action: 等待用户裁决 DR-KP-009（幂等验收口径：行 id 稳定 vs 输入指纹稳定）；批准后修订计划验收、回置 ready，再派第 5 轮修输入指纹。
 notes: 这是返工开工门禁，不是代码验收；dev 保持停止。原 .agent/tmp/knowledge-pipeline-r1/task-pack.yaml
-  已过期，新包位于 .agent/runs/2026-09-12-knowledge-pipeline-r1-repair/。
+  已过期，新包位于 .agent/runs/2026-09-12-knowledge-pipeline-r1-repair/。 注：DR-KP-005/006 在就绪报告层已按"契约是否完备"记为
+  resolved（计划已补真实副本验收要求），其**实现缺陷本身仍未修复**，由 run 2026-09-12-knowledge-pipeline-r1-fix
+  证明。
 iterations:
 - iteration: 1
   status: ready
@@ -69,3 +106,19 @@ iterations:
   status: ready
   result: R1 返工完成（attempt=2/3）；协调者独立复验 canonical 9/9 pass、局部回退重叠与旧任务版本复检反例已修并有实质断言、scope
     clean。仅证明 R1 实现可信，不等于整份 cadence 计划或 F11 产品验收完成。
+- iteration: 5
+  status: ready
+  result: 用户要求补真实验证：R1 目前仅仓库内合成验证。已确认真库 126 迁移/3994 间隔，新迁移与活跃视图在副本上可应用且向后兼容；待补副本真实重切分分布与发现
+    dry-run 止烧验证。委派后端改为 pi_subagent（openai-codex/gpt-5.6-luna/low）。
+- iteration: 6
+  status: ready
+  result: R1 真实验证完成并 blocked：真库存量 69 条证据越界（35 条边界口径、34 条实质越界）非 R1 引入；v2 在真实窗口未改善碎片（110→113
+    段，96% <1 分钟）；dry-run 模型调用 0 但产生 64 条候选投递，需确认版本切换是否造成同窗口重复消费。不变量幂等/单活跃版本项未完成。已批准派归因与收口轮（不修产品代码）。
+- iteration: 7
+  status: ready
+  result: 真实验证与归因完成：越界归属 69 v1 + 2 v2；v2 不变量因 2 条越界与幂等失败整体不成立；碎片主因确认为跨身份切换（§4.4 机制不可达，转
+    Plan B）；重复消费在快照口径为 0、实际未验证。已批准返工修 DR-KP-005/006，并把真实副本不变量写入计划 §4.4/§5。
+- iteration: 8
+  status: ready
+  result: 修复轮 4 轮预算+1 后仍 blocked：D1 修好并保持；knowledge 陈旧用例已按 [start,end) 语义更新且全绿；D2
+    根因确认为 evidence 删除→触发器级联删 interval→重插新 id，证据删除已改差集重写，但仍有残留 fresh-insert。建议改验收口径为输入指纹稳定。
