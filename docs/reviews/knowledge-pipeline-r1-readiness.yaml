@@ -7,7 +7,7 @@ iteration: 3
 source_artifacts:
 - name: execution-plan
   uri: docs/plans/knowledge-pipeline-cadence-execution-plan.md
-  sha256: 7f8f4d63d37d14d5d45aaa0108d85b5a05189856a02a08abeb608b6449cf764c
+  sha256: ae971326dd115a2ef27f0be2d7e5959aa897ae61af24af5e9fae238bd5bbe43c
 findings:
 - id: DR-KP-004
   severity: blocker
@@ -87,8 +87,8 @@ assumptions: []
 evidence:
 - docs/reviews/evidence/dev-smoke-2026-09-12.md
 waiting_on: none
-next_action: 第 5 轮：discovery_input_hash 成员改用 interval_key，并让真实副本不变量改断言"段集合稳定 + 输入指纹不变
-  + 零新增投递"。
+next_action: 第 6 轮（新 run，预算 3）：修 summarize_input_hash 的 interval.id 依赖并修正历史断言，全量验收通过后收口
+  R1。
 notes: 这是返工开工门禁，不是代码验收；dev 保持停止。原 .agent/tmp/knowledge-pipeline-r1/task-pack.yaml
   已过期，新包位于 .agent/runs/2026-09-12-knowledge-pipeline-r1-repair/。 注：DR-KP-005/006 在就绪报告层已按"契约是否完备"记为
   resolved（计划已补真实副本验收要求），其**实现缺陷本身仍未修复**，由 run 2026-09-12-knowledge-pipeline-r1-fix
@@ -127,3 +127,7 @@ iterations:
   status: ready
   result: 用户批准把幂等口径改为输入指纹稳定（行 id 不再作为验收对象）；计划与任务包同步更新，派第 5 轮实现 discovery_input_hash
     用 interval_key。
+- iteration: 10
+  status: ready
+  result: 第 5 轮通过新口径（key 稳定、哈希稳定、重复投递 90→0）。用户批准继续收尾并清零预算：开新 run 2026-09-12-knowledge-pipeline-r1-closure，预算
+    3 轮重算；范围＝summarize 侧同类哈希改稳定键 + 修正测试中过时的历史 id 断言 + 全量验收。

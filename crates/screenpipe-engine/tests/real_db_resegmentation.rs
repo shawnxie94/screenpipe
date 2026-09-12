@@ -174,9 +174,6 @@ async fn invariants() {
         .await
         .unwrap();
     report_line(format!("idempotence effective_1=[{}, {})", effective_1.0, effective_1.1)).await;
-    let historical_id: Option<i64> = sqlx::query_scalar(
-        "SELECT id FROM activity_intervals WHERE producer='deterministic-v1' AND end_at > ?1 AND start_at < ?2 ORDER BY id LIMIT 1",
-    ).bind(start.to_rfc3339()).bind(end.to_rfc3339()).fetch_optional(&db.pool).await.unwrap();
     reconcile_range(&db, start, end).await.unwrap();
     let rows = db
         .list_activity_ledger(start, end, true, true)
@@ -206,7 +203,6 @@ async fn invariants() {
     .await;
     assert_eq!(bad_evidence, 0);
     assert_eq!(orphan, 0);
-    let first_id = historical_id;
     let keys_before: std::collections::BTreeSet<String> = sqlx::query_scalar(
         "SELECT interval_key FROM activity_intervals_active WHERE producer='deterministic-v2' AND end_at > ?1 AND start_at < ?2 ORDER BY interval_key",
     )
@@ -237,14 +233,25 @@ async fn invariants() {
         .list_activity_ledger(start, end, true, true)
         .await
         .unwrap();
-    if let Some(id) = first_id {
-        let found: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM activity_intervals WHERE id=?1")
-            .bind(id)
-            .fetch_one(&db.pool)
-            .await
-            .unwrap();
-        assert_eq!(found, 1, "historical interval is not queryable by id");
-    }
+    let covered_v1_id: i64 = sqlx::query_scalar(
+        "SELECT i.id FROM activity_intervals i \
+         WHERE i.producer='deterministic-v1' \
+           AND i.end_at > ?1 AND i.start_at < ?2 \
+           AND NOT EXISTS (SELECT 1 FROM activity_intervals_active a WHERE a.id = i.id) \
+         ORDER BY i.id LIMIT 1",
+    )
+    .bind(start.to_rfc3339())
+    .bind(end.to_rfc3339())
+    .fetch_optional(&db.pool)
+    .await
+    .unwrap()
+    .expect("reconcile must leave a covered v1 interval for history lookup");
+    let found: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM activity_intervals WHERE id=?1")
+        .bind(covered_v1_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    assert_eq!(found, 1, "covered v1 interval is not queryable by id");
     let active_versions: i64 = sqlx::query_scalar(
         "SELECT COUNT(DISTINCT producer) FROM activity_intervals_active WHERE end_at > ?1 AND start_at < ?2",
     ).bind(start.to_rfc3339()).bind(end.to_rfc3339()).fetch_one(&db.pool).await.unwrap();

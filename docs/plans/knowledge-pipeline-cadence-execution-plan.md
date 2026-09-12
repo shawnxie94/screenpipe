@@ -6,7 +6,7 @@ created: 2026-09-12
 updated_at: 2026-09-12
 plan_id: plan-knowledge-pipeline-cadence
 plan_unit_id: root
-base_commit: 2378f3ec4
+base_commit: 769c80189
 orchestration_mode: batch
 execution_target: subagent
 execution_backend: pi_subagent

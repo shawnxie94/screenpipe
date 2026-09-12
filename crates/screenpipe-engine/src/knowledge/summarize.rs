@@ -347,6 +347,8 @@ fn validate_attempt(
 
 struct IntervalIdentity {
     id: i64,
+    /// Deterministic identity that survives interval row replacement during reconcile.
+    interval_key: String,
     start_at: String,
     end_at: String,
     title: String,
@@ -370,8 +372,8 @@ async fn load_interval(
     db: &DatabaseManager,
     interval_id: i64,
 ) -> Result<Option<IntervalIdentity>, sqlx::Error> {
-    let row: Option<(i64, String, String, String, Option<String>)> = sqlx::query_as(
-        "SELECT i.id, i.start_at, i.end_at, t.title, t.app_name \
+    let row: Option<(i64, String, String, String, String, Option<String>)> = sqlx::query_as(
+        "SELECT i.id, i.interval_key, i.start_at, i.end_at, t.title, t.app_name \
          FROM activity_intervals i \
          JOIN activity_tasks t ON t.id = i.task_id \
          WHERE i.id = ?1",
@@ -379,8 +381,9 @@ async fn load_interval(
     .bind(interval_id)
     .fetch_optional(&db.pool)
     .await?;
-    Ok(row.map(|(id, start_at, end_at, title, app_name)| IntervalIdentity {
+    Ok(row.map(|(id, interval_key, start_at, end_at, title, app_name)| IntervalIdentity {
         id,
+        interval_key,
         start_at,
         end_at,
         title,
@@ -517,7 +520,7 @@ fn summary_input_hash(
         SUMMARY_PROMPT_VERSION,
         &format!(
             "{}|{}|{}|{}|{}",
-            interval.id,
+            interval.interval_key,
             interval.start_at,
             interval.end_at,
             interval.app_name.as_deref().unwrap_or(""),
@@ -872,6 +875,29 @@ mod tests {
         assert_eq!(band_bounds("2026-08-17T09:00:00Z", "2026-08-17T10:00:00Z"), ("medium", 150, 300));
         // >60min → long.
         assert_eq!(band_bounds("2026-08-17T09:00:00Z", "2026-08-17T10:01:00Z"), ("long", 300, 600));
+    }
+
+    #[test]
+    fn summary_hash_uses_stable_interval_key_not_row_id() {
+        let model = ScriptedExecutor::new(vec![]).identity();
+        let interval = |id: i64, interval_key: &str| IntervalIdentity {
+            id,
+            interval_key: interval_key.into(),
+            start_at: "2026-08-17T09:00:00Z".into(),
+            end_at: "2026-08-17T09:05:00Z".into(),
+            title: "Ticket 42".into(),
+            app_name: Some("Arc".into()),
+        };
+        let evidence = vec![("ui_event".into(), 7)];
+        assert_eq!(
+            summary_input_hash(&interval(1, "stable-key"), &evidence, &model),
+            summary_input_hash(&interval(2, "stable-key"), &evidence, &model),
+            "replacing the interval row must not change the summary input hash"
+        );
+        assert_ne!(
+            summary_input_hash(&interval(1, "stable-key"), &evidence, &model),
+            summary_input_hash(&interval(1, "other-key"), &evidence, &model)
+        );
     }
 
     #[test]
