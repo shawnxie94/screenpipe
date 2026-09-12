@@ -19,6 +19,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Json as JsonResponse, Response};
 use serde_json::{json, Value};
 use screenpipe_db::{fingerprint, DatabaseManager};
+use oasgen::oasgen;
 
 use crate::server::AppState;
 
@@ -153,6 +154,7 @@ pub(crate) fn rows_value<T: serde::Serialize>(rows: &T) -> Value {
 /// the unchanged `search` handler, then buffers the JSON body to fingerprint
 /// its `data` rows (pagination and related-tag envelopes are excluded, as is
 /// every volatile field — the rows themselves are the fingerprint input).
+#[oasgen]
 pub(crate) async fn traced_search(
     Query(query): Query<crate::routes::search::SearchQuery>,
     State(state): State<Arc<AppState>>,
