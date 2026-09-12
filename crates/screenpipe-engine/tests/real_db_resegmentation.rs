@@ -167,13 +167,16 @@ async fn real_resegmentation() {
 #[ignore]
 async fn invariants() {
     let _lock = test_lock();
-    let db = open_copy().await;
+    let db = Arc::new(open_copy().await);
     let (start, end) = window(&db).await;
     let effective_1 = db
         .activity_ledger_expand_range_to_active_bounds(start, end, "deterministic-v2")
         .await
         .unwrap();
     report_line(format!("idempotence effective_1=[{}, {})", effective_1.0, effective_1.1)).await;
+    let historical_id: Option<i64> = sqlx::query_scalar(
+        "SELECT id FROM activity_intervals WHERE producer='deterministic-v1' AND end_at > ?1 AND start_at < ?2 ORDER BY id LIMIT 1",
+    ).bind(start.to_rfc3339()).bind(end.to_rfc3339()).fetch_optional(&db.pool).await.unwrap();
     reconcile_range(&db, start, end).await.unwrap();
     let rows = db
         .list_activity_ledger(start, end, true, true)
@@ -203,33 +206,38 @@ async fn invariants() {
     .await;
     assert_eq!(bad_evidence, 0);
     assert_eq!(orphan, 0);
-    let ids: Vec<i64> = rows.iter().map(|r| r.id).collect();
-    let keys_before: Vec<(String, String, String)> = sqlx::query_as(
-        "SELECT interval_key, start_at, end_at FROM activity_intervals_active WHERE producer='deterministic-v2' AND end_at > ?1 AND start_at < ?2 ORDER BY start_at, id",
+    let first_id = historical_id;
+    let keys_before: std::collections::BTreeSet<String> = sqlx::query_scalar(
+        "SELECT interval_key FROM activity_intervals_active WHERE producer='deterministic-v2' AND end_at > ?1 AND start_at < ?2 ORDER BY interval_key",
     )
-    .bind(start.to_rfc3339()).bind(end.to_rfc3339()).fetch_all(&db.pool).await.unwrap();
+    .bind(start.to_rfc3339()).bind(end.to_rfc3339()).fetch_all(&db.pool).await.unwrap().into_iter().collect();
+    let first_dispatched = extract::discover_and_enqueue(&db, start).await.unwrap();
+    let hashes_before: std::collections::BTreeSet<String> = sqlx::query_scalar(
+        "SELECT DISTINCT input_hash FROM knowledge_jobs WHERE kind='extract' AND input_hash IS NOT NULL",
+    ).fetch_all(&db.pool).await.unwrap().into_iter().collect();
     let effective_2 = db
         .activity_ledger_expand_range_to_active_bounds(start, end, "deterministic-v2")
         .await
         .unwrap();
     report_line(format!("idempotence effective_2=[{}, {})", effective_2.0, effective_2.1)).await;
     reconcile_range(&db, start, end).await.unwrap();
-    let keys_after: Vec<(String, String, String)> = sqlx::query_as(
-        "SELECT interval_key, start_at, end_at FROM activity_intervals_active WHERE producer='deterministic-v2' AND end_at > ?1 AND start_at < ?2 ORDER BY start_at, id",
+    let keys_after: std::collections::BTreeSet<String> = sqlx::query_scalar(
+        "SELECT interval_key FROM activity_intervals_active WHERE producer='deterministic-v2' AND end_at > ?1 AND start_at < ?2 ORDER BY interval_key",
     )
-    .bind(start.to_rfc3339()).bind(end.to_rfc3339()).fetch_all(&db.pool).await.unwrap();
-    let key_changes = keys_before.iter().zip(keys_after.iter()).filter(|(before, after)| before != after).count();
-    report_line(format!("idempotence key_diff positional_changes={} before={} after={}", key_changes, keys_before.len(), keys_after.len())).await;
+    .bind(start.to_rfc3339()).bind(end.to_rfc3339()).fetch_all(&db.pool).await.unwrap().into_iter().collect();
+    let second_dispatched = extract::discover_and_enqueue(&db, start).await.unwrap();
+    let hashes_after: std::collections::BTreeSet<String> = sqlx::query_scalar(
+        "SELECT DISTINCT input_hash FROM knowledge_jobs WHERE kind='extract' AND input_hash IS NOT NULL",
+    ).fetch_all(&db.pool).await.unwrap().into_iter().collect();
+    report_line(format!("idempotence keys_equal={} before={} after={} hashes_equal={} first_dispatch={} second_dispatch={}", keys_before == keys_after, keys_before.len(), keys_after.len(), hashes_before == hashes_after, first_dispatched, second_dispatched)).await;
+    assert_eq!(keys_before, keys_after, "interval key set changed");
+    assert_eq!(hashes_before, hashes_after, "discovery input hash set changed");
+    assert_eq!(second_dispatched, 0, "same window created new extract jobs");
     let rows_again = db
         .list_activity_ledger(start, end, true, true)
         .await
         .unwrap();
-    assert_eq!(
-        ids,
-        rows_again.iter().map(|r| r.id).collect::<Vec<_>>(),
-        "reconcile is not idempotent"
-    );
-    if let Some(id) = ids.first() {
+    if let Some(id) = first_id {
         let found: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM activity_intervals WHERE id=?1")
             .bind(id)
             .fetch_one(&db.pool)

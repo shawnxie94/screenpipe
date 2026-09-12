@@ -115,10 +115,10 @@ async fn load_window_member_bounds(
     db: &DatabaseManager,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
-) -> Result<Vec<(i64, String, String)>, KnowledgeError> {
-    let rows: Vec<(i64, String, String)> = sqlx::query_as(
-        "SELECT id, start_at, end_at FROM activity_intervals_active \
-         WHERE start_at >= ?1 AND start_at < ?2 ORDER BY id",
+) -> Result<Vec<(String, String, String)>, KnowledgeError> {
+    let rows: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT interval_key, start_at, end_at FROM activity_intervals_active \
+         WHERE start_at >= ?1 AND start_at < ?2 ORDER BY start_at, interval_key",
     )
     .bind(start.to_rfc3339())
     .bind(end.to_rfc3339())
@@ -130,12 +130,12 @@ async fn load_window_member_bounds(
 
 /// Discovery-time input identity (§4.1.2), following
 /// `summary_input_hash`'s sorted-join pattern: prompt/schema versions +
-/// scope + the sorted `interval_id:start:end` member set + the work-unit
+/// scope + the sorted `interval_key:start:end` member set + the work-unit
 /// skill revision (so a skill edit invalidates queued jobs too).
-fn discovery_input_hash(scope: &str, members: &[(i64, String, String)]) -> String {
+fn discovery_input_hash(scope: &str, members: &[(String, String, String)]) -> String {
     let mut parts: Vec<String> = members
         .iter()
-        .map(|(id, start, end)| format!("{id}:{start}:{end}"))
+        .map(|(key, start, end)| format!("{key}:{start}:{end}"))
         .collect();
     parts.sort();
     fingerprint(&[
@@ -1837,11 +1837,11 @@ mod tests {
     #[test]
     fn discovery_input_hash_tracks_member_activities() {
         let scope = "arc|ticket 42";
-        let a = vec![(7i64, "2026-08-17T09:00:00Z".into(), "2026-08-17T09:05:00Z".into())];
+        let a = vec![("interval-a".to_string(), "2026-08-17T09:00:00Z".into(), "2026-08-17T09:05:00Z".into())];
         let same_members_reordered = vec![a[0].clone()];
         let with_newcomer = vec![
             a[0].clone(),
-            (9i64, "2026-08-17T09:01:00Z".into(), "2026-08-17T09:02:00Z".into()),
+            ("interval-b".to_string(), "2026-08-17T09:01:00Z".into(), "2026-08-17T09:02:00Z".into()),
         ];
         assert_eq!(
             discovery_input_hash(scope, &a),
