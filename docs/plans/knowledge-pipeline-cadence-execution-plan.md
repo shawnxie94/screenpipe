@@ -46,7 +46,7 @@ doc-verified: ee1f78dae
 2. **input_hash 真实反映输入**：抽取的三元组必须含参与的活动集合（现在传 `&[]`，导致同 scope 恒定哈希、幂等失效）。
 3. **错误消息可见**：`knowledge_jobs` 增加错误消息列并写日志，用户可据此手动处理。
 4. **发现阶段预筛**：无证据（`no_evidence`）等不成熟目标不投递，不产生无效模型调用。
-5. **四层节拍全部可配置**（不再写死）：间隔重建、间隔摘要、WorkUnit 抽取、知识蒸馏。
+5. **四层节拍 + 发现回看窗口 + 调用预算全部可配置**（不再写死）：间隔重建、间隔摘要、WorkUnit 抽取、知识蒸馏各自独立的节拍，**以及各阶段自己的发现回看窗口**（现为 ②③ 共用写死 26h）、每轮投递上限、单次调用/单任务超时与每任务调用上限。证据（2026-09-12）：②③ 的 26h 回看与 5 分钟 tick 都不可配，导致早于 26h 的 418 个未摘要间隔永远不会被处理，用户既不能拉长窗口补历史也不能缩短窗口控制消耗。
 6. **知识按粗粒度定时 + 三机制投递**（默认 1 天，可配 7 天）：**不做数量阈值**，也不全量投递，改用「模型提名 + 变更驱动 + 冷却期」——模型决定值不值得、输入变化决定有没有新料、冷却决定别重复烧钱。
 7. **① 活动间隔切分优化**（确定性、可配）：换内容锚点（窗口标题降级为段内标签）、加相邻段合并规则、细段吸收。**2026-09-12 真机副本实测已证伪原目标**：真实窗口 112/112 个相邻边界均为跨身份切换（semantic 68 / site 40 / document_path 0），"把 <1 分钟碎片降到合理水平"不能由锚点与合并规则达成，须改由工作项层（Plan B）解决；本项保留锚点稳定性、证据不变量与单活跃版本三项已实现能力。详见 §4.4。
 8. **间隔重建独立成节拍**：新增 app 侧 tick 调 `activity_ledger::reconcile_range`，不再依赖 legacy 生成路径「读台账顺带 refresh」的副作用。
@@ -57,8 +57,20 @@ doc-verified: ee1f78dae
 | 项 | 批次 |
 | --- | --- |
 | 工作项身份（模型优先）+ 闭环判定（显式边界优先 + 30 分钟静默兜底） | 下一批（Plan B）；本批只做确定性的切分与合并 |
+| **碎片目标**（原 §2.1 #7 的"降低 <1 分钟碎片占比"） | **移交 Plan B**：2026-09-12 真机副本实测 112/112 相邻边界均为跨身份切换（semantic 68 / site 40 / document_path 0），锚点与合并规则不可达，须由工作项层解决 |
+| 桌面 UI 展示知识任务错误消息（R1 已透出 DTO/API，未进界面） | **R2**（与 §4.2 设置页同批） |
+| v1 存量证据时间越界（34 条实质越界 + 35 条 end 边界口径） | **独立小批**（不在 R2）；见 §2.3 |
 | WorkUnit 按工作项聚合、知识按「互不相同工作项」计数 | 下一批 |
 | 前端活动视图文案 | 界面整理批 |
+
+### 2.3 后续批次登记（不在 R1/R2 范围，已指定归属）
+
+| 项 | 批次 | 证据 | 备注 |
+| --- | --- | --- | --- |
+| v1 存量证据时间越界 | 独立小批 | 真库副本统计：9,423 条证据中 69 条越界——**35 条恰落在 `end` 边界**（`[start,end)` 口径问题）、**34 条实质早于 `start` 超过 60s**（疑与音频身份继承 / 未观测切分有关）；R1 未引入亦未修 | 修复前先判定：边界口径类走"改语义或改断言"，实质类需定位成因；不得改已应用迁移，不得清洗真库现有行 |
+| 碎片/工作项聚合 | Plan B | 同 §2.2 实测结论 | 本计划不再承担该目标 |
+| 桌面 UI 错误可见 | R2 | R1 仅验证到 `JobDto.last_error_message` 透出 | 与设置页同批交付 |
+| 重复模型调用实际发生量审计 | 待定（Plan B 或独立小批） | 归因轮快照口径为 0 重复；未运行 worker 级审计 | 幂等口径修复后可闭合 |
 
 ## 3. 现状锚点
 
@@ -69,6 +81,7 @@ doc-verified: ee1f78dae
 | 摘要发现：`missing-summary` 批 20 | `crates/screenpipe-engine/src/knowledge/summarize.rs:70-100` |
 | 抽取成功即入队 compile（无定时） | `crates/screenpipe-engine/src/knowledge/extract.rs:275` |
 | app 侧 5 分钟扫描（写死）驱动摘要 + 抽取 | `apps/screenpipe-app-tauri/src-tauri/src/knowledge_runtime.rs:443-450` |
+| 发现回看窗口写死 26h、批 20、调用预算写死（45s/120s/3 次） | `knowledge_runtime.rs:451`、`summarize.rs:35`、`executor.rs:66-70` |
 | worker 串行 loop（单任务） | `crates/screenpipe-engine/src/knowledge/worker.rs:243-300` |
 | 间隔重建入口（pub，供 tick 调用） | `crates/screenpipe-engine/src/activity_ledger.rs:48` `reconcile_range(db, start, end)` |
 | legacy 自动叙事 30 秒 tick（同时是间隔重建的实际驱动） | `apps/screenpipe-app-tauri/src-tauri/src/activity_history.rs:1893-1930` |
@@ -105,6 +118,11 @@ doc-verified: ee1f78dae
 | `knowledgeDistillCooldownDays` | ④ 同流程重新蒸馏冷却期 | 7 | 1–90 |
 | `activityMergeGapMinutes` | ① 相邻段合并阈值（§4.4） | 10 | 1–120 |
 | `activityMinDwellSeconds` | ① 短段吸收阈值（§4.4） | 30 | 5–300 |
+| `knowledgeDiscoveryLookbackHours` | ②③ 发现回看窗口（现写死 26h） | 26 | 1–168 |
+| `knowledgeDiscoveryBatch` | ②③ 每轮发现投递上限（现写死 20） | 20 | 1–500 |
+| `knowledgeCallTimeoutSeconds` | 单次模型调用超时（现写死 45s） | 45 | 10–600 |
+| `knowledgeStepTimeoutSeconds` | 单任务总时长（现写死 120s） | 120 | 30–1800 |
+| `knowledgeMaxModelCallsPerJob` | 每任务模型调用上限（现写死 3） | 3 | 1–10 |
 
 落地：
 
@@ -116,6 +134,7 @@ doc-verified: ee1f78dae
    定时器只决定「什么时候看一眼」，不决定选谁，也不做数量阈值。
 3. 设置页：在 `activities-settings.tsx` 增加上述字段（数字输入 + 单位 + 范围校验），旧 `activitiesIntervalMinutes` 保留为 legacy 展示并标注「仅影响旧叙事生成」。
 4. 迁移兼容：旧配置存在时作为新键初值读取（不静默改动用户已有值）。
+5. 桌面 UI：知识任务失败时展示 `last_error_message`（R1 已透出到 `JobDto`/API，本轮接到界面并给出手动重试入口）。
 
 ### 4.3 legacy 解耦与下线
 

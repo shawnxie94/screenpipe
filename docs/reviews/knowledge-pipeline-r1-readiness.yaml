@@ -7,7 +7,7 @@ iteration: 3
 source_artifacts:
 - name: execution-plan
   uri: docs/plans/knowledge-pipeline-cadence-execution-plan.md
-  sha256: ae971326dd115a2ef27f0be2d7e5959aa897ae61af24af5e9fae238bd5bbe43c
+  sha256: b5abd25d07371fa48e741004f0f7a17b4b22a1c5826d39eea35c3fc09585bcd5
 findings:
 - id: DR-KP-004
   severity: blocker
@@ -131,3 +131,12 @@ iterations:
   status: ready
   result: 第 5 轮通过新口径（key 稳定、哈希稳定、重复投递 90→0）。用户批准继续收尾并清零预算：开新 run 2026-09-12-knowledge-pipeline-r1-closure，预算
     3 轮重算；范围＝summarize 侧同类哈希改稳定键 + 修正测试中过时的历史 id 断言 + 全量验收。
+- iteration: 11
+  status: ready
+  result: 用户指出"不同维度时间间隔可配"未覆盖发现回看窗口：计划 §4.2 增补 5 个键（knowledgeDiscoveryLookbackHours
+    / knowledgeDiscoveryBatch / knowledgeCallTimeoutSeconds / knowledgeStepTimeoutSeconds
+    / knowledgeMaxModelCallsPerJob），§2.1#5 扩为"四层节拍+回看窗口+调用预算"，§3 锚点补写死位置。仍未实现（属 R2）。
+- iteration: 12
+  status: ready
+  result: 按用户要求把三项对话结论固化进计划：碎片目标确认移交 Plan B（附 112/112 跨身份切换证据）、桌面 UI 错误可见归入 R2（§4.2
+    落地第 5 条）、v1 存量越界（34 实质 + 35 边界口径）登记为独立小批；新增 §2.3 后续批次登记表。
