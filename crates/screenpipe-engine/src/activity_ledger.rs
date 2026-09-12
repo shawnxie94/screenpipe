@@ -97,12 +97,8 @@ pub async fn reconcile_range(
         (start, end) = db
             .activity_ledger_expand_range_to_active_bounds(start, end, ACTIVITY_LEDGER_PRODUCER)
             .await?;
-        let observations = db
-            .load_activity_ledger_observations(start, end)
-            .await?;
-        let meeting_spans = db
-            .activity_meeting_spans(start, end)
-            .await?;
+        let observations = db.load_activity_ledger_observations(start, end).await?;
+        let meeting_spans = db.activity_meeting_spans(start, end).await?;
         let (tasks, intervals) = build_ledger_with_policy(
             observations,
             start,
@@ -113,13 +109,7 @@ pub async fn reconcile_range(
         );
         let interval_count = intervals.len();
         match db
-            .reconcile_activity_ledger(
-                ACTIVITY_LEDGER_PRODUCER,
-                start,
-                end,
-                &tasks,
-                &intervals,
-            )
+            .reconcile_activity_ledger(ACTIVITY_LEDGER_PRODUCER, start, end, &tasks, &intervals)
             .await
         {
             Ok(()) => {
@@ -252,7 +242,10 @@ fn select_retained_evidence(
     mut candidates: Vec<RetentionCandidate>,
     limits: RetentionLimits,
     meeting_exempt: bool,
-) -> (Vec<ActivityEvidenceDraft>, HashMap<String, (i64, Option<String>)>) {
+) -> (
+    Vec<ActivityEvidenceDraft>,
+    HashMap<String, (i64, Option<String>)>,
+) {
     candidates.sort_by(|left, right| {
         left.occurred_at
             .cmp(&right.occurred_at)
@@ -333,7 +326,9 @@ fn select_retained_evidence(
                 status[index] = Some("cap");
             }
         }
-        let indices: Vec<usize> = (0..total).filter(|&index| status[index].is_none()).collect();
+        let indices: Vec<usize> = (0..total)
+            .filter(|&index| status[index].is_none())
+            .collect();
         for index in sample_out(&indices, limits.total_cap, &change_point, total) {
             status[index] = Some("sample");
         }
@@ -380,12 +375,7 @@ fn select_retained_evidence(
 /// the interval boundaries are always preferred. Should the preferred set
 /// alone exceed the cap, it is thinned uniformly while the boundaries stay.
 /// Returns the dropped indices.
-fn sample_out(
-    indices: &[usize],
-    cap: usize,
-    change_point: &[bool],
-    total: usize,
-) -> Vec<usize> {
+fn sample_out(indices: &[usize], cap: usize, change_point: &[bool], total: usize) -> Vec<usize> {
     if cap == 0 || indices.len() <= cap {
         return Vec::new();
     }
@@ -442,7 +432,11 @@ fn is_meeting_interval(
     let overlap_ms: i64 = meeting_spans
         .iter()
         .copied()
-        .map(|(start, end)| (end.min(end_at) - start.max(start_at)).num_milliseconds().max(0))
+        .map(|(start, end)| {
+            (end.min(end_at) - start.max(start_at))
+                .num_milliseconds()
+                .max(0)
+        })
         .sum();
     overlap_ms * 2 > duration
 }
@@ -533,11 +527,6 @@ pub(crate) fn build_ledger_with_policy(
             // (continuously observed) segments.
             if observation.occurred_at - open.last_at > UNOBSERVED_GAP {
                 let open = current.take().expect("checked above");
-                let previous = open
-                    .candidates
-                    .last()
-                    .cloned()
-                    .expect("segments start with one candidate");
                 let closed_at =
                     (open.last_at + ChronoDuration::seconds(1)).min(observation.occurred_at);
                 segments.push(close_segment(open, closed_at));
@@ -549,8 +538,6 @@ pub(crate) fn build_ledger_with_policy(
                         &unknown,
                         closed_at,
                         observation.occurred_at,
-                        previous,
-                        retention_candidate(&observation, None),
                         range_end,
                     ));
                 }
@@ -636,14 +623,11 @@ fn fold_short_same_identity_segments(
             let one_side_short = (segment.end_at - segment.start_at) < policy.min_dwell
                 || (last.end_at - last.start_at) < policy.min_dwell;
             let gap_ok = segment.start_at - last.end_at <= policy.merge_gap;
-            let nothing_between = !unobserved.iter().any(|span| {
-                span.start_at >= last.end_at && span.start_at < segment.start_at
-            });
-            let same_meeting_side = is_meeting_interval(
-                last.start_at,
-                last.end_at,
-                meeting_spans,
-            ) == is_meeting_interval(segment.start_at, segment.end_at, meeting_spans);
+            let nothing_between = !unobserved
+                .iter()
+                .any(|span| span.start_at >= last.end_at && span.start_at < segment.start_at);
+            let same_meeting_side = is_meeting_interval(last.start_at, last.end_at, meeting_spans)
+                == is_meeting_interval(segment.start_at, segment.end_at, meeting_spans);
             if one_side_short
                 && gap_ok
                 && nothing_between
@@ -710,8 +694,7 @@ fn finish_closed_segment(
     if segment.end_at <= segment.start_at {
         return;
     }
-    let meeting_exempt =
-        is_meeting_interval(segment.start_at, segment.end_at, meeting_spans);
+    let meeting_exempt = is_meeting_interval(segment.start_at, segment.end_at, meeting_spans);
     let (evidence, retention) =
         select_retained_evidence(segment.candidates.clone(), limits, meeting_exempt);
     // A segment whose candidates were all content-less has no evidence and no
@@ -743,17 +726,11 @@ fn unobserved_interval(
     identity: &TaskIdentity,
     start_at: DateTime<Utc>,
     end_at: DateTime<Utc>,
-    first: RetentionCandidate,
-    last: RetentionCandidate,
     range_end: DateTime<Utc>,
 ) -> ActivityIntervalDraft {
-    // An unobserved gap produced no observations of its own; the borrowed
-    // boundary candidates anchor the interval and nothing is dropped.
-    let mut retention: HashMap<String, (i64, Option<String>)> = HashMap::new();
-    retention
-        .entry(first.source_type.clone())
-        .or_insert((0, None));
-    retention.entry(last.source_type.clone()).or_insert((0, None));
+    // An unobserved gap has no evidence of its own. The observations on either
+    // side remain owned by their adjacent intervals; borrowing them here would
+    // violate the half-open [start_at, end_at) contract and duplicate sources.
     ActivityIntervalDraft {
         interval_key: stable_key(&format!(
             "interval|{}|{}|{}",
@@ -767,21 +744,8 @@ fn unobserved_interval(
         state: interval_state(end_at, range_end),
         confidence: identity.confidence(),
         actions: Vec::new(),
-        evidence: vec![
-            ActivityEvidenceDraft {
-                source_type: first.source_type,
-                source_id: first.source_id,
-                occurred_at: first.occurred_at,
-                action_key: None,
-            },
-            ActivityEvidenceDraft {
-                source_type: last.source_type,
-                source_id: last.source_id,
-                occurred_at: last.occurred_at,
-                action_key: None,
-            },
-        ],
-        retention,
+        evidence: Vec::new(),
+        retention: HashMap::new(),
     }
 }
 
@@ -882,7 +846,10 @@ fn identity_for(observation: &ActivityLedgerObservation) -> TaskIdentity {
 /// from splitting a site into per-visitor identities.
 fn browser_anchor(url: &str) -> Option<String> {
     let parsed = url::Url::parse(url).ok()?;
-    let host = parsed.host_str()?.trim_end_matches('.').to_ascii_lowercase();
+    let host = parsed
+        .host_str()?
+        .trim_end_matches('.')
+        .to_ascii_lowercase();
     if host.is_empty() {
         return None;
     }
@@ -1248,7 +1215,10 @@ mod tests {
             "https://github.com",
             "Something else entirely",
         );
-        assert_eq!(identity_for(&root).task_key, identity_for(&root_again).task_key);
+        assert_eq!(
+            identity_for(&root).task_key,
+            identity_for(&root_again).task_key
+        );
         assert_ne!(identity_for(&root).task_key, identity_for(&b).task_key);
 
         // An identified document beats the low-precision URL grouping
@@ -1417,7 +1387,10 @@ mod tests {
             identity: identity(),
             start_at: at("2026-08-17T09:00:00Z"),
             end_at: at("2026-08-17T09:02:00Z"),
-            candidates: vec![candidate(1, "2026-08-17T09:00:00Z"), candidate(2, "2026-08-17T09:01:00Z")],
+            candidates: vec![
+                candidate(1, "2026-08-17T09:00:00Z"),
+                candidate(2, "2026-08-17T09:01:00Z"),
+            ],
             actions: Vec::new(),
         };
         let short = ClosedSegment {
@@ -1433,7 +1406,11 @@ mod tests {
         assert_eq!(segments.len(), 1, "same-object short folds into the main");
         let merged = &segments[0];
         assert_eq!(merged.start_at, at("2026-08-17T09:00:00Z"));
-        assert_eq!(merged.end_at, at("2026-08-17T09:10:01Z"), "bounds cover all evidence time");
+        assert_eq!(
+            merged.end_at,
+            at("2026-08-17T09:10:01Z"),
+            "bounds cover all evidence time"
+        );
         assert_eq!(merged.candidates.len(), 3);
 
         // The final selection pass over the union respects the total cap.
@@ -1632,16 +1609,12 @@ mod tests {
         let mut blank = doc_frame(2, "2026-08-17T09:01:00Z", "blank");
         blank.content_fingerprint = None;
         blank.content_empty = true;
-        let observations = vec![
-            blank,
-            doc_frame(4, "2026-08-17T09:03:00Z", "screen A"),
-            {
-                let mut tail = doc_frame(5, "2026-08-17T09:04:00Z", "screen A");
-                tail.content_fingerprint = None;
-                tail.content_empty = true;
-                tail
-            },
-        ];
+        let observations = vec![blank, doc_frame(4, "2026-08-17T09:03:00Z", "screen A"), {
+            let mut tail = doc_frame(5, "2026-08-17T09:04:00Z", "screen A");
+            tail.content_fingerprint = None;
+            tail.content_empty = true;
+            tail
+        }];
         let (_, intervals) = build_ledger(
             observations,
             at("2026-08-17T09:00:00Z"),
@@ -1662,8 +1635,7 @@ mod tests {
         let observations: Vec<_> = [1, 2, 3]
             .into_iter()
             .map(|id| {
-                let mut observation =
-                    doc_frame(id, &format!("2026-08-17T09:0{id}:00Z"), "blank");
+                let mut observation = doc_frame(id, &format!("2026-08-17T09:0{id}:00Z"), "blank");
                 observation.content_fingerprint = None;
                 observation.content_empty = true;
                 observation
@@ -1681,10 +1653,7 @@ mod tests {
     fn transcripts_are_all_kept_within_an_interval() {
         let mut observations = vec![frame(1, "2026-08-17T09:00:00Z", "Meet", "Customer call")];
         for second in 1..=6 {
-            observations.push(audio(
-                second + 1,
-                &format!("2026-08-17T09:00:{second:02}Z"),
-            ));
+            observations.push(audio(second + 1, &format!("2026-08-17T09:00:{second:02}Z")));
         }
         let (_, intervals) = build_ledger(
             observations,
@@ -1718,10 +1687,7 @@ mod tests {
             ui_event_cap: 2,
         };
         // Overlapping more than half of the 5-minute interval: exempt.
-        let meeting = vec![(
-            at("2026-08-17T08:58:00Z"),
-            at("2026-08-17T09:07:00Z"),
-        )];
+        let meeting = vec![(at("2026-08-17T08:58:00Z"), at("2026-08-17T09:07:00Z"))];
         let (_, intervals) = build_ledger_with_policy(
             observations.clone(),
             at("2026-08-17T09:00:00Z"),
@@ -1750,9 +1716,7 @@ mod tests {
 
     #[test]
     fn per_source_cap_samples_and_reports_cap_over_unchanged() {
-        let windows = [
-            "W1", "W1", "W1", "W1", "W2", "W3", "W4", "W4", "W5", "W5",
-        ];
+        let windows = ["W1", "W1", "W1", "W1", "W2", "W3", "W4", "W4", "W5", "W5"];
         let observations: Vec<_> = windows
             .iter()
             .enumerate()
@@ -1791,10 +1755,7 @@ mod tests {
     fn total_cap_samples_transcripts_and_reports_sample() {
         let mut observations = vec![frame(1, "2026-08-17T09:00:00Z", "Meet", "Customer call")];
         for second in 1..=3 {
-            observations.push(audio(
-                second + 1,
-                &format!("2026-08-17T09:00:{second:02}Z"),
-            ));
+            observations.push(audio(second + 1, &format!("2026-08-17T09:00:{second:02}Z")));
         }
         observations.push(frame(5, "2026-08-17T09:00:04Z", "Meet", "Customer call"));
         let (_, intervals) = build_ledger_with_policy(

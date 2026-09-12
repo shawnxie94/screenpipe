@@ -1695,10 +1695,11 @@ mod tests {
         let created = discover_and_enqueue(&db, at("2026-08-17T09:00:00Z"))
             .await
             .unwrap();
-        assert_eq!(
-            created, 2,
-            "widened window re-enqueues the original scope and queues the newcomer"
-        );
+        // With strict [start, end) discovery, the original boundary-only
+        // observation is intentionally excluded; only the genuinely new
+        // activity is enqueued. This still protects new activity -> new hash
+        // -> permitted recomputation.
+        assert_eq!(created, 1, "only the newcomer crosses the half-open window");
     }
 
     /// §4.1.4 attempt-3 counterexample: a job queued against the v1 ledger

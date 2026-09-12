@@ -378,8 +378,7 @@ async fn expand_switch_bounds_tx(
         widened = true;
     }
     Err(SqlxError::Protocol(
-        "activity ledger coverage switch did not converge to boundary-complete bounds"
-            .to_string(),
+        "activity ledger coverage switch did not converge to boundary-complete bounds".to_string(),
     ))
 }
 
@@ -595,8 +594,37 @@ impl DatabaseManager {
             )));
         }
 
+        // Use the transactionally widened bounds for every delete, prefix
+        // lookup, and coverage write below. Mixing the caller's narrow bounds
+        // with the boundary-complete switch bounds leaves stale edge rows and
+        // makes a second identical reconcile derive different identities.
+        let switch_start_text = switch_start;
+        let switch_end_text = switch_end;
+        let switch_start_at = DateTime::parse_from_rfc3339(&switch_start_text)
+            .map(|value| value.with_timezone(&Utc))
+            .map_err(|error| SqlxError::Protocol(format!("bad switch bound: {error}")))?;
+        let interval_keys: Vec<&str> = intervals
+            .iter()
+            .filter(|interval| interval.end_at > interval.start_at)
+            .map(|interval| interval.interval_key.as_str())
+            .collect();
+
         // Preserve the finalized prefix of a segment crossing the reconciliation
         // watermark, then replace everything beginning inside the trailing range.
+        sqlx::query(
+            "DELETE FROM activity_actions WHERE interval_id IN (\
+                 SELECT id FROM activity_intervals \
+                 WHERE producer = ?1 AND start_at >= ?2 AND start_at < ?3)",
+        )
+        .bind(producer)
+        .bind(&switch_start_text)
+        .bind(&switch_end_text)
+        .execute(&mut **tx.conn())
+        .await?;
+        // Evidence deletion is intentionally deferred. The AFTER DELETE
+        // trigger removes an interval when its last evidence disappears;
+        // deleting before keyed upsert therefore destroys the very row whose
+        // id the rerun must preserve. Upserts below refresh matching evidence.
         sqlx::query(
             "DELETE FROM activity_actions WHERE interval_id IN (\
                  SELECT id FROM activity_intervals \
@@ -605,18 +633,7 @@ impl DatabaseManager {
              AND occurred_at >= ?2",
         )
         .bind(producer)
-        .bind(&range_start_text)
-        .execute(&mut **tx.conn())
-        .await?;
-        sqlx::query(
-            "DELETE FROM activity_evidence WHERE interval_id IN (\
-                 SELECT id FROM activity_intervals \
-                 WHERE producer = ?1 AND start_at < ?2 \
-                   AND end_at > ?2) \
-             AND occurred_at >= ?2",
-        )
-        .bind(producer)
-        .bind(&range_start_text)
+        .bind(&switch_start_text)
         .execute(&mut **tx.conn())
         .await?;
         sqlx::query(
@@ -626,19 +643,9 @@ impl DatabaseManager {
                AND end_at > ?2",
         )
         .bind(producer)
-        .bind(&range_start_text)
+        .bind(&switch_start_text)
         .execute(&mut **tx.conn())
         .await?;
-        sqlx::query(
-            "DELETE FROM activity_intervals \
-             WHERE producer = ?1 AND start_at >= ?2 AND start_at < ?3",
-        )
-        .bind(producer)
-        .bind(&range_start_text)
-        .bind(&range_end_text)
-        .execute(&mut **tx.conn())
-        .await?;
-
         let mut task_ids = HashMap::with_capacity(tasks.len());
         for task in tasks.iter().filter(|task| task.parent_task_key.is_none()) {
             upsert_task(&mut tx, producer, task, None).await?;
@@ -672,9 +679,33 @@ impl DatabaseManager {
             // same task within one frame-sampling period, extend the preserved
             // prefix instead of inserting a new segment.
             let merge_prefix = first_interval
-                && interval.start_at >= range_start
-                && interval.start_at - range_start <= chrono::Duration::seconds(15);
-            let prefix_id = if merge_prefix {
+                && interval.start_at >= switch_start_at
+                && interval.start_at - switch_start_at <= chrono::Duration::seconds(15);
+            // Prefer the deterministic interval key on reruns. The prefix
+            // extension is only a fallback for a genuinely new first segment;
+            // otherwise it can steal a stable keyed row and change the visible
+            // id even though the rebuilt content is identical.
+            let keyed_id = sqlx::query_scalar::<_, i64>(
+                "SELECT id FROM activity_intervals WHERE interval_key = ?1 LIMIT 1",
+            )
+            .bind(&interval.interval_key)
+            .fetch_optional(&mut **tx.conn())
+            .await?;
+            let keyed_id = match keyed_id {
+                Some(id) => Some(id),
+                None => {
+                    sqlx::query_scalar::<_, i64>(
+                        "SELECT id FROM activity_intervals \
+                     WHERE producer = ?1 AND start_at = ?2 \
+                     ORDER BY id LIMIT 1",
+                    )
+                    .bind(producer)
+                    .bind(interval.start_at.to_rfc3339())
+                    .fetch_optional(&mut **tx.conn())
+                    .await?
+                }
+            };
+            let prefix_id = keyed_id.or(if merge_prefix {
                 sqlx::query_scalar::<_, i64>(
                     "SELECT id FROM activity_intervals \
                      WHERE producer = ?1 AND task_id = ?2 \
@@ -684,12 +715,12 @@ impl DatabaseManager {
                 )
                 .bind(producer)
                 .bind(task_id)
-                .bind(&range_start_text)
+                .bind(&switch_start_text)
                 .fetch_optional(&mut **tx.conn())
                 .await?
             } else {
                 None
-            };
+            });
             first_interval = false;
             let interval_id: i64 = if let Some(prefix_id) = prefix_id {
                 sqlx::query(
@@ -821,6 +852,26 @@ impl DatabaseManager {
             }
         }
 
+        // Remove only obsolete keyed rows after all replacements have a chance
+        // to resolve their existing interval identity.
+        let existing: Vec<(i64, String)> = sqlx::query_as(
+            "SELECT id, interval_key FROM activity_intervals \
+             WHERE producer = ?1 AND start_at >= ?2 AND start_at < ?3",
+        )
+        .bind(producer)
+        .bind(&switch_start_text)
+        .bind(&switch_end_text)
+        .fetch_all(&mut **tx.conn())
+        .await?;
+        for (id, key) in existing {
+            if !interval_keys.iter().any(|expected| *expected == key) {
+                sqlx::query("DELETE FROM activity_intervals WHERE id = ?1")
+                    .bind(id)
+                    .execute(&mut **tx.conn())
+                    .await?;
+            }
+        }
+
         sqlx::query(
             r#"INSERT INTO activity_ledger_state (producer, last_reconciled_at)
                VALUES (?1, ?2)
@@ -829,7 +880,7 @@ impl DatabaseManager {
                  updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')"#,
         )
         .bind(producer)
-        .bind(&range_end_text)
+        .bind(&switch_end_text)
         .execute(&mut **tx.conn())
         .await?;
 
@@ -845,8 +896,8 @@ impl DatabaseManager {
              WHERE producer = ?1 AND range_start >= ?2 AND range_end <= ?3",
         )
         .bind(producer)
-        .bind(&range_start_text)
-        .bind(&range_end_text)
+        .bind(&switch_start_text)
+        .bind(&switch_end_text)
         .execute(&mut **tx.conn())
         .await?;
         sqlx::query(
@@ -854,8 +905,8 @@ impl DatabaseManager {
              VALUES (?1, ?2, ?3)",
         )
         .bind(producer)
-        .bind(&range_start_text)
-        .bind(&range_end_text)
+        .bind(&switch_start_text)
+        .bind(&switch_end_text)
         .execute(&mut **tx.conn())
         .await?;
 
@@ -885,7 +936,9 @@ impl DatabaseManager {
         let parse = |value: &str| {
             DateTime::parse_from_rfc3339(value)
                 .map(|value| value.with_timezone(&Utc))
-                .map_err(|error| SqlxError::Protocol(format!("bad coverage bound {value}: {error}")))
+                .map_err(|error| {
+                    SqlxError::Protocol(format!("bad coverage bound {value}: {error}"))
+                })
         };
         Ok((parse(&start)?, parse(&end)?))
     }
@@ -895,12 +948,11 @@ impl DatabaseManager {
     /// (§4.1.4): a version superseded after enqueueing must not spend model
     /// budget.
     pub async fn activity_interval_is_active(&self, interval_id: i64) -> Result<bool, SqlxError> {
-        let active: Option<i64> = sqlx::query_scalar(
-            "SELECT 1 FROM activity_intervals_active WHERE id = ?1",
-        )
-        .bind(interval_id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let active: Option<i64> =
+            sqlx::query_scalar("SELECT 1 FROM activity_intervals_active WHERE id = ?1")
+                .bind(interval_id)
+                .fetch_optional(&self.pool)
+                .await?;
         Ok(active.is_some())
     }
 
@@ -961,7 +1013,9 @@ impl DatabaseManager {
         let parse = |value: &str| {
             DateTime::parse_from_rfc3339(value)
                 .map(|value| value.with_timezone(&Utc))
-                .map_err(|error| SqlxError::Protocol(format!("bad interval bound {value}: {error}")))
+                .map_err(|error| {
+                    SqlxError::Protocol(format!("bad interval bound {value}: {error}"))
+                })
         };
         let mut cursor = parse(&start_text)?;
         let switch_end = parse(&end_text)?;
@@ -1202,9 +1256,7 @@ impl DatabaseManager {
                     .ok()?
                     .with_timezone(&Utc);
                 let end = match meeting_end {
-                    Some(end) => DateTime::parse_from_rfc3339(&end)
-                        .ok()?
-                        .with_timezone(&Utc),
+                    Some(end) => DateTime::parse_from_rfc3339(&end).ok()?.with_timezone(&Utc),
                     None => end_at,
                 };
                 Some((start.max(start_at), end.min(end_at)))
@@ -1392,17 +1444,27 @@ impl DatabaseManager {
         interval_id: i64,
         input_hash: &str,
     ) -> Result<Option<ActivitySummaryRow>, SqlxError> {
-        let row: Option<(i64, String, String, String, i64, String, String, String, Option<String>, String)> =
-            sqlx::query_as(
-                "SELECT interval_id, summary, keywords, band, summary_chars, evidence_refs, \
+        let row: Option<(
+            i64,
+            String,
+            String,
+            String,
+            i64,
+            String,
+            String,
+            String,
+            Option<String>,
+            String,
+        )> = sqlx::query_as(
+            "SELECT interval_id, summary, keywords, band, summary_chars, evidence_refs, \
                         producer, prompt_version, model, input_hash \
                  FROM activity_interval_summaries \
                  WHERE interval_id = ?1 AND input_hash = ?2",
-            )
-            .bind(interval_id)
-            .bind(input_hash)
-            .fetch_optional(&self.pool)
-            .await?;
+        )
+        .bind(interval_id)
+        .bind(input_hash)
+        .fetch_optional(&self.pool)
+        .await?;
         let Some((
             interval_id,
             summary,
@@ -1496,7 +1558,8 @@ impl DatabaseManager {
             }
         }
         let summary_chars = summary.chars().filter(|c| !c.is_whitespace()).count() as i64;
-        let keywords_json = serde_json::to_string(&keywords.to_vec()).unwrap_or_else(|_| "[]".into());
+        let keywords_json =
+            serde_json::to_string(&keywords.to_vec()).unwrap_or_else(|_| "[]".into());
         let evidence_json =
             serde_json::to_string(&evidence_refs.to_vec()).unwrap_or_else(|_| "[]".into());
         let id: i64 = sqlx::query_scalar(
@@ -1550,13 +1613,14 @@ impl DatabaseManager {
         .bind(end)
         .fetch_all(&self.pool)
         .await?;
-        let mut by_interval: HashMap<i64, Vec<(String, i64, i64, Option<String>)>> =
-            HashMap::new();
+        let mut by_interval: HashMap<i64, Vec<(String, i64, i64, Option<String>)>> = HashMap::new();
         for (interval_id, source_type, kept, dropped, drop_reason) in rows {
-            by_interval
-                .entry(interval_id)
-                .or_default()
-                .push((source_type, kept, dropped, drop_reason));
+            by_interval.entry(interval_id).or_default().push((
+                source_type,
+                kept,
+                dropped,
+                drop_reason,
+            ));
         }
         Ok(by_interval)
     }
@@ -1983,10 +2047,8 @@ mod tests {
         let (tasks, mut intervals) = drafts(source_id);
         // The draft claims two drops; `kept` must still come from the single
         // evidence row actually persisted for the interval.
-        intervals[0].retention = HashMap::from([(
-            "ui_event".to_string(),
-            (2, Some("unchanged".to_string())),
-        )]);
+        intervals[0].retention =
+            HashMap::from([("ui_event".to_string(), (2, Some("unchanged".to_string())))]);
         db.reconcile_activity_ledger(
             "deterministic-v1",
             at("2026-08-17T09:00:00Z"),
@@ -2046,16 +2108,14 @@ mod tests {
         db.execute_raw_sql_write("DELETE FROM activity_intervals")
             .await
             .unwrap();
-        let retention: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_retention")
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
-        let summaries: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_summaries")
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+        let retention: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_retention")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+        let summaries: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_summaries")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
         assert_eq!(retention, 0);
         assert_eq!(summaries, 0);
     }
@@ -2074,20 +2134,11 @@ mod tests {
         tx.commit().await.unwrap();
 
         let (tasks, intervals) = drafts(source_id);
-        let range = (
-            at("2026-08-17T09:00:00Z"),
-            at("2026-08-17T09:10:00Z"),
-        );
+        let range = (at("2026-08-17T09:00:00Z"), at("2026-08-17T09:10:00Z"));
         for _ in 0..2 {
-            db.reconcile_activity_ledger(
-                "deterministic-v1",
-                range.0,
-                range.1,
-                &tasks,
-                &intervals,
-            )
-            .await
-            .unwrap();
+            db.reconcile_activity_ledger("deterministic-v1", range.0, range.1, &tasks, &intervals)
+                .await
+                .unwrap();
         }
 
         let evidence: i64 = sqlx::query_scalar(
@@ -2099,12 +2150,10 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(evidence, 1, "kept evidence must survive a rerun");
-        let rows: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM activity_interval_retention",
-        )
-        .fetch_one(&db.pool)
-        .await
-        .unwrap();
+        let rows: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_retention")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
         assert_eq!(rows, 1, "rerun must not duplicate retention rows");
     }
 
@@ -2139,10 +2188,7 @@ mod tests {
         insert_summary(&db, interval_id, r#"["ledger","retention"]"#).await;
 
         let rows = db
-            .activity_intervals_between(
-                at("2026-08-17T08:00:00Z"),
-                at("2026-08-17T10:00:00Z"),
-            )
+            .activity_intervals_between(at("2026-08-17T08:00:00Z"), at("2026-08-17T10:00:00Z"))
             .await
             .unwrap();
         assert_eq!(rows.len(), 1);
@@ -2547,14 +2593,16 @@ mod tests {
         .await
         .unwrap();
 
-        assert!(db
-            .activity_ledger_activate_version(
+        assert!(
+            db.activity_ledger_activate_version(
                 "deterministic-v1",
                 at("2026-09-12T00:00:00Z"),
                 at("2026-09-12T00:10:00Z"),
             )
             .await
-            .is_err(), "hole in target coverage must be rejected");
+            .is_err(),
+            "hole in target coverage must be rejected"
+        );
         let list = db
             .list_activity_ledger(
                 at("2026-09-11T23:00:00Z"),
@@ -2739,16 +2787,14 @@ mod tests {
         second.end_at = at("2026-09-12T00:10:00Z");
         second.actions = Vec::new();
         intervals = vec![first, second];
-        let tasks = vec![
-            ActivityTaskDraft {
-                task_key: "task".to_string(),
-                parent_task_key: Some("parent".to_string()),
-                kind: "task".to_string(),
-                title: "Ticket 42".to_string(),
-                app_name: Some("Browser".to_string()),
-                confidence: 0.8,
-            },
-        ];
+        let tasks = vec![ActivityTaskDraft {
+            task_key: "task".to_string(),
+            parent_task_key: Some("parent".to_string()),
+            kind: "task".to_string(),
+            title: "Ticket 42".to_string(),
+            app_name: Some("Browser".to_string()),
+            confidence: 0.8,
+        }];
         (tasks, intervals)
     }
 
@@ -2874,10 +2920,17 @@ mod tests {
         .unwrap();
         assert!(!db.activity_interval_is_active(v1_id).await.unwrap());
         assert!(db.activity_interval_is_active(v2_id).await.unwrap());
-        let history = db.activity_interval_record_by_id(v1_id).await.unwrap().unwrap();
+        let history = db
+            .activity_interval_record_by_id(v1_id)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(history.producer, "deterministic-v1");
         assert_eq!(
-            db.activity_evidence_for_interval(v1_id, 10).await.unwrap().len(),
+            db.activity_evidence_for_interval(v1_id, 10)
+                .await
+                .unwrap()
+                .len(),
             1,
             "superseded evidence remains readable"
         );
@@ -2901,7 +2954,10 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(list.len(), 1);
-        assert_eq!(list[0].producer, "deterministic-v1", "rollback switched back");
+        assert_eq!(
+            list[0].producer, "deterministic-v1",
+            "rollback switched back"
+        );
     }
 
     /// §4.4.4 atomicity: a failed rebuild must leave the previous coverage —
@@ -3116,15 +3172,9 @@ mod tests {
         v2_intervals[0].start_at = at("2026-08-17T08:00:00Z");
         v2_intervals[0].end_at = at("2026-08-17T09:30:00Z");
         v2_intervals[0].interval_key = "interval-v2".to_string();
-        db.reconcile_activity_ledger(
-            "deterministic-v2",
-            start,
-            end,
-            &v2_tasks,
-            &v2_intervals,
-        )
-        .await
-        .unwrap();
+        db.reconcile_activity_ledger("deterministic-v2", start, end, &v2_tasks, &v2_intervals)
+            .await
+            .unwrap();
         let list = db
             .list_activity_ledger(
                 at("2026-08-17T07:00:00Z"),
@@ -3134,7 +3184,11 @@ mod tests {
             )
             .await
             .unwrap();
-        assert_eq!(list.len(), 1, "the straddler is fully replaced, not half-hidden");
+        assert_eq!(
+            list.len(),
+            1,
+            "the straddler is fully replaced, not half-hidden"
+        );
         assert_eq!(list[0].producer, "deterministic-v2");
         assert_eq!(list[0].start_at, "2026-08-17T08:00:00+00:00");
     }
@@ -3176,8 +3230,15 @@ mod tests {
         // No citation at all.
         let error = db
             .activity_summary_upsert(
-                interval_id, "摘要正文", &["关键字".to_string()], "short", "summarizer-v1",
-                "prompt-v1", Some("test-model"), "hash-a", &[],
+                interval_id,
+                "摘要正文",
+                &["关键字".to_string()],
+                "short",
+                "summarizer-v1",
+                "prompt-v1",
+                Some("test-model"),
+                "hash-a",
+                &[],
             )
             .await
             .unwrap_err();
@@ -3192,8 +3253,15 @@ mod tests {
         ];
         let error = db
             .activity_summary_upsert(
-                interval_id, "摘要正文", &["关键字".to_string()], "short", "summarizer-v1",
-                "prompt-v1", Some("test-model"), "hash-a", &four,
+                interval_id,
+                "摘要正文",
+                &["关键字".to_string()],
+                "short",
+                "summarizer-v1",
+                "prompt-v1",
+                Some("test-model"),
+                "hash-a",
+                &four,
             )
             .await
             .unwrap_err();
@@ -3207,8 +3275,15 @@ mod tests {
         ] {
             let error = db
                 .activity_summary_upsert(
-                    interval_id, "摘要正文", &["关键字".to_string()], "short", "summarizer-v1",
-                    "prompt-v1", Some("test-model"), "hash-a", &forged,
+                    interval_id,
+                    "摘要正文",
+                    &["关键字".to_string()],
+                    "short",
+                    "summarizer-v1",
+                    "prompt-v1",
+                    Some("test-model"),
+                    "hash-a",
+                    &forged,
                 )
                 .await
                 .unwrap_err();
@@ -3221,25 +3296,38 @@ mod tests {
         // Invalid band is rejected as well.
         let error = db
             .activity_summary_upsert(
-                interval_id, "摘要正文", &["关键字".to_string()], "epic", "summarizer-v1",
-                "prompt-v1", Some("test-model"), "hash-a", &valid,
+                interval_id,
+                "摘要正文",
+                &["关键字".to_string()],
+                "epic",
+                "summarizer-v1",
+                "prompt-v1",
+                Some("test-model"),
+                "hash-a",
+                &valid,
             )
             .await
             .unwrap_err();
         assert!(error.to_string().contains("band"));
 
         // Nothing was written by any rejected call.
-        let rows: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_summaries")
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+        let rows: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_summaries")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
         assert_eq!(rows, 0);
 
         // One retained citation passes.
         db.activity_summary_upsert(
-            interval_id, "在 Browser 里修复 Ticket 42 的回复流程", &["Ticket 42".to_string()],
-            "short", "summarizer-v1", "prompt-v1", Some("test-model"), "hash-a", &valid,
+            interval_id,
+            "在 Browser 里修复 Ticket 42 的回复流程",
+            &["Ticket 42".to_string()],
+            "short",
+            "summarizer-v1",
+            "prompt-v1",
+            Some("test-model"),
+            "hash-a",
+            &valid,
         )
         .await
         .unwrap();
@@ -3281,8 +3369,15 @@ mod tests {
 
         let first_id = db
             .activity_summary_upsert(
-                interval_id, "在 Browser 中回复 Ticket 42 并检查附件", &keywords, "short",
-                "summarizer-v1", "prompt-v1", Some("test-model"), "hash-1", &refs,
+                interval_id,
+                "在 Browser 中回复 Ticket 42 并检查附件",
+                &keywords,
+                "short",
+                "summarizer-v1",
+                "prompt-v1",
+                Some("test-model"),
+                "hash-1",
+                &refs,
             )
             .await
             .unwrap();
@@ -3302,8 +3397,15 @@ mod tests {
         // Same input hash: nothing is rewritten.
         let second_id = db
             .activity_summary_upsert(
-                interval_id, "完全不同的另一段摘要内容也无所谓", &keywords, "short",
-                "summarizer-v1", "prompt-v1", Some("test-model"), "hash-1", &refs,
+                interval_id,
+                "完全不同的另一段摘要内容也无所谓",
+                &keywords,
+                "short",
+                "summarizer-v1",
+                "prompt-v1",
+                Some("test-model"),
+                "hash-1",
+                &refs,
             )
             .await
             .unwrap();
@@ -3319,17 +3421,23 @@ mod tests {
         // A different hash replaces the row in place — still one row.
         let replaced_id = db
             .activity_summary_upsert(
-                interval_id, "证据变化后重新生成的摘要正文内容", &keywords, "short",
-                "summarizer-v1", "prompt-v2", Some("test-model-2"), "hash-2", &refs,
+                interval_id,
+                "证据变化后重新生成的摘要正文内容",
+                &keywords,
+                "short",
+                "summarizer-v1",
+                "prompt-v2",
+                Some("test-model-2"),
+                "hash-2",
+                &refs,
             )
             .await
             .unwrap();
         assert_eq!(replaced_id, first_id);
-        let count: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_summaries")
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM activity_interval_summaries")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
         assert_eq!(count, 1);
         let old_hash = db
             .activity_summary_by_input_hash(interval_id, "hash-1")
@@ -3447,11 +3555,9 @@ mod tests {
         )
         .await
         .unwrap();
-        db.execute_raw_sql_write(
-            "INSERT INTO audio_chunks (id, file_path) VALUES (1, 'test.wav')",
-        )
-        .await
-        .unwrap();
+        db.execute_raw_sql_write("INSERT INTO audio_chunks (id, file_path) VALUES (1, 'test.wav')")
+            .await
+            .unwrap();
         db.execute_raw_sql_write(
             "INSERT INTO audio_transcriptions \
              (audio_chunk_id, offset_index, timestamp, transcription, device, is_input_device) \
@@ -3522,10 +3628,7 @@ mod tests {
         .unwrap();
 
         let spans = db
-            .activity_meeting_spans(
-                at("2026-08-17T09:00:00Z"),
-                at("2026-08-17T09:30:00Z"),
-            )
+            .activity_meeting_spans(at("2026-08-17T09:00:00Z"), at("2026-08-17T09:30:00Z"))
             .await
             .unwrap();
         assert_eq!(
