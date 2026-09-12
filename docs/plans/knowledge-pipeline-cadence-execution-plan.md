@@ -140,7 +140,7 @@ doc-verified: ee1f78dae
 
 验收（两层）：
 - **合成层**：内存库/合成 fixture 必须证明失败不重试、A→B→A 不误并、证据时间范围、保留上限、v1→v2 同窗不重复、边缘不丢失、失败原子性、重复重建幂等、历史引用可查及显式回退。
-- **真实副本层**（2026-09-12 新增，因合成层放过了两处真实缺陷）：在 dev 库副本上对 **v2 产出**独立断言区间不重叠、每条证据 `occurred_at` 落在所属区间内、无孤儿证据、**同窗重复 reconcile 的 interval id 集合稳定**、被覆盖 v1 仍可按 id 查、覆盖范围单活跃版本；v1 存量越界单独统计，不并入 v2 判定。副本分布只作观测，不设未经实测的 700–1,200 段或 <20% 门槛；本轮不启动真机或调用远程产品模型。
+- **真实副本层**（2026-09-12 新增，因合成层放过了两处真实缺陷）：在 dev 库副本上对 **v2 产出**独立断言区间不重叠、每条证据 `occurred_at` 落在所属区间内、无孤儿证据、**同窗重复 reconcile 的段集合稳定（`interval_key` 集合不变）且发现输入指纹（`discovery_input_hash`）不变、该窗口零新增投递**（2026-09-12 裁决：行 id 是内部产物、保留策略会按设计删除空段，验收以用户可感知的"同内容不重复消耗模型额度"为准；发现哈希成员改用稳定的 `interval_key`而非行 id）、被覆盖 v1 仍可按 id 查、覆盖范围单活跃版本；v1 存量越界单独统计，不并入 v2 判定。副本分布只作观测，不设未经实测的 700–1,200 段或 <20% 门槛；本轮不启动真机或调用远程产品模型。
 
 ## 5. 测试与验收命令
 
@@ -153,7 +153,7 @@ doc-verified: ee1f78dae
 | 5 | `cd apps/screenpipe-app-tauri && bun run typecheck` | exit 0（设置页新增字段） |
 | 6 | `cargo test -p screenpipe-db --test knowledge_correctness` | 全绿 |
 | 7 | 静态核对：报告附「设置键 → 读取位置 → 默认值」表与「失败终态」语义说明 | 每项可定位 |
-| 9 | `SP_REAL_DB_COPY=<副本> cargo test -p screenpipe-engine --test real_db_resegmentation -- --ignored --nocapture` | exit 0；v2 产出不变量全过（含幂等与证据时间归属）。v1 存量越界单独统计 |
+| 9 | `SP_REAL_DB_COPY=<副本> cargo test -p screenpipe-engine --test real_db_resegmentation -- --ignored --nocapture` | exit 0；v2 产出不变量全过（含段集合/输入指纹稳定与证据时间归属）。v1 存量越界单独统计 |
 | 8 | 人工验收（协调者）：dev 端重启后观察 10 分钟——失败任务不再被重建；无 legacy 自动叙事日志；间隔按新节拍出现；执行 §4.4 的验收观测 | 观察记录写入报告 |
 
 ## 6. 风险与回退

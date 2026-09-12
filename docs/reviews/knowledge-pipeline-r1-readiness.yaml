@@ -2,12 +2,12 @@ schema_version: 1
 id: knowledge-pipeline-r1-readiness
 feature_id: knowledge-pipeline-cadence
 stage: plan_to_build
-status: blocked
+status: ready
 iteration: 3
 source_artifacts:
 - name: execution-plan
   uri: docs/plans/knowledge-pipeline-cadence-execution-plan.md
-  sha256: 944aa18bef7c3065cb5a35abf25f7e33ff917c2148d1c489fffc64f9180b66c3
+  sha256: 7f8f4d63d37d14d5d45aaa0108d85b5a05189856a02a08abeb608b6449cf764c
 findings:
 - id: DR-KP-004
   severity: blocker
@@ -61,14 +61,14 @@ findings:
   evidence: 归因轮发现候选 91 条、与既有终态任务重复 0 条；但比对是数据库快照口径，未运行 worker/模型调用，实际重复调用量未验证。
   next_action: 幂等修复后用切换前后快照 + model_calls 计数闭合。
 - id: DR-KP-009
-  severity: warning
-  status: open
+  severity: info
+  status: resolved
   title: 建议把幂等验收口径从"行 id 稳定"改为"输入指纹稳定 + 不重复投递"
   evidence: 第 4 轮后：evidence 删除路径已改为 upsert 后差集重写，113 个 interval_key 稳定，但真实副本仍有 fresh-insert，行
     id 集合不稳定（残留路径未定位）。而用户可感知的要求是"同一内容不重复消耗模型额度"，其载体是 discovery_input_hash —— 当前成员用
-    interval_id:start:end，行 id 是内部产物，且保留策略/触发器会按设计删除空区间。
-  next_action: 待用户批准：把发现哈希成员改为 interval_key:start:end（interval_key 已确定性且跨重建稳定），验收改为"重复
-    reconcile ⇒ key 集合稳定 + 输入哈希不变 + 该窗口零新增投递"，仍保留不重叠/证据归属/孤儿 0/单活跃版本/历史按 id 可查。
+    interval_id:start:end，行 id 是内部产物，且保留策略/触发器会按设计删除空区间。 用户 2026-09-12 批准该口径：计划 §4.4
+    真实副本层与 §5 第 9 条已改写为"段集合 + 输入指纹稳定 + 零新增投递"。
+  next_action: 由第 5 轮实现 discovery_input_hash 改用 interval_key 并在副本上证明。
 traceability:
 - requirement: 失败即终态、input_hash 真实、错误可见、发现预筛（§4.1）
   plan: §4.1
@@ -86,8 +86,9 @@ decisions:
 assumptions: []
 evidence:
 - docs/reviews/evidence/dev-smoke-2026-09-12.md
-waiting_on: human
-next_action: 等待用户裁决 DR-KP-009（幂等验收口径：行 id 稳定 vs 输入指纹稳定）；批准后修订计划验收、回置 ready，再派第 5 轮修输入指纹。
+waiting_on: none
+next_action: 第 5 轮：discovery_input_hash 成员改用 interval_key，并让真实副本不变量改断言"段集合稳定 + 输入指纹不变
+  + 零新增投递"。
 notes: 这是返工开工门禁，不是代码验收；dev 保持停止。原 .agent/tmp/knowledge-pipeline-r1/task-pack.yaml
   已过期，新包位于 .agent/runs/2026-09-12-knowledge-pipeline-r1-repair/。 注：DR-KP-005/006 在就绪报告层已按"契约是否完备"记为
   resolved（计划已补真实副本验收要求），其**实现缺陷本身仍未修复**，由 run 2026-09-12-knowledge-pipeline-r1-fix
@@ -122,3 +123,7 @@ iterations:
   status: ready
   result: 修复轮 4 轮预算+1 后仍 blocked：D1 修好并保持；knowledge 陈旧用例已按 [start,end) 语义更新且全绿；D2
     根因确认为 evidence 删除→触发器级联删 interval→重插新 id，证据删除已改差集重写，但仍有残留 fresh-insert。建议改验收口径为输入指纹稳定。
+- iteration: 9
+  status: ready
+  result: 用户批准把幂等口径改为输入指纹稳定（行 id 不再作为验收对象）；计划与任务包同步更新，派第 5 轮实现 discovery_input_hash
+    用 interval_key。
