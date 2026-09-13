@@ -7,7 +7,7 @@ iteration: 3
 source_artifacts:
 - name: execution-plan
   uri: docs/plans/knowledge-pipeline-cadence-execution-plan.md
-  sha256: ef51cad0a31e3602781df634359ec3b9b600764a3b74944c1132a0c1dea8f50c
+  sha256: 16daffc9bca368427a297b26771fce096a0a2c19c7dede0cda257960c67200c1
 findings:
 - id: DR-KP-004
   severity: blocker
