@@ -7,7 +7,7 @@ iteration: 3
 source_artifacts:
 - name: execution-plan
   uri: docs/plans/knowledge-pipeline-cadence-execution-plan.md
-  sha256: 2df9e2b6a1ab99f2b33e9062ae2da3e729f976412ccd2fa237dd979e2222f05c
+  sha256: ef51cad0a31e3602781df634359ec3b9b600764a3b74944c1132a0c1dea8f50c
 findings:
 - id: DR-KP-004
   severity: blocker
@@ -144,3 +144,7 @@ iterations:
   status: ready
   result: 用户确认使用 Pi subagent 的 zcode 角色；计划 handoff 更新为 execution_backend=zcode_subagent、runtime_adapter=zcode、logical_role/subagent_role=zcode、角色模型
     builtin:bigmodel-coding-plan/GLM-5.3-Flash、thinking=low；R2 全套执行。
+- iteration: 14
+  status: ready
+  result: R2 handoff acceptance 发现 canonical plan base_commit 与 Task Pack 不一致；已统一为
+    9b48423b7，并同步 plan/readiness 哈希。
