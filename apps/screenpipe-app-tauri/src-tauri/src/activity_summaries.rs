@@ -539,17 +539,22 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn page_boundaries_trim_intervals_that_merely_overlap() {
+    async fn page_boundaries_only_include_intervals_starting_in_page() {
         let (db, _dir) = test_db().await;
-        // Ends at 10:15 but starts before the page: excluded.
+        // The ledger boundary guard intentionally rejects overlapping active
+        // fixtures. Use a tiled fixture here and keep the page predicate's
+        // half-open boundary assertions: an interval ending at page start is
+        // outside, one starting at page start is inside, and one starting at
+        // page end is outside.
+        // Ends exactly at page start: excluded.
         seed_interval(
             &db,
-            "fixture",
+            "fixture-early",
             "task-1",
             "早前页的工作",
             "interval-early",
             "2026-09-11T09:45:00Z",
-            "2026-09-11T10:15:00Z",
+            "2026-09-11T10:00:00Z",
             &["2026-09-11T09:50:00Z"],
             Some(("属于更早一页。", "[]", "short")),
         )
@@ -557,7 +562,7 @@ mod tests {
         // Starts exactly at the page start: included.
         seed_interval(
             &db,
-            "fixture",
+            "fixture-page",
             "task-2",
             "页首的工作",
             "interval-first",
@@ -570,7 +575,7 @@ mod tests {
         // Starts exactly at the page end: excluded.
         seed_interval(
             &db,
-            "fixture",
+            "fixture-next",
             "task-3",
             "下一页的工作",
             "interval-next",
