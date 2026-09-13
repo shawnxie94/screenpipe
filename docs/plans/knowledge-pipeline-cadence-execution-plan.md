@@ -1,9 +1,9 @@
 ---
 id: plan-knowledge-pipeline-cadence
-status: approved
+status: completed
 owner: shawn
 created: 2026-09-12
-updated_at: 2026-09-12
+updated_at: 2026-09-13
 plan_id: plan-knowledge-pipeline-cadence
 plan_unit_id: root
 base_commit: 9b48423b7
@@ -27,7 +27,7 @@ covers:
   - ④ 知识投递三机制：模型提名 + 变更驱动 + 冷却期（不数数量、不全量）
   - 活动间隔重建独立成节拍，不再依赖 legacy 读取副作用；legacy 后端自动叙事下线
 doc-covers: crates/screenpipe-engine/src/activity_ledger.rs, crates/screenpipe-engine/src/knowledge, crates/screenpipe-db/src/db/knowledge, apps/screenpipe-app-tauri/src-tauri/src/knowledge_runtime.rs, apps/screenpipe-app-tauri/src-tauri/src/activity_history.rs
-doc-verified: ee1f78dae
+doc-verified: 02c04d882
 ---
 
 # 沉淀管线：切分与投递优化 + 正确性修复 + 四层节拍配置化
