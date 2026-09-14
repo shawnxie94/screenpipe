@@ -78,6 +78,17 @@ pub fn main_label_for_mode(mode: &str) -> &'static str {
     }
 }
 
+/// Window-mode's steady-state macOS collection behavior.
+///
+/// `FullScreenPrimary` (instead of `FullScreenAuxiliary`) is what makes the
+/// window's own green button offer native fullscreen; `MoveToActiveSpace` is
+/// added only transiently while showing so the panel lands on the current
+/// Space (see show.rs). Overlay panels keep `FullScreenAuxiliary` — they must
+/// float over another app's fullscreen Space instead of entering one.
+#[cfg(target_os = "macos")]
+pub const WINDOW_MODE_STEADY_STATE: tauri_nspanel::cocoa::appkit::NSWindowCollectionBehavior =
+    tauri_nspanel::cocoa::appkit::NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenPrimary;
+
 /// Apply the desired macOS activation policy (and keep the tray reachable).
 ///
 /// Default is `Regular` — dock icon and tray both visible. Three cases switch to

@@ -24,7 +24,7 @@ use super::focus::{
 };
 use super::panel::{main_label_for_mode, MAIN_CREATED_MODE};
 #[cfg(target_os = "macos")]
-use super::panel::{show_panel_visible, MAIN_PANEL_SHOWN};
+use super::panel::{show_panel_visible, MAIN_PANEL_SHOWN, WINDOW_MODE_STEADY_STATE};
 #[cfg(target_os = "macos")]
 use super::util::run_on_main_thread_safe;
 use super::util::screen_aware_size;
@@ -315,7 +315,7 @@ impl ShowRewindWindow {
                         panel.set_level_gated(1001);
                         panel.set_collection_behaviour_gated(
                             NSWindowCollectionBehavior::NSWindowCollectionBehaviorMoveToActiveSpace |
-                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
+                            crate::window::panel::WINDOW_MODE_STEADY_STATE
                         );
                         let sharing: u64 = if capturable { 1 } else { 0 };
                         let _: () = unsafe { msg_send![&*panel, setSharingType: sharing] };
@@ -327,7 +327,7 @@ impl ShowRewindWindow {
 
                         // Remove MoveToActiveSpace so panel stays pinned to this Space
                         panel.set_collection_behaviour_gated(
-                            NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
+                            crate::window::panel::WINDOW_MODE_STEADY_STATE
                         );
                     }
                 });
@@ -919,7 +919,7 @@ impl ShowRewindWindow {
                                         unsafe { msg_send![&*panel, setSharingType: sharing] };
                                     panel.set_collection_behaviour_gated(
                                         NSWindowCollectionBehavior::NSWindowCollectionBehaviorMoveToActiveSpace |
-                                        NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
+                                        crate::window::panel::WINDOW_MODE_STEADY_STATE
                                     );
 
                                     // Shared visibility sequence (activate_app=true for window mode)
@@ -929,7 +929,7 @@ impl ShowRewindWindow {
 
                                     // Remove MoveToActiveSpace so panel stays pinned to this Space
                                     panel.set_collection_behaviour_gated(
-                                        NSWindowCollectionBehavior::NSWindowCollectionBehaviorFullScreenAuxiliary
+                                        crate::window::panel::WINDOW_MODE_STEADY_STATE
                                     );
                                 }
                             });
