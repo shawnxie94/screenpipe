@@ -4925,36 +4925,6 @@ pub(crate) async fn pi_acp_manage_provider_schedule(
         .await
 }
 
-/// Re-show the agent's sign-in methods without signing out: the runtime re-runs
-/// its auth flow, which re-emits the sign-in card. Picking a method re-runs that
-/// method's login (Claude's `--cli auth login`, Codex's ACP ChatGPT flow), which
-/// overwrites the credential in place. We never force a logout, so a user never
-/// loses their existing login as a side effect of re-authenticating.
-#[tauri::command]
-#[specta::specta]
-pub async fn pi_acp_reauthenticate(
-    state: State<'_, PiState>,
-    session_id: Option<String>,
-) -> Result<(), String> {
-    let sid = session_id.unwrap_or_else(|| "chat".to_string());
-
-    let queue = {
-        let mut pool = state.0.lock().await;
-        let m = pool.sessions.get_mut(&sid).ok_or("Pi not initialized")?;
-        if !m.is_running() {
-            return Err("agent is not running".to_string());
-        }
-        m.last_activity = std::time::Instant::now();
-        m.queue_handle
-            .clone()
-            .ok_or("Pi command queue not initialized")?
-    };
-
-    queue
-        .send_immediate_awaited("reauthenticate", json!({ "type": "reauthenticate" }))
-        .await
-}
-
 fn write_pi_settings(settings: &serde_json::Value) -> Result<(), String> {
     let config_dir = get_pi_config_dir()?;
     std::fs::create_dir_all(&config_dir)
