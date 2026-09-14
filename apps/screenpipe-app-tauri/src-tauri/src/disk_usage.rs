@@ -723,6 +723,7 @@ mod tests {
 
     #[test]
     fn single_pass_matches_reference_implementation() {
+        let _serial = TEST_SERIAL.lock().unwrap();
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
         build_tree(root);
@@ -762,6 +763,7 @@ mod tests {
 
     #[test]
     fn attributes_media_audio_and_monitors_correctly() {
+        let _serial = TEST_SERIAL.lock().unwrap();
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
         build_tree(root);
@@ -780,6 +782,7 @@ mod tests {
 
     #[test]
     fn recording_since_uses_oldest_direct_child_only() {
+        let _serial = TEST_SERIAL.lock().unwrap();
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
         build_tree(root);
@@ -792,6 +795,7 @@ mod tests {
 
     #[test]
     fn missing_dir_yields_empty_scan() {
+        let _serial = TEST_SERIAL.lock().unwrap();
         let tmp = tempfile::tempdir().unwrap();
         let scan = scan_tree(&tmp.path().join("nope")).unwrap();
         assert_eq!(scan, TreeScan::default());
@@ -804,6 +808,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn symlinks_are_counted_but_never_descended_into() {
+        let _serial = TEST_SERIAL.lock().unwrap();
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
         build_tree(root);
@@ -844,9 +849,12 @@ mod tests {
 
     use std::sync::atomic::Ordering;
 
-    /// `SCAN_COUNT` is process-global and cargo runs tests in parallel, so any
-    /// test that asserts on walk counts has to hold this first.
-    static TEST_SERIAL: Lazy<tokio::sync::Mutex<()>> = Lazy::new(|| tokio::sync::Mutex::new(()));
+    /// `SCAN_COUNT` is process-global and cargo runs tests in parallel. Every
+    /// scan_tree-based test must hold this guard so walk counts stay exact:
+    /// both the tests that assert on counts and the plain `scan_tree` tests
+    /// (which also bump `SCAN_COUNT`). `std::sync::Mutex` so synchronous
+    /// `#[test]`s can share it with async ones without an executor.
+    static TEST_SERIAL: Lazy<std::sync::Mutex<()>> = Lazy::new(|| std::sync::Mutex::new(()));
 
     fn scans() -> u64 {
         SCAN_COUNT.load(Ordering::Relaxed)
@@ -864,7 +872,7 @@ mod tests {
 
     #[tokio::test]
     async fn cached_only_never_walks() {
-        let _serial = TEST_SERIAL.lock().await;
+        let _serial = TEST_SERIAL.lock().unwrap();
         let (_tmp, root, cache) = fixture();
 
         let before = scans();
@@ -895,7 +903,7 @@ mod tests {
     /// cold cache used to start one full traversal each.
     #[tokio::test]
     async fn concurrent_callers_share_a_single_walk() {
-        let _serial = TEST_SERIAL.lock().await;
+        let _serial = TEST_SERIAL.lock().unwrap();
         let (_tmp, root, cache) = fixture();
 
         let before = scans();
@@ -920,7 +928,7 @@ mod tests {
 
     #[tokio::test]
     async fn warm_cache_serves_without_walking_and_force_rewalks() {
-        let _serial = TEST_SERIAL.lock().await;
+        let _serial = TEST_SERIAL.lock().unwrap();
         let (_tmp, root, cache) = fixture();
 
         let first = disk_usage_in(&root, &cache, Freshness::UseCache)
@@ -946,7 +954,7 @@ mod tests {
 
     #[tokio::test]
     async fn cache_is_invalidated_when_the_data_dir_changes() {
-        let _serial = TEST_SERIAL.lock().await;
+        let _serial = TEST_SERIAL.lock().unwrap();
         let (_tmp, root, cache) = fixture();
         disk_usage_in(&root, &cache, Freshness::UseCache)
             .await
