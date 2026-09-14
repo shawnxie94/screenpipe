@@ -12,9 +12,9 @@ import { saveScreenshot } from "../helpers/screenshot-utils.js";
 import { openHomeWindow, t, waitForAppReady } from "../helpers/test-utils.js";
 
 async function openHelpSection(): Promise<void> {
-  const navHelp = await $('[data-testid="nav-help"]');
-  await navHelp.waitForExist({ timeout: t(12_000) });
-  await navHelp.click();
+  // The Help section keeps its own deep link but no longer has a sidebar
+  // entry (the nav-help button was removed). Navigate by URL instead.
+  await browser.url(`/home?section=help`);
 
   const sectionHelp = await $('[data-testid="section-help"]');
   await sectionHelp.waitForExist({ timeout: t(20_000) });

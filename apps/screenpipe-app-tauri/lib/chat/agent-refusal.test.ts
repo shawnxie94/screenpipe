@@ -46,7 +46,8 @@ describe("agent refusal", () => {
     );
 
     expect(refusal?.message).toContain("Claude Code");
-    expect(refusal?.message).toContain("重新认证");
+    // Re-signing in (agent-driven) is the fix once credentials expire.
+    expect(refusal?.message).toContain("重新登录");
     // The opposite advice from the policy case: here signing in is the fix.
     expect(refusal?.message).not.toContain("重新登录不会改变结果");
   });

@@ -245,7 +245,15 @@ describe("ACP config trigger", () => {
   });
 
   it("uses the saved model on a fresh profile before an advertisement arrives", () => {
-    seedSession([]);
+    // The composer keeps showing the session-agnostic fallback (preset model,
+    // then adapter name) until a live advertisement arrives. Seed the
+    // per-agent cached options the preset editor would have populated.
+    useAcpSessionConfig.setState({
+      sessions: { [SESSION]: { options: [], modes: null } as never },
+      byAgent: {
+        "pi-acp": { options: [modelOption("")], modes: null } as never,
+      },
+    });
 
     render(
       <AcpConfigSelector
@@ -255,29 +263,12 @@ describe("ACP config trigger", () => {
           { model: "screenpipe/Auto (recommended)" },
           "pi-acp",
         )}
-        onReauthenticate={() => {}}
       />,
     );
 
     const trigger = screen.getByTestId("acp-config-trigger");
     expect(trigger).toHaveTextContent("screenpipe/Auto");
     expect(trigger).not.toHaveTextContent("recommended");
-  });
-
-  it("uses the adapter name when only re-authenticate is available", () => {
-    seedSession([]);
-
-    render(
-      <AcpConfigSelector
-        sessionId={SESSION}
-        agentId="claude-acp"
-        onReauthenticate={() => {}}
-      />,
-    );
-
-    expect(screen.getByTestId("acp-config-trigger")).toHaveTextContent(
-      "Claude Code",
-    );
   });
 
   it("can move the mode axis into a dedicated composer control", () => {

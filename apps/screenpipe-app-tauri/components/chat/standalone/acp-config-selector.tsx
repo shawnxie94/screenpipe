@@ -4,7 +4,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -160,7 +160,6 @@ export function AcpConfigSelector({
   agentId,
   activePreset,
   onPersistDefault,
-  onReauthenticate,
   hideModeControl = false,
 }: {
   sessionId: string | null | undefined;
@@ -175,8 +174,6 @@ export function AcpConfigSelector({
   /** Persist a chosen value onto the active preset's ACP defaults, so it is
    *  applied on the next session start even before the first message. */
   onPersistDefault?: (change: AcpConfigDefaultChange) => void;
-  /** Sign the agent out and respawn so the sign-in card returns. */
-  onReauthenticate?: () => void;
   /** A client can promote an agent's permission/mode axis into a dedicated
    *  composer control. Hide that duplicated select or boolean toggle from
    *  this general config popover. */
@@ -201,7 +198,6 @@ export function AcpConfigSelector({
   const presetModeId = activePreset?.acpAgent?.modeId ?? null;
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const [reauthPending, setReauthPending] = useState(false);
   const allSelects = (config?.options ?? []).filter(
     (option) => option.type === "select" && option.values.length > 0,
   );
@@ -271,10 +267,7 @@ export function AcpConfigSelector({
     advertisedModelValue.name !== triggerLabel
       ? `${localizeAcpLabel(advertisedModelValue.name)} 当前解析为 ${triggerLabel}。`
       : undefined;
-  // Re-authenticate is offered for every ACP agent (as Zed does): it re-runs the
-  // agent's own auth flow, which re-shows whatever sign-in methods it has.
-  const canReauth = !!sessionId && !!onReauthenticate;
-  if (selects.length === 0 && toggles.length === 0 && !modes && !canReauth)
+  if (selects.length === 0 && toggles.length === 0 && !modes)
     return null;
 
   const run = async (key: string, action: () => Promise<void>, label: string) => {
@@ -434,29 +427,6 @@ export function AcpConfigSelector({
             />
           </div>
         ))}
-        {canReauth && (
-          <button
-            type="button"
-            disabled={reauthPending}
-            onClick={() => {
-              setReauthPending(true);
-              onReauthenticate?.();
-              // Close after a beat so the button's spinner registers, then the
-              // sign-in card takes over from the fresh session.
-              window.setTimeout(() => {
-                setOpen(false);
-                setReauthPending(false);
-              }, 400);
-            }}
-            className={cn(
-              "flex w-full items-center gap-1.5 border-t border-border pt-2 text-left text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-70",
-              (selects.length > 0 || toggles.length > 0 || modes) && "mt-1",
-            )}
-          >
-            {reauthPending && <Loader2 className="h-3 w-3 animate-spin" aria-hidden />}
-            {reauthPending ? "正在退出…" : "重新认证"}
-          </button>
-        )}
     </ComposerSettingsPopover>
   );
 }

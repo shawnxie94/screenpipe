@@ -3,20 +3,15 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { AlertCircle, Clock3, ListChecks, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, Loader2, RefreshCw } from "lucide-react";
 
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { localFetch } from "@/lib/api";
 import { useSettings } from "@/lib/hooks/use-settings";
 import type { Settings } from "@/lib/hooks/use-settings";
 import type { SettingsField } from "./settings-search";
 
-const DEFAULT_INTERVAL_MINUTES = 15;
-
 export const searchIndex: SettingsField[] = [
-  { label: "启用活动记录", keywords: ["activity", "history", "automatic"] },
-  { label: "间隔", keywords: ["activity", "frequency", "cadence", "minutes", "schedule", "legacy"] },
   { label: "知识管线节拍", keywords: ["knowledge", "pipeline", "cadence", "distill", "summarize", "reconcile"] },
   { label: "失败的知识任务", keywords: ["knowledge", "jobs", "error", "retry", "失败", "重试"], conditional: true },
 ];
@@ -307,10 +302,6 @@ export function KnowledgeJobsErrorCard() {
 }
 
 export function ActivitiesSettings() {
-  const { settings, updateSettings } = useSettings();
-  const enabled = settings.activitiesEnabled ?? false;
-  const intervalMinutes = settings.activitiesIntervalMinutes ?? DEFAULT_INTERVAL_MINUTES;
-
   return (
     <div className="space-y-5" data-testid="section-settings-activities">
       <p className="text-sm text-muted-foreground">
@@ -318,62 +309,6 @@ export function ActivitiesSettings() {
       </p>
 
       <KnowledgeJobsErrorCard />
-
-      <div className="border border-border bg-card">
-        <div className="flex items-center justify-between gap-6 px-4 py-3">
-          <div className="flex items-start gap-3">
-            <ListChecks className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <div>
-              <h3 className="text-sm font-medium text-foreground">启用活动记录</h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                从你的屏幕历史自动创建活动摘要。
-              </p>
-            </div>
-          </div>
-          <Switch
-            data-testid="activities-enabled-toggle"
-            checked={enabled}
-            onCheckedChange={(checked) => updateSettings({ activitiesEnabled: checked })}
-            aria-label="启用活动记录"
-          />
-        </div>
-
-        <div className="border-t border-border px-4 py-3">
-          <div className="flex items-center justify-between gap-6">
-            <div className="flex items-start gap-3">
-              <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-              <div>
-                <h3 className="text-sm font-medium text-foreground">
-                  间隔{" "}
-                  <span
-                    className="ml-1 align-middle text-[10px] uppercase tracking-wide text-muted-foreground"
-                    data-testid="activities-interval-legacy-badge"
-                  >
-                    legacy
-                  </span>
-                </h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  仅影响旧版叙事生成（已停用自动生成）；知识管线节拍见下方设置。
-                </p>
-              </div>
-            </div>
-            <select
-              aria-label="活动间隔"
-              value={intervalMinutes}
-              disabled={!enabled}
-              onChange={(event) =>
-                updateSettings({ activitiesIntervalMinutes: Number(event.target.value) })
-              }
-              className="h-9 min-w-40 border border-border bg-background px-3 font-mono text-xs text-foreground outline-none transition-colors focus:border-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <option value={5}>每 5 分钟</option>
-              <option value={15}>每 15 分钟</option>
-              <option value={30}>每 30 分钟</option>
-              <option value={60}>每小时</option>
-            </select>
-          </div>
-        </div>
-      </div>
 
       <div className="border border-border bg-card" data-testid="knowledge-cadence-settings">
         <div className="border-b border-border px-4 py-3">

@@ -234,7 +234,7 @@ export function buildAgentRefusalMessage(
   if (mentionsCredential) {
     return {
       retryable: false,
-      message: `${agent} 的登录状态在对话中途过期，因此已停止处理，避免丢失本轮消息。内容没有丢失——请通过输入框旁的代理控件重新认证，然后再次发送。`,
+      message: `${agent} 的登录状态在对话中途过期，因此已停止处理，避免丢失本轮消息。内容没有丢失——请重新登录后再发送。`,
     };
   }
 

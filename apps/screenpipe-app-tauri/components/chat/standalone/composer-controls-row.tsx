@@ -187,7 +187,6 @@ export function ComposerControlsRow({
           agentId={acpAgentId}
           activePreset={modelControls.activePreset}
           onPersistDefault={modelControls.onAcpConfigDefault}
-          onReauthenticate={modelControls.onReauthenticate}
           hideModeControl
         />
       )}

@@ -2032,12 +2032,6 @@ export function StandaloneChat({
     setAcpSignInError(null);
     setAcpSignIn(null);
   }, [acpSignIn, handleAcpSignInMethod, clearAcpSignInProbe]);
-  // Config-menu "re-authenticate": re-show the agent's sign-in methods without
-  // signing out. The agent owns its credentials; picking a method re-runs that
-  // login in place, so an existing login is never lost as a side effect.
-  const handleReauthenticate = useCallback(() => {
-    void commands.piAcpReauthenticate(currentQueueSessionId).catch(() => {});
-  }, [currentQueueSessionId]);
 
   const discardTemporarySideConversation = useCallback((id: string) => {
     const store = useChatStore.getState();
@@ -2500,7 +2494,6 @@ export function StandaloneChat({
           onPresetSaved: handlePiRestart,
           onSelectPreset: handleSetActivePreset,
           onAcpConfigDefault: handleAcpConfigDefault,
-          onReauthenticate: handleReauthenticate,
         }}
         codingWorkspace={{
           workspace: codingWorkspace.workspace,

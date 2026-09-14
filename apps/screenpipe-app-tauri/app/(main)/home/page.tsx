@@ -10,7 +10,6 @@ import {
   Plus,
   Brain,
   MonitorPlay,
-  HelpCircle,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
@@ -1477,40 +1476,6 @@ function HomeContent() {
                   </div>
                   <span className="truncate text-xs font-medium">设置</span>
                 </button>
-
-                {/* Help stays discoverable without taking a second row. */}
-                {(() => {
-                  const isActive = activeSection === "help";
-                  return (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          data-testid="nav-help"
-                          aria-label="帮助"
-                          onClick={() => {
-                            setActiveSection("help");
-                          }}
-                          className={cn(
-                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-150",
-                            isActive
-                              ? isTranslucent
-                                ? "vibrant-nav-active"
-                                : "border border-border bg-card text-primary shadow-sm"
-                              : isTranslucent
-                                ? "vibrant-nav-item vibrant-nav-hover"
-                                : "text-muted-foreground hover:bg-card/50 hover:text-foreground",
-                          )}
-                        >
-                          <HelpCircle className="h-4 w-4" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="text-xs">
-                        Help
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })()}
               </div>
             </div>
           </AppSidebar>

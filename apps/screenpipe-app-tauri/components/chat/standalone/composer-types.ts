@@ -169,8 +169,6 @@ export interface ComposerModelControlsProps {
     modeId?: string;
     approvalMode?: "ask" | "allow-all";
   }) => void;
-  /** Sign the ACP agent out and respawn, so the sign-in card returns. */
-  onReauthenticate?: () => void;
 }
 
 export interface ComposerCodingWorkspaceProps {

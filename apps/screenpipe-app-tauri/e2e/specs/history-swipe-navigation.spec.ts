@@ -90,13 +90,13 @@ async function captureSwipePreview(
         ),
       ).toBe(true);
 
-      // Build an explicit Home -> Help -> Settings stack. Top-level Home
+      // Build an explicit Home -> Timeline -> Settings stack. Top-level Home
       // sections must be push entries so the native edge preview has the real
       // previous UI state to animate toward.
-      const help = await $('[data-testid="nav-help"]');
-      await help.waitForExist({ timeout: t(10_000) });
-      await help.click();
-      await $('[data-testid="section-help"]').waitForExist({
+      const timeline = await $('[data-testid="nav-timeline"]');
+      await timeline.waitForExist({ timeout: t(10_000) });
+      await timeline.click();
+      await $('[data-testid="section-timeline"]').waitForExist({
         timeout: t(10_000),
       });
 
@@ -109,20 +109,20 @@ async function captureSwipePreview(
       await prepareScreenshot();
       await saveScreenshot("history-swipe-01-home");
 
-      const helpAgain = await $('[data-testid="nav-help"]');
-      await helpAgain.waitForExist({ timeout: t(10_000) });
-      await helpAgain.click();
+      const timelineAgain = await $('[data-testid="nav-timeline"]');
+      await timelineAgain.waitForExist({ timeout: t(10_000) });
+      await timelineAgain.click();
       await browser.waitUntil(
         async () =>
           new URL(await browser.getUrl()).searchParams.get("section") ===
-          "help",
+          "timeline",
         {
           timeout: t(10_000),
-          timeoutMsg: "Help did not become a browser-history entry",
+          timeoutMsg: "Timeline did not become a browser-history entry",
         },
       );
       await prepareScreenshot();
-      await saveScreenshot("history-swipe-02-help");
+      await saveScreenshot("history-swipe-02-timeline");
 
       const settings = await $('[data-testid="nav-settings"]');
       await settings.waitForExist({ timeout: t(10_000) });
@@ -134,11 +134,11 @@ async function captureSwipePreview(
       await saveScreenshot("history-swipe-03-settings");
 
       await browser.back();
-      const helpAfterBack = await $('[data-testid="section-help"]');
-      await helpAfterBack.waitForExist({ timeout: t(15_000) });
+      const timelineAfterBack = await $('[data-testid="section-timeline"]');
+      await timelineAfterBack.waitForExist({ timeout: t(15_000) });
       expect(new URL(await browser.getUrl()).pathname).toBe("/home");
       expect(new URL(await browser.getUrl()).searchParams.get("section")).toBe(
-        "help",
+        "timeline",
       );
       // WebKit can drop a second WebDriver history traversal while the first
       // popstate is still settling, even after the destination has rendered.
@@ -153,13 +153,13 @@ async function captureSwipePreview(
       // another Home entry. Otherwise the very next back swipe returns to
       // Settings, which was the reported regression.
       await settingsRootAgain.click();
-      const helpAfterButton = await $('[data-testid="section-help"]');
-      await helpAfterButton.waitForExist({ timeout: t(15_000) });
+      const timelineAfterButton = await $('[data-testid="section-timeline"]');
+      await timelineAfterButton.waitForExist({ timeout: t(15_000) });
       expect(new URL(await browser.getUrl()).searchParams.get("section")).toBe(
-        "help",
+        "timeline",
       );
       await prepareScreenshot();
-      await saveScreenshot("history-swipe-04-restored-help");
+      await saveScreenshot("history-swipe-04-restored-timeline");
       await browser.pause(t(750));
 
       await browser.back();

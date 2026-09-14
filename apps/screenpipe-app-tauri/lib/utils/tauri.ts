@@ -1290,21 +1290,6 @@ async piAcpProbeAgent(agent: AcpAgentConfig) : Promise<Result<string, string>> {
 }
 },
 /**
- * Re-show the agent's sign-in methods without signing out: the runtime re-runs
- * its auth flow, which re-emits the sign-in card. Picking a method re-runs that
- * method's login (Claude's `--cli auth login`, Codex's ACP ChatGPT flow), which
- * overwrites the credential in place. We never force a logout, so a user never
- * loses their existing login as a side effect of re-authenticating.
- */
-async piAcpReauthenticate(sessionId: string | null) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("pi_acp_reauthenticate", { sessionId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Change Screenpipe's response policy for ACP permission requests without
  * pretending it is an adapter-owned session mode.
  */

@@ -34,54 +34,6 @@ import {
   type KnowledgeJob,
 } from "../activities-settings";
 
-describe("ActivitiesSettings", () => {
-  beforeEach(() => {
-    mocks.settings = {};
-    mocks.updateSettings.mockReset();
-    mocks.localFetch.mockReset();
-    mocks.toast.mockReset();
-    // The failed-jobs card polls on mount; default to an empty queue so the
-    // cadence tests render without it.
-    mocks.localFetch.mockImplementation(() =>
-      Promise.resolve({ ok: true, json: () => Promise.resolve({ jobs: [] }) }),
-    );
-  });
-
-  afterEach(() => cleanup());
-
-  it("defaults activities off with a 15 minute interval", () => {
-    render(<ActivitiesSettings />);
-
-    expect(screen.getByTestId("activities-enabled-toggle")).toHaveAttribute(
-      "data-state",
-      "unchecked",
-    );
-    expect(screen.getByLabelText("活动间隔")).toHaveValue("15");
-    expect(screen.getByLabelText("活动间隔")).toBeDisabled();
-  });
-
-  it("persists both settings without running activity generation", () => {
-    mocks.settings = { activitiesEnabled: true, activitiesIntervalMinutes: 15 };
-    render(<ActivitiesSettings />);
-
-    fireEvent.click(screen.getByTestId("activities-enabled-toggle"));
-    expect(mocks.updateSettings).toHaveBeenCalledWith({ activitiesEnabled: false });
-
-    fireEvent.change(screen.getByLabelText("活动间隔"), {
-      target: { value: "30" },
-    });
-    expect(mocks.updateSettings).toHaveBeenCalledWith({
-      activitiesIntervalMinutes: 30,
-    });
-  });
-
-  it("marks the legacy interval as legacy-only", () => {
-    render(<ActivitiesSettings />);
-    expect(screen.getByTestId("activities-interval-legacy-badge")).toBeTruthy();
-    expect(screen.getByText(/仅影响旧版叙事生成/)).toBeTruthy();
-  });
-});
-
 describe("knowledge pipeline setting fields (plan §4.2)", () => {
   beforeEach(() => {
     mocks.settings = {};
