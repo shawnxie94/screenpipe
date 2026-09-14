@@ -34,7 +34,7 @@ describe("Automate My Work evaluations", () => {
       },
     ]);
 
-    expect(prompt).toContain("Focus Pulse (focus-pulse; enabled; every 1h)");
+    expect(prompt).toContain("Focus Pulse (focus-pulse; 已启用; every 1h)");
     expect(prompt).toContain("本阶段不要创建、编辑、启用、禁用、安装、运行或调度任何管道");
     expect(prompt).toContain("了解最近 7 天");
     expect(prompt).toContain("/activity-summary?start_time=7d%20ago&end_time=now");
@@ -56,7 +56,7 @@ describe("Automate My Work evaluations", () => {
     expect(prompt).toContain("Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY");
     expect(prompt).toContain("SCREENPIPE_API_KEY");
     expect(prompt).toContain("遵循 Retry-After 重试该请求一次");
-    expect(prompt).toContain("numeric `execution_id`");
+    expect(prompt).toContain("数字型 `execution_id`");
     expect(prompt).toContain("/executions/<execution_id>");
     expect(prompt).toContain("那一次执行");
     expect(prompt).toContain("这只能证明被跟踪的运行已开始");
@@ -122,18 +122,18 @@ describe("Automate My Work evaluations", () => {
     expect(bundledTemplate).toContain("创建并测试这一个？");
     expect(bundledTemplate).toContain("暂不提议自动化——我需要更多重复性的证据");
     expect(bundledTemplate).toContain("POST http://localhost:11435/notify");
-    expect(bundledTemplate).toContain("一个主 `chat` 动作，标签为 `Create and test`");
+    expect(bundledTemplate).toContain("一个主 `chat` 动作，标签为 `创建并测试`");
     expect(bundledTemplate).toContain("一段自包含的动作提示词");
     expect(bundledTemplate).toContain("两条路径用完全相同的文本");
-    expect(bundledTemplate).toContain("response message is exactly `Notification sent successfully`");
+    expect(bundledTemplate).toContain("响应消息恰好是 `Notification sent successfully`");
     expect(bundledTemplate).toContain("把完整的后续提示词打印在一个可复制的围栏代码块里");
     expect(bundledTemplate).toContain("schedule: manual");
     expect(bundledTemplate).toContain("artifacts:");
     expect(bundledTemplate).toContain("POST `http://localhost:3030/pipes/<slug>/run`");
     expect(bundledTemplate).toContain("只有在 CREATE 测试成功后");
     expect(bundledTemplate).toContain("Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY");
-    expect(bundledTemplate).toContain("honor `Retry-After` and retry that request once");
-    expect(bundledTemplate).toContain("numeric `execution_id`");
+    expect(bundledTemplate).toContain("在其一次允许的 `Retry-After` 重试后");
+    expect(bundledTemplate).toContain("数字型 `execution_id`");
     expect(bundledTemplate).toContain("/executions/<execution_id>");
     expect(bundledTemplate).toContain("那一次执行");
     expect(bundledTemplate).toContain("这只能证明被跟踪的运行已开始");

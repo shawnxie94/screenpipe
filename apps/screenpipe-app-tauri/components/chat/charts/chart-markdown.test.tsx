@@ -101,7 +101,7 @@ describe("chart fence inside assistant markdown", () => {
 
     expect(onSendPrompt).toHaveBeenCalledOnce();
     expect(onSendPrompt.mock.calls[0][0]).toContain('"title": "time by app"');
-    expect(onSendPrompt.mock.calls[0][1]).toBe("Add chart to a Live View");
+    expect(onSendPrompt.mock.calls[0][1]).toBe("将图表加入 Live View");
   });
 
   it("waits for a streaming answer to finish before exposing chart actions", () => {

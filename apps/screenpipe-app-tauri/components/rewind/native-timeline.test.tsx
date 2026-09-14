@@ -57,10 +57,10 @@ describe("native timeline bridge payloads", () => {
       frameCount: 4,
     });
 
-    expect(prefill?.context).toContain("Apps: Mail, Chrome");
+    expect(prefill?.context).toContain("应用：Mail, Chrome");
     expect(prefill?.context).toContain("proposal draft");
     expect(prefill?.context).toContain("send it tomorrow");
-    expect(prefill?.prompt).toMatch(/^Based on my activity from /);
+    expect(prefill?.prompt).toMatch(/^根据我从 .+ 到 .+ 的活动，/);
   });
 
   it("rejects malformed or reversed selection ranges", () => {

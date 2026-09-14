@@ -102,7 +102,7 @@ describe("summarizeFirstRunWithAi — session lifecycle", () => {
     );
     expect(prompt).toContain("learning-window.ts");
     expect(prompt).toContain("screens_indexed: 31");
-    expect(prompt).toContain("Do not use any tools");
+    expect(prompt).toContain("不要使用任何工具");
   });
 
   it("recovers the text from agent_end when no deltas streamed", async () => {

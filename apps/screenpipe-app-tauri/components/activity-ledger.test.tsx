@@ -1257,11 +1257,11 @@ describe("activity history helpers", () => {
     expect(prompt).toContain("/meetings/{id}/transcript");
     expect(prompt).toContain("SCREENPIPE_LOCAL_API_URL");
     expect(prompt).toContain("${SCREENPIPE_PORT:-3030}");
-    expect(prompt).toContain("deterministic coverage sweep");
-    expect(prompt).toContain("consecutive 30-minute absolute intervals");
+    expect(prompt).toContain("确定性的覆盖扫描");
+    expect(prompt).toContain("连续的 30 分钟绝对时间段");
     expect(prompt).toContain("meeting_id=8");
     expect(prompt).toContain("Improve Workflow Studio Stability and Insights");
-    expect(prompt).toContain('first artifact must be kind="meeting"');
+    expect(prompt).toContain('会议记录的第一个产物必须是 kind="meeting"');
 
     const meetingHistory = parseActivityHistoryResponse(
       JSON.stringify({
@@ -2115,7 +2115,7 @@ describe("ActivityLedger", () => {
         expect.objectContaining({
           source: "activity-history-skill",
           context: expect.stringContaining("frame 67890"),
-          prompt: expect.stringContaining("Draft a focused SKILL.md"),
+          prompt: expect.stringContaining("起草一份聚焦的 SKILL.md"),
         }),
       ),
     );

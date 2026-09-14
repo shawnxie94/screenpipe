@@ -98,13 +98,11 @@ describe("ChatChart actions", () => {
     expect(onSendPrompt).toHaveBeenCalledOnce();
     expect(onSendPrompt).toHaveBeenCalledWith(
       buildChartLiveViewPrompt(spec),
-      "Add chart to a Live View",
+      "将图表加入 Live View",
     );
     expect(onSendPrompt.mock.calls[0][0]).toContain('"title": "time by app"');
     expect(onSendPrompt.mock.calls[0][0]).toContain('"value": 92');
-    expect(onSendPrompt.mock.calls[0][0]).toContain(
-      "do not change or remove unrelated blocks",
-    );
+    expect(onSendPrompt.mock.calls[0][0]).toContain("不要修改或删除无关区块");
   });
 });
 

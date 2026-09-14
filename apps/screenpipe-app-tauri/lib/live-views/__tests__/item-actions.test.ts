@@ -119,7 +119,7 @@ describe("Live View item handoff", () => {
     ).toEqual({
       context: "实时视图“Commitments” · Needs attention",
       prompt: expect.stringContaining(
-        "Ask me to confirm the exact destination before sending anything.",
+        "发送前请让我确认确切目标",
       ),
       displayLabel: "发送 Send the recap",
     });
