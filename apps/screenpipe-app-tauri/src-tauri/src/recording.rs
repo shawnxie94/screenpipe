@@ -815,7 +815,23 @@ pub(crate) async fn retry_screenpipe(
     spawn_screenpipe_inner(&state, app).await
 }
 
-async fn spawn_screenpipe_inner(
+pub(crate) async fn spawn_screenpipe_inner(
+    state: &RecordingState,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    let resumed = crate::storage_migration::resume_before_startup(&app, state).await?;
+    let result = spawn_screenpipe_after_migration(state, app.clone()).await;
+    if let Some(resumed) = resumed {
+        crate::storage_migration::finish_startup(&app, resumed, result).await
+    } else {
+        if result.is_ok() {
+            crate::storage_migration::finish_recording_recovery(&app).await?;
+        }
+        result
+    }
+}
+
+async fn spawn_screenpipe_after_migration(
     state: &RecordingState,
     app: tauri::AppHandle,
 ) -> Result<(), String> {
