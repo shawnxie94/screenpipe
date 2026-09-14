@@ -402,6 +402,17 @@ async fn main() -> anyhow::Result<()> {
             screenpipe_engine::cli::db::handle_db_command(subcommand).await?;
             return Ok(());
         }
+        Command::Storage {
+            ref operation,
+            ref root,
+            ref destination,
+        } => {
+            let result =
+                screenpipe_db::storage::run_command(operation, root, destination.as_deref())
+                    .await?;
+            println!("{}", serde_json::to_string(&result)?);
+            return Ok(());
+        }
         Command::Backup {
             ref subcommand,
             ref data_dir,
@@ -733,7 +744,8 @@ async fn main() -> anyhow::Result<()> {
 
     // This helps track users who may have screen capture issues due to old macOS
 
-    let database_path = local_data_dir.join("db.sqlite");
+    let database_path =
+        screenpipe_db::storage::resolve_database_path(&local_data_dir.join("db.sqlite"))?;
     let (db, startup_guard) = loop {
         let open = async {
             let startup_guard =
@@ -1671,6 +1683,7 @@ async fn main() -> anyhow::Result<()> {
     // Off by default — only runs when `--async-pii-redaction` is set.
     // The capture path is unaffected either way.
     if !config.async_pii_redaction {
+        db.set_frame_privacy_policy(&Default::default()).await?;
         info!(
             "text-PII worker skipped at startup — async_pii_redaction=false. \
              OPF model (~2.8 GB) will NOT be downloaded or loaded. \
@@ -1710,6 +1723,7 @@ async fn main() -> anyhow::Result<()> {
         //   4. Regex-only otherwise (still destructive — overwrites
         //      regex-redacted text into the source columns).
         let pool = db.pool.clone();
+        let frame_storage_db = Arc::clone(&db);
         let writer = db.coordinated_writer();
         let labels = config.pii_redaction_labels.clone();
         let database_error_hook = redact_database_error_hook.clone();
@@ -1835,6 +1849,7 @@ async fn main() -> anyhow::Result<()> {
                 ..Default::default()
             };
             let _worker_handle = Worker::new_with_writer(pool, writer, pipeline_arc, worker_cfg)
+                .with_frame_storage(frame_storage_db)
                 .with_database_error_hook(database_error_hook)
                 .spawn();
             // The worker runs for the lifetime of the engine. We don't

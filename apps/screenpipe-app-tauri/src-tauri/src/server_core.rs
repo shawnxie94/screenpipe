@@ -235,10 +235,14 @@ impl ServerCore {
         crate::db_relaunch::set_active_database(&local_data_dir);
         let data_path = local_data_dir.join("data");
         std::fs::create_dir_all(&data_path).map_err(|error| {
-            let message = format!("Failed to initialize database: cannot access data directory: {error}");
+            let message =
+                format!("Failed to initialize database: cannot access data directory: {error}");
             crate::health::set_boot_error(&message);
             message
         })?;
+
+        screenpipe_db::storage::pause_interrupted_migration(&local_data_dir)
+            .map_err(|error| format!("Failed to resume storage after interruption: {error}"))?;
 
         // A crash during repair may leave the committed WAL archived separately
         // from the main file. Reconcile the swap before ordinary DB diagnosis.
@@ -249,7 +253,11 @@ impl ServerCore {
                 crate::health::set_boot_error(&message);
                 message
             })?;
-        let db_path = format!("{}/db.sqlite", local_data_dir.to_string_lossy());
+        let db_path =
+            screenpipe_db::storage::resolve_database_path(&local_data_dir.join("db.sqlite"))
+                .map_err(|e| e.to_string())?
+                .to_string_lossy()
+                .into_owned();
         crate::health::set_boot_phase(
             "migrating_database",
             Some("updating database — this may take several minutes on large installs"),
@@ -900,6 +908,11 @@ impl ServerCore {
             }
         }
 
+        if !config.async_pii_redaction {
+            db.set_frame_privacy_policy(&Default::default())
+                .await
+                .map_err(|error| format!("initialize frame privacy policy: {error}"))?;
+        }
         if config.async_pii_redaction {
             use screenpipe_redact::adapters::onnx::{OnnxConfig, OnnxRedactor};
             use screenpipe_redact::adapters::opf::{OpfAdapter, OpfConfig};
@@ -977,6 +990,7 @@ impl ServerCore {
                     pipeline_arc,
                     cfg,
                 )
+                .with_frame_storage(Arc::clone(&db))
                 .with_database_error_hook(redact_database_error_hook.clone())
                 .spawn_with_shutdown(redact_shutdown.clone());
             } else {
@@ -985,6 +999,7 @@ impl ServerCore {
                 // launch. The worker is created inside the spawned
                 // task once the model is ready.
                 let pool = db.pool.clone();
+                let frame_storage_db = Arc::clone(&db);
                 let writer = db.coordinated_writer();
                 let shutdown = redact_shutdown.clone();
                 let labels = pii_labels.clone();
@@ -1069,6 +1084,7 @@ impl ServerCore {
                         ..Default::default()
                     };
                     let _ = Worker::new_with_writer(pool, writer, pipeline_arc, cfg)
+                        .with_frame_storage(frame_storage_db)
                         .with_database_error_hook(database_error_hook)
                         .spawn_with_shutdown(shutdown);
                 });

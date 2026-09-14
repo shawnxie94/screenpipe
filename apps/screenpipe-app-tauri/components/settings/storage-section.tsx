@@ -11,7 +11,9 @@ export const searchIndex: SettingsField[] = [
   { label: "磁盘用量", keywords: ["disk", "space", "gb"] },
   { label: "数据保留", keywords: ["cleanup", "delete old"] },
   { label: "清理缓存" },
+  { label: "数据库存储", keywords: ["migrate", "migration", "compression", "original database"] },
 ];
+import { StorageMigrationCard } from "./storage-migration-card";
 import { DiskUsageSection } from "./disk-usage-section";
 import { ApplyRestartBar } from "./apply-restart-bar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +46,7 @@ function formatBytes(bytes: number): string {
 export function StorageSection() {
   const { settings, updateSettings, getDataDir } = useSettings();
   const { toast } = useToast();
+  const [storageOperationBusy, setStorageOperationBusy] = useState(false);
   const [cacheFiles, setCacheFiles] = useState<CacheFile[]>([]);
   const [showCacheDialog, setShowCacheDialog] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -123,6 +126,8 @@ export function StorageSection() {
         本地磁盘用量与存储控制
       </p>
 
+      <StorageMigrationCard dataDirectory={settings.dataDir} onBusyChange={setStorageOperationBusy} />
+
       {/* 数据目录 */}
       <Card className="border-border bg-card">
           <CardContent className="px-3 py-2.5">
@@ -150,6 +155,7 @@ export function StorageSection() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      disabled={storageOperationBusy}
                       onClick={handleDataDirReset}
                       className="h-7 text-xs shrink-0"
                     >
@@ -159,6 +165,7 @@ export function StorageSection() {
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={storageOperationBusy}
                   onClick={handleDataDirChange}
                   className="h-7 text-xs shrink-0"
                 >

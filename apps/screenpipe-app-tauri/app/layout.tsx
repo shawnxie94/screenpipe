@@ -17,6 +17,7 @@ import { CloseTabOrWindowShortcut } from "@/components/close-tab-or-window-short
 import { RecentChatSwitcherController } from "@/components/chat/recent-chat-switcher-controller";
 import { FeedbackDialog } from "@/components/feedback-dialog";
 import { AdvisoryOverlay } from "@/components/advisory-overlay";
+import { StorageMigrationGate } from "@/components/storage-migration-gate";
 import { PipeAdvisoryWatcher } from "@/components/pipe-advisory-watcher";
 import { usePathname, useSearchParams } from "next/navigation";
 import { commands } from "@/lib/utils/tauri";
@@ -325,6 +326,7 @@ export default function RootLayout({
             React #419 (hydration recovery) → #185 (infinite loop during
             recovery render) on every first launch after auto-update. */}
         <Providers>
+          <StorageMigrationGate offerMigration={pathname === "/home"} />
           {/* DeeplinkHandler is mounted in Providers (outside the entitlement
               gate) so the screenpipe:// login callback is always caught, even
               while the "sign in required" screen is showing. */}

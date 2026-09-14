@@ -5,13 +5,6 @@
 use super::*;
 
 impl DatabaseManager {
-    // ========================================================================
-    // Elements search
-    // ========================================================================
-
-    /// Search the unified `elements` table with optional FTS, time, and app filters.
-    /// Returns a flat `Vec<Element>` — clients reconstruct the tree from `parent_id`/`depth`.
-    #[allow(clippy::too_many_arguments)]
     pub async fn search_elements(
         &self,
         query: &str,
@@ -30,6 +23,7 @@ impl DatabaseManager {
         limit: u32,
         offset: u32,
     ) -> Result<(Vec<Element>, i64), sqlx::Error> {
+        self.consistent_read(|| async {
         let mut conditions = Vec::new();
         let use_fts = !query.is_empty();
 
@@ -73,25 +67,50 @@ impl DatabaseManager {
             ""
         };
 
-        let sql = format!(
+        let hybrid = self.storage.as_ref().is_some_and(|s| s.has_bulk());
+        let grouped = !use_fts && hybrid;
+        let lookup = hybrid && use_fts;
+        let from = if lookup {
+            "_bulk_element_search e JOIN frames f ON f.id=e.frame_id"
+        } else if grouped {
+            "frames f CROSS JOIN elements e ON e.frame_id=f.id"
+        } else {
+            "elements e JOIN frames f ON f.id=e.frame_id"
+        };
+        let frame_order = if grouped { "f.id" } else { "e.frame_id" };
+        let sql = if hybrid { format!(
+            r#"WITH selected AS MATERIALIZED (
+                   SELECT e.id,e.frame_id,e.sort_order
+                   FROM {from} {join_fts} {where_clause}
+                   ORDER BY {frame_order} DESC,e.sort_order ASC,e.id ASC LIMIT ? OFFSET ?
+               )
+               SELECT e.id,e.frame_id,e.source,e.role,e.text,e.parent_id,
+                      e.depth,e.left_bound,e.top_bound,e.width_bound,e.height_bound,
+                      e.confidence,e.sort_order,e.on_screen,e.properties
+               FROM selected s JOIN elements e ON e.id=s.id
+               ORDER BY s.frame_id DESC,s.sort_order ASC,s.id ASC"#
+        ) } else { format!(
             r#"SELECT e.id, e.frame_id, e.source, e.role, e.text, e.parent_id,
                       e.depth, e.left_bound, e.top_bound, e.width_bound, e.height_bound,
                       e.confidence, e.sort_order, e.on_screen, e.properties
-               FROM elements e
-               JOIN frames f ON f.id = e.frame_id
-               {}
-               {}
-               ORDER BY e.frame_id DESC, e.sort_order ASC
-               LIMIT ? OFFSET ?"#,
-            join_fts, where_clause
-        );
-
+               FROM {from} {join_fts} {where_clause}
+               ORDER BY {frame_order} DESC, e.sort_order ASC, e.id ASC
+               LIMIT ? OFFSET ?"#
+        ) };
+        let count_source = if lookup {
+            "_bulk_element_search"
+        } else if grouped {
+            "_bulk_element_counts"
+        } else {
+            "elements"
+        };
+        let aggregate = if grouped {
+            "COALESCE(SUM(e.rows),0)"
+        } else {
+            "COUNT(*)"
+        };
         let count_sql = format!(
-            r#"SELECT COUNT(*) FROM elements e
-               JOIN frames f ON f.id = e.frame_id
-               {}
-               {}"#,
-            join_fts, where_clause
+            "SELECT {aggregate} FROM {count_source} e JOIN frames f ON f.id=e.frame_id {join_fts} {where_clause}"
         );
 
         // Build the data query
@@ -140,12 +159,13 @@ impl DatabaseManager {
         data_query = data_query.bind(limit as i64).bind(offset as i64);
 
         let (rows, total) = tokio::try_join!(
-            data_query.fetch_all(&self.pool),
-            count_query.fetch_one(&self.pool),
+            async { data_query.fetch_all(&mut *self.acquire_read().await?).await },
+            async { count_query.fetch_one(&mut *self.acquire_read().await?).await },
         )?;
 
         let elements: Vec<Element> = rows.into_iter().map(Element::from).collect();
         Ok((elements, total))
+        }).await
     }
 
     /// Get all elements for a single frame, ordered by sort_order.
@@ -158,19 +178,20 @@ impl DatabaseManager {
         frame_id: i64,
         source: Option<&ElementSource>,
     ) -> Result<Vec<Element>, sqlx::Error> {
+        self.consistent_read(|| async {
         // Check if this frame references another frame's elements
         let effective_frame_id: i64 = sqlx::query_scalar(
             "SELECT COALESCE(elements_ref_frame_id, id) FROM frames WHERE id = ?1",
         )
         .bind(frame_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *self.acquire_read().await?)
         .await?
         .unwrap_or(frame_id);
 
         let sql = if source.is_some() {
-            "SELECT id, frame_id, source, role, text, parent_id, depth, left_bound, top_bound, width_bound, height_bound, confidence, sort_order, on_screen, properties FROM elements WHERE frame_id = ?1 AND source = ?2 ORDER BY sort_order"
+            "SELECT id, frame_id, source, role, text, parent_id, depth, left_bound, top_bound, width_bound, height_bound, confidence, sort_order, on_screen, properties FROM elements WHERE frame_id = ?1 AND source = ?2 ORDER BY sort_order, id"
         } else {
-            "SELECT id, frame_id, source, role, text, parent_id, depth, left_bound, top_bound, width_bound, height_bound, confidence, sort_order, on_screen, properties FROM elements WHERE frame_id = ?1 ORDER BY sort_order"
+            "SELECT id, frame_id, source, role, text, parent_id, depth, left_bound, top_bound, width_bound, height_bound, confidence, sort_order, on_screen, properties FROM elements WHERE frame_id = ?1 ORDER BY sort_order, id"
         };
 
         let mut query = sqlx::query_as::<_, ElementRow>(sql).bind(effective_frame_id);
@@ -178,11 +199,11 @@ impl DatabaseManager {
             query = query.bind(src.to_string());
         }
 
-        let rows = query.fetch_all(&self.pool).await?;
+        let rows = query.fetch_all(&mut *self.acquire_read().await?).await?;
         Ok(rows.into_iter().map(Element::from).collect())
+        }).await
     }
 
-}
 
 #[cfg(test)]
 mod tests {

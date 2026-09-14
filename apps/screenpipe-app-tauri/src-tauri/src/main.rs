@@ -53,6 +53,7 @@ mod db_relaunch;
 mod db_self_heal;
 mod deep_link;
 mod dev_isolation;
+mod storage_migration;
 mod disk_pressure_notifications;
 mod disk_usage;
 mod document_sources;
@@ -831,6 +832,7 @@ async fn main() {
     let sync_scheduler = screenpipe_connect::sync_scheduler::SyncScheduler::new();
 
     let app = app.manage(recording_state)
+        .manage(storage_migration::StorageMigrationState::default())
         .manage(activity_history::ActivityHistoryState::default())
         .manage(first_run_summary::FirstRunSummaryState::default())
         .manage(disk_pressure_notifications::DiskPressureNotificationState::default())
@@ -1600,6 +1602,20 @@ async fn main() {
                                 warn!("Microphone permission not granted: {:?}. Audio recording will not work.", permissions_check.microphone);
                             }
 
+
+                            let resumed_migration = match crate::storage_migration::resume_before_startup(
+                                &app_for_owned,
+                                &app_for_owned.state::<recording::RecordingState>(),
+                            ).await {
+                                Ok(resumed) => resumed,
+                                Err(error) => {
+                                    crate::health::set_boot_error(&error);
+                                    crate::health::set_recording_status(crate::health::RecordingStatus::Error);
+                                    is_starting_clone.store(false, std::sync::atomic::Ordering::SeqCst);
+                                    return;
+                                }
+                            };
+
                             info!("Starting server core + capture on dedicated runtime...");
 
                             // Phase 1: Start server core
@@ -1609,6 +1625,11 @@ async fn main() {
                                 Ok(s) => s,
                                 Err(e) => {
                                     error!("Failed to start server core: {}", e);
+                                    if let Some(resumed) = resumed_migration {
+                                        let _ = crate::storage_migration::finish_startup(
+                                            &app_for_owned, resumed, Err(e.to_string()),
+                                        ).await;
+                                    }
                                     crate::db_relaunch::note_respawn_failure(&app_for_db_wedge, &e).await;
                                     if crate::port_conflict::is_error(&e, config.port) {
                                         crate::port_conflict::show_reclaim_failed(
@@ -1672,6 +1693,13 @@ async fn main() {
                                 info!("Server started without capture");
                             }
                             drop(capture_guard);
+                            if let Some(resumed) = resumed_migration {
+                                if let Err(error) = crate::storage_migration::finish_startup(
+                                    &app_for_owned, resumed, Ok(()),
+                                ).await {
+                                    error!("Could not finish migration startup: {error}");
+                                }
+                            }
                             is_starting_clone
                                 .store(false, std::sync::atomic::Ordering::SeqCst);
                             drop(lifecycle_guard);
