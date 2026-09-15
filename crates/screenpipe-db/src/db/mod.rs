@@ -450,6 +450,10 @@ mod accessibility;
 mod activity_ledger;
 mod audio;
 pub(crate) mod knowledge;
+pub mod office;
+pub use self::office::{
+    OfficeConnectionRow, OfficeConnectionUpdate, OfficeObjectDraft, OfficeObjectRow,
+};
 pub mod tasks;
 pub use self::knowledge::history::{
     KnowledgeHistoryBatch, KnowledgeHistoryCoverageInput, KnowledgeHistoryEntryInput, KnowledgeHistoryEntryRow,

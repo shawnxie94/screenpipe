@@ -40,6 +40,7 @@ mod atomic_file;
 pub mod auth_key;
 mod auto_destruct;
 pub mod knowledge;
+pub mod office;
 pub mod calendar_speaker_id;
 mod capture_exclusions;
 pub mod cli;

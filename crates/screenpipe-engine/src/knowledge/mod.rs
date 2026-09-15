@@ -30,8 +30,6 @@ pub mod registry;
 pub mod routes;
 pub mod items;
 pub mod migration;
-pub mod office;
-pub mod office_routes;
 pub mod skill_revisions;
 pub mod sources;
 pub mod summarize;

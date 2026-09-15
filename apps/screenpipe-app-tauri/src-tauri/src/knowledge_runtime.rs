@@ -569,7 +569,7 @@ pub async fn start_knowledge_worker(app: &AppHandle) {
     spawn_distill_tick(app.clone(), shared.db.clone());
     let pi_version = detect_pi_version().await;
     let executor = Arc::new(KnowledgePiExecutor::new(app.clone(), pi_version));
-    let mut handlers = crate::office_runtime::build_handlers_with_office(app).await;
+    let mut handlers = JobHandlers::default();
     handlers.register(
         screenpipe_db::KnowledgeJobKind::Summarize,
         screenpipe_engine::knowledge::summarize::summarize_handler(),

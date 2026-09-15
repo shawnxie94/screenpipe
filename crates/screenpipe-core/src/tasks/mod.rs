@@ -21,7 +21,6 @@ pub enum TaskKind {
     KnowledgeBackfill,
     HistoryMigration,
     ActivitySummary,
-    OfficeSync,
     PipeRun,
 }
 
@@ -33,7 +32,6 @@ impl TaskKind {
             Self::KnowledgeBackfill => "knowledge_backfill",
             Self::HistoryMigration => "history_migration",
             Self::ActivitySummary => "activity_summary",
-            Self::OfficeSync => "office_sync",
             Self::PipeRun => "pipe_run",
         }
     }
@@ -49,7 +47,6 @@ impl std::str::FromStr for TaskKind {
             "knowledge_backfill" => Self::KnowledgeBackfill,
             "history_migration" => Self::HistoryMigration,
             "activity_summary" => Self::ActivitySummary,
-            "office_sync" => Self::OfficeSync,
             "pipe_run" => Self::PipeRun,
             _ => return Err(()),
         })

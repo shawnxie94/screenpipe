@@ -141,9 +141,9 @@ impl TaskService {
             self.register_builtin(id, kind, resource).await?;
         }
         self.register_connection(
-            "office.sync",
-            TaskKind::OfficeSync,
-            TaskResourceClass::OfficeIo,
+            "pipe.run",
+            TaskKind::PipeRun,
+            TaskResourceClass::UserPipe,
         )
         .await?;
         Ok(())
@@ -299,7 +299,6 @@ fn task_priority(kind: TaskKind) -> i32 {
         TaskKind::KnowledgeExtract => 10,
         TaskKind::KnowledgeCompile | TaskKind::KnowledgeBackfill => 20,
         TaskKind::PipeRun => 15,
-        TaskKind::OfficeSync => 30,
     }
 }
 
@@ -312,7 +311,6 @@ fn knowledge_kind_for_task(kind: TaskKind) -> Option<KnowledgeJobKind> {
         TaskKind::KnowledgeExtract => KnowledgeJobKind::Extract,
         TaskKind::KnowledgeCompile => KnowledgeJobKind::Compile,
         TaskKind::KnowledgeBackfill => KnowledgeJobKind::BackfillExtract,
-        TaskKind::OfficeSync => KnowledgeJobKind::OfficeSync,
         TaskKind::HistoryMigration => KnowledgeJobKind::HistoryMigration,
         TaskKind::ActivitySummary | TaskKind::PipeRun => return None,
     })
