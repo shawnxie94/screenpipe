@@ -131,7 +131,6 @@ describe("screenpipe-tools MCP server", () => {
         "skill_manage",
         "sp_mcp_call",
         "sp_mcp_list_tools",
-            "user_profile",
       ].sort(),
     );
     // save_artifact advertises the base64 encoding option (image/binary support).

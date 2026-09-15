@@ -312,7 +312,6 @@ fn coding_workspace_resource_args(project_dir: &Path) -> Result<Vec<String>, Str
         .iter()
         .copied()
         .chain([
-            "self-improvement.ts",
             "chat-control.ts",
             "context-usage.ts",
         ])
@@ -1787,17 +1786,8 @@ fn ensure_screenpipe_skill(project_dir: &str) -> Result<(), String> {
         .map_err(|e| format!("Failed to install screenpipe skills: {}", e))
 }
 
-/// Install the profile + skill tools used by native Pi and pi-acp. Other ACP
-/// agents receive the same contract from the bundled screenpipe-tools MCP.
-fn ensure_self_improvement_extension(project_dir: &str) -> Result<(), String> {
-    use screenpipe_core::agents::pi::PiExecutor;
-    PiExecutor::ensure_self_improvement_extension(std::path::Path::new(project_dir))
-        .map_err(|e| format!("Failed to install self-improvement extension: {}", e))
-}
-
 /// Install exact-target chat search/send tools for interactive Pi chats.
-/// Kept separate from self-improvement so background Pipe agents never gain
-/// cross-chat delivery authority.
+/// Background Pipe agents never gain cross-chat delivery authority.
 fn ensure_chat_control_extension(project_dir: &str) -> Result<(), String> {
     use screenpipe_core::agents::pi::PiExecutor;
     PiExecutor::ensure_chat_control_extension(std::path::Path::new(project_dir))
@@ -1825,7 +1815,6 @@ fn ensure_context_usage_extension(project_dir: &str) -> Result<(), String> {
 /// makes that class of drift impossible; only the deliberately different
 /// web-search variant stays per-branch.
 fn ensure_shared_pi_extensions(project_dir: &str) -> Result<(), String> {
-    ensure_self_improvement_extension(project_dir)?;
     ensure_chat_control_extension(project_dir)?;
     ensure_context_usage_extension(project_dir)?;
     // MCP bridge: lets the agent reach user-registered MCP servers.
@@ -1839,43 +1828,19 @@ fn ensure_shared_pi_extensions(project_dir: &str) -> Result<(), String> {
     // Connection gate: lets Pi block on inline app authorization before
     // continuing app-dependent tasks.
     ensure_connection_gate_extension(project_dir)?;
-    // Knowledge tools: first-party 知迹 knowledge-base tools (answer/source).
-    // The chat and the knowledge share the app, so these are native tools that
-    // call local REST directly — not an MCP hop.
-    ensure_knowledge_tools_extension(project_dir)?;
     Ok(())
 }
 
 /// The files [`ensure_shared_pi_extensions`] writes, for the parity assertion.
 #[cfg(test)]
 const SHARED_PI_EXTENSION_FILES: &[&str] = &[
-    "self-improvement.ts",
     "chat-control.ts",
     "context-usage.ts",
     "mcp-bridge.ts",
     "save-artifact.ts",
     "live-views.ts",
     "connection-gate.ts",
-    "knowledge-tools.ts",
 ];
-
-/// Install the Local Knowledge tools extension. Registers `knowledge_answer` /
-/// `knowledge_source` against the engine's own REST API.
-fn ensure_knowledge_tools_extension(project_dir: &str) -> Result<(), String> {
-    let ext_dir = std::path::Path::new(project_dir)
-        .join(".pi")
-        .join("extensions");
-    std::fs::create_dir_all(&ext_dir)
-        .map_err(|e| format!("Failed to create extensions dir: {}", e))?;
-
-    let ext_path = ext_dir.join("knowledge-tools.ts");
-    let ext_content = include_str!("../assets/extensions/knowledge-tools.ts");
-    std::fs::write(&ext_path, ext_content)
-        .map_err(|e| format!("Failed to write knowledge-tools extension: {}", e))?;
-
-    debug!("knowledge-tools extension installed at {:?}", ext_path);
-    Ok(())
-}
 
 /// Install the MCP bridge extension. Registers proxy tools that route
 /// `sp_mcp_call` / `sp_mcp_list_tools` requests through the local
@@ -7897,7 +7862,7 @@ error: InstallFailed extracting tarball"#;
     }
 
     /// Fresh-profile parity (review item F): from an EMPTY profile, the pi-acp
-    /// baseline seeds Screenpipe skills, self-improvement and Live Views
+    /// baseline seeds Screenpipe skills and Live Views
     /// extensions, and registers
     /// the required pi-subagents package — the exact pieces the pi-acp path now
     /// calls ensure_screenpipe_skill / ensure_live_views_extension /
@@ -7921,18 +7886,6 @@ error: InstallFailed extracting tarball"#;
                 .filter_map(Result::ok)
                 .any(|e| e.file_name().to_string_lossy().starts_with("screenpipe")),
             "at least one screenpipe skill must be seeded on a fresh profile"
-        );
-
-        super::ensure_self_improvement_extension(project_dir)
-            .expect("seed self-improvement extension");
-        assert!(
-            project
-                .path()
-                .join(".pi")
-                .join("extensions")
-                .join("self-improvement.ts")
-                .is_file(),
-            "self-improvement extension must be seeded on a fresh profile"
         );
 
         super::ensure_context_usage_extension(project_dir)

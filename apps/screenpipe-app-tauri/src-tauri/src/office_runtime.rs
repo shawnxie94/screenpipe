@@ -13,16 +13,20 @@ use std::time::Duration;
 use screenpipe_connect::office::types::{OfficeAuthStatus, OfficeProvider, OfficeScope};
 use screenpipe_db::DatabaseManager;
 use screenpipe_engine::office::OfficeService;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
+
+use crate::recording::RecordingState;
 
 /// Build the OfficeService the same way the REST routes do (shared managed
-/// directory), so states agree no matter which side enqueues.
+/// directory), so states agree no matter which side enqueues. Uses the shared
+/// capture database; early in native startup recording may not have started.
 pub fn office_service(app: &AppHandle) -> Option<OfficeService> {
     let data_dir = screenpipe_core::paths::default_screenpipe_data_dir();
-    let _ = app;
-    let db = app.state::<Arc<DatabaseManager>>();
+    let state = app.try_state::<RecordingState>()?;
+    let guard = state.server.try_lock().ok()?;
+    let core = guard.as_ref()?;
     Some(OfficeService::new(
-        (*db).clone(),
+        core.db.clone(),
         managed_dir(&data_dir),
     ))
 }

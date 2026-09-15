@@ -13,7 +13,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use screenpipe_db::{
-    KnowledgeJobKind, DatabaseManager, TaskControl, TaskDefinition, TaskKind, TaskOrigin,
+    DatabaseManager, TaskControl, TaskDefinition, TaskKind, TaskOrigin,
     TaskResourceClass, TaskRetryPolicy, TaskRunRequest, TaskState, TaskTrigger,
 };
 use serde::Deserialize;
@@ -117,21 +117,6 @@ impl TaskService {
     pub async fn register_default_definitions(&self) -> Result<(), sqlx::Error> {
         for (id, kind, resource) in [
             (
-                "knowledge.extract",
-                TaskKind::KnowledgeExtract,
-                TaskResourceClass::Extract,
-            ),
-            (
-                "knowledge.compile",
-                TaskKind::KnowledgeCompile,
-                TaskResourceClass::Extract,
-            ),
-            (
-                "knowledge.backfill",
-                TaskKind::KnowledgeBackfill,
-                TaskResourceClass::Backfill,
-            ),
-            (
                 "activity.summary",
                 TaskKind::ActivitySummary,
                 TaskResourceClass::Extract,
@@ -140,12 +125,6 @@ impl TaskService {
         ] {
             self.register_builtin(id, kind, resource).await?;
         }
-        self.register_connection(
-            "pipe.run",
-            TaskKind::PipeRun,
-            TaskResourceClass::UserPipe,
-        )
-        .await?;
         Ok(())
     }
 
@@ -296,24 +275,12 @@ impl std::error::Error for TaskServiceError {
 fn task_priority(kind: TaskKind) -> i32 {
     match kind {
         TaskKind::ActivitySummary | TaskKind::HistoryMigration => 5,
-        TaskKind::KnowledgeExtract => 10,
-        TaskKind::KnowledgeCompile | TaskKind::KnowledgeBackfill => 20,
         TaskKind::PipeRun => 15,
     }
 }
 
 pub fn user_pipe_definition_id(name: &str) -> String {
     format!("pipe.user.{}", screenpipe_db::fingerprint(&[name]))
-}
-
-fn knowledge_kind_for_task(kind: TaskKind) -> Option<KnowledgeJobKind> {
-    Some(match kind {
-        TaskKind::KnowledgeExtract => KnowledgeJobKind::Extract,
-        TaskKind::KnowledgeCompile => KnowledgeJobKind::Compile,
-        TaskKind::KnowledgeBackfill => KnowledgeJobKind::BackfillExtract,
-        TaskKind::HistoryMigration => KnowledgeJobKind::HistoryMigration,
-        TaskKind::ActivitySummary | TaskKind::PipeRun => return None,
-    })
 }
 
 #[derive(Debug, Deserialize)]
@@ -705,12 +672,7 @@ async fn update_definition(
 fn is_managed_definition_id(definition_id: &str) -> bool {
     matches!(
         definition_id,
-        "knowledge.extract"
-            | "knowledge.compile"
-            | "knowledge.backfill"
-            | "activity.summary"
-            | "office.sync"
-            | "pipe.run"
+        "activity.summary" | "pipe.run"
     )
 }
 
@@ -764,38 +726,6 @@ async fn start_run(
     } else {
         request.input_hash
     };
-    if let Some(kind) = knowledge_kind_for_task(definition.kind) {
-        let scope_key = request.input_refs.get("scope_key").and_then(Value::as_str);
-        let deadline = request
-            .deadline
-            .as_deref()
-            .and_then(|value| DateTime::parse_from_rfc3339(value).ok())
-            .map(|value| value.with_timezone(&Utc));
-        let payload = request.input_refs.to_string();
-        let (job_id, created) = state
-            .db
-            .knowledge_enqueue_job(
-                kind,
-                scope_key,
-                Some(&input_hash),
-                Some(&payload),
-                deadline,
-                None,
-            )
-            .await
-            .map_err(|e| {
-                error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "task_storage",
-                    e.to_string(),
-                )
-            })?;
-        return Ok(Json(json!({
-            "run_id": format!("brain-job-{job_id}"),
-            "created": created,
-            "compatibility": "brain_jobs",
-        })));
-    }
     let (run_id, created) = state
         .db
         .task_start_run(&TaskRunRequest {

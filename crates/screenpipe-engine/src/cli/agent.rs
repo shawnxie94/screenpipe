@@ -26,27 +26,13 @@ const API_SKILL_MD: &str =
     include_str!("../../../screenpipe-core/assets/skills/screenpipe-api/SKILL.md");
 const CLI_SKILL_MD: &str =
     include_str!("../../../screenpipe-core/assets/skills/screenpipe-cli/SKILL.md");
-const KNOWLEDGE_FETCH_SKILL_MD: &str =
-    include_str!("../../../screenpipe-core/assets/skills/knowledge-fetch/SKILL.md");
-const ACTIVITY_SUMMARY_SKILL_MD: &str =
-    include_str!("../../../screenpipe-core/assets/skills/activity-summary/SKILL.md");
-const WORK_UNIT_SKILL_MD: &str =
-    include_str!("../../../screenpipe-core/assets/skills/work-unit/SKILL.md");
-const KNOWLEDGE_DISTILL_SKILL_MD: &str =
-    include_str!("../../../screenpipe-core/assets/skills/knowledge-distill/SKILL.md");
 
 /// The built-in skill set delivered to every external agent: the always-on
-/// API/CLI skills plus the internal knowledge skills (shared retrieval,
-/// activity summary, work unit, knowledge distillation). Single source for
-/// install, remove, readiness, and the desktop refresh path so the set never
-/// drifts apart.
-const BUILTIN_SKILLS: [(&str, &str); 6] = [
+/// API/CLI skills. Single source for install, remove, readiness, and the
+/// desktop refresh path so the set never drifts apart.
+const BUILTIN_SKILLS: [(&str, &str); 2] = [
     ("screenpipe-api", API_SKILL_MD),
     ("screenpipe-cli", CLI_SKILL_MD),
-    ("knowledge-fetch", KNOWLEDGE_FETCH_SKILL_MD),
-    ("activity-summary", ACTIVITY_SUMMARY_SKILL_MD),
-    ("work-unit", WORK_UNIT_SKILL_MD),
-    ("knowledge-distill", KNOWLEDGE_DISTILL_SKILL_MD),
 ];
 
 #[derive(clap::Subcommand, Debug)]
@@ -1541,12 +1527,10 @@ mod tests {
     }
 
     #[test]
-    fn test_agent_builtin_skills_carry_internal_knowledge_set() {
+    fn test_agent_builtin_skills_carry_api_cli_set() {
         let internal = [
-            ("knowledge-fetch", KNOWLEDGE_FETCH_SKILL_MD),
-            ("activity-summary", ACTIVITY_SUMMARY_SKILL_MD),
-            ("work-unit", WORK_UNIT_SKILL_MD),
-            ("knowledge-distill", KNOWLEDGE_DISTILL_SKILL_MD),
+            ("screenpipe-api", API_SKILL_MD),
+            ("screenpipe-cli", CLI_SKILL_MD),
         ];
         for (name, markdown) in internal {
             assert!(

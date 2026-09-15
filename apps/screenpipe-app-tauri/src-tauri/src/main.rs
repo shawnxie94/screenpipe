@@ -45,8 +45,6 @@ mod focus_handoff;
 mod icons;
 mod agent_event_emitter;
 mod audio_exclusions;
-mod knowledge_migration;
-mod knowledge_runtime;
 mod knowledge_views;
 mod office_runtime;
 mod calendar;
@@ -1430,13 +1428,10 @@ async fn main() {
                 .unwrap_or(11435);
             let server_shutdown_tx = spawn_server(app_handle.clone(), focus_port);
             app.manage(server_shutdown_tx);
-            app.manage(knowledge_runtime::KnowledgeRuntimeState::default());
-            {
-                let handle = app_handle.clone();
-                tauri::async_runtime::spawn(async move {
-                    knowledge_runtime::start_knowledge_worker(&handle).await;
-                });
-            }
+            // Office connector auto-sync: independent 15-minute loop, opt-in
+            // per connection and only when authorized. Owns no knowledge
+            // worker/job dependencies.
+            office_runtime::start_auto_sync(&app_handle);
 
 
             // Startup permission gate: check CRITICAL permissions immediately after onboarding
@@ -2029,15 +2024,6 @@ async fn main() {
 
                 tauri::RunEvent::Exit => {
                     info!("App exiting — running cleanup");
-
-                    // Cancel in-flight knowledge steps first: uncommitted results
-                    // must never be written after exit begins.
-                    {
-                        let app = app_handle.app_handle().clone();
-                        tauri::async_runtime::block_on(
-                            async move { knowledge_runtime::stop_knowledge_worker(&app).await },
-                        );
-                    }
 
                     process_exit::run_blocking_pre_exit_teardown(app_handle.app_handle().clone());
 

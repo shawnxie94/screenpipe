@@ -16,9 +16,6 @@ pub const TASK_MESSAGE_RETENTION_LIMIT: usize = 1000;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskKind {
-    KnowledgeExtract,
-    KnowledgeCompile,
-    KnowledgeBackfill,
     HistoryMigration,
     ActivitySummary,
     PipeRun,
@@ -27,9 +24,6 @@ pub enum TaskKind {
 impl TaskKind {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::KnowledgeExtract => "knowledge_extract",
-            Self::KnowledgeCompile => "knowledge_compile",
-            Self::KnowledgeBackfill => "knowledge_backfill",
             Self::HistoryMigration => "history_migration",
             Self::ActivitySummary => "activity_summary",
             Self::PipeRun => "pipe_run",
@@ -42,9 +36,6 @@ impl std::str::FromStr for TaskKind {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         Ok(match value {
-            "knowledge_extract" => Self::KnowledgeExtract,
-            "knowledge_compile" => Self::KnowledgeCompile,
-            "knowledge_backfill" => Self::KnowledgeBackfill,
             "history_migration" => Self::HistoryMigration,
             "activity_summary" => Self::ActivitySummary,
             "pipe_run" => Self::PipeRun,

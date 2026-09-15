@@ -324,14 +324,6 @@ impl RuntimeConfig {
             .map(PathBuf::from)
             .or_else(|| std::env::current_dir().ok())
             .ok_or("ACP project directory is unavailable")?;
-        // pi-acp loads the native self-improvement extension because that
-        // adapter drops client MCP servers. Avoid injecting the same frozen
-        // context twice; every other ACP agent gets it from this middleware.
-        let self_improvement_context = if agent_id == "pi-acp" {
-            None
-        } else {
-            load_self_improvement_context()
-        };
         // Normalized once here so every read site compares like with like.
         let tool_allowlist = parse_json_env::<Vec<String>>(TOOL_ALLOWLIST_ENV)?.map(|tools| {
             tools
@@ -348,7 +340,6 @@ impl RuntimeConfig {
         } else {
             Some(build_first_turn_context(
                 load_screenpipe_agents_context(&data_dir),
-                self_improvement_context,
                 env_nonempty("SCREENPIPE_ACP_SYSTEM_PROMPT"),
             ))
         };
@@ -393,8 +384,6 @@ Never access Screenpipe's live db.sqlite, db.sqlite-wal, or db.sqlite-shm direct
 - the `screenpipe` server searches and summarizes the user's screen, audio, and UI history.
   - `activity-summary` for broad questions (\"what was I doing?\", \"which apps?\", \"how long on X?\"): it pre-summarizes apps, windows, and transcripts and owns the time math — pass natural-language times (\"today\", \"2h ago\"); \"today\" is the user's local calendar day starting at local midnight, not UTC midnight or a rolling 24 hours. Never sum minutes yourself.
   - `search-content` for specific lookups; filter by content_type, app_name, window_name, and a time range.
-  - `update-memory` (and search with content_type=memory) to persist and recall facts across sessions.
-- `user_profile` and `skill_manage` provide self-improvement capabilities; follow their tool descriptions and the shared session guidance.
 - `search_chats` finds exact existing screenpipe, Codex, Claude, and Cursor chat targets. `send_to_chat` delivers to one returned source + id only after the user explicitly authorizes that exact send. Read `.pi/skills/screenpipe-chats/SKILL.md` for the search, disambiguation, and delivery workflow.
 - `list_connections` shows the user's connected apps; `screenpipe_connect_app` connects one and waits for the user when a task needs it.
 - for a connection returned with mcp=true (Linear, Notion, Stripe, Sentry, Jira, Gmail, Zoom, Drive), use `sp_mcp_list_tools` then `sp_mcp_call` (with its `mcp_server_id`) to actually use it — not the connection proxy.
@@ -462,43 +451,13 @@ fn load_screenpipe_agents_context(data_dir: &Path) -> Option<String> {
     None
 }
 
-/// Load the engine-rendered, sanitized profile snapshot and global policy once
-/// while constructing an ACP session. An unavailable engine never blocks chat.
-fn load_self_improvement_context() -> Option<String> {
-    let base = engine_api_url()?;
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_millis(750))
-        .build()
-        .ok()?;
-    let mut request = client.get(format!("{base}/agent/self-improvement/context"));
-    if let Some(key) = env_nonempty("SCREENPIPE_LOCAL_API_KEY") {
-        request = request.bearer_auth(key);
-    }
-    let payload = request.send().ok()?.json::<Value>().ok()?;
-    parse_self_improvement_context(&payload)
-}
-
-fn parse_self_improvement_context(payload: &Value) -> Option<String> {
-    payload
-        .get("system_prompt")?
-        .as_str()
-        .map(str::trim)
-        .filter(|context| !context.is_empty())
-        .map(ToOwned::to_owned)
-}
-
-/// Combine the tools hint, screenpipe-global AGENTS.md, engine-rendered frozen
-/// self-improvement context, and configured system prompt. It is
-/// delivered exactly once, on the first prompt of the ACP session.
 fn build_first_turn_context(
     agents_context: Option<String>,
-    self_improvement_context: Option<String>,
     user_prompt: Option<String>,
 ) -> String {
     [
         Some(SCREENPIPE_TOOLS_HINT.to_string()),
         agents_context,
-        self_improvement_context,
         user_prompt,
     ]
     .into_iter()
@@ -5026,9 +4985,8 @@ pub(super) async fn run_from_env_with_observer(
     // until process exit: dropping it here would terminate this process before
     // main can flush the final ACP error/result and choose its exit code. The
     // OS closes the handle immediately when the hidden runtime exits.
-    // RuntimeConfig loads the optional self-improvement context through a
-    // short-lived blocking HTTP client. Build it off the async runtime so
-    // reqwest can create and drop its internal runtime safely.
+    // RuntimeConfig is built off the async runtime so reqwest can create and
+    // drop its internal runtime safely.
     let config = tokio::task::spawn_blocking(RuntimeConfig::from_env)
         .await
         .map_err(|error| format!("failed to load ACP runtime config: {error}"))??;
@@ -5773,10 +5731,9 @@ mod tests {
     #[test]
     fn first_turn_context_always_includes_the_tools_hint() {
         // With no user system prompt, the first-turn context is just the hint.
-        let none = build_first_turn_context(None, None, None);
+        let none = build_first_turn_context(None, None);
         assert!(none.contains("screenpipe_connect_app"));
         assert!(none.contains("save_artifact"));
-        assert!(none.contains("user_profile"));
         assert!(none.contains("skill_manage"));
         assert!(none.contains("search_chats"));
         assert!(none.contains("send_to_chat"));
@@ -5795,12 +5752,10 @@ mod tests {
         // explicit preset prompt remains last.
         let combined = build_first_turn_context(
             Some("# screenpipe user instructions\n\nUse the weekly-report skill.".to_string()),
-            Some("# screenpipe self-improvement\n\nUser prefers short reports.".to_string()),
             Some("Be terse.".to_string()),
         );
         assert!(combined.contains("save_artifact"));
         assert!(combined.contains("Use the weekly-report skill."));
-        assert!(combined.contains("User prefers short reports."));
         assert!(combined.find("save_artifact") < combined.find("Use the weekly-report skill."));
         assert!(combined.trim_end().ends_with("Be terse."));
     }
@@ -5810,30 +5765,6 @@ mod tests {
         assert!(SCREENPIPE_TOOLS_HINT.contains("Never access Screenpipe's live db.sqlite"));
         assert!(SCREENPIPE_TOOLS_HINT.contains("query_recordings for SQL"));
         assert!(SCREENPIPE_TOOLS_HINT.contains("never fall back to sqlite3"));
-    }
-
-    #[test]
-    fn self_improvement_context_uses_the_shared_engine_contract() {
-        let payload = json!({
-            "system_prompt": "# screenpipe self-improvement\n\nFrozen profile data."
-        });
-        assert_eq!(
-            parse_self_improvement_context(&payload).as_deref(),
-            Some("# screenpipe self-improvement\n\nFrozen profile data.")
-        );
-        assert!(parse_self_improvement_context(&json!({ "system_prompt": "" })).is_none());
-        assert!(!SCREENPIPE_TOOLS_HINT.contains("facts likely to be stale"));
-    }
-
-    #[test]
-    fn bundled_acp_tools_expose_self_improvement_contract() {
-        let source = include_str!("../../../assets/acp/screenpipe-tools.mjs");
-        assert!(source.contains("name: \"start_worktree\""));
-        assert!(source.contains("__worktree-route:"));
-        assert!(source.contains("name: \"user_profile\""));
-        assert!(source.contains("name: \"skill_manage\""));
-        assert!(source.contains("/agent/profile/manage"));
-        assert!(source.contains("/agent/skills/manage"));
     }
 
     #[test]

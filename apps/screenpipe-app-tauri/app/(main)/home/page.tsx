@@ -8,15 +8,12 @@ import {
   Settings as SettingsIcon,
   TimerReset,
   Plus,
-  Brain,
   MonitorPlay,
   PanelLeftClose,
   PanelLeftOpen,
   Search,
   Plug,
   CalendarClock,
-  ListTree,
-  ArrowLeft,
 } from "lucide-react";
 import { emit } from "@tauri-apps/api/event";
 import {
@@ -60,7 +57,6 @@ import { usePlatform } from "@/lib/hooks/use-platform";
 import { useIsFullscreen } from "@/lib/hooks/use-is-fullscreen";
 import { FeedbackSection } from "@/components/settings/feedback-section";
 import { PipeStoreView } from "@/components/pipe-store";
-import { KnowledgeHub } from "@/components/knowledge/knowledge-hub";
 import { ConnectionsSection } from "@/components/settings/connections-section";
 import { MeetingNotesSection } from "@/components/meeting-notes";
 import { StandaloneChat } from "@/components/standalone-chat";
@@ -74,7 +70,6 @@ import Timeline from "@/components/rewind/timeline";
 import {
   NativeTimeline,
   NativeTimelineBridge,
-  shouldClearActivityReturn,
 } from "@/components/rewind/native-timeline";
 import { useQueryState } from "nuqs";
 import { listen } from "@tauri-apps/api/event";
@@ -108,8 +103,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ONBOARDING_KNOWLEDGE_HANDOFF_EVENT } from "@/lib/live-views/onboarding-activation";
-import { ActivityLedger } from "@/components/activity-ledger";
 import { ShortcutKeycap } from "@/components/shortcut-keycap";
 import { ExperimentalShortcutGuide } from "@/components/shortcut-guide";
 import { useExperimentalFeaturesEnabled } from "@/lib/experimental-features";
@@ -120,7 +113,7 @@ import {
 } from "@/lib/shortcuts";
 import { useFirstRunLearningWindow } from "@/components/first-run/learning-window-provider";
 
-type MainSection = "home" | "timeline" | "activity" | "knowledge" | "pipes" | "connections" | "meetings" | "help";
+type MainSection = "home" | "timeline" | "pipes" | "connections" | "meetings" | "help";
 type ConnectionFocusRequest = {
   id: string | null;
   category: string | null;
@@ -130,10 +123,8 @@ type ConnectionFocusRequest = {
 
 // All valid URL sections for the home page
 const ALL_SECTIONS = [
-  "home", "timeline", "activity", "pipes", "help", "knowledge", "connections", "meetings", "history",
+  "home", "timeline", "pipes", "help", "connections", "meetings", "history",
   "feedback", // backwards compat → maps to "help"
-  "memories", // backwards compat → maps to "knowledge"
-  "artifacts", // backwards compat → maps to "knowledge"
 ];
 
 // Settings sections that should redirect to /settings. Sourced from
@@ -162,31 +153,13 @@ function HomeContent() {
     history: "push",
     parse: (value) => {
       if (value === "feedback") return "help"; // backwards compat
-      if (value === "memories") return "knowledge"; // backwards compat — renamed to knowledge
-      if (value === "artifacts") return "knowledge"; // backwards compat — artifacts merged into knowledge
       // Settings sections redirect to /settings page
       if (isSettingsRoute(value)) return value; // handled by redirect effect below
       return ALL_SECTIONS.includes(value) ? value : "home";
     },
     serialize: (value) => value,
   });
-  const [activityReturnVisible, setActivityReturnVisible] = useState(false);
   const previousSectionRef = useRef(activeSection);
-  const returnToActivity = useCallback(() => {
-    setActivityReturnVisible(false);
-    router.push("/home?section=activity");
-  }, [router]);
-
-  useEffect(() => {
-    const previousSection = previousSectionRef.current;
-    previousSectionRef.current = activeSection;
-    if (
-      activityReturnVisible &&
-      shouldClearActivityReturn(previousSection, activeSection)
-    ) {
-      setActivityReturnVisible(false);
-    }
-  }, [activeSection, activityReturnVisible]);
   const [connectionFocusRequest, setConnectionFocusRequest] = useState<ConnectionFocusRequest | null>(null);
 
   const { settings, updateSettings, isSettingsLoaded } = useSettings();
@@ -993,21 +966,10 @@ function HomeContent() {
         return (
           <div className="flex h-full min-h-0 flex-col">
             <div className="min-h-0 flex-1">
-              <NativeTimeline
-                fallback={<Timeline embedded />}
-                showActivityReturn={activityReturnVisible}
-              />
+              <NativeTimeline fallback={<Timeline embedded />} />
             </div>
           </div>
         );
-      case "activity":
-        return (
-          <ActivityLedger
-            onOpenArtifact={() => setActivityReturnVisible(true)}
-          />
-        );
-      case "knowledge":
-        return <KnowledgeHub />;
       case "pipes":
         return <PipeStoreView />;
       case "connections":
@@ -1063,8 +1025,6 @@ function HomeContent() {
     home: { label: "聊天", icon: <Plus className="h-3.5 w-3.5" /> },
     meetings: { label: "会议", icon: <CalendarClock className="h-3.5 w-3.5" /> },
     timeline: { label: "时间线", icon: <MonitorPlay className="h-3.5 w-3.5" /> },
-    activity: { label: "活动", icon: <ListTree className="h-3.5 w-3.5" /> },
-    knowledge: { label: "知识库", icon: <Brain className="h-3.5 w-3.5" /> },
     pipes: { label: "自动化", icon: <TimerReset className="h-3.5 w-3.5" /> },
     connections: { label: "连接", icon: <Plug className="h-3.5 w-3.5" /> },
   };
@@ -1152,9 +1112,6 @@ function HomeContent() {
       const mapped = section === "feedback" ? "help" : section;
       if (ALL_SECTIONS.includes(mapped)) {
         setActiveSection(mapped);
-        if (mapped === "knowledge") {
-          window.dispatchEvent(new Event(ONBOARDING_KNOWLEDGE_HANDOFF_EVENT));
-        }
       }
     }
   });
@@ -1162,10 +1119,8 @@ function HomeContent() {
   const isFullHeight =
     activeSection === "home" ||
     activeSection === "timeline" ||
-    activeSection === "activity" ||
     activeSection === "meetings" ||
-    activeSection === "history" ||
-    activeSection === "knowledge";
+    activeSection === "history";
 
   // The outer flex row (sidebar shell + content column) lives in the shared
   // (main)/layout.tsx so the sidebar width survives navigation to /settings.
@@ -1182,10 +1137,7 @@ function HomeContent() {
           palette use teaches the direct key. Home window only: the settings
           page binds its own ⌘K for search focus while mounted. */}
       {/* Routes actions the native timeline window cannot perform itself. */}
-      <NativeTimelineBridge
-        onReturnToActivity={returnToActivity}
-        onToggleSidebar={toggleSidebar}
-      />
+      <NativeTimelineBridge onToggleSidebar={toggleSidebar} />
 
       <CommandPalette
         open={commandPaletteOpen}
@@ -1537,19 +1489,6 @@ function HomeContent() {
                 </div>
               )
             )}
-
-            {activityReturnVisible &&
-              (activeSection === "meetings" || activeSection === "timeline") && (
-                <button
-                  type="button"
-                  onClick={returnToActivity}
-                  aria-label="返回活动"
-                        title="返回活动"
-                  className="absolute left-4 top-11 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-lg shadow-black/10 backdrop-blur-sm transition-colors hover:border-foreground hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-offset-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </button>
-              )}
 
           </div>
 

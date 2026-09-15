@@ -19,7 +19,6 @@ pub mod health;
 pub mod live_views;
 pub mod meeting_summary_status;
 pub mod meetings;
-pub mod memories;
 pub mod pipe_store;
 pub mod power;
 pub mod response_format;

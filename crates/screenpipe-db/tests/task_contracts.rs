@@ -23,11 +23,11 @@ async fn db() -> Arc<DatabaseManager> {
 fn definition(id: &str) -> TaskDefinition {
     TaskDefinition {
         definition_id: id.to_string(),
-        kind: TaskKind::KnowledgeExtract,
+        kind: TaskKind::PipeRun,
         origin: TaskOrigin::Builtin,
         schema_version: 1,
         config_revision: "cfg-1".to_string(),
-        config_ref: Some("knowledge:extract".to_string()),
+        config_ref: Some("pipe:stub".to_string()),
         trigger: TaskTrigger { kind: "manual".to_string(), expression: None },
         enabled: true,
         resource_class: TaskResourceClass::Extract,

@@ -55,11 +55,6 @@ use crate::{
             merge_meetings_handler, save_meeting_summary_handler, split_meeting_handler,
             start_meeting_handler, stop_meeting_handler, update_meeting_handler,
         },
-        memories::{
-            create_memory_handler, delete_memory_handler, get_memory_handler,
-            list_memories_handler, list_memory_tags_handler, sync_external_memories_handler,
-            update_memory_handler,
-        },
         retranscribe::retranscribe_meeting_handler,
         search::keyword_search_handler,
         semantic::{
@@ -159,7 +154,6 @@ fn search_query_concurrency(read_pool_max: u32) -> usize {
 
 pub struct AppState {
     pub db: Arc<DatabaseManager>,
-    pub knowledge: Arc<crate::knowledge::KnowledgeShared>,
     pub history_access: HistoryAccessPolicy,
     pub audio_manager: Arc<AudioManager>,
     pub app_start_time: DateTime<Utc>,
@@ -241,7 +235,6 @@ pub struct SCServer {
     addr: SocketAddr,
     audio_manager: Arc<AudioManager>,
     screenpipe_dir: PathBuf,
-    knowledge: Option<Arc<crate::knowledge::KnowledgeShared>>,
     vision_disabled: bool,
     audio_disabled: bool,
     use_pii_removal: bool,
@@ -271,10 +264,6 @@ pub struct SCServer {
     pub api_auth_key: Option<String>,
     /// Unified credential store for API keys, etc.
     pub secret_store: Option<Arc<screenpipe_secrets::SecretStore>>,
-    /// Background scheduler that mirrors `memories` out to Claude Code's
-    /// CLAUDE.md and Codex's AGENTS.md every few minutes. Owned so the
-    /// JoinHandle isn't dropped and `.snapshot()` can report health later.
-    pub external_memory_sync: Option<Arc<crate::external_memory_sync::ExternalMemorySyncScheduler>>,
     /// Shared high-FPS controller. Set before `start()` so AppState and
     /// the per-monitor capture loops point at the same instance.
     pub high_fps_controller: Option<Arc<crate::high_fps_controller::HighFpsController>>,
@@ -357,11 +346,6 @@ impl SCServer {
         video_quality: String,
     ) -> Self {
         let audio_metrics = audio_manager.metrics.clone();
-        let knowledge = {
-            let shared = crate::knowledge::KnowledgeShared::new(db.clone(), screenpipe_dir.clone());
-            crate::knowledge::set_shared(shared.clone());
-            Some(shared)
-        };
         SCServer {
             db,
             history_access: HistoryAccessPolicy::unrestricted(),
@@ -384,12 +368,10 @@ impl SCServer {
             api_auth: false,
             api_auth_key: None,
             secret_store: None,
-            external_memory_sync: None,
             high_fps_controller: None,
             vision_manager: Arc::new(ArcSwap::from_pointee(None)),
             timeline_disabled: false,
             advertise_mdns: should_advertise_mdns(addr),
-            knowledge,
         }
     }
 
@@ -544,11 +526,6 @@ impl SCServer {
     /// so that invariant violation must become a recoverable startup error,
     /// never a process abort that prevents the user from updating.
     pub async fn try_create_router(&self) -> Result<Router, std::io::Error> {
-        if let Some(knowledge) = &self.knowledge {
-            knowledge.ensure_recovered().await.map_err(|error| {
-                std::io::Error::new(std::io::ErrorKind::Other, format!("knowledge startup recovery failed: {error}"))
-            })?;
-        }
         catch_router_build_panic(self.create_router_inner()).await
     }
 
@@ -605,12 +582,6 @@ impl SCServer {
 
         let app_state = Arc::new(AppState {
             db: self.db.clone(),
-            knowledge: self
-                .knowledge
-                .clone()
-                .unwrap_or_else(|| {
-                    crate::knowledge::KnowledgeShared::new(self.db.clone(), self.screenpipe_dir.clone())
-                }),
             history_access: self.history_access.clone(),
             audio_manager: self.audio_manager.clone(),
             app_start_time: Utc::now(),
@@ -716,7 +687,7 @@ impl SCServer {
             // Traced /search: same handler, wrapped at the mount point for the
             // opt-in X-Screenpipe-Trace recording + 200-per-key cap. The
             // route table itself is untouched.
-            .get("/search", crate::knowledge::trace::traced_search)
+            .get("/search", keyword_search_handler)
             .get("/semantic/actors/search", search_semantic_actors)
             .post("/semantic/actors/create", create_semantic_actor)
             .post("/semantic/actors/update", update_semantic_actor)
@@ -778,13 +749,6 @@ impl SCServer {
             .put("/meetings/:id", update_meeting_handler)
             .post("/meetings/:id/retranscribe", retranscribe_meeting_handler)
             .post("/meetings/:id/split", split_meeting_handler)
-            .post("/memories", create_memory_handler)
-            .get("/memories", list_memories_handler)
-            .get("/memories/tags", list_memory_tags_handler)
-            .post("/memories/sync-external", sync_external_memories_handler)
-            .get("/memories/:id", get_memory_handler)
-            .put("/memories/:id", update_memory_handler)
-            .delete("/memories/:id", delete_memory_handler)
             .post("/artifacts/register", register_artifact_handler)
             .get("/artifacts", list_artifacts_handler)
             .delete("/artifacts/:id", delete_artifact_handler)
@@ -856,14 +820,6 @@ impl SCServer {
             .route(
                 "/agent/skills/manage",
                 axum::routing::post(crate::agent_skills::manage_agent_skill_handler),
-            )
-            .route(
-                "/agent/profile/manage",
-                axum::routing::post(crate::agent_profile::manage_profile_handler),
-            )
-            .route(
-                "/agent/self-improvement/context",
-                axum::routing::get(crate::agent_profile::self_improvement_context_handler),
             )
             // Renderer-agnostic structured outputs are deliberately outside
             // the public OpenAPI surface for now. Consumers define targets;
@@ -1137,15 +1093,6 @@ impl SCServer {
             ),
         ));
 
-        let router = router.route(
-            "/answer",
-            crate::knowledge::answer::answer_route(),
-        );
-        let router = router.nest(
-            "/knowledge",
-            crate::knowledge::migration::migration_routes()
-                .merge(crate::knowledge::routes::knowledge_routes()),
-        );
         let router = router.nest(
             "/connections/office",
             crate::office::routes::office_routes(),

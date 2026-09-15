@@ -62,12 +62,6 @@ pub struct ServerCore {
     /// `tokio::time::timeout` internally) panic with "A Tokio 1.x context
     /// was found, but it is being shutdown."
     redact_shutdown: Arc<Notify>,
-    /// Background schedulers that hold DB/secret-pool references. Stopped in
-    /// `shutdown()` — before this they survived engine restarts, kept SQLite
-    /// connections (and the shared -shm WAL-index) alive, and made every
-    /// post-wedge respawn fail with SQLITE_IOERR 522 (2026-07-02 incident).
-    external_memory_sync:
-        Option<Arc<screenpipe_engine::external_memory_sync::ExternalMemorySyncScheduler>>,
     /// Tasks spawned by `start()` that would otherwise outlive the engine:
     /// the HD meeting-event listeners and background monitors. Aborted in
     /// `shutdown()`.
@@ -534,7 +528,6 @@ impl ServerCore {
 
         // Handles to the background schedulers created below, kept on Self so
         // `shutdown()` can stop them (they hold DB / secret-pool references).
-        let mut external_memory_sync_handle = None;
         let mut owned_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
 
         if config.audio_transcription_engine == AudioTranscriptionEngine::OpenAICompatible {
@@ -569,17 +562,9 @@ impl ServerCore {
 
                     let store_arc = Arc::new(store);
 
-                    // Background sync of memories → Claude Code's CLAUDE.md
-                    // and Codex's AGENTS.md. Runs every 5 minutes; no-ops
-                    // when neither destination is enabled in the
-                    // connections store, so it's safe to always start.
-                    let memory_sync = Arc::new(
-                        screenpipe_engine::external_memory_sync::ExternalMemorySyncScheduler::new(),
-                    );
-                    memory_sync.start(db.clone(), Some(store_arc.clone()), local_data_dir.clone());
-                    external_memory_sync_handle = Some(memory_sync.clone());
-                    server.external_memory_sync = Some(memory_sync);
-
+                    // Background schedulers that hold DB/secret-pool references
+                    // are stopped in `shutdown()`; the secret store itself is
+                    // managed here.
                     server.secret_store = Some(store_arc);
                 }
                 Err(e) => {
@@ -1260,7 +1245,6 @@ impl ServerCore {
             port: config.port,
             local_api_key: config.api_auth_key.clone(),
             redact_shutdown,
-            external_memory_sync: external_memory_sync_handle,
             owned_tasks,
             http_shutdown,
             http_task: Some(http_task),
@@ -1295,9 +1279,6 @@ impl ServerCore {
         // recoverable disk-I/O wedge into a permanent one: every respawn's DB
         // init fails with SQLITE_IOERR 522 until the whole process restarts
         // (2026-07-02 incident, hours of lost recording).
-        if let Some(sync) = &self.external_memory_sync {
-            sync.stop();
-        }
 
         // Drain the HTTP server before the pools close below: the serve loop
         // stops accepting, then aborts + awaits every connection task, so no

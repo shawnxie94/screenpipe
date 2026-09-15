@@ -485,22 +485,6 @@ async fn do_local_cleanup(
 
         match mode {
             RetentionMode::All => {
-                // Decide and protect published text before raw capture rows
-                // disappear. The source registry is the only durable bridge
-                // from a frame/audio/ui row to a published knowledge body.
-                if let Some(knowledge) = crate::knowledge::shared() {
-                    if let Err(e) = knowledge
-                        .deletion()
-                        .propagate_retention_range(batch_start, batch_end, false)
-                        .await
-                    {
-                        warn!("retention: knowledge source propagation failed: {}", e);
-                        batch_failed = true;
-                    }
-                }
-                if batch_failed {
-                    break;
-                }
                 match db
                     .delete_time_range_batch(batch_start, batch_end, true)
                     .await

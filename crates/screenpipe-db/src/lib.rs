@@ -43,32 +43,22 @@ pub use cancellable_query::{
     is_sqlite_interrupt, CancellableReadConnection, SqliteInterruptReason, SEARCH_QUERY_TIMEOUT,
     SQLITE_PROGRESS_CHECK_OPS,
 };
-pub use db::knowledge::types::{
-    KnowledgeJobKind, KnowledgeJobState, DeletionCause, KnowledgeAvailability, KnowledgeState,
-    KnowledgeType, SourceKind,
-};
 pub use db::tasks::{
     ClaimedTaskRun, TaskAttempt, TaskControl, TaskDefinition, TaskEvent, TaskKind,
     TaskLegacyMapping, TaskOrigin, TaskOwnerState, TaskResourceClass, TaskRetryPolicy, TaskRun,
     TaskRunRequest, TaskState, TaskTrigger,
 };
 pub use db::{
-    compute_input_hash, find_matching_a11y_positions, fingerprint, new_source_uid,
-    parse_all_text_positions, ActivityActionDraft, ActivityActionRecord, ActivityEvidenceDraft,
-    ActivityEvidenceRecord, ActivityIntervalDraft, ActivityIntervalRecord,
-    ActivityLedgerObservation, ActivitySummaryRow, ActivitySummaryEvidenceRef, ActivityTaskDraft,
-    KnowledgeHistoryBatch, KnowledgeHistoryCoverageInput,
-    KnowledgeHistoryEntryInput, KnowledgeHistoryEntryRow, KnowledgeKnowledgeRow, KnowledgeKnowledgeVersionRow,
-    KnowledgeOfficeConnectionRow, KnowledgeOfficeConnectionUpdate, KnowledgeOfficeObjectRow, KnowledgeSourceInput,
-    KnowledgeSourceRegistration, KnowledgeSourceRow, KnowledgeWorkUnitRevisionRow, KnowledgeWorkUnitRow,
-    ClaimedKnowledgeJob, DatabaseManager, DeleteTimeRangeResult, ImmediateTx,
-    NewMeetingTranscriptSegment, OfficeConnectionRow, OfficeConnectionUpdate, OfficeObjectDraft,
-    OfficeObjectRow, OfficeSourceMeta, SemanticActor, SemanticActorAlias,
-    SemanticActorReference, SemanticAttachResult, SemanticCleanupResult, SemanticContextQuery,
-    SemanticFrameContext, SemanticProjectionWriteResult, SourceLocator, SourceRef,
+    find_matching_a11y_positions, parse_all_text_positions, ActivityActionDraft,
+    ActivityActionRecord, ActivityEvidenceDraft, ActivityEvidenceRecord, ActivityIntervalDraft,
+    ActivityIntervalRecord, ActivityLedgerObservation, ActivitySummaryRow,
+    ActivitySummaryEvidenceRef, ActivityTaskDraft, DatabaseManager, DeleteTimeRangeResult,
+    ImmediateTx, NewMeetingTranscriptSegment, OfficeConnectionRow, OfficeConnectionUpdate,
+    OfficeObjectDraft, OfficeObjectRow, SemanticActor, SemanticActorAlias, SemanticActorReference,
+    SemanticAttachResult, SemanticCleanupResult, SemanticContextQuery, SemanticFrameContext,
+    SemanticProjectionWriteResult, fingerprint, knowledge_format_ts, new_source_uid, now_utc,
     MEETING_END_REASON_AUTO_END, MEETING_END_REASON_EXPLICIT_STOP, MEETING_END_REASON_SHUTDOWN,
 };
-pub use db::{KnowledgeReviewUpdate, KnowledgeSearchDocInput, KnowledgeSearchHit};
 pub use recovery::{
     probe_quarantined_generation_health, rebuild_recovered_fts5_indexes,
     verify_fresh_sqlite_recovery_candidate, QuarantineHealthProbe, RecoveryVerification,

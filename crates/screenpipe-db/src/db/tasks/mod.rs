@@ -611,42 +611,6 @@ impl DatabaseManager {
             tx.commit().await?;
             return Ok(false);
         }
-        // Knowledge's public run is temporarily backed by a compatibility row.
-        // Keep queued controls in the same transaction so a cancelled or
-        // retried public run cannot leave the legacy dedupe row stuck.
-        if let Some(job_id) = run_id
-            .strip_prefix("brain-job-")
-            .and_then(|value| value.parse::<i64>().ok())
-        {
-            match (&control, state.as_str(), target) {
-                (TaskControl::Pause, "running", "paused") => {
-                    // The worker still owns the legacy lease. It observes the
-                    // paused public state and closes both rows at a safe
-                    // handler boundary via knowledge_pause_claimed_job.
-                }
-                (TaskControl::Pause, _, "paused") => {
-                    sqlx::query("UPDATE knowledge_jobs SET state='paused',updated_at=?1 WHERE id=?2 AND state IN ('pending','paused')")
-                        .bind(now()).bind(job_id).execute(&mut **tx.conn()).await?;
-                }
-                (TaskControl::Resume, "paused", "queued") => {
-                    sqlx::query("UPDATE knowledge_jobs SET state='pending',not_before=NULL,updated_at=?1 WHERE id=?2 AND state='paused'")
-                        .bind(now()).bind(job_id).execute(&mut **tx.conn()).await?;
-                }
-                (TaskControl::Cancel, "running", "cancelling") => {
-                    // The active worker owns the lease and will commit the
-                    // terminal cancellation with its token.
-                }
-                (TaskControl::Cancel, _, "cancelled") => {
-                    sqlx::query("UPDATE knowledge_jobs SET state='cancelled',last_error_code='user_cancelled',lease_token=NULL,lease_expires_at=NULL,updated_at=?1 WHERE id=?2 AND state IN ('pending','paused')")
-                        .bind(now()).bind(job_id).execute(&mut **tx.conn()).await?;
-                }
-                (TaskControl::Retry, _, "queued") => {
-                    sqlx::query("UPDATE knowledge_jobs SET state='pending',attempts=0,model_calls=0,not_before=NULL,lease_token=NULL,lease_expires_at=NULL,updated_at=?1 WHERE id=?2 AND state IN ('failed','cancelled','paused')")
-                        .bind(now()).bind(job_id).execute(&mut **tx.conn()).await?;
-                }
-                _ => {}
-            }
-        }
         let seq: i64 =
             sqlx::query_scalar("SELECT COALESCE(MAX(seq),0)+1 FROM task_events WHERE run_id=?1")
                 .bind(run_id)
@@ -735,17 +699,13 @@ impl DatabaseManager {
     pub async fn task_reap_expired(&self) -> Result<u64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let now = now();
-        // Knowledge model-calling runs (extract/summarize/compile/backfill)
-        // are excluded: a lost lease there means an unknown outcome, and
-        // re-queueing would re-run model work nobody asked for (§4.1.1). The
-        // paired `knowledge_reap_expired_leases` moves those terminally to
-        // failed instead. Every other owner — pipe runs, office sync — keeps
-        // its requeue-on-expiry resilience.
-        let expired: Vec<(String, String)> = sqlx::query_as("SELECT run_id, lease_token FROM task_runs WHERE state='running' AND lease_expires_at IS NOT NULL AND lease_expires_at < ?1 AND (definition_id IS NULL OR definition_id NOT IN ('knowledge.extract','knowledge.summarize','knowledge.compile','knowledge.backfill'))")
+        // All owners (pipe runs, office sync, activity) keep requeue-on-expiry
+        // resilience; a lost lease simply lets another attempt claim the work.
+        let expired: Vec<(String, String)> = sqlx::query_as("SELECT run_id, lease_token FROM task_runs WHERE state='running' AND lease_expires_at IS NOT NULL AND lease_expires_at < ?1")
             .bind(&now)
             .fetch_all(&mut **tx.conn())
             .await?;
-        let result = sqlx::query("UPDATE task_runs SET state='queued',lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL,revision=revision+1,updated_at=?1 WHERE state='running' AND lease_expires_at IS NOT NULL AND lease_expires_at < ?1 AND (definition_id IS NULL OR definition_id NOT IN ('knowledge.extract','knowledge.summarize','knowledge.compile','knowledge.backfill'))").bind(&now).execute(&mut **tx.conn()).await?;
+        let result = sqlx::query("UPDATE task_runs SET state='queued',lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL,revision=revision+1,updated_at=?1 WHERE state='running' AND lease_expires_at IS NOT NULL AND lease_expires_at < ?1").bind(&now).execute(&mut **tx.conn()).await?;
         for (run_id, token) in &expired {
             sqlx::query("UPDATE task_attempts SET finished_at=?1,outcome='lease_expired',lease_token=NULL WHERE run_id=?2 AND lease_token=?3 AND finished_at IS NULL")
                 .bind(&now).bind(run_id).bind(token).execute(&mut **tx.conn()).await?;
@@ -871,58 +831,6 @@ impl DatabaseManager {
         }))
     }
 
-    /// Atomically mark the queued definitions/runs for an owner generation
-    /// after a runtime cutover. In-flight legacy work is intentionally left
-    /// untouched; its lease must expire or finish before a new generation can
-    /// claim it.
-    pub async fn task_activate_owner_generation(
-        &self,
-        kind: &str,
-        owner_generation: i64,
-    ) -> Result<(), SqlxError> {
-        let definition_ids: &[&str] = match kind {
-            "knowledge" => &[
-                "knowledge.extract",
-                "knowledge.summarize",
-                "knowledge.compile",
-                "knowledge.backfill",
-                "office.sync",
-            ],
-            _ => &[],
-        };
-        if definition_ids.is_empty() {
-            return Ok(());
-        }
-        let mut tx = self.begin_immediate_with_retry().await?;
-        let placeholders = (0..definition_ids.len())
-            .map(|index| format!("?{}", index + 2))
-            .collect::<Vec<_>>()
-            .join(",");
-        let update_definitions = format!(
-            "UPDATE task_definitions SET owner_generation=?1,migration_state='unified',updated_at=?{} WHERE definition_id IN ({placeholders})",
-            definition_ids.len() + 2
-        );
-        let mut query = sqlx::query(sqlx::AssertSqlSafe(update_definitions)).bind(owner_generation);
-        for definition_id in definition_ids {
-            query = query.bind(definition_id);
-        }
-        query = query.bind(now());
-        query.execute(&mut **tx.conn()).await?;
-
-        let update_runs = format!(
-            "UPDATE task_runs SET owner_generation=?1,revision=revision+1,updated_at=?{} WHERE state='queued' AND definition_id IN ({placeholders})",
-            definition_ids.len() + 2
-        );
-        let mut query = sqlx::query(sqlx::AssertSqlSafe(update_runs)).bind(owner_generation);
-        for definition_id in definition_ids {
-            query = query.bind(definition_id);
-        }
-        query = query.bind(now());
-        query.execute(&mut **tx.conn()).await?;
-        tx.commit().await?;
-        Ok(())
-    }
-
     pub async fn task_record_legacy_mapping(
         &self,
         mapping: &TaskLegacyMapping,
@@ -1021,41 +929,27 @@ mod tests {
         tx.commit().await.unwrap();
     }
 
-    /// §4.1.1: a lost lease on a knowledge model-calling run must not put the
-    /// work back into the queue — that would re-run model calls nobody asked
-    /// for. The paired `knowledge_reap_expired_leases` fails those runs
-    /// terminally; other owners keep their requeue-on-expiry resilience.
+    /// A lost lease requeues the run so another attempt can claim the work.
     #[tokio::test]
-    async fn lease_expiry_requeues_other_owners_but_not_knowledge_model_runs() {
+    async fn lease_expiry_requeues_owners_for_retry() {
         let db = test_db().await;
-        let (knowledge_run, created) = db.task_start_run(&request("knowledge.extract")).await.unwrap();
+        let (first_run, created) = db.task_start_run(&request("pipe.run")).await.unwrap();
         assert!(created);
-        let (pipe_run, created) = db.task_start_run(&request("pipe.run")).await.unwrap();
-        assert!(created);
-        assert!(db.task_claim_run(&knowledge_run, "w", 30).await.unwrap().is_some());
-        assert!(db.task_claim_run(&pipe_run, "w", 30).await.unwrap().is_some());
-        expire_lease(&db, &knowledge_run).await;
-        expire_lease(&db, &pipe_run).await;
+        assert!(db.task_claim_run(&first_run, "w", 30).await.unwrap().is_some());
+        expire_lease(&db, &first_run).await;
 
         let reaped = db.task_reap_expired().await.unwrap();
-        assert_eq!(reaped, 1, "only the non-knowledge run is requeued");
+        assert_eq!(reaped, 1, "expired lease requeues the run");
 
-        let knowledge_state: String =
+        let state: String =
             sqlx::query_scalar("SELECT state FROM task_runs WHERE run_id = ?1")
-                .bind(&knowledge_run)
+                .bind(&first_run)
                 .fetch_one(&db.pool)
                 .await
                 .unwrap();
         assert_eq!(
-            knowledge_state, "running",
-            "knowledge model runs wait for knowledge_reap_expired_leases"
+            state, "queued",
+            "a fresh attempt can pick the run back up after expiry"
         );
-        let pipe_state: String =
-            sqlx::query_scalar("SELECT state FROM task_runs WHERE run_id = ?1")
-                .bind(&pipe_run)
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
-        assert_eq!(pipe_state, "queued", "other owners keep their resilience");
     }
 }

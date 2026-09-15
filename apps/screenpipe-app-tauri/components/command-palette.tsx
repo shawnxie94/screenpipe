@@ -6,11 +6,9 @@
 import React, { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-  Brain,
   CalendarClock,
   History,
   Keyboard,
-  ListTree,
   MessageSquare,
   MonitorPlay,
   PanelLeft,
@@ -55,11 +53,9 @@ export type CommandPaletteActionId =
   | "next_recent_chat"
   | "previous_recent_chat"
   | "go_chat"
-  | "go_knowledge"
   | "go_meetings"
   | "go_scheduled"
   | "go_timeline"
-  | "go_activity"
   | "go_connections"
   | "toggle_sidebar"
   | "open_settings"
@@ -105,21 +101,17 @@ export interface PaletteEntry {
 
 const SECTION_ACTION_IDS: Record<SidebarNavId, CommandPaletteActionId> = {
   home: "go_chat",
-  knowledge: "go_knowledge",
   meetings: "go_meetings",
   pipes: "go_scheduled",
   timeline: "go_timeline",
-  activity: "go_activity",
   connections: "go_connections",
 };
 
 const SECTION_ICONS: Record<SidebarNavId, LucideIcon> = {
   home: MessageSquare,
-  knowledge: Brain,
   meetings: CalendarClock,
   pipes: TimerReset,
   timeline: MonitorPlay,
-  activity: ListTree,
   connections: Plug,
 };
 

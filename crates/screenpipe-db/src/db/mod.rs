@@ -449,30 +449,13 @@ async fn flush_ax_bulk(
 mod accessibility;
 mod activity_ledger;
 mod audio;
-pub(crate) mod knowledge;
 pub mod office;
 pub use self::office::{
     OfficeConnectionRow, OfficeConnectionUpdate, OfficeObjectDraft, OfficeObjectRow,
 };
 pub mod tasks;
-pub use self::knowledge::history::{
-    KnowledgeHistoryBatch, KnowledgeHistoryCoverageInput, KnowledgeHistoryEntryInput, KnowledgeHistoryEntryRow,
-};
-pub use self::knowledge::jobs::ClaimedKnowledgeJob;
-pub use self::knowledge::items::KnowledgeReviewUpdate;
-pub use self::knowledge::office::{
-    KnowledgeOfficeConnectionRow, KnowledgeOfficeConnectionUpdate, KnowledgeOfficeObjectRow,
-};
-pub use self::knowledge::search::{KnowledgeSearchDocInput, KnowledgeSearchHit};
-pub use self::knowledge::sources::{KnowledgeSourceInput, KnowledgeSourceRegistration, KnowledgeSourceRow};
-pub use self::knowledge::types::{
-    compute_input_hash, fingerprint, format_ts as knowledge_format_ts, new_source_uid, now_utc,
-    KnowledgeJobKind, KnowledgeJobState, DeletionCause, KnowledgeAvailability, KnowledgeState,
-    KnowledgeType, OfficeSourceMeta, SourceKind, SourceLocator, SourceRef,
-};
-pub use self::knowledge::work_units::{
-    KnowledgeKnowledgeRow, KnowledgeKnowledgeVersionRow, KnowledgeWorkUnitRevisionRow, KnowledgeWorkUnitRow,
-};
+mod util;
+pub use self::util::{fingerprint, format_ts as knowledge_format_ts, new_source_uid, now_utc};
 pub use self::tasks::{ClaimedTaskRun, TaskRunRequest};
 mod display_layout;
 mod elements;

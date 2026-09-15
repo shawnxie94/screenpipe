@@ -16,6 +16,9 @@ use chrono::{DateTime, Utc};
 use screenpipe_db::{ActivityIntervalRecord, DatabaseManager};
 use serde::Serialize;
 use specta::Type;
+use tauri::{AppHandle, Manager};
+
+use crate::recording::RecordingState;
 
 /// Page cap for one read; `coverage.truncated` tells the reader when a range
 /// was cut short.
@@ -58,11 +61,17 @@ pub struct ActivityIntervalSummariesResponse {
     pub coverage: ActivityIntervalSummariesCoverage,
 }
 
-fn shared_activity_db() -> Result<Arc<DatabaseManager>, String> {
-    // The engine publishes its shared database shortly after native startup;
-    // until then the timeline falls back to the legacy KV narrative.
-    screenpipe_engine::knowledge::shared()
-        .map(|shared| Arc::clone(&shared.db))
+fn shared_activity_db(app: &AppHandle) -> Result<Arc<DatabaseManager>, String> {
+    let state = app
+        .try_state::<RecordingState>()
+        .ok_or_else(|| "activity database is not available yet".to_string())?;
+    let guard = state
+        .server
+        .try_lock()
+        .map_err(|_| "activity database is not available yet".to_string())?;
+    guard
+        .as_ref()
+        .map(|core| core.db.clone())
         .ok_or_else(|| "activity database is not available yet".to_string())
 }
 
@@ -199,13 +208,14 @@ async fn load_interval_summaries(
 #[tauri::command]
 #[specta::specta]
 pub async fn get_activity_interval_summaries(
+    app: AppHandle,
     start: String,
     end: String,
     limit: Option<u32>,
 ) -> Result<ActivityIntervalSummariesResponse, String> {
     let (start, end) = parse_summary_range(&start, &end)?;
     let limit = limit.unwrap_or(DEFAULT_SUMMARY_LIMIT).max(1);
-    let db = shared_activity_db()?;
+    let db = shared_activity_db(&app)?;
     load_interval_summaries(&db, start, end, limit).await
 }
 

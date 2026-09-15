@@ -54,24 +54,6 @@ pub(crate) async fn delete_time_range_handler(
         ));
     }
 
-    // The Knowledge wave is the durable deletion boundary. It must be recorded
-    // before raw capture rows are removed so derived text is unavailable even
-    // if the maintenance transaction or file cleanup fails afterward.
-    let source_uids = state
-        .knowledge
-        .db
-        .knowledge_source_uids_captured_between(&["frame", "audio", "ui_event", "office_message", "office_document", "office_transcript", "office_summary"], payload.start, payload.end)
-        .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, JsonResponse(json!({"error": e.to_string()}))))?;
-    let deletion_id = if source_uids.is_empty() {
-        None
-    } else {
-        Some(state.knowledge.deletion().delete_sources(source_uids, screenpipe_db::DeletionCause::UserErase)
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, JsonResponse(json!({"error": e.to_string()}))))?
-            .deletion_id)
-    };
-
     let result = if payload.local_only {
         state
             .db
@@ -81,12 +63,6 @@ pub(crate) async fn delete_time_range_handler(
         state.db.delete_time_range(payload.start, payload.end).await
     }
     .map_err(|e| {
-        if let Some(id) = deletion_id {
-            let db = state.knowledge.db.clone();
-            tokio::spawn(async move {
-                let _ = db.knowledge_update_deletion_state(id, "failed").await;
-            });
-        }
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             JsonResponse(json!({"error": format!("failed to delete time range: {}", e)})),
@@ -102,9 +78,6 @@ pub(crate) async fn delete_time_range_handler(
             Err(e) => {
                 file_cleanup_failed = true;
                 warn!("failed to delete video file {}: {}", path, e);
-                if let Some(id) = deletion_id {
-                    let _ = state.knowledge.db.knowledge_add_cleanup_item(id, "file", path).await;
-                }
             }
         }
     }
@@ -116,9 +89,6 @@ pub(crate) async fn delete_time_range_handler(
             Err(e) => {
                 file_cleanup_failed = true;
                 warn!("failed to delete audio file {}: {}", path, e);
-                if let Some(id) = deletion_id {
-                    let _ = state.knowledge.db.knowledge_add_cleanup_item(id, "file", path).await;
-                }
             }
         }
     }
@@ -128,16 +98,9 @@ pub(crate) async fn delete_time_range_handler(
         if let Err(e) = std::fs::remove_file(path) {
             file_cleanup_failed = true;
             warn!("failed to delete snapshot file {}: {}", path, e);
-            if let Some(id) = deletion_id {
-                let _ = state.knowledge.db.knowledge_add_cleanup_item(id, "file", path).await;
-            }
         }
     }
-    if file_cleanup_failed {
-        if let Some(id) = deletion_id {
-            let _ = state.knowledge.db.knowledge_update_deletion_state(id, "failed").await;
-        }
-    }
+
 
     // Evict the range from the in-memory hot frame cache. Without this the
     // /stream/frames WS keeps re-emitting cached entries that point at

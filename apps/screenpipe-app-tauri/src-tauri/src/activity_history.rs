@@ -27,21 +27,6 @@ use tracing::{error, info, warn};
 
 const STORE_KEY: &str = "activityHistory:activity-history-pi-v9";
 
-// Knowledge history migration state. While migrating, the writer pauses (single
-// writer). Once active, the knowledge DB is the read source and the writer
-// mirrors new entries into it via the engine.
-static MIGRATION_IN_PROGRESS: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
-static KNOWLEDGE_HISTORY_ACTIVE: std::sync::atomic::AtomicBool =
-    std::sync::atomic::AtomicBool::new(false);
-
-pub fn migration_in_progress() -> &'static std::sync::atomic::AtomicBool {
-    &MIGRATION_IN_PROGRESS
-}
-
-pub fn knowledge_history_active() -> &'static std::sync::atomic::AtomicBool {
-    &KNOWLEDGE_HISTORY_ACTIVE
-}
 const DEFAULT_INTERVAL_MINUTES: u64 = 15;
 const COVERAGE_SLOP_MS: i64 = 1_000;
 const OBSERVED_WINDOW_MINUTES: i64 = 30;
@@ -1338,17 +1323,22 @@ struct ActivityTaskLease {
 }
 
 async fn begin_activity_task(
+    app: &AppHandle,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
     source: &str,
     idempotency_key: &str,
 ) -> Result<Option<ActivityTaskLease>, String> {
-    let Some(shared) = screenpipe_engine::knowledge::shared() else {
-        // The activity projection can still be read during very early native
-        // startup, before the engine publishes its shared database.
+    // The activity task runs against the shared capture database; early in
+    // native startup recording may not have started yet.
+    let Some(state) = app.try_state::<RecordingState>() else {
         return Ok(None);
     };
-    let db = shared.db.clone();
+    let guard = state.server.lock().await;
+    let Some(core) = guard.as_ref() else {
+        return Ok(None);
+    };
+    let db = core.db.clone();
     let start_text = start.to_rfc3339();
     let end_text = end.to_rfc3339();
     let input_hash = screenpipe_db::fingerprint(&[
@@ -1417,12 +1407,6 @@ async fn generate(
     source: &'static str,
     idempotency_key: String,
 ) -> Result<PersistedActivityHistory, String> {
-    if MIGRATION_IN_PROGRESS.load(std::sync::atomic::Ordering::SeqCst) {
-        // History migration holds the single-writer lease; skip this tick
-        // without touching the store.
-        return read_all(app);
-    }
-
     let Some(_idempotency_guard) = state.try_begin(idempotency_key.clone()) else {
         info!(
             activity_source = source,
@@ -1431,7 +1415,7 @@ async fn generate(
         );
         return Ok(history_in_range(read_all(app)?, start, end));
     };
-    let task_lease = match begin_activity_task(start, end, source, &idempotency_key).await {
+    let task_lease = match begin_activity_task(app, start, end, source, &idempotency_key).await {
         Ok(lease) => lease,
         Err(error) if error == "activity_task_already_active" => {
             return Ok(history_in_range(read_all(app)?, start, end));
@@ -1679,12 +1663,6 @@ async fn generate_inner(
         degraded_error,
     } = generated;
     let generated_activity_count = entries.len();
-    let entries_for_knowledge: Vec<ActivityHistoryEntry> =
-        if KNOWLEDGE_HISTORY_ACTIVE.load(std::sync::atomic::Ordering::SeqCst) {
-            entries.clone()
-        } else {
-            Vec::new()
-        };
     let mut stored = read_all(app)?;
     if coverage_complete {
         stored.entries.retain(|entry| !overlaps(entry, start, end));
@@ -1705,9 +1683,6 @@ async fn generate_inner(
     }
     stored.coverage = merge_coverage(stored.coverage);
     write_all(app, &stored)?;
-    if !entries_for_knowledge.is_empty() {
-        mirror_new_entries_to_knowledge(app, &entries_for_knowledge, start, end);
-    }
     if source == "manual" {
         let settings = SettingsStore::get(app)?.ok_or("Settings are not available")?;
         set_next_run(
@@ -1892,15 +1867,13 @@ fn set_next_run(app: &AppHandle, at: DateTime<Utc>) -> Result<(), String> {
 }
 
 /// legacy（B02b-2a / plan §4.3）自动叙事开关：false = 停用 30 秒轮询的自动
-/// 生成分支。间隔重建改由 knowledge_runtime 的 ① tick 独立负责（先接上、
-/// 有产出，才停 legacy）。回退 = 把本开关置回 true，同时必须关掉 ① 自动
-/// tick，避免双驱动。手动 generate 命令与物理代码不受影响，供手动/回退。
+/// 生成分支。手动 generate 命令与物理代码不受影响，供手动/回退。
 const LEGACY_AUTO_NARRATIVE_ENABLED: bool = false;
 
 pub fn start(app: AppHandle) {
     if !LEGACY_AUTO_NARRATIVE_ENABLED {
         info!(
-            "activity history: legacy automatic narrative generation retired; interval rebuild runs on the knowledge ① tick"
+            "activity history: legacy automatic narrative generation retired"
         );
         return;
     }
@@ -2722,37 +2695,3 @@ mod tests {
 
 }
 
-/// Post-activation mirror: new history entries go into the knowledge DB through
-/// the engine. Best-effort with visible warnings — the store copy stays as a
-/// legacy cache, the knowledge DB is authoritative.
-fn mirror_new_entries_to_knowledge(
-    app: &AppHandle,
-    entries: &[ActivityHistoryEntry],
-    start: DateTime<Utc>,
-    end: DateTime<Utc>,
-) {
-    let app = app.clone();
-    let entries: Vec<serde_json::Value> = entries
-        .iter()
-        .filter_map(|e| serde_json::to_value(e).ok())
-        .collect();
-    tokio::spawn(async move {
-        for entry in entries {
-            let id = entry
-                .get("id")
-                .cloned()
-                .unwrap_or_else(|| json!(uuid::Uuid::new_v4().to_string()));
-            let body = crate::knowledge_migration::upsert_history_entry(
-                &app,
-                id.as_str().unwrap_or_default().to_string(),
-                entry.to_string(),
-                start.to_rfc3339(),
-                end.to_rfc3339(),
-            )
-            .await;
-            if let Err(error) = body {
-                tracing::warn!("knowledge history mirror failed: {error}");
-            }
-        }
-    });
-}

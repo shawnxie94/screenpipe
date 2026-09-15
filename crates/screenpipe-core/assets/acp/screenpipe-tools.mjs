@@ -504,56 +504,6 @@ const TOOLS = [
     },
   },
   {
-    name: "user_profile",
-    description:
-      "List or save durable user preferences, recurring corrections, role, and workflow habits. List first and update a matching fact instead of duplicating it. Save compact declarative facts proactively when they prevent future re-steering. Never save task progress, temporary state, secrets, raw private data, or facts likely to be stale within a week. Delete only after explicit confirmation.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        action: { type: "string", enum: ["list", "save", "delete"] },
-        id: { type: "integer", description: "Existing profile memory id for update/delete." },
-        content: {
-          type: "string",
-          maxLength: 2_000,
-          description: "One compact, stable declarative fact about the user.",
-        },
-        tags: { type: "array", items: { type: "string" } },
-        importance: { type: "number", minimum: 0, maximum: 1 },
-        confirmed: { type: "boolean", description: "Must be true for delete." },
-      },
-      required: ["action"],
-      additionalProperties: false,
-    },
-    async run(args) {
-      const action = String(args?.action || "");
-      if (!["list", "save", "delete"].includes(action)) {
-        throw new Error("action must be list, save, or delete");
-      }
-      if (action === "delete") {
-        if (!Number.isInteger(args?.id) || args?.confirmed !== true) {
-          throw new Error("delete requires an id and explicit confirmation");
-        }
-      }
-      if (action === "save") {
-        const content = String(args?.content || "").trim();
-        if (!content) throw new Error("save requires one stable fact in content");
-        if (content.length > 2_000) {
-          throw new Error("profile facts must be compact (maximum 2000 characters)");
-        }
-      }
-      const res = await fetch(`${apiBase()}/agent/profile/manage`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          ...args,
-          action,
-          ...(action === "save" ? { source: chatSessionId() } : {}),
-        }),
-      });
-      return JSON.stringify(await agentJson(res), null, 2);
-    },
-  },
-  {
     name: "skill_manage",
     description:
       "List/read reusable skills, create one only after the user explicitly confirms or asks to remember the procedure, or patch an agent-created skill using the current sha256 returned by read. Imported, hand-authored, and bundled skills are read-only.",
