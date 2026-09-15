@@ -12,7 +12,7 @@
 use crate::pi::{self, AcpAgentConfig, PiBackend, PiProviderConfig, PiState};
 use crate::recording::{local_api_context_from_app, RecordingState};
 use crate::store::{self, AIProviderType, SettingsStore};
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Local, Timelike, Utc};
 use screenpipe_db::{DatabaseManager, TaskRunRequest, TaskState};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -97,6 +97,57 @@ struct StoredActivityHistory {
 struct ActivityPreflight {
     data_status: String,
     total_active_minutes: f64,
+    /// Sampled screen text (frames OCR) in range; the heaviest field,
+    /// enabled on purpose for narrative generation.
+    #[serde(default)]
+    key_texts: Vec<KeyTextRecord>,
+    /// Per-app usage minutes.
+    #[serde(default)]
+    apps: Vec<AppUsageRecord>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct KeyTextRecord {
+    text: String,
+    app_name: String,
+    #[serde(default)]
+    window_name: String,
+    timestamp: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct AppUsageRecord {
+    name: String,
+    minutes: f64,
+}
+
+/// /search response — only the fields the narrative needs. Accessibility
+/// rows carry `text`, `app_name`, `window_name`, `browser_url`; audio rows
+/// carry `text` (transcription), `device_name`, `meeting_id`, timestamp.
+/// Extra fields are intentionally not deserialized (cheaper and cleaner
+/// context for the model).
+#[derive(Serialize, Deserialize, Default)]
+struct SearchEvidenceRow {
+    #[serde(default)]
+    text: String,
+    timestamp: DateTime<Utc>,
+    #[serde(default)]
+    app_name: String,
+    #[serde(default)]
+    window_name: String,
+    #[serde(default)]
+    browser_url: Option<String>,
+    #[serde(default)]
+    device_name: String,
+    #[serde(default)]
+    transcription: String,
+    #[serde(default)]
+    meeting_id: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct SearchResponse {
+    data: Vec<SearchEvidenceRow>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -104,11 +155,21 @@ struct ActivityLedgerSnapshot {
     intervals: Vec<ActivityLedgerInterval>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 struct ActivityLedgerInterval {
     kind: String,
     start_at: String,
     end_at: String,
+    /// Semantic fields the narrative needs; the ledger already computes
+    /// them, so keeping them adds zero extra requests.
+    #[serde(default)]
+    title: String,
+    #[serde(default)]
+    category: Option<String>,
+    #[serde(default)]
+    app_name: Option<String>,
+    #[serde(default)]
+    confidence: f64,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -877,7 +938,10 @@ async fn preflight_activity(
         &[
             ("start_time", start.to_rfc3339()),
             ("end_time", end.to_rfc3339()),
-            ("include_key_texts", "false".to_string()),
+            // Heaviest field, but sampled screen text is the primary source
+            // for narrative evidence — keep it on (default include_apps /
+            // include_windows stay on too so usage context arrives cheap).
+            ("include_key_texts", "true".to_string()),
             ("include_snippets", "false".to_string()),
             ("include_recording", "false".to_string()),
             ("include_guidance", "false".to_string()),
@@ -941,27 +1005,202 @@ async fn activity_evidence_snapshot(
             ("max_content_length", "600".to_string()),
         ]
     };
-    let accessibility = get_local_json::<Value>(app, "/search", &query("accessibility")).await?;
-    let audio = get_local_json::<Value>(app, "/search", &query("audio")).await?;
-    let snapshot = json!({
-        "boundary": {"start": start.to_rfc3339(), "end": end.to_rfc3339()},
-        "summary": preflight,
-        "ledger": ledger,
-        "meetings": meetings,
-        "accessibility": accessibility,
-        "audio": audio,
-    });
-    let serialized = serde_json::to_string(&snapshot)
-        .map_err(|error| format!("Could not serialize activity evidence: {error}"))?;
+    let accessibility = get_local_json::<SearchResponse>(app, "/search", &query("accessibility"))
+        .await
+        .map(|response| response.data)?;
+    let audio = get_local_json::<SearchResponse>(app, "/search", &query("audio"))
+        .await
+        .map(|response| response.data)?;
+
+    let lines = render_snapshot_lines(
+        start, end, preflight, ledger, meetings, &accessibility, &audio,
+    );
+
+    // Total-character budget; Spanish / CJK titles are multi-byte, so count
+    // chars (not bytes) and hard-cut with a marker like before.
     const MAX_SNAPSHOT_CHARS: usize = 60_000;
-    let mut chars = serialized.chars();
+    let joined = lines.join("\n");
+    let mut chars = joined.chars();
     let bounded = chars.by_ref().take(MAX_SNAPSHOT_CHARS).collect::<String>();
     Ok(if chars.next().is_some() {
-        format!("{bounded}…")
+        format!("{bounded}\n…（更多证据，已截断）")
     } else {
         bounded
     })
 }
+
+/// Project the collected evidence into a compact, semantics-first text block
+/// for the model: one item per line, flat, local time, no internal ids,
+/// no JSON nesting. This is a pure function so the rendered shape is
+/// unit-testable and stable across runs.
+fn render_snapshot_lines(
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    preflight: &ActivityPreflight,
+    ledger: &[ActivityLedgerInterval],
+    meetings: &[MeetingAnchor],
+    accessibility: &[SearchEvidenceRow],
+    audio: &[SearchEvidenceRow],
+) -> Vec<String> {
+    let mut lines: Vec<String> = Vec::new();
+
+    // 1. Boundary — one line.
+    lines.push(format!(
+        "边界: {} → {}",
+        compact_time(start),
+        compact_time(end)
+    ));
+
+    // 2. Activity overview (semantically relevant preflight fields only).
+    lines.push(format!(
+        "活动概览: 数据状态={}, 活跃时长={:.1} 分钟",
+        preflight.data_status, preflight.total_active_minutes
+    ));
+    if !preflight.apps.is_empty() {
+        let apps = preflight
+            .apps
+            .iter()
+            .map(|app| format!("{} ({:.0}min)", app.name, app.minutes))
+            .collect::<Vec<_>>()
+            .join(", ");
+        lines.push(format!("应用使用: {apps}"));
+    }
+    if !preflight.key_texts.is_empty() {
+        lines.push("屏幕采样文本:".to_string());
+        for key in preflight.key_texts.iter().take(SAMPLED_TEXT_BUDGET) {
+            lines.push(format!(
+                "  [{}{}] {}",
+                compact_time_str(&key.timestamp),
+                if key.app_name.is_empty() {
+                    String::new()
+                } else {
+                    format!(" {}", key.app_name)
+                },
+                squash(&key.text, 300)
+            ));
+        }
+    }
+
+    // 3. Deterministic ledger — the time skeleton with semantic fields.
+    if !ledger.is_empty() {
+        lines.push("确定性账本（时间骨架）:".to_string());
+        for interval in ledger {
+            let title = if interval.title.trim().is_empty() {
+                interval.kind.clone()
+            } else {
+                interval.title.clone()
+            };
+            let app = interval
+                .app_name
+                .clone()
+                .map(|name| format!(" (app: {name})"))
+                .unwrap_or_default();
+            lines.push(format!(
+                "  {}–{} {}「{}」{app}",
+                compact_time_str(&interval.start_at),
+                compact_time_str(&interval.end_at),
+                interval.kind,
+                title
+            ));
+        }
+    }
+
+    // 4. Meeting anchors.
+    if !meetings.is_empty() {
+        lines.push("已知会议锚点:".to_string());
+        for meeting in meetings {
+            let end = meeting
+                .meeting_end
+                .as_deref()
+                .unwrap_or("ongoing");
+            lines.push(format!(
+                "  meeting_id={} {}→{}",
+                meeting.id,
+                compact_time_str(&meeting.meeting_start),
+                compact_time_str(end)
+            ));
+        }
+    }
+
+    // 5. Accessibility evidence — one line per row, compact.
+    if !accessibility.is_empty() {
+        lines.push("屏幕证据（可访问性）:".to_string());
+        for item in accessibility.iter().take(SEARCH_EVIDENCE_BUDGET) {
+            let location = match (&item.browser_url, item.window_name.as_str()) {
+                (Some(url), _) if !url.is_empty() => url.clone(),
+                (_, name) if !name.is_empty() => name.to_string(),
+                _ => item.app_name.clone(),
+            };
+            lines.push(format!(
+                "  {} [{}] {}",
+                compact_time(item.timestamp),
+                location,
+                squash(&item.text, 300)
+            ));
+        }
+    }
+
+    // 6. Audio evidence.
+    if !audio.is_empty() {
+        lines.push("音频证据:".to_string());
+        for item in audio.iter().take(SEARCH_EVIDENCE_BUDGET) {
+            // Audio rows carry the transcript in `transcription`; fall back
+            // to `text` for rows that only fill the generic field.
+            let spoken = if item.transcription.trim().is_empty() {
+                item.text.trim().to_string()
+            } else {
+                item.transcription.trim().to_string()
+            };
+            let meeting_suffix = item
+                .meeting_id
+                .map(|id| format!(" (meeting_id={id})"))
+                .unwrap_or_default();
+            lines.push(format!(
+                "  {} [{}] {}{}",
+                compact_time(item.timestamp),
+                item.device_name,
+                spoken,
+                meeting_suffix
+            ));
+        }
+    }
+
+    lines
+}
+
+/// Compact one month/day time to `HH:MM:SS` where cheap, or the full offset
+/// RFC3339 when the instant crosses a date boundary. Keeps the model focused
+/// on relative ordering within the window instead of calendar noise.
+fn compact_time(time: DateTime<Utc>) -> String {
+    let local = time.with_timezone(&Local);
+    format!("{:02}:{:02}:{:02}", local.hour(), local.minute(), local.second())
+}
+/// Collapse newlines/tabs into spaces and cap length — captured text and
+/// accessibility rows can span several lines, which would otherwise break
+/// the one-line-per-item context layout.
+fn squash(text: &str, max_chars: usize) -> String {
+    let collapsed = text.replace(['\n', '\r', '\t'], " ");
+    let trimmed = collapsed.trim();
+    let mut chars = trimmed.chars();
+    let bounded = chars.by_ref().take(max_chars).collect::<String>();
+    if chars.next().is_some() {
+        format!("{bounded}…")
+    } else {
+        bounded
+    }
+}
+
+fn compact_time_str(rfc3339: &str) -> String {
+    match parse_time(rfc3339) {
+        Some(time) => compact_time(time),
+        None => rfc3339.to_string(),
+    }
+}
+
+/// Search evidence rows per content type fed to the model.
+const SEARCH_EVIDENCE_BUDGET: usize = 100;
+/// Sampled screen text rows fed to the model.
+const SAMPLED_TEXT_BUDGET: usize = 100;
 
 fn parse_document(
     raw: &str,
@@ -1939,6 +2178,90 @@ mod tests {
     }
 
     #[test]
+    fn evidence_text_squash_collapses_newlines_and_caps_length() {
+        assert_eq!(squash("a\nb\tc", 100), "a b c");
+        assert_eq!(squash("  padded  ", 100), "padded");
+        assert_eq!(squash("123456789", 5), "12345…");
+    }
+
+    #[test]
+    fn compact_time_renders_local_hh_mm_ss() {
+        let at = parse_time("2026-08-19T08:05:00Z").unwrap();
+        let rendered = compact_time(at);
+        // 08:05:00 UTC in the local tz — lenient assertion: ends with seconds.
+        assert!(rendered.len() == 8, "unexpected format: {rendered}");
+        assert!(rendered.ends_with(":00"));
+    }
+
+    #[test]
+    fn snapshot_lines_are_flat_semantic_and_keep_key_fields() {
+        let start = parse_time("2026-08-19T08:00:00Z").unwrap();
+        let end = parse_time("2026-08-19T09:00:00Z").unwrap();
+        let preflight = ActivityPreflight {
+            data_status: "ok".to_string(),
+            total_active_minutes: 42.0,
+            key_texts: vec![KeyTextRecord {
+                text: "fn generate_inner(\n  app: AppHandle".to_string(),
+                app_name: "Code".to_string(),
+                window_name: String::new(),
+                timestamp: "2026-08-19T08:05:00Z".to_string(),
+            }],
+            apps: vec![AppUsageRecord {
+                name: "Code".to_string(),
+                minutes: 42.0,
+            }],
+        };
+        let ledger = vec![ActivityLedgerInterval {
+            kind: "task".to_string(),
+            start_at: "2026-08-19T08:05:00Z".to_string(),
+            end_at: "2026-08-19T08:47:00Z".to_string(),
+            title: "写代码".to_string(),
+            category: Some("开发".to_string()),
+            app_name: Some("Code".to_string()),
+            ..Default::default()
+        }];
+        let meetings = vec![MeetingAnchor {
+            id: 7,
+            meeting_start: "2026-08-19T08:50:00Z".to_string(),
+            meeting_end: Some("2026-08-19T09:00:00Z".to_string()),
+        }];
+        let accessibility = vec![SearchEvidenceRow {
+            text: "src/activity_history.rs — fn render_snapshot_lines".to_string(),
+            timestamp: parse_time("2026-08-19T08:06:00Z").unwrap(),
+            app_name: "Code".to_string(),
+            window_name: "活动历史".to_string(),
+            ..Default::default()
+        }];
+        let audio = vec![SearchEvidenceRow {
+            transcription: "这轮把生成上下文改干净".to_string(),
+            text: String::new(),
+            timestamp: parse_time("2026-08-19T08:10:00Z").unwrap(),
+            device_name: "MacBook 麦克风".to_string(),
+            meeting_id: Some(7),
+            ..Default::default()
+        }];
+
+        let lines = render_snapshot_lines(
+            start, end, &preflight, &ledger, &meetings, &accessibility, &audio,
+        );
+        let rendered = lines.join("\n");
+
+        // Key semantic fields present, in flat one-line form.
+        assert!(rendered.contains("活动概览: 数据状态=ok, 活跃时长=42.0 分钟"), "{rendered}");
+        assert!(rendered.contains("应用使用: Code (42min)"), "{rendered}");
+        // Screen text kept on (was previously suppressed) and squashed.
+        assert!(rendered.contains("fn generate_inner(   app: AppHandle"), "{rendered}");
+        // Ledger keeps title/app — the semantic fields.
+        assert!(rendered.contains("task「写代码」 (app: Code)"), "{rendered}");
+        // Meetings keep the id (the output contract references it).
+        assert!(rendered.contains("meeting_id=7"), "{rendered}");
+        // Audio keeps meeting_id link + transcript.
+        assert!(rendered.contains("这轮把生成上下文改干净 (meeting_id=7)"), "{rendered}");
+        // No raw JSON brace-noise.
+        assert!(!rendered.contains("{data_status"), "{rendered}");
+    }
+
+    #[test]
     fn duplicate_selected_interval_is_a_noop_until_the_original_finishes() {
         let state = ActivityHistoryState::default();
         let today = state
@@ -2619,16 +2942,19 @@ mod tests {
                 kind: "task".to_string(),
                 start_at: "2026-08-19T08:05:00Z".to_string(),
                 end_at: "2026-08-19T08:55:00Z".to_string(),
+                ..Default::default()
             },
             ActivityLedgerInterval {
                 kind: "unobserved".to_string(),
                 start_at: "2026-08-19T09:00:00Z".to_string(),
                 end_at: "2026-08-19T10:00:00Z".to_string(),
+                ..Default::default()
             },
             ActivityLedgerInterval {
                 kind: "task".to_string(),
                 start_at: "2026-08-19T10:05:00Z".to_string(),
                 end_at: "2026-08-19T10:55:00Z".to_string(),
+                ..Default::default()
             },
         ];
         let required = required_observed_windows(&intervals, start, end);
