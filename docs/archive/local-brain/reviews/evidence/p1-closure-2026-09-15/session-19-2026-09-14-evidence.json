@@ -1,0 +1,478 @@
+{
+  "session": "session-19-2026-09-14",
+  "start_at": "2026-09-14T17:45:47.417349+08:00",
+  "end_at": "2026-09-14T17:59:39.133273+08:00",
+  "duration_min": 14,
+  "interval_ids": [
+    13696,
+    13707,
+    13713,
+    13718,
+    13858,
+    13862,
+    13873,
+    13875,
+    13877,
+    13879,
+    13881
+  ],
+  "evidence_count": 51,
+  "evidence": [
+    {
+      "interval_id": 13696,
+      "source_type": "ui_event",
+      "source_id": 40495,
+      "occurred_at": "2026-09-14T17:45:47.417349+08:00",
+      "frame_id": 35942,
+      "app_name": "cmux",
+      "window_title": "bun run tauri dev"
+    },
+    {
+      "interval_id": 13696,
+      "source_type": "ui_event",
+      "source_id": 40496,
+      "occurred_at": "2026-09-14T17:45:47.454409+08:00",
+      "frame_id": 35942,
+      "app_name": "cmux",
+      "window_title": "bun run tauri dev"
+    },
+    {
+      "interval_id": 13696,
+      "source_type": "frame",
+      "source_id": 35942,
+      "occurred_at": "2026-09-14T17:45:47.533031+08:00",
+      "frame_id": 35942,
+      "app_name": "cmux",
+      "window_title": "bun run tauri dev"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "ui_event",
+      "source_id": 40529,
+      "occurred_at": "2026-09-14T17:47:56.217+08:00",
+      "frame_id": 35979,
+      "app_name": "cmux",
+      "window_title": "评分小程序"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "ui_event",
+      "source_id": 40530,
+      "occurred_at": "2026-09-14T17:47:56.221685+08:00",
+      "frame_id": 35979,
+      "app_name": "cmux",
+      "window_title": "评分小程序"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 35979,
+      "occurred_at": "2026-09-14T17:47:56.293562+08:00",
+      "frame_id": 35979,
+      "app_name": "cmux",
+      "window_title": "评分小程序"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "ui_event",
+      "source_id": 40531,
+      "occurred_at": "2026-09-14T17:47:57.949676+08:00",
+      "frame_id": 35981,
+      "app_name": "cmux",
+      "window_title": "Terminal"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 35981,
+      "occurred_at": "2026-09-14T17:47:58.102745+08:00",
+      "frame_id": 35981,
+      "app_name": "cmux",
+      "window_title": "Terminal"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "ui_event",
+      "source_id": 40532,
+      "occurred_at": "2026-09-14T17:47:59.233165+08:00",
+      "frame_id": 35982,
+      "app_name": "cmux",
+      "window_title": "~/Developer"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "ui_event",
+      "source_id": 40533,
+      "occurred_at": "2026-09-14T17:47:59.349401+08:00",
+      "frame_id": 35982,
+      "app_name": "cmux",
+      "window_title": "shawn@ShawndeMacBook-Pro:~/Developer"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 35982,
+      "occurred_at": "2026-09-14T17:47:59.471193+08:00",
+      "frame_id": 35982,
+      "app_name": "cmux",
+      "window_title": "shawn@ShawndeMacBook-Pro:~/Developer"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 35983,
+      "occurred_at": "2026-09-14T17:48:02.597216+08:00",
+      "frame_id": 35983,
+      "app_name": "cmux",
+      "window_title": "shawn@ShawndeMacBook-Pro:~/Developer"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "ui_event",
+      "source_id": 40534,
+      "occurred_at": "2026-09-14T17:48:07.070804+08:00",
+      "frame_id": 35984,
+      "app_name": "cmux",
+      "window_title": "…/GitHub/products/screenpipe"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 35984,
+      "occurred_at": "2026-09-14T17:48:07.303858+08:00",
+      "frame_id": 35984,
+      "app_name": "cmux",
+      "window_title": "…/GitHub/products/screenpipe"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "ui_event",
+      "source_id": 40535,
+      "occurred_at": "2026-09-14T17:48:09.465373+08:00",
+      "frame_id": 35985,
+      "app_name": "cmux",
+      "window_title": "gst"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "ui_event",
+      "source_id": 40536,
+      "occurred_at": "2026-09-14T17:48:09.577646+08:00",
+      "frame_id": 35985,
+      "app_name": "cmux",
+      "window_title": "…/GitHub/products/screenpipe"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 35986,
+      "occurred_at": "2026-09-14T17:48:12.815225+08:00",
+      "frame_id": 35986,
+      "app_name": "cmux",
+      "window_title": "…/GitHub/products/screenpipe"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "ui_event",
+      "source_id": 40537,
+      "occurred_at": "2026-09-14T17:48:13.195433+08:00",
+      "frame_id": 35987,
+      "app_name": "cmux",
+      "window_title": "pi"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 35987,
+      "occurred_at": "2026-09-14T17:48:13.411725+08:00",
+      "frame_id": 35987,
+      "app_name": "cmux",
+      "window_title": "pi"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "ui_event",
+      "source_id": 40538,
+      "occurred_at": "2026-09-14T17:48:13.591047+08:00",
+      "frame_id": 35988,
+      "app_name": "cmux",
+      "window_title": "π - screenpipe"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 35988,
+      "occurred_at": "2026-09-14T17:48:13.772215+08:00",
+      "frame_id": 35988,
+      "app_name": "cmux",
+      "window_title": "π - screenpipe"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 35991,
+      "occurred_at": "2026-09-14T17:48:26.871174+08:00",
+      "frame_id": 35991,
+      "app_name": "cmux",
+      "window_title": "π - screenpipe"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 35996,
+      "occurred_at": "2026-09-14T17:48:44.107443+08:00",
+      "frame_id": 35996,
+      "app_name": "cmux",
+      "window_title": "π - screenpipe"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 35998,
+      "occurred_at": "2026-09-14T17:48:54.649055+08:00",
+      "frame_id": 35998,
+      "app_name": "cmux",
+      "window_title": "π - screenpipe"
+    },
+    {
+      "interval_id": 13707,
+      "source_type": "frame",
+      "source_id": 36001,
+      "occurred_at": "2026-09-14T17:49:02.793933+08:00",
+      "frame_id": 36001,
+      "app_name": "cmux",
+      "window_title": "π - screenpipe"
+    },
+    {
+      "interval_id": 13713,
+      "source_type": "frame",
+      "source_id": 36014,
+      "occurred_at": "2026-09-14T17:50:35.102544+08:00",
+      "frame_id": 36014,
+      "app_name": "cmux",
+      "window_title": "π - screenpipe"
+    },
+    {
+      "interval_id": 13713,
+      "source_type": "frame",
+      "source_id": 36021,
+      "occurred_at": "2026-09-14T17:51:07.375261+08:00",
+      "frame_id": 36021,
+      "app_name": "cmux",
+      "window_title": "π - screenpipe"
+    },
+    {
+      "interval_id": 13718,
+      "source_type": "ui_event",
+      "source_id": 40574,
+      "occurred_at": "2026-09-14T17:51:58.028509+08:00",
+      "frame_id": 36034,
+      "app_name": "cmux"
+    },
+    {
+      "interval_id": 13718,
+      "source_type": "frame",
+      "source_id": 36035,
+      "occurred_at": "2026-09-14T17:51:58.033555+08:00",
+      "frame_id": 36035,
+      "app_name": "cmux",
+      "window_title": "π - screenpipe"
+    },
+    {
+      "interval_id": 13718,
+      "source_type": "ui_event",
+      "source_id": 40575,
+      "occurred_at": "2026-09-14T17:51:58.060195+08:00",
+      "frame_id": 36037,
+      "app_name": "cmux",
+      "window_title": "π - screenpipe"
+    },
+    {
+      "interval_id": 13718,
+      "source_type": "frame",
+      "source_id": 36042,
+      "occurred_at": "2026-09-14T17:52:24.662721+08:00",
+      "frame_id": 36042,
+      "app_name": "cmux",
+      "window_title": "π - screenpipe"
+    },
+    {
+      "interval_id": 13858,
+      "source_type": "ui_event",
+      "source_id": 40750,
+      "occurred_at": "2026-09-14T17:55:22.709677+08:00",
+      "frame_id": 36228,
+      "app_name": "cmux"
+    },
+    {
+      "interval_id": 13858,
+      "source_type": "ui_event",
+      "source_id": 40751,
+      "occurred_at": "2026-09-14T17:55:22.712732+08:00",
+      "frame_id": 36228,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13858,
+      "source_type": "frame",
+      "source_id": 36229,
+      "occurred_at": "2026-09-14T17:55:22.965486+08:00",
+      "frame_id": 36229,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13862,
+      "source_type": "ui_event",
+      "source_id": 40765,
+      "occurred_at": "2026-09-14T17:56:04.106264+08:00",
+      "frame_id": 36250,
+      "app_name": "cmux"
+    },
+    {
+      "interval_id": 13862,
+      "source_type": "ui_event",
+      "source_id": 40766,
+      "occurred_at": "2026-09-14T17:56:04.108210+08:00",
+      "frame_id": 36250,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13862,
+      "source_type": "frame",
+      "source_id": 36251,
+      "occurred_at": "2026-09-14T17:56:04.357501+08:00",
+      "frame_id": 36251,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13873,
+      "source_type": "ui_event",
+      "source_id": 40786,
+      "occurred_at": "2026-09-14T17:57:26.447015+08:00",
+      "frame_id": 36302,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13873,
+      "source_type": "ui_event",
+      "source_id": 40787,
+      "occurred_at": "2026-09-14T17:57:26.447798+08:00",
+      "frame_id": 36302,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13873,
+      "source_type": "frame",
+      "source_id": 36302,
+      "occurred_at": "2026-09-14T17:57:26.909001+08:00",
+      "frame_id": 36302,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13875,
+      "source_type": "ui_event",
+      "source_id": 40791,
+      "occurred_at": "2026-09-14T17:57:36.676596+08:00",
+      "frame_id": 36306,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13875,
+      "source_type": "ui_event",
+      "source_id": 40792,
+      "occurred_at": "2026-09-14T17:57:36.677159+08:00",
+      "frame_id": 36306,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13875,
+      "source_type": "frame",
+      "source_id": 36306,
+      "occurred_at": "2026-09-14T17:57:36.748481+08:00",
+      "frame_id": 36306,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13875,
+      "source_type": "frame",
+      "source_id": 36308,
+      "occurred_at": "2026-09-14T17:57:49.919795+08:00",
+      "frame_id": 36308,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13877,
+      "source_type": "frame",
+      "source_id": 36318,
+      "occurred_at": "2026-09-14T17:58:16.492611+08:00",
+      "frame_id": 36318,
+      "app_name": "cmux",
+      "window_title": "训练可视化"
+    },
+    {
+      "interval_id": 13879,
+      "source_type": "ui_event",
+      "source_id": 40807,
+      "occurred_at": "2026-09-14T17:59:03.990045+08:00",
+      "frame_id": 36339,
+      "app_name": "cmux",
+      "window_title": "事件可视化"
+    },
+    {
+      "interval_id": 13879,
+      "source_type": "frame",
+      "source_id": 36339,
+      "occurred_at": "2026-09-14T17:59:04.019601+08:00",
+      "frame_id": 36339,
+      "app_name": "cmux",
+      "window_title": "事件可视化"
+    },
+    {
+      "interval_id": 13881,
+      "source_type": "frame",
+      "source_id": 36346,
+      "occurred_at": "2026-09-14T17:59:10.844662+08:00",
+      "frame_id": 36346,
+      "app_name": "cmux",
+      "window_title": "事件可视化"
+    },
+    {
+      "interval_id": 13881,
+      "source_type": "ui_event",
+      "source_id": 40810,
+      "occurred_at": "2026-09-14T17:59:11.930714+08:00",
+      "frame_id": 36347,
+      "app_name": "cmux",
+      "window_title": "事件可视化"
+    },
+    {
+      "interval_id": 13881,
+      "source_type": "ui_event",
+      "source_id": 40811,
+      "occurred_at": "2026-09-14T17:59:11.931257+08:00",
+      "frame_id": 36347,
+      "app_name": "cmux",
+      "window_title": "事件可视化"
+    },
+    {
+      "interval_id": 13881,
+      "source_type": "frame",
+      "source_id": 36348,
+      "occurred_at": "2026-09-14T17:59:29.954458+08:00",
+      "frame_id": 36348,
+      "app_name": "cmux",
+      "window_title": "事件可视化"
+    }
+  ]
+}

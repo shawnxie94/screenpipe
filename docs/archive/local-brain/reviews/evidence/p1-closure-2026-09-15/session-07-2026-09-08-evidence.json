@@ -1,0 +1,419 @@
+{
+  "session": "session-07-2026-09-08",
+  "start_at": "2026-09-08T12:53:29.326+08:00",
+  "end_at": "2026-09-08T13:32:23.615692+08:00",
+  "duration_min": 39,
+  "interval_ids": [
+    12321,
+    12333,
+    12354,
+    12357,
+    12360,
+    12363,
+    12387,
+    12389,
+    12391,
+    12392,
+    12396,
+    12442,
+    12445,
+    12447,
+    12455,
+    12463
+  ],
+  "evidence_count": 44,
+  "evidence": [
+    {
+      "interval_id": 12321,
+      "source_type": "ui_event",
+      "source_id": 32269,
+      "occurred_at": "2026-09-08T12:53:29.326+08:00",
+      "frame_id": 19388,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12321,
+      "source_type": "ui_event",
+      "source_id": 32270,
+      "occurred_at": "2026-09-08T12:53:29.327+08:00",
+      "frame_id": 19388,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12321,
+      "source_type": "frame",
+      "source_id": 19394,
+      "occurred_at": "2026-09-08T12:53:52.729+08:00",
+      "frame_id": 19394,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12333,
+      "source_type": "ui_event",
+      "source_id": 32366,
+      "occurred_at": "2026-09-08T12:58:10.306+08:00",
+      "frame_id": 19488,
+      "app_name": "ZCode"
+    },
+    {
+      "interval_id": 12333,
+      "source_type": "ui_event",
+      "source_id": 32367,
+      "occurred_at": "2026-09-08T12:58:10.327+08:00",
+      "frame_id": 19488,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12333,
+      "source_type": "frame",
+      "source_id": 19496,
+      "occurred_at": "2026-09-08T12:58:42.738+08:00",
+      "frame_id": 19496,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12354,
+      "source_type": "ui_event",
+      "source_id": 32447,
+      "occurred_at": "2026-09-08T13:05:22.207+08:00",
+      "frame_id": 19847,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12354,
+      "source_type": "ui_event",
+      "source_id": 32448,
+      "occurred_at": "2026-09-08T13:05:22.208+08:00",
+      "frame_id": 19847,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12354,
+      "source_type": "frame",
+      "source_id": 19853,
+      "occurred_at": "2026-09-08T13:05:42.397+08:00",
+      "frame_id": 19853,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12357,
+      "source_type": "ui_event",
+      "source_id": 32454,
+      "occurred_at": "2026-09-08T13:05:46.655+08:00",
+      "frame_id": 19856,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12357,
+      "source_type": "ui_event",
+      "source_id": 32455,
+      "occurred_at": "2026-09-08T13:05:46.657+08:00",
+      "frame_id": 19856,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12360,
+      "source_type": "ui_event",
+      "source_id": 32459,
+      "occurred_at": "2026-09-08T13:05:50.795+08:00",
+      "frame_id": 19859,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12360,
+      "source_type": "ui_event",
+      "source_id": 32460,
+      "occurred_at": "2026-09-08T13:05:50.815+08:00",
+      "frame_id": 19859,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12360,
+      "source_type": "frame",
+      "source_id": 19859,
+      "occurred_at": "2026-09-08T13:05:51.029+08:00",
+      "frame_id": 19859,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12363,
+      "source_type": "ui_event",
+      "source_id": 32464,
+      "occurred_at": "2026-09-08T13:05:59.698+08:00",
+      "frame_id": 19868,
+      "app_name": "ZCode"
+    },
+    {
+      "interval_id": 12363,
+      "source_type": "ui_event",
+      "source_id": 32465,
+      "occurred_at": "2026-09-08T13:05:59.733+08:00",
+      "frame_id": 19870,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12363,
+      "source_type": "frame",
+      "source_id": 19874,
+      "occurred_at": "2026-09-08T13:06:00.649+08:00",
+      "frame_id": 19874,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12387,
+      "source_type": "ui_event",
+      "source_id": 32523,
+      "occurred_at": "2026-09-08T13:08:58.466+08:00",
+      "frame_id": 19959,
+      "app_name": "ZCode"
+    },
+    {
+      "interval_id": 12387,
+      "source_type": "ui_event",
+      "source_id": 32524,
+      "occurred_at": "2026-09-08T13:08:58.470+08:00",
+      "frame_id": 19959,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12387,
+      "source_type": "frame",
+      "source_id": 19963,
+      "occurred_at": "2026-09-08T13:09:02.753+08:00",
+      "frame_id": 19963,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12389,
+      "source_type": "ui_event",
+      "source_id": 32547,
+      "occurred_at": "2026-09-08T13:10:39.621+08:00",
+      "frame_id": 20033,
+      "app_name": "ZCode"
+    },
+    {
+      "interval_id": 12389,
+      "source_type": "ui_event",
+      "source_id": 32548,
+      "occurred_at": "2026-09-08T13:10:39.644+08:00",
+      "frame_id": 20033,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12389,
+      "source_type": "frame",
+      "source_id": 20034,
+      "occurred_at": "2026-09-08T13:10:39.669+08:00",
+      "frame_id": 20034,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12391,
+      "source_type": "frame",
+      "source_id": 20037,
+      "occurred_at": "2026-09-08T13:10:59.039+08:00",
+      "frame_id": 20037,
+      "app_name": "ZCode",
+      "window_title": "ChatGPT"
+    },
+    {
+      "interval_id": 12392,
+      "source_type": "ui_event",
+      "source_id": 32564,
+      "occurred_at": "2026-09-08T13:10:59.050+08:00",
+      "frame_id": 20039,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12392,
+      "source_type": "ui_event",
+      "source_id": 32565,
+      "occurred_at": "2026-09-08T13:10:59.054+08:00",
+      "frame_id": 20039,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12392,
+      "source_type": "frame",
+      "source_id": 20040,
+      "occurred_at": "2026-09-08T13:11:01.305+08:00",
+      "frame_id": 20040,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12396,
+      "source_type": "ui_event",
+      "source_id": 32576,
+      "occurred_at": "2026-09-08T13:11:14.251+08:00",
+      "frame_id": 20049,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12396,
+      "source_type": "ui_event",
+      "source_id": 32577,
+      "occurred_at": "2026-09-08T13:11:14.256+08:00",
+      "frame_id": 20049,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12396,
+      "source_type": "frame",
+      "source_id": 20055,
+      "occurred_at": "2026-09-08T13:11:31.156+08:00",
+      "frame_id": 20055,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12442,
+      "source_type": "ui_event",
+      "source_id": 32773,
+      "occurred_at": "2026-09-08T13:24:02.636+08:00",
+      "frame_id": 20389,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12442,
+      "source_type": "ui_event",
+      "source_id": 32774,
+      "occurred_at": "2026-09-08T13:24:02.638+08:00",
+      "frame_id": 20389,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12442,
+      "source_type": "frame",
+      "source_id": 20425,
+      "occurred_at": "2026-09-08T13:24:54.466+08:00",
+      "frame_id": 20425,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12445,
+      "source_type": "ui_event",
+      "source_id": 32811,
+      "occurred_at": "2026-09-08T13:27:11.257+08:00",
+      "frame_id": 20442,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12445,
+      "source_type": "ui_event",
+      "source_id": 32812,
+      "occurred_at": "2026-09-08T13:27:11.260+08:00",
+      "frame_id": 20442,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12445,
+      "source_type": "frame",
+      "source_id": 20442,
+      "occurred_at": "2026-09-08T13:27:11.276+08:00",
+      "frame_id": 20442,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12447,
+      "source_type": "frame",
+      "source_id": 20448,
+      "occurred_at": "2026-09-08T13:27:22.884+08:00",
+      "frame_id": 20448,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12447,
+      "source_type": "frame",
+      "source_id": 20521,
+      "occurred_at": "2026-09-08T13:28:22.929+08:00",
+      "frame_id": 20521,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12455,
+      "source_type": "ui_event",
+      "source_id": 32852,
+      "occurred_at": "2026-09-08T13:29:47.960+08:00",
+      "frame_id": 20582,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12455,
+      "source_type": "ui_event",
+      "source_id": 32853,
+      "occurred_at": "2026-09-08T13:29:47.962+08:00",
+      "frame_id": 20582,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12455,
+      "source_type": "frame",
+      "source_id": 20582,
+      "occurred_at": "2026-09-08T13:29:48.030+08:00",
+      "frame_id": 20582,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12463,
+      "source_type": "ui_event",
+      "source_id": 32864,
+      "occurred_at": "2026-09-08T13:31:51.243+08:00",
+      "frame_id": 20607,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12463,
+      "source_type": "ui_event",
+      "source_id": 32865,
+      "occurred_at": "2026-09-08T13:31:51.261+08:00",
+      "frame_id": 20607,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 12463,
+      "source_type": "frame",
+      "source_id": 20609,
+      "occurred_at": "2026-09-08T13:32:02.862+08:00",
+      "frame_id": 20609,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    }
+  ]
+}

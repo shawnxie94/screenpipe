@@ -1,116 +1,82 @@
-# screenpipe / zh-local Roadmap
+# screenpipe Roadmap
 
-<!-- doc-covers: crates/screenpipe-core/src/tasks, crates/screenpipe-db/src/db/brain, crates/screenpipe-db/src/migrations, crates/screenpipe-engine/src/brain, crates/screenpipe-engine/src/tasks, crates/screenpipe-connect/src, apps/screenpipe-app-tauri/components/brain -->
-<!-- doc-verified: 18b2379be -->
+<!-- doc-covers: crates/screenpipe-capture, crates/screenpipe-screen, crates/screenpipe-audio, crates/screenpipe-a11y, crates/screenpipe-db/src/db/activity_ledger.rs, crates/screenpipe-db/src/migrations, crates/screenpipe-engine/src/connections_api.rs, crates/screenpipe-connect/src, crates/screenpipe-core/src/tasks, crates/screenpipe-engine/src/tasks -->
+<!-- doc-verified: 000000000 -->
 
-<!-- doc-covers 必须是 git pathspec，不能写逗号分隔的散文；散文永远匹配 0 个提交，会让漂移门禁空转。本文件只把领域包与统一任务面当作自己的覆盖范围，不覆盖上游采集/桌面全仓，避免门禁长期漂红。 -->
+<!-- doc-covers 必须是 git pathspec，不能写逗号分隔的散文。本文件只覆盖采集、统一存储与接入（Connector）面，不覆盖桌面 UI 全仓，避免漂移门禁长期漂红。 -->
 
-最近更新：2026-09-13。
+最近更新：2026-09-15。
 
-本文件是 `screenpipe` `zh-local` 的统一产品与迭代入口。后续功能直接在该分支继续演进，不再维护独立的 MIT 拆分版 `zhiji`。历史拆分、迁移和验证材料保存在 [zhiji archive](archive/zhiji/README.md)，只作为决策记录，不作为当前实现基线。
+本文件是 `screenpipe` 的统一产品与迭代入口。历史方向（Local Brain、知识沉淀、zhiji 拆分、个人工作台整合）已被移除，决策记录归档在 `docs/archive/local-brain/` 与 `docs/archive/zhiji/`，只作决策参考，不再构成当前实现基线。
 
 ## 当前产品方向
 
-`screenpipe` 是本地优先的个人工作记录、知识沉淀与研究工作台。优先满足日常使用，不以当前不明确的商业化前景为理由重做一套干净 MIT 产品。
+**screenpipe 是本地信息收集口**：持续采集本机产生的各类信息（屏幕、音频、可访问性），并把其他应用的已有数据（办公文档、日历、消息等）作为独立接入渠道拉入同一个本地存储与检索底座，供外部应用与 AI Agent 消费。它不内建记忆、知识或研究产品——那些交给下游应用通过 REST API / MCP / Pipes 取数自行实现。
 
 核心闭环：
 
 ```text
-屏幕 / 音频 / 浏览器 / RSS / 文件
-                ↓
-        本地原始记录与信息对象
-                ↓
-        检索、证据、知识与研究产物
-                ↓
-        目标、行动、完成证据与复盘
-                ↓
-        可选的公众发布与订阅
+屏幕 / 音频 / 可访问性 ──┐
+                        ├──→ 本地统一存储与检索（SQLite / FTS / 文件）
+飞书 / 腾讯会议 / 其他接入 ─┘          ↓
+                             外部应用 / Agent（REST API / MCP / Pipes）
 ```
 
-### 统一整合拓扑
+### 边界
 
-```text
-Infinitum radar / RSS ──┐
-                        ├─→ screenpipe zh-local ──→ Lumina publication
-Lumina browser capture ─┘             ↑
-                                       │
-                           Personal OS file adapter
-```
-
-- `screenpipe zh-local` 是唯一持续开发的产品和事实中枢，并提供跨领域的 Memory、Evidence、Retrieval 和 Lifecycle Core 能力。
-- `Local Brain` 是首个记忆领域包：保留活动/情境记忆，同时把高价值内容编译为 Work Unit、知识候选、版本、引用问答和审核后的长期记忆；其他领域包也可使用同一套 Core Memory。
-- `zhihuan` 提供平台、Workflow、Artifact、审批、审计和持续研究的设计输入；不恢复独立产品。
-- `Personal OS` 通过适配器接入，Goal/Quest/Review 继续以文件协议为真源。
-- `Infinitum` 负责 RSS、清洗、去重、质量判断和简单聚合；复杂综合在 screenpipe Workflow 中完成。
-- `Lumina` 的新网页采集直接进入 screenpipe；已审核内容按需单向发布到 Lumina，不做双向业务同步。
-
-外部产品（Lumina、Infinitum）的能力迁移后置：先建 zh-local 核心能力（信封、领域包注册、scope 与放行、Relation），接入时点见后续阶段；延后期间两者继续独立运行，其数据不作为 screenpipe 的事实源，只有显式导入才成为来源（框架 D-12）。
-
-Core 只保留通用对象信封、Memory、来源/证据、版本、关系、Workflow/Run、审核、生命周期和发布边界；领域对象和领域记忆通过内置 Domain Pack 注册，不把 Article、日报、Goal 或 Quest 硬编码为来源产品特判。先实现内置扩展，不提前建设第三方插件市场。
+- **属于 screenpipe**：本地采集、接入渠道、统一存储、全文检索、原始证据保留、供外部消费的 API/MCP。
+- **不属于 screenpipe**：记忆、知识库、研究综合、行动闭环、发布/订阅。一律外部化，screenpipe 只提供事实和证据存取。
+- 数据默认保存在本机（`~/.screenpipe`，开发时 `~/.screenpipe-dev`）；模型调用等外部数据流由用户显式配置。
 
 ## 已完成基线
 
-- README 与项目文档已切换为本地优先的个人知识库定位。
-- Local Brain 基础改造、知识库五入口、统一任务事件和纠错闭环已在 `zh-local` 持续落地。
-- **改名 brain → knowledge**：批 1 代码与接口（`800aa2029`）、批 2 数据库对象与持久化值（`4b322a531`）；仅保留历史标识（legacy 命名空间、已导入运行 id、旧输出消费者 id、持久化会话分类值）。真实库升级路径已在副本上验证。
-- **P1 收尾遗留项全部落地（2026-09-11，决策见框架 D-13–D-16）**：活动层单套总结（证据按变化保留 + 丢弃记账，B01 `9595528ea`）；摘要生产者与自足口径（B02 `96fde4b0a`）；读源收敛到数据库、停用旧叙事自动生成（`ad5c54155`、`5f5aeae6e`）；WorkUnit 先摘要后召回 + schema v2 流程/环境/细节（B03a `ff920587c`）；会话计数按活动去重（B03b `9c7b8bff2`）；四个内部 skill 中性真源 + 按 Agent 注入 + 接口真实性回归（B04a `8dee0a5dd`）；skill 哈希进输入指纹 + 查询轨迹与 200/键强制上限（B04b `beda105041b8`）。证据见 `docs/reviews/evidence/` 各日期子目录；合成验收 10/10 通过（run `2026-09-11-local-brain-closure`，`task_status: completed`）。
-- 现有 Local Brain PRD/TRD、正确性计划、验收矩阵和真实环境证据继续作为当前开发输入。
-- 原独立 `zhiji` 项目的整合框架、迁移材料和历史验证记录已转入本仓库的归档目录；不再以独立应用身份、MIT 基线或独立数据库作为后续目标。
+- 屏幕 / 音频 / 可访问性 / OCR 采集链路持续运行。
+- 本地 SQLite 持久化与全文检索（FTS），按时间、应用、窗口、内容类型查询。
+- 活动 Ledger（确定性活动记录）与 Activity History。
+- 本地 REST API（默认 `127.0.0.1:3030`）：搜索、帧、音频、健康、活动等。
+- MCP 服务与 Pipes（Markdown 描述的个人 AI 工作流，结果存本机）。
+- Tauri 桌面应用 + Rust CLI / 独立引擎。
+- 飞书 / 腾讯会议接入（`screenpipe-connect` 的 office runner）已有可用的连接管理、增量同步与授权；以 `knowledge_jobs` 驱动的旧调度是待解耦项（见进行中）。
+- 历史 Local Brain / 知识域已经整体退出当前范围，相关实现与验收进入归档，不再维护。
 
 ## 进行中
 
-- **沉淀管线修复（切分与投递优化）**：计划 `docs/plans/knowledge-pipeline-cadence-execution-plan.md` 已于 2026-09-13 完成（代码 `02c04d882`，agent-brain acceptance 6/6）。R1 正确性与切分已通过真实副本验证：失败即终态不重投、错误消息落库/API 透出、发现预筛、锚点/合并不变量、单活跃版本与显式回退、稳定 `interval_key` 指纹及重复 reconcile 幂等；v2 evidence 边界与 `bad_evidence=0` 已修复。R2 已完成四层独立节拍、13 个配置键、三机制蒸馏投递（模型提名+变更驱动+冷却期）、legacy 自动叙事下线、设置页和失败任务手动入口。桌面冒烟记录见 `docs/reviews/evidence/dev-smoke-2026-09-13-r2.md`；④ 默认 24 小时周期、失败任务实际重试闭环和长时性能仍待观察。已知未收项：v1 存量 69 条证据时间越界；真实窗口 112/112 相邻边界为跨身份切换，碎片目标已证伪 §4.4 可达，移交工作项层（Plan B）。
-- **Local Brain 真实样本验收（F11）**：引擎侧与收尾遗留项已全部落地（见已完成基线）；剩余 44 项 `unverified` 全部卡在外部条件（真实语料冻结、办公账号、桌面真机、5 工作日观察、性能），执行入口：`docs/reviews/evidence/p1-closure-runbook-2026-09-11.md`；矩阵状态见 `docs/reviews/personal-brain-correctness-acceptance.md`（2026-09-11 收口记录一节）。P1 收口前不建 P2 计划。
-- **桌面端和中文工作台稳定性**：继续修复采集、音频、聊天、Pipe、连接、状态恢复和前端中文路径；沿用当前 `zh-local` 的上游优化，不回移到历史 MIT 快照。
-- **整合边界收敛**：新需求先判断属于 Core、Domain Pack、Connector、Workflow 或 Publication Adapter；禁止为 Infinitum、Lumina 或 zhihuan 再建立第二套事实源、任务调度或审批状态。
+- **移除知识域（Local Brain）**：删除 engine `knowledge/`、db `knowledge/`、Tauri / 前端 knowledge、MCP 知识工具、CLI 知识 skills、活动层 AI 叙事，以及 `memories` 相关实现；保留 SQLite 迁移文件以保证 `user_version` 连续性。生产数据目录清空重建（本次方向调整允许全量重建，不保留知识数据）。
+- **office 接入解耦为独立 Connector**：把飞书 / 腾讯会议从 knowledge 任务调度（worker / jobs / office_connections 表）中解放出来，改为独立同步循环与自有连接表，作为"其他应用数据接入"的样板渠道。
+- **采集与桌面稳定性**：继续沿用当前 `zh-local` 分支的上游优化，不回移历史快照。
 
 ## 后续阶段
 
-阶段顺序、优先级和进度在本文件维护；各阶段**契约冻结顺序与依赖**、Core 公共语义和未决项（O-01–O-06）见 [个人工作台整合框架](trd/personal-workbench-integration-framework.md) §5/§6，本文件不重复其内容。
+阶段顺序、优先级和进度在本文件维护；每个新阶段只在上一阶段收口（有真实证据或用户具名接受风险）后建立计划。
 
-开工门禁：新阶段计划只在上一阶段收口后建立（验收有真实证据，或用户具名接受风险）。P1 收口前不建 P2 计划、不开 P2 实现。
+### S1：知识域清理收口
 
-### P1：完成当前 Local Brain 闭环
+- 移除 knowledge / memories 代码、路由、前端入口与外部工具引用。
+- office 接入提为独立 Connector（`/connections` 直接驱动同步，不经过 knowledge worker）。
+- 全量重建本地数据目录；验证采集、检索、桌面应用在空库上正常启动。
+- 更新 README、文档地图与 doc-covers，CI 门禁恢复绿色。
 
-- 保持 screenpipe 采集、SQLite/FTS、活动记录和现有应用身份。
-- 完成 Work Unit → Knowledge Candidate → Review → Published Knowledge。
-- 完成引用问答、版本修订、删除传播、任务恢复和真实样本验收。
-- 不在本阶段引入 Infinitum/Lumina 全量页面，也不重做基础采集架构。
+### S2：接入渠道扩展
 
-### P2：建立 zh-local 核心能力
+- 以 office Connector 为样板，确立统一接入骨架：连接管理（授权 / 刷新 / 断开）、增量游标、来源登记、拉取落库。
+- 按真实使用需要接入新渠道：浏览器采集、RSS/网页、日历、消息等。
+- 不引入第二套事实源或任务调度；所有渠道统一写入同一本地存储与检索底座。
 
-- 先冻结跨阶段契约（对象信封与 scope 语义、Relation 最小范围、任务种类注册清单）：冻结顺序、触发时点与判定用例见[整合框架](trd/personal-workbench-integration-framework.md) §5/§6，本文件不复述。
-- 落地 scope 迁移：来源表 `dataset_id` 归一为 scope 词表、`memories` 补 scope 列、检索引擎入口统一放行（默认只放 `personal`）；办公导入支持对象级改判（O-06）。
-- 第一验证者用现有办公来源路径（飞书/腾讯会议），不引入新仓库或新采集客户端。
-- 不迁移 Lumina/Infinitum 的采集与发布能力（见框架 D-12）。
+### S3：存储与检索深化
 
-### P3：接入 Personal OS 行动闭环
+- 在采集 + 接入的数据规模上优化检索（FTS 分面、跨渠道按来源过滤、时间线聚合）。
+- 明确原始证据生命周期（保留、压缩、删除传播）策略。
+- 供外部应用稳定的 API/MCP 契约，按需演进 SDK。
 
-- 通过 `personal-pack` + File Ledger Adapter 接入 Goal、Quest、Review。
-- Personal OS 继续维护文件真源和现有域隔离；screenpipe 只保存关系、投影和运行引用。
-- 区分支持事实的 Source Evidence 与证明行动完成的 Completion Record。
-- 验证行动建议、用户确认、完成留证和复盘往返，不让模型自动修改正式行动状态。
+### S4：桌面端与发布边界
 
-### P4：领域包接入与研究综合（reading / radar / research）
+- 桌面端回归"数据底座"定位：采集状态、渠道管理、检索浏览，移除知识相关界面遗留。
+- 部署、备份、恢复、升级流程随真实使用收敛。
 
-- 以 `research-pack` 吸收 zhihuan 的持续研究、Artifact、审核和受控执行设计。
-- 以 `radar-pack` 接入 Infinitum RSS、清洗、去重、基础聚合和候选信号。
-- 以 `reading-pack` 接入网页资料采集与阅读：将 Lumina 浏览器扩展改为 screenpipe 的采集客户端，新网页直接进入 screenpipe，旧数据受控导入；外部扩展的最低版本与不可用时的降级路径（手动粘贴或文件导入）在 P4 计划中声明。
-- 在 screenpipe Workflow 中实现目标相关性、历史比较、证据化周期简报和行动建议；Infinitum 原日报仅作为回归参考，不再继续扩展为综合真源。
-- 将已审核 Artifact 通过单向 Publication Adapter 发布到 Lumina，支持版本、撤回、可见性和失败重试。
+## 不纳入当前范围
 
-### P5：真实数据切换与旧入口收敛
-
-- 完成历史 Lumina/Infinitum 数据的受控导入、来源命名空间、版本和删除传播验证。
-- 决定 Infinitum 是否继续作为独立雷达运行、Lumina 是否继续作为独立公众站点。
-- 在真实日常使用稳定后，再收敛安装、备份、恢复、升级和旧入口。
-
-P2 的契约冻结（信封与 scope、Relation、注册清单）必须先于 P3、P4；在此前提下 P3 与 P4 的顺序可按真实使用调整。Lumina/Infinitum 的能力迁移均在 P4 及之后（框架 D-12）；调整时在本文件记录理由，涉及接口或数据真源变化时同步更新整合框架。
-
-## 不纳入当前默认范围
-
-- 重新拆分干净 MIT 版本或追赶上游独立分支。
-- 商业化分发、第三方插件市场、团队协作、云同步和计费。
-- Infinitum、Lumina、zhihuan 的全部页面、后台和数据库整体合并。
-- 双向办公写入、自动发布高风险操作和多 Runtime 调度。
-- Windows/Linux、商业分发和新增 Runtime；另行立项。
+- 记忆、知识库、研究综合、行动闭环、发布/订阅等任何内建产品逻辑。
+- 重做独立 MIT 拆分版或追赶上游独立分支。
+- 团队协作、云端同步、账号计费、企业管理后台。
+- 双向办公写入、自动发布高风险操作、多 Runtime 调度。
+- Windows/Linux 与商业分发；另行立项。

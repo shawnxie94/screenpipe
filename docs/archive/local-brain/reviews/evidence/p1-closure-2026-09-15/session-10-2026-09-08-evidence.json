@@ -1,0 +1,106 @@
+{
+  "session": "session-10-2026-09-08",
+  "start_at": "2026-09-08T20:28:20.453+08:00",
+  "end_at": "2026-09-08T20:41:41.812+08:00",
+  "duration_min": 13,
+  "interval_ids": [
+    13292,
+    13295,
+    13296,
+    13299,
+    13302,
+    13303,
+    13304,
+    13322,
+    13323
+  ],
+  "evidence_count": 10,
+  "evidence": [
+    {
+      "interval_id": 13292,
+      "source_type": "ui_event",
+      "source_id": 37453,
+      "occurred_at": "2026-09-08T20:28:20.453+08:00",
+      "frame_id": 29797,
+      "app_name": "ZCode"
+    },
+    {
+      "interval_id": 13292,
+      "source_type": "ui_event",
+      "source_id": 37454,
+      "occurred_at": "2026-09-08T20:28:20.454+08:00",
+      "frame_id": 29797,
+      "app_name": "ZCode",
+      "window_title": "ZCode"
+    },
+    {
+      "interval_id": 13295,
+      "source_type": "ui_event",
+      "source_id": 37457,
+      "occurred_at": "2026-09-08T20:28:30.769+08:00",
+      "frame_id": 29806,
+      "app_name": "cmux"
+    },
+    {
+      "interval_id": 13296,
+      "source_type": "ui_event",
+      "source_id": 37458,
+      "occurred_at": "2026-09-08T20:28:30.785+08:00",
+      "frame_id": 29807,
+      "app_name": "cmux",
+      "window_title": "mini"
+    },
+    {
+      "interval_id": 13299,
+      "source_type": "ui_event",
+      "source_id": 37462,
+      "occurred_at": "2026-09-08T20:28:35.624+08:00",
+      "frame_id": 29814,
+      "app_name": "cmux",
+      "window_title": "mini"
+    },
+    {
+      "interval_id": 13302,
+      "source_type": "ui_event",
+      "source_id": 37469,
+      "occurred_at": "2026-09-08T20:29:43.847+08:00",
+      "frame_id": 29893,
+      "app_name": "cmux",
+      "window_title": "mini"
+    },
+    {
+      "interval_id": 13303,
+      "source_type": "ui_event",
+      "source_id": 37470,
+      "occurred_at": "2026-09-08T20:30:00.193+08:00",
+      "frame_id": 29918,
+      "app_name": "cmux"
+    },
+    {
+      "interval_id": 13304,
+      "source_type": "ui_event",
+      "source_id": 37471,
+      "occurred_at": "2026-09-08T20:30:00.194+08:00",
+      "frame_id": 29918,
+      "app_name": "cmux",
+      "window_title": "mini"
+    },
+    {
+      "interval_id": 13322,
+      "source_type": "ui_event",
+      "source_id": 37588,
+      "occurred_at": "2026-09-08T20:41:36.489+08:00",
+      "frame_id": 30318,
+      "app_name": "cmux"
+    },
+    {
+      "interval_id": 13323,
+      "source_type": "ui_event",
+      "source_id": 37589,
+      "occurred_at": "2026-09-08T20:41:36.493+08:00",
+      "frame_id": 30318,
+      "app_name": "cmux",
+      "window_title": "mini"
+    }
+  ]
+}
