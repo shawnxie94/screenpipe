@@ -38,7 +38,7 @@ screenpipe 负责保存事实和证据，AI 负责在用户配置的边界内进
 
 ## 规划
 
-统一产品与迭代入口见 [docs/roadmap.md](docs/roadmap.md)：当前重点是移除历史知识域、把办公接入解耦为独立 Connector，然后扩展接入渠道并深化本地检索。screenpipe 只保留采集、接入、存储与检索能力，不内建记忆、知识库、研究综合或行动闭环。
+统一产品与迭代入口见 SQLite Roadmap Artifact（`agent-brain roadmap show --project .`）：当前重点是移除历史知识域、把办公接入解耦为独立 Connector，然后扩展接入渠道并深化本地检索。screenpipe 只保留采集、接入、存储与检索能力，不内建记忆、知识库、研究综合或行动闭环。
 
 ## 数据与隐私边界
 
@@ -120,12 +120,12 @@ docs/                       规划入口与架构文档
 - JavaScript / TypeScript 使用 `bun`，Rust 使用 `cargo`。
 - 采集、编码和 SQLite 写入属于持续运行的热路径；改动时需要关注 CPU、内存、磁盘和数据完整性。
 - 原生桌面开发使用 `apps/screenpipe-app-tauri` 中的脚本，不直接绕过仓库约定运行 Tauri 命令。
-- 新需求先记录到仓库规划（[docs/roadmap.md](docs/roadmap.md)），再拆成可验证的实现步骤；不要用一次性脚本或临时文档代替长期设计。
+- 新需求先记录到仓库规划（`agent-brain roadmap show --project .`），再拆成可验证的实现步骤；不要用一次性脚本或临时文档代替长期设计。
 - 测试和提交前检查见 [AGENTS.md](AGENTS.md)、[CONTRIBUTING.md](CONTRIBUTING.md) 和 [TESTING.md](TESTING.md)。
 
 ## 文档地图
 
-- [Roadmap](docs/roadmap.md)：当前产品方向、进行中事项与后续阶段。
+- Roadmap：使用 `agent-brain roadmap show --project .` 查看当前产品方向、进行中事项与后续阶段。
 - [ONBOARDING.md](ONBOARDING.md)：第一次参与开发时的安全注意事项与环境准备。
 - [AGENTS.md](AGENTS.md)：仓库级协作、构建和验证规则。
 - [DESIGN.md](DESIGN.md)：桌面端视觉与交互设计约束。
