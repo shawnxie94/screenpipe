@@ -71,12 +71,10 @@ pub(crate) async fn delete_time_range_handler(
 
     // Delete files from disk AFTER successful DB commit
     let mut video_files_deleted: u64 = 0;
-    let mut file_cleanup_failed = false;
     for path in &result.video_files {
         match std::fs::remove_file(path) {
             Ok(_) => video_files_deleted += 1,
             Err(e) => {
-                file_cleanup_failed = true;
                 warn!("failed to delete video file {}: {}", path, e);
             }
         }
@@ -87,7 +85,6 @@ pub(crate) async fn delete_time_range_handler(
         match std::fs::remove_file(path) {
             Ok(_) => audio_files_deleted += 1,
             Err(e) => {
-                file_cleanup_failed = true;
                 warn!("failed to delete audio file {}: {}", path, e);
             }
         }
@@ -96,7 +93,6 @@ pub(crate) async fn delete_time_range_handler(
     // Delete uploaded snapshot files from disk
     for path in &result.snapshot_files {
         if let Err(e) = std::fs::remove_file(path) {
-            file_cleanup_failed = true;
             warn!("failed to delete snapshot file {}: {}", path, e);
         }
     }

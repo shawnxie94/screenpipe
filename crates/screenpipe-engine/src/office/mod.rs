@@ -13,7 +13,7 @@ use chrono::DateTime;
 use serde::Serialize;
 use screenpipe_connect::office::runner::CliRunner;
 use screenpipe_connect::office::types::{
-    is_office_provider, OfficeAuthStatus, OfficeCommand, OfficeError, OfficeErrorCode,
+    OfficeAuthStatus, OfficeCommand, OfficeError, OfficeErrorCode,
     OfficeObjectKind, OfficeProvider, OfficeRuntimeStatus, OfficeScope, OfficeSyncStatus,
 };
 use screenpipe_connect::office::types::OfficeObject;
@@ -493,18 +493,6 @@ pub struct OfficeStatusDto {
     pub imported_objects: u64,
     pub last_error_code: Option<String>,
     pub last_error_message: Option<String>,
-}
-
-pub(crate) fn reject_office_provider(id: &str) -> Option<OfficeServiceError> {
-    if is_office_provider(id) {
-        Some(OfficeServiceError::new(
-            OfficeErrorCode::ScopeInvalid,
-            "办公连接必须使用 /connections/office 专用接口",
-            400,
-        ))
-    } else {
-        None
-    }
 }
 
 pub(crate) struct SyncSummary {

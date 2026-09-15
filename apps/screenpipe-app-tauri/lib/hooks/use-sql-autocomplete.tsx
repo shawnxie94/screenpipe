@@ -15,8 +15,6 @@ export interface AutocompleteItem {
 }
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const TAG_AUTOCOMPLETE_LIMIT = 100;
-
 const cache: Record<string, { data: AutocompleteItem[]; timestamp: number }> =
   {};
 
@@ -130,53 +128,20 @@ export function useSqlAutocomplete(type: "app" | "window" | "url") {
   return { items, isLoading, refresh };
 }
 
-const TAG_CACHE: { data?: AutocompleteItem[]; ts?: number } = {};
-
-/** Distinct tags across screen, audio, and memories for chat/search filter pickers. */
+/**
+ * Tag mention autocomplete backed by the retired memory-tags autocomplete
+ * endpoint. The tags namespace now only covers vision/audio, which has no
+ * autocomplete API; the hook stays as an empty contract so callers keep
+ * compiling and manual `#tag` filters still work in search.
+ */
 export function useTagAutocomplete() {
-  const [items, setItems] = useState<AutocompleteItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchItems = useCallback(async (force = false) => {
-    setIsLoading(true);
-    try {
-      if (
-        !force &&
-        TAG_CACHE.data &&
-        TAG_CACHE.ts &&
-        Date.now() - TAG_CACHE.ts < CACHE_DURATION
-      ) {
-        setItems(TAG_CACHE.data);
-        return;
-      }
-      const response = await localFetch(
-        `/tags/autocomplete?limit=${TAG_AUTOCOMPLETE_LIMIT}`
-      );
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const result: AutocompleteItem[] = await response.json();
-      if (!Array.isArray(result)) {
-        throw new Error("expected array from /tags/autocomplete");
-      }
-      TAG_CACHE.data = result;
-      TAG_CACHE.ts = Date.now();
-      setItems(result);
-    } catch (error) {
-      const msg = (error as Error)?.stack ?? (error as Error)?.message ?? String(error);
-      console.error("failed to fetch tags:", msg);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchItems();
-  }, [fetchItems]);
-
-  const refresh = useCallback(() => fetchItems(true), [fetchItems]);
-
-  return { items, isLoading, refresh };
+  const [items] = useState<AutocompleteItem[]>([]);
+  const [isLoading] = useState(false);
+  return {
+    items,
+    isLoading,
+    refresh: useCallback(() => undefined, []),
+  };
 }
 
 /** A single (app, window) cell returned by the tree query. */

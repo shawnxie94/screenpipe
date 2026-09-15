@@ -355,7 +355,6 @@ impl DatabaseManager {
             tx.commit().await?; // read-only run; release the reservation
             return Ok(false);
         }
-        let was_deleted = false;
         let created = existing.is_none();
         sqlx::query(
             "INSERT INTO office_objects (provider, account_namespace, object_kind, object_id, \

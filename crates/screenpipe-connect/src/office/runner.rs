@@ -136,8 +136,8 @@ impl CliRunner {
             )
         })?;
 
-        let mut stdout = child.stdout.take().expect("stdout piped");
-        let mut stderr = child.stderr.take().expect("stderr piped");
+        let stdout = child.stdout.take().expect("stdout piped");
+        let stderr = child.stderr.take().expect("stderr piped");
         let stdout_buf: Arc<std::sync::Mutex<Vec<u8>>> =
             Arc::new(std::sync::Mutex::new(Vec::with_capacity(8 * 1024)));
         let truncated: Arc<std::sync::atomic::AtomicBool> =

@@ -33,7 +33,7 @@ use crate::{
     FrameData, FrameRow, FrameRowLight, FrameWindowData, InsertUiEvent, MeetingRecord,
     MeetingTranscriptSegment, NewDiarizationSegment, OCREntry,
     OCRResult, OCRResultRaw, OcrEngine, OcrTextBlock, Order, ReplacementAudioTranscription,
-    SearchMatch, SearchMatchGroup, SearchResult, Speaker, TagAutocompleteItem, TagContentType,
+    SearchMatch, SearchMatchGroup, SearchResult, Speaker, TagContentType,
     TextBounds, TextPosition, TimeSeriesChunk, UiContent, UiEventRecord, UiEventRow, VideoMetadata,
     MAX_TRANSCRIPTION_ATTEMPTS,
 };
@@ -456,7 +456,6 @@ pub use self::office::{
 pub mod tasks;
 mod util;
 pub use self::util::{fingerprint, format_ts as knowledge_format_ts, new_source_uid, now_utc};
-pub use self::tasks::{ClaimedTaskRun, TaskRunRequest};
 mod display_layout;
 mod elements;
 mod feedback;
