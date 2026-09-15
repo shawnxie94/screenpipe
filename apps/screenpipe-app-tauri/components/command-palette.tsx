@@ -9,6 +9,7 @@ import {
   CalendarClock,
   History,
   Keyboard,
+  ListTree,
   MessageSquare,
   MonitorPlay,
   PanelLeft,
@@ -56,6 +57,7 @@ export type CommandPaletteActionId =
   | "go_meetings"
   | "go_scheduled"
   | "go_timeline"
+  | "go_activity"
   | "go_connections"
   | "toggle_sidebar"
   | "open_settings"
@@ -104,6 +106,7 @@ const SECTION_ACTION_IDS: Record<SidebarNavId, CommandPaletteActionId> = {
   meetings: "go_meetings",
   pipes: "go_scheduled",
   timeline: "go_timeline",
+  activity: "go_activity",
   connections: "go_connections",
 };
 
@@ -112,6 +115,7 @@ const SECTION_ICONS: Record<SidebarNavId, LucideIcon> = {
   meetings: CalendarClock,
   pipes: TimerReset,
   timeline: MonitorPlay,
+  activity: ListTree,
   connections: Plug,
 };
 

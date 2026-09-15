@@ -1865,14 +1865,14 @@ fn set_next_run(app: &AppHandle, at: DateTime<Utc>) -> Result<(), String> {
     Ok(())
 }
 
-/// legacy（B02b-2a / plan §4.3）自动叙事开关：false = 停用 30 秒轮询的自动
-/// 生成分支。手动 generate 命令与物理代码不受影响，供手动/回退。
-const LEGACY_AUTO_NARRATIVE_ENABLED: bool = false;
+/// 自动叙事开关：true = 30 秒轮询 tick，按 activitiesIntervalMinutes 间隔
+/// 增量生成活动叙事（改版前行为）。generate 命令与物理代码同时保留。
+const LEGACY_AUTO_NARRATIVE_ENABLED: bool = true;
 
 pub fn start(app: AppHandle) {
     if !LEGACY_AUTO_NARRATIVE_ENABLED {
         info!(
-            "activity history: legacy automatic narrative generation retired"
+            "activity history: automatic narrative generation retired by switch"
         );
         return;
     }
@@ -1932,11 +1932,10 @@ pub fn start(app: AppHandle) {
 mod tests {
     use super::*;
 
-    /// §4.3：legacy 自动叙事停用是一个被钉住的决策——若要恢复，必须同时
-    /// 关闭 ① 自动 tick（避免双驱动），该测试会在这里失败提醒。
+    /// 自动叙事开关默认开启（改版前行为）。若未来改为 false，此测试提醒。
     #[test]
-    fn legacy_auto_narrative_is_retired() {
-        assert!(!LEGACY_AUTO_NARRATIVE_ENABLED);
+    fn auto_narrative_is_enabled_by_default() {
+        assert!(LEGACY_AUTO_NARRATIVE_ENABLED);
     }
 
     #[test]

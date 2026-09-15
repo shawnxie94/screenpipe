@@ -572,7 +572,7 @@ export function makeDefaultPresets(): AIPreset[] {
 const DEFAULT_AUDIO_ENGINE = "whisper-large-v3-turbo-quantized";
 
 let DEFAULT_SETTINGS: Settings = {
-			activitiesEnabled: false,
+			activitiesEnabled: true,
 			activitiesIntervalMinutes: 15,
 			knowledgeReconcileMinutes: 5,
 			knowledgeReconcileWindowHours: 2,

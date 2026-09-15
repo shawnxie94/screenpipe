@@ -6,10 +6,10 @@ import { describe, expect, it } from "vitest";
 import { createDefaultSettingsObject } from "../use-settings";
 
 describe("default settings: activities", () => {
-  it("keeps automatic activities off with a 15 minute future cadence", () => {
+  it("keeps automatic activities on with a 15 minute cadence (pre-Local-Brain behavior)", () => {
     const settings = createDefaultSettingsObject();
 
-    expect(settings.activitiesEnabled).toBe(false);
+    expect(settings.activitiesEnabled).toBe(true);
     expect(settings.activitiesIntervalMinutes).toBe(15);
   });
 });

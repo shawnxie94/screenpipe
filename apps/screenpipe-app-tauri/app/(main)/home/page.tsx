@@ -14,6 +14,8 @@ import {
   Search,
   Plug,
   CalendarClock,
+  ListTree,
+  ArrowLeft,
 } from "lucide-react";
 import { emit } from "@tauri-apps/api/event";
 import {
@@ -70,6 +72,7 @@ import Timeline from "@/components/rewind/timeline";
 import {
   NativeTimeline,
   NativeTimelineBridge,
+  shouldClearActivityReturn,
 } from "@/components/rewind/native-timeline";
 import { useQueryState } from "nuqs";
 import { listen } from "@tauri-apps/api/event";
@@ -86,6 +89,7 @@ import {
 } from "@/lib/chat-utils";
 import { useTauriEvent } from "@/lib/hooks/use-tauri-event";
 import { PipeActivityIndicator } from "@/components/pipe-activity-indicator";
+import { ActivityLedger } from "@/components/activity-ledger";
 import FirstRunGuide from "@/components/onboarding/first-run-guide";
 import {
   consumeFirstRunGuidePending,
@@ -113,7 +117,7 @@ import {
 } from "@/lib/shortcuts";
 import { useFirstRunLearningWindow } from "@/components/first-run/learning-window-provider";
 
-type MainSection = "home" | "timeline" | "pipes" | "connections" | "meetings" | "help";
+type MainSection = "home" | "timeline" | "activity" | "pipes" | "connections" | "meetings" | "help";
 type ConnectionFocusRequest = {
   id: string | null;
   category: string | null;
@@ -123,7 +127,7 @@ type ConnectionFocusRequest = {
 
 // All valid URL sections for the home page
 const ALL_SECTIONS = [
-  "home", "timeline", "pipes", "help", "connections", "meetings", "history",
+  "home", "timeline", "activity", "pipes", "help", "connections", "meetings", "history",
   "feedback", // backwards compat → maps to "help"
 ];
 
@@ -159,7 +163,23 @@ function HomeContent() {
     },
     serialize: (value) => value,
   });
+  const [activityReturnVisible, setActivityReturnVisible] = useState(false);
   const previousSectionRef = useRef(activeSection);
+  const returnToActivity = useCallback(() => {
+    setActivityReturnVisible(false);
+    router.push("/home?section=activity");
+  }, [router]);
+
+  useEffect(() => {
+    const previousSection = previousSectionRef.current;
+    previousSectionRef.current = activeSection;
+    if (
+      activityReturnVisible &&
+      shouldClearActivityReturn(previousSection, activeSection)
+    ) {
+      setActivityReturnVisible(false);
+    }
+  }, [activeSection, activityReturnVisible]);
   const [connectionFocusRequest, setConnectionFocusRequest] = useState<ConnectionFocusRequest | null>(null);
 
   const { settings, updateSettings, isSettingsLoaded } = useSettings();
@@ -970,6 +990,12 @@ function HomeContent() {
             </div>
           </div>
         );
+      case "activity":
+        return (
+          <ActivityLedger
+            onOpenArtifact={() => setActivityReturnVisible(true)}
+          />
+        );
       case "pipes":
         return <PipeStoreView />;
       case "connections":
@@ -1025,6 +1051,7 @@ function HomeContent() {
     home: { label: "聊天", icon: <Plus className="h-3.5 w-3.5" /> },
     meetings: { label: "会议", icon: <CalendarClock className="h-3.5 w-3.5" /> },
     timeline: { label: "时间线", icon: <MonitorPlay className="h-3.5 w-3.5" /> },
+    activity: { label: "活动", icon: <ListTree className="h-3.5 w-3.5" /> },
     pipes: { label: "自动化", icon: <TimerReset className="h-3.5 w-3.5" /> },
     connections: { label: "连接", icon: <Plug className="h-3.5 w-3.5" /> },
   };
@@ -1119,6 +1146,7 @@ function HomeContent() {
   const isFullHeight =
     activeSection === "home" ||
     activeSection === "timeline" ||
+    activeSection === "activity" ||
     activeSection === "meetings" ||
     activeSection === "history";
 
@@ -1137,7 +1165,10 @@ function HomeContent() {
           palette use teaches the direct key. Home window only: the settings
           page binds its own ⌘K for search focus while mounted. */}
       {/* Routes actions the native timeline window cannot perform itself. */}
-      <NativeTimelineBridge onToggleSidebar={toggleSidebar} />
+      <NativeTimelineBridge
+        onReturnToActivity={returnToActivity}
+        onToggleSidebar={toggleSidebar}
+      />
 
       <CommandPalette
         open={commandPaletteOpen}
@@ -1489,6 +1520,19 @@ function HomeContent() {
                 </div>
               )
             )}
+
+            {activityReturnVisible &&
+              (activeSection === "meetings" || activeSection === "timeline") && (
+                <button
+                  type="button"
+                  onClick={returnToActivity}
+                  aria-label="返回活动"
+                        title="返回活动"
+                  className="absolute left-4 top-11 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-lg shadow-black/10 backdrop-blur-sm transition-colors hover:border-foreground hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground focus-visible:ring-offset-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+              )}
 
           </div>
 
