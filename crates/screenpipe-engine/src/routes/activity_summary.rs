@@ -4,7 +4,7 @@
 
 //! One agent-safe activity bundle.
 //!
-//! Returns app/window/audio activity plus recording health, memories,
+//! Returns app/window/audio activity plus recording health,
 //! bounded screen+audio snippets, and an empty-state diagnosis (`data_status`,
 //! `query_status`, `guidance`). Everything except the always-present status
 //! fields can be turned off per-request with `include_*=false` query params.
@@ -53,7 +53,7 @@ pub struct ActivitySummaryQuery {
     #[serde(default)]
     pub app_name: Option<String>,
 
-    /// Optional keyword. When set, filters memories and screen/audio snippets
+    /// Optional keyword. When set, filters screen/audio snippets
     /// and drives `query_status`. Leave empty for a broad activity bundle.
     #[serde(default)]
     pub q: Option<String>,
@@ -77,10 +77,6 @@ pub struct ActivitySummaryQuery {
     /// capture flag). Default: true. Disable to skip one cheap SQL call.
     #[serde(default = "default_true")]
     pub include_recording: bool,
-    /// Include top memories filtered by `q` and bounded to the requested time
-    /// range. Default: true.
-    #[serde(default = "default_true")]
-    pub include_memories: bool,
     /// Include bounded, deduped screen+audio snippets. Default: true. Screen
     /// snippets are reused from `key_texts` (no second a11y scan).
     #[serde(default = "default_true")]
@@ -102,9 +98,6 @@ pub struct ActivitySummaryQuery {
     /// Cap on characters per snippet. Default 500, clamped to 160..=1200.
     #[serde(default = "default_max_snippet_chars")]
     pub max_snippet_chars: usize,
-    /// Cap on memories returned. Default 5, max 20.
-    #[serde(default = "default_max_memories")]
-    pub max_memories: u32,
 }
 
 fn default_true() -> bool {
@@ -115,9 +108,6 @@ fn default_max_snippets() -> u32 {
 }
 fn default_max_snippet_chars() -> usize {
     500
-}
-fn default_max_memories() -> u32 {
-    5
 }
 
 // ---------- response ----------
@@ -210,16 +200,6 @@ pub struct RecordingStatus {
 }
 
 #[derive(Serialize, OaSchema)]
-pub struct ActivityMemory {
-    pub id: i64,
-    pub content: String,
-    pub source: String,
-    pub tags: Vec<String>,
-    pub importance: f64,
-    pub created_at: String,
-}
-
-#[derive(Serialize, OaSchema)]
 pub struct ActivitySnippet {
     /// "parsed" | "screen" | "audio". `screen` is the bounded accessibility
     /// fallback retained for compatibility with existing callers.
@@ -282,9 +262,6 @@ pub struct ActivitySummaryResponse {
     /// Omitted when `include_recording=false`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recording: Option<RecordingStatus>,
-    /// Omitted when `include_memories=false`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub memories: Option<Vec<ActivityMemory>>,
     /// Bounded, deduped screen+audio excerpts. Omitted when `include_snippets=false`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub snippets: Option<Vec<ActivitySnippet>>,
@@ -298,11 +275,11 @@ pub struct ActivitySummaryResponse {
 /// Rich activity summary for a time range, with optional agent-context fields.
 ///
 /// By default returns: app usage, window/tab activity, sampled screen text,
-/// edited files, audio summary, recording health, memories, bounded snippets,
+/// edited files, audio summary, recording health, bounded snippets,
 /// and a `data_status`/`query_status`/`guidance` triple so agents can tell
 /// "nothing was recorded" apart from "query didn't match".
 ///
-/// Pass `include_recording=false`, `include_memories=false`,
+/// Pass `include_recording=false`, `include_snippets=false`,
 /// `include_snippets=false`, or `include_guidance=false` to slim the payload.
 /// For a lean, token-cheap time-tracking sweep also pass `include_apps=false`,
 /// `include_windows=false`, and especially `include_key_texts=false` (the
@@ -332,30 +309,13 @@ pub async fn get_activity_summary(
 
     // Run optional sidecars in parallel — each is best-effort; failures
     // degrade to None rather than blowing up the whole response.
-    let memory_query = query.q.as_deref().map(str::trim).filter(|q| !q.is_empty());
-    let (recording_opt, memories_opt, snippets_opt, parsed_count_opt) = tokio::join!(
+    let (recording_opt, snippets_opt, parsed_count_opt) = tokio::join!(
         async {
             if query.include_recording {
                 load_recording_status(&state.db, &start, &end, query.app_name.as_deref())
                     .await
                     .map_err(|e| error!("activity summary: recording status failed: {}", e))
                     .ok()
-            } else {
-                None
-            }
-        },
-        async {
-            if query.include_memories {
-                load_memories(
-                    &state.db,
-                    memory_query,
-                    query.max_memories.clamp(1, 20),
-                    &start,
-                    &end,
-                )
-                .await
-                .map_err(|e| error!("activity summary: memories failed: {}", e))
-                .ok()
             } else {
                 None
             }
@@ -386,10 +346,12 @@ pub async fn get_activity_summary(
     );
 
     let snippets_for_status = snippets_opt.as_deref().unwrap_or(&[]);
-    let memories_for_status = memories_opt.as_deref().unwrap_or(&[]);
     let data_status =
         compute_data_status(&summary_core, recording_opt.as_ref(), snippets_for_status);
-    let query_status = compute_query_status(memory_query, memories_for_status, snippets_for_status);
+    let query_status = compute_query_status(
+        query.q.as_deref().map(str::trim).filter(|q| !q.is_empty()),
+        snippets_for_status,
+    );
 
     let guidance = if query.include_guidance {
         Some(build_guidance(
@@ -416,7 +378,6 @@ pub async fn get_activity_summary(
         data_status,
         query_status,
         recording: recording_opt,
-        memories: memories_opt,
         snippets: snippets_opt,
         guidance,
     }))
@@ -468,7 +429,6 @@ fn empty_activity_summary_response(query: &ActivitySummaryQuery) -> ActivitySumm
         data_status: "no_capture_in_range".to_string(),
         query_status: query_status.to_string(),
         recording: None,
-        memories: query.include_memories.then(Vec::new),
         snippets: query.include_snippets.then(Vec::new),
         guidance: query.include_guidance.then(|| ActivityGuidance {
             searched_endpoints: vec!["/activity-summary".to_string()],
@@ -1005,49 +965,6 @@ async fn load_recording_status(
     })
 }
 
-// ---------- memories ----------
-
-async fn load_memories(
-    db: &DatabaseManager,
-    q: Option<&str>,
-    limit: u32,
-    start: &str,
-    end: &str,
-) -> Result<Vec<ActivityMemory>, String> {
-    let rows = db
-        .list_memories(
-            q,
-            None,
-            None,
-            None,
-            Some(start),
-            Some(end),
-            limit,
-            0,
-            Some("importance"),
-            Some("desc"),
-            &[],
-        )
-        .await
-        .map_err(|e| e.to_string())?;
-
-    Ok(rows
-        .into_iter()
-        .map(|m| ActivityMemory {
-            id: m.id,
-            content: truncate_text(&m.content, 500),
-            source: m.source,
-            tags: m
-                .tags
-                .as_ref()
-                .and_then(|t| serde_json::from_str(t).ok())
-                .unwrap_or_default(),
-            importance: m.importance,
-            created_at: m.created_at,
-        })
-        .collect())
-}
-
 // ---------- snippets ----------
 
 async fn load_snippets(
@@ -1287,13 +1204,12 @@ fn compute_data_status(
 
 fn compute_query_status(
     q: Option<&str>,
-    memories: &[ActivityMemory],
     snippets: &[ActivitySnippet],
 ) -> String {
     if q.is_none() {
         return "not_requested".to_string();
     }
-    if memories.is_empty() && snippets.is_empty() {
+    if snippets.is_empty() {
         return "no_query_matches".to_string();
     }
     "matched".to_string()
@@ -1306,9 +1222,6 @@ fn build_guidance(
     recording: Option<&RecordingStatus>,
 ) -> ActivityGuidance {
     let mut searched_endpoints = vec!["/activity-summary".to_string()];
-    if query.include_memories {
-        searched_endpoints.push("/memories".to_string());
-    }
     if query.include_snippets {
         searched_endpoints.push("bounded screen/audio snippets".to_string());
     }
@@ -1332,7 +1245,7 @@ fn next_best_query(
 ) -> Option<String> {
     if query_status == "no_query_matches" {
         return Some(
-            "no memories or snippets matched q. retry /activity-summary without q, then use /search only for verbatim matches.".to_string(),
+            "no snippets matched q. retry /activity-summary without q, then use /search only for verbatim matches.".to_string(),
         );
     }
 
@@ -1444,17 +1357,6 @@ mod tests {
             window_name: None,
             speaker: None,
             timestamp: ts.to_string(),
-        }
-    }
-
-    fn memory(content: &str) -> ActivityMemory {
-        ActivityMemory {
-            id: 1,
-            content: content.to_string(),
-            source: "test".to_string(),
-            tags: vec![],
-            importance: 0.5,
-            created_at: "2026-05-20T00:00:00Z".to_string(),
         }
     }
 
@@ -1704,21 +1606,15 @@ mod tests {
 
     #[test]
     fn query_status_not_requested_when_no_q() {
-        let s = compute_query_status(None, &[], &[]);
+        let s = compute_query_status(None, &[]);
         assert_eq!(s, "not_requested");
     }
 
-    #[test]
-    fn query_status_matched_with_memory() {
-        let s = compute_query_status(Some("foo"), &[memory("foo")], &[]);
-        assert_eq!(s, "matched");
-    }
 
     #[test]
     fn query_status_matched_with_snippet() {
         let s = compute_query_status(
             Some("foo"),
-            &[],
             &[snippet("Long enough text matching foo here", "t1")],
         );
         assert_eq!(s, "matched");
@@ -1726,7 +1622,7 @@ mod tests {
 
     #[test]
     fn query_status_no_matches_when_q_set_empty() {
-        let s = compute_query_status(Some("foo"), &[], &[]);
+        let s = compute_query_status(Some("foo"), &[]);
         assert_eq!(s, "no_query_matches");
     }
 
@@ -1742,13 +1638,11 @@ mod tests {
             include_windows: true,
             include_key_texts: true,
             include_recording: true,
-            include_memories: true,
             include_snippets: true,
             include_guidance: true,
             include_parsed_count: false,
             max_snippets: 8,
             max_snippet_chars: 500,
-            max_memories: 5,
         }
     }
 
@@ -1867,13 +1761,11 @@ mod tests {
         assert!(g
             .searched_endpoints
             .contains(&"/activity-summary".to_string()));
-        assert!(g.searched_endpoints.contains(&"/memories".to_string()));
     }
 
     #[test]
     fn guidance_omits_disabled_endpoints() {
         let mut q = default_query();
-        q.include_memories = false;
         q.include_snippets = false;
         q.include_recording = false;
         let g = build_guidance("ok", "not_requested", &q, None);
@@ -1980,13 +1872,11 @@ mod db_tests {
             include_windows: true,
             include_key_texts: true,
             include_recording: true,
-            include_memories: false,
             include_snippets: false,
             include_guidance: false,
             include_parsed_count: false,
             max_snippets: 8,
             max_snippet_chars: 500,
-            max_memories: 5,
         }
     }
 
@@ -2654,42 +2544,6 @@ mod db_tests {
     }
 
     #[tokio::test]
-    async fn memories_respect_activity_summary_time_range() {
-        let (db, _d) = fresh_db().await;
-        for (content, created_at) in [
-            (
-                "old important memory outside requested week",
-                "2026-05-01T10:00:00Z",
-            ),
-            (
-                "in-range weekly memory that belongs in the summary",
-                "2026-06-03T10:00:00Z",
-            ),
-        ] {
-            db.execute_raw_sql_write(&format!(
-                "INSERT INTO memories (content, source, tags, importance, created_at, updated_at) \
-                 VALUES ('{}', 'test', '[]', 0.9, '{created_at}', '{created_at}')",
-                content.replace('\'', "''")
-            ))
-            .await
-            .unwrap();
-        }
-
-        let memories = load_memories(
-            &db,
-            None,
-            10,
-            "2026-06-01T00:00:00Z",
-            "2026-06-08T00:00:00Z",
-        )
-        .await
-        .expect("load memories");
-
-        assert_eq!(memories.len(), 1);
-        assert!(memories[0].content.contains("in-range weekly memory"));
-    }
-
-    #[tokio::test]
     async fn recording_status_counts_frames() {
         let (db, _d) = fresh_db().await;
         for ts in ["10:00:00", "10:00:20", "10:00:40"] {
@@ -2931,7 +2785,7 @@ mod db_tests {
 mod include_flag_tests {
     //! Unit tests for the lean-mode `include_apps` / `include_windows` /
     //! `include_key_texts` toggles. These gate the heavy always-on fields the
-    //! same way the existing `include_recording/memories/snippets/guidance`
+    //! same way the existing `include_recording/snippets/guidance`
     //! flags gate their fields: when false the field is set to `None` and the
     //! `skip_serializing_if = "Option::is_none"` attribute drops it from the
     //! serialized JSON entirely. We test the response serialization (not the
@@ -2989,7 +2843,6 @@ mod include_flag_tests {
             data_status: "ok".to_string(),
             query_status: "not_requested".to_string(),
             recording: None,
-            memories: None,
             snippets: None,
             guidance: None,
         }

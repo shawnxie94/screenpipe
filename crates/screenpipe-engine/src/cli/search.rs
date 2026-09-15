@@ -86,7 +86,6 @@ pub async fn handle_search_command(args: &SearchArgs) -> anyhow::Result<()> {
                 .app_name
                 .as_ref()
                 .is_none_or(|app| !is_screenpipe_app(app)),
-            SearchResult::Memory(_) => true,
         })
         .map(|r| search_result_to_content_item(r, args.max_content_length))
         .collect();
@@ -109,9 +108,8 @@ fn parse_content_type(s: &str) -> Result<ContentType, String> {
         "audio" => Ok(ContentType::Audio),
         "accessibility" | "a11y" => Ok(ContentType::Accessibility),
         "input" => Ok(ContentType::Input),
-        "memory" => Ok(ContentType::Memory),
         other => Err(format!(
-            "unknown content type '{}' — expected one of: all, ocr, audio, accessibility, input, memory",
+            "unknown content type '{}' — expected one of: all, ocr, audio, accessibility, input",
             other
         )),
     }
@@ -179,15 +177,6 @@ fn print_text(items: &[ContentItem]) {
                     app,
                     c.event_type,
                     one_line(&text)
-                );
-            }
-            ContentItem::Memory(c) => {
-                println!(
-                    "[{}] memory · {} · importance {:.1}\n  {}",
-                    c.created_at,
-                    c.source,
-                    c.importance,
-                    one_line(&c.content)
                 );
             }
             ContentItem::Parsed(c) => {

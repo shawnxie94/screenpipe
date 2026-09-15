@@ -63,11 +63,9 @@ impl DatabaseManager {
     /// items carrying ALL of the given `tags`. An empty `tags` slice behaves
     /// exactly like `search`.
     ///
-    /// Tags span three stores under one string namespace: the
-    /// `vision_tags` / `audio_tags` junction tables (screen + audio) and the
-    /// `memories.tags` JSON array (content_type=memory). Content types with no
-    /// tags (input, accessibility) return nothing when a tag filter is active
-    /// rather than ignoring it.
+    /// Tags span the `vision_tags` / `audio_tags` junction tables (screen +
+    /// audio). Content types with no tag table (input, accessibility) return
+    /// nothing when a tag filter is active rather than ignoring it.
     #[allow(clippy::too_many_arguments)]
     pub async fn search_with_tags(
         &self,
@@ -267,7 +265,7 @@ impl DatabaseManager {
 
         // Input events and accessibility-only hits have no tag table, so a
         // tag filter can never match them — short-circuit to empty. Screen
-        // (OCR), audio, and memories all carry tags and are filtered below.
+        // (OCR) and audio carry tags and are filtered below.
         if !tags.is_empty()
             && matches!(
                 content_type,
@@ -528,29 +526,6 @@ impl DatabaseManager {
                     .await?;
                 results.extend(input_results.into_iter().map(SearchResult::Input));
             }
-            ContentType::Memory => {
-                let start_str = start_time.map(|t| t.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string());
-                let end_str = end_time.map(|t| t.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string());
-                let memory_results = self
-                    .list_memories_for_search(
-                        Some(query).filter(|q| !q.is_empty()),
-                        None,
-                        None,
-                        None,
-                        start_str.as_deref(),
-                        end_str.as_deref(),
-                        limit,
-                        offset,
-                        Some("created_at"),
-                        Some(match order {
-                            Order::Ascending => "asc",
-                            Order::Descending => "desc",
-                        }),
-                        tags,
-                    )
-                    .await?;
-                results.extend(memory_results.into_iter().map(SearchResult::Memory));
-            }
         }
 
         // Keep merged content types consistent with the database page order.
@@ -560,18 +535,12 @@ impl DatabaseManager {
                 SearchResult::Audio(audio) => audio.timestamp,
                 SearchResult::UI(ui) => ui.timestamp,
                 SearchResult::Input(input) => input.timestamp,
-                SearchResult::Memory(m) => {
-                    m.created_at.parse::<DateTime<Utc>>().unwrap_or_default()
-                }
             };
             let timestamp_b = match b {
                 SearchResult::OCR(ocr) => ocr.timestamp,
                 SearchResult::Audio(audio) => audio.timestamp,
                 SearchResult::UI(ui) => ui.timestamp,
                 SearchResult::Input(input) => input.timestamp,
-                SearchResult::Memory(m) => {
-                    m.created_at.parse::<DateTime<Utc>>().unwrap_or_default()
-                }
             };
             match order {
                 Order::Ascending => timestamp_a.cmp(&timestamp_b),
@@ -2203,22 +2172,6 @@ impl DatabaseManager {
                     "audio_transcriptions_fts MATCH ?1"
                 }
             ),
-            ContentType::Memory => {
-                let start_str = start_time.map(|t| t.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string());
-                let end_str = end_time.map(|t| t.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string());
-                let count = self
-                    .count_memories_for_search(
-                        Some(query).filter(|q| !q.is_empty()),
-                        None,
-                        None,
-                        None,
-                        start_str.as_deref(),
-                        end_str.as_deref(),
-                        tags,
-                    )
-                    .await?;
-                return Ok(count as usize);
-            }
             ContentType::Input => {
                 // Count ui_events using parameterized LIKE queries
                 let mut conditions = Vec::new();
@@ -2368,10 +2321,8 @@ impl DatabaseManager {
     }
 
     /// Tags that co-occur with ALL of the given `tags`, most-frequent first,
-    /// excluding the input tags themselves. Spans the same three stores as the
-    /// tag filter on [`search_with_tags`](Self::search_with_tags): the screen
-    /// (`vision_tags`) and audio (`audio_tags`) junction tables plus the
-    /// `memories.tags` JSON array.
+    /// excluding the input tags themselves. Spans the screen (`vision_tags`)
+    /// and audio (`audio_tags`) junction tables.
     ///
     /// Powers `GET /search?...&include_related=true`: one query surfaces the
     /// people / projects / workflows that appear alongside a tag so an AI
@@ -2379,16 +2330,6 @@ impl DatabaseManager {
     /// Returns each co-occurring tag's full namespaced name and its count.
     /// An empty `tags` slice returns an empty vec; duplicate inputs are folded
     /// (the `DISTINCT` in the `input` CTE) so they match like a single tag.
-    ///
-    /// Cost: the vision/audio legs ride the tag indexes (`idx_*_tags_tag_id` +
-    /// `tags.name`), but the memories leg full-scans + `json_each` because
-    /// `memories.tags` is an unindexed JSON column — the same linear cost the
-    /// tag *filter* already pays (see `tests/tag_filter_bench.rs`). Measured on
-    /// a 200k-frame / 250k-vision_tag / 50k-memory in-memory DB: ~21 ms for a
-    /// realistic tag, ~150 ms worst-case for a hot tag on 50k items with wide
-    /// fan-out. The HTTP handler bounds it with a timeout and treats it as
-    /// optional. If memory counts ever reach millions, give them a
-    /// `memory_tags` junction table mirroring `vision_tags`.
     pub async fn related_tags(
         &self,
         tags: &[String],
@@ -2401,10 +2342,6 @@ impl DatabaseManager {
         // Same JSON-array binding trick as the tag filter: pass the tags as a
         // JSON array and expand with `json_each`. `n.c` is the input cardinality
         // so the `HAVING` clauses keep only items carrying ALL requested tags.
-        // The `memories.tags` reads wrap the column in `CASE WHEN json_valid`
-        // because a single legacy/sync row that isn't valid JSON would
-        // otherwise make `json_each` raise "malformed JSON" and 500 the whole
-        // query (same guard as `list_memory_tags`).
         let tags_json = serde_json::to_string(tags).unwrap_or_else(|_| "[]".to_string());
 
         let mut connection = self.acquire_search_read().await?;
@@ -2426,15 +2363,6 @@ impl DatabaseManager {
                      GROUP BY aud.audio_chunk_id
                      HAVING COUNT(DISTINCT t.name) = (SELECT c FROM n)
                  ),
-                 memory_matches(id) AS (
-                     SELECT m.id
-                     FROM memories m
-                     WHERE (
-                         SELECT COUNT(DISTINCT j.value)
-                         FROM json_each(CASE WHEN json_valid(m.tags) THEN m.tags ELSE '[]' END) j
-                         WHERE j.value IN (SELECT name FROM input)
-                     ) = (SELECT c FROM n)
-                 ),
                  co(name) AS (
                      SELECT t.name
                      FROM vision_tags vt JOIN tags t ON vt.tag_id = t.id
@@ -2443,11 +2371,6 @@ impl DatabaseManager {
                      SELECT t.name
                      FROM audio_tags aud JOIN tags t ON aud.tag_id = t.id
                      WHERE aud.audio_chunk_id IN (SELECT id FROM audio_matches)
-                     UNION ALL
-                     SELECT j.value
-                     FROM memories m,
-                          json_each(CASE WHEN json_valid(m.tags) THEN m.tags ELSE '[]' END) j
-                     WHERE m.id IN (SELECT id FROM memory_matches)
                  )
             SELECT name, COUNT(*) AS count
             FROM co

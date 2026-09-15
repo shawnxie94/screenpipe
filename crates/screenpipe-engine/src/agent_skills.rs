@@ -237,7 +237,7 @@ impl AgentSkillStore {
         validate_skill_fields(&current.name, next_description, instructions)?;
         let document = render_skill(&current.name, next_description, instructions);
         let next_sha256 = sha256_hex(document.as_bytes());
-        screenpipe_core::memories::external_sync::write_atomic_full(
+        screenpipe_core::atomic_io::write_atomic_full(
             &self.root.join(&key).join("SKILL.md"),
             &document,
         )?;
@@ -460,7 +460,7 @@ fn write_manifest(root: &Path, manifest: &AgentSkillManifest) -> Result<(), Agen
     let json = serde_json::to_string_pretty(manifest).map_err(|error| {
         AgentSkillError::Internal(format!("could not serialize skill manifest: {error}"))
     })?;
-    screenpipe_core::memories::external_sync::write_atomic_full(&root.join(MANIFEST_FILE), &json)?;
+    screenpipe_core::atomic_io::write_atomic_full(&root.join(MANIFEST_FILE), &json)?;
     Ok(())
 }
 

@@ -497,143 +497,9 @@ mod tests {
         assert_eq!(total, 2);
     }
 
-    /// Memories filter by their JSON tags through the same interface
-    /// (`content_type=memory`): exact AND match, never substring, composes
-    /// with FTS, and `content_type=all` still never returns memories.
-    #[tokio::test]
-    async fn test_memory_filter_by_tags() {
-        let db = setup_test_db().await;
-
-        let m1 = db
-            .insert_memory(
-                "ada planning fact",
-                "user",
-                None,
-                Some(r#"["person:ada","project:atlas"]"#),
-                0.5,
-                None,
-            )
-            .await
-            .unwrap();
-        let _m2 = db
-            .insert_memory(
-                "atlas only fact",
-                "user",
-                None,
-                Some(r#"["project:atlas"]"#),
-                0.5,
-                None,
-            )
-            .await
-            .unwrap();
-        let _m3 = db
-            .insert_memory(
-                "adam fact",
-                "user",
-                None,
-                Some(r#"["person:adam"]"#),
-                0.5,
-                None,
-            )
-            .await
-            .unwrap();
-
-        // Single tag, exact: person:ada must not match person:adam.
-        let ada = search_ct(&db, ContentType::Memory, &["person:ada".to_string()]).await;
-        assert_eq!(ada.len(), 1);
-        assert!(matches!(&ada[0], SearchResult::Memory(m) if m.id == m1));
-
-        // Shared tag → both memories carrying it.
-        assert_eq!(
-            search_ct(&db, ContentType::Memory, &["project:atlas".to_string()])
-                .await
-                .len(),
-            2
-        );
-
-        // AND semantics across multiple tags.
-        assert_eq!(
-            search_ct(
-                &db,
-                ContentType::Memory,
-                &["person:ada".to_string(), "project:atlas".to_string()],
-            )
-            .await
-            .len(),
-            1
-        );
-
-        // Exact, not substring: project:atl matches nothing.
-        assert_eq!(
-            search_ct(&db, ContentType::Memory, &["project:atl".to_string()])
-                .await
-                .len(),
-            0
-        );
-
-        // No filter → all three.
-        assert_eq!(search_ct(&db, ContentType::Memory, &[]).await.len(), 3);
-
-        // Tags compose with full-text search on memory content.
-        let combined = db
-            .search_with_tags(
-                "planning",
-                ContentType::Memory,
-                100,
-                0,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                &["project:atlas".to_string()],
-            )
-            .await
-            .unwrap();
-        assert_eq!(combined.len(), 1);
-        assert!(matches!(&combined[0], SearchResult::Memory(m) if m.id == m1));
-
-        // content_type=all never includes memories, tagged or not.
-        let all = search_ct(&db, ContentType::All, &["person:ada".to_string()]).await;
-        assert!(all.iter().all(|r| !matches!(r, SearchResult::Memory(_))));
-
-        // Count agrees with the memory result set.
-        let n = db
-            .count_search_results_with_tags(
-                "",
-                ContentType::Memory,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                &["project:atlas".to_string()],
-            )
-            .await
-            .unwrap();
-        assert_eq!(n, 2);
-    }
-
     /// `related_tags` returns the tags that co-occur with the requested ones,
-    /// counted across all three stores (vision frames, audio chunks, memory
-    /// JSON), most-frequent first, with the inputs themselves excluded and
-    /// AND-semantics on multiple inputs.
+    /// counted across the vision and audio stores, most-frequent first, with
+    /// the inputs themselves excluded and AND-semantics on multiple inputs.
     #[tokio::test]
     async fn test_related_tags_co_occurrence() {
         let db = setup_test_db().await;
@@ -692,18 +558,6 @@ mod tests {
         .await
         .unwrap();
 
-        // Memory carrying person:ada alongside a different person.
-        db.insert_memory(
-            "ada + drew planning",
-            "user",
-            None,
-            Some(r#"["person:ada","person:drew"]"#),
-            0.5,
-            None,
-        )
-        .await
-        .unwrap();
-
         // Single input tag: project:atlas co-occurs 3× (f_a, f_b, ac); the
         // three singletons tie and break by name ascending. person:ada (input)
         // and person:bob (unrelated frame) must be absent.
@@ -713,12 +567,11 @@ mod tests {
             .unwrap();
         let counts: std::collections::HashMap<&str, i64> =
             related.iter().map(|(n, c)| (n.as_str(), *c)).collect();
-        assert_eq!(related.len(), 4, "got {related:?}");
+        assert_eq!(related.len(), 3, "got {related:?}");
         assert_eq!(related[0], ("project:atlas".to_string(), 3));
         assert_eq!(counts.get("project:atlas"), Some(&3));
         assert_eq!(counts.get("workflow:planning"), Some(&1));
         assert_eq!(counts.get("person:connor"), Some(&1));
-        assert_eq!(counts.get("person:drew"), Some(&1));
         assert!(!counts.contains_key("person:ada"), "input tag leaked");
         assert!(!counts.contains_key("person:bob"), "unrelated tag leaked");
 
@@ -730,8 +583,8 @@ mod tests {
         assert_eq!(top1, vec![("project:atlas".to_string(), 3)]);
 
         // Multiple inputs → AND: only items carrying BOTH person:ada AND
-        // project:atlas (f_a, f_b, ac — not the memory, which lacks the
-        // project). Co-occurring extras: workflow:planning and person:connor.
+        // project:atlas (f_a, f_b, ac). Co-occurring extras: workflow:planning
+        // and person:connor.
         let both = db
             .related_tags(&["person:ada".to_string(), "project:atlas".to_string()], 50)
             .await
@@ -748,9 +601,9 @@ mod tests {
         assert!(db.related_tags(&[], 50).await.unwrap().is_empty());
     }
 
-    /// Adversarial inputs for `related_tags`: malformed memory JSON, colon-rich
-    /// tag values, duplicate inputs, store isolation, limit edges, unicode, and
-    /// quote/`%`/`_` injection-shaped strings. None may error or leak.
+    /// Adversarial inputs for `related_tags`: colon-rich tag values, duplicate
+    /// inputs, store isolation, limit edges, and unicode. None may error or
+    /// leak.
     #[tokio::test]
     async fn test_related_tags_edge_cases() {
         let db = setup_test_db().await;
@@ -775,37 +628,6 @@ mod tests {
         .await
         .unwrap();
 
-        // A memory carrying the anchor + a SQL-injection-shaped value. Bound as
-        // a JSON param, so it's inert; it must come back as data, not break out.
-        db.insert_memory(
-            "weird tags",
-            "user",
-            None,
-            Some(r#"["person:ada","weird:a' OR 1=1 --","like:50%_x"]"#),
-            0.5,
-            None,
-        )
-        .await
-        .unwrap();
-
-        // A memory whose `tags` column is NOT valid JSON. The `json_valid`
-        // guard must skip it instead of letting `json_each` raise and 500.
-        db.insert_memory("legacy", "user", None, Some("not valid json"), 0.5, None)
-            .await
-            .unwrap();
-        // ...and one carrying the anchor twice (deliberately) — the value must
-        // still be counted once per memory, not double.
-        db.insert_memory(
-            "dupe-in-row",
-            "user",
-            None,
-            Some(r#"["person:ada","person:ada","only:here"]"#),
-            0.5,
-            None,
-        )
-        .await
-        .unwrap();
-
         let related = db
             .related_tags(&["person:ada".to_string()], 50)
             .await
@@ -815,10 +637,6 @@ mod tests {
         // Colon-rich and unicode values survive intact.
         assert!(names.contains("url:https://example.com:8080/x"));
         assert!(names.contains("emoji:🦀"));
-        // Injection-shaped strings come back as plain data.
-        assert!(names.contains("weird:a' OR 1=1 --"));
-        assert!(names.contains("like:50%_x"));
-        assert!(names.contains("only:here"));
         // The anchor itself is never echoed back.
         assert!(!names.contains("person:ada"));
 

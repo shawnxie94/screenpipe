@@ -11,7 +11,7 @@ use oasgen::{oasgen, OaSchema};
 
 use chrono::{DateTime, Utc};
 use screenpipe_audio::core::device::DeviceType;
-use screenpipe_db::{Speaker, TagAutocompleteItem, TagContentType};
+use screenpipe_db::{Speaker, TagContentType};
 
 use image::ImageFormat;
 use serde::{Deserialize, Serialize};
@@ -38,8 +38,6 @@ pub enum ContentItem {
     UI(UiContent),
     /// User input actions (clicks, keystrokes, clipboard)
     Input(InputContent),
-    /// Persistent memory: fact, preference, decision, insight
-    Memory(MemoryContent),
     /// App-specific records parsed from a captured accessibility frame.
     Parsed(ParsedContent),
 }
@@ -94,29 +92,6 @@ pub struct ParsedActorReference {
     pub name: String,
     pub observed_name: String,
     pub assignment_source: String,
-}
-
-#[derive(OaSchema, Serialize, Deserialize, Debug, Clone)]
-pub struct MemoryContent {
-    pub id: i64,
-    pub content: String,
-    pub source: String,
-    pub source_context: Option<serde_json::Value>,
-    pub tags: Vec<String>,
-    pub importance: f64,
-    /// First frame of the workflow segment this memory describes, when known.
-    /// Lets a caller jump straight from a memory to the exact captured moment
-    /// (`GET /frames/{frame_id}`). Null for memories with no frame provenance.
-    pub frame_id: Option<i64>,
-    pub created_at: String,
-    pub updated_at: String,
-}
-
-#[derive(OaSchema, Serialize, Deserialize, Debug)]
-pub(crate) struct TagAutocompleteRequest {
-    pub q: Option<String>,
-    pub limit: Option<u32>,
-    pub offset: Option<u32>,
 }
 
 #[derive(OaSchema, Serialize, Deserialize, Debug, Clone)]
@@ -249,29 +224,6 @@ pub struct RemoveTagsRequest {
 #[derive(OaSchema, Serialize)]
 pub struct RemoveTagsResponse {
     success: bool,
-}
-
-#[oasgen]
-pub(crate) async fn autocomplete_tags(
-    State(state): State<Arc<AppState>>,
-    Query(request): Query<TagAutocompleteRequest>,
-) -> Result<JsonResponse<Vec<TagAutocompleteItem>>, (StatusCode, JsonResponse<Value>)> {
-    let limit = request.limit.unwrap_or(50).clamp(1, 100) as i64;
-    let offset = request.offset.unwrap_or(0) as i64;
-    let query = request.q.unwrap_or_default();
-
-    state
-        .db
-        .autocomplete_tags(&query, limit, offset)
-        .await
-        .map(JsonResponse)
-        .map_err(|e| {
-            error!("Failed to autocomplete tags: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(json!({"error": e.to_string()})),
-            )
-        })
 }
 
 #[oasgen]

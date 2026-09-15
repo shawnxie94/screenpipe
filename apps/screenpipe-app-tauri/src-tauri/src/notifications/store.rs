@@ -162,7 +162,7 @@ fn update_native_inbox(_entries: &[NotificationHistoryEntry], json: &str) {
 
 fn write_all_to(path: &Path, entries: &[NotificationHistoryEntry]) -> Result<String, String> {
     let json = serde_json::to_string(entries).map_err(|error| error.to_string())?;
-    screenpipe_core::memories::external_sync::write_atomic_full(path, &json)
+    screenpipe_core::atomic_io::write_atomic_full(path, &json)
         .map_err(|error| error.to_string())?;
     Ok(json)
 }

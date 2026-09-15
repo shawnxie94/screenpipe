@@ -71,7 +71,7 @@ use crate::server::AppState;
 use crate::video_utils::extract_frame;
 
 use super::content::{
-    AudioContent, ContentItem, InputContent, MemoryContent, OCRContent, PaginationInfo,
+    AudioContent, ContentItem, InputContent, OCRContent, PaginationInfo,
     ParsedActorReference, ParsedContent, ParsedItem, UiContent,
 };
 
@@ -85,7 +85,6 @@ pub(crate) enum SearchContentType {
     Audio,
     Input,
     Accessibility,
-    Memory,
     /// App-specific records parsed from accessibility frames.
     #[serde(alias = "semantic", alias = "Semantic", alias = "Parsed")]
     Parsed,
@@ -99,7 +98,6 @@ impl SearchContentType {
             Self::Audio => Some(ContentType::Audio),
             Self::Input => Some(ContentType::Input),
             Self::Accessibility => Some(ContentType::Accessibility),
-            Self::Memory => Some(ContentType::Memory),
             Self::Parsed => None,
         }
     }
@@ -111,7 +109,6 @@ impl SearchContentType {
             Self::Audio => Some("audio"),
             Self::Input => Some("input"),
             Self::Accessibility => Some("accessibility"),
-            Self::Memory => Some("memory"),
             Self::Parsed => Some("parsed"),
         }
     }
@@ -306,14 +303,6 @@ fn pipe_can_access_content_item(permissions: &PipePermissions, item: &ContentIte
             content.window_title.as_deref(),
             "input",
             Some(content.timestamp),
-        ),
-        ContentItem::Memory(content) => (
-            None,
-            None,
-            "memory",
-            DateTime::parse_from_rfc3339(&content.created_at)
-                .ok()
-                .map(|timestamp| timestamp.with_timezone(&Utc)),
         ),
         ContentItem::Parsed(content) => (
             Some(content.app_name.as_str()),
@@ -658,24 +647,6 @@ pub fn search_result_to_content_item(
             element_role: input.element.as_ref().and_then(|e| e.role.clone()),
             element_name: input.element.as_ref().and_then(|e| e.name.clone()),
             frame_id: input.frame_id,
-        }),
-        SearchResult::Memory(m) => ContentItem::Memory(MemoryContent {
-            id: m.id,
-            content: truncate(m.content.clone()),
-            source: m.source.clone(),
-            source_context: m
-                .source_context
-                .as_ref()
-                .and_then(|s| serde_json::from_str(s).ok()),
-            tags: m
-                .tags
-                .as_ref()
-                .and_then(|t| serde_json::from_str(t).ok())
-                .unwrap_or_default(),
-            importance: m.importance,
-            frame_id: m.frame_id,
-            created_at: m.created_at.clone(),
-            updated_at: m.updated_at.clone(),
         }),
     }
 }
@@ -1240,7 +1211,6 @@ pub(crate) async fn search(
                     .app_name
                     .as_ref()
                     .is_none_or(|app| !is_screenpipe_app(app)),
-                SearchResult::Memory(_) => true,
             })
             .map(|result| search_result_to_content_item(result, query.max_content_length))
             .collect(),
@@ -1281,7 +1251,6 @@ pub(crate) async fn search(
             Audio,
             Ui,
             Input,
-            Memory,
             ParsedText,
             ParsedItemTitle(usize),
             ParsedItemBody(usize),
@@ -1311,10 +1280,6 @@ pub(crate) async fn search(
                         targets.push((i, Field::Input));
                         texts.push(t.clone());
                     }
-                }
-                ContentItem::Memory(c) => {
-                    targets.push((i, Field::Memory));
-                    texts.push(c.content.clone());
                 }
                 ContentItem::Parsed(c) => {
                     targets.push((i, Field::ParsedText));
@@ -1370,7 +1335,6 @@ pub(crate) async fn search(
                 (Field::Audio, ContentItem::Audio(c)) => c.transcription = new_text,
                 (Field::Ui, ContentItem::UI(c)) => c.text = new_text,
                 (Field::Input, ContentItem::Input(c)) => c.text_content = Some(new_text),
-                (Field::Memory, ContentItem::Memory(c)) => c.content = new_text,
                 (Field::ParsedText, ContentItem::Parsed(c)) => c.text = new_text,
                 (Field::ParsedItemTitle(item), ContentItem::Parsed(c)) => {
                     c.items[item].title = Some(new_text)
@@ -1817,20 +1781,6 @@ mod tests {
         }
     }
 
-    fn test_memory(id: i64) -> MemoryContent {
-        MemoryContent {
-            id,
-            content: format!("memory {id}"),
-            source: "test".to_string(),
-            source_context: None,
-            tags: vec![],
-            importance: 0.0,
-            frame_id: None,
-            created_at: Utc::now().to_rfc3339(),
-            updated_at: Utc::now().to_rfc3339(),
-        }
-    }
-
     #[test]
     fn pipe_search_rejects_broad_and_denied_content_types() {
         let permissions = restricted_pipe_permissions(
@@ -2057,7 +2007,6 @@ mod tests {
     async fn include_frames_skips_failed_ocr_without_misaligning_interleaved_items() {
         let mut items = vec![
             ContentItem::OCR(test_ocr(1, "bad-frame.mp4")),
-            ContentItem::Memory(test_memory(10)),
             ContentItem::OCR(test_ocr(2, "good-frame.mp4")),
         ];
 
@@ -2075,10 +2024,6 @@ mod tests {
             other => panic!("expected first item to stay OCR, got {other:?}"),
         }
         match &items[1] {
-            ContentItem::Memory(memory) => assert_eq!(memory.id, 10),
-            other => panic!("expected interleaved item to stay Memory, got {other:?}"),
-        }
-        match &items[2] {
             ContentItem::OCR(ocr) => {
                 assert_eq!(ocr.frame.as_deref(), Some("encoded:good-frame.mp4"));
             }
@@ -2463,17 +2408,23 @@ mod tests {
 
     #[test]
     fn test_search_response_cache_guard_rejects_large_payloads() {
-        let memory_item = |content: String| {
-            ContentItem::Memory(MemoryContent {
-                id: 1,
-                content,
-                source: "test".to_string(),
-                source_context: None,
+        let simple_item = |content: String| {
+            ContentItem::OCR(OCRContent {
+                frame_id: 1,
+                text: content,
+                timestamp: "2026-06-30T00:00:00Z".parse().unwrap(),
+                file_path: "/tmp/f.png".to_string(),
+                offset_index: 0,
+                app_name: "TestApp".to_string(),
+                window_name: String::new(),
                 tags: vec![],
-                importance: 0.0,
-                frame_id: None,
-                created_at: "2026-06-30T00:00:00Z".to_string(),
-                updated_at: "2026-06-30T00:00:00Z".to_string(),
+                frame: None,
+                frame_name: None,
+                browser_url: None,
+                focused: None,
+                device_name: "test".to_string(),
+                text_source: Some("accessibility".to_string()),
+                event_source: None,
             })
         };
         let response = |data| SearchResponse {
@@ -2486,20 +2437,20 @@ mod tests {
             related: None,
         };
 
-        let small_response = response(vec![memory_item("small".to_string())]);
+        let small_response = response(vec![simple_item("small".to_string())]);
         let cache_entry =
             build_search_cache_entry(&small_response).expect("small response should be cacheable");
         let decoded: SearchResponse = serde_json::from_slice(&cache_entry.json_body).unwrap();
         assert_eq!(decoded.data.len(), 1);
         assert_eq!(cache_entry.weight() as usize, cache_entry.json_body.len());
 
-        assert!(build_search_cache_entry(&response(vec![memory_item(
+        assert!(build_search_cache_entry(&response(vec![simple_item(
             "x".repeat(SEARCH_CACHE_MAX_RESPONSE_BYTES + 1)
         )]))
         .is_none());
 
         assert!(build_search_cache_entry(&response(vec![
-            memory_item("small".to_string());
+            simple_item("small".to_string());
             SEARCH_CACHE_MAX_ITEMS + 1
         ]))
         .is_none());

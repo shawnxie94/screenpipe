@@ -22,12 +22,7 @@
 //!   OCR  tags=person:ada                    ~7 ms   (17x faster than baseline)
 //!   Audio tags=person:ada                   ~1 ms
 //!   All  tags=person:ada                    ~8 ms
-//!   Memory tags=person:ada                  ~16 ms
-//!   counts (OCR/All/Memory)                 ~7-12 ms
-//! Memory is the one linear path: memories.tags is JSON with no index, so the
-//! filter is a full scan + correlated json_each (~0.3 us/row, ~16 ms @ 50k,
-//! so ~160 ms @ 500k). Fine at realistic memory counts; if memories ever reach
-//! millions, add a memory_tags junction table mirroring vision_tags.
+//!   counts (OCR/All)                        ~7-12 ms
 
 use std::time::Instant;
 
@@ -216,15 +211,6 @@ async fn bench_tag_filter_scaling() {
          ORDER BY frames.timestamp DESC LIMIT 20",
     )
     .await;
-    explain(
-        &db,
-        "memory tag filter (correlated json_each over memories.tags)",
-        "SELECT id FROM memories WHERE (json_array_length(?1)=0 OR \
-           (SELECT COUNT(DISTINCT je.value) FROM json_each(memories.tags) je \
-            WHERE je.value IN (SELECT value FROM json_each(?1)))=json_array_length(?1)) \
-         ORDER BY created_at DESC LIMIT 20",
-    )
-    .await;
 
     // ---- timings (best of 3, after a warm-up) ----
     let ada = vec!["person:ada".to_string()];
@@ -296,13 +282,11 @@ async fn bench_tag_filter_scaling() {
     runs("OCR  tags=person:ada", ContentType::OCR, ada.clone()).await;
     runs("Audio tags=person:ada", ContentType::Audio, ada.clone()).await;
     runs("All  tags=person:ada", ContentType::All, ada.clone()).await;
-    runs("Memory tags=person:ada", ContentType::Memory, ada.clone()).await;
 
     // counts (used for pagination total; must also be index-bound)
     for (label, ct) in [
         ("OCR", ContentType::OCR),
         ("All", ContentType::All),
-        ("Memory", ContentType::Memory),
     ] {
         let t = Instant::now();
         let total = db
@@ -329,11 +313,9 @@ async fn bench_tag_filter_scaling() {
 /// counted". Two cost drivers to pin down:
 ///   1. a HOT input tag — on many items, each carrying many other tags — makes
 ///      the `co` CTE materialize (items × tags-per-item) rows before GROUP BY.
-///   2. memories have no tag index, so the memory leg full-scans + json_each
-///      (same linear cost the tag-filter bench already documents).
 /// This seed maximizes (1): `person:hot` is on 50k frames that EACH carry 4
-/// extra co-tags (so 50k×5 = 250k rows feed the aggregation) plus a 50k-memory
-/// store for (2). `person:cold` (200 items) is the realistic case.
+/// extra co-tags (so 50k×5 = 250k rows feed the aggregation).
+/// `person:cold` (200 items) is the realistic case.
 #[tokio::test]
 #[ignore]
 async fn bench_related_tags_scaling() {
@@ -341,8 +323,6 @@ async fn bench_related_tags_scaling() {
     const HOT_FRAMES: i64 = 50_000; // person:hot is on the first 50k frames
     const CO_POOL: i64 = 50; // each hot frame carries 4 of these → wide fan-out
     const COLD_FRAMES: i64 = 200; // realistic tag
-    const N_MEM_R: i64 = 50_000;
-    const HOT_MEM: i64 = 50_000; // every memory carries person:hot + a co tag
 
     let db = migrated_db().await;
     let seed = Instant::now();
@@ -434,34 +414,16 @@ async fn bench_related_tags_scaling() {
     )
     .await;
 
-    // Memories: every one carries person:hot + a rotating co:N (full-scan leg).
-    exec(
-        &db,
-        &format!(
-            "INSERT INTO memories (content, tags, importance) \
-             WITH RECURSIVE s(i) AS (SELECT 0 UNION ALL SELECT i+1 FROM s WHERE i<{n}-1) \
-             SELECT 'mem '||i, \
-               CASE WHEN i<{k} THEN '[\"person:hot\",\"co:'||(i%{pool})||'\"]' ELSE '[\"noise:'||(i%500)||'\"]' END, \
-               0.5 FROM s",
-            n = N_MEM_R,
-            k = HOT_MEM,
-            pool = CO_POOL
-        ),
-    )
-    .await;
 
-    let counts: (i64, i64, i64) = sqlx::query_as(
-        "SELECT (SELECT COUNT(*) FROM frames), (SELECT COUNT(*) FROM vision_tags), (SELECT COUNT(*) FROM memories)",
+    let counts: (i64, i64) = sqlx::query_as(
+        "SELECT (SELECT COUNT(*) FROM frames), (SELECT COUNT(*) FROM vision_tags)",
     )
     .fetch_one(&db.pool)
     .await
     .unwrap();
     println!(
-        "seeded in {:?}: frames={} vision_tags={} memories={}",
-        seed.elapsed(),
-        counts.0,
-        counts.1,
-        counts.2
+        "seeded in {:?}: frames={} vision_tags={}",
+        seed.elapsed(), counts.0, counts.1
     );
 
     // ---- query plan: confirm the vision/audio legs ride the tag indexes and

@@ -878,7 +878,6 @@ async fn preflight_activity(
             ("start_time", start.to_rfc3339()),
             ("end_time", end.to_rfc3339()),
             ("include_key_texts", "false".to_string()),
-            ("include_memories", "false".to_string()),
             ("include_snippets", "false".to_string()),
             ("include_recording", "false".to_string()),
             ("include_guidance", "false".to_string()),

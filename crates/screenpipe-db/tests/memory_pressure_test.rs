@@ -272,7 +272,6 @@ async fn run_read_pressure_round(db: &DatabaseManager, frame_ids: &[i64], meetin
         ContentType::Audio,
         ContentType::Input,
         ContentType::Accessibility,
-        ContentType::Memory,
     ] {
         let _ = db
             .search(

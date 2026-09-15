@@ -87,7 +87,6 @@ async fn fetch_snapshot(app: &AppHandle, started_at: DateTime<Utc>) -> Result<Va
         .append_pair("include_windows", "true")
         .append_pair("include_key_texts", "false")
         .append_pair("include_recording", "false")
-        .append_pair("include_memories", "false")
         .append_pair("include_parsed_count", "true")
         .append_pair("include_snippets", "true")
         .append_pair("include_guidance", "false")
@@ -253,7 +252,7 @@ fn save_chat(summary: &str) -> Result<String, String> {
     let directory = screenpipe_core::paths::default_screenpipe_data_dir().join("chats");
     std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
     let path = directory.join(format!("{id}.json"));
-    screenpipe_core::memories::external_sync::write_atomic_full(
+    screenpipe_core::atomic_io::write_atomic_full(
         &path,
         &serde_json::to_string_pretty(&conversation).map_err(|error| error.to_string())?,
     )

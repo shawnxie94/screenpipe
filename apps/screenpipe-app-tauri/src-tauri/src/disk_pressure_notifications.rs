@@ -111,7 +111,7 @@ impl DiskPressureNotificationState {
             data_dir: Some(data_dir.clone()),
         };
         let raw = serde_json::to_string(&persisted).map_err(|error| error.to_string())?;
-        let write_result = screenpipe_core::memories::external_sync::write_atomic_full(
+        let write_result = screenpipe_core::atomic_io::write_atomic_full(
             &self.path, &raw,
         )
         .map_err(|error| error.to_string());

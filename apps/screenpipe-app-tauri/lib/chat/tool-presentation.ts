@@ -197,17 +197,6 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
 
   if (path === "/activity-summary") return { label: "活动摘要" };
 
-  if (path === "/memories") {
-    if (method === "POST") return { label: "保存了记忆" };
-    return { label: "列出了记忆" };
-  }
-  const memMatch = path.match(/^\/memories\/(\w+)$/);
-  if (memMatch) {
-    const id = memMatch[1];
-    if (method === "PATCH" || method === "PUT") return { label: `更新了记忆 #${id}` };
-    if (method === "DELETE") return { label: `删除了记忆 #${id}` };
-    return { label: `获取了记忆 #${id}` };
-  }
 
   if (path === "/meetings") return { label: "列出了会议" };
   const meetingMatch = path.match(/^\/meetings\/(\w+)$/);
@@ -361,7 +350,6 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
 }
 
 export function endpointFamily(path: string): string {
-  if (path === "/memories" || path.startsWith("/memories/")) return "记忆";
   if (path === "/search") return "屏幕搜索";
   if (path === "/activity-summary") return "活动";
   if (path === "/raw_sql") return "数据库";
@@ -418,8 +406,7 @@ export function summarizeToolResult(result: string | undefined, family: string):
     if (typeof json?.error === "string") return trunc(json.error, 120);
   }
 
-  const noun = family === "/memories" ? "条记忆"
-    : family === "/search" ? "条结果"
+  const noun = family === "/search" ? "条结果"
     : family.startsWith("/meetings") ? "场会议"
     : family.startsWith("/connections") ? "项内容"
     : "项内容";
@@ -646,11 +633,6 @@ function curlActivity(command: string): ToolActivityPresentation | null {
   if (path === "/activity-summary" || path === "/search") {
     return activity("正在查看你的活动", "已查看你的活动", "screenpipe");
   }
-  if (path === "/memories" || path.startsWith("/memories/")) {
-    return method === "GET"
-      ? activity("正在查看记忆", "已查看记忆", "memory")
-      : activity("正在更新记忆", "已更新记忆", "memory");
-  }
   if (path === "/meetings" || path.startsWith("/meetings/")) {
     return method === "GET"
       ? activity("正在查看会议", "已查看会议", "meeting")
@@ -752,7 +734,6 @@ const MCP_SCREENPIPE_ENDPOINTS: Record<string, { path: string; method: string }>
   "search-speakers": { path: "/speakers/search", method: "GET" },
   "merge-speakers": { path: "/speakers/merge", method: "POST" },
   "update-speaker": { path: "/speakers", method: "PATCH" },
-  "update-memory": { path: "/memories", method: "POST" },
   "add-tags": { path: "/tags", method: "POST" },
   "health-check": { path: "/health", method: "GET" },
   "export-video": { path: "/export", method: "GET" },

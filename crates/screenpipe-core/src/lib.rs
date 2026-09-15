@@ -28,6 +28,7 @@
 //! SQLite-backed evidence store.
 
 pub mod agents;
+pub mod atomic_io;
 pub mod connections;
 pub mod display_topology;
 // Runtime CPU-feature detection lives in its own leaf crate so that
@@ -35,7 +36,6 @@ pub mod display_topology;
 // cycle via screenpipe-secrets). Re-exported here as the canonical path.
 pub use screenpipe_cpu_features as cpu_features;
 pub mod ffmpeg;
-pub mod memories;
 // Single source of truth for CREATE_NO_WINDOW. Spawning a console program from
 // the GUI-subsystem app flashes a terminal on Windows unless every call site
 // remembers the flag; route them through here instead.

@@ -137,8 +137,6 @@ pub enum SearchResult {
     UI(UiContent),
     /// User input actions (clicks, keystrokes, clipboard)
     Input(UiEventRecord),
-    /// Persistent memory
-    Memory(MemoryRecord),
 }
 
 #[derive(FromRow, Debug)]
@@ -204,7 +202,6 @@ pub struct OCRResult {
 /// - `audio` - Transcribed speech
 /// - `input` - User actions (clicks, keystrokes, clipboard)
 /// - `accessibility` - Accessibility tree text
-/// - `memory` - Persistent facts, preferences, decisions
 #[derive(OaSchema, Debug, Deserialize, PartialEq, Default, Clone)]
 #[serde(rename_all = "lowercase")]
 pub enum ContentType {
@@ -219,8 +216,6 @@ pub enum ContentType {
     Input,
     /// Accessibility tree text
     Accessibility,
-    /// Persistent memories: facts, preferences, decisions, insights
-    Memory,
 }
 
 #[derive(FromRow)]
@@ -273,7 +268,6 @@ pub struct TagAutocompleteItem {
     pub count: i64,
     pub frame_count: i64,
     pub audio_count: i64,
-    pub memory_count: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -365,20 +359,6 @@ pub struct AudioChunkProcessingSnapshot {
     pub oldest_pending: Option<DateTime<Utc>>,
 }
 
-/// A persistent memory: fact, preference, decision, or insight.
-#[derive(OaSchema, Debug, Serialize, Deserialize, FromRow, Clone)]
-pub struct MemoryRecord {
-    pub id: i64,
-    pub content: String,
-    pub source: String,
-    pub source_context: Option<String>,
-    pub tags: Option<String>,
-    pub importance: f64,
-    pub frame_id: Option<i64>,
-    pub created_at: String,
-    pub updated_at: String,
-}
-
 /// Human feedback attached to any AI-produced or user-visible object.
 ///
 /// `target_kind` is intentionally open (notification, chat, memory, block,
@@ -427,24 +407,6 @@ pub struct OutputRecord {
     pub saf_version: Option<i64>,
     pub created_at: String,
     pub updated_at: String,
-}
-
-/// A memory row + the columns the cross-device sync layer needs.
-/// Used only by [`DatabaseManager::list_memories_for_sync`] — the
-/// HTTP/UI surface keeps using [`MemoryRecord`] to avoid leaking
-/// sync state into the public API.
-#[derive(Debug, FromRow, Clone)]
-pub struct MemorySyncRow {
-    pub id: i64,
-    pub sync_uuid: Option<String>,
-    pub content: String,
-    pub source: String,
-    pub source_context: Option<String>,
-    pub tags: Option<String>,
-    pub importance: f64,
-    pub created_at: String,
-    pub updated_at: String,
-    pub sync_modified_by: Option<String>,
 }
 
 #[derive(OaSchema, Debug, Serialize, Deserialize, FromRow, Clone)]
@@ -1124,10 +1086,6 @@ mod tests {
         assert_eq!(
             ContentType::Accessibility,
             serde_json::from_str(r#""accessibility""#).unwrap()
-        );
-        assert_eq!(
-            ContentType::Memory,
-            serde_json::from_str(r#""memory""#).unwrap()
         );
     }
 

@@ -58,7 +58,6 @@ async fn fetch_activity_capsule(
             ("end_time", end.to_rfc3339_opts(SecondsFormat::Secs, true)),
             ("include_recording", "false".into()),
             ("include_key_texts", "false".into()),
-            ("include_memories", "true".into()),
             ("include_snippets", "true".into()),
             ("include_guidance", "true".into()),
             ("max_snippets", "12".into()),
@@ -184,7 +183,6 @@ mod tests {
             .and(path("/activity-summary"))
             .and(header("authorization", "Bearer local-key"))
             .and(query_param("include_recording", "false"))
-            .and(query_param("include_memories", "true"))
             .respond_with(ResponseTemplate::new(200).set_body_raw(
                 r#"{"apps":[{"name":"Code"}],"edited_files":[{"path":"/Users/me/private.rs"}]}"#,
                 "application/json",

@@ -32,7 +32,7 @@ export function buildDailySummaryAgentPrompt(
 - timezone_offset: ${format(date, "xxx")}
 - partial_day: ${isPartialDay ? "true" : "false"}
 
-查询前先读取 screenpipe-api skill。先使用上面的精确 start_time 和 end_time 调用 /activity-summary。以其中权威的 active-minute 总数和 data_status 为准；只有持久上下文能改善回顾时，才在同一边界内查询 /memories。
+查询前先读取 screenpipe-api skill。先使用上面的精确 start_time 和 end_time 调用 /activity-summary。以其中权威的 active-minute 总数和 data_status 为准。
 
 屏幕证据在 /activity-summary 之后必须遵循以下渐进式披露顺序：
 1. 先查 Parsed：始终进行一次有界 /search，使用 content_type=parsed、精确 start_time 和 end_time，limit 为 10。content_type=all 不包含 Parsed。

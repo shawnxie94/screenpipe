@@ -136,7 +136,6 @@ describe("endpointFamily", () => {
     expect(endpointFamily("/search")).toBe("屏幕搜索");
     expect(endpointFamily("/raw_sql")).toBe("数据库");
     expect(endpointFamily("/activity-summary")).toBe("活动");
-    expect(endpointFamily("/memories/5")).toBe("记忆");
     expect(endpointFamily("/connections/google-calendar/events")).toBe("日历");
     expect(endpointFamily("/connections/slack/x")).toBe("Slack");
     expect(endpointFamily("/pipes")).toBe("定时任务");
@@ -412,12 +411,7 @@ describe("mcpScreenpipeCommand", () => {
     expect(cmd).toContain("app_name=Safari");
   });
 
-  it("uses -X and a body for write tools", () => {
-    const cmd = mcpScreenpipeCommand("mcp__screenpipe__update-memory", { id: "1", note: "x" });
-    expect(cmd).toContain("-X POST");
-    expect(cmd).toContain("/memories");
-    expect(cmd).toContain("-d");
-  });
+
 
   it("recognizes a known screenpipe tool name even without the mcp__ prefix", () => {
     expect(mcpScreenpipeCommand("list-pipes", {})).toContain("/pipes");

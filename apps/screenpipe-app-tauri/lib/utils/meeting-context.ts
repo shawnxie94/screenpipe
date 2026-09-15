@@ -228,7 +228,7 @@ export async function fetchActivitySummary(
   const { start, end } = rangeFor(meeting);
   try {
     const res = await localFetch(
-      `/activity-summary?start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}&include_memories=false&include_snippets=false&include_recording=false&include_guidance=false`,
+      `/activity-summary?start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}&include_snippets=false&include_recording=false&include_guidance=false`,
     );
     if (!res.ok) return null;
     return (await res.json()) as ActivitySummary;

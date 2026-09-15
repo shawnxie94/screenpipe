@@ -486,11 +486,6 @@ impl DatabaseManager {
         // so we check pragma_table_info and add missing columns in Rust.
         Self::ensure_event_driven_columns(pool).await?;
 
-        // Same self-heal pattern for the cross-device memories sync columns
-        // (added in 20260506120000_add_memories_sync_columns.sql). Older DBs
-        // upgraded across that migration boundary may have skipped it.
-        Self::ensure_memories_sync_columns(pool).await?;
-
         // Self-heal the speakers + speaker_embeddings tables. The migration
         // (20241108202826) depends on sqlite-vec being loaded for the vec_length
         // CHECK constraint. If an older engine ran that migration without
@@ -647,34 +642,6 @@ impl DatabaseManager {
             );
         }
 
-        Ok(())
-    }
-
-    /// Self-heal the `memories.sync_uuid` and `memories.sync_modified_by`
-    /// columns + uuid index. Mirror of [`ensure_event_driven_columns`] for
-    /// the cross-device memories sync feature, so DBs that upgraded across
-    /// the migration boundary without applying it converge on next launch.
-    async fn ensure_memories_sync_columns(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        let cols: &[(&str, &str)] = &[("sync_uuid", "TEXT"), ("sync_modified_by", "TEXT")];
-        for (col_name, col_type) in cols {
-            let row: (i64,) = sqlx::query_as(
-                "SELECT COUNT(*) FROM pragma_table_info('memories') WHERE name = ?1",
-            )
-            .bind(col_name)
-            .fetch_one(pool)
-            .await?;
-            if row.0 == 0 {
-                tracing::info!("Adding missing column memories.{}", col_name);
-                let sql = format!("ALTER TABLE memories ADD COLUMN {} {}", col_name, col_type);
-                sqlx::query(sqlx::AssertSqlSafe(sql)).execute(pool).await?;
-            }
-        }
-        sqlx::query(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_sync_uuid \
-             ON memories(sync_uuid) WHERE sync_uuid IS NOT NULL",
-        )
-        .execute(pool)
-        .await?;
         Ok(())
     }
 
