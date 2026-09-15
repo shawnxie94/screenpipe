@@ -56,7 +56,7 @@ use crate::{
             start_meeting_handler, stop_meeting_handler, update_meeting_handler,
         },
         retranscribe::retranscribe_meeting_handler,
-        search::keyword_search_handler,
+        search::{keyword_search_handler, search},
         semantic::{
             create_semantic_actor, merge_semantic_actors, reassign_semantic_actor,
             reassign_semantic_actor_alias, search_semantic_actors, update_semantic_actor,
@@ -756,6 +756,10 @@ impl SCServer {
             .post("/audio/start", start_audio)
             .post("/audio/stop", stop_audio)
             .get("/search/keyword", keyword_search_handler)
+            // Full content-recall search (empty q allowed, content_type +
+            // time range filtering). Kept off "/search" (keyword handler)
+            // and "/search/keyword"; used by desktop activity narrative.
+            .get("/search/records", search)
             .post("/audio/device/start", start_audio_device)
             .post("/audio/device/stop", stop_audio_device)
             .get("/audio/device/status", audio_device_status)

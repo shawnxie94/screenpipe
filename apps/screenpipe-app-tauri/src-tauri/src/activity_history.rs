@@ -145,9 +145,13 @@ struct SearchEvidenceRow {
     meeting_id: Option<i64>,
 }
 
-#[derive(Serialize, Deserialize)]
+/// /search/records rows are `ContentItem`s serialized as
+/// `{"type":"UI","content":{...}}`. They arrive as raw JSON values so a row
+/// of a variant the narrative does not consume (OCR, Input, Parsed) — or a
+/// malformed row — is skipped instead of failing the whole snapshot.
+#[derive(Deserialize)]
 struct SearchResponse {
-    data: Vec<SearchEvidenceRow>,
+    data: Vec<Value>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -1005,12 +1009,11 @@ async fn activity_evidence_snapshot(
             ("max_content_length", "600".to_string()),
         ]
     };
-    let accessibility = get_local_json::<SearchResponse>(app, "/search", &query("accessibility"))
-        .await
-        .map(|response| response.data)?;
-    let audio = get_local_json::<SearchResponse>(app, "/search", &query("audio"))
-        .await
-        .map(|response| response.data)?;
+    // Full content-recall search: empty query allowed, filtered by
+    // content_type + time range. The keyword handler on "/search" requires
+    // a query string and matches text — wrong semantics for evidence recall.
+    let accessibility = evidence_rows(app, &query("accessibility")).await?;
+    let audio = evidence_rows(app, &query("audio")).await?;
 
     let lines = render_snapshot_lines(
         start, end, preflight, ledger, meetings, &accessibility, &audio,
@@ -1166,6 +1169,35 @@ fn render_snapshot_lines(
     }
 
     lines
+}
+
+/// Flatten `/search/records` rows into plain evidence rows. UI rows
+/// carry `text` on the record; audio rows carry `transcription`/`text` and
+/// an optional `meeting_id`. Rows of other variants (OCR, Input, Parsed)
+/// are dropped — the narrative snapshot only consumes UI + audio.
+fn expand_content_rows(rows: &[Value]) -> Vec<SearchEvidenceRow> {
+    rows.iter()
+        .filter_map(|row| match row.get("type").and_then(Value::as_str) {
+            Some("UI") | Some("Audio") => row
+                .get("content")
+                .cloned()
+                .and_then(|content| serde_json::from_value(content).ok()),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Fetch one evidence leg from `/search/records` and flatten its tagged
+/// `ContentItem` rows. The full-recall search handler allows an empty query
+/// and filters by content_type + time range; the keyword handler mounted on
+/// "/search" requires a query string and matches text — wrong semantics for
+/// evidence recall.
+async fn evidence_rows(
+    app: &AppHandle,
+    query: &[(&str, String)],
+) -> Result<Vec<SearchEvidenceRow>, String> {
+    let response = get_local_json::<SearchResponse>(app, "/search/records", query).await?;
+    Ok(expand_content_rows(&response.data))
 }
 
 /// Compact one month/day time to `HH:MM:SS` where cheap, or the full offset
@@ -2259,6 +2291,55 @@ mod tests {
         assert!(rendered.contains("这轮把生成上下文改干净 (meeting_id=7)"), "{rendered}");
         // No raw JSON brace-noise.
         assert!(!rendered.contains("{data_status"), "{rendered}");
+    }
+
+    #[test]
+    fn content_rows_flatten_ui_and_audio_and_skip_other_variants() {
+        // Row shape mirrors the engine's ContentItem wire format:
+        // {"type":"UI","content":{UiContent}}, {"type":"Audio","content":{AudioContent}}.
+        let rows = vec![
+            json!({
+                "type": "UI",
+                "content": {
+                    "id": 1,
+                    "text": "屏幕内容",
+                    "timestamp": "2026-08-19T08:06:00Z",
+                    "app_name": "Code",
+                    "window_name": "活动历史",
+                    "browser_url": null,
+                    "file_path": "/tmp/frame.jpg"
+                }
+            }),
+            json!({
+                "type": "Audio",
+                "content": {
+                    "chunk_id": 2,
+                    "transcription": "会议内容",
+                    "text": "会议内容",
+                    "timestamp": "2026-08-19T08:10:00Z",
+                    "device_name": "MacBook 麦克风",
+                    "meeting_id": 7
+                }
+            }),
+            // Variants the narrative does not consume are skipped, not fatal.
+            json!({"type": "Input", "content": {"id": 3, "timestamp": "2026-08-19T08:11:00Z", "event_type": "click"}}),
+            json!({"type": "OCR", "content": {"frame_id": 4, "text": "ocr", "timestamp": "2026-08-19T08:12:00Z"}}),
+            // Malformed rows are skipped too.
+            json!({"content": {"text": "no type"}}),
+            json!({"type": "UI"}),
+        ];
+
+        let rows = expand_content_rows(&rows);
+
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].text, "屏幕内容");
+        assert_eq!(rows[0].app_name, "Code");
+        assert_eq!(rows[0].window_name, "活动历史");
+        assert_eq!(rows[0].device_name, "");
+        assert_eq!(rows[1].transcription, "会议内容");
+        assert_eq!(rows[1].meeting_id, Some(7));
+        // Audio rows have no app_name on the wire; it defaults to empty.
+        assert_eq!(rows[1].app_name, "");
     }
 
     #[test]
