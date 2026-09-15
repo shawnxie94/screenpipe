@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   SlidersHorizontal,
   KeyRound,
+  ListChecks,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
@@ -33,6 +34,7 @@ import {
 import ShortcutSection, { searchIndex as shortcutsSearchIndex } from "@/components/settings/shortcut-section";
 import { AIPresets, searchIndex as aiSearchIndex } from "@/components/settings/ai-presets";
 import { AISettings, searchIndex as aiSettingsSearchIndex } from "@/components/settings/ai-settings";
+import { ActivitiesSettings, searchIndex as activitiesSearchIndex } from "@/components/settings/activities-settings";
 import {
   RecordingSettings,
   audioSearchIndex,
@@ -65,6 +67,7 @@ const ALL_SETTINGS_FIELDS: IndexedSettingsField[] = [
   ...generalSearchIndex.map((f) => ({ ...f, section: "general" })),
   ...aiSearchIndex.map((f) => ({ ...f, section: "ai" })),
   ...aiSettingsSearchIndex.map((f) => ({ ...f, section: "ai-settings" })),
+  ...activitiesSearchIndex.map((f) => ({ ...f, section: "activities" })),
   ...audioSearchIndex.map((f) => ({ ...f, section: "audio" })),
   ...screenSearchIndex.map((f) => ({ ...f, section: "recording" })),
   ...powerSearchIndex.map((f) => ({ ...f, section: "recording" })),
@@ -156,6 +159,7 @@ function SettingsContent() {
     {
       label: "AI 智能",
       items: [
+        { id: "activities" as const, label: "活动记录", icon: <ListChecks className="h-4 w-4" /> },
         { id: "ai-settings" as const, label: "AI 功能", icon: <SlidersHorizontal className="h-4 w-4" /> },
         { id: "ai" as const, label: "模型与密钥", icon: <Brain className="h-4 w-4" /> },
       ],
@@ -263,6 +267,7 @@ function SettingsContent() {
       case "display":       return <DisplaySection />;
       case "ai":            return <AIPresets />;
       case "ai-settings":   return <AISettings />;
+      case "activities":    return <ActivitiesSettings />;
       case "recording":     return <RecordingSettings section="screen" />;
       case "audio":         return <RecordingSettings section="audio" />;
       case "shortcuts":     return <ShortcutSection />;
