@@ -306,7 +306,7 @@ async function perform(mode: BuildMode, args: string[]): Promise<number> {
       exitCode = await run([
         "cargo", "build", "--manifest-path", "src-tauri/Cargo.toml",
         "--profile", "debug-dev", "--no-default-features", "--features",
-        "qwen3-asr,parakeet,local-only", "--bin", "screenpipe-app",
+        "qwen3-asr,local-only", "--bin", "screenpipe-app",
       ], env);
       return exitCode;
     }

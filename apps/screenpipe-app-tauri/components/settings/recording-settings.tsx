@@ -193,7 +193,6 @@ import {
 import { AudioEqualizer } from "@/app/shortcut-reminder/audio-equalizer";
 
 import { useOverlayData } from "@/app/shortcut-reminder/use-overlay-data";
-import { useOpenAIModels } from "./hooks/use-openai-models";
 import { useTranscriptionDiagnostics } from "./hooks/use-transcription-diagnostics";
 import { useVoiceTraining } from "./hooks/use-voice-training";
 
@@ -213,83 +212,17 @@ const getAppIconUrl = (appName: string): string => {
   return `http://localhost:11435/app-icon?name=${encodeURIComponent(appName)}`;
 };
 
-const FALLBACK_TRANSCRIPTION_ENGINE = "whisper-large-v3-turbo-quantized";
-
-type OpenAICompatibleDraft = {
-  endpoint: string;
-  apiKey: string;
-  model: string;
-  headers?: Record<string, string>;
-  rawAudio: boolean;
-};
-
-const getOpenAICompatibleDraft = (settings: Settings): OpenAICompatibleDraft => ({
-  endpoint: settings.openaiCompatibleEndpoint || DEFAULT_OPENAI_COMPATIBLE_ENDPOINT,
-  apiKey: settings.openaiCompatibleApiKey || "",
-  model: settings.openaiCompatibleModel || "",
-  headers: settings.openaiCompatibleHeaders || undefined,
-  rawAudio: settings.openaiCompatibleRawAudio || false,
-});
-
 const TRANSCRIPTION_ENGINE_LABELS: Record<string, string> = {
-  deepgram: "Deepgram",
   "whisper-large-v3-turbo": "Whisper Turbo",
   "whisper-large-v3-turbo-quantized": "Whisper Turbo (fast)",
   "whisper-tiny": "Whisper Tiny",
   "whisper-tiny-quantized": "Whisper Tiny (fast)",
-  "openai-compatible": "OpenAI 兼容",
   "qwen3-asr": "Qwen3-ASR",
-  parakeet: "Parakeet",
-  "parakeet-mlx": "Parakeet MLX",
   disabled: "已禁用（仅采集）",
 };
 
-type AudioEngineFallbackReason =
-  | "missingDeepgramKey";
-
-type AudioEngineResolution = {
-  requested: string;
-  active: string;
-  fallbackReason: AudioEngineFallbackReason | null;
-};
-
-type AudioEngineResolutionSettings = Pick<
-  Settings,
-  "audioTranscriptionEngine" | "deepgramApiKey"
->;
-
 const getTranscriptionEngineLabel = (engine: string) =>
   TRANSCRIPTION_ENGINE_LABELS[engine] ?? engine;
-
-const getAudioEngineResolution = (
-  settings: AudioEngineResolutionSettings
-): AudioEngineResolution => {
-  const requested = settings.audioTranscriptionEngine;
-  const hasDeepgramKey = Boolean(
-    settings.deepgramApiKey && settings.deepgramApiKey !== "default"
-  );
-
-  if (requested === "deepgram" && !hasDeepgramKey) {
-    return {
-      requested,
-      active: FALLBACK_TRANSCRIPTION_ENGINE,
-      fallbackReason: "missingDeepgramKey",
-    };
-  }
-
-  return {
-    requested,
-    active: requested,
-    fallbackReason: null,
-  };
-};
-
-const getAudioFallbackMessage = (reason: AudioEngineFallbackReason) => {
-  switch (reason) {
-    case "missingDeepgramKey":
-      return "未配置 Deepgram API 密钥，因此音频在本地转写。";
-  }
-};
 
 const SERVER_RESTART_SETTINGS = new Set<keyof SettingsStore>([
   "port",
@@ -1229,7 +1162,7 @@ const getAudioDeviceIcon = (name: string) => {
 
 const DEEPGRAM_LIMIT = 100;
 const WHISPER_CHAR_LIMIT = 800;
-// Cap stored terms at the strictest real engine limit (Deepgram cloud).
+// Cap stored terms at 100 — the strictest transcription vocabulary limit.
 // Whisper's offline limit is on total chars, not term count, and is surfaced separately below.
 const VOCAB_LIMIT = DEEPGRAM_LIMIT;
 
@@ -1892,47 +1825,9 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
   const audioPipeline = health?.audio_pipeline ?? null;
   const [platformReady, setPlatformReady] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
-  const [showOpenAIApiKey, setShowOpenAIApiKey] = useState(false);
-  const [isOpenAICompatibleSetupOpen, setIsOpenAICompatibleSetupOpen] = useState(false);
-  const [openAICompatibleDraft, setOpenAICompatibleDraft] = useState<OpenAICompatibleDraft>(
-    () => getOpenAICompatibleDraft(settings)
-  );
-  const [isTestingOpenAICompatible, setIsTestingOpenAICompatible] = useState(false);
-  const [openAICompatibleTestError, setOpenAICompatibleTestError] = useState<string | null>(null);
   const [isRefreshingSubscription, setIsRefreshingSubscription] = useState(false);
   const overlayData = useOverlayData();
   const [hwCapability, setHwCapability] = useState<HardwareCapability | null>(null);
-
-  // OpenAI Compatible model fetching
-  const {
-    openAIModels,
-    allOpenAIModels,
-    isLoadingModels,
-    filterText: filterTranscriptionModels,
-    setFilterText: setFilterTranscriptionModels,
-    fetchOpenAIModels,
-  } = useOpenAIModels({
-    engine: isOpenAICompatibleSetupOpen || settings.audioTranscriptionEngine === "openai-compatible"
-      ? "openai-compatible"
-      : settings.audioTranscriptionEngine,
-    endpoint: openAICompatibleDraft.endpoint,
-    apiKey: openAICompatibleDraft.apiKey,
-  });
-
-  // Keep the draft in sync with persisted settings until the user starts a
-  // verification attempt. Draft edits must not mark recording as restartable.
-  useEffect(() => {
-    if (!isOpenAICompatibleSetupOpen) {
-      setOpenAICompatibleDraft(getOpenAICompatibleDraft(settings));
-    }
-  }, [
-    isOpenAICompatibleSetupOpen,
-    settings.openaiCompatibleApiKey,
-    settings.openaiCompatibleEndpoint,
-    settings.openaiCompatibleHeaders,
-    settings.openaiCompatibleModel,
-    settings.openaiCompatibleRawAudio,
-  ]);
 
   // Transcription diagnostics
   const {
@@ -1947,14 +1842,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     commands.getHardwareCapability().then(setHwCapability).catch(() => {});
   }, []);
 
-  const audioEngineResolution = useMemo(
-    () => getAudioEngineResolution(settings),
-    [
-      settings.audioTranscriptionEngine,
-      settings.deepgramApiKey,
-    ]
-  );
-  const languageSupportEngine = audioEngineResolution.active;
+  const languageSupportEngine = settings.audioTranscriptionEngine;
   const languageSupportKey =
     getTranscriptionEngineLanguageSupportKey(languageSupportEngine);
   const languageSelectionsBySupportKeyRef = React.useRef<Record<string, string[]>>(
@@ -2016,12 +1904,6 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
         const dataDirValidation = validateField("dataDir", newSettings.dataDir);
         if (!dataDirValidation.isValid && dataDirValidation.error) {
           errors.dataDir = dataDirValidation.error;
-        }
-      }
-      
-      if (newSettings.deepgramApiKey !== undefined && newSettings.deepgramApiKey.trim()) {
-        if (newSettings.deepgramApiKey.length < 10) {
-          errors.deepgramApiKey = "API 密钥似乎太短";
         }
       }
       
@@ -2104,10 +1986,6 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
       setIsMacOS(currentPlatform === "macos");
       setIsWindows(currentPlatform === "windows");
       setPlatformReady(true);
-      // Auto-migrate macOS users off qwen3-asr (CPU-only, no Metal support)
-      if (currentPlatform === "macos" && settings.audioTranscriptionEngine === "qwen3-asr") {
-        handleSettingsChange({ audioTranscriptionEngine: "whisper-large-v3-turbo-quantized" }, true);
-      }
     };
     checkPlatform();
   }, []);
@@ -2270,22 +2148,6 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Enhanced validation for specific fields
-  const validateDeepgramApiKey = useCallback((apiKey: string): FieldValidationResult => {
-    if (!apiKey.trim()) {
-      return { isValid: false, error: "需要 API 密钥" };
-    }
-    if (apiKey.length < 10) {
-      return { isValid: false, error: "API 密钥似乎太短" };
-    }
-    return { isValid: true };
-  }, []);
-
-  // Enhanced Deepgram API key handler
-  const handleDeepgramApiKeyChange = useCallback((value: string, isValid: boolean) => {
-    handleSettingsChange({ deepgramApiKey: value }, true);
-  }, [handleSettingsChange]);
-
   // Optimized update function with better error handling
   const handleUpdate = async () => {
     // Check for validation errors
@@ -2373,22 +2235,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
   const handleAudioTranscriptionModelChange = async (
     value: string,
     realtime = false,
-    endpointVerified = false
   ) => {
-    // Do not activate an OpenAI-compatible server optimistically. Its first
-    // real transcription failure otherwise leaves audio recorded but absent
-    // from search with no clear recovery path.
-    if (
-      value === "openai-compatible" &&
-      settings.audioTranscriptionEngine !== value &&
-      !endpointVerified
-    ) {
-      setOpenAICompatibleDraft(getOpenAICompatibleDraft(settings));
-      setIsOpenAICompatibleSetupOpen(true);
-      setOpenAICompatibleTestError(null);
-      return;
-    }
-
     let newSettings: Partial<Settings>;
     if (realtime) {
       newSettings = { realtimeAudioTranscriptionEngine: value };
@@ -2401,11 +2248,7 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
         languages: [...settings.languages],
       };
 
-      const nextAudioEngineResolution = getAudioEngineResolution({
-        ...settings,
-        audioTranscriptionEngine: value,
-      });
-      const nextLanguageSupportEngine = nextAudioEngineResolution.active;
+      const nextLanguageSupportEngine = value;
       const nextLanguageSupportKey =
         getTranscriptionEngineLanguageSupportKey(nextLanguageSupportEngine);
       const preferredLanguages =
@@ -2423,55 +2266,6 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
 
     handleSettingsChange(newSettings, true);
   };
-
-  const updateOpenAICompatibleDraft = (
-    updates: Partial<OpenAICompatibleDraft>
-  ) => {
-    setOpenAICompatibleTestError(null);
-    setIsOpenAICompatibleSetupOpen(true);
-    setOpenAICompatibleDraft((current) => ({ ...current, ...updates }));
-  };
-
-  const handleTestAndEnableOpenAICompatible = async () => {
-    setIsTestingOpenAICompatible(true);
-    setOpenAICompatibleTestError(null);
-
-    try {
-      const result = await commands.testOpenaiCompatibleTranscription(
-        openAICompatibleDraft.endpoint,
-        openAICompatibleDraft.apiKey || null,
-        openAICompatibleDraft.model,
-        openAICompatibleDraft.headers || null,
-        openAICompatibleDraft.rawAudio
-      );
-      if (result.status === "error") {
-        throw new Error(result.error);
-      }
-
-      handleSettingsChange(
-        {
-          openaiCompatibleEndpoint: openAICompatibleDraft.endpoint,
-          openaiCompatibleApiKey: openAICompatibleDraft.apiKey || undefined,
-          openaiCompatibleModel: openAICompatibleDraft.model || undefined,
-          openaiCompatibleHeaders: openAICompatibleDraft.headers,
-          openaiCompatibleRawAudio: openAICompatibleDraft.rawAudio,
-        },
-        true
-      );
-      await handleAudioTranscriptionModelChange("openai-compatible", false, true);
-      setIsOpenAICompatibleSetupOpen(false);
-      toast({
-        title: "OpenAI 兼容已启用",
-        description: "端点已接受真实的转写请求。",
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setOpenAICompatibleTestError(message);
-    } finally {
-      setIsTestingOpenAICompatible(false);
-    }
-  };
-
 
   const handleLanguageChange = (currentValue: Language | null) => {
     if (!currentValue) {
@@ -2729,7 +2523,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                 <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
                 <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
                   转写引擎
-                  <HelpTooltip text="云端引擎将音频发送到服务器进行快速准确的转写。本地引擎在你的设备上运行 — 完全私密但占用更多 CPU/内存。" />
+                  <HelpTooltip text="本地引擎在你的设备上运行 — 完全私密，Qwen3-ASR 对中文支持最佳，Whisper 作为备选。" />
                 </h3>
               </div>
               <div className="flex items-center gap-2">
@@ -2745,360 +2539,22 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">云端</SelectLabel>
-                      <SelectItem value="deepgram">Deepgram</SelectItem>
-                    </SelectGroup>
-                    <SelectGroup>
                       <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">本地</SelectLabel>
+                      <SelectItem value="qwen3-asr">Qwen3-ASR</SelectItem>
                       <SelectItem value="whisper-large-v3-turbo">Whisper Turbo</SelectItem>
                       <SelectItem value="whisper-large-v3-turbo-quantized">Whisper Turbo（快）</SelectItem>
                       <SelectItem value="whisper-tiny">Whisper Tiny</SelectItem>
                       <SelectItem value="whisper-tiny-quantized">Whisper Tiny（快）</SelectItem>
-                      {!isMacOS && <SelectItem value="qwen3-asr">Qwen3-ASR</SelectItem>}
-                      <SelectItem value="parakeet">Parakeet{isMacOS ? " (experimental)" : ""}</SelectItem>
                     </SelectGroup>
                     <SelectGroup>
                       <SelectLabel className="text-[10px] text-muted-foreground/70 uppercase tracking-wider">其他</SelectLabel>
-                      <SelectItem value="openai-compatible">OpenAI 兼容</SelectItem>
                       <SelectItem value="disabled">已禁用（仅采集）</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            {audioEngineResolution.fallbackReason && (
-              <Alert
-                data-testid="audio-engine-fallback-alert"
-                className="mt-2 ml-[26px] border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
-              >
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle className="text-xs font-semibold">
-                  {getTranscriptionEngineLabel(audioEngineResolution.requested)} 未处于激活状态
-                </AlertTitle>
-                <AlertDescription className="space-y-2 text-xs">
-                  <p>{getAudioFallbackMessage(audioEngineResolution.fallbackReason)}</p>
-                  <div className="grid gap-1">
-                    <div>
-                      已保存的选择：
-                      <span className="font-medium">
-                        {getTranscriptionEngineLabel(audioEngineResolution.requested)}
-                      </span>
-                    </div>
-                    <div>
-                      当前生效：
-                      <span className="font-medium">
-                        {getTranscriptionEngineLabel(audioEngineResolution.active)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      data-testid="audio-engine-fallback-use-whisper"
-                      onClick={() =>
-                        handleSettingsChange(
-                          { audioTranscriptionEngine: FALLBACK_TRANSCRIPTION_ENGINE },
-                          true
-                        )
-                      }
-                    >
-                      使用 Whisper 设置
-                    </Button>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-            {settings.audioTranscriptionEngine === "deepgram" && (
-              <div className="mt-2 ml-[26px] relative">
-                <ValidatedInput
-                  id="deepgramApiKey"
-                  label=""
-                  type={showApiKey ? "text" : "password"}
-                  value={settings.deepgramApiKey || ""}
-                  onChange={handleDeepgramApiKeyChange}
-                  validation={validateDeepgramApiKey}
-                  placeholder="Deepgram API 密钥"
-                  required={true}
-                  className="pr-8 h-7 text-xs"
-                />
-                <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-7 w-7" onClick={() => setShowApiKey(!showApiKey)}>
-                  {showApiKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                </Button>
-              </div>
-            )}
-            {(settings.audioTranscriptionEngine === "openai-compatible" || isOpenAICompatibleSetupOpen) && (
-              <div className="mt-2 ml-[26px] space-y-2">
-                {isOpenAICompatibleSetupOpen && (
-                  <Alert className="border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle className="text-xs font-semibold">需要端点验证</AlertTitle>
-                    <AlertDescription className="text-xs">
-                      在端点完成测试转写之前，这些更改不会被保存或应用。这样可以避免产生无法搜索的录制内容。
-                    </AlertDescription>
-                  </Alert>
-                )}
-                {/* API Endpoint Input */}
-                <ValidatedInput
-                  id="openaiCompatibleEndpoint"
-                  label=""
-                  value={openAICompatibleDraft.endpoint}
-                  onChange={(value: string) => updateOpenAICompatibleDraft({ endpoint: value })}
-                  onBlur={() => fetchOpenAIModels(openAICompatibleDraft.endpoint, openAICompatibleDraft.apiKey)}
-                  onKeyDown={(e: React.KeyboardEvent) => {
-                    if (e.key === 'Enter') {
-                      fetchOpenAIModels(openAICompatibleDraft.endpoint, openAICompatibleDraft.apiKey);
-                    }
-                  }}
-                  placeholder="API 端点（例如 http://127.0.0.1:8080）"
-                  className="h-7 text-xs"
-                />
-                
-                {/* API Key Input */}
-                <div className="relative">
-                  <ValidatedInput
-                    id="openaiCompatibleApiKey"
-                    label=""
-                    type={showOpenAIApiKey ? "text" : "password"}
-                    value={openAICompatibleDraft.apiKey}
-                    onChange={(value: string) => updateOpenAICompatibleDraft({ apiKey: value })}
-                    placeholder="API 密钥（可选）"
-                    className="pr-8 h-7 text-xs"
-                  />
-                  <Button type="button" variant="ghost" size="icon" className="absolute right-0 top-0 h-7 w-7" onClick={() => setShowOpenAIApiKey(!showOpenAIApiKey)}>
-                    {showOpenAIApiKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                  </Button>
-                </div>
-                
-                {/* Model Input — editable with dropdown suggestions */}
-                <div className="space-y-1.5">
-                  <div className="relative">
-                    <Input
-                      value={openAICompatibleDraft.model}
-                      onChange={(e) => updateOpenAICompatibleDraft({ model: e.target.value })}
-                      placeholder={isLoadingModels ? "正在加载模型..." : "模型名称（例如 whisper-large-v3-turbo）"}
-                      className="h-7 text-xs pr-8"
-                    />
-                    {isLoadingModels && (
-                      <Loader2 className="h-3 w-3 animate-spin absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    )}
-                  </div>
-                  {openAIModels.length > 0 && !openAIModels.includes('!API_Error') && (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          可用模型（{openAIModels.length}）
-                        </span>
-                        {allOpenAIModels.length > 0 && (
-                          <button
-                            type="button"
-                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => setFilterTranscriptionModels(!filterTranscriptionModels)}
-                          >
-                            {filterTranscriptionModels ? "显示全部" : "仅显示 STT"}
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {openAIModels.map((model) => (
-                          <button
-                            key={model}
-                            type="button"
-                            className={cn(
-                              "px-2 py-0.5 rounded text-xs border transition-colors",
-                              openAICompatibleDraft.model === model
-                                ? "bg-foreground text-background border-foreground"
-                                : "hover:bg-accent border-border"
-                            )}
-                            onClick={() => updateOpenAICompatibleDraft({ model })}
-                          >
-                            {model}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {openAIModels.includes('!API_Error') && (
-                    <p className="text-xs text-muted-foreground">无法从 API 获取模型列表 — 请手动输入模型名称。</p>
-                  )}
-                  {allOpenAIModels.length === 0 && !openAIModels.includes('!API_Error') && !isLoadingModels && (
-                    <p className="text-xs text-muted-foreground">API 未返回模型列表 — 请手动输入模型名称。</p>
-                  )}
-                </div>
 
-                {/* Raw Audio Toggle */}
-                <label className="flex items-center gap-2 text-xs cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={openAICompatibleDraft.rawAudio}
-                    onChange={(e) => updateOpenAICompatibleDraft({ rawAudio: e.target.checked })}
-                    className="rounded border-border"
-                  />
-                  <span>发送原始 WAV 音频（而非 MP3）</span>
-                </label>
-
-                {/* Custom Headers */}
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">自定义请求头（JSON）</label>
-                  <Input
-                    defaultValue={openAICompatibleDraft.headers ? JSON.stringify(openAICompatibleDraft.headers) : ""}
-                    onBlur={(e) => {
-                      const val = e.target.value.trim();
-                      if (!val) {
-                        updateOpenAICompatibleDraft({ headers: undefined });
-                        return;
-                      }
-                      try {
-                        const parsed = JSON.parse(val);
-                        if (typeof parsed === "object" && !Array.isArray(parsed)) {
-                          updateOpenAICompatibleDraft({ headers: parsed });
-                        }
-                      } catch {
-                        // Invalid JSON — don't save
-                      }
-                    }}
-                    placeholder='{"X-Custom-Header": "value"}'
-                    className="h-7 text-xs font-mono"
-                  />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 border border-border bg-muted/20 p-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={handleTestAndEnableOpenAICompatible}
-                    disabled={isTestingOpenAICompatible}
-                  >
-                    {isTestingOpenAICompatible ? (
-                      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
-                    ) : (
-                      <Zap className="mr-1.5 h-3 w-3" />
-                    )}
-                    {isTestingOpenAICompatible ? "正在测试端点..." : "测试并启用"}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">
-                    使用已配置的模型和音频格式发送一段短静音样本。
-                  </span>
-                </div>
-                {openAICompatibleTestError && (
-                  <p className="text-xs text-destructive" role="alert">
-                    {openAICompatibleTestError}
-                  </p>
-                )}
-
-                {/* Connection Test Panel */}
-                <div className="border rounded-lg">
-                  <button
-                    type="button"
-                    className="flex items-center justify-between w-full px-3 py-2 text-xs font-medium text-left hover:bg-accent/50 transition-colors rounded-lg"
-                    onClick={() => setTxDiagnosticsOpen(!txDiagnosticsOpen)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-3.5 w-3.5" />
-                      <span>连接测试</span>
-                      {txTestStatus === "done" && (
-                        <span className="text-xs text-muted-foreground">
-                          {txTestResults.transcribe.status === "pass"
-                            ? "全部检查通过"
-                            : txTestResults.endpoint.status === "fail"
-                            ? "连接失败"
-                            : txTestResults.auth.status === "fail"
-                            ? "认证失败"
-                            : txTestResults.models.status === "fail"
-                            ? "模型加载失败"
-                            : txTestResults.transcribe.status === "fail"
-                            ? "转写失败"
-                            : ""}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {txTestStatus === "testing" && (
-                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                      )}
-                      {txDiagnosticsOpen ? (
-                        <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                      )}
-                    </div>
-                  </button>
-
-                  {txDiagnosticsOpen && (
-                    <div className="px-3 pb-3 space-y-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={runTranscriptionDiagnostics}
-                        disabled={txTestStatus === "testing"}
-                        className="flex items-center gap-2 h-7 text-xs"
-                      >
-                        {txTestStatus === "testing" ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Zap className="h-3 w-3" />
-                        )}
-                        {txTestStatus === "testing" ? "正在测试..." : "运行诊断"}
-                      </Button>
-
-                      <div className="space-y-1.5 text-xs">
-                        {(
-                          [
-                            ["endpoint", "1", "端点可达"],
-                            ["auth", "2", "认证有效"],
-                            ["models", "3", "模型已加载"],
-                            ["transcribe", "4", "测试转写"],
-                          ] as const
-                        ).map(([key, num, label]) => {
-                          const result = txTestResults[key];
-                          return (
-                            <div key={key} className="flex items-start gap-2">
-                              <div className="flex items-center gap-1.5 min-w-[150px]">
-                                {result.status === "pass" ? (
-                                  <CheckCircle2 className="h-3.5 w-3.5 text-foreground shrink-0" />
-                                ) : result.status === "fail" ? (
-                                  <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                                ) : result.status === "running" ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
-                                ) : (
-                                  <Circle className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                                )}
-                                <span
-                                  className={cn(
-                                    result.status === "skip" || result.status === "pending"
-                                      ? "text-muted-foreground/40"
-                                      : result.status === "fail"
-                                      ? "text-destructive"
-                                      : ""
-                                  )}
-                                >
-                                  {num}. {label}
-                                </span>
-                              </div>
-                              {result.message && (
-                                <span
-                                  className={cn(
-                                    "text-xs",
-                                    result.status === "fail"
-                                      ? "text-destructive"
-                                      : "text-muted-foreground"
-                                  )}
-                                >
-                                  {result.message}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           {/* Languages — folded into the transcription engine card */}
             {!settings.disableAudio && settings.audioTranscriptionEngine !== "disabled" && (
               <div className="mt-2.5 pt-2.5 border-t border-border/50">
@@ -3285,7 +2741,6 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="selected-engine">当前转写引擎</SelectItem>
-                      <SelectItem value="deepgram-live">Deepgram 实时直连</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

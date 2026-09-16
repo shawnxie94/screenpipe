@@ -2588,8 +2588,7 @@ error: string | null;
 sinceEpochSecs: number;
 /**
  * True when this CPU lacks AVX2 (pre-2013 x86-64 / Atom-line): local
- * whisper/qwen3 STT is disabled at runtime (their kernels are
- * AVX2-compiled); parakeet remains available. Drives the
+ * STT is disabled at runtime (their kernels are AVX2-compiled). Drives the
  * "compatibility mode" notice in onboarding/settings.
  */
 cpuCompatMode: boolean }
@@ -3007,8 +3006,8 @@ export type SettingsStore =
 disableAudio: boolean;
 /**
  * Audio transcription engine identifier.
- * Values: "whisper-large-v3-turbo", "whisper-large-v3-turbo-quantized",
- * "deepgram", "screenpipe-cloud", etc.
+ * Values: "qwen3-asr", "whisper-large-v3-turbo",
+ * "whisper-large-v3-turbo-quantized", "disabled", etc.
  */
 audioTranscriptionEngine: string;
 /**
@@ -3103,9 +3102,8 @@ aecMode?: AecMode;
  */
 audioChunkDuration: number;
 /**
- * Deepgram API key for cloud transcription.
- * Empty string or "default" means not configured.
- * Kept as String (not Option) to match existing store.bin schema.
+ * Legacy Deepgram API key — kept as String to match the existing store.bin
+ * schema. The Deepgram engine was removed; this field is no longer used.
  */
 deepgramApiKey: string;
 /**

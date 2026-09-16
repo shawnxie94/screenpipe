@@ -569,7 +569,7 @@ export function makeDefaultPresets(): AIPreset[] {
 	return [];
 }
 
-const DEFAULT_AUDIO_ENGINE = "whisper-large-v3-turbo-quantized";
+const DEFAULT_AUDIO_ENGINE = "qwen3-asr";
 
 let DEFAULT_SETTINGS: Settings = {
 			activitiesEnabled: true,
@@ -594,7 +594,7 @@ let DEFAULT_SETTINGS: Settings = {
 			isLoading: false,
 			userId: "",
 			devMode: false,
-			audioTranscriptionEngine: "whisper-large-v3-turbo-quantized",
+			audioTranscriptionEngine: "qwen3-asr",
 			meetingLiveTranscriptionEnabled: true,
 			meetingLiveTranscriptionProvider: "selected-engine",
 			appendTypedTextToMeetingNote: true,
@@ -1002,18 +1002,20 @@ function createSettingsStore() {
 			needsUpdate = true;
 		}
 
-		// Migration: Set default transcription engine (one-time only)
-		// - macOS → whisper-large-v3-turbo-quantized
-		// - Windows/Linux → parakeet
+		// Migration: migrate removed transcription engines to qwen3-asr
+		// (parakeet/parakeet-mlx were cloud-unreachable, deepgram and
+		// openai-compatible were cloud engines removed in the local-only fork).
+		// User-selected whisper variants are preserved — they still work.
 		if (!(settings as any)._parakeetDefaultMigrationDone) {
 			const engine = settings.audioTranscriptionEngine;
 			const isWhisperVariant = engine?.includes("whisper");
-			if (isWhisperVariant || engine === "screenpipe-cloud" || engine === "parakeet") {
-				const { platform: getPlatform } = await import("@tauri-apps/plugin-os");
-				const os = getPlatform();
-				settings.audioTranscriptionEngine = os === "macos"
-					? "whisper-large-v3-turbo-quantized"
-					: "parakeet";
+			if (
+				!isWhisperVariant &&
+				engine &&
+				engine !== "qwen3-asr" &&
+				engine !== "disabled"
+			) {
+				settings.audioTranscriptionEngine = "qwen3-asr";
 				needsUpdate = true;
 			}
 			(settings as any)._parakeetDefaultMigrationDone = true;

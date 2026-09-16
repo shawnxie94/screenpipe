@@ -15,40 +15,6 @@ import {
 } from "@/lib/language";
 
 describe("transcription engine language support", () => {
-  it("limits Parakeet to its supported European language set", () => {
-    const options = getLanguageOptionsForTranscriptionEngine("parakeet");
-    const codes = options.map((option) => option.code);
-
-    expect(options).toHaveLength(25);
-    expect(codes).toContain(Language.english);
-    expect(codes).toContain(Language.maltese);
-    expect(codes).not.toContain(Language.japanese);
-    expect(codes).not.toContain(Language.chinese);
-  });
-
-  it("prunes stale selections when switching to a limited engine", () => {
-    expect(
-      filterLanguagesForTranscriptionEngine(
-        [Language.english, Language.japanese, Language.portuguese],
-        "parakeet"
-      )
-    ).toEqual([Language.english, Language.portuguese]);
-  });
-
-  it("uses Deepgram Nova-3 support for Deepgram transcription", () => {
-    const deepgramCodes = getLanguageOptionsForTranscriptionEngine("deepgram").map(
-      (option) => option.code
-    );
-
-    expect(deepgramCodes).toContain(Language.japanese);
-    expect(deepgramCodes).toContain(Language.vietnamese);
-    expect(deepgramCodes).not.toContain(Language.maltese);
-    // The retired hosted engine is gone: unknown engines get the broad list.
-    expect(
-      getLanguageOptionsForTranscriptionEngine("screenpipe-cloud").length
-    ).toBeGreaterThan(deepgramCodes.length);
-  });
-
   it("uses the Qwen3-ASR language set for local Qwen transcription", () => {
     const codes = getLanguageOptionsForTranscriptionEngine("qwen3-asr").map(
       (option) => option.code
@@ -61,7 +27,23 @@ describe("transcription engine language support", () => {
     expect(codes).not.toContain(Language.ukrainian);
   });
 
-  it("keeps the broad list for engines with unknown or provider-defined support", () => {
+  it("prunes stale selections when switching to a limited engine", () => {
+    expect(
+      filterLanguagesForTranscriptionEngine(
+        [Language.english, Language.japanese, Language.portuguese],
+        "qwen3-asr"
+      )
+    ).toEqual([Language.english, Language.japanese, Language.portuguese]);
+  });
+
+  it("returns the broad list for engines with unknown support", () => {
+    const unknownCodes = getLanguageOptionsForTranscriptionEngine(
+      "whisper-large-v3-turbo"
+    ).map((option) => option.code);
+    expect(unknownCodes).toContain(Language.english);
+  });
+
+  it("keeps the broad list for engines with provider-defined support", () => {
     expect(hasLimitedLanguageSupport("whisper-large-v3-turbo")).toBe(false);
     expect(transcriptionEngineUsesLanguageHints("whisper-large-v3-turbo")).toBe(true);
     expect(
@@ -73,19 +55,16 @@ describe("transcription engine language support", () => {
   });
 
   it("marks auto-detect-only local engines as not consuming language hints", () => {
-    expect(transcriptionEngineUsesLanguageHints("parakeet")).toBe(false);
     expect(transcriptionEngineUsesLanguageHints("qwen3-asr")).toBe(false);
+    expect(transcriptionEngineUsesLanguageHints("disabled")).toBe(false);
   });
 
   it("groups equivalent engines so language choices can be restored by model family", () => {
-    expect(getTranscriptionEngineLanguageSupportKey("deepgram")).toBe(
-      "deepgram-nova-3"
-    );
-    expect(getTranscriptionEngineLanguageSupportKey("parakeet")).toBe(
-      getTranscriptionEngineLanguageSupportKey("parakeet-mlx")
+    expect(getTranscriptionEngineLanguageSupportKey("qwen3-asr")).toBe(
+      "qwen3-asr"
     );
     expect(getTranscriptionEngineLanguageSupportKey("whisper-large-v3-turbo")).toBe(
-      getTranscriptionEngineLanguageSupportKey("openai-compatible")
+      "default"
     );
   });
 
@@ -103,17 +82,17 @@ describe("transcription engine language support", () => {
     expect(
       resolveLanguageSelectionForTranscriptionEngine(
         [Language.english, Language.portuguese],
-        "parakeet",
+        "qwen3-asr",
         [Language.japanese]
       )
-    ).toEqual([Language.english, Language.portuguese]);
+    ).toEqual([Language.japanese]);
   });
 
   it("preserves explicit auto-detect selections per engine family", () => {
     expect(
       resolveLanguageSelectionForTranscriptionEngine(
         [Language.english, Language.portuguese],
-        "parakeet",
+        "qwen3-asr",
         []
       )
     ).toEqual([]);

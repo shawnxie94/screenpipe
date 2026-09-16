@@ -75,8 +75,8 @@ type BootPhaseSnapshot = {
   message: string | null;
   error: string | null;
   sinceEpochSecs: number;
-  // True when the CPU lacks AVX2 (compatibility mode): local whisper/qwen3
-  // STT is disabled at runtime; parakeet remains available.
+  // True when the CPU lacks AVX2 (compatibility mode): local STT
+  // (whisper/qwen3) is disabled at runtime.
   cpuCompatMode: boolean;
 };
 
@@ -649,8 +649,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
             reports it via the boot-phase snapshot. */}
         {bootPhase?.cpuCompatMode && (
           <p className="font-mono text-[10px] text-muted-foreground/60 mt-2 max-w-[360px] text-center">
-            兼容模式：此 CPU 不支持 AVX2，因此无法使用本地 whisper 转录
-            （云端和 parakeet 引擎仍可用）
+            兼容模式：此 CPU 不支持 AVX2，本地语音转写已禁用
           </p>
         )}
 

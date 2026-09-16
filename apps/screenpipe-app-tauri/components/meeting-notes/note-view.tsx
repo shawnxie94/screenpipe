@@ -3263,8 +3263,6 @@ function providerLabel(
   switch (provider) {
     case "selected-engine":
       return transcriptionEngineLabel(selectedEngine);
-    case "deepgram-live":
-      return "Deepgram 实时转写";
     default:
       return "关闭";
   }
@@ -3272,14 +3270,10 @@ function providerLabel(
 
 function transcriptionEngineLabel(engine: string) {
   switch (engine) {
-    case "deepgram":
-      return "Deepgram";
     case "whisper-large-v3-turbo":
       return "Whisper Turbo";
     case "whisper-large-v3-turbo-quantized":
       return "Whisper Turbo（快速）";
-    case "openai-compatible":
-      return "OpenAI 兼容模式";
     case "disabled":
       return "关闭";
     default:

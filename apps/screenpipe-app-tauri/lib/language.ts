@@ -165,34 +165,6 @@ export const LANGUAGE_OPTIONS: readonly LanguageOption[] = [
   { code: Language.malayalam, name: "Malayalam" },
 ];
 
-const PARAKEET_SUPPORTED_LANGUAGES: readonly Language[] = [
-  Language.bulgarian,
-  Language.croatian,
-  Language.czech,
-  Language.danish,
-  Language.dutch,
-  Language.english,
-  Language.estonian,
-  Language.finnish,
-  Language.french,
-  Language.german,
-  Language.greek,
-  Language.hungarian,
-  Language.italian,
-  Language.latvian,
-  Language.lithuanian,
-  Language.maltese,
-  Language.polish,
-  Language.portuguese,
-  Language.romanian,
-  Language.russian,
-  Language.slovak,
-  Language.slovenian,
-  Language.spanish,
-  Language.swedish,
-  Language.ukrainian,
-];
-
 const QWEN3_ASR_SUPPORTED_LANGUAGES: readonly Language[] = [
   Language.arabic,
   Language.chinese,
@@ -224,67 +196,11 @@ const QWEN3_ASR_SUPPORTED_LANGUAGES: readonly Language[] = [
   Language.vietnamese,
 ];
 
-const DEEPGRAM_NOVA3_SUPPORTED_LANGUAGES: readonly Language[] = [
-  Language.arabic,
-  Language.belarusian,
-  Language.bengali,
-  Language.bosnian,
-  Language.bulgarian,
-  Language.catalan,
-  Language.chinese,
-  Language.croatian,
-  Language.czech,
-  Language.danish,
-  Language.dutch,
-  Language.english,
-  Language.estonian,
-  Language.finnish,
-  Language.french,
-  Language.german,
-  Language.greek,
-  Language.gujarati,
-  Language.hebrew,
-  Language.hindi,
-  Language.hungarian,
-  Language.indonesian,
-  Language.italian,
-  Language.japanese,
-  Language.korean,
-  Language.latvian,
-  Language.lithuanian,
-  Language.macedonian,
-  Language.malay,
-  Language.marathi,
-  Language.norwegian,
-  Language.persian,
-  Language.polish,
-  Language.portuguese,
-  Language.romanian,
-  Language.russian,
-  Language.serbian,
-  Language.slovak,
-  Language.slovenian,
-  Language.spanish,
-  Language.swedish,
-  Language.tagalog,
-  Language.thai,
-  Language.turkish,
-  Language.ukrainian,
-  Language.urdu,
-  Language.vietnamese,
-];
-
 const ENGINE_LANGUAGE_SUPPORT: Record<string, readonly Language[]> = {
-  deepgram: DEEPGRAM_NOVA3_SUPPORTED_LANGUAGES,
-  parakeet: PARAKEET_SUPPORTED_LANGUAGES,
-  "parakeet-mlx": PARAKEET_SUPPORTED_LANGUAGES,
   "qwen3-asr": QWEN3_ASR_SUPPORTED_LANGUAGES,
 };
 
 const ENGINE_LANGUAGE_SUPPORT_KEYS: Record<string, string> = {
-  deepgram: "deepgram-nova-3",
-  parakeet: "parakeet",
-  "parakeet-mlx": "parakeet",
   "qwen3-asr": "qwen3-asr",
 };
 
@@ -316,7 +232,7 @@ export function getTranscriptionEngineLanguageSupportKey(engine: string): string
 }
 
 export function transcriptionEngineUsesLanguageHints(engine: string): boolean {
-  return !["disabled", "parakeet", "parakeet-mlx", "qwen3-asr"].includes(engine);
+  return !["disabled", "qwen3-asr"].includes(engine);
 }
 
 export function filterLanguagesForTranscriptionEngine(
