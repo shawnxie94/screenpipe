@@ -50,8 +50,8 @@ const engineTests: ModelTestDef[] = [
     },
   },
   {
-    name: "parakeet loads",
-    engine: "parakeet",
+    name: "qwen3-asr loads",
+    engine: "qwen3-asr",
     healthCheck: (h) => {
       if (h.audio_status === "error")
         throw new Error(`audio_status is error`);

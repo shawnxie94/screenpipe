@@ -139,7 +139,7 @@ jobs:
           if [[ "${{ matrix.target }}" == "aarch64-apple-darwin" ]]; then
             export CFLAGS="-mcpu=apple-m1 -U__ARM_FEATURE_MATMUL_INT8"
             export CXXFLAGS="-mcpu=apple-m1 -U__ARM_FEATURE_MATMUL_INT8"
-            cargo build --release -p screenpipe-engine --bin screenpipe --features metal,parakeet-mlx,rfdetr-mlx,redact-onnx-coreml --target ${{ matrix.target }}
+            cargo build --release -p screenpipe-engine --bin screenpipe --features metal,rfdetr-mlx,redact-onnx-coreml --target ${{ matrix.target }}
           else
             cargo build --release -p screenpipe-engine --bin screenpipe --features metal,redact-onnx-coreml --target ${{ matrix.target }}
           fi
@@ -314,7 +314,7 @@ jobs:
         run: |
           # DirectML flavor of the OFFICIAL MS build: baseline SSE2 + MLAS runtime
           # CPUID dispatch (full AVX2 speed on modern CPUs, no crash on old ones),
-          # DML EP for parakeet/PII. pyke's download-binaries static libs are
+          # DML EP for the ONNX PII path. pyke's download-binaries static libs are
           # compiled /arch:AVX2 since Oct 2025 and caused 0xc000001d at launch on
           # pre-Haswell CPUs. Keep in sync with release-app.yml's x64 branch.
           $version = '1.24.2'
@@ -930,7 +930,7 @@ jobs:
           tar -xzf artifacts/screenpipe-macos-aarch64-apple-darwin/screenpipe-*.tar.gz -C /tmp/darwin-arm64
           cp /tmp/darwin-arm64/bin/screenpipe packages/cli/screenpipe-darwin-arm64/bin/ 2>/dev/null || \
             (cd artifacts/screenpipe-macos-aarch64-apple-darwin && tar -xzf screenpipe-*.tar.gz && cp bin/screenpipe ../../packages/cli/screenpipe-darwin-arm64/bin/)
-          # Bundle mlx.metallib for Parakeet MLX GPU support
+          # Bundle mlx.metallib for the MLX-based image-PII runtime (rfdetr-mlx)
           cp /tmp/darwin-arm64/bin/mlx.metallib packages/cli/screenpipe-darwin-arm64/bin/ 2>/dev/null || \
             (cd artifacts/screenpipe-macos-aarch64-apple-darwin && cp bin/mlx.metallib ../../packages/cli/screenpipe-darwin-arm64/bin/ 2>/dev/null) || \
             echo "⚠️ mlx.metallib not found in artifact"

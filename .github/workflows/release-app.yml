@@ -171,9 +171,9 @@ jobs:
           # Persistent release runners by default; the manual input retains
           # the GitHub-hosted escape hatch.
           - platform: ${{ needs.check_commit.outputs.macos_arm_runner || 'macos-latest' }}
-            args: "--target aarch64-apple-darwin --features metal,parakeet-mlx,rfdetr-mlx,redact-onnx-coreml"
+            args: "--target aarch64-apple-darwin --features metal,rfdetr-mlx,redact-onnx-coreml"
             target: aarch64-apple-darwin
-            tauri-args: "--target aarch64-apple-darwin --features metal,parakeet-mlx,rfdetr-mlx,redact-onnx-coreml,official-build"
+            tauri-args: "--target aarch64-apple-darwin --features metal,rfdetr-mlx,redact-onnx-coreml,official-build"
             os_type: "macos"
           - platform: ${{ needs.check_commit.outputs.macos_x64_runner || 'macos-26' }}
             args: "--target x86_64-apple-darwin --features metal,redact-onnx-coreml"
@@ -587,7 +587,7 @@ jobs:
           if ($arch -eq 'x64') {
             # DirectML flavor of the OFFICIAL MS build: baseline SSE2 + MLAS runtime
             # CPUID dispatch (full AVX2 speed on modern CPUs, no crash on old ones),
-            # DML EP for parakeet/PII. pyke's download-binaries static libs are
+            # DML EP for the ONNX PII path. pyke's download-binaries static libs are
             # compiled /arch:AVX2 since Oct 2025 and caused 0xc000001d at launch on
             # pre-Haswell CPUs (ort sessions are created on the audio boot path at
             # every app launch).

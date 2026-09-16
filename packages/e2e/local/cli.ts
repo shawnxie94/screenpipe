@@ -108,7 +108,7 @@ commands:
   test        run all tests (auto-setup if needed)
   test --target cli      CLI tests only (shared from packages/e2e/src/suites/cli.ts)
   test --target e2e      API tests only (shared from packages/e2e/src/suites/api.ts)
-  test --target models   model loading tests (whisper-tiny, parakeet, disabled)
+  test --target models   model loading tests (whisper-tiny, qwen3-asr, disabled)
   ssh         open SSH session to the VM
   status      show current VM state
   teardown    delete VM + remove tart completely

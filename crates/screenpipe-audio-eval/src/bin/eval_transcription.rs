@@ -51,7 +51,7 @@ struct Args {
 
     /// Comma-separated list of `name[=cap]` entries. Names: `tiny`,
     /// `tiny-quantized`, `whisper-large-v3-turbo`, `whisper-large-v3-turbo-quantized`,
-    /// `whisper-large` (large-v3), `whisper-large-quantized`, `parakeet`. When
+    /// `whisper-large` (large-v3), `whisper-large-quantized`, `qwen3-asr`. When
     /// `=cap` is omitted, falls back to `--max-utterances`. Each model is run in
     /// listed order and emitted as its own JSON row.
     #[arg(long, default_value = "tiny")]
@@ -84,11 +84,11 @@ fn parse_engine(name: &str) -> Result<AudioTranscriptionEngine> {
         "whisper-large-v3-turbo-quantized" => {
             Ok(AudioTranscriptionEngine::WhisperLargeV3TurboQuantized)
         }
-        "parakeet" => Ok(AudioTranscriptionEngine::Parakeet),
+        "qwen3" | "qwen3-asr" => Ok(AudioTranscriptionEngine::Qwen3Asr),
         // `base` is not a screenpipe engine variant; surface clearly rather
         // than silently substituting tiny.
         "base" | "whisper-base" => anyhow::bail!(
-            "whisper-base is not a screenpipe engine variant; use tiny / whisper-large-v3 / whisper-large-v3-turbo / parakeet"
+            "whisper-base is not a screenpipe engine variant; use tiny / whisper-large-v3 / whisper-large-v3-turbo / qwen3-asr"
         ),
         other => anyhow::bail!("unknown model: {other}"),
     }
@@ -133,23 +133,21 @@ fn parse_models(spec: &str, default_cap: usize) -> Result<Vec<ModelSpec>> {
 }
 
 /// Ensure the model weights are on disk before constructing the engine.
-/// Whisper variants go through screenpipe's own HF helper; Parakeet goes
+/// Whisper variants go through screenpipe's own HF helper; Qwen3 goes
 /// through audiopipe directly because the engine constructor only does a
 /// cache-only check and spawns a background download otherwise.
 async fn prime_model(engine: &AudioTranscriptionEngine) -> Result<()> {
     match engine {
-        AudioTranscriptionEngine::Parakeet => {
-            // Match the CPU model name used at engine.rs (parakeet-mlx is not
-            // available on Linux CI anyway).
-            const MODEL_NAME: &str = "parakeet-tdt-0.6b-v3";
+        AudioTranscriptionEngine::Qwen3Asr => {
+            const MODEL_NAME: &str = "qwen3-asr-0.6b-antirez";
             if audiopipe::Model::from_pretrained_cache_only(MODEL_NAME).is_ok() {
                 return Ok(());
             }
-            eprintln!("downloading parakeet weights: {MODEL_NAME}");
+            eprintln!("downloading qwen3-asr weights: {MODEL_NAME}");
             tokio::task::spawn_blocking(|| audiopipe::Model::from_pretrained(MODEL_NAME))
                 .await
-                .map_err(|e| anyhow::anyhow!("parakeet download task panicked: {e}"))?
-                .map_err(|e| anyhow::anyhow!("parakeet download failed: {e}"))?;
+                .map_err(|e| anyhow::anyhow!("qwen3 download task panicked: {e}"))?
+                .map_err(|e| anyhow::anyhow!("qwen3 download failed: {e}"))?;
             Ok(())
         }
         _ => {
@@ -179,8 +177,6 @@ async fn run_model(
 
     let engine = TranscriptionEngine::new(
         Arc::new(spec.engine.clone()),
-        None,
-        None,
         Vec::new(),
         Vec::new(),
     )
@@ -283,7 +279,7 @@ async fn main() -> Result<()> {
         total
     );
 
-    // Per-model error isolation: a failing model (cold parakeet download,
+    // Per-model error isolation: a failing model (cold qwen3-or-whisper download,
     // whisper variant pulled and missing, etc.) shouldn't kill the whole
     // report. Each failure becomes its own JSON row with `error`. The
     // process still exits non-zero at the end so CI flags it — but only
@@ -343,23 +339,23 @@ mod tests {
     #[test]
     fn multiple_models_preserve_order() {
         let specs =
-            parse_models("tiny=50,whisper-large-v3-turbo-quantized=20,parakeet", 30).unwrap();
+            parse_models("tiny=50,whisper-large-v3-turbo-quantized=20,qwen3-asr", 30).unwrap();
         assert_eq!(specs.len(), 3);
         assert_eq!(specs[0].name, "tiny");
         assert_eq!(specs[0].cap, 50);
         assert_eq!(specs[1].name, "whisper-large-v3-turbo-quantized");
         assert_eq!(specs[1].cap, 20);
-        assert_eq!(specs[2].name, "parakeet");
-        // parakeet falls back to default since no =N was provided.
+        assert_eq!(specs[2].name, "qwen3-asr");
+        // qwen3 falls back to default since no =N was provided.
         assert_eq!(specs[2].cap, 30);
     }
 
     #[test]
     fn whitespace_and_empty_entries_tolerated() {
-        let specs = parse_models("  tiny ,, , parakeet=5 ", 50).unwrap();
+        let specs = parse_models("  tiny ,, , qwen3-asr=5 ", 50).unwrap();
         assert_eq!(specs.len(), 2);
         assert_eq!(specs[0].name, "tiny");
-        assert_eq!(specs[1].name, "parakeet");
+        assert_eq!(specs[1].name, "qwen3-asr");
         assert_eq!(specs[1].cap, 5);
     }
 
@@ -421,8 +417,8 @@ mod tests {
             AudioTranscriptionEngine::WhisperLargeV3TurboQuantized
         ));
         assert!(matches!(
-            parse_engine("parakeet").unwrap(),
-            AudioTranscriptionEngine::Parakeet
+            parse_engine("qwen3-asr").unwrap(),
+            AudioTranscriptionEngine::Qwen3Asr
         ));
     }
 }

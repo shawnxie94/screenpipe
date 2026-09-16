@@ -214,7 +214,7 @@ curl -X POST "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/audio/retranscr
   -d '{"start": "1h ago", "end": "now"}'
 ```
 
-Optional: `engine` (`deepgram`, `whisper-large`, `whisper-large-v3-turbo`, `whisper-large-v3-turbo-quantized`, `qwen3-asr`, `parakeet`, `parakeet-mlx`, `openai-compatible`), `vocabulary` (array of `{"word","replacement"}`), `prompt` (Whisper topic context). Keep ranges ≤1h. Show old vs new.
+Optional: `engine` (`qwen3-asr`, `whisper-large`, `whisper-large-v3-turbo`, `whisper-large-v3-turbo-quantized`), `vocabulary` (array of `{"word","replacement"}`), `prompt` (Whisper topic context). Keep ranges ≤1h. Show old vs new.
 
 ---
 

@@ -12,7 +12,7 @@
 #    "screenpipe-shaped" data — the real workload that broke #3107.
 #
 # 2. Transcription quality eval. Runs a small matrix (whisper-tiny,
-#    whisper-large-v3-turbo-quantized, parakeet) on a sample of LibriSpeech
+#    whisper-large-v3-turbo-quantized, qwen3-asr) on a sample of LibriSpeech
 #    test-clean and reports WER + CER vs verbatim ground-truth transcripts.
 #    Per-model utterance caps keep total wall under the eval budget — the
 #    cheap tiny gets 50, the heavier turbo gets 20.
@@ -253,16 +253,15 @@ jobs:
       # Score a small transcription matrix against LibriSpeech test-clean.
       # whisper-tiny gets 50 utterances (~2 min CPU wall); the heavier
       # whisper-large-v3-turbo-quantized gets 20 to keep wall bounded;
-      # parakeet (screenpipe's actual local default) gets 50. Model weights
+      # qwen3-asr (screenpipe's actual local default) gets 50. Model weights
       # are cached by HF — first run downloads, subsequent are warm.
       - name: Run pipeline replay matrix
         run: |
           /usr/bin/time -v ./target/release/screenpipe-eval-pipeline-replay \
             --suite-dir /tmp/screenpipe-shaped \
-            --engines parakeet-local,whisper-local \
+            --engines qwen3-local,whisper-local \
             --modes background,live \
             --devices input,output \
-            --deepgram off \
             --out /tmp/eval-results/pipeline-replay.json \
             2> /tmp/eval-results/pipeline-replay.stderr || {
               echo "::error::pipeline replay failed"
@@ -283,7 +282,7 @@ jobs:
           set +e
           /usr/bin/time -v ./target/release/screenpipe-eval-transcription \
             --librispeech-dir crates/screenpipe-audio-eval/evals/fixtures/librispeech/LibriSpeech/test-clean \
-            --models 'tiny=50,whisper-large-v3-turbo-quantized=20,parakeet=50' \
+            --models 'tiny=50,whisper-large-v3-turbo-quantized=20,qwen3-asr=50' \
             > /tmp/eval-results/transcription.json \
             2>/tmp/eval-results/transcription.stderr
           rc=$?
@@ -365,8 +364,8 @@ jobs:
               echo
               echo "Source: generated \`screenpipe_*\` fixtures materialized into temp screenpipe SQLite DBs, then read back through \`search_audio\`. This catches storage/search regressions that pure DER scoring misses."
               echo
-              echo "| scenarios | passed | failed | skipped | avg background DER | avg background speaker err | Deepgram |"
-              echo "|---:|---:|---:|---:|---:|---:|---|"
+              echo "| scenarios | passed | failed | skipped | avg background DER | avg background speaker err |"
+              echo "|---:|---:|---:|---:|---:|---|"
               jq -r '
                 def fmt:
                   if . == null then "n/a"
@@ -378,7 +377,6 @@ jobs:
                 " | " + (.skipped | tostring) +
                 " | " + (.avg_background_der | fmt) +
                 " | " + (.avg_background_speaker_error | fmt) +
-                " | " + (.deepgram_status // "not_requested") +
                 " |"
               ' /tmp/eval-results/pipeline-replay.json
               echo
@@ -391,7 +389,7 @@ jobs:
                   /tmp/eval-results/pipeline-replay.json
                 echo
               fi
-              echo "<sub>The no-secret CI matrix runs local diarization under Parakeet/Whisper engine labels across live/background and mic/system device profiles. Real Deepgram/screenpipe-cloud smoke can be run locally with \`--deepgram required\` when credentials are present.</sub>"
+              echo "<sub>The no-secret CI matrix runs local diarization under Qwen3/Whisper engine labels across live/background and mic/system device profiles. Real cloud smoke is not part of the local-only fork.</sub>"
               echo
             fi
             if [ -f /tmp/eval-results/transcription.json ]; then
@@ -430,7 +428,7 @@ jobs:
                   /tmp/eval-results/transcription.json
               fi
               echo
-              echo "<sub>WER + CER on read-aloud speech. Per-model utterance caps keep wall time bounded — tiny/parakeet at 50, the heavier large-v3-turbo-quantized at 20. See README for normalization rules.</sub>"
+              echo "<sub>WER + CER on read-aloud speech. Per-model utterance caps keep wall time bounded — tiny/qwen3-asr at 50, the heavier large-v3-turbo-quantized at 20. See README for normalization rules.</sub>"
             fi
           } > /tmp/eval-report.md
           cat /tmp/eval-report.md
@@ -462,7 +460,7 @@ jobs:
           gh pr comment "$PR_NUMBER" --body-file /tmp/eval-report.md
 
       # Fail the job *after* the report has uploaded + posted, so a failing
-      # parakeet/turbo doesn't suppress the rows that did succeed.
+      # qwen3/turbo doesn't suppress the rows that did succeed.
       - name: Fail job on transcription error
         if: always() && steps.transcription.outputs.exit_code != '0'
         run: |
