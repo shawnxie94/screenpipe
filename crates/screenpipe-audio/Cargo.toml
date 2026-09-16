@@ -93,8 +93,7 @@ ort = { workspace = true, default-features = false, features = ["ndarray", "half
 ort-sys = { workspace = true }
 knf-rs = "0.3.2"
 futures = { workspace = true }
-audiopipe = { workspace = true, features = ["qwen3-asr-antirez-blas", "parakeet"], optional = true }
-mlx-rs = { workspace = true, optional = true }
+audiopipe = { workspace = true, features = ["qwen3-asr-antirez-blas"], optional = true }
 bytes = { workspace = true, features = ["serde"] }
 rand = { workspace = true }
 tokio-tungstenite = { workspace = true, features = ["native-tls"] }
@@ -198,8 +197,6 @@ directml = ["audiopipe?/directml"]
 vulkan = ["audiopipe?/vulkan-ggml"]
 pulseaudio = ["dep:libpulse-binding", "dep:libpulse-simple-binding"]
 qwen3-asr = ["dep:audiopipe"]
-parakeet = ["dep:audiopipe"]
-parakeet-mlx = ["dep:audiopipe", "audiopipe?/parakeet-mlx", "dep:mlx-rs"]
 
 [[example]]
 name = "screenpipe-audio"
@@ -237,44 +234,24 @@ name = "exclusion_probe"
 path = "examples/exclusion_probe.rs"
 
 # These benchmark/eval examples use the optional `audiopipe` crate (linked only
-# by the `parakeet` / `qwen3-asr` features). Without a `required-features` guard,
+# by the `qwen3-asr` feature). Without a `required-features` guard,
 # `cargo {build,clippy} --all-targets` on default features tries to compile them,
 # fails to resolve the unlinked `audiopipe` crate (E0433), and breaks the
-# lefthook clippy hook for ANY change in this crate. Gating each on `parakeet`
+# lefthook clippy hook for ANY change in this crate. Gating each on `qwen3-asr`
 # (which pulls in `audiopipe`) makes --all-targets skip them unless it's enabled.
-[[example]]
-name = "bench_quality"
-path = "examples/bench_quality.rs"
-required-features = ["parakeet"]
-
-[[example]]
-name = "bench_quality2"
-path = "examples/bench_quality2.rs"
-required-features = ["parakeet"]
-
-[[example]]
-name = "bench_parakeet"
-path = "examples/bench_parakeet.rs"
-required-features = ["parakeet"]
-
 [[example]]
 name = "bench_engines"
 path = "examples/bench_engines.rs"
-required-features = ["parakeet"]
-
-[[example]]
-name = "parakeet_bench"
-path = "examples/parakeet_bench.rs"
-required-features = ["parakeet"]
+required-features = ["qwen3-asr"]
 
 [[example]]
 name = "wer_battle_test"
 path = "examples/wer_battle_test.rs"
-required-features = ["parakeet"]
+required-features = ["qwen3-asr"]
 
 [[test]]
 name = "audio_pipeline_benchmark"
 path = "tests/audio_pipeline_benchmark/main.rs"
 
 [package.metadata.cargo-machete]
-ignored = ["ort-sys", "bytes", "mlx-rs"]
+ignored = ["ort-sys", "bytes"]

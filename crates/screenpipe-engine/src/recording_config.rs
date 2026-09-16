@@ -6,7 +6,6 @@ use screenpipe_audio::audio_manager::builder::{AudioCaptureMode, TranscriptionMo
 use screenpipe_audio::audio_manager::AudioManagerBuilder;
 use screenpipe_audio::core::engine::AudioTranscriptionEngine;
 use screenpipe_audio::meeting_streaming::MeetingStreamingConfig;
-use screenpipe_audio::transcription::deepgram::DeepgramTranscriptionConfig;
 use screenpipe_audio::transcription::VocabularyEntry;
 use screenpipe_audio::vad::VadEngineEnum;
 use screenpipe_config::{ChannelConfig, DbConfig, DomainRule, SemanticContextMode, UrlRule};
@@ -136,18 +135,6 @@ pub struct RecordingConfig {
     /// event-driven capture. See `RecordingSettings.disable_click_capture`.
     pub disable_click_capture: bool,
     pub languages: Vec<Language>,
-
-    // Cloud/auth
-    pub deepgram_api_key: Option<String>,
-    pub deepgram_config: Option<DeepgramTranscriptionConfig>,
-
-    // OpenAI Compatible transcription
-    pub openai_compatible_endpoint: Option<String>,
-    pub openai_compatible_api_key: Option<String>,
-    pub openai_compatible_model: Option<String>,
-    pub openai_compatible_headers: Option<std::collections::HashMap<String, String>>,
-    pub openai_compatible_raw_audio: bool,
-
 
     // Speaker identification
     /// User's display name for calendar-assisted speaker ID.
@@ -315,10 +302,7 @@ impl RecordingConfig {
             meeting_streaming: MeetingStreamingConfig::from_settings(
                 settings.meeting_live_transcription_enabled,
                 &settings.meeting_live_transcription_provider,
-                match settings.meeting_live_transcription_provider.as_str() {
-                    "deepgram-live" | "deepgram_live" => Some(settings.deepgram_api_key.clone()),
-                    _ => None,
-                },
+                None,
                 single_language_code(&settings.languages),
                 settings.effective_user_name().map(str::to_string),
             )
@@ -359,18 +343,6 @@ impl RecordingConfig {
                 .filter(|s| s.as_str() != "default")
                 .filter_map(|s| s.parse().ok())
                 .collect(),
-            deepgram_api_key: settings.effective_deepgram_key().map(|s| s.to_string()),
-            deepgram_config: match engine_str {
-                "deepgram" => settings
-                    .effective_deepgram_key()
-                    .map(|s| DeepgramTranscriptionConfig::direct(s.to_string())),
-                _ => None,
-            },
-            openai_compatible_endpoint: settings.openai_compatible_endpoint.clone(),
-            openai_compatible_api_key: settings.openai_compatible_api_key.clone(),
-            openai_compatible_model: settings.openai_compatible_model.clone(),
-            openai_compatible_headers: settings.openai_compatible_headers.clone(),
-            openai_compatible_raw_audio: settings.openai_compatible_raw_audio,
             user_name: settings.user_name.clone(),
             video_quality: settings.video_quality.clone(),
             use_chinese_mirror: settings.use_chinese_mirror,
@@ -500,7 +472,6 @@ impl RecordingConfig {
             .windows_input_aec_enabled(self.windows_input_aec_enabled)
             .macos_input_vpio_enabled(self.macos_input_vpio_enabled)
             .screenpipe_aec_enabled(self.screenpipe_aec_enabled)
-            .deepgram_config(self.deepgram_config.clone())
             .output_path(output_path)
             .use_pii_removal(self.use_pii_removal)
             .filter_music(self.filter_music)

@@ -166,7 +166,7 @@ criterion = { workspace = true }
 # imports `screenpipe_redact::adapters::onnx` for the async PII worker. Without
 # it, `cargo {check,clippy,build} -p screenpipe-engine` (no --features) fails
 # to compile. Mac/Win release builds layer redact-onnx-{coreml,directml} on top.
-default = ["qwen3-asr", "parakeet", "redact-onnx-cpu"]
+default = ["qwen3-asr", "redact-onnx-cpu"]
 e2e = []
 metal = ["screenpipe-audio/metal"]
 heap-prof = ["dhat"]
@@ -176,8 +176,6 @@ vulkan = ["screenpipe-audio/vulkan"]
 debug-console = ["console-subscriber"]
 pulseaudio = ["screenpipe-audio/pulseaudio"]
 qwen3-asr = ["screenpipe-audio/qwen3-asr"]
-parakeet = ["screenpipe-audio/parakeet"]
-parakeet-mlx = ["screenpipe-audio/parakeet-mlx"]
 # Image-PII detector via MLX (Apple Silicon-only). Compiled into macOS
 # release builds for experiments, but the CLI runtime keeps ONNX as the
 # default stable path unless SCREENPIPE_ENABLE_EXPERIMENTAL_RFDETR_MLX=1

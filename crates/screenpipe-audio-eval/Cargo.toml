@@ -30,21 +30,19 @@ chrono = { workspace = true }
 # Yes this drags in the audio crate's full dep tree (cpal, ort, whisper,
 # etc.) — that's intentional. The eval is a binary-only consumer; nothing
 # in the prod tree depends on this crate.
-# `parakeet` here flips on `dep:audiopipe` in screenpipe-audio so the
-# transcription eval can construct AudioTranscriptionEngine::Parakeet and
+# `qwen3-asr` here flips on `dep:audiopipe` in screenpipe-audio so the
+# transcription eval can construct AudioTranscriptionEngine::Qwen3Asr and
 # get a real session (otherwise engine.rs errors out at runtime with
-# "neither 'parakeet' nor 'parakeet-mlx' feature is enabled"). The audio
-# crate's `parakeet-mlx` is intentionally off here — the eval runs on
-# Ubuntu CPU CI, no Metal available.
-screenpipe-audio = { path = "../screenpipe-audio", features = ["parakeet"] }
+# "'qwen3-asr' feature is not enabled").
+screenpipe-audio = { path = "../screenpipe-audio", features = ["qwen3-asr"] }
 screenpipe-core = { path = "../screenpipe-core" }
 screenpipe-db = { path = "../screenpipe-db" }
 # Direct audiopipe dep so the transcription eval can synchronously
-# prime Parakeet weights via `Model::from_pretrained` before constructing
+# prime Qwen3 weights via `Model::from_pretrained` before constructing
 # the engine. Without this, `TranscriptionEngine::new` returns
 # `Disabled` while audiopipe's background download thread runs and the
 # eval silently emits empty hypotheses.
-audiopipe = { workspace = true, features = ["parakeet"] }
+audiopipe = { workspace = true, features = ["qwen3-asr-antirez-blas"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }

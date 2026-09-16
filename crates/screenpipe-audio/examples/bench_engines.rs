@@ -7,10 +7,10 @@
 //! Measures: load time, transcription speed (RTF), CPU%, memory, and accuracy.
 //!
 //! Usage:
-//!   cargo run --example bench_engines --features "metal,parakeet" --release -- <audio.wav>
+//!   cargo run --example bench_engines --features "metal,qwen3-asr" --release -- <audio.wav>
 //!
 //! On Windows:
-//!   cargo run --example bench_engines --features "directml,parakeet" --release -- <audio.wav>
+//!   cargo run --example bench_engines --features "directml,qwen3-asr" --release -- <audio.wav>
 
 use screenpipe_audio::core::engine::AudioTranscriptionEngine;
 use screenpipe_audio::TranscriptionEngine;
@@ -196,13 +196,6 @@ async fn main() -> anyhow::Result<()> {
             AudioTranscriptionEngine::WhisperLargeV3TurboQuantized,
             "whisper-large-v3-turbo-q8",
         ),
-        #[cfg(feature = "parakeet")]
-        (
-            AudioTranscriptionEngine::Parakeet,
-            "parakeet-tdt-0.6b-v3-int8",
-        ),
-        #[cfg(feature = "parakeet-mlx")]
-        (AudioTranscriptionEngine::ParakeetMlx, "parakeet-mlx (GPU)"),
         #[cfg(feature = "qwen3-asr")]
         (AudioTranscriptionEngine::Qwen3Asr, "qwen3-asr-0.6b"),
     ];
@@ -218,8 +211,6 @@ async fn main() -> anyhow::Result<()> {
         let t_load = Instant::now();
         let engine_result = TranscriptionEngine::new(
             Arc::new(engine_config.clone()),
-            None,
-            None,
             vec![Language::English],
             vec![],
         )

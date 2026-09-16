@@ -18,7 +18,6 @@ use uuid::Uuid;
 use crate::{core::engine::AudioTranscriptionEngine, transcription::engine::TranscriptionEngine};
 
 use super::{
-    deepgram_live,
     events::{
         MeetingAudioFrame, MeetingAudioTap, MeetingLifecycleEvent, MeetingStreamingError,
         MeetingStreamingSessionEnded, MeetingStreamingSessionStarted,
@@ -697,17 +696,6 @@ fn route_frame_to_provider(
                 );
                 session.device_senders.insert(key.clone(), tx);
             }
-            MeetingStreamingProvider::DeepgramLive => {
-                deepgram_live::spawn_deepgram_live_stream(
-                    config.clone(),
-                    session.meeting_id,
-                    stream_id,
-                    frame.device_name.clone(),
-                    frame.device_type.clone(),
-                    rx,
-                );
-                session.device_senders.insert(key.clone(), tx);
-            }
             MeetingStreamingProvider::Disabled => {
                 return;
             }
@@ -963,32 +951,8 @@ fn auto_end_reason(session: &ActiveMeetingStream, now: Instant) -> Option<AutoEn
 
 async fn effective_streaming_config(
     config: &MeetingStreamingConfig,
-    transcription_engine: &Arc<RwLock<Option<TranscriptionEngine>>>,
+    _transcription_engine: &Arc<RwLock<Option<TranscriptionEngine>>>,
 ) -> MeetingStreamingConfig {
-    if config.provider != MeetingStreamingProvider::SelectedEngine {
-        return config.clone();
-    }
-
-    let engine = transcription_engine.read().await;
-    let Some(TranscriptionEngine::Deepgram {
-        config: background, ..
-    }) = engine.as_ref()
-    else {
-        return config.clone();
-    };
-
-    let mut direct_deepgram_config = config
-        .clone()
-        .with_provider(MeetingStreamingProvider::DeepgramLive);
-    direct_deepgram_config.api_key = (!background.auth_token.trim().is_empty())
-        .then(|| background.auth_token.trim().to_string());
-    if direct_deepgram_config.live_transcription_ready() {
-        info!(
-            "meeting streaming: selected-engine resolved to direct Deepgram live because the selected transcription engine is Deepgram"
-        );
-        return direct_deepgram_config;
-    }
-
     config.clone()
 }
 
@@ -1007,10 +971,6 @@ async fn readiness_error(
             Some(_) => None,
             None => Some("Selected transcription engine is still loading".to_string()),
         },
-        MeetingStreamingProvider::DeepgramLive if config.live_transcription_ready() => None,
-        MeetingStreamingProvider::DeepgramLive => Some(
-            "Direct Deepgram live transcription needs a Deepgram API key".to_string(),
-        ),
     }
 }
 
@@ -1035,8 +995,6 @@ fn emit_error(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::transcription::deepgram::DeepgramTranscriptionConfig;
-    use crate::transcription::stt::OpenAICompatibleConfig;
 
     fn test_session(now: Instant, live: bool) -> ActiveMeetingStream {
         ActiveMeetingStream {
@@ -1253,33 +1211,24 @@ mod tests {
 
     #[tokio::test]
     async fn live_ready_session_keeps_background_recording_until_transcript_arrives() {
-        let audio_tap = test_audio_tap();
+        // SelectedEngine is the local-only live provider. With a loaded,
+        // non-disabled engine it is ready and background recording stays on
+        // until the first transcript arrives. With no engine yet it reports a
+        // clear readiness error instead of silently dropping live notes.
         let transcription_engine = Arc::new(RwLock::new(None));
-        let mut active = None;
         let config = MeetingStreamingConfig::from_settings(
             true,
-            "deepgram-live",
-            Some("direct-key".to_string()),
+            "selected-engine",
+            None,
             None,
             None,
         );
-
-        start_streaming_session(
-            &config,
-            &audio_tap,
-            &transcription_engine,
-            &mut active,
-            7,
-            Some("manual".to_string()),
-            None,
-            Vec::new(),
-        )
-        .await;
-
-        let session = active.expect("active live session");
-        assert!(session.live_transcription_enabled);
-        assert!(audio_tap.is_active());
-        assert!(!audio_tap.background_suppressed());
+        assert!(config.live_transcription_ready());
+        let err = readiness_error(&config, &transcription_engine).await;
+        assert_eq!(
+            err.as_deref(),
+            Some("Selected transcription engine is still loading")
+        );
     }
 
     #[tokio::test]
@@ -1287,8 +1236,9 @@ mod tests {
         let audio_tap = test_audio_tap();
         let transcription_engine = Arc::new(RwLock::new(None));
         let mut active = None;
+        // Disabled provider: live transcription off, background recording stays.
         let config =
-            MeetingStreamingConfig::from_settings(true, "deepgram", None, None, None);
+            MeetingStreamingConfig::from_settings(true, "disabled", None, None, None);
 
         start_streaming_session(
             &config,
@@ -1490,70 +1440,5 @@ mod tests {
         assert!(!session.live_transcript_seen);
         assert!(session.last_live_transcript_at.is_none());
         assert!(!audio_tap.background_suppressed());
-    }
-
-    #[tokio::test]
-    async fn selected_direct_deepgram_ignores_unrelated_cloud_identity() {
-        let engine = TranscriptionEngine::new(
-            Arc::new(AudioTranscriptionEngine::Deepgram),
-            Some(DeepgramTranscriptionConfig::direct(
-                "personal-key".to_string(),
-            )),
-            None,
-            Vec::new(),
-            Vec::new(),
-        )
-        .await
-        .expect("deepgram engine");
-        let engine_ref = Arc::new(RwLock::new(Some(engine)));
-        let config = MeetingStreamingConfig::from_settings(
-            true,
-            "selected-engine",
-            None,
-            None,
-            None,
-        );
-
-        let effective = effective_streaming_config(&config, &engine_ref).await;
-
-        assert_eq!(effective.provider, MeetingStreamingProvider::DeepgramLive);
-        assert_eq!(effective.api_key.as_deref(), Some("personal-key"));
-        assert!(effective.live_transcription_ready());
-        assert_eq!(effective.model.as_deref(), Some("nova-3"));
-        assert!(effective.endpoint.starts_with("wss://"));
-    }
-
-    #[tokio::test]
-    async fn selected_openai_compatible_survives_cloud_identity() {
-        let engine = TranscriptionEngine::new(
-            Arc::new(AudioTranscriptionEngine::OpenAICompatible),
-            None,
-            Some(OpenAICompatibleConfig {
-                endpoint: "http://localhost:8080/v1/audio/transcriptions".to_string(),
-                model: "local-whisper".to_string(),
-                ..Default::default()
-            }),
-            Vec::new(),
-            Vec::new(),
-        )
-        .await
-        .expect("OpenAI-compatible engine");
-        let engine_ref = Arc::new(RwLock::new(Some(engine)));
-        let config = MeetingStreamingConfig::from_settings(
-            true,
-            "selected-engine",
-            None,
-            None,
-            None,
-        );
-
-        let effective = effective_streaming_config(&config, &engine_ref).await;
-
-        assert_eq!(effective.provider, MeetingStreamingProvider::SelectedEngine);
-        assert!(effective.endpoint.is_empty());
-        assert_eq!(
-            effective.model.as_deref(),
-            Some("selected transcription engine")
-        );
     }
 }

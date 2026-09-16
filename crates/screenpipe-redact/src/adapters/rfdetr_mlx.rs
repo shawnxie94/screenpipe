@@ -35,23 +35,20 @@ const VERSION: u32 = 9; // tracks rfdetr_v9 weights
 
 /// Minimum macOS major version that's safe for MLX at runtime.
 ///
-/// Mirrors `screenpipe_config::PARAKEET_MIN_MACOS_MAJOR` — mlx-sys's
-/// pre-compiled `.metallib` uses Metal 3.2+ features (simdgroup_matrix
-/// kernels) that segfault during Metal init on older macOS. The
-/// build-time deployment target gate (14.0) lets the binary *launch*
-/// on macOS 14+; this runtime gate prevents us from actually invoking
-/// MLX on anything below 26.
+/// mlx-sys's pre-compiled `.metallib` uses Metal 3.2+ features
+/// (simdgroup_matrix kernels) that segfault during Metal init on older
+/// macOS. The build-time deployment target gate (14.0) lets the binary
+/// *launch* on macOS 14+; this runtime gate prevents us from actually
+/// invoking MLX on anything below 26.
 const MIN_MACOS_MAJOR: u32 = 26;
 
 /// Returns true iff this host can safely run MLX at runtime.
 ///
 /// On macOS aarch64, shells out to `sw_vers -productVersion` and
-/// gates on [`MIN_MACOS_MAJOR`] — same shape as
-/// `screenpipe_config::macos_major_version`, inlined here so this
-/// crate doesn't pick up screenpipe-config just for one fn. On any
-/// other platform this always returns `false` — the cfg gates
-/// elsewhere keep the rest of the module from compiling, but having
-/// this fn always callable simplifies the public API.
+/// gates on [`MIN_MACOS_MAJOR`]. On any other platform this always
+/// returns `false` — the cfg gates elsewhere keep the rest of the module
+/// from compiling, but having this fn always callable simplifies the
+/// public API.
 fn is_runtime_supported() -> bool {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     {

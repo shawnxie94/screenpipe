@@ -1237,15 +1237,6 @@ async fn main() -> anyhow::Result<()> {
         "│ auto-destruct pid      │ {:<34} │",
         record_args.auto_destruct_pid.unwrap_or(0)
     );
-    // For security reasons, you might want to mask the API key if displayed
-    println!(
-        "│ deepgram key           │ {:<34} │",
-        if config.deepgram_api_key.is_some() {
-            "set (masked)"
-        } else {
-            "not set"
-        }
-    );
     println!(
         "│ api auth               │ {:<34} │",
         if config.api_auth {

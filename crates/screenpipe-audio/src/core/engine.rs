@@ -6,18 +6,14 @@ use std::fmt;
 
 #[derive(Clone, Debug, PartialEq, Default)]
 pub enum AudioTranscriptionEngine {
-    Deepgram,
     WhisperTiny,
     WhisperTinyQuantized,
-    #[default]
     WhisperLargeV3Turbo,
     WhisperLargeV3TurboQuantized,
     WhisperLargeV3,
     WhisperLargeV3Quantized,
-    OpenAICompatible,
+    #[default]
     Qwen3Asr,
-    Parakeet,
-    ParakeetMlx,
     Disabled,
 }
 
@@ -26,14 +22,10 @@ impl AudioTranscriptionEngine {
     /// builds (no runtime dispatch): every Whisper variant (statically linked
     /// ggml) and Qwen3 (antirez C kernels). Initializing them on a CPU
     /// without AVX2 raises STATUS_ILLEGAL_INSTRUCTION (0xc000001d).
-    /// Parakeet runs on ONNX Runtime, which does its own runtime CPUID
-    /// dispatch; cloud engines run no local kernels at all.
     pub fn requires_avx2(&self) -> bool {
         match self {
-            Self::Qwen3Asr => true,
-            Self::Deepgram | Self::OpenAICompatible | Self::Disabled => false,
-            Self::Parakeet | Self::ParakeetMlx => false, // ONNX Runtime: runtime CPU dispatch
-            _ => true,                                   // all Whisper variants (ggml)
+            Self::Disabled => false,
+            _ => true, // Qwen3Asr (antirez) + all Whisper variants (ggml)
         }
     }
 }
@@ -42,18 +34,20 @@ impl std::str::FromStr for AudioTranscriptionEngine {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "deepgram" => Ok(Self::Deepgram),
             "whisper-tiny" => Ok(Self::WhisperTiny),
             "whisper-tiny-quantized" => Ok(Self::WhisperTinyQuantized),
             "whisper-large" => Ok(Self::WhisperLargeV3),
             "whisper-large-quantized" => Ok(Self::WhisperLargeV3Quantized),
             "whisper-large-v3-turbo" => Ok(Self::WhisperLargeV3Turbo),
             "whisper-large-v3-turbo-quantized" => Ok(Self::WhisperLargeV3TurboQuantized),
-            "openai-compatible" => Ok(Self::OpenAICompatible),
             "qwen3-asr" => Ok(Self::Qwen3Asr),
-            "parakeet" | "parakeet-tdt-0.6b-v2" => Ok(Self::Parakeet),
-            "parakeet-mlx" => Ok(Self::ParakeetMlx),
             "disabled" => Ok(Self::Disabled),
+            // Legacy engines removed in the zh-local cleanup: parakeet /
+            // parakeet-mlx have no Chinese support, deepgram /
+            // openai-compatible were cloud engines. Map stored configs to
+            // the local default instead of failing to parse.
+            "deepgram" | "openai-compatible" | "parakeet" | "parakeet-tdt-0.6b-v2"
+            | "parakeet-mlx" => Ok(Self::Qwen3Asr),
             _ => Err(format!("unknown audio engine: {s}")),
         }
     }
@@ -62,7 +56,6 @@ impl std::str::FromStr for AudioTranscriptionEngine {
 impl fmt::Display for AudioTranscriptionEngine {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AudioTranscriptionEngine::Deepgram => write!(f, "Deepgram"),
             AudioTranscriptionEngine::WhisperTiny => write!(f, "WhisperTiny"),
             AudioTranscriptionEngine::WhisperTinyQuantized => write!(f, "WhisperTinyQuantized"),
             AudioTranscriptionEngine::WhisperLargeV3 => write!(f, "WhisperLargeV3"),
@@ -73,10 +66,7 @@ impl fmt::Display for AudioTranscriptionEngine {
             AudioTranscriptionEngine::WhisperLargeV3TurboQuantized => {
                 write!(f, "WhisperLargeV3TurboQuantized")
             }
-            AudioTranscriptionEngine::OpenAICompatible => write!(f, "OpenAICompatible"),
             AudioTranscriptionEngine::Qwen3Asr => write!(f, "Qwen3Asr"),
-            AudioTranscriptionEngine::Parakeet => write!(f, "Parakeet"),
-            AudioTranscriptionEngine::ParakeetMlx => write!(f, "ParakeetMlx"),
             AudioTranscriptionEngine::Disabled => write!(f, "Disabled"),
         }
     }
@@ -85,14 +75,6 @@ impl fmt::Display for AudioTranscriptionEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn from_str_deepgram() {
-        assert_eq!(
-            "deepgram".parse::<AudioTranscriptionEngine>().unwrap(),
-            AudioTranscriptionEngine::Deepgram
-        );
-    }
 
     #[test]
     fn from_str_whisper_tiny() {
@@ -151,11 +133,36 @@ mod tests {
     }
 
     #[test]
+    fn from_str_qwen3_asr() {
+        assert_eq!(
+            "qwen3-asr".parse::<AudioTranscriptionEngine>().unwrap(),
+            AudioTranscriptionEngine::Qwen3Asr
+        );
+    }
+
+    #[test]
     fn from_str_disabled() {
         assert_eq!(
             "disabled".parse::<AudioTranscriptionEngine>().unwrap(),
             AudioTranscriptionEngine::Disabled
         );
+    }
+
+    #[test]
+    fn legacy_engine_strings_migrate_to_qwen3() {
+        for legacy in [
+            "deepgram",
+            "openai-compatible",
+            "parakeet",
+            "parakeet-tdt-0.6b-v2",
+            "parakeet-mlx",
+        ] {
+            assert_eq!(
+                legacy.parse::<AudioTranscriptionEngine>().unwrap(),
+                AudioTranscriptionEngine::Qwen3Asr,
+                "legacy engine {legacy} should migrate to qwen3-asr"
+            );
+        }
     }
 
     #[test]
@@ -170,10 +177,14 @@ mod tests {
         assert!(AudioTranscriptionEngine::WhisperTiny.requires_avx2());
         assert!(AudioTranscriptionEngine::WhisperLargeV3TurboQuantized.requires_avx2());
         assert!(AudioTranscriptionEngine::Qwen3Asr.requires_avx2());
-        assert!(!AudioTranscriptionEngine::Parakeet.requires_avx2());
-        assert!(!AudioTranscriptionEngine::ParakeetMlx.requires_avx2());
-        assert!(!AudioTranscriptionEngine::Deepgram.requires_avx2());
-        assert!(!AudioTranscriptionEngine::OpenAICompatible.requires_avx2());
         assert!(!AudioTranscriptionEngine::Disabled.requires_avx2());
+    }
+
+    #[test]
+    fn default_is_qwen3_asr() {
+        assert_eq!(
+            AudioTranscriptionEngine::default(),
+            AudioTranscriptionEngine::Qwen3Asr
+        );
     }
 }

@@ -37,7 +37,7 @@ pub struct RetranscribeRequest {
         deserialize_with = "super::time::deserialize_flexible_datetime_option"
     )]
     pub end: Option<DateTime<Utc>>,
-    /// Optional engine override: "whisper-large-v3", "deepgram", etc.
+    /// Optional engine override: "whisper-large-v3", "qwen3-asr", etc.
     pub engine: Option<String>,
     /// Custom vocabulary for this re-transcription
     pub vocabulary: Option<Vec<VocabularyEntry>>,
@@ -66,7 +66,7 @@ pub struct MeetingRetranscribeVocabularyEntry {
 
 #[derive(Debug, Deserialize, Default, OaSchema)]
 pub struct MeetingRetranscribeRequest {
-    /// Optional engine override: "deepgram", "screenpipe-cloud", "parakeet", etc.
+    /// Optional engine override: "qwen3-asr", "whisper-large-v3", etc.
     pub engine: Option<String>,
     /// Custom vocabulary for this re-transcription.
     pub vocabulary: Option<Vec<MeetingRetranscribeVocabularyEntry>>,
@@ -329,8 +329,6 @@ pub async fn retranscribe_handler(
         audio_manager.transcription_engine().await
     };
 
-    let deepgram_config = audio_manager.deepgram_config().await;
-    let openai_compatible_config = audio_manager.openai_compatible_config().await;
     let languages = audio_manager.languages().await;
 
     // Build effective vocabulary: user-provided + prompt words as bias entries
@@ -350,8 +348,6 @@ pub async fn retranscribe_handler(
     // 3. Build unified TranscriptionEngine for this retranscription request
     let transcription_engine = match TranscriptionEngine::new(
         engine.clone(),
-        deepgram_config,
-        openai_compatible_config,
         languages,
         effective_vocabulary,
     )
@@ -555,13 +551,9 @@ pub async fn retranscribe_meeting_handler(
         request.prompt,
     );
 
-    let deepgram_config = state.audio_manager.deepgram_config().await;
-    let openai_compatible_config = state.audio_manager.openai_compatible_config().await;
     let languages = state.audio_manager.languages().await;
     let transcription_engine = match TranscriptionEngine::new(
         engine.clone(),
-        deepgram_config,
-        openai_compatible_config,
         languages,
         vocabulary,
     )
@@ -826,12 +818,8 @@ fn dedupe_audio_chunks(chunks: Vec<AudioChunkInfo>) -> Vec<AudioChunkInfo> {
 }
 
 fn meeting_retranscribe_max_batch_duration_secs(engine: &AudioTranscriptionEngine) -> u64 {
-    match engine {
-        AudioTranscriptionEngine::Deepgram => 5000,
-        AudioTranscriptionEngine::OpenAICompatible => 3000,
-        AudioTranscriptionEngine::Parakeet | AudioTranscriptionEngine::ParakeetMlx => 30,
-        _ => 600,
-    }
+    let _ = engine;
+    600
 }
 
 fn group_meeting_chunks(
@@ -984,14 +972,10 @@ mod tests {
     }
 
     #[test]
-    fn parakeet_uses_short_retranscribe_batches() {
+    fn default_retranscribe_batch_duration_is_600s() {
         assert_eq!(
-            meeting_retranscribe_max_batch_duration_secs(&AudioTranscriptionEngine::Parakeet),
-            30
-        );
-        assert_eq!(
-            meeting_retranscribe_max_batch_duration_secs(&AudioTranscriptionEngine::ParakeetMlx),
-            30
+            meeting_retranscribe_max_batch_duration_secs(&AudioTranscriptionEngine::Qwen3Asr),
+            600
         );
     }
 }

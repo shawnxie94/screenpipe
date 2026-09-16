@@ -5,22 +5,21 @@
 use std::{env, str::FromStr};
 
 use serde::{Deserialize, Serialize};
-use url::Url;
-
-const DEEPGRAM_LIVE_URL: &str = "wss://api.deepgram.com/v1/listen";
-const DEEPGRAM_LIVE_PATH: &str = "/v1/listen";
 
 /// Live transcription provider for meeting-only streaming.
 ///
 /// This is intentionally separate from the 24/7 background transcription
 /// engine. The continuous recorder still writes durable audio chunks; this
 /// provider only handles the temporary low-latency meeting overlay.
+///
+/// Local-only fork: cloud live providers (Deepgram live websocket) were
+/// removed — transcription always goes through the selected local engine
+/// (`SelectedEngine`), which is also the default.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MeetingStreamingProvider {
     Disabled,
     SelectedEngine,
-    DeepgramLive,
 }
 
 impl MeetingStreamingProvider {
@@ -28,7 +27,6 @@ impl MeetingStreamingProvider {
         match self {
             Self::Disabled => "disabled",
             Self::SelectedEngine => "selected-engine",
-            Self::DeepgramLive => "deepgram-live",
         }
     }
 
@@ -40,8 +38,7 @@ impl MeetingStreamingProvider {
 /// Configuration for meeting-only live streaming.
 ///
 /// `enabled` controls the lifecycle coordinator. A disabled provider still lets
-/// the coordinator emit clean session state, while avoiding cloud calls until a
-/// real streaming adapter is configured.
+/// the coordinator emit clean session state.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct MeetingStreamingConfig {
     pub enabled: bool,
@@ -52,9 +49,9 @@ pub struct MeetingStreamingConfig {
     pub language: Option<String>,
     pub local_speaker_name: Option<String>,
     pub persist_finals: bool,
-    /// Domain / proper-noun terms to bias the live transcriber toward (Deepgram
-    /// nova-3 keyterm prompting). Seeded from the user's custom vocabulary; the
-    /// streaming analog of the batch path's keyterms. Empty = no biasing.
+    /// Domain / proper-noun terms to bias the live transcriber toward. Seeded
+    /// from the user's custom vocabulary; the streaming analog of the batch
+    /// path's keyterms. Empty = no biasing.
     #[serde(default)]
     pub keyterms: Vec<String>,
 }
@@ -66,35 +63,13 @@ impl Default for MeetingStreamingConfig {
             .as_deref()
             .and_then(|value| MeetingStreamingProvider::from_str(value).ok())
             .unwrap_or(MeetingStreamingProvider::SelectedEngine);
-        let api_key = provider_api_key(&provider);
-        let endpoint = match provider {
-            MeetingStreamingProvider::DeepgramLive => endpoint_from_env(
-                &["SCREENPIPE_MEETING_DEEPGRAM_LIVE_URL"],
-                DEEPGRAM_LIVE_URL,
-                DEEPGRAM_LIVE_PATH,
-            ),
-            _ => endpoint_from_env(
-                &["SCREENPIPE_MEETING_REALTIME_URL"],
-                DEEPGRAM_LIVE_URL,
-                DEEPGRAM_LIVE_PATH,
-            ),
-        };
-        let default_model = match provider {
-            MeetingStreamingProvider::SelectedEngine => "selected transcription engine",
-            MeetingStreamingProvider::Disabled | MeetingStreamingProvider::DeepgramLive => {
-                "nova-3"
-            }
-        };
 
         Self {
             enabled: true,
             provider,
-            api_key,
-            endpoint,
-            model: Some(
-                env_non_empty("SCREENPIPE_MEETING_TRANSCRIPTION_MODEL")
-                    .unwrap_or_else(|| default_model.to_string()),
-            ),
+            api_key: None,
+            endpoint: String::new(),
+            model: Some("selected transcription engine".to_string()),
             language: env::var("SCREENPIPE_MEETING_TRANSCRIPTION_LANGUAGE")
                 .ok()
                 .filter(|s| !s.trim().is_empty()),
@@ -122,8 +97,8 @@ impl FromStr for MeetingStreamingProvider {
             | "local"
             | "local-engine"
             | "local_engine" => Ok(Self::SelectedEngine),
-            "deepgram" | "deepgram_live" | "deepgram-live" => Ok(Self::DeepgramLive),
-            "auto" => Err(()),
+            // Legacy cloud provider string — migrate to the local default.
+            "deepgram" | "deepgram_live" | "deepgram-live" => Ok(Self::SelectedEngine),
             _ => Err(()),
         }
     }
@@ -146,18 +121,6 @@ impl MeetingStreamingConfig {
                 self.endpoint = String::new();
                 self.model = Some("selected transcription engine".to_string());
             }
-            MeetingStreamingProvider::DeepgramLive => {
-                self.api_key = provider_api_key(&self.provider);
-                self.endpoint = endpoint_from_env(
-                    &["SCREENPIPE_MEETING_DEEPGRAM_LIVE_URL"],
-                    DEEPGRAM_LIVE_URL,
-                    DEEPGRAM_LIVE_PATH,
-                );
-                self.model = Some(
-                    env_non_empty("SCREENPIPE_MEETING_TRANSCRIPTION_MODEL")
-                        .unwrap_or_else(|| "nova-3".to_string()),
-                );
-            }
             MeetingStreamingProvider::Disabled => {}
         }
         self
@@ -172,8 +135,7 @@ impl MeetingStreamingConfig {
     ) -> Self {
         let provider = MeetingStreamingProvider::from_str(provider)
             .unwrap_or(MeetingStreamingProvider::SelectedEngine);
-        let provider_api_key_override =
-            provider_api_key_override.and_then(|key| non_empty_trimmed(&key));
+        let _ = provider_api_key_override; // cloud keys removed — local engine needs none
         let mut config = Self {
             enabled,
             provider,
@@ -186,44 +148,14 @@ impl MeetingStreamingConfig {
             config.api_key = None;
             config.endpoint = String::new();
             config.model = Some("selected transcription engine".to_string());
-        } else if config.provider == MeetingStreamingProvider::DeepgramLive {
-            config.api_key =
-                provider_api_key_override.or_else(|| provider_api_key(&config.provider));
-            config.endpoint = endpoint_from_env(
-                &["SCREENPIPE_MEETING_DEEPGRAM_LIVE_URL"],
-                DEEPGRAM_LIVE_URL,
-                DEEPGRAM_LIVE_PATH,
-            );
-            config.model = Some(
-                env_non_empty("SCREENPIPE_MEETING_TRANSCRIPTION_MODEL")
-                    .unwrap_or_else(|| "nova-3".to_string()),
-            );
         }
 
         config
     }
 
     pub fn live_transcription_ready(&self) -> bool {
-        match self.provider {
-            MeetingStreamingProvider::Disabled => false,
-            MeetingStreamingProvider::SelectedEngine => true,
-            MeetingStreamingProvider::DeepgramLive => self
-                .api_key
-                .as_deref()
-                .is_some_and(|key| !key.trim().is_empty()),
-        }
+        self.provider != MeetingStreamingProvider::Disabled
     }
-}
-
-fn provider_api_key(provider: &MeetingStreamingProvider) -> Option<String> {
-    let keys: &[&str] = match provider {
-        MeetingStreamingProvider::DeepgramLive => {
-            &["SCREENPIPE_MEETING_DEEPGRAM_API_KEY", "DEEPGRAM_API_KEY"]
-        }
-        MeetingStreamingProvider::Disabled | MeetingStreamingProvider::SelectedEngine => &[],
-    };
-
-    keys.iter().find_map(|key| env_non_empty(key))
 }
 
 fn env_non_empty(key: &str) -> Option<String> {
@@ -240,39 +172,6 @@ fn non_empty_trimmed(value: &str) -> Option<String> {
     } else {
         Some(trimmed.to_string())
     }
-}
-
-fn endpoint_from_env(keys: &[&str], fallback: &str, default_path: &str) -> String {
-    for key in keys {
-        if let Some(value) = env_non_empty(key) {
-            if let Some(endpoint) = normalize_realtime_endpoint(&value, default_path) {
-                return endpoint;
-            }
-        }
-    }
-    fallback.to_string()
-}
-
-fn normalize_realtime_endpoint(value: &str, default_path: &str) -> Option<String> {
-    let mut url = Url::parse(value.trim()).ok()?;
-    url.host_str()?;
-
-    match url.scheme() {
-        "wss" | "ws" => {}
-        "https" => {
-            url.set_scheme("wss").ok()?;
-        }
-        "http" => {
-            url.set_scheme("ws").ok()?;
-        }
-        _ => return None,
-    }
-
-    if url.path().is_empty() || url.path() == "/" {
-        url.set_path(default_path);
-    }
-
-    Some(url.to_string())
 }
 
 #[cfg(test)]
@@ -292,34 +191,22 @@ mod tests {
     }
 
     #[test]
-    fn explicit_settings_providers_survive_cloud_identity() {
+    fn explicit_settings_providers_survive() {
         let cases = [
-            (
-                "selected-engine",
-                MeetingStreamingProvider::SelectedEngine,
-                None,
-            ),
-            (
-                "deepgram-live",
-                MeetingStreamingProvider::DeepgramLive,
-                Some("direct-key"),
-            ),
-            ("disabled", MeetingStreamingProvider::Disabled, None),
+            ("selected-engine", MeetingStreamingProvider::SelectedEngine),
+            ("disabled", MeetingStreamingProvider::Disabled),
         ];
 
-        for (persisted, expected, direct_key) in cases {
+        for (persisted, expected) in cases {
             let config = MeetingStreamingConfig::from_settings(
                 true,
                 persisted,
-                direct_key.map(str::to_string),
+                None,
                 None,
                 None,
             );
 
             assert_eq!(config.provider, expected, "persisted={persisted}");
-            if let Some(direct_key) = direct_key {
-                assert_eq!(config.api_key.as_deref(), Some(direct_key));
-            }
         }
     }
 
@@ -354,49 +241,12 @@ mod tests {
     }
 
     #[test]
-    fn direct_deepgram_live_uses_settings_api_key_override() {
-        let config = MeetingStreamingConfig::from_settings(
-            true,
-            "deepgram-live",
-            Some("settings-deepgram-key".to_string()),
-            None,
-            None,
-        );
-
-        assert_eq!(config.provider, MeetingStreamingProvider::DeepgramLive);
-        assert_eq!(config.api_key.as_deref(), Some("settings-deepgram-key"));
-        assert!(config.live_transcription_ready());
-    }
-
-    #[test]
-    fn realtime_endpoint_normalization_rejects_hostless_urls() {
-        assert_eq!(
-            normalize_realtime_endpoint("wss://", "/v1/realtime"),
-            None
-        );
-        assert_eq!(
-            normalize_realtime_endpoint("https://", "/v1/realtime"),
-            None
-        );
-        assert_eq!(
-            normalize_realtime_endpoint("", "/v1/realtime"),
-            None
-        );
-    }
-
-    #[test]
-    fn realtime_endpoint_normalization_can_use_deepgram_path() {
-        assert_eq!(
-            normalize_realtime_endpoint("https://api.deepgram.com", DEEPGRAM_LIVE_PATH).as_deref(),
-            Some("wss://api.deepgram.com/v1/listen")
-        );
-    }
-
-    #[test]
-    fn realtime_endpoint_normalization_preserves_explicit_path() {
-        assert_eq!(
-            normalize_realtime_endpoint("wss://example.com/custom", DEEPGRAM_LIVE_PATH).as_deref(),
-            Some("wss://example.com/custom")
-        );
+    fn legacy_deepgram_string_migrates_to_selected_engine() {
+        for alias in ["deepgram", "deepgram_live", "deepgram-live"] {
+            assert_eq!(
+                MeetingStreamingProvider::from_str(alias),
+                Ok(MeetingStreamingProvider::SelectedEngine)
+            );
+        }
     }
 }
