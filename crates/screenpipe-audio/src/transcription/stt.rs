@@ -125,6 +125,11 @@ pub async fn stt(
     }
 }
 
+/// Process one audio chunk: persist-fallback, VAD gate, then transcribe.
+///
+/// Returns `Ok(true)` when the engine actually transcribed segments and
+/// `Ok(false)` when VAD judged the chunk silence (the engine was not touched,
+/// so callers tracking engine idleness must not count it as usage).
 #[allow(clippy::too_many_arguments)]
 pub async fn process_audio_input(
     audio: AudioInput,
@@ -138,7 +143,7 @@ pub async fn process_audio_input(
     metrics: Arc<AudioPipelineMetrics>,
     pre_written_path: Option<String>,
     filter_music: bool,
-) -> Result<()> {
+) -> Result<bool> {
     // capture_timestamp is set when audio enters the channel. Used for both
     // file naming and DB storage so audio appears at the correct timeline position,
     // even when smart mode defers processing by 20+ minutes.
@@ -176,7 +181,7 @@ pub async fn process_audio_input(
 
     if !speech_ratio_ok {
         // Audio is already persisted to disk by the caller — just skip transcription
-        return Ok(());
+        return Ok(false);
     }
 
     // Use the pre-written path if audio was already persisted before deferral,
@@ -214,7 +219,7 @@ pub async fn process_audio_input(
         }
     }
 
-    Ok(())
+    Ok(true)
 }
 
 pub async fn run_stt(

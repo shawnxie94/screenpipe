@@ -13,7 +13,7 @@ use std::{
         atomic::{AtomicBool, AtomicU64, Ordering},
         Arc,
     },
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tokio::{
     sync::{broadcast, oneshot, Mutex, Notify, RwLock},
@@ -56,7 +56,7 @@ use crate::{
     metrics::AudioPipelineMetrics,
     segmentation::segmentation_manager::SegmentationManager,
     transcription::{
-        engine::TranscriptionEngine,
+        engine::{TranscriptionEngine, TranscriptionSession},
         handle_new_transcript,
         stt::{process_audio_input, SAMPLE_RATE},
         whisper::model::get_cached_whisper_model_path,
@@ -352,6 +352,160 @@ where
         engine,
         created: builds.published_unobserved.swap(false, Ordering::AcqRel),
     })
+}
+
+/// An engine and its reusable session as held by the audio receiver worker.
+/// `last_used` advances only when the engine actually transcribed something;
+/// VAD-skipped silence does not count.
+struct LoadedTranscriptionEngine {
+    engine: TranscriptionEngine,
+    session: TranscriptionSession,
+    last_used: Instant,
+}
+
+/// Default idle time before the audio receiver worker drops the model.
+///
+/// The model is the largest single resident allocation (qwen3-asr-0.6b keeps
+/// its ~1.7 GB of weights in-process) and reloads in ~1.5s, so idle machines
+/// should not pay for it while no one is speaking.
+const DEFAULT_ENGINE_IDLE_UNLOAD_SECS: u64 = 600;
+
+/// Pure decision for dropping the loaded engine. Zero `threshold` disables
+/// unloading entirely; an active audio session (meeting) or live meeting
+/// transcription pins the engine regardless of idleness.
+fn should_unload_engine(
+    idle_for: Duration,
+    threshold: Duration,
+    in_audio_session: bool,
+    live_transcription_active: bool,
+) -> bool {
+    if threshold.is_zero() || in_audio_session || live_transcription_active {
+        return false;
+    }
+    idle_for >= threshold
+}
+
+/// Idle threshold before the worker drops the model. Override with
+/// `SCREENPIPE_ENGINE_IDLE_UNLOAD_SECS` (`0` disables unloading).
+fn engine_idle_unload_secs() -> Duration {
+    Duration::from_secs(parse_engine_idle_unload_secs(
+        std::env::var("SCREENPIPE_ENGINE_IDLE_UNLOAD_SECS").ok(),
+    ))
+}
+
+fn parse_engine_idle_unload_secs(raw: Option<String>) -> u64 {
+    raw.and_then(|v| v.parse::<u64>().ok())
+        .unwrap_or(DEFAULT_ENGINE_IDLE_UNLOAD_SECS)
+}
+
+/// Load the engine into `loaded` if not already present, sharing the global
+/// slot so construction stays serialized with capability refreshes and the
+/// meeting-streaming path.
+async fn ensure_transcription_engine_loaded<'a>(
+    loaded: &'a mut Option<LoadedTranscriptionEngine>,
+    slot: &Arc<RwLock<Option<TranscriptionEngine>>>,
+    builds: &EngineBuildCoordinator,
+    config: Arc<AudioTranscriptionEngine>,
+    languages: Vec<screenpipe_core::Language>,
+    vocabulary: Vec<crate::transcription::VocabularyEntry>,
+) -> Result<&'a mut LoadedTranscriptionEngine> {
+    if loaded.is_none() {
+        let requested_for_match = config.clone();
+        let acquisition = get_or_create_engine(
+            slot.clone(),
+            builds.clone(),
+            move |engine| {
+                runtime_transcription_config_matches(requested_for_match.as_ref(), &engine.config())
+            },
+            move || {
+                let config = config.clone();
+                let languages = languages.clone();
+                let vocabulary = vocabulary.clone();
+                async move { TranscriptionEngine::new(config, languages, vocabulary).await }
+            },
+        )
+        .await?;
+        let session = acquisition.engine.create_session()?;
+        if acquisition.created {
+            info!("transcription engine constructed for audio receiver handler");
+        } else {
+            debug!("reusing shared transcription engine for audio receiver handler");
+        }
+        info!("transcription session created (will be reused across segments)");
+        *loaded = Some(LoadedTranscriptionEngine {
+            engine: acquisition.engine,
+            session,
+            last_used: Instant::now(),
+        });
+    }
+    Ok(loaded.as_mut().expect("engine was just loaded"))
+}
+
+/// Ensure the engine is loaded, then run one chunk through VAD + STT.
+/// Engine usage (`last_used`) is recorded only when transcription actually
+/// happened; VAD-skipped silence leaves the idle clock running.
+#[allow(clippy::too_many_arguments)]
+async fn ensure_and_process_audio_input(
+    loaded: &mut Option<LoadedTranscriptionEngine>,
+    slot: &Arc<RwLock<Option<TranscriptionEngine>>>,
+    builds: &EngineBuildCoordinator,
+    config: Arc<AudioTranscriptionEngine>,
+    languages: Vec<screenpipe_core::Language>,
+    vocabulary: Vec<crate::transcription::VocabularyEntry>,
+    audio: AudioInput,
+    vad_engine: Arc<Mutex<Box<dyn VadEngine + Send>>>,
+    segmentation_model_path: Option<PathBuf>,
+    embedding_manager: Arc<
+        std::sync::Mutex<crate::speaker::embedding_manager::EmbeddingManager>,
+    >,
+    embedding_extractor: Option<
+        Arc<std::sync::Mutex<crate::speaker::embedding::EmbeddingExtractor>>,
+    >,
+    output_path: &PathBuf,
+    output_sender: &crossbeam::channel::Sender<TranscriptionResult>,
+    metrics: Arc<AudioPipelineMetrics>,
+    pre_written_path: Option<String>,
+    filter_music: bool,
+) {
+    let active = match ensure_transcription_engine_loaded(
+        loaded,
+        slot,
+        builds,
+        config,
+        languages,
+        vocabulary,
+    )
+    .await
+    {
+        Ok(active) => active,
+        Err(e) => {
+            metrics.record_process_error();
+            log_audio_process_error(&e);
+            return;
+        }
+    };
+    match process_audio_input(
+        audio,
+        vad_engine,
+        segmentation_model_path,
+        embedding_manager,
+        embedding_extractor,
+        output_path,
+        output_sender,
+        &mut active.session,
+        metrics.clone(),
+        pre_written_path,
+        filter_music,
+    )
+    .await
+    {
+        Ok(true) => active.last_used = Instant::now(),
+        Ok(false) => {}
+        Err(e) => {
+            metrics.record_process_error();
+            log_audio_process_error(&e);
+        }
+    }
 }
 
 fn runtime_transcription_config_matches(
@@ -1303,27 +1457,14 @@ impl AudioManager {
         // drop gate below — they exist only during a meeting by construction.
         let session_devices = self.session_devices.clone();
 
-        // Reuse the ready shared engine across handler restarts. Construction is
-        // serialized with capability refreshes so the model can never be loaded
-        // twice by the two paths.
-        let acquisition = self
-            .get_or_create_transcription_engine(
-                audio_transcription_engine.clone(),
-                languages.clone(),
-                vocabulary.clone(),
-            )
-            .await?;
-        let engine = acquisition.engine;
-        if acquisition.created {
-            info!("transcription engine constructed for audio receiver handler");
-        } else {
-            debug!("reusing shared transcription engine for audio receiver handler");
-        }
-
-        // Create a single session and reuse it across all segments.
-        // WhisperState is reused (whisper_full_with_state clears KV caches internally).
-        let mut session = engine.create_session()?;
-        info!("transcription session created (will be reused across segments)");
+        // The engine is loaded lazily on the first voiced chunk and dropped
+        // again after an idle period (see should_unload_engine): the model is
+        // the largest single resident allocation and reloads in ~1.5s, so an
+        // idle machine should not keep it resident. Loading goes through the
+        // same shared slot as before, so construction stays serialized with
+        // capability refreshes and the meeting-streaming path.
+        let engine_slot = self.engine.clone();
+        let engine_builds = self.engine_builds.clone();
 
         Ok(tokio::spawn(async move {
             // Track whether we've deferred segments so we can trigger reconciliation
@@ -1337,6 +1478,11 @@ impl AudioManager {
                 &audio_transcription_engine,
             );
             let mut deferral_started: Option<std::time::Instant> = None;
+
+            // Lazy engine state: loaded on the first voiced chunk, dropped after
+            // the idle threshold. See should_unload_engine for the pinning gates.
+            let unload_after = engine_idle_unload_secs();
+            let mut loaded: Option<LoadedTranscriptionEngine> = None;
 
             while let Ok(audio) = whisper_receiver.recv() {
                 metrics.record_chunk_received();
@@ -1363,6 +1509,25 @@ impl AudioManager {
                         crate::core::device::DeviceType::Input => rms > 0.05,
                     };
                     meeting.on_audio_activity(&audio.device.device_type, has_activity);
+                }
+
+                // Drop the model once it has idled past the threshold — but an
+                // active audio session or live meeting transcription pins it.
+                let idle_for = loaded.as_ref().map(|l| l.last_used.elapsed());
+                let unload_now = idle_for.is_some_and(|idle| {
+                    let in_session = meeting_detector
+                        .as_ref()
+                        .is_some_and(|m| m.is_in_audio_session());
+                    let live_active = meeting_audio_tap.background_suppressed();
+                    should_unload_engine(idle, unload_after, in_session, live_active)
+                });
+                if unload_now {
+                    info!(
+                        "transcription engine idle for {:?}; unloading model until the next voiced chunk",
+                        idle_for.unwrap()
+                    );
+                    loaded = None;
+                    *engine_slot.write().await = None;
                 }
 
                 // Meetings-only capture: enforce the privacy boundary again at
@@ -1541,25 +1706,47 @@ impl AudioManager {
                                 "batch mode: audio session ended, transcribing accumulated audio"
                             );
                             let data_dir = output_path.as_deref();
-                            let sweep = super::reconciliation::reconcile_untranscribed(
-                                &db,
-                                &engine,
-                                on_insert_session.as_ref(),
+                            match ensure_transcription_engine_loaded(
+                                &mut loaded,
+                                &engine_slot,
+                                &engine_builds,
                                 audio_transcription_engine.clone(),
-                                Some(segmentation_manager.clone()),
-                                data_dir,
-                                batch_max_duration_secs,
-                                Some(metrics.clone()),
+                                languages.clone(),
+                                vocabulary.clone(),
                             )
-                            .await;
-                            let count = sweep.processed_chunks;
-                            for _ in 0..count {
-                                metrics.record_segment_batch_processed();
+                            .await
+                            {
+                                Ok(active) => {
+                                    let sweep = super::reconciliation::reconcile_untranscribed(
+                                        &db,
+                                        &active.engine,
+                                        on_insert_session.as_ref(),
+                                        audio_transcription_engine.clone(),
+                                        Some(segmentation_manager.clone()),
+                                        data_dir,
+                                        batch_max_duration_secs,
+                                        Some(metrics.clone()),
+                                    )
+                                    .await;
+                                    let count = sweep.processed_chunks;
+                                    if count > 0 {
+                                        active.last_used = std::time::Instant::now();
+                                    }
+                                    for _ in 0..count {
+                                        metrics.record_segment_batch_processed();
+                                    }
+                                    if sweep.hit_candidate_limit {
+                                        reconciliation_wakeup.notify_one();
+                                    }
+                                    info!("batch mode: transcribed {} chunks", count);
+                                }
+                                Err(e) => {
+                                    metrics.record_process_error();
+                                    error!(
+                                        "batch mode: failed to load engine for reconciliation: {e:#}"
+                                    );
+                                }
                             }
-                            if sweep.hit_candidate_limit {
-                                reconciliation_wakeup.notify_one();
-                            }
-                            info!("batch mode: transcribed {} chunks", count);
                         } else if now_in_session {
                             if deferral_started.is_none() {
                                 deferral_started = Some(std::time::Instant::now());
@@ -1574,7 +1761,13 @@ impl AudioManager {
                             debug!("batch mode: in audio session, deferring transcription");
                         } else {
                             // Not in an audio session — transcribe immediately like realtime
-                            if let Err(e) = process_audio_input(
+                            ensure_and_process_audio_input(
+                                &mut loaded,
+                                &engine_slot,
+                                &engine_builds,
+                                audio_transcription_engine.clone(),
+                                languages.clone(),
+                                vocabulary.clone(),
                                 audio.clone(),
                                 vad_engine.clone(),
                                 segmentation_model_path.clone(),
@@ -1582,20 +1775,21 @@ impl AudioManager {
                                 embedding_extractor.clone(),
                                 &output_path.clone().unwrap(),
                                 &transcription_sender.clone(),
-                                &mut session,
                                 metrics.clone(),
                                 persisted_file_path.clone(),
                                 filter_music,
                             )
-                            .await
-                            {
-                                metrics.record_process_error();
-                                log_audio_process_error(&e);
-                            }
+                            .await;
                         }
                     } else {
                         // No meeting detector available — transcribe immediately
-                        if let Err(e) = process_audio_input(
+                        ensure_and_process_audio_input(
+                            &mut loaded,
+                            &engine_slot,
+                            &engine_builds,
+                            audio_transcription_engine.clone(),
+                            languages.clone(),
+                            vocabulary.clone(),
                             audio.clone(),
                             vad_engine.clone(),
                             segmentation_model_path.clone(),
@@ -1603,20 +1797,21 @@ impl AudioManager {
                             embedding_extractor.clone(),
                             &output_path.clone().unwrap(),
                             &transcription_sender.clone(),
-                            &mut session,
                             metrics.clone(),
                             persisted_file_path.clone(),
                             filter_music,
                         )
-                        .await
-                        {
-                            metrics.record_process_error();
-                            log_audio_process_error(&e);
-                        }
+                        .await;
                     }
                 } else {
                     // Realtime mode: transcribe immediately
-                    if let Err(e) = process_audio_input(
+                    ensure_and_process_audio_input(
+                        &mut loaded,
+                        &engine_slot,
+                        &engine_builds,
+                        audio_transcription_engine.clone(),
+                        languages.clone(),
+                        vocabulary.clone(),
                         audio.clone(),
                         vad_engine.clone(),
                         segmentation_model_path.clone(),
@@ -1624,16 +1819,11 @@ impl AudioManager {
                         embedding_extractor.clone(),
                         &output_path.clone().unwrap(),
                         &transcription_sender.clone(),
-                        &mut session,
                         metrics.clone(),
                         persisted_file_path.clone(),
                         filter_music,
                     )
-                    .await
-                    {
-                        metrics.record_process_error();
-                        log_audio_process_error(&e);
-                    }
+                    .await;
                 }
             }
         }))
@@ -1944,6 +2134,18 @@ impl AudioManager {
     /// Returns the current transcription engine instance (for retranscribe endpoint).
     pub async fn transcription_engine_instance(&self) -> Option<TranscriptionEngine> {
         self.engine.read().await.clone()
+    }
+
+    /// Load the shared transcription engine on demand, creating it if the
+    /// audio receiver worker has unloaded it after an idle period.
+    pub async fn ensure_transcription_engine_available(&self) -> Result<TranscriptionEngine> {
+        let config = self.transcription_engine().await;
+        let languages = self.languages().await;
+        let vocabulary = self.vocabulary().await;
+        let acquisition = self
+            .get_or_create_transcription_engine(config, languages, vocabulary)
+            .await?;
+        Ok(acquisition.engine)
     }
 
     /// Returns the current transcription engine config.
@@ -2403,6 +2605,47 @@ mod tests {
         Arc,
     };
     use tokio::sync::{Barrier, Notify, Semaphore};
+
+    #[test]
+    fn idle_unload_decision_respects_gates() {
+        let idle = Duration::from_secs(10_000);
+        let threshold = Duration::from_secs(600);
+
+        // Zero threshold disables unloading entirely.
+        assert!(!should_unload_engine(idle, Duration::ZERO, false, false));
+        // An active audio session (meeting) or live meeting transcription
+        // pins the engine no matter how long it has been idle.
+        assert!(!should_unload_engine(idle, threshold, true, false));
+        assert!(!should_unload_engine(idle, threshold, false, true));
+        assert!(!should_unload_engine(idle, threshold, true, true));
+        // Past the threshold with no gates: unload.
+        assert!(should_unload_engine(idle, threshold, false, false));
+        // Not yet idle: keep loaded.
+        assert!(!should_unload_engine(
+            Duration::from_secs(1),
+            threshold,
+            false,
+            false
+        ));
+    }
+
+    #[test]
+    fn idle_unload_secs_parses_env_override() {
+        assert_eq!(
+            parse_engine_idle_unload_secs(None),
+            DEFAULT_ENGINE_IDLE_UNLOAD_SECS
+        );
+        assert_eq!(parse_engine_idle_unload_secs(Some("0".to_string())), 0);
+        assert_eq!(parse_engine_idle_unload_secs(Some("30".to_string())), 30);
+        assert_eq!(
+            parse_engine_idle_unload_secs(Some("junk".to_string())),
+            DEFAULT_ENGINE_IDLE_UNLOAD_SECS
+        );
+        assert_eq!(
+            parse_engine_idle_unload_secs(Some("-5".to_string())),
+            DEFAULT_ENGINE_IDLE_UNLOAD_SECS
+        );
+    }
 
     /// Regression: a dropped clone used to tear down the live manager.
     ///

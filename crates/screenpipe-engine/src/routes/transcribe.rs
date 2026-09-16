@@ -193,16 +193,21 @@ pub async fn transcribe_handler(
             }
         }
     } else {
-        // Use the shared engine (same GPU model as the audio pipeline)
+        // Use the shared engine (same GPU model as the audio pipeline). The
+        // audio worker unloads the model after an idle period to reclaim its
+        // resident memory, so reload it on demand for explicit API calls.
         match audio_manager.transcription_engine_instance().await {
             Some(e) => e,
-            None => {
-                error!("transcription engine not initialized");
-                return error_response(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "transcription engine not ready yet".into(),
-                );
-            }
+            None => match audio_manager.ensure_transcription_engine_available().await {
+                Ok(e) => e,
+                Err(err) => {
+                    error!("failed to reload transcription engine: {err:#}");
+                    return error_response(
+                        StatusCode::SERVICE_UNAVAILABLE,
+                        "transcription engine not ready yet".into(),
+                    );
+                }
+            },
         }
     };
 
