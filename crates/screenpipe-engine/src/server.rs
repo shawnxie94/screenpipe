@@ -1100,6 +1100,10 @@ impl SCServer {
             "/connections/office",
             crate::office::routes::office_routes(),
         );
+        let router = router.nest(
+            "/connections/rss",
+            crate::connectors::routes::rss_routes(),
+        );
         let router = router.nest("/tasks", crate::tasks::routes());
         let router = router.nest(
             "/connections",

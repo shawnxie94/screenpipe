@@ -121,6 +121,7 @@ bincode = "1.3.3"
 
 # SHA256 for hashing
 sha2 = { workspace = true }
+feed-rs = { workspace = true }
 
 # Fast random number generator
 fastrand = "2.1.1"

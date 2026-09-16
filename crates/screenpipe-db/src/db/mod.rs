@@ -449,9 +449,13 @@ async fn flush_ax_bulk(
 mod accessibility;
 mod activity_ledger;
 mod audio;
+pub mod connector;
 pub mod office;
 pub use self::office::{
     OfficeConnectionRow, OfficeConnectionUpdate, OfficeObjectDraft, OfficeObjectRow,
+};
+pub use self::connector::{
+    ConnectorConnectionRow, ConnectorConnectionUpdate, ConnectorObjectDraft, ConnectorObjectRow,
 };
 pub mod tasks;
 mod util;

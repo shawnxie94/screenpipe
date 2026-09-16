@@ -29,11 +29,6 @@ pub fn now_utc() -> DateTime<Utc> {
     Utc::now()
 }
 
-/// Timestamp format used across SQLite TEXT columns (RFC3339 micros).
-pub fn format_ts(t: DateTime<Utc>) -> String {
-    t.to_rfc3339_opts(chrono::SecondsFormat::Micros, true)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -47,14 +42,5 @@ mod tests {
         assert_ne!(a, c);
         assert_eq!(a.len(), 64);
         assert!(a.chars().all(|c| c.is_ascii_hexdigit()));
-    }
-
-    #[test]
-    fn format_ts_is_rfc3339_with_micros() {
-        let t = Utc::now();
-        let s = format_ts(t);
-        assert!(s.ends_with('Z'));
-        assert!(s.contains('.'));
-        assert!(s.contains(':'));
     }
 }

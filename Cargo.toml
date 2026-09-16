@@ -24,6 +24,7 @@ license-file = "LICENSE.md"
 edition = "2021"
 
 [workspace.dependencies]
+feed-rs = "2"
 # AI
 tokenizers = { version = "0.21.0", default-features = false }
 hf-hub = { version = "0.3.2", git = "https://github.com/neo773/hf-hub", rev = "437dcf4049233f4a0e0cfc4e1c1dbf5ed2c57760", default-features = false, features = [

@@ -45,6 +45,7 @@ mod capture_exclusions;
 pub mod cli;
 pub mod cli_reminder;
 pub mod compaction_encoder;
+pub mod connectors;
 pub mod connections_api;
 pub mod core;
 pub mod crash_log;
