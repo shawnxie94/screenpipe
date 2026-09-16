@@ -17,6 +17,68 @@ use tracing::{info, warn};
 use crate::routes::search::is_screenpipe_app;
 use crate::video_cache::{AudioEntry, DeviceFrame, FrameMetadata, TimeSeriesFrame};
 
+/// Hard cap on cached frame entries (one per OCR row). Post-interning cost is
+/// roughly 400-500 bytes per entry, so the cap bounds the map near ~100 MB.
+/// When the cap engages, the oldest entries are dropped and `cache_warm_start`
+/// advances so the timeline streaming handler backfills that range from the DB
+/// (its existing partial-coverage path).
+const MAX_CACHED_FRAMES: usize = 200_000;
+
+/// Log a progress note every N trimmed entries instead of per push.
+const TRIM_LOG_INTERVAL: u64 = 10_000;
+
+/// Deduplicates repeated strings across the day's cache entries: app names,
+/// window titles, device and file paths, URLs, and OCR previews of static
+/// screens recur thousands of times per day and previously cost one heap
+/// allocation per field per frame. One pool per cache; cleared on day
+/// rollover together with the frames so it cannot grow unbounded.
+#[derive(Default)]
+struct StringInterner {
+    pool: std::sync::Mutex<HashSet<Arc<str>>>,
+}
+
+impl StringInterner {
+    fn intern(&self, s: &str) -> Arc<str> {
+        let mut pool = self.pool.lock().unwrap();
+        intern_in(&mut pool, s)
+    }
+
+    /// Intern several strings under a single lock acquisition — push_frame is
+    /// on the capture hot path and pays this once per OCR row.
+    fn intern_frame(&self, frame: &mut HotFrame) {
+        let mut pool = self.pool.lock().unwrap();
+        frame.device_name = intern_in(&mut pool, &frame.device_name);
+        frame.app_name = intern_in(&mut pool, &frame.app_name);
+        frame.window_name = intern_in(&mut pool, &frame.window_name);
+        frame.ocr_text_preview = intern_in(&mut pool, &frame.ocr_text_preview);
+        frame.snapshot_path = intern_in(&mut pool, &frame.snapshot_path);
+        frame.capture_trigger = intern_in(&mut pool, &frame.capture_trigger);
+        frame.browser_url = frame.browser_url.take().map(|u| intern_in(&mut pool, &u));
+        frame.machine_id = frame.machine_id.take().map(|m| intern_in(&mut pool, &m));
+    }
+
+    fn intern_audio(&self, audio: &mut HotAudio) {
+        let mut pool = self.pool.lock().unwrap();
+        audio.transcription = intern_in(&mut pool, &audio.transcription);
+        audio.device_name = intern_in(&mut pool, &audio.device_name);
+        audio.audio_file_path = intern_in(&mut pool, &audio.audio_file_path);
+        audio.speaker_name = audio.speaker_name.take().map(|s| intern_in(&mut pool, &s));
+    }
+
+    fn clear(&self) {
+        self.pool.lock().unwrap().clear();
+    }
+}
+
+fn intern_in(pool: &mut HashSet<Arc<str>>, s: &str) -> Arc<str> {
+    if let Some(existing) = pool.get(s) {
+        return existing.clone();
+    }
+    let arc: Arc<str> = s.into();
+    pool.insert(arc.clone());
+    arc
+}
+
 /// Cached frame from the capture pipeline.
 ///
 /// All string fields are `Arc<str>` so that `.clone()` is O(1) — one atomic
@@ -69,6 +131,10 @@ pub struct HotFrameCache {
     audio_notify: broadcast::Sender<HotAudio>,
     /// Ordinal day number — cache is cleared on day rollover.
     cache_day: RwLock<u32>,
+    /// Dedup pool for the day's repeated strings. Cleared on rollover.
+    interner: StringInterner,
+    /// Cumulative entries dropped by the size cap; drives throttled logging.
+    trimmed_total: std::sync::atomic::AtomicU64,
     /// Earliest timestamp the cache covers. Set by warm_from_db (cold start)
     /// and extended by push_frame (live capture). The streaming handler uses
     /// this to skip the DB backfill when the cache already covers the range.
@@ -97,6 +163,8 @@ impl HotFrameCache {
             frame_notify: frame_tx,
             audio_notify: audio_tx,
             cache_day: RwLock::new(Utc::now().ordinal()),
+            interner: StringInterner::default(),
+            trimmed_total: std::sync::atomic::AtomicU64::new(0),
             cache_warm_start: RwLock::new(None),
             warm_ready_tx: warm_tx,
             warm_ready_rx: warm_rx,
@@ -114,14 +182,55 @@ impl HotFrameCache {
             );
             self.frames.write().await.clear();
             self.audio.write().await.clear();
+            self.interner.clear();
             *self.cache_warm_start.write().await = None;
             *day = today;
         }
     }
 
+    /// Enforce the frame entry cap: drop the oldest entries past `max` and
+    /// advance `cache_warm_start` to the oldest surviving entry so the
+    /// streaming handler backfills the trimmed range from the DB.
+    async fn enforce_frame_cap(&self, max: usize) {
+        let dropped = {
+            let mut frames = self.frames.write().await;
+            if frames.len() <= max {
+                return;
+            }
+            let mut dropped = 0u64;
+            while frames.len() > max {
+                if frames.pop_first().is_some() {
+                    dropped += 1;
+                } else {
+                    break;
+                }
+            }
+            let new_oldest = frames.keys().next().map(|(ts, _)| *ts);
+            drop(frames);
+            if let Some(new_oldest) = new_oldest {
+                let mut ws = self.cache_warm_start.write().await;
+                if ws.is_none_or(|existing| existing < new_oldest) {
+                    *ws = Some(new_oldest);
+                }
+            }
+            dropped
+        };
+        let total = self
+            .trimmed_total
+            .fetch_add(dropped, std::sync::atomic::Ordering::Relaxed)
+            + dropped;
+        if total / TRIM_LOG_INTERVAL != (total - dropped) / TRIM_LOG_INTERVAL {
+            info!(
+                "hot_frame_cache: size cap engaged, {} entries trimmed in total; oldest ranges fall back to DB reads",
+                total
+            );
+        }
+    }
+
     /// Push a captured frame into the cache and broadcast to subscribers.
-    pub async fn push_frame(&self, frame: HotFrame) {
+    pub async fn push_frame(&self, mut frame: HotFrame) {
         self.maybe_rollover().await;
+        self.interner.intern_frame(&mut frame);
         let key = (frame.timestamp, frame.frame_id);
         // Extend cache coverage if this frame is earlier than current warm_start
         {
@@ -135,11 +244,13 @@ impl HotFrameCache {
         self.frames.write().await.insert(key, frame.clone());
         // Broadcast to WS handlers — ignore errors (no subscribers = fine)
         let _ = self.frame_notify.send(frame);
+        self.enforce_frame_cap(MAX_CACHED_FRAMES).await;
     }
 
     /// Push an audio transcription into the cache and broadcast.
-    pub async fn push_audio(&self, audio: HotAudio) {
+    pub async fn push_audio(&self, mut audio: HotAudio) {
         self.maybe_rollover().await;
+        self.interner.intern_audio(&mut audio);
         self.audio
             .write()
             .await
@@ -237,21 +348,24 @@ impl HotFrameCache {
                         let hot = HotFrame {
                             frame_id: frame_data.frame_id,
                             timestamp: frame_data.timestamp,
-                            device_name: Arc::from(ocr_entry.device_name.as_str()),
-                            app_name: Arc::from(ocr_entry.app_name.as_str()),
-                            window_name: Arc::from(ocr_entry.window_name.as_str()),
-                            ocr_text_preview: ocr_entry
-                                .text
-                                .chars()
-                                .take(200)
-                                .collect::<String>()
-                                .into(),
-                            snapshot_path: Arc::from(ocr_entry.video_file_path.as_str()),
-                            browser_url: ocr_entry.browser_url.as_deref().map(Arc::from),
-                            capture_trigger: Arc::from(""),
+                            device_name: self.interner.intern(&ocr_entry.device_name),
+                            app_name: self.interner.intern(&ocr_entry.app_name),
+                            window_name: self.interner.intern(&ocr_entry.window_name),
+                            ocr_text_preview: self
+                                .interner
+                                .intern(&ocr_entry.text.chars().take(200).collect::<String>()),
+                            snapshot_path: self.interner.intern(&ocr_entry.video_file_path),
+                            browser_url: ocr_entry
+                                .browser_url
+                                .as_deref()
+                                .map(|u| self.interner.intern(u)),
+                            capture_trigger: self.interner.intern(""),
                             offset_index: frame_data.offset_index,
                             fps: frame_data.fps,
-                            machine_id: frame_data.machine_id.as_deref().map(Arc::from),
+                            machine_id: frame_data
+                                .machine_id
+                                .as_deref()
+                                .map(|m| self.interner.intern(m)),
                         };
                         frames.insert((hot.timestamp, hot.frame_id), hot);
                         frame_count += 1;
@@ -277,15 +391,18 @@ impl HotFrameCache {
                         let hot_audio = HotAudio {
                             audio_chunk_id: audio_entry.audio_chunk_id,
                             timestamp: frame_data.timestamp,
-                            transcription: Arc::from(audio_entry.transcription.as_str()),
-                            device_name: Arc::from(audio_entry.device_name.as_str()),
+                            transcription: self.interner.intern(&audio_entry.transcription),
+                            device_name: self.interner.intern(&audio_entry.device_name),
                             is_input: audio_entry.is_input,
-                            audio_file_path: Arc::from(audio_entry.audio_file_path.as_str()),
+                            audio_file_path: self.interner.intern(&audio_entry.audio_file_path),
                             duration_secs: audio_entry.duration_secs,
                             start_time: audio_entry.start_time,
                             end_time: audio_entry.end_time,
                             speaker_id: audio_entry.speaker_id,
-                            speaker_name: audio_entry.speaker_name.as_deref().map(Arc::from),
+                            speaker_name: audio_entry
+                                .speaker_name
+                                .as_deref()
+                                .map(|s| self.interner.intern(s)),
                         };
                         audio_map
                             .entry(hot_audio.timestamp)
@@ -315,6 +432,10 @@ impl HotFrameCache {
                 warn!("hot_frame_cache: failed to warm from DB: {}", e);
             }
         }
+
+        // A 24h warm on a dense database can exceed the entry cap on its own;
+        // trim here so cold-start memory is bounded too.
+        self.enforce_frame_cap(MAX_CACHED_FRAMES).await;
 
         // Signal that warm is complete (even on failure — callers should not block forever)
         let _ = self.warm_ready_tx.send(true);
@@ -369,7 +490,7 @@ impl HotFrameCache {
         }
         for (_, hot) in frames.iter_mut() {
             if let Some((mp4_path, offset, fps)) = updates.get(&hot.frame_id) {
-                hot.snapshot_path = Arc::from(*mp4_path);
+                hot.snapshot_path = self.interner.intern(mp4_path);
                 hot.offset_index = *offset;
                 hot.fps = *fps;
             }
@@ -556,5 +677,99 @@ mod tests {
 
         let yesterday = Utc::now() - chrono::Duration::days(1);
         assert!(!cache.is_today(yesterday).await);
+    }
+
+    fn test_frame(frame_id: i64, ts: DateTime<Utc>, app: &str, window: &str) -> HotFrame {
+        HotFrame {
+            frame_id,
+            timestamp: ts,
+            device_name: "monitor_0".into(),
+            app_name: app.into(),
+            window_name: window.into(),
+            ocr_text_preview: "static screen text".into(),
+            snapshot_path: "/tmp/test.jpg".into(),
+            browser_url: None,
+            capture_trigger: "click".into(),
+            offset_index: 0,
+            fps: 0.033,
+            machine_id: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn intern_dedups_repeated_strings() {
+        let cache = HotFrameCache::new();
+        let now = Utc::now();
+        cache.push_frame(test_frame(1, now, "SameApp", "Window A")).await;
+        cache.push_frame(test_frame(2, now, "SameApp", "Window B")).await;
+
+        let frames = cache.frames.read().await;
+        assert_eq!(frames.len(), 2);
+        let mut apps = frames.values().map(|f| f.app_name.clone());
+        let (first, second) = (apps.next().unwrap(), apps.next().unwrap());
+        // Same allocation, not just equal content.
+        assert!(Arc::ptr_eq(&first, &second));
+        drop(frames);
+
+        // One pool entry for the app name despite two frames, plus two window
+        // names, device, preview, path, trigger.
+        assert_eq!(cache.interner.pool.lock().unwrap().len(), 7);
+    }
+
+    #[tokio::test]
+    async fn frame_cap_trims_oldest_and_advances_warm_start() {
+        let cache = HotFrameCache::new();
+        let now = Utc::now();
+        for id in 0..10i64 {
+            let ts = now - chrono::Duration::seconds(10 - id);
+            cache.push_frame(test_frame(id, ts, "App", "Win")).await;
+            // Simulate a low cap by trimming to 5 after each push.
+            cache.enforce_frame_cap(5).await;
+        }
+
+        let frames = cache.frames.read().await;
+        assert_eq!(frames.len(), 5);
+        // Oldest five dropped (ids 0-4), newest five survive (ids 5-9,
+        // timestamps now-5s .. now-1s).
+        assert!(!frames.contains_key(&(now - chrono::Duration::seconds(10), 0)));
+        assert!(frames.contains_key(&(now - chrono::Duration::seconds(1), 9)));
+        drop(frames);
+
+        // Coverage advanced to the oldest surviving entry so the streaming
+        // handler backfills the trimmed range from the DB.
+        let warm_start = cache.earliest_coverage().await.unwrap();
+        let oldest_remaining = {
+            let frames = cache.frames.read().await;
+            frames.keys().next().unwrap().0
+        };
+        assert_eq!(warm_start, oldest_remaining);
+    }
+
+    #[tokio::test]
+    async fn rollover_clears_interner() {
+        let cache = HotFrameCache::new();
+        cache
+            .push_frame(test_frame(1, Utc::now(), "App", "Win"))
+            .await;
+        assert!(!cache.interner.pool.lock().unwrap().is_empty());
+
+        // Fake yesterday so the next push triggers the rollover path.
+        let yesterday_ordinal = (Utc::now() - chrono::Duration::days(1)).ordinal();
+        *cache.cache_day.write().await = yesterday_ordinal;
+
+        // Frame 2 uses a different app name so the pool after the rollover
+        // proves frame 1's strings were cleared, not just equal-looking ones.
+        cache
+            .push_frame(test_frame(2, Utc::now(), "OtherApp", "Win"))
+            .await;
+
+        {
+            let pool = cache.interner.pool.lock().unwrap();
+            assert!(!pool.contains("App"));
+            assert!(pool.contains("OtherApp"));
+        }
+        assert_eq!(cache.frames.read().await.len(), 1);
+        // Coverage re-extends from the post-rollover push.
+        assert!(cache.earliest_coverage().await.is_some());
     }
 }
