@@ -318,15 +318,16 @@ mod tests {
 }
 
 // ---------------------------------------------------------------------------
-// Local Knowledge Chinese projection (knowledge_search_* index). unicode61 cannot
-// match two-character Chinese substrings inside continuous CJK runs, so the
-// projection pre-tokenizes: every CJK run emits prefixed unigrams (`cu字`)
-// and bigrams (`cb词汇`); latin/code tokens pass through unchanged. Queries
-// use the same projection so a two-character term matches its bigram token.
-// Version bump invalidates the whole index (index_version column).
+// Chinese FTS projection (used by the office connector's `office_objects` FTS
+// index). unicode61 cannot match two-character Chinese substrings inside
+// continuous CJK runs, so the projection pre-tokenizes: every CJK run emits
+// prefixed unigrams (`cu字`) and bigrams (`cb词汇`); latin/code tokens pass
+// through unchanged. Queries use the same projection so a two-character term
+// matches its bigram token. Version bump invalidates the whole index
+// (index_version column).
 // ---------------------------------------------------------------------------
 
-pub const KNOWLEDGE_SEARCH_INDEX_VERSION: i64 = 1;
+pub const CHINESE_FTS_INDEX_VERSION: i64 = 1;
 
 /// Question/function words stripped before candidate generation.
 const CJK_STOPWORDS: &[&str] = &[
@@ -471,7 +472,7 @@ pub fn chinese_query_candidates(query: &str) -> Vec<String> {
 }
 
 #[cfg(test)]
-mod knowledge_chinese_tests {
+mod chinese_projection_tests {
     use super::*;
 
     #[test]

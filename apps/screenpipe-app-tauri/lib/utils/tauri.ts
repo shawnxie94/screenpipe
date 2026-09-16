@@ -2350,20 +2350,6 @@ async suspendGlobalShortcuts() : Promise<Result<null, string>> {
 }
 },
 /**
- * Verifies an OpenAI-compatible endpoint with the exact request path and
- * audio encoding used by the recording engine. A successful response is
- * required before the settings UI can activate this engine, so recordings
- * cannot silently accumulate without searchable audio transcripts.
- */
-async testOpenaiCompatibleTranscription(endpoint: string, apiKey: string | null, model: string, headers: { [key in string]: string } | null, rawAudio: boolean) : Promise<Result<string, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("test_openai_compatible_transcription", { endpoint, apiKey, model, headers, rawAudio }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Tauri command: start voice training. Spawns a background task that polls
  * until audio is transcribed, then assigns the speaker. Returns immediately.
  */
@@ -2588,7 +2574,8 @@ error: string | null;
 sinceEpochSecs: number;
 /**
  * True when this CPU lacks AVX2 (pre-2013 x86-64 / Atom-line): local
- * STT is disabled at runtime (their kernels are AVX2-compiled). Drives the
+ * whisper/qwen3 STT is disabled at runtime (their kernels are
+ * AVX2-compiled); parakeet remains available. Drives the
  * "compatibility mode" notice in onboarding/settings.
  */
 cpuCompatMode: boolean }
@@ -3006,8 +2993,8 @@ export type SettingsStore =
 disableAudio: boolean;
 /**
  * Audio transcription engine identifier.
- * Values: "qwen3-asr", "whisper-large-v3-turbo",
- * "whisper-large-v3-turbo-quantized", "disabled", etc.
+ * Values: "whisper-large-v3-turbo", "whisper-large-v3-turbo-quantized",
+ * "deepgram", "screenpipe-cloud", etc.
  */
 audioTranscriptionEngine: string;
 /**
@@ -3101,11 +3088,6 @@ aecMode?: AecMode;
  * Stored as i32 to match existing store.bin schema (cast to u64 by engine).
  */
 audioChunkDuration: number;
-/**
- * Legacy Deepgram API key — kept as String to match the existing store.bin
- * schema. The Deepgram engine was removed; this field is no longer used.
- */
-deepgramApiKey: string;
 /**
  * Filter music-dominant audio before transcription using spectral analysis.
  */

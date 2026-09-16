@@ -56,7 +56,7 @@ pub use db::{
     ImmediateTx, NewMeetingTranscriptSegment, OfficeConnectionRow, OfficeConnectionUpdate,
     OfficeObjectDraft, OfficeObjectRow, SemanticActor, SemanticActorAlias, SemanticActorReference,
     SemanticAttachResult, SemanticCleanupResult, SemanticContextQuery, SemanticFrameContext,
-    SemanticProjectionWriteResult, fingerprint, knowledge_format_ts, new_source_uid, now_utc,
+    SemanticProjectionWriteResult, fingerprint, new_source_uid, now_utc,
     MEETING_END_REASON_AUTO_END, MEETING_END_REASON_EXPLICIT_STOP, MEETING_END_REASON_SHUTDOWN,
 };
 pub use recovery::{

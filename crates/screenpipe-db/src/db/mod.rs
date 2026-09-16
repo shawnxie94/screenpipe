@@ -455,7 +455,7 @@ pub use self::office::{
 };
 pub mod tasks;
 mod util;
-pub use self::util::{fingerprint, format_ts as knowledge_format_ts, new_source_uid, now_utc};
+pub use self::util::{fingerprint, new_source_uid, now_utc};
 mod display_layout;
 mod elements;
 mod feedback;

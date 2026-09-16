@@ -193,7 +193,6 @@ import {
 import { AudioEqualizer } from "@/app/shortcut-reminder/audio-equalizer";
 
 import { useOverlayData } from "@/app/shortcut-reminder/use-overlay-data";
-import { useTranscriptionDiagnostics } from "./hooks/use-transcription-diagnostics";
 import { useVoiceTraining } from "./hooks/use-voice-training";
 
 type PermissionsStatus = {
@@ -1828,15 +1827,6 @@ export function RecordingSettings({ section }: { section: RecordingSettingsSecti
   const [isRefreshingSubscription, setIsRefreshingSubscription] = useState(false);
   const overlayData = useOverlayData();
   const [hwCapability, setHwCapability] = useState<HardwareCapability | null>(null);
-
-  // Transcription diagnostics
-  const {
-    txTestStatus,
-    txTestResults,
-    txDiagnosticsOpen,
-    setTxDiagnosticsOpen,
-    runTranscriptionDiagnostics,
-  } = useTranscriptionDiagnostics({ settings });
 
   useEffect(() => {
     commands.getHardwareCapability().then(setHwCapability).catch(() => {});
