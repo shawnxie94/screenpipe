@@ -1,9 +1,0 @@
-db-knowledge: exit=0 | test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 157 filtered out; finished in 1.06s
-db-activity: exit=0 | test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 163 filtered out; finished in 8.30s
-engine-knowledge: exit=0 | test result: ok. 54 passed; 0 failed; 0 ignored; 0 measured; 1435 filtered out; finished in 4.37s
-engine-activity: exit=0 | test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 1467 filtered out; finished in 0.00s
-skill-routes: exit=0 | test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
-core-skills: exit=0 | test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 566 filtered out; finished in 0.00s
-core-pi: exit=0 | test result: ok. 405 passed; 0 failed; 0 ignored; 0 measured; 165 filtered out; finished in 0.29s
-check: exit=0 | 
-correctness: exit=0 | test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.84s
