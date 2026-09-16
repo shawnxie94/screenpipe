@@ -2145,6 +2145,85 @@ mod recovery_tests {
     }
 
     #[tokio::test]
+    async fn startup_recovers_immediately_after_lock_owner_is_force_quit() {
+        const CHILD_DATA_DIR: &str = "SCREENPIPE_TEST_FORCE_QUIT_DB_LOCK_DIR";
+        if let Some(data_dir) = std::env::var_os(CHILD_DATA_DIR).map(PathBuf::from) {
+            let _guard = prepare_database_startup(&data_dir).await.unwrap();
+            let live = data_dir.join("db.sqlite");
+            let recovery = data_dir.join("db-recovery-force-quit");
+            let source = recovery.join("source-generation");
+            fs::create_dir_all(&source).unwrap();
+            atomic_write_manifest(
+                &recovery.join(RECOVERY_MANIFEST_FILE),
+                &test_manifest(&live),
+            )
+            .unwrap();
+            fs::rename(sqlite_sidecar(&live, "-wal"), source.join("db.sqlite-wal")).unwrap();
+            fs::write(data_dir.join("ready"), b"lock held; WAL move interrupted").unwrap();
+            // Bound the child lifetime even if the parent test fails.
+            tokio::time::sleep(Duration::from_secs(30)).await;
+            panic!("parent did not force quit the lock owner");
+        }
+
+        let dir = tempfile::tempdir().unwrap();
+        let live = dir.path().join("db.sqlite");
+        write_generation(&live);
+        let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "cli::db::recovery_tests::startup_recovers_immediately_after_lock_owner_is_force_quit",
+                "--nocapture",
+            ])
+            .env(CHILD_DATA_DIR, dir.path())
+            .spawn()
+            .unwrap();
+        let ready = tokio::time::timeout(Duration::from_secs(10), async {
+            while !dir.path().join("ready").exists() {
+                if child.try_wait().unwrap().is_some() {
+                    return false;
+                }
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+            true
+        })
+        .await;
+        if !matches!(ready, Ok(true)) {
+            let _ = child.kill();
+            let _ = child.wait();
+            panic!("child did not acquire the database startup lock");
+        }
+
+        let blocked = prepare_database_startup(dir.path()).await;
+        let wal_still_archived = !sqlite_sidecar(&live, "-wal").exists();
+        child.kill().unwrap();
+        child.wait().unwrap();
+        assert!(blocked.is_err(), "a live owner must keep recovery excluded");
+        assert!(
+            wal_still_archived,
+            "blocked startup must not reconcile the WAL"
+        );
+        assert!(
+            dir.path().join(LOCK_FILE).exists(),
+            "force quit leaves the lock file"
+        );
+        assert!(!pid_alive(child.id()));
+
+        let _guard = prepare_database_startup(dir.path()).await.unwrap();
+        assert_eq!(fs::read(&live).unwrap(), b"database-bytes");
+        assert_eq!(
+            fs::read(sqlite_sidecar(&live, "-wal")).unwrap(),
+            b"wal-bytes"
+        );
+        assert_eq!(
+            fs::read(sqlite_sidecar(&live, "-shm")).unwrap(),
+            b"shm-bytes"
+        );
+        let replacement: LockPayload =
+            serde_json::from_slice(&fs::read(dir.path().join(LOCK_FILE)).unwrap()).unwrap();
+        assert_eq!(replacement.pid, std::process::id());
+    }
+
+    #[tokio::test]
     async fn end_to_end_recovery_salvages_corruption_installs_fresh_inode_and_archives_original() {
         let dir = tempfile::tempdir().expect("tempdir");
         let data_dir = dir.path();
