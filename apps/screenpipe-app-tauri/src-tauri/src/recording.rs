@@ -73,48 +73,6 @@ fn build_config(app: &tauri::AppHandle) -> Result<RecordingConfig, String> {
     Ok(store.to_recording_config(data_dir))
 }
 
-/// Verifies an OpenAI-compatible endpoint with the exact request path and
-/// audio encoding used by the recording engine. A successful response is
-/// required before the settings UI can activate this engine, so recordings
-/// cannot silently accumulate without searchable audio transcripts.
-#[tauri::command]
-#[specta::specta]
-pub async fn test_openai_compatible_transcription(
-    endpoint: String,
-    api_key: Option<String>,
-    model: String,
-    headers: Option<HashMap<String, String>>,
-    raw_audio: bool,
-) -> Result<String, String> {
-    let endpoint = endpoint.trim();
-    if endpoint.is_empty() {
-        return Err("Enter an OpenAI-compatible endpoint first.".to_string());
-    }
-
-    let model = if model.trim().is_empty() {
-        screenpipe_audio::DEFAULT_OPENAI_COMPATIBLE_MODEL
-    } else {
-        model.trim()
-    };
-
-    let test_audio = vec![0.0_f32; 16_000];
-    screenpipe_audio::transcription::openai_compatible::batch::transcribe_with_openai_compatible(
-        None,
-        endpoint,
-        api_key.as_deref(),
-        model,
-        &test_audio,
-        "OpenAI-compatible settings test",
-        16_000,
-        Vec::new(),
-        &[],
-        headers.as_ref(),
-        raw_audio,
-    )
-    .await
-    .map_err(|error| format!("Endpoint test failed: {error}"))
-}
-
 fn configured_local_api_port(app: &tauri::AppHandle) -> u16 {
     build_config(app)
         .map(|config| config.port)
@@ -150,25 +108,6 @@ fn require_server_access(store: &SettingsStore) -> Result<(), String> {
 
     crate::health::set_recording_status(crate::health::RecordingStatus::Paused);
     Err("account_required: sign in to start screenpipe".to_string())
-}
-
-pub fn notify_audio_engine_fallback(store: &SettingsStore) {
-    if store.recording.disable_audio {
-        return;
-    }
-
-    let resolution = store.audio_engine_resolution();
-    let Some(reason) = resolution.fallback_reason else {
-        return;
-    };
-
-    crate::notifications::client::send_typed_with_priority(
-        reason.notification_title(),
-        reason.notification_body(),
-        "system",
-        Some(20000),
-        crate::notifications::store::NotificationPriority::High,
-    );
 }
 
 pub fn local_api_context_from_app(app: &tauri::AppHandle) -> LocalApiContext {
@@ -1234,8 +1173,6 @@ async fn spawn_screenpipe_inner(
             Err(e) => tracing::error!("failed to resolve api auth key: {}", e),
         }
     }
-
-    notify_audio_engine_fallback(&store);
 
     let server_arc = state.server.clone();
     let capture_arc = state.capture.clone();

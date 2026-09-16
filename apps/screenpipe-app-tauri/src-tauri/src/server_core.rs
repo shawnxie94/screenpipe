@@ -17,9 +17,6 @@ use std::time::{Duration, Instant};
 use futures::FutureExt;
 use screenpipe_audio::core::device::resolve_audio_devices_for_capture;
 use screenpipe_audio::core::engine::AudioTranscriptionEngine;
-use screenpipe_audio::transcription::stt::{
-    OpenAICompatibleConfig, DEFAULT_OPENAI_COMPATIBLE_ENDPOINT, DEFAULT_OPENAI_COMPATIBLE_MODEL,
-};
 use screenpipe_db::DatabaseManager;
 use screenpipe_engine::{
     hot_frame_cache::HotFrameCache, power::PowerManagerHandle, server::bind_listener,
@@ -84,73 +81,6 @@ pub struct ServerCore {
 const BIND_RETRY_ATTEMPTS: u32 = 20;
 const BIND_RETRY_DELAY: Duration = Duration::from_millis(500);
 const PORT_HOLDER_LOOKUP_TIMEOUT: Duration = Duration::from_secs(2);
-const OPENAI_COMPATIBLE_FAILURE_POLL_INTERVAL: Duration = Duration::from_secs(15);
-const OPENAI_COMPATIBLE_FAILURE_NOTIFICATION_COOLDOWN: Duration = Duration::from_secs(5 * 60);
-
-fn should_notify_openai_compatible_failure(
-    previous_error_count: u64,
-    current_error_count: u64,
-    previous_empty_count: u64,
-    current_empty_count: u64,
-    previous_completed_count: u64,
-    current_completed_count: u64,
-    last_notification: Option<Instant>,
-    now: Instant,
-) -> bool {
-    let failed_request = current_error_count > previous_error_count;
-    // VAD already filters for speech before this stage. A run of empty
-    // responses with no successful transcript is therefore a strong signal
-    // that the endpoint accepted the request but is not producing indexable
-    // data, rather than normal silence.
-    let repeated_empty_responses = current_empty_count.saturating_sub(previous_empty_count) >= 3
-        && current_completed_count == previous_completed_count;
-
-    (failed_request || repeated_empty_responses)
-        && last_notification.is_none_or(|last| now.duration_since(last) >= OPENAI_COMPATIBLE_FAILURE_NOTIFICATION_COOLDOWN)
-}
-
-fn monitor_openai_compatible_transcription_failures(
-    metrics: Arc<screenpipe_audio::metrics::AudioPipelineMetrics>,
-) -> tokio::task::JoinHandle<()> {
-    tokio::spawn(async move {
-        let mut previous_error_count = metrics.transcription_errors.load(Ordering::Relaxed);
-        let mut previous_empty_count = metrics.transcriptions_empty.load(Ordering::Relaxed);
-        let mut previous_completed_count = metrics.transcriptions_completed.load(Ordering::Relaxed);
-        let mut last_notification = None;
-
-        loop {
-            tokio::time::sleep(OPENAI_COMPATIBLE_FAILURE_POLL_INTERVAL).await;
-            let current_error_count = metrics.transcription_errors.load(Ordering::Relaxed);
-            let current_empty_count = metrics.transcriptions_empty.load(Ordering::Relaxed);
-            let current_completed_count = metrics.transcriptions_completed.load(Ordering::Relaxed);
-            let now = Instant::now();
-
-            if should_notify_openai_compatible_failure(
-                previous_error_count,
-                current_error_count,
-                previous_empty_count,
-                current_empty_count,
-                previous_completed_count,
-                current_completed_count,
-                last_notification,
-                now,
-            ) {
-                crate::notifications::client::send_typed_with_priority(
-                    "OpenAI Compatible transcription is failing",
-                    "Screenpipe is still recording audio, but the endpoint is failing or returning empty transcripts, so new audio may not be searchable. Check Settings and run Test and enable again.",
-                    "system",
-                    Some(20_000),
-                    crate::notifications::store::NotificationPriority::High,
-                );
-                last_notification = Some(now);
-            }
-
-            previous_error_count = current_error_count;
-            previous_empty_count = current_empty_count;
-            previous_completed_count = current_completed_count;
-        }
-    })
-}
 
 #[cfg(any(test, target_os = "macos", target_os = "linux"))]
 fn parse_lsof_port_holder(stdout: &str) -> Option<String> {
@@ -417,32 +347,11 @@ impl ServerCore {
             warn!("No audio devices available");
         }
 
-        let openai_compatible_config =
-            if config.audio_transcription_engine == AudioTranscriptionEngine::OpenAICompatible {
-                Some(OpenAICompatibleConfig {
-                    endpoint: config
-                        .openai_compatible_endpoint
-                        .clone()
-                        .unwrap_or_else(|| DEFAULT_OPENAI_COMPATIBLE_ENDPOINT.to_string()),
-                    api_key: config.openai_compatible_api_key.clone(),
-                    model: config
-                        .openai_compatible_model
-                        .clone()
-                        .unwrap_or_else(|| DEFAULT_OPENAI_COMPATIBLE_MODEL.to_string()),
-                    client: None,
-                    headers: config.openai_compatible_headers.clone(),
-                    raw_audio: config.openai_compatible_raw_audio,
-                })
-            } else {
-                None
-            };
-
         let hot_frame_cache = Arc::new(HotFrameCache::new());
 
         let mut audio_manager_builder = config
             .to_audio_manager_builder(data_path.clone(), audio_devices)
-            .transcription_mode(config.transcription_mode.clone())
-            .openai_compatible_config(openai_compatible_config);
+            .transcription_mode(config.transcription_mode.clone());
 
         crate::health::set_boot_phase("building_audio", Some("starting audio pipeline"));
         let mut audio_manager = audio_manager_builder.build(db.clone()).await.map_err(|e| {
@@ -529,12 +438,6 @@ impl ServerCore {
         // Handles to the background schedulers created below, kept on Self so
         // `shutdown()` can stop them (they hold DB / secret-pool references).
         let mut owned_tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();
-
-        if config.audio_transcription_engine == AudioTranscriptionEngine::OpenAICompatible {
-            owned_tasks.push(monitor_openai_compatible_transcription_failures(
-                audio_manager.metrics.clone(),
-            ));
-        }
 
         // Secret-store readers always resolve an existing OS-vault key. The
         // read path never creates a key, so optional encryption remains
@@ -1395,34 +1298,5 @@ mod tests {
             Some("screenpipe.exe")
         );
         assert_eq!(parse_tasklist_process_name(""), None);
-    }
-
-    #[test]
-    fn openai_compatible_failure_notifications_are_rate_limited() {
-        let now = Instant::now();
-        assert!(should_notify_openai_compatible_failure(2, 3, 0, 0, 0, 0, None, now));
-        assert!(!should_notify_openai_compatible_failure(3, 3, 0, 0, 0, 0, None, now));
-        assert!(should_notify_openai_compatible_failure(3, 3, 1, 4, 10, 10, None, now));
-        assert!(!should_notify_openai_compatible_failure(3, 3, 1, 4, 10, 11, None, now));
-        assert!(!should_notify_openai_compatible_failure(
-            3,
-            4,
-            0,
-            0,
-            0,
-            0,
-            Some(now),
-            now + Duration::from_secs(1),
-        ));
-        assert!(should_notify_openai_compatible_failure(
-            3,
-            4,
-            0,
-            0,
-            0,
-            0,
-            Some(now),
-            now + OPENAI_COMPATIBLE_FAILURE_NOTIFICATION_COOLDOWN,
-        ));
     }
 }

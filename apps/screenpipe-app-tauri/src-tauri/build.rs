@@ -922,7 +922,7 @@ int shortcut_get_frame(double* x, double* y, double* w, double* h) {
 
 /// Stage mlx.metallib and libonnxruntime.dylib into `src-tauri/` for macOS
 /// release bundling.
-/// MLX needs metallib next to the binary at runtime (parakeet-mlx crashes without it).
+/// MLX needs metallib next to the binary at runtime (rfdetr-mlx crashes without it).
 /// x86_64 Intel builds need libonnxruntime.dylib colocated for ort `load-dynamic`.
 /// Same build-time staging pattern as `copy_permission_flow_bundle` (#3990).
 #[cfg(target_os = "macos")]
@@ -933,7 +933,7 @@ fn stage_macos_sidecar_libs() {
 
 /// Copy mlx.metallib to a known location so release packaging can bundle it as
 /// a Tauri externalBin on aarch64 macOS builds. MLX compiles Metal shaders into
-/// this file during mlx-sys build. Without it, parakeet-mlx crashes with
+/// this file during mlx-sys build. Without it, the MLX runtimes (e.g. rfdetr-mlx) crash with
 /// "Failed to load the default metallib".
 #[cfg(target_os = "macos")]
 fn stage_mlx_metallib() {
@@ -953,7 +953,7 @@ fn stage_mlx_metallib() {
         !metallib.exists() || std::fs::metadata(&metallib).map(|m| m.len()).unwrap_or(0) < min_size;
 
     if needs_download {
-        // Download mlx.metallib (pre-compiled MLX Metal shaders) for parakeet-mlx.
+        // Download mlx.metallib (pre-compiled MLX Metal shaders) for the MLX runtimes.
         // MLX needs this file next to the binary at runtime. The release
         // workflow exposes the target-suffixed externalBin copy to Tauri.
         eprintln!("mlx-metallib: downloading from GitHub releases...");
@@ -968,7 +968,7 @@ fn stage_mlx_metallib() {
                 eprintln!("mlx-metallib: downloaded ({} MB)", size / 1_000_000);
             }
             _ => println!(
-                "cargo:warning=mlx-metallib: download failed — parakeet-mlx will crash at runtime"
+                "cargo:warning=mlx-metallib: download failed — MLX runtime will crash at runtime"
             ),
         }
     } else {

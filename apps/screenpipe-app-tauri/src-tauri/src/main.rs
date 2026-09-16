@@ -1060,7 +1060,7 @@ async fn main() {
             // subscriber is up, so it lands in the log files users send us.
             if !screenpipe_core::cpu_features::has_avx2() {
                 warn!(
-                    "cpu lacks AVX2 ({}); running in compatibility mode — local whisper/qwen3 STT disabled, parakeet remains available",
+                    "cpu lacks AVX2 ({}); running in compatibility mode — local STT disabled",
                     screenpipe_core::cpu_features::snapshot().as_log_string()
                 );
             }
@@ -1231,13 +1231,11 @@ async fn main() {
                     }
                     // Determine which whisper model the user's config needs
                     let engine = match store_for_download.recording.audio_transcription_engine.as_str() {
-                        "deepgram" => None, // Deepgram does not need a local model
-                        // Non-whisper local engines (parakeet MLX, qwen3) download their own
+                        // Non-whisper local engines (qwen3-asr) download their own
                         // models at load time — don't fetch the 834MB whisper file for them.
                         // If the user later switches to a whisper engine, TranscriptionEngine::new
                         // downloads it in the background ("will retry at server start").
-                        "disabled" | "parakeet" | "parakeet-tdt-0.6b-v2" | "parakeet-mlx"
-                        | "qwen3-asr" => None,
+                        "disabled" | "qwen3-asr" => None,
                         _ => {
                             use screenpipe_audio::core::engine::AudioTranscriptionEngine;
                             Some(std::sync::Arc::new(match store_for_download.recording.audio_transcription_engine.as_str() {
@@ -1674,8 +1672,6 @@ async fn main() {
                             if !disable_audio && !permissions_check.microphone.permitted() {
                                 warn!("Microphone permission not granted: {:?}. Audio recording will not work.", permissions_check.microphone);
                             }
-
-                            crate::recording::notify_audio_engine_fallback(&store_clone);
 
                             info!("Starting server core + capture on dedicated runtime...");
 

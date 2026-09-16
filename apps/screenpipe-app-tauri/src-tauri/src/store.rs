@@ -1479,33 +1479,15 @@ impl Default for AIPreset {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
-pub enum AudioEngineFallbackReason {
-    MissingDeepgramKey,
-}
-
-impl AudioEngineFallbackReason {
-    pub fn notification_title(&self) -> &'static str {
-        match self {
-            Self::MissingDeepgramKey => "Deepgram unavailable",
-        }
-    }
-
-    pub fn notification_body(&self) -> &'static str {
-        match self {
-            Self::MissingDeepgramKey => {
-                "Deepgram has no API key configured, so audio is being transcribed locally with Whisper Turbo (fast)."
-            }
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
-#[serde(rename_all = "camelCase")]
 pub struct AudioEngineResolution {
     pub requested: String,
     pub active: String,
     pub fallback_reason: Option<AudioEngineFallbackReason>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum AudioEngineFallbackReason {}
 
 
 #[derive(Serialize, Deserialize, Type, Clone)]
@@ -1976,25 +1958,11 @@ impl SettingsStore {
 
     pub fn audio_engine_resolution(&self) -> AudioEngineResolution {
         let engine = self.recording.audio_transcription_engine.clone();
-        let has_deepgram_key = !self.recording.deepgram_api_key.is_empty()
-            && self.recording.deepgram_api_key != "default";
-        let fallback = "whisper-large-v3-turbo-quantized".to_string();
-        let mut resolution = AudioEngineResolution {
+        AudioEngineResolution {
             requested: engine.clone(),
-            active: engine.clone(),
+            active: engine,
             fallback_reason: None,
-        };
-
-        match engine.as_str() {
-            "deepgram" if !has_deepgram_key => {
-                tracing::warn!("deepgram selected but no API key configured, falling back to whisper-large-v3-turbo-quantized");
-                resolution.active = fallback;
-                resolution.fallback_reason = Some(AudioEngineFallbackReason::MissingDeepgramKey);
-            }
-            _ => {}
-        };
-
-        resolution
+        }
     }
 
     pub fn save(&self, app: &AppHandle) -> Result<(), String> {
@@ -2171,18 +2139,17 @@ pub fn init_store(app: &AppHandle) -> Result<SettingsStore, String> {
             should_save = true;
         }
 
-        // Unconditional safety guard: prevent parakeet/parakeet-mlx on platforms
-        // where it will crash (Low tier = OOM, macOS < 26 = MLX segfault).
+        // Unconditional safety guard: prevent local engines on CPUs that can't
+        // run them (x86-64 without AVX2 → illegal instruction at load).
         if screenpipe_config::is_engine_unsafe(
             &store.recording.audio_transcription_engine,
             detected,
         ) {
             let safe = screenpipe_config::best_engine_for_platform(detected);
             tracing::warn!(
-                "engine {} is unsafe on this platform (tier={:?}, macOS={:?}) — switching to {}",
+                "engine {} is unsafe on this platform (tier={:?}) — switching to {}",
                 store.recording.audio_transcription_engine,
                 detected,
-                screenpipe_config::macos_major_version(),
                 safe,
             );
             store.recording.audio_transcription_engine = safe.to_string();

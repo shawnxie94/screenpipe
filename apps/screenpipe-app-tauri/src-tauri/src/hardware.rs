@@ -27,9 +27,9 @@ pub fn detect_hardware_capability() -> HardwareCapability {
     let cpu_cores = sys.cpus().len();
     let total_memory_gb = sys.total_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
 
-    // Parakeet is the default for all — lightweight ONNX, no GPU needed
+    // Qwen3-ASR is the default for all — best Chinese accuracy, CPU-only
     let reason = format!(
-        "Parakeet TDT 0.6B (multilingual, ONNX) — works on all hardware ({} cores, {:.1} GB RAM)",
+        "Qwen3-ASR 0.6B — best Chinese accuracy, runs on CPU ({} cores, {:.1} GB RAM)",
         cpu_cores, total_memory_gb
     );
 
@@ -37,7 +37,7 @@ pub fn detect_hardware_capability() -> HardwareCapability {
         has_gpu,
         cpu_cores,
         total_memory_gb,
-        recommended_engine: "parakeet".to_string(),
+        recommended_engine: "qwen3-asr".to_string(),
         reason,
     }
 }

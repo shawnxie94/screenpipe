@@ -254,7 +254,7 @@ futures-channel = "0.3.30"
 lazy_static = "1.5.0"
 
 [features]
-default = ["custom-protocol", "qwen3-asr", "parakeet"]
+default = ["custom-protocol", "qwen3-asr"]
 metal = ["screenpipe-audio/metal"]
 pulseaudio = ["screenpipe-audio/pulseaudio"]
 directml = ["screenpipe-engine/directml"]
@@ -276,9 +276,6 @@ custom-protocol = ["tauri/custom-protocol"]
 local-only = []
 
 qwen3-asr = ["screenpipe-engine/qwen3-asr"]
-parakeet = ["screenpipe-engine/parakeet"]
-# macOS only — requires Apple MLX (Metal)
-parakeet-mlx = ["screenpipe-engine/parakeet-mlx"]
 # Apple Silicon only — image-PII detector via mlx-rs (~6× faster than
 # ONNX CoreML EP). Forwards to screenpipe-engine which forwards to
 # screenpipe-redact/mlx-mac.
