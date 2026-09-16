@@ -318,12 +318,6 @@ pub struct RecordingSettings {
     #[serde(rename = "audioChunkDuration")]
     pub audio_chunk_duration: i32,
 
-    /// Deepgram API key for cloud transcription.
-    /// Empty string or "default" means not configured.
-    /// Kept as String (not Option) to match existing store.bin schema.
-    #[serde(rename = "deepgramApiKey")]
-    pub deepgram_api_key: String,
-
     /// Filter music-dominant audio before transcription using spectral analysis.
     #[serde(rename = "filterMusic")]
     pub filter_music: bool,
@@ -775,17 +769,6 @@ pub struct RecordingSettings {
 }
 
 impl RecordingSettings {
-    /// Returns the Deepgram API key if actually configured.
-    /// Treats empty string and "default" as not configured (matching existing behavior).
-    pub fn effective_deepgram_key(&self) -> Option<&str> {
-        let key = self.deepgram_api_key.as_str();
-        if key.is_empty() || key == "default" {
-            None
-        } else {
-            Some(key)
-        }
-    }
-
     /// Returns the display name/email used to label the local microphone speaker.
     pub fn effective_user_name(&self) -> Option<&str> {
         self.user_name
@@ -825,7 +808,6 @@ impl Default for RecordingSettings {
             screenpipe_aec_enabled: false,
             aec_mode: AecMode::Off,
             audio_chunk_duration: 30,
-            deepgram_api_key: String::new(),
             filter_music: false,
             batch_max_duration_secs: None,
             vocabulary: vec![],
@@ -1204,7 +1186,6 @@ mod tests {
             "whisper-large-v3-turbo"
         );
         assert_eq!(settings.audio_devices, vec!["MacBook Pro Microphone"]);
-        assert_eq!(settings.deepgram_api_key, "");
         assert_eq!(
             settings.ignored_windows,
             vec!["Control Center", "Notification Center"]
@@ -1263,22 +1244,6 @@ mod tests {
         assert_eq!(roundtrip.recording.port, 4040);
         assert_eq!(roundtrip.recording.transcription_mode, "batch");
         assert!(roundtrip.extra.contains_key("chatHistory"));
-    }
-
-    #[test]
-    fn helper_deepgram_key_sentinel_values() {
-        // Existing store.bin uses "" and "default" as sentinel for "not configured"
-        let json = r#"{"deepgramApiKey": ""}"#;
-        let s: RecordingSettings = serde_json::from_str(json).unwrap();
-        assert_eq!(s.deepgram_api_key, "");
-
-        let json = r#"{"deepgramApiKey": "default"}"#;
-        let s: RecordingSettings = serde_json::from_str(json).unwrap();
-        assert_eq!(s.deepgram_api_key, "default");
-
-        let json = r#"{"deepgramApiKey": "real-api-key-123"}"#;
-        let s: RecordingSettings = serde_json::from_str(json).unwrap();
-        assert_eq!(s.deepgram_api_key, "real-api-key-123");
     }
 
     #[test]

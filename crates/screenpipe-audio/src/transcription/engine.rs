@@ -302,7 +302,9 @@ impl TranscriptionSession {
         sample_rate: u32,
         device: &str,
     ) -> Result<String> {
-        let _ = device;
+        // sample_rate is only consumed by the qwen3-asr arm; device has no
+        // consumer since the cloud engines were removed.
+        let _ = (sample_rate, device);
         let transcription = match self {
             Self::Disabled => Ok(String::new()),
 
