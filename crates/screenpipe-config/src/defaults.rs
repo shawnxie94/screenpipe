@@ -99,9 +99,14 @@ pub fn detect_tier() -> DeviceTier {
 }
 
 /// Database configuration tuned per device tier.
+/// Controls SQLite PRAGMA values and pool sizes.
+/// `Default` returns the High-tier values.
 ///
-/// Controls SQLite PRAGMA values and connection pool sizes.
-/// `Default` returns the High-tier values matching the previous hardcoded settings.
+/// Cache-size rationale: SQLite page cache is **per connection** and never
+/// proactively shrunk, so resident memory scales as `(read+write pool
+/// connections) × cache_size`. Hot pages are additionally shared by the OS
+/// page cache, so a smaller per-connection cache mostly costs re-reads from
+/// that shared cache, not from disk.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DbConfig {
     /// SQLite `mmap_size` pragma in bytes.
@@ -122,8 +127,8 @@ impl DbConfig {
         match tier {
             DeviceTier::High => Self::default(),
             DeviceTier::Mid => Self {
-                mmap_size: 0,          // disabled — see DbConfig::default (prevents DB corruption)
-                cache_size_kb: 32_000, // 32 MB
+                mmap_size: 0,         // disabled — see DbConfig::default (prevents DB corruption)
+                cache_size_kb: 8_000, // 8 MB
                 read_pool_max: 12,
                 read_pool_min: 2,
                 write_pool_max: 6,
@@ -140,7 +145,7 @@ impl DbConfig {
 }
 
 impl Default for DbConfig {
-    /// High-tier defaults — identical to the previous hardcoded values.
+    /// High-tier defaults.
     fn default() -> Self {
         Self {
             // mmap disabled (0): memory-mapped I/O maps the DB file *writably*
@@ -151,8 +156,11 @@ impl Default for DbConfig {
             // page cache below is the safe default and the integrity win is
             // worth the small read-throughput cost for a capture product.
             mmap_size: 0,
-            cache_size_kb: 64_000, // 64 MB
-            read_pool_max: 27,
+            // 16 MB × (12 read + 8 write) = 320 MB worst-case resident cache,
+            // down from 27×64 + 8×64 = 2.2 GB. Write pool stays at 8 — a
+            // smaller pool caused UI-batch write timeouts (SCREENPIPE-CLI-FZ).
+            cache_size_kb: 16_000, // 16 MB
+            read_pool_max: 12,
             read_pool_min: 3,
             write_pool_max: 8,
         }

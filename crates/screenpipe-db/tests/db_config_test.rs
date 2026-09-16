@@ -29,7 +29,7 @@ async fn low_tier_db_initializes_successfully() {
 async fn mid_tier_db_initializes_successfully() {
     let config = DbConfig::for_tier(screenpipe_config::DeviceTier::Mid);
     assert_eq!(config.mmap_size, 0); // mmap disabled to prevent DB corruption
-    assert_eq!(config.cache_size_kb, 32_000);
+    assert_eq!(config.cache_size_kb, 8_000);
     assert_eq!(config.read_pool_max, 12);
 
     let _db = DatabaseManager::new("sqlite::memory:", config)
@@ -41,8 +41,8 @@ async fn mid_tier_db_initializes_successfully() {
 async fn high_tier_db_initializes_successfully() {
     let config = DbConfig::default();
     assert_eq!(config.mmap_size, 0); // mmap disabled to prevent DB corruption
-    assert_eq!(config.cache_size_kb, 64_000);
-    assert_eq!(config.read_pool_max, 27);
+    assert_eq!(config.cache_size_kb, 16_000);
+    assert_eq!(config.read_pool_max, 12);
 
     let _db = DatabaseManager::new("sqlite::memory:", config)
         .await
