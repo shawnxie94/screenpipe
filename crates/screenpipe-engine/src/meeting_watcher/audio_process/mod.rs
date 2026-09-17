@@ -13,6 +13,7 @@ use crate::meeting_watcher::shared::ignore::{
     meeting_app_is_ignored_with_terms, normalize_ignored_meeting_apps,
 };
 use crate::meeting_watcher::shared::profiles::{load_detection_profiles, MeetingDetectionProfile};
+use crate::meeting_watcher::shared::calendar::merge_calendar_updates;
 use crate::routes::meetings::{emit_meeting_status_changed, resolve_meeting_status_from};
 use chrono::{DateTime, Utc};
 use futures::{FutureExt, StreamExt};
@@ -179,7 +180,12 @@ pub async fn run_audio_process_meeting_detection_loop(
         }
 
         while let Some(event) = cal_sub.next().now_or_never().flatten() {
-            calendar_events = event.data.into_iter().filter(|e| !e.is_all_day).collect();
+            let incoming: Vec<CalendarEventSignal> = event
+                .data
+                .into_iter()
+                .filter(|e| !e.is_all_day)
+                .collect();
+            merge_calendar_updates(&mut calendar_events, incoming);
         }
 
         if let Some(event) = stop_sub.next().now_or_never().flatten() {

@@ -19,7 +19,7 @@ use screenpipe_connect::office::types::{
 use screenpipe_connect::office::types::OfficeObject;
 use screenpipe_db::{OfficeConnectionUpdate, OfficeObjectDraft, DatabaseManager};
 use tokio_util::sync::CancellationToken;
-use tracing::warn;
+use tracing::{debug, info, warn};
 
 pub mod routes;
 
@@ -54,6 +54,17 @@ impl OfficeServiceError {
 
     pub fn as_str(&self) -> &'static str {
         self.code.as_str()
+    }
+}
+
+impl From<OfficeError> for OfficeServiceError {
+    fn from(e: OfficeError) -> Self {
+        Self {
+            code: e.code,
+            message: e.message,
+            transient: false,
+            http: 502,
+        }
     }
 }
 
@@ -667,8 +678,8 @@ async fn run_sync(
                                 &identity.account_id,
                             ) {
                                 Ok(page) => {
-                                    for object in &page.objects {
-                                        if register_object(service, object).await? {
+                                    for event in &page.events {
+                                        if register_object(service, &event.object).await? {
                                             imported += 1;
                                         }
                                     }
@@ -897,13 +908,7 @@ async fn register_object(
     service: &OfficeService,
     object: &OfficeObject,
 ) -> Result<bool, OfficeError> {
-    let kind = match object.object_kind {
-        OfficeObjectKind::Message => "message",
-        OfficeObjectKind::Document => "document",
-        OfficeObjectKind::Transcript => "transcript",
-        OfficeObjectKind::Summary => "summary",
-        _ => "document",
-    };
+    let kind = object.object_kind.as_str();
     let completeness = match &object.completeness {
         screenpipe_connect::office::types::OfficeCompleteness::Full => "full".to_string(),
         screenpipe_connect::office::types::OfficeCompleteness::Partial { reason } => {
@@ -956,4 +961,108 @@ fn ms_to_utc(ms: i64) -> DateTime<chrono::Utc> {
 fn default_window_start() -> String {
     (chrono::Utc::now() - chrono::Duration::hours(24 * 7))
         .to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+}
+
+/// Publish Feishu primary-calendar events onto the shared `calendar_events`
+/// bus (source tag `feishu`) so the meeting detectors can bind detected
+/// meetings to the scheduled event — same contract as the native/ICS/Google
+/// publishers in the desktop shell. Runs every 60s; skips silently unless the
+/// Feishu connection is authorized with `sync_calendar_events` enabled.
+pub fn spawn_feishu_calendar_publisher(
+    db: Arc<DatabaseManager>,
+    managed_dir: std::path::PathBuf,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let service = OfficeService::new(db.clone(), managed_dir);
+        loop {
+            if let Err(e) = publish_feishu_calendar_once(&service).await {
+                debug!("feishu calendar publisher: {} {}", e.code.as_str(), e.message);
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+        }
+    })
+}
+
+async fn publish_feishu_calendar_once(service: &OfficeService) -> Result<(), OfficeServiceError> {
+    let row = service
+        .db
+        .office_get_connection(OfficeProvider::Feishu.as_str())
+        .await?
+        .ok_or_else(|| {
+            OfficeServiceError::new(OfficeErrorCode::ScopeInvalid, "未连接", 0)
+        })?;
+    if row.auth_status != OfficeAuthStatus::Authorized.as_str() {
+        return Err(OfficeServiceError::new(
+            OfficeErrorCode::ScopeInvalid,
+            "未授权",
+            0,
+        ));
+    }
+    let scope = service
+        .db
+        .office_get_scope(OfficeProvider::Feishu.as_str())
+        .await?
+        .map(|(json, _)| {
+            serde_json::from_str::<OfficeScope>(&json).unwrap_or_default()
+        })
+        .unwrap_or_default();
+    if !scope.sync_calendar_events {
+        return Err(OfficeServiceError::new(
+            OfficeErrorCode::ScopeInvalid,
+            "日历同步未开启",
+            0,
+        ));
+    }
+
+    // Cover a meeting that is already running plus the rest of the workday;
+    // the matcher only binds events overlapping `now` (with a join lead).
+    let now = chrono::Utc::now();
+    let start = (now - chrono::Duration::hours(2)).to_rfc3339();
+    let end = (now + chrono::Duration::hours(12)).to_rfc3339();
+    let dependency = service.runner.discover(OfficeProvider::Feishu).await;
+    let command = OfficeCommand::FeishuCalendarEvents {
+        start_iso: start,
+        end_iso: end,
+    };
+    let output = service
+        .runner
+        .run(&dependency, &command, service.cancel.child_token())
+        .await?;
+    if output.truncated {
+        return Err(OfficeServiceError::new(
+            OfficeErrorCode::OutputTruncated,
+            "日历输出被截断",
+            0,
+        ));
+    }
+    let payload = cli_payload(&output);
+    let page = screenpipe_connect::office::feishu::parse_calendar_events(
+        &payload,
+        row.account_namespace.as_deref().unwrap_or(""),
+    )?;
+
+    let signals: Vec<serde_json::Value> = page
+        .events
+        .iter()
+        .map(|event| {
+            serde_json::json!({
+                "id": format!("feishu:{}", event.object.object_id),
+                "title": event.object.title.clone().unwrap_or_default(),
+                "start": event.start_iso,
+                "end": event.end_iso,
+                "attendees": [],
+                "meetingUrl": event.meeting_url.clone(),
+                "isAllDay": event.is_all_day,
+                "source": "feishu",
+            })
+        })
+        .collect();
+    info!(
+        "feishu calendar publisher: published {} calendar event signal(s)",
+        signals.len()
+    );
+    if let Err(e) = screenpipe_events::send_event("calendar_events", signals) {
+        warn!("feishu calendar publisher: failed to send event: {}", e);
+    }
+    Ok(())
 }

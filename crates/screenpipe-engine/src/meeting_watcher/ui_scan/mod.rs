@@ -182,7 +182,12 @@ pub async fn run_meeting_detection_loop(
         // Drain pending calendar events (non-blocking).
         // Each publish replaces the full list, so we keep only the latest.
         while let Some(event) = cal_sub.next().now_or_never().flatten() {
-            calendar_events = event.data.into_iter().filter(|e| !e.is_all_day).collect();
+            let incoming: Vec<CalendarEventSignal> = event
+                .data
+                .into_iter()
+                .filter(|e| !e.is_all_day)
+                .collect();
+            merge_calendar_updates(&mut calendar_events, incoming);
         }
 
         // Handle explicit stop signals from the API layer.

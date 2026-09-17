@@ -580,6 +580,16 @@ impl SCServer {
             });
         }
 
+        // Publish Feishu primary-calendar events onto the calendar_events bus
+        // so detected meetings bind to the scheduled event (source-tagged,
+        // merged with the native/ICS/Google publishers).
+        if !self.timeline_disabled {
+            crate::office::spawn_feishu_calendar_publisher(
+                self.db.clone(),
+                self.screenpipe_dir.join("office-cli"),
+            );
+        }
+
         let app_state = Arc::new(AppState {
             db: self.db.clone(),
             history_access: self.history_access.clone(),

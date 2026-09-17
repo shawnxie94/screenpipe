@@ -533,6 +533,7 @@ fn test_calendar_event_keep_alive() {
         attendees: vec![],
         meeting_url: None,
         is_all_day: all_day,
+        source: "test".to_string(),
     };
 
     // Event in progress now → keep the meeting alive.

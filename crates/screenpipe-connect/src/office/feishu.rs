@@ -369,9 +369,22 @@ mod tests {
 /// One parsed calendar agenda window.
 #[derive(Debug)]
 pub struct CalendarPage {
-    pub objects: Vec<OfficeObject>,
+    pub events: Vec<FeishuCalendarEvent>,
     pub next_cursor: Option<String>,
     pub complete: bool,
+}
+
+/// A calendar event plus the structured window the meeting matcher needs
+/// (the `OfficeObject` body only embeds them as display text).
+#[derive(Debug)]
+pub struct FeishuCalendarEvent {
+    pub object: OfficeObject,
+    pub start_iso: String,
+    pub end_iso: String,
+    pub is_all_day: bool,
+    /// VC link when the event carries one (`vchat.meeting_url`) — lets the
+    /// meeting matcher bind by exact conference URL, not just time overlap.
+    pub meeting_url: Option<String>,
 }
 
 /// Parse `calendar +agenda --json` (primary calendar, one window per run —
@@ -386,9 +399,11 @@ pub fn parse_calendar_events(
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         return Err(envelope_error(&value));
     }
-    let items = first_array(&value, &["/data/items", "/items", "/data/events"])
-        .ok_or_else(|| OfficeError::new(OfficeErrorCode::ProviderError, "日历输出缺少 items"))?;
-    let mut objects = Vec::new();
+    // Real `calendar +agenda` shape: `data` IS the event array. Older/other
+    // envelope shapes kept as fallbacks.
+    let items = first_array(&value, &["/data", "/data/items", "/items", "/data/events"])
+        .ok_or_else(|| OfficeError::new(OfficeErrorCode::ProviderError, "日历输出缺少事件列表"))?;
+    let mut events = Vec::new();
     for item in items {
         let Some(event_id) = item
             .get("event_id")
@@ -460,7 +475,13 @@ pub fn parse_calendar_events(
             .trim()
             .to_string();
         let status = item.get("status").and_then(Value::as_str);
-        objects.push(OfficeObject {
+        let meeting_url = ["/vchat/meeting_url", "/hangout_link", "/meeting_url"]
+            .iter()
+            .find_map(|p| item.pointer(p))
+            .and_then(Value::as_str)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string);
+        let object = OfficeObject {
             provider: OfficeProvider::Feishu,
             account_namespace: account_namespace.to_string(),
             object_kind: OfficeObjectKind::CalendarEvent,
@@ -469,7 +490,7 @@ pub fn parse_calendar_events(
             title,
             body_text,
             event_at: event_at.or(end_at),
-            source_url: None,
+            source_url: meeting_url.clone(),
             actor: item
                 .pointer("/organizer_calendar_id")
                 .and_then(Value::as_str)
@@ -480,8 +501,17 @@ pub fn parse_calendar_events(
             )],
             completeness: OfficeCompleteness::Full,
             platform_generated: false,
-        });
+        };
         let _ = status; // cancelled events still carry content; keep them.
+        let is_all_day = start_display.is_empty()
+            || chrono::NaiveDate::parse_from_str(&start_display, "%Y-%m-%d").is_ok();
+        events.push(FeishuCalendarEvent {
+            object,
+            start_iso: start_display.to_string(),
+            end_iso: end_display.to_string(),
+            is_all_day,
+            meeting_url,
+        });
     }
     let next_cursor = value
         .pointer("/data/page_token")
@@ -491,7 +521,7 @@ pub fn parse_calendar_events(
         .map(str::to_string);
     let complete = next_cursor.is_none();
     Ok(CalendarPage {
-        objects,
+        events,
         next_cursor,
         complete,
     })
@@ -507,32 +537,31 @@ mod calendar_tests {
         // all-day entries).
         let stdout = r#"{
             "ok": true,
-            "data": {
-                "items": [
-                    {
-                        "event_id": "evt_1",
-                        "summary": "周会",
-                        "description": "每周同步",
-                        "status": "confirmed",
-                        "organizer_calendar_id": "cal_primary",
-                        "start_time": {"datetime": "2026-09-18T10:00:00+08:00", "timezone": "Asia/Shanghai"},
-                        "end_time": {"datetime": "2026-09-18T11:00:00+08:00", "timezone": "Asia/Shanghai"}
-                    },
-                    {
-                        "event_id": "evt_2",
-                        "summary": "全天休假",
-                        "start_time": {"date": "2026-10-01"},
-                        "end_time": {"date": "2026-10-02"}
-                    }
-                ]
-            }
+            "data": [
+                {
+                    "event_id": "evt_1",
+                    "summary": "周会",
+                    "description": "每周同步",
+                    "status": "confirmed",
+                    "organizer_calendar_id": "cal_primary",
+                    "start_time": {"datetime": "2026-09-18T10:00:00+08:00", "timezone": "Asia/Shanghai"},
+                    "end_time": {"datetime": "2026-09-18T11:00:00+08:00", "timezone": "Asia/Shanghai"},
+                    "vchat": {"vc_type": "vc", "meeting_url": "https://vc.feishu.cn/j/602031992"}
+                },
+                {
+                    "event_id": "evt_2",
+                    "summary": "全天休假",
+                    "start_time": {"date": "2026-10-01"},
+                    "end_time": {"date": "2026-10-02"}
+                }
+            ]
         }"#;
 
         let page = parse_calendar_events(stdout, "acct-1").unwrap();
-        assert_eq!(page.objects.len(), 2);
+        assert_eq!(page.events.len(), 2);
         assert!(page.complete);
 
-        let first = &page.objects[0];
+        let first = &page.events[0].object;
         assert_eq!(first.object_kind, OfficeObjectKind::CalendarEvent);
         assert_eq!(first.object_id, "evt_1");
         assert_eq!(first.title.as_deref(), Some("周会"));
@@ -543,11 +572,18 @@ mod calendar_tests {
             "2026-09-18T02:00:00+00:00"
         );
         assert_eq!(first.account_namespace, "acct-1");
+        assert_eq!(
+            page.events[0].meeting_url.as_deref(),
+            Some("https://vc.feishu.cn/j/602031992")
+        );
+        assert!(!page.events[0].is_all_day);
 
-        // All-day entry: date-only start parses, no description body.
-        let second = &page.objects[1];
+        // All-day entry: date-only start parses, no description body, no VC.
+        let second = &page.events[1].object;
         assert_eq!(second.object_id, "evt_2");
         assert!(second.event_at.is_some());
+        assert!(page.events[1].meeting_url.is_none());
+        assert!(page.events[1].is_all_day);
     }
 
     #[test]

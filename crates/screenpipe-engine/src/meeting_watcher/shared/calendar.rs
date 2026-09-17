@@ -29,6 +29,27 @@ pub(crate) struct CalendarEventSignal {
     pub meeting_url: Option<String>,
     #[serde(default)]
     pub is_all_day: bool,
+    /// Publisher identity ("native" / "ics" / "google" / "feishu"). The
+    /// detector merges bus publications per source so several calendar
+    /// publishers can coexist without clobbering each other.
+    #[serde(default)]
+    pub source: String,
+}
+
+/// Merge an incoming publication into the detector's event list: the
+/// incoming source's slice is replaced, events from other sources survive.
+/// An empty incoming list still replaces that source's slice — publishing an
+/// empty list is how a publisher signals "no events right now".
+pub(crate) fn merge_calendar_updates(
+    current: &mut Vec<CalendarEventSignal>,
+    incoming: Vec<CalendarEventSignal>,
+) {
+    let source = incoming
+        .first()
+        .map(|e| e.source.clone())
+        .unwrap_or_default();
+    current.retain(|e| e.source != source);
+    current.extend(incoming);
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -173,6 +194,14 @@ fn meeting_url_identity(raw: &str) -> Option<String> {
 
     if host == "meet.google.com" {
         return segments.first().map(|room| format!("google-meet:{room}"));
+    }
+
+    // Feishu VC rooms: https://vc.feishu.cn/j/<meeting-no>
+    if host == "vc.feishu.cn" || host.ends_with(".feishu.cn") {
+        if segments.first().map(String::as_str) == Some("j") {
+            return segments.get(1).map(|room| format!("feishu:{room}"));
+        }
+        return None;
     }
 
     if host == "zoom.us" || host.ends_with(".zoom.us") {

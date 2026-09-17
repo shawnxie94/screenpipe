@@ -2249,6 +2249,7 @@ fn calendar_event(
         attendees: attendees.iter().map(|a| a.to_string()).collect(),
         meeting_url: None,
         is_all_day: false,
+        source: "test".to_string(),
     }
 }
 
@@ -2524,6 +2525,38 @@ fn exact_conference_identity_is_order_independent() {
             CalendarMatchMethod::ExactConferenceUrl
         );
     }
+}
+
+#[test]
+fn feishu_vc_room_matches_by_exact_identity() {
+    let now = Utc::now();
+    let mut target = calendar_event(
+        "feishu-evt",
+        "飞书周会",
+        chrono::Duration::minutes(1),
+        chrono::Duration::minutes(30),
+        &[],
+    );
+    target.meeting_url = Some("https://vc.feishu.cn/j/602031992".to_string());
+    let unrelated = calendar_event(
+        "other-evt",
+        "无关日程",
+        chrono::Duration::minutes(-1),
+        chrono::Duration::minutes(30),
+        &[],
+    );
+
+    let binding = find_calendar_event_for_meeting(
+        &[unrelated, target],
+        now,
+        Some("https://vc.feishu.cn/j/602031992"),
+    )
+    .expect("feishu vc room should match exactly");
+    assert_eq!(binding.key, "feishu-evt");
+    assert_eq!(
+        binding.match_method,
+        CalendarMatchMethod::ExactConferenceUrl
+    );
 }
 
 #[test]
@@ -2959,6 +2992,7 @@ fn binding_key_is_stable_across_timestamp_formats() {
         attendees: vec![],
         meeting_url: None,
         is_all_day: false,
+        source: "test".to_string(),
     };
 
     let rfc = mk(base.to_rfc3339(), end.to_rfc3339());
