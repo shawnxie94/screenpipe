@@ -30,6 +30,7 @@ futures = { workspace = true, features = ["std"] }
 screenpipe-config = { path = "../screenpipe-config" }
 screenpipe-core = { path = "../screenpipe-core" }
 screenpipe-semantic = { path = "../screenpipe-semantic" }
+screenpipe-resource = { path = "../screenpipe-resource" }
 screenpipe-sqlite-coordinator = { path = "../screenpipe-sqlite-coordinator" }
 zerocopy = { version = "0.7.32" }
 
