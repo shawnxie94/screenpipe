@@ -1,15 +1,17 @@
 // screenpipe — AI that knows everything you've seen, said, or heard
 // https://screenpipe.com
 
-//! Office connector persistence: connection/scope/cursor state and imported
-//! objects with their own full-text search. Self-contained — no dependency on
-//! the retired knowledge domain.
+//! Office connector persistence — now a thin mapping over the generic
+//! `connector_*` store (see `db/connector.rs`), kept under the historical
+//! `office_*` method names so the engine's sync orchestration is untouched.
+//! Office-specific fields (CLI paths, completeness, activity anchors) travel
+//! in the `metadata` JSON column; the tables themselves stay channel-generic.
 
 use super::*;
 use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
 
-/// Timestamp format used across office tables (SQLite TEXT, RFC3339 micros).
+/// Timestamp format shared with the connector tables (RFC3339 micros).
 pub fn office_format_ts(t: DateTime<Utc>) -> String {
     t.to_rfc3339_opts(chrono::SecondsFormat::Micros, true)
 }
@@ -25,7 +27,69 @@ pub fn office_fingerprint(parts: &[&str]) -> String {
     hex::encode(hasher.finalize())
 }
 
-#[derive(Debug, sqlx::FromRow)]
+/// The office channel registers one connector id per provider
+/// (`office:feishu`, `office:tencent-meeting`) so rows keep their provider
+/// identity in the generic `(connector, key)` addressing; the aggregate
+/// adapter presents both as sub-keys of one "office" channel.
+fn conn_id(provider: &str) -> String {
+    format!("office:{provider}")
+}
+
+const KEY: &str = "";
+
+/// Connection-level fields with no generic column, packed into
+/// `connector_connections.metadata`.
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+struct OfficeConnectionMeta {
+    #[serde(default)]
+    account_namespace: Option<String>,
+    #[serde(default)]
+    cli_path: Option<String>,
+    #[serde(default)]
+    cli_version: Option<String>,
+    #[serde(default)]
+    credential_ref: Option<String>,
+    #[serde(default)]
+    runtime_status: Option<String>,
+}
+
+/// Object-level fields with no generic column, packed into
+/// `connector_objects.metadata`.
+#[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
+struct OfficeObjectMeta {
+    #[serde(default)]
+    completeness: Option<String>,
+    #[serde(default)]
+    activity_anchor: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_platform_generated")]
+    platform_generated: Option<bool>,
+}
+
+// Pre-merge rows carried a strict 0/1 column; JSON carries true/false or the
+// number. Accept all three so migrated and fresh rows parse identically.
+fn deserialize_platform_generated<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let v: Option<serde_json::Value> = serde::Deserialize::deserialize(deserializer)?;
+    Ok(match v {
+        None | Some(serde_json::Value::Null) => None,
+        Some(serde_json::Value::Bool(b)) => Some(b),
+        Some(serde_json::Value::Number(n)) => Some(n.as_i64().unwrap_or(0) != 0),
+        Some(other) => {
+            return Err(serde::de::Error::custom(format!(
+                "invalid platform_generated: {other}"
+            )))
+        }
+    })
+}
+
+fn parse_meta<T: Default + serde::de::DeserializeOwned>(raw: Option<String>) -> T {
+    raw.and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+#[derive(Debug)]
 pub struct OfficeConnectionRow {
     pub provider: String,
     pub account_namespace: Option<String>,
@@ -45,7 +109,7 @@ pub struct OfficeConnectionRow {
     pub last_error_message: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize, sqlx::FromRow)]
+#[derive(Debug, serde::Serialize)]
 pub struct OfficeObjectRow {
     pub provider: String,
     pub account_namespace: String,
@@ -63,8 +127,8 @@ pub struct OfficeObjectRow {
     pub state: String,
 }
 
-/// Normalized imported object before persistence; maps to an
-/// `office_objects` row plus its FTS entry.
+/// Normalized imported object before persistence; maps to a
+/// `connector_objects` row (connector='office') plus its FTS entry.
 #[derive(Clone, Debug)]
 pub struct OfficeObjectDraft {
     pub provider: String,
@@ -82,188 +146,94 @@ pub struct OfficeObjectDraft {
     pub platform_generated: bool,
 }
 
-impl DatabaseManager {
-    // ------------------------------------------------------------------
-    // Connections
-    // ------------------------------------------------------------------
+/// Raw connector_connections row; converted to `OfficeConnectionRow` with
+/// metadata unpacked.
+#[derive(Debug, sqlx::FromRow)]
+struct ConnectorConnRaw {
+    key: String,
+    enabled: i64,
+    auto_sync: i64,
+    auth_status: String,
+    sync_status: String,
+    connection_revision: i64,
+    scope_revision: i64,
+    last_sync_at: Option<String>,
+    last_success_at: Option<String>,
+    last_error_code: Option<String>,
+    last_error_message: Option<String>,
+    metadata: Option<String>,
+}
 
-    pub async fn office_get_connection(
+impl From<ConnectorConnRaw> for OfficeConnectionRow {
+    fn from(r: ConnectorConnRaw) -> Self {
+        let meta: OfficeConnectionMeta = parse_meta(r.metadata);
+        Self {
+            provider: r.key,
+            account_namespace: meta.account_namespace,
+            cli_path: meta.cli_path,
+            cli_version: meta.cli_version,
+            credential_ref: meta.credential_ref,
+            runtime_status: meta
+                .runtime_status
+                .unwrap_or_else(|| "missing".to_string()),
+            auth_status: r.auth_status,
+            sync_status: r.sync_status,
+            connection_revision: r.connection_revision,
+            scope_revision: r.scope_revision,
+            enabled: r.enabled != 0,
+            auto_sync: r.auto_sync != 0,
+            last_sync_at: r.last_sync_at,
+            last_success_at: r.last_success_at,
+            last_error_code: r.last_error_code,
+            last_error_message: r.last_error_message,
+        }
+    }
+}
+
+impl DatabaseManager {
+    async fn office_get_connection_raw(
         &self,
         provider: &str,
-    ) -> Result<Option<OfficeConnectionRow>, SqlxError> {
-        sqlx::query_as::<_, OfficeConnectionRow>(
-            "SELECT provider, account_namespace, cli_path, cli_version, credential_ref, \
-             runtime_status, auth_status, sync_status, connection_revision, scope_revision, \
-             enabled, auto_sync, last_sync_at, last_success_at, last_error_code, \
-             last_error_message FROM office_connections WHERE provider = ?1",
+    ) -> Result<Option<ConnectorConnRaw>, SqlxError> {
+        sqlx::query_as::<_, ConnectorConnRaw>(
+            "SELECT key, enabled, auto_sync, auth_status, sync_status, \
+             connection_revision, scope_revision, last_sync_at, last_success_at, \
+             last_error_code, last_error_message, metadata FROM connector_connections \
+             WHERE connector = ?1 AND key = ?2",
         )
+        .bind(conn_id(provider))
         .bind(provider)
         .fetch_optional(&self.pool)
         .await
     }
 
+    pub async fn office_get_connection(
+        &self,
+        provider: &str,
+    ) -> Result<Option<OfficeConnectionRow>, SqlxError> {
+        Ok(self
+            .office_get_connection_raw(provider)
+            .await?
+            .map(OfficeConnectionRow::from))
+    }
+
     pub async fn office_list_connections(&self) -> Result<Vec<OfficeConnectionRow>, SqlxError> {
-        sqlx::query_as::<_, OfficeConnectionRow>(
-            "SELECT provider, account_namespace, cli_path, cli_version, credential_ref, \
-             runtime_status, auth_status, sync_status, connection_revision, scope_revision, \
-             enabled, auto_sync, last_sync_at, last_success_at, last_error_code, \
-             last_error_message FROM office_connections ORDER BY provider",
+        let rows = sqlx::query_as::<_, ConnectorConnRaw>(
+            "SELECT key, enabled, auto_sync, auth_status, sync_status, \
+             connection_revision, scope_revision, last_sync_at, last_success_at, \
+             last_error_code, last_error_message, metadata FROM connector_connections \
+             WHERE connector LIKE 'office:%' ORDER BY key",
         )
         .fetch_all(&self.pool)
-        .await
+        .await?;
+        Ok(rows.into_iter().map(OfficeConnectionRow::from).collect())
     }
 
     pub async fn office_ensure_connection(&self, provider: &str) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        sqlx::query("INSERT OR IGNORE INTO office_connections (provider) VALUES (?1)")
-            .bind(provider)
-            .execute(&mut **tx.conn())
-            .await?;
+        self.office_ensure_connection_tx(&mut tx, provider).await?;
         tx.commit().await?;
         Ok(())
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub async fn office_update_connection(
-        &self,
-        provider: &str,
-        updates: OfficeConnectionUpdate,
-    ) -> Result<i64, SqlxError> {
-        let mut tx = self.begin_immediate_with_retry().await?;
-        self.office_ensure_connection_tx(&mut tx, provider).await?;
-        if let Some(v) = updates.account_namespace {
-            sqlx::query("UPDATE office_connections SET account_namespace = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.cli_path {
-            sqlx::query("UPDATE office_connections SET cli_path = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.cli_version {
-            sqlx::query("UPDATE office_connections SET cli_version = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.credential_ref {
-            sqlx::query("UPDATE office_connections SET credential_ref = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.runtime_status {
-            sqlx::query("UPDATE office_connections SET runtime_status = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.auth_status {
-            sqlx::query("UPDATE office_connections SET auth_status = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.sync_status {
-            sqlx::query("UPDATE office_connections SET sync_status = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.enabled {
-            sqlx::query("UPDATE office_connections SET enabled = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.auto_sync {
-            sqlx::query("UPDATE office_connections SET auto_sync = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.last_sync_at {
-            sqlx::query("UPDATE office_connections SET last_sync_at = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.last_success_at {
-            sqlx::query("UPDATE office_connections SET last_success_at = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.last_error_code {
-            sqlx::query("UPDATE office_connections SET last_error_code = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if let Some(v) = updates.last_error_message {
-            sqlx::query("UPDATE office_connections SET last_error_message = ?1 WHERE provider = ?2")
-                .bind(v)
-                .bind(provider)
-                .execute(&mut **tx.conn())
-                .await?;
-        }
-        if updates.clear_errors {
-            sqlx::query(
-                "UPDATE office_connections SET last_error_code = NULL, \
-                 last_error_message = NULL WHERE provider = ?1",
-            )
-            .bind(provider)
-            .execute(&mut **tx.conn())
-            .await?;
-        }
-        if updates.bump_connection_revision {
-            sqlx::query(
-                "UPDATE office_connections SET connection_revision = connection_revision + 1 \
-                 WHERE provider = ?1",
-            )
-            .bind(provider)
-            .execute(&mut **tx.conn())
-            .await?;
-        }
-        if updates.bump_scope_revision {
-            sqlx::query(
-                "UPDATE office_connections SET scope_revision = scope_revision + 1 \
-                 WHERE provider = ?1",
-            )
-            .bind(provider)
-            .execute(&mut **tx.conn())
-            .await?;
-        }
-        sqlx::query(
-            "UPDATE office_connections SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
-             WHERE provider = ?1",
-        )
-        .bind(provider)
-        .execute(&mut **tx.conn())
-        .await?;
-        let revision: i64 = sqlx::query_scalar(
-            "SELECT scope_revision FROM office_connections WHERE provider = ?1",
-        )
-        .bind(provider)
-        .fetch_one(&mut **tx.conn())
-        .await?;
-        tx.commit().await?;
-        Ok(revision)
     }
 
     async fn office_ensure_connection_tx(
@@ -271,11 +241,202 @@ impl DatabaseManager {
         tx: &mut ImmediateTx,
         provider: &str,
     ) -> Result<(), SqlxError> {
-        sqlx::query("INSERT OR IGNORE INTO office_connections (provider) VALUES (?1)")
+        sqlx::query(
+            "INSERT OR IGNORE INTO connector_connections (connector, key) VALUES (?1, ?2)",
+        )
+        .bind(conn_id(provider))
+        .bind(provider)
+        .execute(&mut **tx.conn())
+        .await?;
+        Ok(())
+    }
+
+    pub async fn office_update_connection(
+        &self,
+        provider: &str,
+        updates: OfficeConnectionUpdate,
+    ) -> Result<i64, SqlxError> {
+        let mut tx = self.begin_immediate_with_retry().await?;
+        self.office_ensure_connection_tx(&mut tx, provider).await?;
+
+        // Office-specific fields live in metadata; read-merge-write inside the
+        // same transaction the generic columns are updated in.
+        let meta_field_updates = [
+            updates.account_namespace.clone().map(|v| ("account_namespace", v)),
+            updates.cli_path.clone().map(|v| ("cli_path", v)),
+            updates.cli_version.clone().map(|v| ("cli_version", v)),
+            updates.credential_ref.clone().map(|v| ("credential_ref", v)),
+            updates.runtime_status.clone().map(|v| ("runtime_status", v)),
+        ];
+        let has_meta_updates = meta_field_updates.iter().any(|u| u.is_some());
+        if has_meta_updates {
+            let current: Option<(String,)> = sqlx::query_as(
+                "SELECT metadata FROM connector_connections \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .fetch_optional(&mut **tx.conn())
+            .await?;
+            let mut meta: OfficeConnectionMeta =
+                parse_meta(current.map(|(m,)| m));
+            for update in meta_field_updates.into_iter().flatten() {
+                match update {
+                    ("account_namespace", v) => meta.account_namespace = Some(v),
+                    ("cli_path", v) => meta.cli_path = Some(v),
+                    ("cli_version", v) => meta.cli_version = Some(v),
+                    ("credential_ref", v) => meta.credential_ref = Some(v),
+                    ("runtime_status", v) => meta.runtime_status = Some(v),
+                    _ => unreachable!("field list above"),
+                }
+            }
+            sqlx::query(
+                "UPDATE connector_connections SET metadata = ?3 \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .bind(serde_json::to_string(&meta).unwrap_or_default())
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+
+        if let Some(v) = updates.auth_status {
+            sqlx::query(
+                "UPDATE connector_connections SET auth_status = ?3 \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .bind(v)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        if let Some(v) = updates.sync_status {
+            sqlx::query(
+                "UPDATE connector_connections SET sync_status = ?3 \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .bind(v)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        if let Some(v) = updates.enabled {
+            sqlx::query(
+                "UPDATE connector_connections SET enabled = ?3 \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .bind(v as i64)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        if let Some(v) = updates.auto_sync {
+            sqlx::query(
+                "UPDATE connector_connections SET auto_sync = ?3 \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .bind(v as i64)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        if let Some(v) = updates.last_sync_at {
+            sqlx::query(
+                "UPDATE connector_connections SET last_sync_at = ?3 \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .bind(v)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        if let Some(v) = updates.last_success_at {
+            sqlx::query(
+                "UPDATE connector_connections SET last_success_at = ?3 \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .bind(v)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        if let Some(v) = updates.last_error_code {
+            sqlx::query(
+                "UPDATE connector_connections SET last_error_code = ?3 \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .bind(v)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        if let Some(v) = updates.last_error_message {
+            sqlx::query(
+                "UPDATE connector_connections SET last_error_message = ?3 \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .bind(v)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        if updates.clear_errors {
+            sqlx::query(
+                "UPDATE connector_connections SET last_error_code = NULL, \
+                 last_error_message = NULL WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
             .bind(provider)
             .execute(&mut **tx.conn())
             .await?;
-        Ok(())
+        }
+        if updates.bump_connection_revision {
+            sqlx::query(
+                "UPDATE connector_connections SET connection_revision = connection_revision + 1 \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        if updates.bump_scope_revision {
+            sqlx::query(
+                "UPDATE connector_connections SET scope_revision = scope_revision + 1 \
+                 WHERE connector = ?1 AND key = ?2",
+            )
+            .bind(conn_id(provider))
+            .bind(provider)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        sqlx::query(
+            "UPDATE connector_connections SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
+             WHERE connector = ?1 AND key = ?2",
+        )
+        .bind(conn_id(provider))
+        .bind(provider)
+        .execute(&mut **tx.conn())
+        .await?;
+        let revision: i64 = sqlx::query_scalar(
+            "SELECT scope_revision FROM connector_connections \
+             WHERE connector = ?1 AND key = ?2",
+        )
+        .bind(conn_id(provider))
+        .bind(provider)
+        .fetch_one(&mut **tx.conn())
+        .await?;
+        tx.commit().await?;
+        Ok(revision)
     }
 
     // ------------------------------------------------------------------
@@ -287,8 +448,9 @@ impl DatabaseManager {
         provider: &str,
     ) -> Result<Option<(String, i64)>, SqlxError> {
         sqlx::query_as::<_, (String, i64)>(
-            "SELECT scope, revision FROM office_scopes WHERE provider = ?1",
+            "SELECT scope, revision FROM connector_scopes WHERE connector = ?1 AND key = ?2",
         )
+        .bind(conn_id(provider))
         .bind(provider)
         .fetch_optional(&self.pool)
         .await
@@ -298,24 +460,21 @@ impl DatabaseManager {
         let mut tx = self.begin_immediate_with_retry().await?;
         self.office_ensure_connection_tx(&mut tx, provider).await?;
         sqlx::query(
-            "INSERT INTO office_scopes (provider, scope, revision) VALUES (?1, ?2, 1) \
-             ON CONFLICT (provider) DO UPDATE SET scope = ?2, revision = revision + 1, \
+            "INSERT INTO connector_scopes (connector, key, scope, revision) \
+             VALUES (?1, ?2, ?3, 1) \
+             ON CONFLICT (connector, key) DO UPDATE SET scope = ?3, \
+             revision = revision + 1, \
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')",
         )
+        .bind(conn_id(provider))
         .bind(provider)
         .bind(scope_json)
         .execute(&mut **tx.conn())
         .await?;
-        sqlx::query(
-            "UPDATE office_connections SET scope_revision = scope_revision + 1, \
-             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE provider = ?1",
+        let (revision,): (i64,) = sqlx::query_as(
+            "SELECT revision FROM connector_scopes WHERE connector = ?1 AND key = ?2",
         )
-        .bind(provider)
-        .execute(&mut **tx.conn())
-        .await?;
-        let revision: i64 = sqlx::query_scalar(
-            "SELECT scope_revision FROM office_connections WHERE provider = ?1",
-        )
+        .bind(conn_id(provider))
         .bind(provider)
         .fetch_one(&mut **tx.conn())
         .await?;
@@ -324,11 +483,10 @@ impl DatabaseManager {
     }
 
     // ------------------------------------------------------------------
-    // Objects
+    // Imported objects
     // ------------------------------------------------------------------
 
     /// Upsert one imported object (idempotent per provider/account/kind/id).
-    /// `doc_key` derives from the stable identity so FTS rows follow upserts.
     /// Returns true when the object was new (first import this run).
     pub async fn office_upsert_object(&self, draft: &OfficeObjectDraft) -> Result<bool, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
@@ -339,11 +497,17 @@ impl DatabaseManager {
             .split_whitespace()
             .collect::<Vec<_>>()
             .join(" ");
-        let existing: Option<(String, String)> = sqlx::query_as(
-            "SELECT revision, state FROM office_objects WHERE provider = ?1 \
-             AND account_namespace = ?2 AND object_kind = ?3 AND object_id = ?4",
+        let meta = serde_json::to_string(&OfficeObjectMeta {
+            completeness: Some(draft.completeness.clone()),
+            activity_anchor: draft.activity_anchor.clone(),
+            platform_generated: Some(draft.platform_generated),
+        })
+        .unwrap_or_default();
+        let existing: Option<(String,)> = sqlx::query_as(
+            "SELECT state FROM connector_objects WHERE connector = ?1 AND namespace = ?2 \
+             AND object_kind = ?3 AND object_id = ?4",
         )
-        .bind(&draft.provider)
+        .bind(conn_id(&draft.provider))
         .bind(&draft.account_namespace)
         .bind(&draft.object_kind)
         .bind(&draft.object_id)
@@ -351,62 +515,58 @@ impl DatabaseManager {
         .await?;
         // User-erased objects (state='deleted') must never be resurrected by
         // a later import over the same identity.
-        if matches!(existing.as_ref(), Some((_, s)) if s == "deleted") {
+        if matches!(existing.as_ref(), Some((s,)) if s == "deleted") {
             tx.commit().await?; // read-only run; release the reservation
             return Ok(false);
         }
         let created = existing.is_none();
         sqlx::query(
-            "INSERT INTO office_objects (provider, account_namespace, object_kind, object_id, \
-             revision, title, body_text, completeness, event_at, fetched_at, source_url, \
-             activity_anchor, platform_generated, state) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, 'active') \
-             ON CONFLICT (provider, account_namespace, object_kind, object_id) DO UPDATE SET \
-             revision = ?5, title = ?6, body_text = ?7, completeness = ?8, event_at = ?9, \
-             fetched_at = ?10, source_url = ?11, activity_anchor = ?12, \
-             platform_generated = ?13, state = 'active', \
+            "INSERT INTO connector_objects (connector, namespace, object_kind, object_id, \
+             revision, title, body_text, event_at, fetched_at, source_url, metadata, state) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 'active') \
+             ON CONFLICT (connector, namespace, object_kind, object_id) DO UPDATE SET \
+             revision = ?5, title = ?6, body_text = ?7, event_at = ?8, fetched_at = ?9, \
+             source_url = ?10, metadata = ?11, state = 'active', \
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')",
         )
-        .bind(&draft.provider)
+        .bind(conn_id(&draft.provider))
         .bind(&draft.account_namespace)
         .bind(&draft.object_kind)
         .bind(&draft.object_id)
         .bind(&draft.revision)
         .bind(&draft.title)
         .bind(&normalized)
-        .bind(&draft.completeness)
         .bind(&event)
         .bind(&fetched)
         .bind(&draft.source_url)
-        .bind(&draft.activity_anchor)
-        .bind(draft.platform_generated)
+        .bind(&meta)
         .execute(&mut **tx.conn())
         .await?;
-        // FTS: replace the row's projection (provider/ns/kind/id enable a
-        // direct join with office_objects on query). Chinese text is
-        // projected into unigram/bigram tokens so unicode61 can match it.
+        // FTS: replace the row's projection (identity columns enable a direct
+        // join with connector_objects on query). Chinese text is projected
+        // into unigram/bigram tokens so unicode61 can match it.
         let fts_body = crate::text_normalizer::chinese_project(&format!(
             "{} {}",
             draft.title.clone().unwrap_or_default(),
             normalized
         ));
         sqlx::query(
-            "DELETE FROM office_objects_fts WHERE provider = ?1 AND account_namespace = ?2 \
+            "DELETE FROM connector_objects_fts WHERE connector = ?1 AND namespace = ?2 \
              AND object_kind = ?3 AND object_id = ?4",
         )
-        .bind(&draft.provider)
+        .bind(conn_id(&draft.provider))
         .bind(&draft.account_namespace)
         .bind(&draft.object_kind)
         .bind(&draft.object_id)
         .execute(&mut **tx.conn())
         .await?;
         sqlx::query(
-            "INSERT INTO office_objects_fts (body, title, provider, account_namespace, \
+            "INSERT INTO connector_objects_fts (body, title, connector, namespace, \
              object_kind, object_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         )
         .bind(&fts_body)
         .bind(&draft.title)
-        .bind(&draft.provider)
+        .bind(conn_id(&draft.provider))
         .bind(&draft.account_namespace)
         .bind(&draft.object_kind)
         .bind(&draft.object_id)
@@ -426,16 +586,58 @@ impl DatabaseManager {
         object_id: &str,
     ) -> Result<bool, SqlxError> {
         let count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM office_objects WHERE provider = ?1 AND account_namespace = ?2 \
+            "SELECT COUNT(*) FROM connector_objects WHERE connector = ?1 AND namespace = ?2 \
              AND object_kind = ?3 AND object_id = ?4",
         )
-        .bind(provider)
+        .bind(conn_id(provider))
         .bind(account_namespace)
         .bind(object_kind)
         .bind(object_id)
         .fetch_one(&self.pool)
         .await?;
         Ok(count > 0)
+    }
+
+    async fn office_row_from_parts(
+        &self,
+        provider: &str,
+        namespace: &str,
+        kind: &str,
+        id: &str,
+    ) -> Result<Option<OfficeObjectRow>, SqlxError> {
+        let raw: Option<(Option<String>, Option<String>, String, Option<String>, String, Option<String>, Option<String>, String)> = sqlx::query_as(
+            "SELECT revision, title, body_text, event_at, fetched_at, source_url, metadata, state \
+             FROM connector_objects WHERE connector = ?1 AND namespace = ?2 \
+             AND object_kind = ?3 AND object_id = ?4",
+        )
+        .bind(conn_id(provider))
+        .bind(namespace)
+        .bind(kind)
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        let Some((revision, title, body_text, event_at, fetched_at, source_url, metadata, state)) =
+            raw
+        else {
+            return Ok(None);
+        };
+        let meta: OfficeObjectMeta = parse_meta(metadata);
+        Ok(Some(OfficeObjectRow {
+            provider: provider.to_string(),
+            account_namespace: namespace.to_string(),
+            object_kind: kind.to_string(),
+            object_id: id.to_string(),
+            revision,
+            title,
+            completeness: meta.completeness.unwrap_or_else(|| "full".to_string()),
+            body_text,
+            event_at,
+            fetched_at,
+            source_url,
+            activity_anchor: meta.activity_anchor,
+            platform_generated: meta.platform_generated.unwrap_or(false),
+            state,
+        }))
     }
 
     pub async fn office_get_object(
@@ -445,19 +647,8 @@ impl DatabaseManager {
         object_kind: &str,
         object_id: &str,
     ) -> Result<Option<OfficeObjectRow>, SqlxError> {
-        sqlx::query_as::<_, OfficeObjectRow>(
-            "SELECT provider, account_namespace, object_kind, object_id, revision, title, \
-             body_text, completeness, event_at, fetched_at, source_url, activity_anchor, \
-             platform_generated, state \
-             FROM office_objects WHERE provider = ?1 AND account_namespace = ?2 \
-             AND object_kind = ?3 AND object_id = ?4",
-        )
-        .bind(provider)
-        .bind(account_namespace)
-        .bind(object_kind)
-        .bind(object_id)
-        .fetch_optional(&self.pool)
-        .await
+        self.office_row_from_parts(provider, account_namespace, object_kind, object_id)
+            .await
     }
 
     /// Disable everything outside the saved scope (scope shrink / account
@@ -470,10 +661,10 @@ impl DatabaseManager {
     ) -> Result<Vec<(String, String)>, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let rows: Vec<(String, String)> = sqlx::query_as(
-            "SELECT object_kind, object_id FROM office_objects \
-             WHERE provider = ?1 AND account_namespace = ?2 AND state = 'active'",
+            "SELECT object_kind, object_id FROM connector_objects \
+             WHERE connector = ?1 AND namespace = ?2 AND state = 'active'",
         )
-        .bind(provider)
+        .bind(conn_id(provider))
         .bind(account_namespace)
         .fetch_all(&mut **tx.conn())
         .await?;
@@ -482,11 +673,11 @@ impl DatabaseManager {
             let keep = keep_object_ids.iter().any(|(k, i)| *k == kind && *i == id);
             if !keep {
                 sqlx::query(
-                    "UPDATE office_objects SET state = 'disabled', \
+                    "UPDATE connector_objects SET state = 'disabled', \
                      updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
-                     WHERE provider = ?1 AND account_namespace = ?2 AND object_kind = ?3 AND object_id = ?4",
+                     WHERE connector = ?1 AND namespace = ?2 AND object_kind = ?3 AND object_id = ?4",
                 )
-                .bind(provider)
+                .bind(conn_id(provider))
                 .bind(account_namespace)
                 .bind(&kind)
                 .bind(&id)
@@ -494,10 +685,10 @@ impl DatabaseManager {
                 .await?;
                 // Drop FTS so disabled content stops surfacing.
                 sqlx::query(
-                    "DELETE FROM office_objects_fts WHERE provider = ?1 AND account_namespace = ?2 \
+                    "DELETE FROM connector_objects_fts WHERE connector = ?1 AND namespace = ?2 \
                      AND object_kind = ?3 AND object_id = ?4",
                 )
-                .bind(provider)
+                .bind(conn_id(provider))
                 .bind(account_namespace)
                 .bind(&kind)
                 .bind(&id)
@@ -507,14 +698,15 @@ impl DatabaseManager {
             }
         }
         tx.commit().await?;
+        let _ = provider;
         Ok(disabled)
     }
 
     pub async fn office_imported_object_count(&self, provider: &str) -> Result<i64, SqlxError> {
         sqlx::query_scalar(
-            "SELECT COUNT(*) FROM office_objects WHERE provider = ?1 AND state = 'active'",
+            "SELECT COUNT(*) FROM connector_objects WHERE connector = ?1 AND state = 'active'",
         )
-        .bind(provider)
+        .bind(conn_id(provider))
         .fetch_one(&self.pool)
         .await
     }
@@ -524,31 +716,31 @@ impl DatabaseManager {
     /// are suppressed.
     pub async fn office_erase(&self, provider: &str) -> Result<u64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        let rows: Vec<(String, String, String, String)> = sqlx::query_as(
-            "SELECT provider, account_namespace, object_kind, object_id \
-             FROM office_objects WHERE provider = ?1",
+        let rows: Vec<(String, String, String)> = sqlx::query_as(
+            "SELECT namespace, object_kind, object_id FROM connector_objects \
+             WHERE connector = ?1",
         )
-        .bind(provider)
+        .bind(conn_id(provider))
         .fetch_all(&mut **tx.conn())
         .await?;
         let mut erased = 0u64;
-        for (prov, ns, kind, id) in &rows {
+        for (ns, kind, id) in &rows {
             sqlx::query(
-                "DELETE FROM office_objects_fts WHERE provider = ?1 AND account_namespace = ?2 \
+                "DELETE FROM connector_objects_fts WHERE connector = ?1 AND namespace = ?2 \
                  AND object_kind = ?3 AND object_id = ?4",
             )
-            .bind(prov)
+            .bind(conn_id(provider))
             .bind(ns)
             .bind(kind)
             .bind(id)
             .execute(&mut **tx.conn())
             .await?;
             sqlx::query(
-                "UPDATE office_objects SET state = 'deleted', \
+                "UPDATE connector_objects SET state = 'deleted', \
                  updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
-                 WHERE provider = ?1 AND account_namespace = ?2 AND object_kind = ?3 AND object_id = ?4",
+                 WHERE connector = ?1 AND namespace = ?2 AND object_kind = ?3 AND object_id = ?4",
             )
-            .bind(prov)
+            .bind(conn_id(provider))
             .bind(ns)
             .bind(kind)
             .bind(id)
@@ -557,6 +749,7 @@ impl DatabaseManager {
             erased += 1;
         }
         tx.commit().await?;
+        let _ = provider;
         Ok(erased)
     }
 
@@ -571,25 +764,34 @@ impl DatabaseManager {
         let projected = crate::text_normalizer::chinese_project(query);
         let limit = limit.max(1) as i64;
         let rows: Vec<(String, String, String, String, f64)> = sqlx::query_as(
-            "SELECT f.provider, f.account_namespace, f.object_kind, f.object_id, \
-             bm25(office_objects_fts, 10.0) AS rank \
-             FROM office_objects_fts f \
-             JOIN office_objects o ON o.provider = f.provider \
-                 AND o.account_namespace = f.account_namespace \
+            "SELECT f.connector, f.namespace, f.object_kind, f.object_id, \
+             bm25(connector_objects_fts, 10.0) AS rank \
+             FROM connector_objects_fts f \
+             JOIN connector_objects o ON o.connector = f.connector \
+                 AND o.namespace = f.namespace \
                  AND o.object_kind = f.object_kind \
                  AND o.object_id = f.object_id \
-             WHERE o.state = 'active' AND office_objects_fts MATCH ?1 \
-                 AND (?2 IS NULL OR o.provider = ?2) \
+             WHERE o.state = 'active' AND o.connector LIKE 'office:%' \
+                 AND (?1 IS NULL OR o.connector = ?1) AND connector_objects_fts MATCH ?2 \
              ORDER BY rank LIMIT ?3",
         )
+        .bind(provider.map(conn_id))
         .bind(&projected)
-        .bind(provider)
         .bind(limit)
         .fetch_all(&self.pool)
         .await?;
         let mut out = Vec::new();
-        for (prov, ns, kind, id, rank) in rows {
-            if let Some(row) = self.office_get_object(&prov, &ns, &kind, &id).await? {
+        for (conn, ns, kind, id, rank) in rows {
+            // connector id is `office:<provider>`; recover the provider so the
+            // DTO keeps the shape office has always returned.
+            let provider = conn
+                .strip_prefix("office:")
+                .unwrap_or(conn.as_str())
+                .to_string();
+            if let Some(row) = self
+                .office_row_from_parts(&provider, &ns, &kind, &id)
+                .await?
+            {
                 out.push((row, rank));
             }
         }
@@ -606,8 +808,10 @@ impl DatabaseManager {
         cursor_key: &str,
     ) -> Result<Option<String>, SqlxError> {
         sqlx::query_scalar(
-            "SELECT cursor_value FROM office_cursors WHERE provider = ?1 AND cursor_key = ?2",
+            "SELECT cursor_value FROM connector_cursors \
+             WHERE connector = ?1 AND key = ?2 AND cursor_key = ?3",
         )
+        .bind(conn_id(provider))
         .bind(provider)
         .bind(cursor_key)
         .fetch_optional(&self.pool)
@@ -622,11 +826,12 @@ impl DatabaseManager {
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
-            "INSERT INTO office_cursors (provider, cursor_key, cursor_value) \
-             VALUES (?1, ?2, ?3) \
-             ON CONFLICT (provider, cursor_key) DO UPDATE SET cursor_value = ?3, \
+            "INSERT INTO connector_cursors (connector, key, cursor_key, cursor_value) \
+             VALUES (?1, ?2, ?3, ?4) \
+             ON CONFLICT (connector, key, cursor_key) DO UPDATE SET cursor_value = ?4, \
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')",
         )
+        .bind(conn_id(provider))
         .bind(provider)
         .bind(cursor_key)
         .bind(cursor_value)
@@ -638,8 +843,8 @@ impl DatabaseManager {
 
     pub async fn office_clear_cursors(&self, provider: &str) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        sqlx::query("DELETE FROM office_cursors WHERE provider = ?1")
-            .bind(provider)
+        sqlx::query("DELETE FROM connector_cursors WHERE connector = ?1")
+            .bind(conn_id(provider))
             .execute(&mut **tx.conn())
             .await?;
         tx.commit().await?;
