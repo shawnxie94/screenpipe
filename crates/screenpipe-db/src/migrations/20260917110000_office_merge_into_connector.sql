@@ -41,7 +41,7 @@ SELECT body, title, 'office:' || provider, account_namespace, object_kind, objec
 FROM office_objects_fts;
 
 INSERT INTO connector_cursors (connector, key, cursor_key, cursor_value, updated_at)
-SELECT 'office:' || provider, '', cursor_key, cursor_value, updated_at FROM office_cursors;
+SELECT 'office:' || provider, provider, cursor_key, cursor_value, updated_at FROM office_cursors;
 
 DROP TABLE office_connections;
 DROP TABLE office_scopes;

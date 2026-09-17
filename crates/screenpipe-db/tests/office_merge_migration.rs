@@ -156,13 +156,13 @@ async fn office_merge_migration_moves_data_faithfully() {
     .unwrap();
     assert_eq!(fts, 1);
 
-    // Cursor moved under key=''.
+    // Cursor moved under the provider key.
     let cursor: (String, String) = sqlx::query_as(
         "SELECT key, cursor_value FROM connector_cursors WHERE connector = 'office:feishu'",
     )
     .fetch_one(&pool)
     .await
     .unwrap();
-    assert_eq!(cursor.0, "");
+    assert_eq!(cursor.0, "feishu");
     assert_eq!(cursor.1, "om_9");
 }

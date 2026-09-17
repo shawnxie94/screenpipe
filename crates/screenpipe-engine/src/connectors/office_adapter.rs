@@ -14,7 +14,6 @@ use crate::office::{OfficeService, OfficeServiceError};
 use crate::connectors::{Connector, ConnectorError};
 use screenpipe_connect::office::types::OfficeScope;
 use screenpipe_db::DatabaseManager;
-use tokio_util::sync::CancellationToken;
 
 pub struct OfficeConnector {
     inner: OfficeService,
