@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, ExternalLink, Check, Loader2, Copy, Terminal, LogIn, LogOut, RotateCw, Send, X, HelpCircle, Search, Calendar as CalendarIcon, Eye, EyeOff, FolderOpen, Plus, AlertCircle, MessageSquare, Inbox, ChevronDown } from "lucide-react";
+import { Download, ExternalLink, Check, Loader2, Copy, Terminal, LogIn, LogOut, RotateCw, Send, X, HelpCircle, Search, Calendar as CalendarIcon, Eye, EyeOff, FolderOpen, Plus, AlertCircle, MessageSquare, Inbox, ChevronDown, Rss } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { commands } from "@/lib/utils/tauri";
 import { useSettings } from "@/lib/hooks/use-settings";
@@ -51,6 +51,7 @@ import { join, homeDir, tempDir, dirname } from "@tauri-apps/api/path";
 import { AppleCalendarCard } from "./apple-calendar-card";
 import { ImapCard } from "./imap-card";
 import { IcsCalendarCard } from "./ics-calendar-card";
+import { RssCard } from "./rss-card";
 import { RemoteAgentCard } from "./remote-agent-card";
 import { BrowserUrlCard } from "./browser-url-card";
 import { UserBrowserCard } from "./user-browser-card";
@@ -546,6 +547,7 @@ const INTEGRATION_ICONS: Record<string, React.ReactNode> = {
     "google-drive": <img src="/images/google-drive.svg" alt="Google Drive" className="w-5 h-5" />,
     "google-sheets": <img src="/images/google-sheets.svg" alt="Google Sheets" className="w-5 h-5" />,
     "ics-calendar": <CalendarIcon className="h-5 w-5 text-muted-foreground" />,
+    "rss": <Rss className="h-5 w-5 text-muted-foreground" />,
     "remote-agent": <img src="/openclaw-icon.svg" alt="远程代理" className="w-5 h-5" />,
     feishu: (
       <svg viewBox="0 0 24 24" className="w-5 h-5" aria-label="飞书">
@@ -3696,6 +3698,7 @@ export function ConnectionsSection({
       ] : []),
       ...(os === "macos" ? [{ id: "apple-calendar", name: "Apple Calendar", icon: "apple-calendar", connected: appleCalendarConnected }] : []),
       { id: "ics-calendar", name: "其他日历", icon: "ics-calendar", connected: false },
+      { id: "rss", name: "RSS 订阅", icon: "rss", connected: false, description: "导入 RSS/Atom 条目，可全文检索" },
       { id: "remote-agent", name: "常驻 AI", icon: "remote-agent", connected: false },
       { id: "whatsapp", name: "WhatsApp", icon: "whatsapp", connected: false, detected: detectedConnectionIds.has("whatsapp") },
       { id: "anythingllm", name: "AnythingLLM", icon: "anythingllm", connected: false, detected: detectedConnectionIds.has("anythingllm") },
@@ -3932,6 +3935,7 @@ export function ConnectionsSection({
       case "gmail":
       case "zoom": return <CloudServiceRetiredCard name={selectedIntegration?.name ?? selected} />;
       case "ics-calendar": return <IcsCalendarCard />;
+      case "rss": return <RssCard />;
       case "remote-agent": return <RemoteAgentCard />;
       case "whatsapp": return <WhatsAppPanel />;
       case "anythingllm": return <AnythingLLMPanel />;
