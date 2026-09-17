@@ -1019,10 +1019,41 @@ async fn publish_feishu_calendar_once(service: &OfficeService) -> Result<(), Off
     let now = chrono::Utc::now();
     let start = (now - chrono::Duration::hours(2)).to_rfc3339();
     let end = (now + chrono::Duration::hours(12)).to_rfc3339();
+    let page = fetch_feishu_calendar_page(
+        service,
+        row.account_namespace.as_deref().unwrap_or(""),
+        start,
+        end,
+    )
+    .await?;
+
+    let signals: Vec<serde_json::Value> = page
+        .events
+        .iter()
+        .map(feishu_calendar_signal)
+        .collect();
+    info!(
+        "feishu calendar publisher: published {} calendar event signal(s)",
+        signals.len()
+    );
+    if let Err(e) = screenpipe_events::send_event("calendar_events", signals) {
+        warn!("feishu calendar publisher: failed to send event: {}", e);
+    }
+    Ok(())
+}
+
+/// Run `calendar +agenda` over a window and parse it. Shared by the
+/// meeting-matcher publisher and the UI agenda endpoint.
+async fn fetch_feishu_calendar_page(
+    service: &OfficeService,
+    account_namespace: &str,
+    start_iso: String,
+    end_iso: String,
+) -> Result<screenpipe_connect::office::feishu::CalendarPage, OfficeServiceError> {
     let dependency = service.runner.discover(OfficeProvider::Feishu).await;
     let command = OfficeCommand::FeishuCalendarEvents {
-        start_iso: start,
-        end_iso: end,
+        start_iso,
+        end_iso,
     };
     let output = service
         .runner
@@ -1036,33 +1067,131 @@ async fn publish_feishu_calendar_once(service: &OfficeService) -> Result<(), Off
         ));
     }
     let payload = cli_payload(&output);
-    let page = screenpipe_connect::office::feishu::parse_calendar_events(
+    Ok(screenpipe_connect::office::feishu::parse_calendar_events(
         &payload,
-        row.account_namespace.as_deref().unwrap_or(""),
-    )?;
+        account_namespace,
+    )?)
+}
 
-    let signals: Vec<serde_json::Value> = page
-        .events
-        .iter()
-        .map(|event| {
-            serde_json::json!({
-                "id": format!("feishu:{}", event.object.object_id),
-                "title": event.object.title.clone().unwrap_or_default(),
-                "start": event.start_iso,
-                "end": event.end_iso,
-                "attendees": [],
-                "meetingUrl": event.meeting_url.clone(),
-                "isAllDay": event.is_all_day,
-                "source": "feishu",
-            })
+/// Bus signal shape consumed by the meeting detector (`CalendarEventSignal`,
+/// camelCase over the wire).
+fn feishu_calendar_signal(event: &screenpipe_connect::office::feishu::FeishuCalendarEvent) -> serde_json::Value {
+    serde_json::json!({
+        "id": format!("feishu:{}", event.object.object_id),
+        "title": event.object.title.clone().unwrap_or_default(),
+        "start": event.start_iso,
+        "end": event.end_iso,
+        "attendees": [],
+        "meetingUrl": event.meeting_url,
+        "isAllDay": event.is_all_day,
+        "source": "feishu",
+    })
+}
+
+/// UI agenda shape consumed by `fetchUpcomingCalendarSnapshot` (snake_case,
+/// mirroring the native-calendar route).
+fn feishu_agenda_event(event: &screenpipe_connect::office::feishu::FeishuCalendarEvent) -> serde_json::Value {
+    serde_json::json!({
+        "id": format!("feishu:{}", event.object.object_id),
+        "title": event.object.title.clone().unwrap_or_default(),
+        "start": event.start_iso,
+        "end": event.end_iso,
+        "attendees": [],
+        "meeting_url": event.meeting_url,
+        "calendar_name": "飞书",
+        "is_all_day": event.is_all_day,
+    })
+}
+
+/// Live Feishu primary-calendar agenda for the "Coming up" list. Read-only:
+/// no DB writes (persistence stays with sync) and no bus signals (the
+/// publisher owns the meeting-matcher feed).
+#[derive(Debug, Serialize)]
+pub struct FeishuAgenda {
+    /// False when the connection is missing, unauthorized, or the calendar
+    /// toggle is off — the UI treats this as "source not connected".
+    pub connected: bool,
+    pub events: Vec<serde_json::Value>,
+}
+
+impl OfficeService {
+    pub async fn feishu_agenda(
+        &self,
+        hours_back: i64,
+        hours_ahead: i64,
+    ) -> Result<FeishuAgenda, OfficeServiceError> {
+        let row = self
+            .db
+            .office_get_connection(OfficeProvider::Feishu.as_str())
+            .await?
+            .ok_or_else(|| {
+                OfficeServiceError::new(OfficeErrorCode::ScopeInvalid, "未连接", 0)
+            })?;
+        if row.auth_status != OfficeAuthStatus::Authorized.as_str() {
+            return Ok(FeishuAgenda { connected: false, events: Vec::new() });
+        }
+        let scope = self
+            .db
+            .office_get_scope(OfficeProvider::Feishu.as_str())
+            .await?
+            .map(|(json, _)| serde_json::from_str::<OfficeScope>(&json).unwrap_or_default())
+            .unwrap_or_default();
+        if !scope.sync_calendar_events {
+            return Ok(FeishuAgenda { connected: false, events: Vec::new() });
+        }
+
+        let now = chrono::Utc::now();
+        let start = (now - chrono::Duration::hours(hours_back.clamp(0, 24))).to_rfc3339();
+        let end = (now + chrono::Duration::hours(hours_ahead.clamp(0, 48))).to_rfc3339();
+        let page = fetch_feishu_calendar_page(
+            self,
+            row.account_namespace.as_deref().unwrap_or(""),
+            start,
+            end,
+        )
+        .await?;
+        Ok(FeishuAgenda {
+            connected: true,
+            events: page.events.iter().map(feishu_agenda_event).collect(),
         })
-        .collect();
-    info!(
-        "feishu calendar publisher: published {} calendar event signal(s)",
-        signals.len()
-    );
-    if let Err(e) = screenpipe_events::send_event("calendar_events", signals) {
-        warn!("feishu calendar publisher: failed to send event: {}", e);
     }
-    Ok(())
+}
+
+#[cfg(test)]
+mod agenda_tests {
+    use super::*;
+
+    fn sample_event() -> screenpipe_connect::office::feishu::FeishuCalendarEvent {
+        // Minimal fixture; fields beyond what the mappers read are defaults.
+        let page = screenpipe_connect::office::feishu::parse_calendar_events(
+            r#"{"ok":true,"data":[{"event_id":"evt_9","summary":"周会",
+                "start_time":{"datetime":"2026-09-18T10:00:00+08:00"},
+                "end_time":{"datetime":"2026-09-18T11:00:00+08:00"},
+                "vchat":{"meeting_url":"https://vc.feishu.cn/j/602031992"}}]}"#,
+            "acct",
+        )
+        .unwrap();
+        page.events.into_iter().next().unwrap()
+    }
+
+    #[test]
+    fn agenda_event_maps_ui_shape_with_vc_link() {
+        let event = sample_event();
+        let value = feishu_agenda_event(&event);
+        assert_eq!(value["id"], "feishu:evt_9");
+        assert_eq!(value["title"], "周会");
+        assert_eq!(value["meeting_url"], "https://vc.feishu.cn/j/602031992");
+        assert_eq!(value["is_all_day"], false);
+        assert_eq!(value["calendar_name"], "飞书");
+    }
+
+    #[test]
+    fn calendar_signal_maps_bus_shape_with_vc_link() {
+        let event = sample_event();
+        let value = feishu_calendar_signal(&event);
+        assert_eq!(value["id"], "feishu:evt_9");
+        assert_eq!(value["meetingUrl"], "https://vc.feishu.cn/j/602031992");
+        assert_eq!(value["source"], "feishu");
+        assert_eq!(value["isAllDay"], false);
+    }
 }

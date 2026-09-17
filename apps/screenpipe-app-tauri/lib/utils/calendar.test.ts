@@ -189,6 +189,85 @@ describe("fetchUpcomingCalendarSnapshot", () => {
     });
   });
 
+  it("includes Feishu agenda events when the connection is live", async () => {
+    mocks.commands.oauthStatus.mockResolvedValue({
+      status: "ok",
+      data: { connected: false },
+    });
+    mocks.localFetch.mockImplementation((url: string) => {
+      if (url.startsWith("/connections/calendar/events")) {
+        return Promise.resolve(
+          jsonResponse(false, { error: "AuthorizationDenied" }),
+        );
+      }
+      if (url.startsWith("/connections/office/feishu/agenda")) {
+        return Promise.resolve(
+          jsonResponse(true, {
+            connected: true,
+            events: [
+              {
+                id: "feishu:evt_1",
+                title: "飞书周会",
+                start: "2026-06-05T10:00:00+08:00",
+                end: "2026-06-05T11:00:00+08:00",
+                meeting_url: "https://vc.feishu.cn/j/602031992",
+                is_all_day: false,
+              },
+            ],
+          }),
+        );
+      }
+      return Promise.reject(new Error(`unexpected url: ${url}`));
+    });
+
+    const snapshot = await fetchUpcomingCalendarSnapshot({ hoursAhead: 8 });
+
+    expect(snapshot.connectedSources).toEqual(["feishu"]);
+    expect(snapshot.events).toHaveLength(1);
+    expect(snapshot.events[0]).toMatchObject({
+      title: "飞书周会",
+      source: "feishu",
+      meeting_url: "https://vc.feishu.cn/j/602031992",
+    });
+  });
+
+  it("treats a connected:false Feishu agenda as a silent non-participant", async () => {
+    // Toggle off / unauthorized is "source not connected", not a failure.
+    mocks.commands.oauthStatus.mockResolvedValue({
+      status: "ok",
+      data: { connected: false },
+    });
+    mocks.localFetch.mockImplementation((url: string) => {
+      if (url.startsWith("/connections/office/feishu/agenda")) {
+        return Promise.resolve(jsonResponse(true, { connected: false, events: [] }));
+      }
+      return Promise.reject(new Error(`unexpected url: ${url}`));
+    });
+
+    const snapshot = await fetchUpcomingCalendarSnapshot({ hoursAhead: 8 });
+
+    expect(snapshot.connectedSources).toEqual([]);
+    expect(snapshot.failedSources).toEqual([]);
+  });
+
+  it("reports Feishu as a failed source when the agenda route errors", async () => {
+    mocks.commands.oauthStatus.mockResolvedValue({
+      status: "ok",
+      data: { connected: false },
+    });
+    mocks.localFetch.mockImplementation((url: string) => {
+      if (url.startsWith("/connections/office/feishu/agenda")) {
+        return Promise.resolve(jsonResponse(false, { code: "cli_missing" }));
+      }
+      return Promise.reject(new Error(`unexpected url: ${url}`));
+    });
+
+    const snapshot = await fetchUpcomingCalendarSnapshot({ hoursAhead: 8 });
+
+    expect(snapshot.connectedSources).toEqual([]);
+    expect(snapshot.failedSources).toEqual([]);
+  });
+
 });
 
 describe("calendarBindingKey", () => {

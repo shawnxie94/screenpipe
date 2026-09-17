@@ -31,6 +31,7 @@ pub(crate) fn office_routes() -> Router<Arc<AppState>> {
         .route("/:provider/control", post(control))
         .route("/:provider/disconnect", post(disconnect))
         .route("/:provider/search", get(search_office))
+        .route("/:provider/agenda", get(agenda))
 }
 
 fn service(state: &Arc<AppState>) -> OfficeService {
@@ -226,6 +227,46 @@ async fn search_office(
         .await
     {
         Ok(objects) => Json(json!({ "objects": objects })).into_response(),
+        Err(e) => err_response(e),
+    }
+}
+
+#[derive(Deserialize)]
+struct AgendaParams {
+    #[serde(default)]
+    hours_back: i64,
+    #[serde(default = "default_hours_ahead")]
+    hours_ahead: i64,
+}
+
+fn default_hours_ahead() -> i64 {
+    8
+}
+
+/// Live calendar agenda for the desktop "Coming up" list. Only Feishu has a
+/// calendar source today; other providers answer with the generic 400.
+async fn agenda(
+    State(state): State<Arc<AppState>>,
+    Path(provider): Path<String>,
+    axum::extract::Query(params): axum::extract::Query<AgendaParams>,
+) -> Response {
+    if provider != "feishu" {
+        let e = OfficeServiceError::new(
+            OfficeErrorCode::ScopeInvalid,
+            format!("{provider} 没有日历源"),
+            400,
+        );
+        return err_response(e);
+    }
+    match service(&state)
+        .feishu_agenda(params.hours_back, params.hours_ahead)
+        .await
+    {
+        Ok(agenda) => Json(json!({
+            "connected": agenda.connected,
+            "events": agenda.events,
+        }))
+        .into_response(),
         Err(e) => err_response(e),
     }
 }

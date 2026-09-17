@@ -142,6 +142,8 @@ function sourceLabel(
       return platformNativeCalendarLabel(platform);
     case "ics":
       return "ICS";
+    case "feishu":
+      return "飞书日历";
   }
 }
 

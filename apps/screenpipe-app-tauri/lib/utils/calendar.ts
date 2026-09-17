@@ -5,7 +5,7 @@
 import { localFetch } from "@/lib/api";
 import { commands, type CalendarEventItem } from "@/lib/utils/tauri";
 
-export type CalendarSource = "native" | "ics";
+export type CalendarSource = "native" | "ics" | "feishu";
 
 export interface CalendarEvent {
   id?: string;
@@ -263,6 +263,41 @@ async function fetchIcsProvider(
   }
 }
 
+async function fetchFeishuProvider(
+  hoursBack: number,
+  hoursAhead: number,
+): Promise<ProviderCalendarResult> {
+  try {
+    const res = await localFetch(
+      `/connections/office/feishu/agenda?hours_back=${hoursBack}&hours_ahead=${hoursAhead}`,
+    );
+    if (!res.ok) return { source: "feishu", connected: false, ok: false, events: [] };
+    const body = (await res.json()) as {
+      connected?: boolean;
+      events?: RawNativeEvent[];
+    };
+    // connected:false covers "not authorized" and "calendar toggle off" —
+    // the source simply doesn't participate in the list.
+    if (body.connected === false) {
+      return { source: "feishu", connected: false, ok: true, events: [] };
+    }
+    const arr = body.events ?? [];
+    return {
+      source: "feishu",
+      connected: true,
+      ok: true,
+      events: arr
+        .map((e): CalendarEvent | null => {
+          const normalized = normalizeNative(e);
+          return normalized ? { ...normalized, source: "feishu" } : null;
+        })
+        .filter((e): e is CalendarEvent => e !== null),
+    };
+  } catch {
+    return { source: "feishu", connected: false, ok: false, events: [] };
+  }
+}
+
 function mergeCalendarEvents(events: CalendarEvent[]): CalendarEvent[] {
   const seen = new Set<string>();
   const out: CalendarEvent[] = [];
@@ -285,6 +320,7 @@ export async function fetchUpcomingCalendarSnapshot(opts?: {
   const providers = await Promise.all([
     fetchNativeProvider(hoursBack, hoursAhead),
     fetchIcsProvider(hoursBack, hoursAhead),
+    fetchFeishuProvider(hoursBack, hoursAhead),
   ]);
   const sourceConnected = (provider: ProviderCalendarResult) =>
     provider.connected || provider.events.length > 0;
