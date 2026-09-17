@@ -16,8 +16,9 @@ use axum::{Json, Router};
 use serde::Deserialize;
 use serde_json::json;
 
-use super::{Connector, ConnectorError};
+use super::office_adapter::OfficeConnector;
 use super::rss::RssService;
+use super::{channels_index, Connector, ConnectorError};
 use crate::server::AppState;
 
 pub(crate) fn rss_routes() -> Router<Arc<AppState>> {
@@ -127,4 +128,21 @@ async fn search(
         Ok(hits) => Json(hits).into_response(),
         Err(e) => err_response(e),
     }
+}
+
+/// GET /connections/channels — aggregate status of every connector channel,
+/// built from the shared registry (office adapter + native channels).
+pub(crate) fn channels_routes() -> Router<Arc<AppState>> {
+    Router::new().route("/", get(channels))
+}
+
+async fn channels(State(state): State<Arc<AppState>>) -> Response {
+    let registry: Vec<Arc<dyn Connector>> = vec![
+        Arc::new(OfficeConnector::new(
+            state.db.clone(),
+            state.screenpipe_dir.join("office-cli"),
+        )),
+        Arc::new(RssService::new(state.db.clone())),
+    ];
+    Json(channels_index(&registry).await).into_response()
 }

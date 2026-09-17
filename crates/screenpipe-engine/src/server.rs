@@ -1104,6 +1104,10 @@ impl SCServer {
             "/connections/rss",
             crate::connectors::routes::rss_routes(),
         );
+        let router = router.nest(
+            "/connections/channels",
+            crate::connectors::routes::channels_routes(),
+        );
         let router = router.nest("/tasks", crate::tasks::routes());
         let router = router.nest(
             "/connections",

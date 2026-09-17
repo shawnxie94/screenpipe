@@ -13,6 +13,7 @@
 
 use serde_json::json;
 
+pub mod office_adapter;
 pub mod rss;
 pub mod routes;
 
