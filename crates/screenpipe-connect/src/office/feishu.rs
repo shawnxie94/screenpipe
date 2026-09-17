@@ -278,6 +278,13 @@ fn parse_feishu_time(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
     chrono::DateTime::parse_from_rfc3339(s)
         .ok()
         .map(|t| t.with_timezone(&chrono::Utc))
+        // All-day calendar events carry a bare `YYYY-MM-DD` date.
+        .or_else(|| {
+            chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+                .ok()
+                .and_then(|d| d.and_hms_opt(0, 0, 0))
+                .map(|dt| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(dt, chrono::Utc))
+        })
 }
 
 fn feishu_ms_to_utc(ms: i64) -> chrono::DateTime<chrono::Utc> {
@@ -356,5 +363,199 @@ mod tests {
         let stdout = r#"{"ok":false,"error":{"code":99991672,"message":"Restricted: rate limited"}}"#;
         let page = parse_chat_messages(stdout, "acc", "oc_1").unwrap_err();
         assert_eq!(page.code, OfficeErrorCode::RateLimited);
+    }
+}
+
+/// One parsed calendar agenda window.
+#[derive(Debug)]
+pub struct CalendarPage {
+    pub objects: Vec<OfficeObject>,
+    pub next_cursor: Option<String>,
+    pub complete: bool,
+}
+
+/// Parse `calendar +agenda --json` (primary calendar, one window per run —
+/// the shortcut exposes no pagination flags; a page token in the payload is
+/// surfaced defensively but normal responses are complete).
+pub fn parse_calendar_events(
+    stdout: &str,
+    account_namespace: &str,
+) -> Result<CalendarPage, OfficeError> {
+    let value: Value = serde_json::from_str(stdout)
+        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("日历输出不是合法 JSON: {e}")))?;
+    if value.get("ok").and_then(Value::as_bool) == Some(false) {
+        return Err(envelope_error(&value));
+    }
+    let items = first_array(&value, &["/data/items", "/items", "/data/events"])
+        .ok_or_else(|| OfficeError::new(OfficeErrorCode::ProviderError, "日历输出缺少 items"))?;
+    let mut objects = Vec::new();
+    for item in items {
+        let Some(event_id) = item
+            .get("event_id")
+            .or_else(|| item.get("eventId"))
+            .or_else(|| item.get("uid"))
+            .and_then(Value::as_str)
+        else {
+            continue;
+        };
+        let title = item
+            .get("summary")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        // Feishu start_time/end_time carry either `datetime` (timed) or
+        // `date` (all-day); prefer the datetime form.
+        let event_at = ["start_time", "startTime"]
+            .iter()
+            .find_map(|k| item.get(*k))
+            .and_then(|t| {
+                t.get("datetime")
+                    .or_else(|| t.get("date"))
+                    .and_then(Value::as_str)
+                    .and_then(parse_feishu_time)
+                    .or_else(|| {
+                        t.get("datetime")
+                            .and_then(Value::as_str)
+                            .and_then(parse_feishu_time)
+                    })
+            });
+        let end_at = ["end_time", "endTime"]
+            .iter()
+            .find_map(|k| item.get(*k))
+            .and_then(|t| {
+                t.get("datetime")
+                    .or_else(|| t.get("date"))
+                    .and_then(Value::as_str)
+                    .and_then(parse_feishu_time)
+            });
+        let mut body_text = item
+            .get("description")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        // Keep the window readable in the indexed body: "summary
+        // start → end" plus the description.
+        let start_display = item
+            .pointer("/start_time/datetime")
+            .or_else(|| item.pointer("/start_time/date"))
+            .or_else(|| item.pointer("/startTime/datetime"))
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let end_display = item
+            .pointer("/end_time/datetime")
+            .or_else(|| item.pointer("/end_time/date"))
+            .or_else(|| item.pointer("/endTime/datetime"))
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let header = if start_display.is_empty() {
+            title.clone().unwrap_or_default()
+        } else {
+            format!(
+                "{}\n{} → {}",
+                title.clone().unwrap_or_default(),
+                start_display,
+                end_display
+            )
+        };
+        body_text = format!("{}\n{}", header, body_text)
+            .trim()
+            .to_string();
+        let status = item.get("status").and_then(Value::as_str);
+        objects.push(OfficeObject {
+            provider: OfficeProvider::Feishu,
+            account_namespace: account_namespace.to_string(),
+            object_kind: OfficeObjectKind::CalendarEvent,
+            object_id: event_id.to_string(),
+            revision: None,
+            title,
+            body_text,
+            event_at: event_at.or(end_at),
+            source_url: None,
+            actor: item
+                .pointer("/organizer_calendar_id")
+                .and_then(Value::as_str)
+                .map(str::to_string),
+            anchors: vec![(
+                "calendar_event_id".to_string(),
+                event_id.to_string(),
+            )],
+            completeness: OfficeCompleteness::Full,
+            platform_generated: false,
+        });
+        let _ = status; // cancelled events still carry content; keep them.
+    }
+    let next_cursor = value
+        .pointer("/data/page_token")
+        .or_else(|| value.pointer("/page_token"))
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+    let complete = next_cursor.is_none();
+    Ok(CalendarPage {
+        objects,
+        next_cursor,
+        complete,
+    })
+}
+
+#[cfg(test)]
+mod calendar_tests {
+    use super::*;
+
+    #[test]
+    fn parse_calendar_events_maps_identity_and_window() {
+        // Shape follows the Feishu calendar list/agenda payload (timed and
+        // all-day entries).
+        let stdout = r#"{
+            "ok": true,
+            "data": {
+                "items": [
+                    {
+                        "event_id": "evt_1",
+                        "summary": "周会",
+                        "description": "每周同步",
+                        "status": "confirmed",
+                        "organizer_calendar_id": "cal_primary",
+                        "start_time": {"datetime": "2026-09-18T10:00:00+08:00", "timezone": "Asia/Shanghai"},
+                        "end_time": {"datetime": "2026-09-18T11:00:00+08:00", "timezone": "Asia/Shanghai"}
+                    },
+                    {
+                        "event_id": "evt_2",
+                        "summary": "全天休假",
+                        "start_time": {"date": "2026-10-01"},
+                        "end_time": {"date": "2026-10-02"}
+                    }
+                ]
+            }
+        }"#;
+
+        let page = parse_calendar_events(stdout, "acct-1").unwrap();
+        assert_eq!(page.objects.len(), 2);
+        assert!(page.complete);
+
+        let first = &page.objects[0];
+        assert_eq!(first.object_kind, OfficeObjectKind::CalendarEvent);
+        assert_eq!(first.object_id, "evt_1");
+        assert_eq!(first.title.as_deref(), Some("周会"));
+        assert!(first.body_text.contains("2026-09-18T10:00:00+08:00"));
+        assert!(first.body_text.contains("每周同步"));
+        assert_eq!(
+            first.event_at.unwrap().to_rfc3339(),
+            "2026-09-18T02:00:00+00:00"
+        );
+        assert_eq!(first.account_namespace, "acct-1");
+
+        // All-day entry: date-only start parses, no description body.
+        let second = &page.objects[1];
+        assert_eq!(second.object_id, "evt_2");
+        assert!(second.event_at.is_some());
+    }
+
+    #[test]
+    fn parse_calendar_events_rejects_error_envelope() {
+        let stdout = r#"{"ok": false, "error": {"type": "authentication"}}"#;
+        let err = parse_calendar_events(stdout, "acct-1").unwrap_err();
+        // token_missing carries "authentication" in the message → maps to
+        // the provider-level error code the surface knows how to label.
+        assert_eq!(err.code, OfficeErrorCode::ProviderError);
     }
 }

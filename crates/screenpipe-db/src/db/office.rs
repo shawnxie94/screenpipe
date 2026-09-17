@@ -35,7 +35,6 @@ fn conn_id(provider: &str) -> String {
     format!("office:{provider}")
 }
 
-const KEY: &str = "";
 
 /// Connection-level fields with no generic column, packed into
 /// `connector_connections.metadata`.
@@ -471,8 +470,21 @@ impl DatabaseManager {
         .bind(scope_json)
         .execute(&mut **tx.conn())
         .await?;
+        // The connection row's scope_revision is what start_sync's OCC guard
+        // compares against — bump it in step with the scope revision and
+        // return it (pre-merge semantics).
+        sqlx::query(
+            "UPDATE connector_connections SET scope_revision = scope_revision + 1, \
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
+             WHERE connector = ?1 AND key = ?2",
+        )
+        .bind(conn_id(provider))
+        .bind(provider)
+        .execute(&mut **tx.conn())
+        .await?;
         let (revision,): (i64,) = sqlx::query_as(
-            "SELECT revision FROM connector_scopes WHERE connector = ?1 AND key = ?2",
+            "SELECT scope_revision FROM connector_connections \
+             WHERE connector = ?1 AND key = ?2",
         )
         .bind(conn_id(provider))
         .bind(provider)

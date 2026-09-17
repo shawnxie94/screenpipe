@@ -198,6 +198,9 @@ pub enum OfficeCommand {
     FeishuMessageDetail { message_id: String },
     /// Chat list so the user can pick conversation scope in the UI.
     FeishuChatList { cursor: Option<String>, limit: u32 },
+    /// Primary-calendar events within an explicit window (ISO 8601).
+    /// `calendar +agenda` has no pagination flags; one shot per window.
+    FeishuCalendarEvents { start_iso: String, end_iso: String },
 
     // -- tencent-meeting (tmeet) -------------------------------------------
     TencentAuthStatus,
@@ -284,6 +287,17 @@ impl OfficeCommand {
                 }
                 argv
             }
+            OfficeCommand::FeishuCalendarEvents { start_iso, end_iso } => vec![
+                "calendar".into(),
+                "+agenda".into(),
+                "--calendar-id".into(),
+                "primary".into(),
+                "--start".into(),
+                start_iso.clone(),
+                "--end".into(),
+                end_iso.clone(),
+                "--json".into(),
+            ],
             // tmeet 1.0.16 `auth status` has no --json flag and always prints
             // human-readable text (see parse_auth_status).
             OfficeCommand::TencentAuthStatus => vec!["auth".into(), "status".into()],
@@ -355,7 +369,8 @@ impl OfficeCommand {
             | OfficeCommand::FeishuDocFetch { .. }
             | OfficeCommand::FeishuMessages { .. }
             | OfficeCommand::FeishuMessageDetail { .. }
-            | OfficeCommand::FeishuChatList { .. } => OfficeProvider::Feishu,
+            | OfficeCommand::FeishuChatList { .. }
+            | OfficeCommand::FeishuCalendarEvents { .. } => OfficeProvider::Feishu,
             OfficeCommand::TencentAuthStatus
             | OfficeCommand::TencentMeetingList { .. }
             | OfficeCommand::TencentRecordList { .. }
@@ -440,6 +455,7 @@ pub enum OfficeObjectKind {
     Meeting,
     Transcript,
     Summary,
+    CalendarEvent,
 }
 
 impl OfficeObjectKind {
@@ -450,6 +466,7 @@ impl OfficeObjectKind {
             OfficeObjectKind::Meeting => "meeting",
             OfficeObjectKind::Transcript => "transcript",
             OfficeObjectKind::Summary => "summary",
+            OfficeObjectKind::CalendarEvent => "calendar_event",
         }
     }
 }
@@ -563,6 +580,14 @@ pub struct OfficeScope {
     /// Explicit opt-in to "all meetings I can access within the window".
     #[serde(default)]
     pub all_accessible_meetings: bool,
+    /// Sync every chat the account can access within the window, instead of
+    /// only the whitelisted `chat_ids`.
+    #[serde(default)]
+    pub all_accessible_chats: bool,
+    /// Sync the primary calendar's events within the window (Feishu only;
+    /// requires `lark-cli auth login --domain calendar`).
+    #[serde(default)]
+    pub sync_calendar_events: bool,
     /// Half-open window [start_ms, end_ms) for messages/meetings.
     #[serde(default)]
     pub window_start_ms: i64,
@@ -579,6 +604,8 @@ impl OfficeScope {
             && self.chat_ids.is_empty()
             && self.meeting_ids.is_empty()
             && !self.all_accessible_meetings
+            && !self.all_accessible_chats
+            && !self.sync_calendar_events
     }
 }
 

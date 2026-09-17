@@ -19,6 +19,7 @@ use screenpipe_connect::office::types::{
 use screenpipe_connect::office::types::OfficeObject;
 use screenpipe_db::{OfficeConnectionUpdate, OfficeObjectDraft, DatabaseManager};
 use tokio_util::sync::CancellationToken;
+use tracing::warn;
 
 pub mod routes;
 
@@ -229,11 +230,14 @@ impl OfficeService {
             ));
         }
         if provider_enum == OfficeProvider::TencentMeeting
-            && (!scope.document_ids.is_empty() || !scope.chat_ids.is_empty())
+            && (!scope.document_ids.is_empty()
+                || !scope.chat_ids.is_empty()
+                || scope.all_accessible_chats
+                || scope.sync_calendar_events)
         {
             return Err(OfficeServiceError::new(
                 OfficeErrorCode::ScopeInvalid,
-                "文档/会话范围只属于飞书连接",
+                "文档/会话/日历范围只属于飞书连接",
                 400,
             ));
         }
@@ -544,18 +548,50 @@ async fn run_sync(
     match provider_enum {
         OfficeProvider::Feishu => {
             // Messages: per chat, windowed pages; cursor per chat.
-            for chat_id in &scope.chat_ids {
+            // "All accessible chats" expands the whitelist to every chat the
+            // account can see (paged), reusing the UI picker's list command.
+            let mut chats = scope.chat_ids.clone();
+            if scope.all_accessible_chats {
+                let mut cursor: Option<String> = None;
+                loop {
+                    if cancel.is_cancelled() {
+                        return Err(OfficeError::new(OfficeErrorCode::CliTimeout, "同步已取消"));
+                    }
+                    let command = OfficeCommand::FeishuChatList { cursor, limit: 100 };
+                    let output = service
+                        .runner
+                        .run(&dependency, &command, cancel.clone())
+                        .await?;
+                    if output.truncated {
+                        partial = true;
+                        break;
+                    }
+                    let payload = cli_payload(&output);
+                    let (found, next) =
+                        screenpipe_connect::office::feishu::parse_chat_list(&payload)?;
+                    chats.extend(found.into_iter().map(|(id, _)| id));
+                    match next {
+                        Some(next) => cursor = Some(next),
+                        None => break,
+                    }
+                }
+                chats.sort();
+                chats.dedup();
+            }
+            let window_start = if scope.window_start_ms > 0 {
+                ms_to_iso(scope.window_start_ms)
+            } else {
+                default_window_start()
+            };
+            let window_end = if scope.window_end_ms > 0 {
+                ms_to_iso(scope.window_end_ms)
+            } else {
+                now_iso()
+            };
+            for chat_id in &chats {
                 let cursor_key = format!("chat:{chat_id}:messages");
-                let start = if scope.window_start_ms > 0 {
-                    ms_to_iso(scope.window_start_ms)
-                } else {
-                    default_window_start()
-                };
-                let end = if scope.window_end_ms > 0 {
-                    ms_to_iso(scope.window_end_ms)
-                } else {
-                    now_iso()
-                };
+                let start = window_start.clone();
+                let end = window_end.clone();
                 // lark page tokens are opaque and scoped to one sync run —
                 // never replay a stored high-water as a page token. Each run
                 // walks its full window; object upserts absorb the overlap.
@@ -605,6 +641,51 @@ async fn run_sync(
                     match &page.next_cursor {
                         Some(next) => cursor = Some(next.clone()),
                         None => break,
+                    }
+                }
+            }
+            // Calendar: primary calendar events within the window. The
+            // calendar domain needs its own CLI login, so a failure here is
+            // best-effort (partial) rather than failing the whole run.
+            if scope.sync_calendar_events {
+                let command = OfficeCommand::FeishuCalendarEvents {
+                    start_iso: window_start.clone(),
+                    end_iso: window_end.clone(),
+                };
+                match service
+                    .runner
+                    .run(&dependency, &command, cancel.clone())
+                    .await
+                {
+                    Ok(output) => {
+                        if output.truncated {
+                            partial = true;
+                        } else {
+                            let payload = cli_payload(&output);
+                            match screenpipe_connect::office::feishu::parse_calendar_events(
+                                &payload,
+                                &identity.account_id,
+                            ) {
+                                Ok(page) => {
+                                    for object in &page.objects {
+                                        if register_object(service, object).await? {
+                                            imported += 1;
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    partial = true;
+                                    warn!("feishu calendar parse failed: {}", e.message);
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        partial = true;
+                        warn!(
+                            "feishu calendar fetch failed (需要 `lark-cli auth login --domain calendar`?): {}",
+                            e.message
+                        );
                     }
                 }
             }

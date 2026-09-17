@@ -98,6 +98,8 @@ export function emptyOfficeScope(): OfficeScope {
     chat_ids: [],
     meeting_ids: [],
     all_accessible_meetings: false,
+    all_accessible_chats: false,
+    sync_calendar_events: false,
     window_start_ms: 0,
     window_end_ms: 0,
     auto_sync: false,

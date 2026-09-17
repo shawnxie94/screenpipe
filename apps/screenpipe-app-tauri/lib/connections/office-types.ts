@@ -51,6 +51,10 @@ export interface OfficeScope {
   meeting_ids: string[];
   /** Explicit opt-in to "all meetings I can access within the window". */
   all_accessible_meetings: boolean;
+  /** Sync every chat the account can access within the window. */
+  all_accessible_chats: boolean;
+  /** Sync the primary calendar's events within the window (Feishu only). */
+  sync_calendar_events: boolean;
   /** Message / meeting window (epoch ms). Half-open: [start, end). */
   window_start_ms: number;
   window_end_ms: number;

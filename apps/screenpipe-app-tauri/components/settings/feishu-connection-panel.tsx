@@ -4,6 +4,7 @@
 
 "use client";
 
+import { Switch } from "@/components/ui/switch";
 import { OfficeConnectionCard, ScopeIdListEditor } from "@/components/settings/office-connection-card";
 
 /** Feishu connection panel: documents + chats scope, manual/auto sync. */
@@ -29,6 +30,26 @@ export function FeishuConnectionPanel({ onChanged }: { onChanged?: () => void })
             values={scope.chat_ids}
             onChange={(chat_ids) => onScopeChange({ ...scope, chat_ids })}
           />
+          <div className="space-y-2 text-xs">
+            <label className="flex items-center gap-2">
+              <Switch
+                checked={scope.all_accessible_chats}
+                onCheckedChange={(all_accessible_chats) =>
+                  onScopeChange({ ...scope, all_accessible_chats })
+                }
+              />
+              同步全部会话（时间窗口内，免逐个填 ID）
+            </label>
+            <label className="flex items-center gap-2">
+              <Switch
+                checked={scope.sync_calendar_events}
+                onCheckedChange={(sync_calendar_events) =>
+                  onScopeChange({ ...scope, sync_calendar_events })
+                }
+              />
+              同步主日历日程（需已登录日历域）
+            </label>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs">
               窗口开始

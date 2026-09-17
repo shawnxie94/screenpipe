@@ -85,3 +85,32 @@ async fn cursors_roundtrip() {
     db.office_clear_cursors("feishu").await.unwrap();
     assert!(db.office_get_cursor("feishu", "chat:c1:messages").await.unwrap().is_none());
 }
+#[tokio::test]
+async fn save_scope_bumps_connection_scope_revision() {
+    // start_sync compares expected_revision against the CONNECTION row's
+    // scope_revision; saving a scope must advance that row (regression guard
+    // for the connector-merge rewrite).
+    let db = DatabaseManager::new("sqlite::memory:", Default::default())
+        .await
+        .unwrap();
+    let r1 = db.office_save_scope("feishu", "{}").await.unwrap();
+    assert_eq!(r1, 1);
+    let r2 = db.office_save_scope("feishu", "{}").await.unwrap();
+    assert_eq!(r2, 2);
+
+    let row = db.office_get_connection("feishu").await.unwrap().unwrap();
+    assert_eq!(row.scope_revision, 2);
+
+    // office_update_connection returning the same counter stays consistent.
+    let returned = db
+        .office_update_connection(
+            "feishu",
+            screenpipe_db::OfficeConnectionUpdate {
+                bump_scope_revision: true,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(returned, 3);
+}
