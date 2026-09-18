@@ -5,7 +5,7 @@ description: Query the user's local and synced-device Screenpipe data via the RE
 
 # Screenpipe API
 
-Local REST API at `http://localhost:3030`. Full reference (60+ endpoints): https://docs.screenpi.pe/llms-full.txt
+Local REST API at `http://localhost:3030`. Runs the zh-local fork — where it diverges from upstream docs (docs.screenpi.pe), this file describes the local reality. Main divergence: **full search is `GET /search/records`** (same parameters as the upstream `/search`); `/search` here is a keyword-only handler (param `query`, flat results).
 
 ## Authentication
 
@@ -27,16 +27,16 @@ The `$SCREENPIPE_LOCAL_API_KEY` env var is already set in your environment. With
 
 API responses can be large. Always write curl output to a file first (`curl ... -o /tmp/sp_result.json`), check size (`wc -c /tmp/sp_result.json`), and if over 5KB read only the first 50-100 lines. Extract what you need with `jq`. NEVER dump full large responses into context.
 
-For the list endpoints (`/search`, `/elements`, `/frames/{id}/elements`) you can also cut tokens at the source: add `&format=csv` (or `tsv`) to get a columnar table that writes each column name once instead of repeating keys per row, and `&fields=a,b,c` to return only the columns you need (dotted paths like `content.text`). On a list of UI elements that is roughly a 70% token cut versus JSON. For the element endpoints specifically, `&format=outline` (alias `tree`) goes further still — a deduped, indented tree of just the text-bearing nodes (~91% fewer tokens, measured) — and is the best default for reading UI structure. Use `&format=automation` for automation planning: it retains interactive controls, state, bounds, allowed actions, short response-local refs, and best-effort stable keys. Text-heavy `ocr`/`audio` barely benefit from any reshaping (the text blob dominates), so reach for `fields` + `max_content_length` there. With no `format`/`fields` the response is unchanged JSON.
+For the list endpoints (`/search/records`, `/elements`, `/frames/{id}/elements`) you can also cut tokens at the source: add `&format=csv` (or `tsv`) to get a columnar table that writes each column name once instead of repeating keys per row, and `&fields=a,b,c` to return only the columns you need (dotted paths like `content.text`). On a list of UI elements that is roughly a 70% token cut versus JSON. For the element endpoints specifically, `&format=outline` (alias `tree`) goes further still — a deduped, indented tree of just the text-bearing nodes (~91% fewer tokens, measured) — and is the best default for reading UI structure. Use `&format=automation` for automation planning: it retains interactive controls, state, bounds, allowed actions, short response-local refs, and best-effort stable keys. Text-heavy `ocr`/`audio` barely benefit from any reshaping (the text blob dominates), so reach for `fields` + `max_content_length` there. With no `format`/`fields` the response is unchanged JSON.
 
 ---
 
-## 1. Search — `GET /search`
+## 1. Search — `GET /search/records`
 
 ```bash
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
   -H "X-Screenpipe-Client: api" \
-  "http://localhost:3030/search?q=QUERY&content_type=all&limit=10&start_time=1h%20ago"
+  "http://localhost:3030/search/records?q=QUERY&content_type=all&limit=10&start_time=1h%20ago"
 ```
 
 ### Parameters
@@ -44,7 +44,7 @@ curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `q` | string | No | Keywords. Do NOT use for audio searches — transcriptions are noisy, q filters too aggressively. |
-| `content_type` | string | No | `all` (default), `accessibility`, `audio`, `input`, `ocr`, `memory`, `parsed`. Use `parsed` for compact app-specific messages, emails, tasks, documents, and code review. Parsed capture is experimental, may be empty when disabled/unsupported, and is not included in `all`. Screen text is primarily captured via the OS accessibility tree (`accessibility`); OCR is a fallback for apps without accessibility support. |
+| `content_type` | string | No | `all` (default), `accessibility`, `audio`, `input`, `ocr`, `parsed`, `connection`. Use `parsed` for compact app-specific messages, emails, tasks, documents, and code review. Parsed capture is experimental, may be empty when disabled/unsupported, and is not included in `all`. `connection` searches imported connector content (Feishu messages/docs/calendar events, Tencent Meeting transcripts, RSS entries) and is also not part of `all`. Screen text is primarily captured via the OS accessibility tree (`accessibility`); OCR is a fallback for apps without accessibility support. |
 | `limit` | integer | No | Max 1-20. Default: 10 |
 | `offset` | integer | No | Pagination. Default: 0 |
 | `start_time` | ISO 8601, relative, or local calendar | **Yes** | Accepts `2024-01-15T10:00:00Z`, `16h ago`, `today`, `yesterday`, or `YYYY-MM-DD` |
@@ -55,7 +55,7 @@ curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
 | `actor_id` | integer | No | With `content_type=parsed`, filter by a resolved actor identity. |
 | `speaker_name` | string | No | Filter audio by speaker (case-insensitive partial) |
 | `focused` | boolean | No | Only focused windows |
-| `tags` | string | No | Comma-separated; return only items carrying ALL of them (e.g. `person:ada,project:atlas`). Works for screen/audio and, with `content_type=memory`, memories. See Tags below. |
+| `tags` | string | No | Comma-separated; return only items carrying ALL of them (e.g. `person:ada,project:atlas`). Works for screen/audio. See Tags below. |
 | `include_related` | boolean | No | With `tags`, also return a `related` map of co-occurring tags (people/projects/workflows seen alongside yours), most-frequent first. One call for the surrounding context instead of several. See Tags below. |
 | `max_content_length` | integer | No | Truncate each result's text (middle-truncation) |
 | `format` | string | No | `json` (default), `csv`, `tsv`/`table`, or `outline`/`tree` (element endpoints only). CSV/TSV return a columnar table (column names written once) instead of one JSON object per row. `outline` returns a deduped indented text tree of the text-bearing UI nodes — the cheapest read for "what's on screen?" (~91% fewer tokens). CSV is lossless; TSV collapses newlines (worse for long `ocr` text). |
@@ -63,13 +63,12 @@ curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
 
 ### Progressive Disclosure
 
-Don't jump to heavy `/search` calls. Escalate:
+Don't jump to heavy `/search/records` calls. Escalate:
 
 | Step | Endpoint | When |
 |------|----------|------|
-| 0 | `GET /memories?q=...` | **Always query first/in parallel** — highest signal, lowest cost |
 | 1 | `GET /activity-summary?start_time=...&end_time=...` | Broad questions ("what was I doing?", "which apps?") |
-| 2 | `GET /search?...` | Need specific content |
+| 2 | `GET /search/records?...` | Need specific content |
 | 3 | `GET /elements?...` or `GET /frames/{id}/context` | UI structure, buttons, links |
 | 4 | `GET /frames/{frame_id}` (PNG) | Visual context needed |
 
@@ -80,6 +79,7 @@ Decision tree:
 - "Which apps today?" → Step 1 (do NOT use frame counts or raw SQLite)
 - "What button did I click?" → Step 3 (`/elements` with role=AXButton)
 - "Show me what I saw" → Step 2 (find frame_id) → Step 4
+- "那封飞书消息 / 会上说的 / 订阅里的" → Step 2 with `content_type=connection`
 
 ### Attached activity episodes
 
@@ -99,19 +99,18 @@ captured content and not search terms.
 
 ### Tags — linking people, projects, topics
 
-Tags are a shared label layer across screen, audio, and memories under one string namespace. Use namespaced tags: `person:ada`, `project:atlas`, `topic:pricing`. Two items sharing a tag are connected.
+Tags are a shared label layer across screen and audio under one string namespace. Use namespaced tags: `person:ada`, `project:atlas`, `topic:pricing`. Two items sharing a tag are connected.
 
 - Add to a frame/audio: `POST /tags/vision/{frame_id}` or `POST /tags/audio/{chunk_id}` body `{"tags":["person:ada"]}`.
-- Add to a memory: include `tags` in `POST /memories` (or `PUT /memories/{id}`).
-- Retrieve by tag: `GET /search?tags=person:ada&start_time=30d%20ago` (screen+audio), or add `content_type=memory` for memories. Multiple tags AND together; matching is exact, not substring.
+- Retrieve by tag: `GET /search/records?tags=person:ada&start_time=30d%20ago` (screen+audio). Multiple tags AND together; matching is exact, not substring.
 
-Frames are pruned by retention, so for a durable link tag a memory (memories also carry `created_at` and a `frame_id` back to the moment — jump there with `GET /frames/{frame_id}`). To pull everything about a person across time: one call for captures (`content_type=all&tags=person:ada`) plus one for facts (`content_type=memory&tags=person:ada`).
+Frames are pruned by retention, so treat tags as pointers into the recent window, not a permanent knowledge graph.
 
 Add `include_related=true` to a tag query to get the surrounding context in the same response — the tags that co-occur with yours, grouped by namespace (prefix pluralized: `person:`→`people`, `project:`→`projects`) and ranked by frequency. Replaces the 2-3 follow-up "who/what else" calls with one:
 
 ```bash
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "http://localhost:3030/search?tags=person:ada&include_related=true&limit=5"
+  "http://localhost:3030/search/records?tags=person:ada&include_related=true&limit=5"
 # data: [...], related: { "people": ["connor","drew"], "projects": ["atlas"], "workflows": ["planning"] }
 ```
 
@@ -134,36 +133,14 @@ curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
     {"type": "OCR", "content": {"frame_id": 12345, "text": "...", "timestamp": "...", "app_name": "Chrome", "window_name": "..."}},
     {"type": "Audio", "content": {"chunk_id": 678, "transcription": "...", "timestamp": "...", "speaker": {"name": "John"}}},
     {"type": "UI", "content": {"id": 999, "text": "Clicked 'Submit'", "timestamp": "...", "app_name": "Safari"}},
-    {"type": "Parsed", "content": {"frame_id": 12345, "text": "compact corrected app data", "items": [], "actors": []}}
+    {"type": "Parsed", "content": {"frame_id": 12345, "text": "compact corrected app data", "items": [], "actors": []}},
+    {"type": "Connection", "content": {"connector": "office:feishu", "provider": "feishu", "object_kind": "message", "object_id": "om_...", "title": null, "body_text": "...", "event_at": "...", "fetched_at": "...", "source_url": "https://www.feishu.cn/message/om_..."}}
   ],
   "pagination": {"limit": 10, "offset": 0, "total": 42}
 }
 ```
 
 > **Note**: The `"OCR"` type label is used for all screen text results, including text captured via the accessibility tree. Most screen text comes from accessibility, not OCR.
-
----
-
-## Synced devices — `GET /data-sync/devices` and `/data-sync/search`
-
-Use these endpoints when the user says **another device**, **across devices**, or
-names a machine that is not the current one. For the current machine only, keep
-using `/search`; it is faster and has richer local filters.
-
-```bash
-curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "http://localhost:3030/data-sync/devices"
-
-curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "http://localhost:3030/data-sync/search?device_name=MacBook&since_hours_ago=24&q=pricing&limit=10"
-```
-
-Start with `/data-sync/devices` when the device name is ambiguous. Search accepts
-`q`, `device_name`, `device_id`, `app_name`, `since`, `until`,
-`since_hours_ago`, and `limit`. Cite the returned device and timestamp. If Data
-Sync is disabled or unavailable, say so plainly; never ask for a cloud token,
-account ID, user ID, or R2 bucket and never access R2 directly. The local API
-supplies the signed-in identity.
 
 ---
 
@@ -182,7 +159,7 @@ Returns a rich overview with:
 - **key_texts**: one representative text snippet per window context (user input fields prioritized over static page text)
 - **audio_summary.top_transcriptions**: actual transcription text with speaker and timestamp (not just counts)
 
-This is usually enough to answer "what was I doing?" without further searches. Only drill into `/search` if you need verbatim quotes or specific content.
+This is usually enough to answer "what was I doing?" without further searches. Only drill into `/search/records` if you need verbatim quotes or specific content.
 
 > **Building a pipe/automation?** Same rule: call this endpoint for time math. The numbers are computed server-side from frame timestamps — never recompute durations from raw frames, and never ask an LLM to sum minutes (it will drift). Let the model label activities; let this endpoint own the durations.
 
@@ -190,7 +167,7 @@ This is usually enough to answer "what was I doing?" without further searches. O
 
 ## 3. Elements — `GET /elements`
 
-Lightweight FTS search across UI elements (~100-500 bytes each vs 5-20KB from `/search`).
+Lightweight FTS search across UI elements (~100-500 bytes each vs 5-20KB from `/search/records`).
 
 ```bash
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" "http://localhost:3030/elements?q=Submit&start_time=1h%20ago&limit=10"
@@ -304,7 +281,7 @@ curl -X POST http://localhost:3030/audio/retranscribe \
   -d '{"start": "1h ago", "end": "now"}'
 ```
 
-Optional: `engine` (`whisper-large-v3-turbo`|`whisper-large-v3`|`deepgram`|`qwen3-asr`), `vocabulary` (array of `{"word": "...", "replacement": "..."}` for bias/replacement), `prompt` (topic context for Whisper).
+Optional: `engine` (`qwen3-asr` — the local default, or `whisper-large-v3`), `vocabulary` (array of `{"word": "...", "replacement": "..."}` for bias/replacement), `prompt` (topic context for Whisper).
 
 Keep ranges short (1h max). Show old vs new transcription.
 
@@ -320,7 +297,7 @@ curl -X POST http://localhost:3030/raw_sql \
 
 **Rules**: Every SELECT needs LIMIT. Always filter by time. Read-only. For time math, see the timestamp caveat below.
 
-**Timestamp caveat**: DB timestamps are stored as RFC3339 strings — usually `2026-06-26T18:01:14.214586+00:00` (frames / audio_transcriptions / ui_events), though some tables (e.g. `meetings.meeting_start`, memories) use a `Z` suffix with milliseconds: `2026-06-26T18:01:14.214Z`. Do not compare either form directly to SQLite `datetime()` strings like `timestamp > datetime('now', '-10 seconds')`: the `T` vs space makes it a lexical string comparison and can include stale same-day rows. Use `datetime(timestamp) > datetime('now', '-10 seconds')` (works for both forms), or for indexed string comparisons use an RFC3339-shaped cutoff: `timestamp > strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now', '-10 seconds')`.
+**Timestamp caveat**: DB timestamps are stored as RFC3339 strings — usually `2026-06-26T18:01:14.214586+00:00` (frames / audio_transcriptions / ui_events), though some tables (e.g. `meetings.meeting_start`) use a `Z` suffix with milliseconds: `2026-06-26T18:01:14.214Z`. Do not compare either form directly to SQLite `datetime()` strings like `timestamp > datetime('now', '-10 seconds')`: the `T` vs space makes it a lexical string comparison and can include stale same-day rows. Use `datetime(timestamp) > datetime('now', '-10 seconds')` (works for both forms), or for indexed string comparisons use an RFC3339-shaped cutoff: `timestamp > strftime('%Y-%m-%dT%H:%M:%f+00:00', 'now', '-10 seconds')`.
 
 **WARNING**: Do NOT use frame counts for time estimates — frames are event-driven, not fixed-interval. Use `/activity-summary` for screen time.
 
@@ -337,7 +314,7 @@ curl -X POST http://localhost:3030/raw_sql \
 | `ui_events` | `event_type`, `app_name`, `window_title`, `browser_url` | `timestamp` |
 | `accessibility` | `app_name`, `window_name`, `text_content`, `browser_url` | `timestamp` |
 | `meetings` | `meeting_app`, `title`, `attendees`, `detection_source` | `meeting_start` |
-| `memories` | `content`, `source`, `tags`, `importance` | `created_at` |
+| `connector_objects` | `connector`, `object_kind`, `title`, `body_text`, `source_url`, `state` | `event_at` / `fetched_at` |
 
 ### Example Queries
 
@@ -409,6 +386,28 @@ curl -X POST http://localhost:3030/connections/<id>/proxy/<upstream-api-path> \
 Do **not** call `https://api.github.com/...` directly from a pipe — use `/connections/github/proxy/...` instead. There is no `/connections/<id>/token` endpoint.
 
 If not connected, tell the user to set it up from the Connections page in the desktop app.
+
+### Connector channels — office & RSS (separate surface)
+
+These are **not** the Telegram/Slack-style connections above. Import channels with their own REST surface:
+
+```bash
+# Aggregate status of every import channel
+curl http://localhost:3030/connections/channels
+
+# Feishu: status / save scope / kick a sync / search imported content / today's calendar agenda
+curl http://localhost:3030/connections/office/feishu
+curl -X PUT  http://localhost:3030/connections/office/feishu/scope -d '{"expected_revision":1,"all_accessible_chats":true,"sync_calendar_events":true,"window_start_ms":0,"window_end_ms":0,"document_ids":[],"chat_ids":[],"meeting_ids":[],"all_accessible_meetings":false,"auto_sync":true}'
+curl -X POST http://localhost:3030/connections/office/feishu/sync -d '{"expected_revision":1}'
+curl "http://localhost:3030/connections/office/feishu/search?q=关键词"
+curl "http://localhost:3030/connections/office/feishu/agenda?hours_ahead=8"
+
+# Tencent Meeting (same shape) and RSS feeds
+curl http://localhost:3030/connections/office/tencent-meeting
+curl http://localhost:3030/connections/rss
+```
+
+Search across all of them at once with `content_type=connection` on the main search endpoint (§1).
 
 ---
 
@@ -504,7 +503,7 @@ Parsed data uses the same search surface as every other readable content type:
 
 ```bash
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "http://localhost:3030/search?content_type=parsed&start_time=2h%20ago&limit=10"
+  "http://localhost:3030/search/records?content_type=parsed&start_time=2h%20ago&limit=10"
 ```
 
 Results contain compact corrected `text`, typed `items`, parser provenance, and
@@ -516,56 +515,6 @@ alone; the parser label is observed evidence, while the actor record is mutable.
 
 ---
 
-## 12. Memories — High-Signal Persistent Knowledge
-
-**Memories are the highest-signal data source in screenpipe.** They contain curated facts, user preferences, decisions, and project context — distilled from hours of screen/audio data. Always check memories when answering questions or building context.
-
-### When to Query Memories
-
-**Query memories FIRST (before or alongside `/search`)** when:
-- The user asks about preferences, decisions, or past context
-- You need background on a project, person, or workflow
-- You're generating a summary, recommendation, or action plan
-- You're unsure about user preferences or past decisions
-- Any task where historical context would improve the output
-
-**Rule: If you're calling `/search`, also call `/memories` in parallel.** Memories provide the "why" behind the raw screen data. Search gives you what happened; memories tell you what matters.
-
-### API
-
-```bash
-# Search memories (FTS) — do this often!
-curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" "http://localhost:3030/memories?q=preference&limit=20"
-
-# List recent memories (high importance first)
-curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" "http://localhost:3030/memories?min_importance=0.5&limit=20"
-
-# Filter by source or tags
-curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" "http://localhost:3030/memories?source=user&tags=project&limit=20"
-
-# Create a memory
-curl -X POST http://localhost:3030/memories \
-  -H "Content-Type: application/json" \
-  -d '{"content": "User prefers dark mode", "source": "user", "tags": ["preference", "ui"], "importance": 0.7}'
-
-# Update a memory
-curl -X PUT http://localhost:3030/memories/1 \
-  -H "Content-Type: application/json" \
-  -d '{"content": "User prefers dark mode in all apps", "importance": 0.8}'
-
-# Delete a memory
-curl -X DELETE http://localhost:3030/memories/1
-```
-
-Parameters for `GET /memories`: `q` (FTS search), `source`, `tags`, `min_importance`, `start_time`, `end_time`, `limit`, `offset`.
-
-Memories also appear in `/search?content_type=memory`.
-
-### Creating Memories
-
-When you learn something important about the user (preferences, decisions, project context), store it as a memory. Use `importance` 0.0-1.0 to rank signal. Only store genuinely useful long-lived facts, not transient observations.
-
----
 
 ## 12. Notifications — `POST http://localhost:11435/notify`
 
