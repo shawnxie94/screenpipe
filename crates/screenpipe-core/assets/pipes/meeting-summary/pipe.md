@@ -146,4 +146,4 @@ featured: false
           {"label": "忽略", "type": "dismiss"}
         ]}'
 
-每个按钮都映射到其 `/connections` `description` 里的一个连接端点（slack/telegram/discord 用 `POST /connections/<id>/send`，notion/linear 等用 `POST /connections/<id>/proxy/...`）。只有当端点、负载和目标都完整时才用 `type: "api"`。当目标需要一个你无法推断的目的地（如 Notion 父页面、Slack 频道）时，用一个指定动作的 `type: "chat"` 按钮，其 prompt 指名现有的会议摘要，并在写入前向用户询问缺失的目的地。绝不要在摘要后按钮上使用 `type: "pipe"` 配合 `pipe: "meeting-summary"` ——那会再次运行总结器。仅查看的按钮也必须用 `type: "chat"`，并告诉聊天只查看已保存的摘要、不要重跑。如果什么都没连接，跳过通知，只需说明连接一个应用就能让你下次推送摘要。
+每个按钮都映射到其 `/connections` `description` 里的一个连接端点（凭据代理类连接用 `POST /connections/<id>/proxy/...`；webhook 类（如 ntfy）与本地目录类（如 obsidian/logseq）按各自 `description` 给出的方式调用）。只有当端点、负载和目标都完整时才用 `type: "api"`。当目标需要一个你无法推断的目的地（如一个 IMAP 文件夹、一个 ntfy 主题）时，用一个指定动作的 `type: "chat"` 按钮，其 prompt 指名现有的会议摘要，并在写入前向用户询问缺失的目的地。绝不要在摘要后按钮上使用 `type: "pipe"` 配合 `pipe: "meeting-summary"` ——那会再次运行总结器。仅查看的按钮也必须用 `type: "chat"`，并告诉聊天只查看已保存的摘要、不要重跑。如果什么都没连接，跳过通知，只需说明连接一个应用就能让你下次推送摘要。
