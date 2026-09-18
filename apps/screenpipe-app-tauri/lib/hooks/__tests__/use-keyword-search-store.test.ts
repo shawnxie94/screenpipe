@@ -74,7 +74,7 @@ describe("useKeywordSearchStore search scheduling", () => {
 				return keywordResponse.promise;
 			}
 
-			if (url.startsWith("/search?")) {
+			if (url.startsWith("/search/records?")) {
 				return uiEventResponse.promise;
 			}
 
@@ -123,7 +123,7 @@ describe("useKeywordSearchStore search scheduling", () => {
 		expect(useKeywordSearchStore.getState().searchResults).toHaveLength(1);
 		expect(useKeywordSearchStore.getState().isSearching).toBe(false);
 		expect(calls).toHaveLength(2);
-		expect(calls[1]).toContain("/search?");
+		expect(calls[1]).toContain("/search/records?");
 		expect(calls[1]).toContain("content_type=input");
 		expect(useKeywordSearchStore.getState().isSearchingUiEvents).toBe(true);
 		for (const [, properties] of mocks.capture.mock.calls) {
@@ -165,7 +165,7 @@ describe("useKeywordSearchStore search scheduling", () => {
 				return oldResponse.promise;
 			}
 			if (url.includes("query=new-query")) return newResponse.promise;
-			if (url.startsWith("/search?")) return Promise.resolve(jsonResponse({ data: [] }));
+			if (url.startsWith("/search/records?")) return Promise.resolve(jsonResponse({ data: [] }));
 			throw new Error(`unexpected request: ${url}`);
 		});
 
@@ -236,7 +236,7 @@ describe("useKeywordSearchStore search scheduling", () => {
 					text_source: "ocr",
 				}])));
 			}
-			if (url.startsWith("/search?")) {
+			if (url.startsWith("/search/records?")) {
 				return Promise.resolve(jsonResponse({ data: [] }));
 			}
 			throw new Error(`unexpected request: ${url}`);
@@ -283,7 +283,7 @@ describe("useKeywordSearchStore search scheduling", () => {
 			if (url.startsWith("/search/keyword?")) {
 				return Promise.resolve(jsonResponse(grouped(candidates)));
 			}
-			if (url.startsWith("/search?")) {
+			if (url.startsWith("/search/records?")) {
 				return Promise.resolve(jsonResponse({ data: [] }));
 			}
 			throw new Error(`unexpected request: ${url}`);
@@ -324,7 +324,7 @@ describe("useKeywordSearchStore search scheduling", () => {
 					text_source: "accessibility",
 				}])));
 			}
-			if (url.startsWith("/search?")) {
+			if (url.startsWith("/search/records?")) {
 				return Promise.resolve(jsonResponse({ data: [] }));
 			}
 			throw new Error(`unexpected request: ${url}`);
@@ -360,7 +360,7 @@ describe("useKeywordSearchStore search scheduling", () => {
 					text_source: "accessibility" as const,
 				}])));
 			}
-			if (url.startsWith("/search?")) {
+			if (url.startsWith("/search/records?")) {
 				return Promise.resolve(jsonResponse({ data: [] }));
 			}
 			throw new Error(`unexpected request: ${url}`);

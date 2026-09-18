@@ -75,7 +75,7 @@ export async function fetchFirstRunMedia(
       // common default) cannot crowd out the screen artifact behind them.
       limit: String(options.limit ?? 24),
     });
-    const response = await localFetch(`/search?${params.toString()}`, {
+    const response = await localFetch(`/search/records?${params.toString()}`, {
       signal: options.signal,
     });
     if (!response.ok) {

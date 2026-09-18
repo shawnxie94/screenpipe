@@ -10,6 +10,7 @@ use crate::office::types::{
     OfficeAccountIdentity, OfficeCompleteness, OfficeError, OfficeErrorCode, OfficeObject,
     OfficeObjectKind, OfficeProvider,
 };
+use chrono::TimeZone;
 use serde_json::Value;
 
 /// Parse `auth status --json --verify`.
@@ -109,10 +110,13 @@ pub fn parse_chat_messages(
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         return Err(envelope_error(&value));
     }
-    let items = first_array(&value, &["/data/items", "/items", "/data/messages"])
+    let items = first_array(&value, &["/data/messages", "/data/items", "/items"])
         .ok_or_else(|| OfficeError::new(OfficeErrorCode::ProviderError, "消息列表缺少 items"))?;
     let mut objects = Vec::new();
     for item in items {
+        if item.get("deleted").and_then(Value::as_bool) == Some(true) {
+            continue;
+        }
         let Some(message_id) = item
             .get("message_id")
             .or_else(|| item.get("messageId"))
@@ -259,6 +263,13 @@ fn first_array<'a>(value: &'a Value, pointers: &[&str]) -> Option<&'a Vec<Value>
 /// Message bodies arrive as JSON-encoded strings per msg_type; extract the
 /// readable text without assuming Markdown.
 fn extract_message_text(item: &Value) -> String {
+    // Real `im +chat-messages-list` output: the top-level `content` field IS
+    // the plain text — the CLI flattens Feishu's body.content JSON for us.
+    if let Some(text) = item.get("content").and_then(Value::as_str) {
+        return text.to_string();
+    }
+    // Raw Feishu API shape fallback: body.content is a JSON string like
+    // {"text":"..."} for text messages.
     let raw = item
         .pointer("/body/content")
         .and_then(Value::as_str)
@@ -284,6 +295,18 @@ fn parse_feishu_time(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
                 .ok()
                 .and_then(|d| d.and_hms_opt(0, 0, 0))
                 .map(|dt| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(dt, chrono::Utc))
+        })
+        // Message create_time is local wall time without seconds or offset,
+        // e.g. "2026-09-18 09:00" — interpret it in the machine's timezone.
+        .or_else(|| {
+            chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M")
+                .ok()
+                .and_then(|dt| {
+                    chrono::Local
+                        .from_local_datetime(&dt)
+                        .single()
+                        .map(|t| t.with_timezone(&chrono::Utc))
+                })
         })
 }
 
@@ -345,6 +368,30 @@ mod tests {
         let page = parse_chat_messages(stdout, "acc", "oc_1").unwrap();
         assert!(page.complete);
         assert!(page.next_cursor.is_none());
+    }
+
+    #[test]
+    fn real_cli_shape_parses_content_and_local_time() {
+        // Captured from `lark-cli im +chat-messages-list --json`: array at
+        // data.messages, plain-text `content` at the top level, local wall
+        // time without seconds, plus a deleted message that must be skipped.
+        let stdout = r#"{"ok":true,"data":{"has_more":false,"page_token":"","total":3,"messages":[
+            {"chat_id":"oc_x","message_id":"om_a","msg_type":"text","deleted":false,
+             "content":"季度目标对齐会议",
+             "create_time":"2026-09-18 09:00",
+             "sender":{"id":"cli_a","id_type":"app_id","sender_type":"app"}},
+            {"chat_id":"oc_x","message_id":"om_b","msg_type":"post","deleted":true,
+             "content":"已撤回",
+             "create_time":"2026-09-18 09:05",
+             "sender":{"id":"ou_b","id_type":"open_id","sender_type":"user"}}
+        ]}}"#;
+        let page = parse_chat_messages(stdout, "acc", "oc_x").unwrap();
+        assert_eq!(page.objects.len(), 1, "deleted messages must be skipped");
+        let msg = &page.objects[0];
+        assert_eq!(msg.object_id, "om_a");
+        assert_eq!(msg.body_text, "季度目标对齐会议");
+        assert!(msg.event_at.is_some(), "local wall time must parse");
+        assert!(page.complete);
     }
 
     #[test]

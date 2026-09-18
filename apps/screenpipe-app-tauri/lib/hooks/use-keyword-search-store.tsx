@@ -365,7 +365,7 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 					uiParams.append("end_time", options.end_time.toISOString());
 				}
 
-				localFetch(`/search?${uiParams}`, {
+				localFetch(`/search/records?${uiParams}`, {
 					signal: combinedSignal,
 				})
 					.then((resp) => (resp.ok ? resp.json() : null))

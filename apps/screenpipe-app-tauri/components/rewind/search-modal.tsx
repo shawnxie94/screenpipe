@@ -4,7 +4,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo, useLayoutEffect } from "react";
-import { Search, X, Loader2, Clock, MessageSquare, User, ArrowLeft, Mic, Volume2, Hash, Tag, Monitor, Keyboard, ClipboardCopy, AppWindow } from "lucide-react";
+import { Search, X, Loader2, Clock, MessageSquare, User, ArrowLeft, Mic, Volume2, Hash, Tag, Monitor, Keyboard, ClipboardCopy, AppWindow, Plug } from "lucide-react";
 import {
   useKeywordSearchStore,
   SearchMatch,
@@ -68,6 +68,29 @@ interface TaggedFrame {
   app_name: string;
 }
 
+// Connector-channel content (Feishu messages/docs/calendar events, Tencent
+// Meeting transcripts, RSS entries) — `content_type=connection` results.
+interface ConnectionHit {
+  connector: string;
+  provider: string;
+  object_kind: string;
+  object_id: string;
+  title: string | null;
+  body_text: string;
+  event_at: string | null;
+  fetched_at: string;
+  source_url: string | null;
+}
+
+const connectionHitKey = (hit: ConnectionHit) =>
+  `${hit.connector}/${hit.object_kind}/${hit.object_id}`;
+
+const PROVIDER_LABELS: Record<string, string> = {
+  feishu: "飞书",
+  "tencent-meeting": "腾讯会议",
+  rss: "RSS",
+};
+
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -84,7 +107,8 @@ type SearchResultType =
   | "person"
   | "app"
   | "speaker_transcription"
-  | "tagged_frame";
+  | "tagged_frame"
+  | "connection";
 
 type SearchSelectionMethod = "click" | "keyboard";
 
@@ -224,7 +248,7 @@ function useSuggestions(isOpen: boolean, enabled: boolean) {
           end_time: endTime.toISOString(),
         });
 
-        const resp = await localFetch(`/search?${params}`, {
+        const resp = await localFetch(`/search/records?${params}`, {
           signal: AbortSignal.any([controller.signal, AbortSignal.timeout(5000)]),
         });
         if (cancelled) return;
@@ -717,14 +741,22 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   const entityFilter = parseEntityFilter(query) ?? "";
 
   // Content type filter
-  type ContentFilter = "all" | "screen" | "input" | "chats";
+  type ContentFilter = "all" | "screen" | "input" | "chats" | "connections";
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
 
   // A selectable row, identified so selection survives lists being re-sorted
   type NavItem =
     | { kind: "chat"; id: string }
     | { kind: "uievent"; id: string }
+    | { kind: "connection"; id: string }
     | { kind: "frame"; index: number };
+
+  // Connection search state. Rows live only in this scope; every fetch
+  // replaces the list wholesale (no paging — one 30-row page covers the
+  // keyword+connector result space the palette is used at).
+  const [connectionResults, setConnectionResults] = useState<ConnectionHit[]>([]);
+  const [isLoadingConnections, setIsLoadingConnections] = useState(false);
+  const connectionRequestRef = useRef(0);
 
   // Chat search state. Seed from the prewarm cache so a reopened search window
   // paints its recent chats on the first frame instead of after a disk scan.
@@ -1038,6 +1070,16 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       return items;
     }
 
+    if (contentFilter === "connections") {
+      // Same contract as the chats scope: rows off the screen (loading or
+      // below-minimum query) stay out of the selection list.
+      if (belowMinimum || isLoadingConnections) return items;
+      for (const hit of connectionResults) {
+        items.push({ kind: "connection", id: connectionHitKey(hit) });
+      }
+      return items;
+    }
+
     // Empty state: the recent chats strip is the only content, so it owns
     // selection — this is what makes Enter work the moment search opens.
     if (contentFilter === "all" && !query.trim()) {
@@ -1062,11 +1104,14 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     return items;
   }, [
     chatsQuery,
+    connectionHitKey,
+    connectionResults,
     contentFilter,
     debouncedQuery,
     filteredChats,
     filteredResults,
     isLoadingChats,
+    isLoadingConnections,
     isEntitySearch,
     isTagSearch,
     query,
@@ -1106,6 +1151,8 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   navIndexRef.current = navIndex;
   const uiEventResultsRef = useRef(uiEventResults);
   uiEventResultsRef.current = uiEventResults;
+  const connectionResultsRef = useRef(connectionResults);
+  connectionResultsRef.current = connectionResults;
 
   // Keep the selection in range as results stream in and sections appear.
   useEffect(() => {
@@ -1438,7 +1485,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           limit: APP_BROWSE_PAGE_SIZE.toString(),
           offset: "0",
         });
-        const resp = await localFetch(`/search?${params}`, {
+        const resp = await localFetch(`/search/records?${params}`, {
           signal: AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]),
         });
         if (resp.ok && !cancelled) {
@@ -1468,7 +1515,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
         limit: APP_BROWSE_PAGE_SIZE.toString(),
         offset: appFrameOffset.toString(),
       });
-      const resp = await localFetch(`/search?${params}`);
+      const resp = await localFetch(`/search/records?${params}`);
       if (resp.ok) {
         const data = await resp.json();
         const items = (data?.data || []).map(toAppFrame);
@@ -1482,6 +1529,46 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       setIsLoadingMoreAppFrames(false);
     }
   }, [appFrameOffset, hasMoreAppFrames, isLoadingMoreAppFrames, selectedApp, toAppFrame]);
+
+  // Connector content scope: search the imported channel store (Feishu,
+  // Tencent Meeting, RSS). Empty query is a valid browse (most recent first).
+  // Runs only in its own scope, mirroring how chats fetch only for theirs.
+  useEffect(() => {
+    if (!isOpen || contentFilter !== "connections") return;
+    const requestId = ++connectionRequestRef.current;
+    const controller = new AbortController();
+    (async () => {
+      setIsLoadingConnections(true);
+      try {
+        const params = new URLSearchParams({
+          content_type: "connection",
+          limit: "30",
+          offset: "0",
+        });
+        const q = debouncedQuery.trim();
+        if (q) params.set("q", q);
+        const resp = await localFetch(`/search/records?${params}`, {
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]),
+        });
+        if (resp.ok && requestId === connectionRequestRef.current) {
+          const data = await resp.json();
+          const hits: ConnectionHit[] = ((data?.data ?? []) as Array<Record<string, unknown>>)
+            .filter((item) => item?.type === "Connection" && item?.content)
+            .map((item) => item.content as ConnectionHit);
+          setConnectionResults(hits);
+        }
+      } catch {
+        // Aborts and transient failures keep the previous page visible.
+      } finally {
+        if (requestId === connectionRequestRef.current) setIsLoadingConnections(false);
+      }
+    })();
+    return () => {
+      controller.abort();
+    };
+    // `query` (live) re-runs the fetch the moment the text changes so Enter's
+    // row list never lags the input; results only repaint on the debounced pass.
+  }, [isOpen, contentFilter, debouncedQuery, searchEpoch]);
 
   // Search speakers. @ queries are immediate; normal text queries wait for the
   // first keyword pass so names do not slow down the first result.
@@ -1552,7 +1639,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           offset: "0",
         });
         const resp = await localFetch(
-          `/search?${params}`,
+          `/search/records?${params}`,
           { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(5000)]) }
         );
         if (resp.ok && !cancelled) {
@@ -1821,7 +1908,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
         offset: newOffset.toString(),
       });
       const resp = await localFetch(
-        `/search?${params}`,
+        `/search/records?${params}`,
         { signal: AbortSignal.timeout(5000) }
       );
       if (resp.ok) {
@@ -2044,6 +2131,14 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           if (!item) break;
           if (item.kind === "chat") {
             handleOpenChatResult(item.id, "keyboard");
+          } else if (item.kind === "connection") {
+            const hit = connectionResultsRef.current.find(
+              (c) => connectionHitKey(c) === item.id,
+            );
+            if (hit?.source_url) {
+              trackSearchResultSelected("connection", "keyboard", "drilldown");
+              window.open(hit.source_url, "_blank");
+            }
           } else if (item.kind === "uievent") {
             const evt = uiEventResultsRef.current.find((u) => String(u.id) === item.id);
             if (evt) {
@@ -2246,7 +2341,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   // it hanging; `chatsFreshForQuery` still decides which rows are safe to show.
   const chatsFreshForQuery = chatsQuery === trimmedQuery;
   const chatsPending = contentFilter !== "screen" && chatsPassPending;
-  const anyLoading = isSearching || isSearchingSpeakers || isSearchingTags || isSearchingUiEvents || isLoadingChats || chatsPending || isLoadingAppFrames;
+  const anyLoading = isSearching || isSearchingSpeakers || isSearchingTags || isSearchingUiEvents || isLoadingChats || chatsPending || isLoadingAppFrames || isLoadingConnections;
   const pendingScreenCardsRendered =
     contentFilter !== "input" && filteredResults.length > 0;
   const nothingRendered =
@@ -2305,6 +2400,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     screen: "屏幕匹配",
     input: "键盘或剪贴板匹配",
     chats: "聊天",
+    connections: "接入内容",
   };
 
   // Scope lives in the search bar rather than as a row of chips above the
@@ -2332,6 +2428,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           { key: "screen" as ContentFilter, label: "屏幕", icon: Monitor },
           { key: "input" as ContentFilter, label: "按键", icon: Keyboard },
           { key: "chats" as ContentFilter, label: "聊天", icon: MessageSquare },
+          { key: "connections" as ContentFilter, label: "接入", icon: Plug },
         ] as const).map(({ key, label, icon: Icon }) => {
           const isActive = contentFilter === key;
           return (
@@ -2382,7 +2479,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
         <span>{activeNavItem.kind === "frame" ? "←→↑↓ 切换" : "↑↓ 切换"}</span>
         {/* Every non-chat row resolves to a moment — a frame, or the instant a
             line was typed or copied — and Enter opens the main timeline there. */}
-        <span>{activeNavItem.kind === "chat" ? "⏎ 打开聊天" : "⏎ 跳到时间线"}</span>
+        <span>{activeNavItem.kind === "chat" ? "⏎ 打开聊天" : activeNavItem.kind === "connection" ? "⏎ 打开原文" : "⏎ 跳到时间线"}</span>
         {activeNavItem.kind === "frame" && (
           <span className="flex items-center gap-1" suppressHydrationWarning>
             <MessageSquare className="w-2.5 h-2.5" />
@@ -2974,6 +3071,69 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                   );
                 });
               })()}
+            </>
+          )}
+
+          {/* Connector content (接入): imported Feishu / Tencent Meeting / RSS
+              objects. Rows open the source in the browser — there is no frame
+              to jump to, so unlike timeline rows Enter never navigates. */}
+          {contentFilter === "connections" && (
+            <>
+              {!isLoadingConnections && connectionResults.length === 0 && !queryBelowMinimum && (
+                <EmptyMessage
+                  title={trimmedQuery ? "没有匹配的接入内容" : "还没有接入内容"}
+                  hint={
+                    trimmedQuery
+                      ? "换个词试试，或在设置里检查接入渠道"
+                      : "在设置里连接飞书或 RSS 后，导入的内容会出现在这里"
+                  }
+                />
+              )}
+              {connectionResults.length > 0 && (
+                <div className="flex flex-col">
+                  <SectionLabel>接入</SectionLabel>
+                  {connectionResults.map((hit) => {
+                    const navKey = `connection:${connectionHitKey(hit)}`;
+                    const pos = navPositions.get(navKey);
+                    const when = hit.event_at ?? hit.fetched_at;
+                    return (
+                      <button
+                        key={navKey}
+                        data-nav-index={pos}
+                        onClick={() => {
+                          if (hit.source_url) {
+                            trackSearchResultSelected("connection", "click", "drilldown");
+                            window.open(hit.source_url, "_blank");
+                          }
+                        }}
+                        onMouseEnter={() => pos !== undefined && setNavIndex(pos)}
+                        className={cn(
+                          "w-full flex items-start gap-2.5 px-2 py-2 rounded text-left transition-colors",
+                          isNavActive(navKey) ? "bg-muted" : "hover:bg-muted/50",
+                        )}
+                      >
+                        <Plug className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0 mt-0.5" />
+                        <span className="flex-1 min-w-0">
+                          <span className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm truncate">
+                              {hit.title || hit.body_text.split("\n")[0] || "未命名内容"}
+                            </span>
+                            <span className="shrink-0 px-1.5 py-px text-[10px] rounded-md border border-border text-muted-foreground">
+                              {PROVIDER_LABELS[hit.provider] ?? hit.provider}
+                            </span>
+                          </span>
+                          <span className="block text-xs text-muted-foreground truncate mt-0.5">
+                            {hit.body_text.split("\n").slice(1).join(" ").slice(0, 120) || hit.object_kind}
+                          </span>
+                        </span>
+                        <span className="text-[11px] font-mono text-muted-foreground shrink-0 mt-0.5">
+                          {when ? formatRelativeTime(when) : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </>
           )}
 
