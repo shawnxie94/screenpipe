@@ -691,31 +691,6 @@ pub struct RecordingSettings {
     #[serde(rename = "userName", default)]
     pub user_name: Option<String>,
 
-    /// OpenAI-compatible transcription endpoint URL.
-    /// Previously stored in SettingsStore.extra["openaiCompatibleEndpoint"].
-    #[serde(rename = "openaiCompatibleEndpoint", default)]
-    pub openai_compatible_endpoint: Option<String>,
-
-    /// OpenAI-compatible transcription API key.
-    /// Previously stored in SettingsStore.extra["openaiCompatibleApiKey"].
-    #[serde(rename = "openaiCompatibleApiKey", default)]
-    pub openai_compatible_api_key: Option<String>,
-
-    /// OpenAI-compatible transcription model name.
-    /// Previously stored in SettingsStore.extra["openaiCompatibleModel"].
-    #[serde(rename = "openaiCompatibleModel", default)]
-    pub openai_compatible_model: Option<String>,
-
-    /// Custom HTTP headers for OpenAI-compatible transcription requests.
-    /// JSON object, e.g. {"X-Custom-Header": "value"}.
-    #[serde(rename = "openaiCompatibleHeaders", default)]
-    pub openai_compatible_headers: Option<std::collections::HashMap<String, String>>,
-
-    /// Send raw WAV audio instead of MP3 to OpenAI-compatible endpoint.
-    /// Some ASR providers prefer uncompressed audio for better accuracy.
-    #[serde(rename = "openaiCompatibleRawAudio", default)]
-    pub openai_compatible_raw_audio: bool,
-
     // ── System ─────────────────────────────────────────────────────────
     /// HTTP server port for the screenpipe API.
     pub port: u16,
@@ -858,11 +833,6 @@ impl Default for RecordingSettings {
             pii_redaction_columns: default_pii_redaction_columns(),
             pii_redaction_pseudonyms: false,
             user_name: None,
-            openai_compatible_endpoint: None,
-            openai_compatible_api_key: None,
-            openai_compatible_model: None,
-            openai_compatible_headers: None,
-            openai_compatible_raw_audio: false,
             port: 3030,
             power_mode: None,
             keep_computer_awake: false,
@@ -1106,8 +1076,7 @@ mod tests {
             "powerMode": "battery_saver",
             "userName": "Alice",
             "vocabularyWords": [{"word": "screenpipe"}],
-            "batchMaxDurationSecs": 600,
-            "openaiCompatibleEndpoint": "https://api.example.com/v1"
+            "batchMaxDurationSecs": 600
         }"#;
         let settings: RecordingSettings = serde_json::from_str(json).unwrap();
         assert_eq!(settings.transcription_mode, "batch");
@@ -1116,16 +1085,14 @@ mod tests {
         assert_eq!(settings.vocabulary.len(), 1);
         assert_eq!(settings.vocabulary[0].word, "screenpipe");
         assert_eq!(settings.batch_max_duration_secs, Some(600));
-        assert_eq!(
-            settings.openai_compatible_endpoint.as_deref(),
-            Some("https://api.example.com/v1")
-        );
     }
 
     #[test]
     fn unknown_fields_ignored() {
-        // Frontend may add fields this struct doesn't know about
-        let json = r#"{"unknownFutureField": true, "port": 4040}"#;
+        // Frontend may add fields this struct doesn't know about;
+        // openaiCompatibleEndpoint is a removed legacy field that old
+        // store.bin files may still carry.
+        let json = r#"{"unknownFutureField": true, "port": 4040, "openaiCompatibleEndpoint": "https://api.example.com/v1"}"#;
         let settings: RecordingSettings = serde_json::from_str(json).unwrap();
         assert_eq!(settings.port, 4040);
     }

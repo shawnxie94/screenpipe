@@ -1293,12 +1293,6 @@ pub struct SettingsStore {
     #[serde(rename = "hideOverlayInScreenRecording", default)]
     pub hide_overlay_in_screen_recording: bool,
 
-    /// Legacy global capture-protection preference. Retained for settings-file
-    /// compatibility; capture protection is now controlled only by the overlay
-    /// preference above.
-    #[serde(rename = "hideAppInScreenShare", default = "default_true")]
-    pub hide_app_in_screen_share: bool,
-
     // NOTE: `disableTimeline` lives on the flattened `recording`
     // (`RecordingSettings::disable_timeline`) so the engine can read it too. The
     // frontend JSON key stays `disableTimeline` at the top level via serde
@@ -1685,7 +1679,6 @@ impl Default for SettingsStore {
             overlay_mode: "window".to_string(),
             show_overlay_in_screen_recording: false,
             hide_overlay_in_screen_recording: false,
-            hide_app_in_screen_share: true,
             chat_always_on_top: true,
             show_restart_notifications: false,
             stop_recording_on_low_disk: true,

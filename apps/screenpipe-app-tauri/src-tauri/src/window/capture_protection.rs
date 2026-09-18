@@ -152,7 +152,6 @@ mod tests {
     #[test]
     fn capture_protection_is_limited_to_overlays() {
         let settings = SettingsStore::default();
-        assert!(settings.hide_app_in_screen_share);
         assert!(!should_protect_window(&settings, "home", false));
         assert!(!should_protect_window(&settings, "settings", false));
         assert!(!should_protect_window(&settings, "main", false));

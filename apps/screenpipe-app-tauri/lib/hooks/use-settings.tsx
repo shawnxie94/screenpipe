@@ -321,16 +321,6 @@ export type Settings = SettingsStore & {
 	meetingSummaryPipeSlug?: string;
 	/** Font size for the entire app UI */
 	fontSize?: FontSize;
-	/** OpenAI-compatible transcription endpoint URL */
-	openaiCompatibleEndpoint?: string;
-	/** OpenAI-compatible transcription API key */
-	openaiCompatibleApiKey?: string;
-	/** OpenAI-compatible transcription model name */
-	openaiCompatibleModel?: string;
-	/** Custom HTTP headers for OpenAI-compatible transcription (JSON object) */
-	openaiCompatibleHeaders?: Record<string, string>;
-	/** Send raw WAV audio instead of MP3 to OpenAI-compatible endpoint */
-	openaiCompatibleRawAudio?: boolean;
 	/** Filter music-dominant audio before transcription (reduces Spotify/YouTube music noise) */
 	filterMusic?: boolean;
 	/** Maximum batch transcription duration in seconds (0 = engine default: Deepgram 5000s, OpenAI 3000s, Whisper 600s) */
@@ -341,8 +331,6 @@ export type Settings = SettingsStore & {
 	showRestartNotifications?: boolean;
 	/** Hide only overlay windows from screen recordings and sharing. Default false. */
 	hideOverlayInScreenRecording?: boolean;
-	/** @deprecated Retained for settings compatibility. */
-	hideAppInScreenShare?: boolean;
 	/** Pause all screen capture when a DRM-protected streaming app (Netflix, Disney+, etc.) or a remote-desktop client (Omnissa/VMware Horizon) is focused — they blank their windows during screen recording */
 	pauseOnDrmContent?: boolean;
 	/** Skip clipboard capture in the UI recorder (events + content). Defaults to true (clipboard capture OFF) — passwords / API keys often pass through the clipboard, so it's opt-in. */
@@ -655,7 +643,6 @@ let DEFAULT_SETTINGS: Settings = {
 			overlayMode: "fullscreen",
 			showOverlayInScreenRecording: false,
 			hideOverlayInScreenRecording: false,
-			hideAppInScreenShare: true,
 			disableTimeline: false,
 			firstRunGuideDone: false,
 			videoQuality: "balanced",

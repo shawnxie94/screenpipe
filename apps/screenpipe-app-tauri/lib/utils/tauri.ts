@@ -3428,31 +3428,6 @@ piiRedactionPseudonyms?: boolean;
  */
 userName?: string | null;
 /**
- * OpenAI-compatible transcription endpoint URL.
- * Previously stored in SettingsStore.extra["openaiCompatibleEndpoint"].
- */
-openaiCompatibleEndpoint?: string | null;
-/**
- * OpenAI-compatible transcription API key.
- * Previously stored in SettingsStore.extra["openaiCompatibleApiKey"].
- */
-openaiCompatibleApiKey?: string | null;
-/**
- * OpenAI-compatible transcription model name.
- * Previously stored in SettingsStore.extra["openaiCompatibleModel"].
- */
-openaiCompatibleModel?: string | null;
-/**
- * Custom HTTP headers for OpenAI-compatible transcription requests.
- * JSON object, e.g. {"X-Custom-Header": "value"}.
- */
-openaiCompatibleHeaders?: { [key in string]: string } | null;
-/**
- * Send raw WAV audio instead of MP3 to OpenAI-compatible endpoint.
- * Some ASR providers prefer uncompressed audio for better accuracy.
- */
-openaiCompatibleRawAudio?: boolean;
-/**
  * HTTP server port for the screenpipe API.
  */
 port: number;
@@ -3566,11 +3541,6 @@ showOverlayInScreenRecording?: boolean;
  */
 hideOverlayInScreenRecording?: boolean;
 /**
- * Legacy global capture-protection preference. Retained for settings-file
- * compatibility; capture protection is now controlled only by the overlay
- * preference above.
- */
-hideAppInScreenShare?: boolean;
 /**
  * When true, the chat window stays above all other windows (default: true).
  */
