@@ -683,7 +683,6 @@ pub struct AudioDevice {
 
 #[derive(OaSchema, Clone, Debug, Default, Serialize, Deserialize)]
 pub enum OcrEngine {
-    Unstructured,
     #[default]
     Tesseract,
     WindowsNative,
