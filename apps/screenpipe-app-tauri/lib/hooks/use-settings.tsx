@@ -677,7 +677,10 @@ let DEFAULT_SETTINGS: Settings = {
 			keepComputerAwake: false,
 			showRestartNotifications: false,
 			experimentalCoreaudioSystemAudio: true,
-			experimentalMeetingPiggyback: LOCAL_DESKTOP_REMOTE_POLICY.boolean.smartRecording.defaultEnabled,
+			// Upstream derives this from LOCAL_DESKTOP_REMOTE_POLICY (remote-control
+			// policy module, not on this branch); its resolved value is the shipped
+			// default `true`.
+			experimentalMeetingPiggyback: true,
 			alwaysRecordBluetoothMic: false,
 			windowsInputAecEnabled: false,
 			macosInputVpioEnabled: false,
