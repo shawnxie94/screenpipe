@@ -514,51 +514,6 @@
       "notes": "CRUD coverage for artifact registration, validation, unified listing, upsert, and delete."
     },
     {
-      "spec": "brain-overview.spec.ts",
-      "platforms": [
-        "windows",
-        "macos",
-        "linux"
-      ],
-      "layers": [
-        "real-ui-e2e",
-        "local-api",
-        "pipes"
-      ],
-      "features": [
-        "brain",
-        "brain-overview",
-        "brain-canvas",
-        "artifacts",
-        "pipes"
-      ],
-      "criticality": "high",
-      "confidence": "strong",
-      "ux": "real-user-flow",
-      "notes": "Deletes the last dashboard at 800x600, scrolls to the final starter template, verifies the real local builder keeps its generated dashboard on review through save, requires four AI-proposed Blocks to be visible on an empty Canvas before acceptance, and samples the native Canvas viewport across an AI-added Block focus to prove eased intermediate movement instead of a teleport. Also renders source-backed selectable and fixed-period Live Views, verifies dashboard switching stays available during refresh, omits fixed-period controls from view and Customize, exercises durable Canvas notes, connections, keyboard movement, navigation restore, deletion cleanup, and checks layout bounds from 800x600 through 1920x1080."
-    },
-    {
-      "spec": "brain-section.spec.ts",
-      "platforms": [
-        "windows",
-        "macos",
-        "linux"
-      ],
-      "layers": [
-        "real-ui-e2e"
-      ],
-      "features": [
-        "brain",
-        "artifacts",
-        "memories",
-        "viewer-deeplink"
-      ],
-      "criticality": "medium",
-      "confidence": "strong",
-      "ux": "real-user-flow",
-      "notes": "Brain coverage for filters, search, delete flows, selection pruning, add memory, and inline artifact markdown preview."
-    },
-    {
       "spec": "capture-frequency-floor.spec.ts",
       "platforms": [
         "macos"
@@ -1678,45 +1633,6 @@
       "confidence": "conditional",
       "ux": "api",
       "notes": "Opt-in macOS HD capture and OCR indexing."
-    },
-    {
-      "spec": "help-discord-link.spec.ts",
-      "platforms": [
-        "windows",
-        "macos",
-        "linux"
-      ],
-      "layers": [
-        "real-ui-e2e"
-      ],
-      "features": [
-        "help"
-      ],
-      "criticality": "low",
-      "confidence": "smoke",
-      "ux": "real-user-flow",
-      "notes": "Help section Discord invite link."
-    },
-    {
-      "spec": "history-swipe-navigation.spec.ts",
-      "platforms": [
-        "windows",
-        "macos"
-      ],
-      "layers": [
-        "real-ui-e2e",
-        "window-lifecycle",
-        "tauri-command"
-      ],
-      "features": [
-        "home-navigation",
-        "window-lifecycle"
-      ],
-      "criticality": "medium",
-      "confidence": "partial",
-      "ux": "real-user-flow",
-      "tests": 2,
-      "notes": "Reads back the real WKWebView/WebView2 history-swipe setting, verifies top-level UI sections are browser-history entries, proves Back to app consumes Settings so the next back action restores the prior Home state, and captures every destination plus the production back/forward gesture-arrow design. Physical OS trackpad input remains manual."
     },
     {
       "spec": "home-window.spec.ts",
@@ -2927,111 +2843,6 @@
       "confidence": "strong",
       "ux": "real-user-flow",
       "notes": "Exercises the Send snapshot dialog from meeting notes and Live Views across disconnected setup, connected direct-send, receipt, and Chat-draft destinations, with mocked connection APIs and screenshot coverage."
-    },
-    {
-      "spec": "zz-account-basic-upgrade-billing.spec.ts",
-      "platforms": [
-        "windows",
-        "macos",
-        "linux"
-      ],
-      "layers": [
-        "real-ui-e2e",
-        "settings",
-        "billing"
-      ],
-      "features": [
-        "account-upgrade",
-        "billing-proration",
-        "checkout-duplication"
-      ],
-      "criticality": "high",
-      "confidence": "strong",
-      "ux": "real-user-flow",
-      "notes": "Basic paid user clicking Account upgrade opens account billing for subscription changes/proration and does not call the fresh subscription checkout endpoint."
-    },
-    {
-      "spec": "zz-account-stale-subscription.spec.ts",
-      "platforms": [
-        "windows",
-        "macos",
-        "linux"
-      ],
-      "layers": [
-        "real-ui-e2e",
-        "settings",
-        "billing"
-      ],
-      "features": [
-        "account-card",
-        "billing-gate"
-      ],
-      "criticality": "medium",
-      "confidence": "strong",
-      "ux": "real-user-flow",
-      "notes": "Account 'active' plan card is gated on the session token (token AND cloud_subscribed) like the header, so a tokenless-but-subscribed stale shell (post-#3943 secret-store token desync) renders 'not logged in' with the active card gone. Mocks /api/user across all windows and clears set_cloud_token to reproduce the desync deterministically."
-    },
-    {
-      "spec": "zz-app-entitlement-gate.spec.ts",
-      "platforms": [
-        "windows",
-        "macos",
-        "linux"
-      ],
-      "layers": [
-        "settings",
-        "billing",
-        "real-ui-e2e"
-      ],
-      "features": [
-        "app-entitlement-gate",
-        "billing-gate"
-      ],
-      "criticality": "high",
-      "confidence": "strong",
-      "ux": "real-user-flow",
-      "notes": "Production billing gate blocks an unentitled session behind the paywall and restores access when the forced-gate flag is cleared."
-    },
-    {
-      "spec": "zz-enterprise-license-prompt.spec.ts",
-      "platforms": [
-        "windows",
-        "macos",
-        "linux"
-      ],
-      "layers": [
-        "settings",
-        "billing",
-        "real-ui-e2e"
-      ],
-      "features": [
-        "app-entitlement-gate",
-        "billing-gate"
-      ],
-      "criticality": "high",
-      "confidence": "strong",
-      "ux": "real-user-flow",
-      "notes": "Enterprise license prompt handles invalid keys, full-seat errors, and retry success after seats are added without staying stuck in validating state."
-    },
-    {
-      "spec": "zz-logout-resurrect.spec.ts",
-      "platforms": [
-        "windows",
-        "macos",
-        "linux"
-      ],
-      "layers": [
-        "real-ui-e2e",
-        "settings"
-      ],
-      "features": [
-        "account-logout",
-        "auth-session"
-      ],
-      "criticality": "high",
-      "confidence": "strong",
-      "ux": "synthetic",
-      "notes": "Logout must not be resurrected by an in-flight loadUser. Logs in via a synthetic deep-link (?api_key=) with a mocked /api/user fetch, makes the fetch slow, fires it, then clicks logout while it is pending and asserts the slow response cannot re-write the user (the 'logout needs two clicks' bug). Covers the auth-generation guard in use-settings.tsx."
     },
     {
       "spec": "zz-owned-browser-background-nav.spec.ts",
