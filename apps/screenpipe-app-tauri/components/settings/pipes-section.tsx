@@ -6,7 +6,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useInterval } from "@/lib/hooks/use-interval";
-import { screenpipeWebUrl } from "@/lib/web-url";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -29,8 +28,6 @@ import {
   GitFork,
   Search,
   Link,
-  Upload,
-  ArrowUpCircle,
   MessageSquare,
   AlertCircle,
   Copy,
@@ -127,7 +124,6 @@ import {
   pipeConversationNeedsRefresh,
 } from "@/lib/pipe-conversation";
 import { pipeConversationDeletionKey } from "@/lib/pipe-execution-status";
-import { PipeStoreSubmissionDialog } from "@/components/pipe-store-submission";
 import {
   Dialog,
   DialogContent,
@@ -1179,7 +1175,6 @@ export function PipesSection() {
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
   const [, setSection] = useQueryState("section");
-  const [publishPipeName, setPublishPipeName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   // Favorites — per-machine preference persisted via /pipes/favorites.
   // `showOnly` toggles a filter that hides non-starred pipes.
@@ -1187,18 +1182,10 @@ export function PipesSection() {
   const [copiedExecId, setCopiedExecId] = useState<number | null>(null);
   const [availableConnections, setAvailableConnections] = useState<AvailableConnection[]>([]);
   const [connectionModal, setConnectionModal] = useState<{ pipeName: string; connections: string[] } | null>(null);
-  const [availableUpdates, setAvailableUpdates] = useState<Record<string, { latest_version: number; installed_version: number; locally_modified: boolean }>>({});
-  const [updatingPipe, setUpdatingPipe] = useState<string | null>(null);
   const [selectedPipes, setSelectedPipes] = useState<Set<string>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
-  const [updateDialog, setUpdateDialog] = useState<{
-    pipeName: string;
-    slug: string;
-    installedVersion: number;
-    latestVersion: number;
-  } | null>(null);
   // Live streaming output for running executions: key = "apiBase|pipeName:executionId"
   const [liveOutput, setLiveOutput] = useState<Record<string, string[]>>({});
   const liveOutputRef = useRef<Record<string, string[]>>({});
@@ -1392,49 +1379,6 @@ export function PipesSection() {
     } catch { /* server may not be running */ }
   }, [apiBase, availableConnections]);
 
-  const checkForUpdates = useCallback(async () => {
-    try {
-      const res = await fetch(`${apiBase}/pipes/store/check-updates`);
-      if (!res.ok) return;
-      const json = await res.json();
-      const updates: Record<string, { latest_version: number; installed_version: number; locally_modified: boolean }> = {};
-      for (const u of json.data || []) {
-        updates[u.pipe_name] = { latest_version: u.latest_version, installed_version: u.installed_version, locally_modified: u.locally_modified };
-      }
-      setAvailableUpdates(updates);
-    } catch {
-      // silently fail — not critical
-    }
-  }, []);
-
-  const updatePipe = async (pipeName: string, slug: string) => {
-    setUpdatingPipe(pipeName);
-    try {
-      const res = await fetch(`${apiBase}/pipes/store/update`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        toast({ title: "更新失败", description: err.error || "未知错误", variant: "destructive" });
-        return;
-      }
-      toast({ title: "定时任务已更新", description: `${pipeName} 已成功更新` });
-      // Remove from updates map and refresh
-      setAvailableUpdates(prev => {
-        const next = { ...prev };
-        delete next[pipeName];
-        return next;
-      });
-      await fetchPipes();
-    } catch (e) {
-      toast({ title: "更新失败", description: String(e), variant: "destructive" });
-    } finally {
-      setUpdatingPipe(null);
-    }
-  };
-
   const disablePipe = async (name: string) => {
     await localFetch(`/pipes/${name}/config`, {
       method: "POST",
@@ -1596,36 +1540,8 @@ export function PipesSection() {
     }
   };
   const trackedPipesView = useRef(false);
-  const autoUpdateRan = useRef(false);
   useEffect(() => {
     fetchConnections();
-    checkForUpdates();
-
-    // Auto-update unmodified pipes
-    if (settings?.autoUpdatePipes !== false && !autoUpdateRan.current) {
-      autoUpdateRan.current = true;
-      (async () => {
-        try {
-          const res = await fetch(`${apiBase}/pipes/store/auto-update`, { method: "POST" });
-          if (res.ok) {
-            const data = await res.json();
-            const updated = data.auto_updated || [];
-            if (updated.length > 0) {
-              for (const u of updated) {
-                toast({
-                  title: `${u.pipe_name} auto-updated`,
-                  description: `v${u.from_version} → v${u.to_version}`,
-                });
-              }
-              // Refresh updates map and pipes list
-              await Promise.all([checkForUpdates(), fetchPipes()]);
-            }
-          }
-        } catch {
-          // silently fail — not critical
-        }
-      })();
-    }
 
     fetchPipes().then((applied) => {
       if (!applied || currentApiBase.current !== apiBase) return;
@@ -2377,16 +2293,6 @@ export function PipesSection() {
                     ))}
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('switch-pipes-tab', {
-                      detail: { tab: 'discover' }
-                    }));
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 border border-border text-sm font-medium hover:bg-muted transition-colors"
-                >
-                  或浏览任务商店 →
-                </button>
               </div>
             )}
           </CardContent>
@@ -2559,12 +2465,6 @@ export function PipesSection() {
                           需配置
                         </span>
                       )}
-                      {availableUpdates[pipe.config.name] && (
-                        <ArrowUpCircle
-                          className="h-3 w-3 shrink-0 text-muted-foreground"
-                          aria-label="有可用更新"
-                        />
-                      )}
                     </div>
                     <span className="truncate font-mono text-xs text-muted-foreground">
                       {scheduleSummary} · {lastRunSummary}
@@ -2644,36 +2544,6 @@ export function PipesSection() {
                           title="后续运行会记住之前的上下文并更新同一个聊天"
                         >
                           单一聊天
-                        </Badge>
-                      )}
-
-                      {/* Update badge */}
-                      {availableUpdates[pipe.config.name] && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] shrink-0 cursor-pointer border-foreground/30 text-muted-foreground hover:bg-accent transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const update = availableUpdates[pipe.config.name];
-                            const slug = (pipe.config as any).config?.source_slug as string || pipe.source_slug || pipe.config.name;
-                            if (update.locally_modified) {
-                              setUpdateDialog({
-                                pipeName: pipe.config.name,
-                                slug,
-                                installedVersion: update.installed_version,
-                                latestVersion: update.latest_version,
-                              });
-                            } else {
-                              updatePipe(pipe.config.name, slug);
-                            }
-                          }}
-                        >
-                          {updatingPipe === pipe.config.name ? (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          ) : (
-                            <ArrowUpCircle className="h-3 w-3 mr-1" />
-                          )}
-                          v{availableUpdates[pipe.config.name].installed_version} → v{availableUpdates[pipe.config.name].latest_version}
                         </Badge>
                       )}
 
@@ -2795,23 +2665,6 @@ export function PipesSection() {
                             复制为新任务
                           </DropdownMenuItem>
 
-                          {(pipe.source_slug || (pipe.config as any).config?.source_slug) && (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                checkForUpdates();
-                                toast({ title: "正在检查更新..." });
-                              }}
-                            >
-                              <RefreshCw className="h-3.5 w-3.5 mr-2" />
-                              检查更新
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => setPublishPipeName(pipe.config.name)}
-                          >
-                            <Upload className="h-3.5 w-3.5 mr-2" />
-                            发布到任务商店
-                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => {
@@ -3755,12 +3608,6 @@ export function PipesSection() {
         />
       )}
 
-      <PipeStoreSubmissionDialog
-        open={!!publishPipeName}
-        onOpenChange={(v) => { if (!v) setPublishPipeName(null); }}
-        defaultPipe={publishPipeName || undefined}
-      />
-
       <Dialog
         open={!!historyResetPipe}
         onOpenChange={(open) => {
@@ -3818,44 +3665,7 @@ export function PipesSection() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!updateDialog} onOpenChange={(open) => !open && setUpdateDialog(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>更新 {updateDialog?.pipeName}？</DialogTitle>
-            <DialogDescription>
-              <span className="inline-flex items-center gap-2 mt-2">
-                <Badge variant="outline">v{updateDialog?.installedVersion}</Badge>
-                <span>→</span>
-                <Badge variant="outline">v{updateDialog?.latestVersion}</Badge>
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20">
-            <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              你对这个定时任务有本地修改。更新会覆盖提示词改动。
-              更新前会保存本地备份。
-              任务的计划、模型和启用状态会保留。
-            </p>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="ghost" onClick={() => setUpdateDialog(null)}>
-              跳过
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (updateDialog) {
-                  updatePipe(updateDialog.pipeName, updateDialog.slug);
-                  setUpdateDialog(null);
-                }
-              }}
-            >
-              更新并丢弃我的修改
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       <Dialog open={bulkDeleteConfirm} onOpenChange={(open) => { if (!open && !bulkDeleting) setBulkDeleteConfirm(false); }}>
         <DialogContent>

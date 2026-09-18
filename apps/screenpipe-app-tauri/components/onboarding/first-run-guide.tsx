@@ -332,12 +332,6 @@ export default function FirstRunGuide({
 
   const goToPipes = useCallback(() => {
     onGoToAutomations();
-    // Switch to My Pipes tab so user sees the newly created pipe
-    setTimeout(() => {
-      window.dispatchEvent(
-        new CustomEvent("switch-pipes-tab", { detail: { tab: "my-pipes" } }),
-      );
-    }, 100);
     setPhase("run-pipe");
   }, [onGoToAutomations]);
 

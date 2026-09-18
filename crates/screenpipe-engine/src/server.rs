@@ -1047,40 +1047,6 @@ impl SCServer {
                     "/:id/session/:exec_id",
                     axum::routing::get(crate::pipes_api::get_pipe_session),
                 )
-                // Store/registry routes (nested under /pipes/store)
-                .route(
-                    "/store",
-                    axum::routing::get(crate::routes::pipe_store::pipe_store_search),
-                )
-                .route(
-                    "/store/publish",
-                    axum::routing::post(crate::routes::pipe_store::pipe_store_publish),
-                )
-                .route(
-                    "/store/install",
-                    axum::routing::post(crate::routes::pipe_store::pipe_store_install),
-                )
-                .route(
-                    "/store/update",
-                    axum::routing::post(crate::routes::pipe_store::pipe_store_update),
-                )
-                .route(
-                    "/store/check-updates",
-                    axum::routing::get(crate::routes::pipe_store::pipe_store_check_updates),
-                )
-                .route(
-                    "/store/auto-update",
-                    axum::routing::post(crate::routes::pipe_store::pipe_store_auto_update),
-                )
-                .route(
-                    "/store/:slug",
-                    axum::routing::get(crate::routes::pipe_store::pipe_store_detail)
-                        .delete(crate::routes::pipe_store::pipe_store_unpublish),
-                )
-                .route(
-                    "/store/:slug/review",
-                    axum::routing::post(crate::routes::pipe_store::pipe_store_review),
-                )
                 .with_state(pm.clone());
             // Inject SecretStore as an Extension so pipe handlers can access it
             let pipe_routes = if let Some(ref ss) = self.secret_store {

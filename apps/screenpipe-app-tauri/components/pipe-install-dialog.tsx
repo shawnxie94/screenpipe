@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { listen } from "@tauri-apps/api/event";
-import { InstallRiskSummary, getPipeInstallRisk } from "@/components/pipe-store";
 import { localFetch } from "@/lib/api";
 import {
   publishPipeInstallCancelledReceipt,
@@ -32,28 +31,11 @@ interface PipeInstallRequest {
   name?: string;
 }
 
-interface RegistryPipeDetail {
-  slug: string;
-  title: string;
-  author: string;
-  author_verified: boolean;
-  permissions: Record<string, unknown>;
-}
-
-function isRegistrySource(url: string): boolean {
-  return url.startsWith("registry:");
-}
-
-function getRegistrySlug(url: string): string {
-  return url.replace("registry:", "");
-}
-
 export function PipeInstallDialog() {
   const [request, setRequest] = useState<PipeInstallRequest | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [installing, setInstalling] = useState(false);
-  const [registryDetail, setRegistryDetail] = useState<RegistryPipeDetail | null>(null);
   const [, setSection] = useQueryState("section");
   const { toast } = useToast();
   const openFeedback = useFeedbackStore((s) => s.openFeedback);
@@ -63,39 +45,20 @@ export function PipeInstallDialog() {
     const unlisten = listen<PipeInstallRequest>("install-pipe", (event) => {
       setRequest(event.payload);
       setPreview(null);
-      setRegistryDetail(null);
       setLoading(true);
 
-      const url = event.payload.url;
-
-      if (isRegistrySource(url)) {
-        // Fetch registry pipe details for permissions review
-        const slug = getRegistrySlug(url);
-        localFetch(`/pipes/store/${slug}`)
-          .then((res) => {
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json();
-          })
-          .then((data) => setRegistryDetail(data))
-          .catch((err) => {
-            console.error("failed to fetch registry pipe:", err);
-            setRegistryDetail(null);
-          })
-          .finally(() => setLoading(false));
-      } else {
-        // Fetch the pipe content for preview (existing behavior)
-        fetch(url)
-          .then((res) => {
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.text();
-          })
-          .then((content) => setPreview(content))
-          .catch((err) => {
-            console.error("failed to fetch pipe preview:", err);
-            setPreview(null);
-          })
-          .finally(() => setLoading(false));
-      }
+      // Fetch the pipe content for preview.
+      fetch(event.payload.url)
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.text();
+        })
+        .then((content) => setPreview(content))
+        .catch((err) => {
+          console.error("failed to fetch pipe preview:", err);
+          setPreview(null);
+        })
+        .finally(() => setLoading(false));
     });
 
     return () => {
@@ -107,25 +70,11 @@ export function PipeInstallDialog() {
     if (!request) return;
     setInstalling(true);
     try {
-      const url = request.url;
-      let res;
-
-      if (isRegistrySource(url)) {
-        // Install via store endpoint
-        const slug = getRegistrySlug(url);
-        res = await localFetch("/pipes/store/install", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug }),
-        });
-      } else {
-        // Install via regular endpoint
-        res = await localFetch("/pipes/install", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ source: url }),
-        });
-      }
+      const res = await localFetch("/pipes/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: request.url }),
+      });
 
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -183,14 +132,6 @@ export function PipeInstallDialog() {
   const body = preview?.replace(/^---\n[\s\S]*?\n---\n*/, "").trim() || "";
   const previewLines = body.split("\n").slice(0, 15).join("\n");
 
-  const isRegistry = request ? isRegistrySource(request.url) : false;
-  const registryRisk = registryDetail
-    ? getPipeInstallRisk({
-      permissions: registryDetail.permissions as any,
-      author_verified: registryDetail.author_verified,
-    })
-    : "safe";
-
   return (
     <>
       <AlertDialog open={!!request} onOpenChange={(open) => !open && handleCancel()}>
@@ -198,11 +139,7 @@ export function PipeInstallDialog() {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-sm">审查定时任务访问权限</AlertDialogTitle>
             <AlertDialogDescription className="text-xs">
-              {isRegistry
-                ? registryRisk === "high"
-                  ? "未验证的发布者。可以访问你所有的屏幕数据。"
-                  : "安装前请审查请求的访问权限。"
-                : "外部链接请求安装计划任务。它们是基于屏幕数据运行的 AI 代理，请在安装前审查下方提示。"}
+              外部链接请求安装计划任务。它们是基于屏幕数据运行的 AI 代理，请在安装前审查下方提示。
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -213,15 +150,8 @@ export function PipeInstallDialog() {
           {loading ? (
             <div className="flex items-center gap-2 py-4 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
-              {isRegistry ? "正在加载计划任务详情…" : "正在加载计划任务内容…"}
+              正在加载计划任务内容…
             </div>
-          ) : isRegistry && registryDetail ? (
-            <InstallRiskSummary
-              title={registryDetail.title}
-              author={registryDetail.author}
-              authorVerified={registryDetail.author_verified}
-              permissions={registryDetail.permissions as any}
-            />
           ) : preview ? (
             <div className="border rounded overflow-hidden">
               <div className="px-3 py-1.5 bg-muted text-[10px] uppercase tracking-wider text-muted-foreground border-b">
