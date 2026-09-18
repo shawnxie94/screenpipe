@@ -271,7 +271,6 @@ vi.mock("@/lib/chat-utils", () => ({
 	formatShortcutDisplay: (s: string) => s,
 }));
 vi.mock("@/components/ui/use-toast", () => ({ toast: vi.fn() }));
-vi.mock("posthog-js", () => ({ default: { capture: posthogCapture } }));
 
 import Timeline from "@/components/rewind/timeline";
 

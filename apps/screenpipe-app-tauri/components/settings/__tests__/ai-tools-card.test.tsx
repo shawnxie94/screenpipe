@@ -61,7 +61,6 @@ vi.mock("@/lib/ai-tools-mcp", () => ({
 
 vi.mock("@/lib/hooks/use-hardcoded-tiles", () => hookMocks);
 vi.mock("@/lib/external-agent-skills", () => skillsMocks);
-vi.mock("posthog-js", () => ({ default: { capture: vi.fn() } }));
 
 describe("AiToolsCard", () => {
   beforeEach(() => {

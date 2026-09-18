@@ -19,8 +19,6 @@ const { submitFeedbackMock } = vi.hoisted(() => ({
   submitFeedbackMock: vi.fn(),
 }));
 
-vi.mock("posthog-js", () => ({
-}));
 
 const privateMessage: Message = {
   id: "message-containing-private-id",

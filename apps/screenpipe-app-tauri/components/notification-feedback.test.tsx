@@ -8,9 +8,6 @@ import { NotificationFeedback } from "./notification-feedback";
 
 const capture = vi.hoisted(() => vi.fn());
 
-vi.mock("posthog-js", () => ({
-  default: { capture },
-}));
 
 const notification = {
   id: "notification-1",

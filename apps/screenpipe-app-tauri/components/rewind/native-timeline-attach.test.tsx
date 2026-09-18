@@ -26,9 +26,6 @@ vi.mock("@tauri-apps/plugin-opener", () => ({
   revealItemInDir: vi.fn(),
 }));
 
-vi.mock("posthog-js", () => ({
-  default: { capture: vi.fn() },
-}));
 
 vi.mock("@/lib/utils/tauri", () => ({
   commands: {

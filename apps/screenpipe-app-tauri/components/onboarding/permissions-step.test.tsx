@@ -60,9 +60,6 @@ vi.mock("@tauri-apps/api/window", () => ({
   }),
 }));
 
-vi.mock("posthog-js", () => ({
-  default: { capture: mocks.posthogCapture },
-}));
 
 import PermissionsStep from "./permissions-step";
 

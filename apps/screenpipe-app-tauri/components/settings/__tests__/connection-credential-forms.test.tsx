@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api", () => ({ localFetch: mocks.localFetch }));
-vi.mock("posthog-js", () => ({ default: { capture: vi.fn() } }));
 vi.mock("@/lib/hooks/use-settings", () => ({
   useSettings: () => ({ settings: {}, updateSettings: vi.fn() }),
 }));

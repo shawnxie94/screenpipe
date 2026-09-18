@@ -82,9 +82,6 @@ vi.mock("@tauri-apps/api/event", () => ({
     return () => mocks.eventListeners.delete(event);
   }),
 }));
-vi.mock("posthog-js", () => ({
-  default: { capture: mocks.posthogCapture },
-}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mocks.routerPush }),
 }));

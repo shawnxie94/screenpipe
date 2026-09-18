@@ -12,7 +12,6 @@ const mocks = vi.hoisted(() => ({
   fetchRecentActivity: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock("posthog-js", () => ({ default: { capture: mocks.capture } }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(async () => () => {}),
 }));

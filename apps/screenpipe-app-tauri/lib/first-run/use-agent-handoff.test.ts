@@ -25,7 +25,6 @@ const {
   areExternalAgentSkillsInstalled: vi.fn(async () => true),
 }));
 
-vi.mock("posthog-js", () => ({ default: { capture } }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl }));
 vi.mock("@/lib/utils/tauri", () => ({ commands: { copyTextToClipboard } }));
 vi.mock("@/lib/ai-tools-mcp", () => ({ detectAiTools }));

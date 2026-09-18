@@ -39,7 +39,6 @@ vi.mock("@/components/notification-bell", () => ({ NotificationBell: () => null 
 vi.mock("@/components/pipe-store-submission", () => ({ PipeStoreSubmissionDialog: () => null }));
 vi.mock("@/lib/stores/feedback-store", () => ({ useFeedbackStore: () => vi.fn() }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
-vi.mock("posthog-js", () => ({ default: { capture: vi.fn() } }));
 
 import { answer, listKnowledge, listWorkUnits } from "@/lib/knowledge/api";
 

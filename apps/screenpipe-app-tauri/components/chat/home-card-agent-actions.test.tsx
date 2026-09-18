@@ -10,9 +10,6 @@ import { HomeCardAgentActions } from "./home-card-agent-actions";
 
 const { captureMock } = vi.hoisted(() => ({ captureMock: vi.fn() }));
 
-vi.mock("posthog-js", () => ({
-  default: { capture: captureMock },
-}));
 
 const DAY_RECAP = {
   name: "day-recap",

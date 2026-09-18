@@ -1158,11 +1158,10 @@ const getAudioDeviceIcon = (name: string) => {
 
 // ─── Transcription Dictionary ────────────────────────────────────────────────
 
-const DEEPGRAM_LIMIT = 100;
 const WHISPER_CHAR_LIMIT = 800;
-// Cap stored terms at 100 — the strictest transcription vocabulary limit.
+// Cap stored terms at 100 terms — qwen3-asr's transcription vocabulary limit.
 // Whisper's offline limit is on total chars, not term count, and is surfaced separately below.
-const VOCAB_LIMIT = DEEPGRAM_LIMIT;
+const VOCAB_LIMIT = 100;
 
 function parseTerms(raw: string): string[] {
   // Auto-detect delimiter: if there are newlines, split by newlines; otherwise commas; otherwise semicolons; otherwise tabs
@@ -1280,7 +1279,7 @@ function TranscriptionDictionary({
         {vocabularyWords.length > 0 && (
           <div className="text-[10px] text-muted-foreground/60 font-mono mb-2 px-1 flex gap-3">
             <span>离线: {Math.min(vocabularyWords.reduce((n, e) => n + (e.replacement || e.word).length + 2, 0), WHISPER_CHAR_LIMIT)}/{WHISPER_CHAR_LIMIT} 字符</span>
-            <span>云: {Math.min(vocabularyWords.length, DEEPGRAM_LIMIT)}/{DEEPGRAM_LIMIT} 关键词</span>
+            <span>关键词: {Math.min(vocabularyWords.length, VOCAB_LIMIT)}/{VOCAB_LIMIT}</span>
           </div>
         )}
 

@@ -9,7 +9,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const capture = vi.hoisted(() => vi.fn());
 const appServerFetch = vi.hoisted(() => vi.fn());
 
-vi.mock("posthog-js", () => ({ default: { capture } }));
 vi.mock("@/lib/notifications/app-server", () => ({ appServerFetch }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@tauri-apps/api/event", () => ({ emit: vi.fn() }));

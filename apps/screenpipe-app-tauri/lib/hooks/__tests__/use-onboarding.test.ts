@@ -37,11 +37,6 @@ vi.mock("@/lib/utils/tauri", () => ({
   },
 }));
 
-vi.mock("posthog-js", () => ({
-  default: {
-    capture: mocks.capture,
-  },
-}));
 
 vi.mock("@tauri-apps/api/event", () => ({
   emit: mocks.emit,

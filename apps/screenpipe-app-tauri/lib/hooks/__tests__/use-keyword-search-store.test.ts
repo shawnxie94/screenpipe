@@ -21,11 +21,6 @@ vi.mock("@/lib/api", () => ({
 	localFetch: vi.fn(),
 }));
 
-vi.mock("posthog-js", () => ({
-	default: {
-		capture: mocks.capture,
-	},
-}));
 
 function deferred<T>() {
 	let resolve!: (value: T) => void;

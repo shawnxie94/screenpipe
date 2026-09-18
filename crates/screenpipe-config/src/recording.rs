@@ -208,8 +208,10 @@ pub struct RecordingSettings {
     pub disable_audio: bool,
 
     /// Audio transcription engine identifier.
-    /// Values: "whisper-large-v3-turbo", "whisper-large-v3-turbo-quantized",
-    /// "deepgram", "screenpipe-cloud", etc.
+    /// zh-local resolves local engines only: "qwen3-asr" (default) plus the
+    /// whisper-large-v3 variants. Legacy cloud strings ("deepgram",
+    /// "screenpipe-cloud", "openai-compatible", parakeet) migrate to
+    /// "qwen3-asr" when the engine enum parses them.
     #[serde(rename = "audioTranscriptionEngine")]
     pub audio_transcription_engine: String,
 
@@ -323,7 +325,7 @@ pub struct RecordingSettings {
     pub filter_music: bool,
 
     /// Maximum batch duration in seconds for batch transcription.
-    /// None = use engine-aware defaults (Deepgram=5000s, OpenAI=3000s, Whisper=600s).
+    /// None = use the engine default (600s across the local engines).
     /// Also controls the max deferral cap during active meetings.
     #[serde(rename = "batchMaxDurationSecs", default)]
     pub batch_max_duration_secs: Option<u64>,

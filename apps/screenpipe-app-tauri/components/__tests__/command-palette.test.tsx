@@ -32,9 +32,6 @@ const mocks = vi.hoisted(() => ({
   isMac: true,
 }));
 
-vi.mock("posthog-js", () => ({
-  default: { capture: mocks.capture },
-}));
 vi.mock("@/lib/hooks/use-settings", () => ({
   useSettings: () => ({ settings: mocks.settings }),
 }));

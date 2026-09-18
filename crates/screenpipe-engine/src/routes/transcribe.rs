@@ -5,7 +5,7 @@
 //! OpenAI-compatible audio transcription endpoint (`POST /v1/audio/transcriptions`).
 //!
 //! Accepts a multipart file upload and transcribes it using the user's configured
-//! transcription engine (whisper, deepgram, screenpipe-cloud, etc.).
+//! local transcription engine (qwen3-asr default, whisper variants).
 //!
 //! Compatible with:
 //!   curl http://localhost:3030/v1/audio/transcriptions \
@@ -48,7 +48,7 @@ fn error_response(status: StatusCode, message: String) -> Response {
 /// OpenAI-compatible multipart upload. Fields:
 ///   - `file` (required): audio file (any format ffmpeg can decode)
 ///   - `model` (optional): ignored, uses user's configured engine
-///   - `engine` (optional): override engine e.g. "whisper-large-v3", "deepgram"
+///   - `engine` (optional): override engine e.g. "whisper-large-v3" (default "qwen3-asr")
 ///   - `language` (optional): hint language code
 pub async fn transcribe_handler(
     State(state): State<Arc<AppState>>,

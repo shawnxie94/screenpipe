@@ -28,9 +28,6 @@ vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({ label: "home" }),
 }));
 
-vi.mock("posthog-js", () => ({
-  default: { capture: vi.fn() },
-}));
 
 vi.mock("@/lib/api", () => ({ localFetch: vi.fn() }));
 vi.mock("@/lib/chat-storage", () => ({

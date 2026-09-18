@@ -18,7 +18,6 @@ vi.mock("@tauri-apps/api/event", () => ({ emit: mocks.emit }));
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({ label: "main" }),
 }));
-vi.mock("posthog-js", () => ({ default: { capture: mocks.capture } }));
 vi.mock("framer-motion", () => ({
   motion: new Proxy(
     {},

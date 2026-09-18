@@ -14,7 +14,6 @@ vi.mock("@/lib/utils/tauri", () => ({
   commands: {
   },
 }));
-vi.mock("posthog-js", () => ({ default: { capture: vi.fn() } }));
 vi.mock("@/lib/hooks/use-settings", () => ({
   useSettings: () => ({ settings: {}, updateSettings: vi.fn() }),
 }));

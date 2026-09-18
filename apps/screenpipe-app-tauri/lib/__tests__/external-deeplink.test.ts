@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   showWindowActivated: vi.fn(async () => undefined),
 }));
 
-vi.mock("posthog-js", () => ({ default: { capture: mocks.capture } }));
 vi.mock("@tauri-apps/api/event", () => ({ emit: mocks.emit }));
 vi.mock("@/lib/chat-utils", () => ({
   showChatWithPrefill: mocks.showChatWithPrefill,

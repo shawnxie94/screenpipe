@@ -69,7 +69,6 @@ export const settingsStoreSchema = z.object({
   // AI Settings
   aiPresets: z.array(aiPresetSchema),
   openaiApiKey: z.string(),
-  deepgramApiKey: z.string(),
   aiModel: z.string().min(1, "AI model is required"),
   customPrompt: z.string().min(10, "自定义提示词至少需要 10 个字符"),
   aiProviderType: aiProviderTypeSchema,

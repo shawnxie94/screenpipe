@@ -56,7 +56,6 @@ vi.mock("@tauri-apps/api/window", () => ({
   }),
 }));
 
-vi.mock("posthog-js", () => ({ default: { capture: vi.fn() } }));
 
 import PermissionRecoveryPage from "./page";
 

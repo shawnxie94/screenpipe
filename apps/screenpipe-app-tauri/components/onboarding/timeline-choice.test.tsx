@@ -27,11 +27,6 @@ vi.mock("@/lib/hooks/use-settings", () => ({
   }),
 }));
 
-vi.mock("posthog-js", () => ({
-  default: {
-    capture: mocks.capture,
-  },
-}));
 
 describe("TimelineChoice", () => {
   beforeEach(() => {

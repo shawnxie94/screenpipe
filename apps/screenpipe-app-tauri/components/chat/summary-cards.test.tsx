@@ -15,9 +15,6 @@ import { SummaryCards } from "./summary-cards";
 
 const { captureMock } = vi.hoisted(() => ({ captureMock: vi.fn() }));
 
-vi.mock("posthog-js", () => ({
-  default: { capture: captureMock },
-}));
 
 describe("SummaryCards", () => {
   afterEach(() => {

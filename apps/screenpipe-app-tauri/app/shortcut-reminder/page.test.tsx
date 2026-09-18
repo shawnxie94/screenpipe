@@ -97,9 +97,6 @@ vi.mock("@tauri-apps/api/dpi", () => ({
   },
 }));
 
-vi.mock("posthog-js", () => ({
-  default: { capture: vi.fn() },
-}));
 
 vi.mock("@/lib/hooks/use-platform", () => ({
   usePlatform: () => ({ isMac: true, isWindows: false, isLoading: false }),

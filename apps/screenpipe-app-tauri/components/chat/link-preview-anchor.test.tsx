@@ -11,9 +11,6 @@ const { fetchRichLinkPreviewMock, posthogCaptureMock } = vi.hoisted(() => ({
   posthogCaptureMock: vi.fn(),
 }));
 
-vi.mock("posthog-js", () => ({
-  default: { capture: posthogCaptureMock },
-}));
 
 vi.mock("@/lib/chat/link-preview", async (importOriginal) => {
   const original =

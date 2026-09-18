@@ -27,9 +27,6 @@ vi.mock("@/lib/hooks/use-platform", () => ({
 vi.mock("@/lib/hooks/use-settings", () => ({
   useSettings: () => ({ settings: mocks.settings }),
 }));
-vi.mock("posthog-js/react", () => ({
-  useFeatureFlagEnabled: () => mocks.experimentalEnabled,
-}));
 
 import {
   ExperimentalShortcutGuide,

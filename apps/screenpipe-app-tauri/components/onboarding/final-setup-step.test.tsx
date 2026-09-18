@@ -37,7 +37,6 @@ vi.mock("@/lib/utils/tauri", () => ({
     spawnScreenpipe: mocks.spawnScreenpipe,
   },
 }));
-vi.mock("posthog-js", () => ({ default: { capture: mocks.capture } }));
 
 let calendarConnected: boolean;
 

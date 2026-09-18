@@ -55,7 +55,6 @@ vi.mock("@tauri-apps/plugin-os", () => ({
   platform: vi.fn(() => "macos"),
   version: vi.fn(() => "15.0"),
 }));
-vi.mock("posthog-js", () => ({ default: { capture: mocks.capture } }));
 vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
   motion: new Proxy(

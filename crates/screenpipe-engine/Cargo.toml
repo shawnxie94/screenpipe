@@ -55,7 +55,6 @@ async-trait = { workspace = true }
 moka = { workspace = true }
 
 #opentelemetry
-sentry = { workspace = true }
 
 # Server
 axum = { workspace = true }

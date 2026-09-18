@@ -590,7 +590,6 @@ let DEFAULT_SETTINGS: Settings = {
 			aiPresets: makeDefaultPresets() as any,
 			userGoalCategory: DEFAULT_USER_GOAL_CATEGORY,
 			deviceId: crypto.randomUUID(),
-			deepgramApiKey: "",
 			isLoading: false,
 			userId: "",
 			devMode: false,
