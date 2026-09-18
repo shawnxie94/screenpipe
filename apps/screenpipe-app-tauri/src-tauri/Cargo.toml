@@ -276,10 +276,6 @@ custom-protocol = ["tauri/custom-protocol"]
 local-only = []
 
 qwen3-asr = ["screenpipe-engine/qwen3-asr"]
-# Apple Silicon only — image-PII detector via mlx-rs (~6× faster than
-# ONNX CoreML EP). Forwards to screenpipe-engine which forwards to
-# screenpipe-redact/mlx-mac.
-rfdetr-mlx = ["screenpipe-engine/rfdetr-mlx"]
 
 # v45 phase 3 text-PII redactor via ONNX Runtime — cross-platform with
 # zero end-user dependencies. CPU is the Linux baseline; CoreML on Mac

@@ -176,11 +176,6 @@ vulkan = ["screenpipe-audio/vulkan"]
 debug-console = ["console-subscriber"]
 pulseaudio = ["screenpipe-audio/pulseaudio"]
 qwen3-asr = ["screenpipe-audio/qwen3-asr"]
-# Image-PII detector via MLX (Apple Silicon-only). Compiled into macOS
-# release builds for experiments, but the CLI runtime keeps ONNX as the
-# default stable path unless SCREENPIPE_ENABLE_EXPERIMENTAL_RFDETR_MLX=1
-# is set.
-rfdetr-mlx = ["screenpipe-redact/mlx-mac"]
 
 # v45 phase 3 text-PII redactor via ONNX Runtime. CPU baseline for
 # Linux + the foundation for the GPU EPs below. ~280 MB INT8 model

@@ -1735,8 +1735,8 @@ async fn main() -> anyhow::Result<()> {
 
     // Image-PII reconciliation worker (issue #3185 follow-up).
     // Independent of the text worker — users can toggle either one
-    // without the other. Requires the rfdetr_v9 model present and at
-    // least one of the `onnx-*` or `mlx-mac` cargo features built.
+    // without the other. Requires the rfdetr_v9 model present and an
+    // `onnx-*` cargo feature built.
     if !config.async_image_pii_redaction {
         info!(
             "image-PII worker skipped at startup — async_image_pii_redaction=false. \
@@ -1751,49 +1751,8 @@ async fn main() -> anyhow::Result<()> {
         use std::sync::Arc;
 
         // The desktop app intentionally uses the ONNX image redactor for
-        // local mode. Keep the standalone CLI on that same stable path by
-        // default: the MLX RF-DETR port is still experimental and can crash
-        // the process while reconciling large frame backlogs. Developers can
-        // still opt in while iterating on that runtime.
-        #[allow(unused_mut)]
+        // local mode; the standalone CLI shares that same stable path.
         let mut detector_arc: Option<Arc<dyn ImageRedactor>> = None;
-        #[cfg(all(feature = "rfdetr-mlx", target_os = "macos", target_arch = "aarch64"))]
-        {
-            if std::env::var_os("SCREENPIPE_ENABLE_EXPERIMENTAL_RFDETR_MLX").is_some() {
-                use screenpipe_redact::adapters::rfdetr_mlx::{RfdetrMlxConfig, RfdetrMlxRedactor};
-                let mlx_cfg = RfdetrMlxConfig::default();
-                // Mirrors the ONNX adapter: download once, verify SHA-256,
-                // cache at ~/.screenpipe/models/rfdetr_v9.safetensors.
-                if let Err(e) = mlx_cfg.ensure_model_present().await {
-                    tracing::info!(
-                        "rfdetr-mlx safetensors download failed ({e}); falling back to ONNX adapter"
-                    );
-                } else {
-                    match RfdetrMlxRedactor::load(mlx_cfg) {
-                        Ok(d) => {
-                            info!("image-PII detector: rfdetr-mlx (Apple Silicon GPU)");
-                            // Lazy-load + 60 s idle-unload — frees the
-                            // ~150–200 MB MLX resident footprint when the
-                            // worker is paused or the reconciliation queue
-                            // has drained. Same pattern as OpfAdapter.
-                            let d = Arc::new(d);
-                            let _ = Arc::clone(&d).spawn_idle_unloader();
-                            detector_arc = Some(d as Arc<dyn ImageRedactor>);
-                        }
-                        Err(e) => {
-                            tracing::info!(
-                                "rfdetr-mlx load failed ({e}); falling back to ONNX adapter"
-                            );
-                        }
-                    }
-                }
-            } else {
-                tracing::info!(
-                    "rfdetr-mlx disabled by default for CLI stability; \
-                     set SCREENPIPE_ENABLE_EXPERIMENTAL_RFDETR_MLX=1 to opt in"
-                );
-            }
-        }
         if detector_arc.is_none() {
             match RfdetrRedactor::load_or_download(RfdetrConfig::default()).await {
                 Ok(d) => {
