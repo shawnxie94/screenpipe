@@ -126,6 +126,24 @@ impl DatabaseManager {
         .await
     }
 
+    /// Connector syncs are in-process tasks — nothing can legitimately still
+    /// be running after a restart, so a row marked running/queued at startup is
+    /// a crashed run. Left alone, the running guard would lock the channel out
+    /// of syncing forever. Returns the number of rows reset.
+    pub async fn connector_reset_stale_sync_runs(&self) -> Result<u64, SqlxError> {
+        let mut tx = self.begin_immediate_with_retry().await?;
+        let result = sqlx::query(
+            "UPDATE connector_connections SET sync_status = 'failed', \
+             last_error_code = 'interrupted', \
+             last_error_message = '同步进程重启，上一次运行被中断' \
+             WHERE sync_status IN ('running', 'queued')",
+        )
+        .execute(&mut **tx.conn())
+        .await?;
+        tx.commit().await?;
+        Ok(result.rows_affected())
+    }
+
     pub async fn connector_update_connection(
         &self,
         connector: &str,
@@ -447,6 +465,94 @@ impl DatabaseManager {
             }
         }
         Ok(out)
+    }
+
+    /// Cross-channel paged search for the main `/search` surface
+    /// (`content_type=connection`). Empty query = browse: most recently
+    /// relevant items first. Time filters compare epoch seconds so RFC3339
+    /// values written with different offsets (`Z` vs `+00:00`) order correctly.
+    /// Cross-channel paged search for the main `/search` surface
+    /// (`content_type=connection`). Empty query = browse: most recently
+    /// relevant items first. Time filters compare epoch seconds so RFC3339
+    /// values written with different offsets (`Z` vs `+00:00`) order correctly.
+    /// Fixed parameter shape (`?N IS NULL OR ...`) keeps one SQL string per
+    /// branch regardless of which filters are set.
+    pub async fn connector_search_page(
+        &self,
+        query: &str,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        limit: u32,
+        offset: u32,
+    ) -> Result<(Vec<ConnectorObjectRow>, i64), SqlxError> {
+        let limit = limit.clamp(1, 200) as i64;
+        let offset = offset.max(0) as i64;
+        let trimmed = query.trim();
+
+        let time_pred =
+            "AND (?1 IS NULL OR strftime('%s', COALESCE(o.event_at, o.fetched_at)) >= strftime('%s', ?1)) \
+             AND (?2 IS NULL OR strftime('%s', COALESCE(o.event_at, o.fetched_at)) <= strftime('%s', ?2)) ";
+
+        let (rows, total): (Vec<ConnectorObjectRow>, i64) = if trimmed.is_empty() {
+            let page_sql = format!(
+                "SELECT o.connector, o.namespace, o.object_kind, o.object_id, o.revision, \
+                 o.title, o.body_text, o.event_at, o.fetched_at, o.source_url, o.state \
+                 FROM connector_objects o WHERE o.state = 'active' {time_pred} \
+                 ORDER BY strftime('%s', COALESCE(o.event_at, o.fetched_at)) DESC \
+                 LIMIT {limit} OFFSET {offset}"
+            );
+            let count_sql = format!(
+                "SELECT COUNT(*) FROM connector_objects o WHERE o.state = 'active' {time_pred}"
+            );
+            let rows = sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(page_sql.as_str()))
+                .bind(start_time)
+                .bind(end_time)
+                .fetch_all(&self.pool)
+                .await?;
+            let total = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(count_sql.as_str()))
+                .bind(start_time)
+                .bind(end_time)
+                .fetch_one(&self.pool)
+                .await?;
+            (rows, total)
+        } else {
+            let projected = crate::text_normalizer::chinese_project(trimmed);
+            let page_sql = format!(
+                "SELECT o.connector, o.namespace, o.object_kind, o.object_id, o.revision, \
+                 o.title, o.body_text, o.event_at, o.fetched_at, o.source_url, o.state \
+                 FROM connector_objects_fts f \
+                 JOIN connector_objects o ON o.connector = f.connector \
+                     AND o.namespace = f.namespace \
+                     AND o.object_kind = f.object_kind \
+                     AND o.object_id = f.object_id \
+                 WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} \
+                 ORDER BY bm25(connector_objects_fts, 10.0) \
+                 LIMIT {limit} OFFSET {offset}"
+            );
+            let count_sql = format!(
+                "SELECT COUNT(*) FROM connector_objects_fts f \
+                 JOIN connector_objects o ON o.connector = f.connector \
+                     AND o.namespace = f.namespace \
+                     AND o.object_kind = f.object_kind \
+                     AND o.object_id = f.object_id \
+                 WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred}"
+            );
+            let rows = sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(page_sql.as_str()))
+                .bind(start_time)
+                .bind(end_time)
+                .bind(&projected)
+                .fetch_all(&self.pool)
+                .await?;
+            let total = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(count_sql.as_str()))
+                .bind(start_time)
+                .bind(end_time)
+                .bind(&projected)
+                .fetch_one(&self.pool)
+                .await?;
+            (rows, total)
+        };
+
+        Ok((rows, total))
     }
 
     pub async fn connector_get_cursor(

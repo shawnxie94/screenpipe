@@ -189,6 +189,17 @@ fn print_text(items: &[ContentItem]) {
                     one_line(&c.text)
                 );
             }
+            ContentItem::Connection(c) => {
+                let when = c.event_at.unwrap_or(c.fetched_at);
+                println!(
+                    "[{}] connection · {} · {} · {}\n  {}",
+                    when.to_rfc3339(),
+                    c.provider,
+                    c.object_kind,
+                    c.title.as_deref().unwrap_or("-"),
+                    one_line(&c.body_text)
+                );
+            }
         }
     }
 }

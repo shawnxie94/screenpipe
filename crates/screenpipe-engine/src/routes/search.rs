@@ -71,7 +71,7 @@ use crate::server::AppState;
 use crate::video_utils::extract_frame;
 
 use super::content::{
-    AudioContent, ContentItem, InputContent, OCRContent, PaginationInfo,
+    AudioContent, ConnectionContent, ContentItem, InputContent, OCRContent, PaginationInfo,
     ParsedActorReference, ParsedContent, ParsedItem, UiContent,
 };
 
@@ -88,6 +88,9 @@ pub(crate) enum SearchContentType {
     /// App-specific records parsed from accessibility frames.
     #[serde(alias = "semantic", alias = "Semantic", alias = "Parsed")]
     Parsed,
+    /// Objects imported by connector channels (Feishu, Tencent Meeting, RSS).
+    #[serde(alias = "connector", alias = "Connection", alias = "Connector")]
+    Connection,
 }
 
 impl SearchContentType {
@@ -100,6 +103,7 @@ impl SearchContentType {
             Self::Input => Some(ContentType::Input),
             Self::Accessibility => Some(ContentType::Accessibility),
             Self::Parsed => None,
+            Self::Connection => None,
         }
     }
 
@@ -112,6 +116,10 @@ impl SearchContentType {
             Self::Input => Some("input"),
             Self::Accessibility => Some("accessibility"),
             Self::Parsed => Some("parsed"),
+            // Connector content is not part of the pipe permission model yet:
+            // returning None makes a restricted pipe's request fail validation
+            // instead of silently exposing channel data.
+            Self::Connection => None,
         }
     }
 }
@@ -313,6 +321,14 @@ fn pipe_can_access_content_item(permissions: &PipePermissions, item: &ContentIte
             Some(content.window_name.as_str()),
             "parsed",
             Some(content.timestamp),
+        ),
+        // Unreachable through a pipe today: `permission_name()` is None, so a
+        // restricted pipe's connection query is rejected before any row is read.
+        ContentItem::Connection(content) => (
+            None,
+            None,
+            "connection",
+            content.event_at.or(Some(content.fetched_at)),
         ),
     };
 
@@ -996,6 +1012,7 @@ pub(crate) async fn search(
     }
 
     let parsed_search = query.content_type == SearchContentType::Parsed;
+    let connection_search = query.content_type == SearchContentType::Connection;
     if !parsed_search && (query.frame_id.is_some() || query.actor_id.is_some()) {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -1004,11 +1021,13 @@ pub(crate) async fn search(
             })),
         ));
     }
-    if parsed_search && query.tags.as_ref().is_some_and(|tags| !tags.is_empty()) {
+    if (parsed_search || connection_search)
+        && query.tags.as_ref().is_some_and(|tags| !tags.is_empty())
+    {
         return Err((
             StatusCode::BAD_REQUEST,
             JsonResponse(json!({
-                "error": "tags are not supported for content_type=parsed",
+                "error": "tags are not supported for this content_type",
             })),
         ));
     }
@@ -1065,6 +1084,7 @@ pub(crate) async fn search(
     enum SearchPage {
         Standard(Vec<SearchResult>),
         Parsed(Vec<SemanticFrameContext>),
+        Connection(Vec<screenpipe_db::ConnectorObjectRow>),
     }
 
     // Keep the exact `pagination.total` contract, but do not launch another
@@ -1072,6 +1092,19 @@ pub(crate) async fn search(
     // of simultaneous SQLite statements per admitted request while the outer
     // deadline still covers the complete operation.
     let search_and_count = async {
+        if connection_search {
+            let (results, total) = state
+                .db
+                .connector_search_page(
+                    query_str,
+                    query.start_time,
+                    query.end_time,
+                    query.pagination.limit,
+                    query.pagination.offset,
+                )
+                .await?;
+            return Ok::<_, sqlx::Error>((SearchPage::Connection(results), total as usize));
+        }
         if parsed_search {
             let parsed_query = SemanticContextQuery {
                 frame_id: query.frame_id,
@@ -1093,7 +1126,7 @@ pub(crate) async fn search(
         let content_type = query
             .content_type
             .database_type()
-            .expect("non-parsed search type must map to a database content type");
+            .expect("standard search type must map to a database content type");
         let results = state
             .db
             .search_with_tags_ordered_lightweight(
@@ -1231,6 +1264,32 @@ pub(crate) async fn search(
                 ))
             })
             .collect(),
+        SearchPage::Connection(rows) => rows
+            .into_iter()
+            .map(|row| {
+                let connector = row.connector.clone();
+                let provider = connector
+                    .strip_prefix("office:")
+                    .unwrap_or(&connector)
+                    .to_string();
+                ContentItem::Connection(ConnectionContent {
+                    connector,
+                    provider,
+                    object_kind: row.object_kind,
+                    object_id: row.object_id,
+                    title: row.title,
+                    body_text: row.body_text,
+                    event_at: row
+                        .event_at
+                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+                        .map(|t| t.with_timezone(&Utc)),
+                    fetched_at: DateTime::parse_from_rfc3339(&row.fetched_at)
+                        .map(|t| t.with_timezone(&Utc))
+                        .unwrap_or_else(|_| Utc::now()),
+                    source_url: row.source_url,
+                })
+            })
+            .collect(),
     };
 
     if let Some(permissions) = &pipe_perms {
@@ -1322,6 +1381,9 @@ pub(crate) async fn search(
                         texts.push(actor.observed_name.clone());
                     }
                 }
+                // Connector content is never pipe-visible (see
+                // `permission_name`), so there is nothing to redact here.
+                ContentItem::Connection(_) => {}
             }
         }
 

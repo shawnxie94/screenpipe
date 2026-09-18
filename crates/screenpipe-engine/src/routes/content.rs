@@ -40,6 +40,28 @@ pub enum ContentItem {
     Input(InputContent),
     /// App-specific records parsed from a captured accessibility frame.
     Parsed(ParsedContent),
+    /// An object imported by a connector channel (Feishu messages/docs/
+    /// calendar events, Tencent Meeting transcripts, RSS entries). Served by
+    /// `content_type=connection`; never mixed into the capture-timeline types.
+    Connection(ConnectionContent),
+}
+
+#[derive(OaSchema, Serialize, Deserialize, Debug, Clone)]
+pub struct ConnectionContent {
+    /// Channel identity as stored (`office:feishu`, `rss`, ...).
+    pub connector: String,
+    /// Short provider name for badges (`feishu`, `rss`, `tencent-meeting`).
+    pub provider: String,
+    /// `message` / `document` / `calendar_event` / `transcript` / ...
+    pub object_kind: String,
+    pub object_id: String,
+    pub title: Option<String>,
+    pub body_text: String,
+    /// When the thing happened (message sent, meeting held); falls back to
+    /// fetch time in ordering, kept distinct here for display.
+    pub event_at: Option<DateTime<Utc>>,
+    pub fetched_at: DateTime<Utc>,
+    pub source_url: Option<String>,
 }
 
 #[derive(OaSchema, Serialize, Deserialize, Debug, Clone)]

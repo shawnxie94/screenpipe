@@ -594,6 +594,11 @@ impl SCServer {
         // Periodic auto-sync for connector channels (office providers + RSS).
         // Connection data sync is independent of timeline capture, so this
         // spawns unconditionally; the per-connection toggle decides activity.
+        // A crashed run leaves sync_status='running' behind, which the running
+        // guard would honor forever — clear those before the loop starts.
+        if let Err(e) = self.db.connector_reset_stale_sync_runs().await {
+            tracing::warn!("stale connector sync reset failed: {e}");
+        }
         crate::connectors::auto_sync::spawn_auto_sync(
             self.db.clone(),
             self.screenpipe_dir.join("office-cli"),

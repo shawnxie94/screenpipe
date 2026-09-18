@@ -114,3 +114,47 @@ async fn save_scope_bumps_connection_scope_revision() {
         .unwrap();
     assert_eq!(returned, 3);
 }
+
+#[tokio::test]
+async fn connector_search_page_matches_browses_and_counts() {
+    let db = test_db().await;
+    db.office_upsert_object(&draft("message", "m1", "季度目标对齐会议")).await.unwrap();
+    let mut old = draft("document", "d1", "季度总结文档");
+    old.event_at = Some(Utc::now() - Duration::hours(48));
+    db.office_upsert_object(&old).await.unwrap();
+
+    // Keyword search: relevance across channels with an accurate total.
+    let (rows, total) = db
+        .connector_search_page("季度", None, None, 10, 0)
+        .await
+        .unwrap();
+    assert_eq!(total, 2);
+    assert_eq!(rows.len(), 2);
+
+    // Pagination honors offset and reports a stable total.
+    let (page2, total) = db
+        .connector_search_page("季度", None, None, 1, 1)
+        .await
+        .unwrap();
+    assert_eq!(total, 2);
+    assert_eq!(page2.len(), 1);
+
+    // Browse (empty query) returns recent items newest-first.
+    let (rows, total) = db.connector_search_page("", None, None, 10, 0).await.unwrap();
+    assert_eq!(total, 2);
+    assert_eq!(rows[0].object_id, "m1");
+
+    // Time filter excludes the 48h-old document.
+    let since = Utc::now() - Duration::hours(24);
+    let (rows, total) = db
+        .connector_search_page("季度", Some(since), None, 10, 0)
+        .await
+        .unwrap();
+    assert_eq!(total, 1);
+    assert_eq!(rows[0].object_id, "m1");
+
+    // Disabled rows never surface.
+    db.office_disable_out_of_scope("feishu", "acct-1", &[]).await.unwrap();
+    let (_, total) = db.connector_search_page("季度", None, None, 10, 0).await.unwrap();
+    assert_eq!(total, 0);
+}
