@@ -18,8 +18,6 @@ pub mod logseq;
 pub mod ntfy;
 pub mod obsidian;
 pub mod openclaw;
-pub mod perplexity;
-pub mod pushover;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -273,10 +271,8 @@ pub fn all_integrations() -> Vec<Box<dyn Integration>> {
     vec![
         Box::new(email::Email),
         Box::new(imap::Imap),
-        Box::new(perplexity::Perplexity),
         Box::new(obsidian::Obsidian),
         Box::new(logseq::Logseq),
-        Box::new(pushover::Pushover),
         Box::new(ntfy::Ntfy),
         Box::new(claude_code::ClaudeCode),
         Box::new(codex::Codex),
@@ -927,15 +923,6 @@ mod tests {
         dir
     }
 
-    fn manual_perplexity_creds() -> Map<String, Value> {
-        let mut creds = Map::new();
-        creds.insert(
-            "api_key".to_string(),
-            Value::String("pplx-manual-instance-key".to_string()),
-        );
-        creds
-    }
-
     #[test]
     fn agent_integrations_are_registered() {
         let ids: Vec<&str> = all_integrations().iter().map(|i| i.def().id).collect();
@@ -983,7 +970,7 @@ mod tests {
             .mount(&server)
             .await;
         let client = build_client_for_with_timeouts(
-            &perplexity::Perplexity,
+            &ntfy::Ntfy,
             std::time::Duration::from_secs(1),
             std::time::Duration::from_millis(50),
         );
@@ -1002,17 +989,22 @@ mod tests {
         let dir = temp_screenpipe_dir();
         let mgr = ConnectionManager::new(dir.clone(), None);
 
-        mgr.connect_instance("perplexity", Some("work"), manual_perplexity_creds())
+        let mut creds = Map::new();
+        creds.insert(
+            "topic_url".to_string(),
+            Value::String("https://ntfy.sh/e2e-topic".to_string()),
+        );
+        mgr.connect_instance("ntfy", Some("work"), creds)
             .await
             .unwrap();
 
-        let perplexity = mgr
+        let ntfy = mgr
             .list()
             .await
             .into_iter()
-            .find(|connection| connection.def.id == "perplexity")
+            .find(|connection| connection.def.id == "ntfy")
             .unwrap();
-        assert!(perplexity.connected);
+        assert!(ntfy.connected);
 
         let _ = std::fs::remove_dir_all(dir);
     }
@@ -1022,18 +1014,21 @@ mod tests {
         let dir = temp_screenpipe_dir();
         let mgr = ConnectionManager::new(dir.clone(), None);
 
-        mgr.connect_instance("perplexity", Some("work"), manual_perplexity_creds())
+        let mut creds = Map::new();
+        creds.insert(
+            "topic_url".to_string(),
+            Value::String("https://ntfy.sh/e2e-topic".to_string()),
+        );
+        mgr.connect_instance("ntfy", Some("work"), creds)
             .await
             .unwrap();
 
         let context = render_context(&dir, 3030, None).await;
-        assert!(context.contains("## Perplexity (perplexity, instance: work)"));
-        assert!(
-            context.contains(
-                "proxy: http://localhost:3030/connections/perplexity/proxy/<api-path>?instance=work"
-            )
-        );
-        assert!(!context.contains("pplx-manual-instance-key"));
+        assert!(context.contains("## ntfy (ntfy, instance: work)"));
+        // No remaining integration registers a proxy, and the credential
+        // value must never leak into the model context regardless.
+        assert!(!context.contains("/proxy/<api-path>"));
+        assert!(!context.contains("https://ntfy.sh/e2e-topic"));
 
         let _ = std::fs::remove_dir_all(dir);
     }
