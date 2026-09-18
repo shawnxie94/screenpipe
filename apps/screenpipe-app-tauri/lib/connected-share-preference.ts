@@ -9,7 +9,7 @@ import type { ConnectedShareSurface } from "@/lib/connected-share";
  * interrogation.
  *
  * Sharing a meeting is overwhelmingly a repeat action against the same
- * channel: the same standup goes to the same Slack channel every week. Asking
+ * destination: the same standup goes to the same vault every week. Asking
  * for the destination every time is the difference between a one-click action
  * and a five-step form, and it is the whole reason the first version of this
  * dialog felt heavy.
@@ -20,20 +20,6 @@ import type { ConnectedShareSurface } from "@/lib/connected-share";
  */
 export type RememberedShare = {
   destination: string;
-  /** Slack channel/user id, or Linear team id, depending on destination. */
-  target?: string;
-  /**
-   * How that target reads to a person: `#product`, `my Slack messages`, `ENG`.
-   *
-   * Stored at send time rather than resolved on read, because resolving it
-   * means fetching the channel or team list, and the one place that most needs
-   * to name the destination — a button offering to send there again — would
-   * then have to make a network call before it could render its own label.
-   * The dialog already knows the name at the moment it sends.
-   */
-  targetLabel?: string;
-  /** Slack instance id, when the workspace is not the default. */
-  instance?: string;
 };
 
 const KEY_PREFIX = "screenpipe.connected-share.last";
@@ -72,13 +58,7 @@ export function readRememberedShare(
     if (typeof value.destination !== "string" || !value.destination) {
       return null;
     }
-    return {
-      destination: value.destination,
-      target: typeof value.target === "string" ? value.target : undefined,
-      targetLabel:
-        typeof value.targetLabel === "string" ? value.targetLabel : undefined,
-      instance: typeof value.instance === "string" ? value.instance : undefined,
-    };
+    return { destination: value.destination };
   } catch {
     return null;
   }
@@ -105,9 +85,10 @@ export function writeRememberedShare(
  * question with a single answer. Otherwise nothing.
  *
  * Auto-select deliberately does not apply once a remembered destination has
- * gone missing. Someone who sends to Slack every week, whose Slack connection
- * then drops, should not find the dialog quietly pointed at Linear with a
- * confirm button under their cursor. A vanished destination means ask again.
+ * gone missing. Someone who shares to Obsidian every week, whose Obsidian
+ * connection then drops, should not find the dialog quietly pointed at Notion
+ * with a confirm button under their cursor. A vanished destination means ask
+ * again.
  *
  * The fallback used to be `copy`, which made "we could not work out where this
  * should go" indistinguishable from "send this to your clipboard" — and made
@@ -116,7 +97,6 @@ export function writeRememberedShare(
  * so instead of quietly aiming somewhere.
  */
 const DESTINATION_APP: Record<string, string> = {
-  slack: "Slack",
   "chat-notion": "Notion",
   "chat-obsidian": "Obsidian",
 };
@@ -133,36 +113,6 @@ export function rememberedSendLabel(
 ): string {
   const app = remembered ? DESTINATION_APP[remembered.destination] : undefined;
   return app ? `发送到 ${app}…` : "发送到应用…";
-}
-
-/**
- * The one-tap repeat of the last send, when it can be stated exactly.
- *
- * A button that sends the moment it is pressed has to name where, in full,
- * before the press. "send to Slack" is not enough: the workspace has a dozen
- * channels and the difference between the right one and a public one is the
- * whole risk. So this returns nothing unless the exact target was recorded,
- * which in practice means the send happened after `targetLabel` shipped.
- *
- * Only the direct Slack destination qualifies. `chat-*` hands off to the agent
- * for review, so "one tap" there would be one tap to open a conversation, which
- * the dialog already does and does not need a second control for.
- *
- * Availability is the caller's job: a remembered channel whose connection has
- * since been revoked must not be offered, and only the caller knows that.
- */
-export function rememberedOneTapSend(
-  remembered: RememberedShare | null,
-): { destination: "slack"; target: string; label: string } | null {
-  if (!remembered?.target || !remembered.targetLabel) return null;
-  if (remembered.destination !== "slack") {
-    return null;
-  }
-  return {
-    destination: remembered.destination,
-    target: remembered.target,
-    label: remembered.targetLabel,
-  };
 }
 
 export function preferredShareDestination(

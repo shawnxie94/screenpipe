@@ -30,7 +30,6 @@ interface KnowledgeView {
   id: string;
 }
 
-interface ShareWrite {
   path: string;
   body: Record<string, unknown>;
 }
@@ -45,109 +44,55 @@ async function setCssWindowSize(width: number, height: number) {
   );
 }
 
-async function installShareFixture(
-  mode: ShareFixtureMode,
-  resetWrites: boolean,
-) {
-  await browser.execute(
-    (fixtureMode: ShareFixtureMode, shouldResetWrites: boolean) => {
-      const fixtureWindow = window as typeof window & {
-        __connectedShareOriginalFetch?: typeof window.fetch;
-      };
-      if (!fixtureWindow.__connectedShareOriginalFetch) {
-        fixtureWindow.__connectedShareOriginalFetch = window.fetch.bind(window);
+async function installShareFixture(mode: ShareFixtureMode) {
+  await browser.execute((fixtureMode: ShareFixtureMode) => {
+    const fixtureWindow = window as typeof window & {
+      __connectedShareOriginalFetch?: typeof window.fetch;
+    };
+    if (!fixtureWindow.__connectedShareOriginalFetch) {
+      fixtureWindow.__connectedShareOriginalFetch = window.fetch.bind(window);
+    }
+    const originalFetch = fixtureWindow.__connectedShareOriginalFetch;
+
+    const json = (body: unknown, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "Content-Type": "application/json" },
+      });
+
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const raw =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      const url = new URL(raw, window.location.href);
+      const isLocal =
+        url.hostname === "localhost" || url.hostname === "127.0.0.1";
+      if (!isLocal) return originalFetch(input, init);
+
+      if (url.pathname === "/connections") {
+        return fixtureMode === "disconnected"
+          ? json({
+              data: [
+                { id: "notion", connected: false },
+                { id: "obsidian", connected: false },
+              ],
+            })
+          : json({
+              data: [
+                { id: "notion", connected: true, mcp: true },
+                { id: "obsidian", connected: true, mcp: true },
+              ],
+            });
       }
-      const originalFetch = fixtureWindow.__connectedShareOriginalFetch;
-      const writesKey = "e2eConnectedShareWrites";
-      if (shouldResetWrites || !sessionStorage.getItem(writesKey)) {
-        sessionStorage.setItem(writesKey, "[]");
-      }
 
-      const json = (body: unknown, status = 200) =>
-        new Response(JSON.stringify(body), {
-          status,
-          headers: { "Content-Type": "application/json" },
-        });
-
-      window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-        const raw =
-          typeof input === "string"
-            ? input
-            : input instanceof URL
-              ? input.href
-              : input.url;
-        const url = new URL(raw, window.location.href);
-        const isLocal =
-          url.hostname === "localhost" || url.hostname === "127.0.0.1";
-        if (!isLocal) return originalFetch(input, init);
-
-        if (url.pathname === "/connections") {
-          return fixtureMode === "disconnected"
-            ? json({
-                data: [
-                  { id: "slack", connected: false },
-                  { id: "linear", connected: false },
-                  { id: "notion", connected: false },
-                ],
-              })
-            : json({
-                data: [
-                  { id: "slack", connected: true },
-                  { id: "linear", connected: true, mcp: true },
-                  { id: "notion", connected: true, mcp: true },
-                ],
-              });
-        }
-        if (url.pathname === "/connections/slack/instances") {
-          return json({
-            instances: [
-              {
-                instance: "e2e-acme",
-                connected: true,
-                display_name: "Acme workspace",
-              },
-            ],
-          });
-        }
-        if (url.pathname === "/connections/slack/conversations") {
-          return json({
-            ok: true,
-            channels: [
-              { id: "C-PRODUCT", name: "product" },
-              { id: "C-PRIVATE", name: "leadership", is_private: true },
-            ],
-          });
-        }
-        if (url.pathname === "/connections/slack/send") {
-          const writes = JSON.parse(
-            sessionStorage.getItem(writesKey) ?? "[]",
-          ) as ShareWrite[];
-          writes.push({
-            path: url.pathname,
-            body: init?.body ? JSON.parse(String(init.body)) : {},
-          });
-          sessionStorage.setItem(writesKey, JSON.stringify(writes));
-          return json({
-            ok: true,
-            team: "Acme workspace",
-            channel: "D-E2E",
-            ts: "1722272400.000100",
-          });
-        }
-
-        return originalFetch(input, init);
-      };
-    },
-    mode,
-    resetWrites,
-  );
+      return originalFetch(input, init);
+    };
+  }, mode);
 }
 
-async function shareWrites(): Promise<ShareWrite[]> {
-  return (await browser.execute(() =>
-    JSON.parse(sessionStorage.getItem("e2eConnectedShareWrites") ?? "[]"),
-  )) as ShareWrite[];
-}
 
 async function selectDashboard(viewId: string) {
   await browser.execute((nextViewId: string) => {
@@ -469,7 +414,7 @@ describe("connected snapshot sharing", function () {
     if (pipeTempDir) rmSync(pipeTempDir, { recursive: true, force: true });
   });
 
-  it("reviews disconnected, direct-send, receipt, Live View, and Chat-draft states", async () => {
+  it("reviews disconnected, connected, Live View, and Chat-draft states", async () => {
     // Mount the meetings section after seeding so it fetches a fresh list. A
     // full webview navigation here can outrun local API credential hydration
     // and turn the first /meetings request into a misleading 403.
@@ -508,14 +453,7 @@ describe("connected snapshot sharing", function () {
       });
     await meetingRow.click();
     await waitForTestId("note-editor", 20_000);
-    // Sending is a named button on the meeting rule, beside copy. It spent one
-    // release behind the share caret, which put the same artifact's send action
-    // in the header on Live View and two clicks deep on meetings.
-    const openShareMenu = async () => {
-      const send = await $(`[data-testid="meeting-send-button"]`);
-      await send.waitForClickable({ timeout: t(10_000) });
-      return send;
-    };
+
     // Destinations live in one grouped menu on the dialog's first row.
     const openDestinationMenu = async () => {
       const row = await $(
@@ -575,159 +513,110 @@ describe("connected snapshot sharing", function () {
           });
       });
     };
-    const shareCaret = await $(`[aria-label="more meeting actions"]`);
+    const shareCaret = await $(`[aria-label="更多会议操作"]`);
     await shareCaret.waitForExist({ timeout: t(10_000) });
     expect(
       existsSync(await saveScreenshot("connected-share-meeting-entry")),
     ).toBe(true);
 
-    await installShareFixture("disconnected", true);
-    await (await openShareMenu()).click();
+    // ── Disconnected: the chooser stays reachable and the dialog says so. ──
+    await installShareFixture("disconnected");
+    await (await $(`[data-testid="meeting-send-button"]`)).click();
     await waitForTestId("connected-share-dialog", 10_000);
     await waitForTestId("connected-share-empty", 10_000);
     await waitForSettledShareDialog();
     const disconnectedText = (await browser.execute(
       () => document.body?.innerText ?? "",
     )) as string;
-    expect(disconnectedText).toContain(
-      "Nothing runs or sends until you press send",
-    );
-    expect(disconnectedText).toContain("Nothing is connected for sharing yet");
-    expect(await shareWrites()).toHaveLength(0);
+    expect(disconnectedText).toContain("暂无可用于分享的已连接应用");
+    expect(disconnectedText).toContain("在你点击发送前，不会运行或发送任何内容");
     expect(
       existsSync(await saveScreenshot("connected-share-meeting-disconnected")),
     ).toBe(true);
 
     const closeDisconnected = await $(
-      `//*[@data-testid="connected-share-dialog"]//button[normalize-space()="close"]`,
+      `//*[@data-testid="connected-share-dialog"]//button[normalize-space()="关闭"]`,
     );
     await closeDisconnected.click();
     await waitForShareDialogClosed();
 
-    await installShareFixture("connected", true);
-    await (await openShareMenu()).click();
+    // ── Connected: the suggestion icon opens review aimed at Obsidian. ──
+    await installShareFixture("connected");
+    const obsidianSend = await $(`[data-testid="meeting-send-obsidian"]`);
+    await obsidianSend.waitForExist({ timeout: t(10_000) });
+    await obsidianSend.click();
     await waitForTestId("connected-share-dialog", 10_000);
     await waitForSettledShareDialog();
-    const unchangedMode = await waitForTestId(
-      "connected-share-mode-unchanged",
+    const confirmObsidian = await waitForTestId(
+      "connected-share-confirm",
       10_000,
     );
-    const chatMode = await waitForTestId("connected-share-mode-chat", 10_000);
-    expect(await unchangedMode.getAttribute("aria-pressed")).toBe("true");
-    expect(await chatMode.getAttribute("aria-pressed")).toBe("false");
-    expect(
-      existsSync(await saveScreenshot("connected-share-meeting-modes")),
-    ).toBe(true);
-
-    await openDestinationMenu();
-    await waitForTestId("connected-share-destination-slack", 10_000);
-    const connectedText = (await browser.execute(
-      () => document.body?.innerText ?? "",
-    )) as string;
-    expect(connectedText).toContain("send unchanged");
-    expect(connectedText).toContain("no new AI processing");
-    expect(await shareWrites()).toHaveLength(0);
+    await browser.waitUntil(
+      async () => (await confirmObsidian.getText()).includes("Obsidian"),
+      {
+        timeout: t(10_000),
+        timeoutMsg: "Obsidian destination did not become the confirm action",
+      },
+    );
+    expect(await confirmObsidian.getText()).toContain("在聊天中准备 Obsidian");
     expect(
       existsSync(await saveScreenshot("connected-share-meeting-connected")),
     ).toBe(true);
-
-    // Chat processing is a visible mode, not a hidden property of the app.
-    // Switching it changes the eligible destinations without authorizing a
-    // write or running the model.
-    await browser.execute(() =>
-      document
-        .querySelector<HTMLElement>(
-          '[data-testid="connected-share-dialog"][data-state="open"] [data-testid="connected-share-mode-chat"]',
-        )
-        ?.click(),
-    );
-    expect(await chatMode.getAttribute("aria-pressed")).toBe("true");
-    await waitForTestId("connected-share-destination-chat-notion", 10_000);
-    expect(
-      existsSync(await saveScreenshot("connected-share-meeting-chat-mode")),
-    ).toBe(true);
-    await browser.execute(() =>
-      document
-        .querySelector<HTMLElement>(
-          '[data-testid="connected-share-dialog"][data-state="open"] [data-testid="connected-share-mode-unchanged"]',
-        )
-        ?.click(),
-    );
-
-    // Opening the review can never send anything, whatever destination the row
-    // reports. Pick Slack explicitly from the open menu.
-    await waitForTestId("connected-share-destination-slack", 10_000);
-    await browser.execute(() =>
-      document
-        .querySelector<HTMLElement>(
-          '[role="menu"][data-state="open"] [data-testid="connected-share-destination-slack"]',
-        )
-        ?.click(),
-    );
-    await settleClosedDestinationMenu();
-    const confirmSlack = await waitForTestId("connected-share-confirm", 10_000);
+    await confirmObsidian.click();
     await browser.waitUntil(
-      async () => (await confirmSlack.getText()).includes("Slack"),
+      async () => {
+        const url = new URL(await browser.getUrl());
+        return (
+          url.pathname === "/home" && url.searchParams.get("section") === "home"
+        );
+      },
       {
-        timeout: t(10_000),
-        timeoutMsg: "Slack destination did not become the confirm action",
+        timeout: t(20_000),
+        timeoutMsg: "Obsidian handoff did not open Home Chat",
       },
     );
-    // The row above states the channel, so the button names the app and stops
-    // there instead of restating the whole destination in caps.
-    expect(await confirmSlack.getText()).toContain("发送到 Slack");
-    await confirmSlack.click();
-    await waitForTestId("connected-share-receipt", 10_000);
-    await waitForSettledShareDialog();
-    const writesAfterSlack = await shareWrites();
-    expect(writesAfterSlack).toHaveLength(1);
-    expect(writesAfterSlack[0].path).toBe("/connections/slack/send");
-    expect(String(writesAfterSlack[0].body.text)).toContain(
-      "Keep transcripts, recordings, and screen activity private",
-    );
-    expect(
-      existsSync(await saveScreenshot("connected-share-meeting-receipt")),
-    ).toBe(true);
-    await browser.execute(() =>
-      document.querySelector<HTMLElement>("[toast-close]")?.click(),
-    );
+    const chatInput = await $(`textarea[placeholder*="Ask about your screen"]`);
+    await chatInput.waitForExist({ timeout: t(20_000) });
     await browser.waitUntil(
       async () =>
-        (await browser.execute(() => {
-          const close = document.querySelector<HTMLElement>("[toast-close]");
-          return (
-            !close ||
-            close.closest("[data-state]")?.getAttribute("data-state") !== "open"
-          );
-        })) as boolean,
-      { timeout: t(10_000), timeoutMsg: "Slack receipt toast stayed visible" },
+        String(await chatInput.getValue()).includes(
+          "Do not create, overwrite, append, or send anything yet",
+        ),
+      { timeout: t(20_000), timeoutMsg: "Chat draft was not prefilled" },
     );
+    expect(String(await chatInput.getValue())).toContain(
+      "connected Obsidian vault",
+    );
+    expect(String(await chatInput.getValue())).toContain(
+      "ask for approval exactly once",
+    );
+    const chatBodyText = (await browser.execute(
+      () => document.body?.innerText ?? "",
+    )) as string;
+    expect(chatBodyText.toLowerCase()).toContain("frozen screenpipe snapshot");
+    expect(chatBodyText).not.toContain('"kind":"screenpipe_share_context"');
+    expect(
+      existsSync(await saveScreenshot("connected-share-chat-draft")),
+    ).toBe(true);
 
-    const closeReceipt = await $(
-      `//*[@data-testid="connected-share-dialog"]//button[normalize-space()="close"]`,
-    );
-    await closeReceipt.click();
-    await waitForShareDialogClosed();
-    const backToMeetings = await $(`[aria-label="back to meetings"]`);
-    await backToMeetings.waitForExist({ timeout: t(10_000) });
-    await backToMeetings.click();
+    // ── Live View: same review, section toggles, and a Notion handoff. ──
+    const backFromChat = await browser.execute(() => {
+      window.history.back();
+      return true;
+    });
+    expect(backFromChat).toBe(true);
     const knowledgeNav = await waitForTestId("nav-knowledge", 10_000);
     await knowledgeNav.click();
     await waitForTestId("section-knowledge", 25_000);
     await waitForTestId("knowledge-overview-scroll", 25_000);
     await selectDashboard(VIEW_ID);
     await waitForTestId("overview-send", 15_000);
-    await installShareFixture("connected", false);
+    await installShareFixture("connected");
 
     const sendView = await waitForTestId("overview-send", 10_000);
     await sendView.click();
     await waitForTestId("connected-share-dialog", 10_000);
     await waitForSettledShareDialog();
-    const liveViewChatMode = await waitForTestId(
-      "connected-share-mode-chat",
-      10_000,
-    );
-    await liveViewChatMode.click();
     await openDestinationMenu();
     await waitForTestId("connected-share-destination-chat-notion", 10_000);
     await browser.execute(() =>
@@ -744,9 +633,8 @@ describe("connected snapshot sharing", function () {
     )) as string;
     // Contents reports the settled answer instead of the grid; the Block
     // titles are still one click away, asserted below once it is open.
-    expect(liveViewText).toMatch(/all \d+ blocks/);
-    expect(liveViewText).toContain("what Chat will review");
-    expect(await shareWrites()).toHaveLength(1);
+    expect(liveViewText).toMatch(/全部 \d+ 个内容块/);
+    expect(liveViewText).toContain("聊天将要审阅的内容");
     expect(
       existsSync(await saveScreenshot("connected-share-live-view-notion")),
     ).toBe(true);
@@ -789,7 +677,7 @@ describe("connected snapshot sharing", function () {
       "connected-share-confirm",
       10_000,
     );
-    expect(await prepareNotion.getText()).toContain("prepare Notion in Chat");
+    expect(await prepareNotion.getText()).toContain("在聊天中准备 Notion");
     await prepareNotion.click();
     await browser.waitUntil(
       async () => {
@@ -803,7 +691,6 @@ describe("connected snapshot sharing", function () {
         timeoutMsg: "Notion handoff did not open Home Chat",
       },
     );
-    const chatInput = await $(`textarea[placeholder*="Ask about your screen"]`);
     await chatInput.waitForExist({ timeout: t(20_000) });
     await browser.waitUntil(
       async () =>
@@ -826,18 +713,9 @@ describe("connected snapshot sharing", function () {
     expect(String(await chatInput.getValue())).not.toContain(
       "Released the new meeting flow",
     );
-    const chatBodyText = (await browser.execute(
-      () => document.body?.innerText ?? "",
-    )) as string;
-    expect(chatBodyText.toLowerCase()).toContain("frozen screenpipe snapshot");
-    expect(chatBodyText).toContain(
-      "Weekly product pulse · Live View · reviewed copy",
-    );
-    expect(chatBodyText).not.toContain('"kind":"screenpipe_share_context"');
-    expect(await shareWrites()).toHaveLength(1);
-    expect(existsSync(await saveScreenshot("connected-share-chat-draft"))).toBe(
-      true,
-    );
+    expect(
+      existsSync(await saveScreenshot("connected-share-chat-draft-notion")),
+    ).toBe(true);
 
     // Deterministically exercise the optimistic post-Send representation. The
     // live transport uses this exact envelope; no provider is needed to prove

@@ -83,15 +83,13 @@ describe("connected share artifacts", () => {
     expect(markdown).not.toContain("## Empty");
   });
 
-  it("separates deterministic sends from AI-assisted MCP connections", () => {
+  it("exposes chat connections for AI-assisted handoff", () => {
     expect(
       shareConnectionAvailability([
-        { id: "slack", connected: true },
         { id: "notion", connected: true, mcp: true },
         { id: "obsidian", connected: true },
       ]),
     ).toEqual({
-      direct: { slack: true },
       chat: { notion: true, obsidian: true },
     });
   });
@@ -99,22 +97,16 @@ describe("connected share artifacts", () => {
   it("ranks connected apps seen during the meeting without exposing evidence", () => {
     const suggestions = rankedShareSuggestions(
       [
-        { id: "slack", connected: true },
         { id: "notion", connected: true, mcp: true },
         { id: "obsidian", connected: true },
       ],
       ["Arc · notion.so/roadmap", "Obsidian · product notes"],
     );
 
-    expect(suggestions.map(({ app }) => app)).toEqual([
-      "notion",
-      "obsidian",
-      "slack",
-    ]);
+    expect(suggestions.map(({ app }) => app)).toEqual(["notion", "obsidian"]);
     expect(suggestions.map(({ destination }) => destination)).toEqual([
       "chat-notion",
       "chat-obsidian",
-      "slack",
     ]);
     expect(JSON.stringify(suggestions)).not.toContain("product notes");
   });

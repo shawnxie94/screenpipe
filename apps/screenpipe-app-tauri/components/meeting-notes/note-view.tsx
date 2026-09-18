@@ -422,27 +422,6 @@ export function NoteView({
     meetingShareEvidence,
   );
 
-  /**
-   * The press is the confirmation, so the receipt has to be unmissable.
-   *
-   * Nothing was reviewed on the way out: the user pressed a button naming a
-   * destination and the message left. Saying exactly where it landed is what
-   * keeps that honest, and a failure has to be loud for the same reason —
-   * silence after a send reads as success.
-   */
-  const handleOneTapSend = useCallback(async () => {
-    const result = await oneTapSend.send();
-    if (result.ok) {
-      toast({ title: result.detail });
-      return;
-    }
-    toast({
-      title: "无法发送",
-      description: result.error,
-      variant: "destructive",
-    });
-  }, [oneTapSend, toast]);
-
   const summaryPipeSlug = settings.meetingSummaryPipeSlug || "meeting-summary";
   // The picker offers ACP presets behind the same rollout gate as the rest of
   // the ACP UI, and falls back to a pipe-compatible model. Both rules live in
@@ -2270,7 +2249,6 @@ export function NoteView({
                 onMenuOpenChange={(open) => {
                   if (!open) return;
                 }}
-                resendLabel={oneTapSend.label ?? undefined}
                 suggestedDestinations={oneTapSend.suggestions}
                 onShare={(action) => {
                   if (action === "summary") void handleCopySummary();
@@ -2280,7 +2258,6 @@ export function NoteView({
                     setRequestedShareDestination(null);
                     setShareOpen(true);
                   }
-                  else if (action === "resend") void handleOneTapSend();
                   else void handleCopy();
                 }}
                 onDestinationSelect={(destination) => {

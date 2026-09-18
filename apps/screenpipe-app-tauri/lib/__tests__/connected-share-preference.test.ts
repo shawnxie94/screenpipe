@@ -34,23 +34,17 @@ afterEach(() => {
 });
 
 describe("remembered share destination", () => {
-  it("round-trips the destination and its target", () => {
+  it("round-trips the destination", () => {
     const store = new Map<string, string>();
     restore = installStorage({
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => void store.set(k, v),
     });
 
-    writeRememberedShare("meeting", {
-      destination: "slack",
-      target: "C123",
-      instance: "T9",
-    });
+    writeRememberedShare("meeting", { destination: "chat-obsidian" });
 
     expect(readRememberedShare("meeting")).toEqual({
-      destination: "slack",
-      target: "C123",
-      instance: "T9",
+      destination: "chat-obsidian",
     });
   });
 
@@ -61,7 +55,7 @@ describe("remembered share destination", () => {
       setItem: (k: string, v: string) => void store.set(k, v),
     });
 
-    writeRememberedShare("meeting", { destination: "slack", target: "C1" });
+    writeRememberedShare("meeting", { destination: "chat-obsidian" });
 
     expect(readRememberedShare("live-view")).toBeNull();
   });

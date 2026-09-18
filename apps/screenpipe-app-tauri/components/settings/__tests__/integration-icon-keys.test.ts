@@ -16,7 +16,7 @@ import { connectionNameToId } from "../../../lib/utils/connection-chip";
 describe("INTEGRATION_ICON_KEYS", () => {
   it("is non-empty and includes core integrations", () => {
     expect(INTEGRATION_ICON_KEYS.size).toBeGreaterThan(0);
-    for (const id of ["slack", "google-calendar", "obsidian"]) {
+    for (const id of ["obsidian", "feishu", "ntfy", "claude"]) {
       expect(INTEGRATION_ICON_KEYS.has(id)).toBe(true);
     }
   });
