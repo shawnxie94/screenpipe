@@ -10,7 +10,15 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Rocket, Moon, Sun, Monitor, Layers, RefreshCw } from "lucide-react";
+import {
+  Rocket,
+  Moon,
+  Sun,
+  Monitor,
+  MonitorOff,
+  Layers,
+  RefreshCw,
+} from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +41,10 @@ import {
 /** Settings search index for this section. Co-located with the component so adding a field here means updating one file. See `SettingsField` in `./settings-search` for the schema. */
 export const searchIndex: SettingsField[] = [
   { label: "开机自启", keywords: ["autostart", "launch", "startup"] },
+  {
+    label: "托盘录制模式",
+    keywords: ["headless", "tray", "关闭窗口", "省资源"],
+  },
   { label: "重置引导流程", keywords: ["setup", "onboarding"] },
   { label: "你的目标", keywords: ["onboarding", "purpose", "personalization"] },
 ];
@@ -102,6 +114,15 @@ export default function GeneralSettings() {
       });
     }
   };
+  const handleHeadlessChange = (checked: boolean) => {
+    handleSettingsChange({ headless: checked });
+    toast({
+      title: checked ? "已开启托盘录制模式" : "已关闭托盘录制模式",
+      description: checked
+        ? "关闭窗口后界面将销毁，从托盘重新打开"
+        : "关闭窗口将保留界面",
+    });
+  };
   return (
     <div className="space-y-5" data-testid="section-settings-general">
       <p className="text-muted-foreground text-sm mb-4">
@@ -123,6 +144,28 @@ export default function GeneralSettings() {
                 id="auto-start-toggle"
                 checked={settings?.autoStartEnabled ?? false}
                 onCheckedChange={handleAutoStartChange}
+                className="ml-4"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border bg-card">
+          <CardContent className="px-3 py-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <MonitorOff className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div>
+                  <h3 className="text-sm font-medium text-foreground">托盘录制模式</h3>
+                  <p className="text-xs text-muted-foreground">
+                    关闭窗口后仅保留托盘、录制与本地 API
+                  </p>
+                </div>
+              </div>
+              <Switch
+                id="headless-toggle"
+                checked={settings?.headless ?? false}
+                onCheckedChange={handleHeadlessChange}
                 className="ml-4"
               />
             </div>
