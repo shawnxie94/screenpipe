@@ -1237,6 +1237,7 @@ impl PiExecutor {
         continue_session: bool,
         pipe_system_prompt: Option<&str>,
     ) -> Result<AgentOutput> {
+        super::pi_compaction::ensure_for_entrypoint(Path::new(pi_path))?;
         let mut cmd = build_async_command(pi_path);
         cmd.current_dir(working_dir);
         apply_pi_isolation_env(&mut |k, v| {
@@ -1368,6 +1369,7 @@ impl PiExecutor {
         mcp_server_allowlist: Option<&[String]>,
         session_owner: Option<&str>,
     ) -> Result<AgentOutput> {
+        super::pi_compaction::ensure_for_entrypoint(Path::new(pi_path))?;
         let mut cmd = build_async_command(pi_path);
         cmd.current_dir(working_dir);
         apply_pi_isolation_env(&mut |k, v| {

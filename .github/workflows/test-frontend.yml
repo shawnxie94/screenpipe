@@ -7,6 +7,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'crates/screenpipe-core/assets/pi-context-compaction*'
       - 'apps/screenpipe-app-tauri/**/*.ts'
       - 'apps/screenpipe-app-tauri/**/*.tsx'
       - 'apps/screenpipe-app-tauri/**/*.js'
@@ -17,6 +18,7 @@ on:
       - '.github/workflows/test-frontend.yml'
   pull_request:
     paths:
+      - 'crates/screenpipe-core/assets/pi-context-compaction*'
       - 'apps/screenpipe-app-tauri/**/*.ts'
       - 'apps/screenpipe-app-tauri/**/*.tsx'
       - 'apps/screenpipe-app-tauri/**/*.js'
@@ -69,6 +71,9 @@ jobs:
         # (vitest.config.ts excludes the same discovered set). Both runners
         # must pass for CI green.
         run: bun run test:bun
+
+      - name: Pi context compaction runtime eval
+        run: bun scripts/eval-pi-compaction.ts
 
       - name: Biome lint (root config)
         # Biome auto-discovers ../../biome.json from the repo root. Running

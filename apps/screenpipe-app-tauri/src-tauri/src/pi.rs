@@ -1542,7 +1542,9 @@ fn npm_install_command(install_dir: &Path) -> Command {
 fn verify_pi_package_install(install_dir: &Path) -> Result<(), String> {
     match local_pi_install_integrity_error(install_dir) {
         Some(error) => Err(format!("Pi 安装已完成，但依赖校验失败：{}", error)),
-        None => Ok(()),
+        None => screenpipe_core::agents::pi_compaction::ensure(install_dir).map_err(|error| {
+            format!("Pi 安装已完成，但上下文压缩补丁应用失败：{error}")
+        }),
     }
 }
 
@@ -2952,6 +2954,8 @@ pub async fn pi_start_inner(
         }
     };
 
+    screenpipe_core::agents::pi_compaction::ensure_for_entrypoint(Path::new(&pi_path))
+        .map_err(|error| format!("Failed to prepare Pi compaction: {error}"))?;
     let bun_path = find_bun_executable().unwrap_or_else(|| "NOT FOUND".to_string());
     info!(
         "Starting {} from {} in dir: {} with provider: {} model: {} bun: {}",
@@ -5681,6 +5685,14 @@ pub fn ensure_pi_installed_background() {
                 !pkg_contents.is_empty() && !pkg_contents.contains("@anthropic-ai/sdk");
             let needs_upgrade = !is_local_pi_version_current(&install_dir);
 
+            if !needs_upgrade {
+                if let Err(error) = screenpipe_core::agents::pi_compaction::ensure(&install_dir) {
+                    set_pi_install_error(format!("Failed to prepare Pi compaction: {error}"));
+                    PI_INSTALL_DONE.store(true, Ordering::SeqCst);
+                    return;
+                }
+            }
+
             if needs_lru_fix || needs_anthropic_sdk || needs_upgrade {
                 if needs_lru_fix {
                     info!("Pi installed but missing lru-cache overrides — patching");
@@ -7945,5 +7957,6 @@ error: InstallFailed extracting tarball"#;
             super::SHARED_PI_EXTENSION_FILES.contains(&"context-usage.ts"),
             "context-usage must stay in the shared set so pi-acp keeps the breakdown"
         );
+
     }
 }
