@@ -25,11 +25,14 @@ fn now_iso() -> String {
     Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Micros, true)
 }
 
-/// User-approved scope: the feed list. Empty list = nothing to sync.
+/// User-approved scope: the feed list plus the auto-sync toggle. Empty list =
+/// nothing to sync.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RssScope {
     #[serde(default)]
     pub feed_urls: Vec<String>,
+    #[serde(default)]
+    pub auto_sync: bool,
 }
 
 impl RssScope {
@@ -531,6 +534,7 @@ mod tests {
             let err = service
                 .save_scope(&RssScope {
                     feed_urls: vec!["ftp://example.com/feed".to_string()],
+                    auto_sync: false,
                 })
                 .await
                 .unwrap_err();

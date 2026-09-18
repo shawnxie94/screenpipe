@@ -49,13 +49,29 @@ export function RssCard() {
     setIsBusy(true);
     setError(null);
     try {
-      await saveRssScope({ feed_urls: urls });
+      await saveRssScope({
+        feed_urls: urls,
+        auto_sync: status?.scope.auto_sync ?? false,
+      });
       feedsRef.current = urls;
       await loadStatus();
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       return false;
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleToggleAutoSync = async (autoSync: boolean) => {
+    setIsBusy(true);
+    setError(null);
+    try {
+      await saveRssScope({ feed_urls: feedsRef.current, auto_sync: autoSync });
+      await loadStatus();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setIsBusy(false);
     }
@@ -180,6 +196,15 @@ export function RssCard() {
 
         <div className="px-4 py-2 bg-muted/50 border-t border-border">
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={status?.scope.auto_sync ?? false}
+                onChange={(e) => handleToggleAutoSync(e.target.checked)}
+                disabled={isBusy || !connected}
+              />
+              自动同步（每 15 分钟）
+            </label>
             <span>
               {connected
                 ? `${feeds.length} 个订阅源，已导入 ${status?.imported_objects ?? 0} 条${

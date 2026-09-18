@@ -9,6 +9,7 @@ const BASE = "/connections/rss";
 
 export interface RssScope {
   feed_urls: string[];
+  auto_sync: boolean;
 }
 
 export interface RssStatus {

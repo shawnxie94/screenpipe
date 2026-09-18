@@ -591,6 +591,14 @@ impl SCServer {
             );
         }
 
+        // Periodic auto-sync for connector channels (office providers + RSS).
+        // Connection data sync is independent of timeline capture, so this
+        // spawns unconditionally; the per-connection toggle decides activity.
+        crate::connectors::auto_sync::spawn_auto_sync(
+            self.db.clone(),
+            self.screenpipe_dir.join("office-cli"),
+        );
+
         let app_state = Arc::new(AppState {
             db: self.db.clone(),
             history_access: self.history_access.clone(),
