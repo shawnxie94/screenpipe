@@ -24,7 +24,6 @@ export const searchIndex: SettingsField[] = [
   { label: "PII 打码", keywords: ["mask", "redact", "columns", "url", "fields"] },
   { label: "遥测" },
 ];
-import { screenpipeWebUrl } from "@/lib/web-url";
 import {
   Eye,
   EyeOff,

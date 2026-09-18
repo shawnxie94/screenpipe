@@ -6,27 +6,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   fetch: vi.fn(),
-  webBaseOverride: { value: null as string | null },
 }));
 
 vi.mock("@tauri-apps/plugin-http", () => ({
   fetch: mocks.fetch,
 }));
 
-vi.mock("@/lib/web-url", () => ({
-  PROD_WEB_BASE: "https://screenpipe.com",
-  screenpipeWebBase: (fallbackHost: string) => mocks.webBaseOverride.value ?? fallbackHost,
-  screenpipeWebUrl: (path: string, fallbackHost: string) =>
-    `${mocks.webBaseOverride.value ?? fallbackHost}${path}`,
-}));
 
 import {
   TAURI_FETCH_CONNECT_TIMEOUT_MS,
-  TAURI_FETCH_LOCAL_TIMEOUT_MS,
   TAURI_FETCH_MIN_TIMEOUT_MS,
   TAURI_FETCH_TIMEOUT_MS,
-  defaultTauriFetchTimeoutMs,
-  isLocalControlPlaneBase,
   tauriFetchWithDeadline,
 } from "@/lib/http/tauri-fetch";
 
@@ -112,7 +102,6 @@ describe("tauriFetchWithDeadline", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-    mocks.webBaseOverride.value = null;
     // A fresh Response per call: the wrapper reads the body stream, and a
     // Response object cannot be consumed twice.
     mocks.fetch.mockImplementation(async () => new Response("ok", { status: 200 }));
@@ -286,60 +275,6 @@ describe("tauriFetchWithDeadline", () => {
       { timeoutMs: 3_000 }
     );
     expect(mocks.fetch.mock.calls[0][1].connectTimeout).toBe(3_000);
-  });
-
-  it("gives a control plane on this machine a longer default deadline", async () => {
-    // The baked control-plane base means the same call can point at a `next dev`
-    // server whose first hit pays a cold compile. Failing that at the production
-    // deadline would break the one-knob self-hosted workflow.
-    mocks.webBaseOverride.value = "http://localhost:3000";
-    expect(isLocalControlPlaneBase()).toBe(true);
-    expect(defaultTauriFetchTimeoutMs()).toBe(TAURI_FETCH_LOCAL_TIMEOUT_MS);
-
-    vi.useFakeTimers();
-    hangUntilAborted();
-    const pending = tauriFetchWithDeadline("http://localhost:3000/api/enterprise/policy");
-    const state = trackSettlement(pending);
-
-    await vi.advanceTimersByTimeAsync(TAURI_FETCH_TIMEOUT_MS + 1);
-    expect(state.settled).toBe(false);
-
-    await vi.advanceTimersByTimeAsync(TAURI_FETCH_LOCAL_TIMEOUT_MS);
-    await expect(pending).rejects.toThrow(/timed out after 60000ms/);
-  }, 20_000);
-
-  it("treats a LAN control plane as local and a public one as production", () => {
-    // web_base.rs's own example is a baked build against 192.168.x — that is a
-    // developer / on-prem test, and it pays cold compiles.
-    for (const local of [
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-      "http://192.168.10.161:3000",
-      "http://10.1.2.3:3000",
-      "http://172.20.0.5:3000",
-      "http://dev.localhost:3000",
-      "http://mac-studio.local:3000",
-    ]) {
-      mocks.webBaseOverride.value = local;
-      expect(isLocalControlPlaneBase()).toBe(true);
-    }
-
-    // A customer's own control plane is PRODUCTION. Handing it the cold-compile
-    // grace period would leave the population most likely to sit behind a wedged
-    // internal gateway staring at the blank gate for a full minute — the very
-    // complaint this deadline exists to fix.
-    for (const production of [
-      "https://screenpipe.corp.example.com",
-      "https://my-preview.vercel.app",
-      "https://8.8.8.8",
-    ]) {
-      mocks.webBaseOverride.value = production;
-      expect(isLocalControlPlaneBase()).toBe(false);
-      expect(defaultTauriFetchTimeoutMs()).toBe(TAURI_FETCH_TIMEOUT_MS);
-    }
-
-    mocks.webBaseOverride.value = null;
-    expect(isLocalControlPlaneBase()).toBe(false);
   });
 
   it("keeps the caller's own signal working, composed with the deadline", async () => {

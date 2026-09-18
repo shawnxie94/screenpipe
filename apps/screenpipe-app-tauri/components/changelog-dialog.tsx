@@ -21,7 +21,7 @@ interface ChangelogEntry {
   commitCount: number;
 }
 
-const CHANGELOG_API = screenpipeWebUrl("/api/changelog?limit=50", "https://screenpipe.com");
+const CHANGELOG_API = screenpipeWebUrl("/api/changelog?limit=50");
 
 async function fetchRemote(): Promise<ChangelogEntry[] | null> {
   try {
@@ -118,7 +118,7 @@ export const ChangelogDialog: React.FC = () => {
         <div className="px-6 pt-6 pb-4 border-b border-border flex items-center justify-between">
           <h1 className="text-xl font-semibold">更新日志</h1>
           <a
-            href={screenpipeWebUrl("/changelog", "https://screenpipe.com")}
+            href={screenpipeWebUrl("/changelog")}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -201,7 +201,7 @@ export const ChangelogDialog: React.FC = () => {
             <div className="text-sm text-muted-foreground font-mono">
               无法获取更新日志。请稍后重试，或访问{" "}
               <a
-                href={screenpipeWebUrl("/changelog", "https://screenpipe.com")}
+                href={screenpipeWebUrl("/changelog")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline hover:text-foreground"

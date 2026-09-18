@@ -54,20 +54,9 @@
  */
 
 import { fetch as tauriFetch, type ClientOptions } from "@tauri-apps/plugin-http";
-import { PROD_WEB_BASE, screenpipeWebBase } from "@/lib/web-url";
 
-/** Overall deadline against the production control plane / public internet. */
+/** Overall deadline against the public internet. */
 export const TAURI_FETCH_TIMEOUT_MS = 30_000;
-/**
- * Overall deadline when NEXT_PUBLIC_SCREENPIPE_WEB_URL points at a control
- * plane on this machine or this LAN. That is the developer / on-prem-test
- * shape the baked-base work documents (`src-tauri/src/web_base.rs` uses
- * `NEXT_PUBLIC_SCREENPIPE_WEB_URL=http://192.168.10.161:3000 bun tauri build`
- * as its own example), and the first hit on such a base pays a cold `next dev`
- * compile that routinely exceeds the production budget. The one-knob workflow
- * must not start failing the gate because of a deadline.
- */
-export const TAURI_FETCH_LOCAL_TIMEOUT_MS = 60_000;
 /** TCP connect deadline handed to reqwest via the plugin. */
 export const TAURI_FETCH_CONNECT_TIMEOUT_MS = 10_000;
 /**
@@ -81,55 +70,12 @@ export const TAURI_FETCH_CONNECT_TIMEOUT_MS = 10_000;
  */
 export const TAURI_FETCH_MIN_TIMEOUT_MS = 1_000;
 
-/**
- * True when the baked web base points somewhere that cannot be reached from
- * the public internet: loopback, a private/link-local IPv4 literal, or a
- * development-only TLD.
- *
- * Deliberately NARROWER than "the base was overridden at all". A baked
- * enterprise build pointing at a customer's own PUBLIC control plane
- * (`https://screenpipe.corp.example.com`) is production, not a dev server —
- * `lib/auth-guard.tsx` documents that exact shape — and handing it the cold
- * compile grace period would leave the population most likely to sit behind a
- * wedged internal gateway staring at the blank gate for 60s, which is the very
- * complaint this deadline exists to fix.
- */
-export function isLocalControlPlaneBase(): boolean {
-  const base = screenpipeWebBase(PROD_WEB_BASE);
-  if (base === PROD_WEB_BASE) return false;
-
-  let host: string;
-  try {
-    host = new URL(base).hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  } catch {
-    return false;
-  }
-
-  if (host === "localhost" || host === "0.0.0.0" || host === "::1" || host === "::") return true;
-  if (/(^|\.)(localhost|local|test|internal)$/.test(host)) return true;
-  // IPv4 literals only — a hostname that merely RESOLVES to a private address
-  // is somebody's real deployment and gets the production budget.
-  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
-  if (!v4) return false;
-  const [a, b] = [Number(v4[1]), Number(v4[2])];
-  if (a === 127 || a === 10) return true;
-  if (a === 192 && b === 168) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 169 && b === 254) return true;
-  return false;
-}
-
-/** Base-aware default overall deadline. */
-export function defaultTauriFetchTimeoutMs(): number {
-  return isLocalControlPlaneBase() ? TAURI_FETCH_LOCAL_TIMEOUT_MS : TAURI_FETCH_TIMEOUT_MS;
-}
-
 export type TauriFetchInit = RequestInit & ClientOptions;
 
 export interface TauriFetchDeadlineOptions {
   /**
    * Overall deadline in ms, covering connect, headers AND reading the response
-   * body to completion. Defaults to {@link defaultTauriFetchTimeoutMs}.
+   * body to completion. Defaults to TAURI_FETCH_TIMEOUT_MS.
    *
    * Opting out of the deadline entirely (long-lived streams) requires exactly
    * `Number.POSITIVE_INFINITY`. Any other unusable value — 0, negative, NaN,
@@ -163,7 +109,7 @@ function timeoutError(input: URL | Request | string, timeoutMs: number): Error {
  * trying hardest to be careful about time.
  */
 function resolveTimeoutMs(requested: number | undefined): number {
-  const timeoutMs = requested ?? defaultTauriFetchTimeoutMs();
+  const timeoutMs = requested ?? TAURI_FETCH_TIMEOUT_MS;
   if (timeoutMs === Number.POSITIVE_INFINITY) return Number.POSITIVE_INFINITY;
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) return TAURI_FETCH_MIN_TIMEOUT_MS;
   return timeoutMs;

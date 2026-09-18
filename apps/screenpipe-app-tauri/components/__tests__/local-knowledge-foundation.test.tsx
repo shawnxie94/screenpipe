@@ -36,7 +36,6 @@ vi.mock("@/lib/hooks/use-settings", () => ({ useSettings: () => ({ settings: { u
 vi.mock("@/lib/hooks/use-event-listener", () => ({ useEventListener: vi.fn() }));
 vi.mock("@/components/settings/pipes-section", () => ({ PipesSection: () => <div>installed tasks</div> }));
 vi.mock("@/components/notification-bell", () => ({ NotificationBell: () => null }));
-vi.mock("@/components/pipe-store-submission", () => ({ PipeStoreSubmissionDialog: () => null }));
 vi.mock("@/lib/stores/feedback-store", () => ({ useFeedbackStore: () => vi.fn() }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
 
