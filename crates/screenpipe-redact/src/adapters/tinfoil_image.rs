@@ -81,7 +81,7 @@ pub struct TinfoilImageConfig {
     /// to `SCREENPIPE_PRIVACY_FILTER_REPO`, then [`DEFAULT_REPO`].
     pub repo: Option<String>,
     /// Bearer token. Falls back through `SCREENPIPE_PRIVACY_FILTER_API_KEY`,
-    /// `SCREENPIPE_LOCAL_API_KEY`, then `SCREENPIPE_API_AUTH_KEY` (deprecated alias).
+    /// then `SCREENPIPE_LOCAL_API_KEY`.
     pub api_key: Option<String>,
     /// Per-request timeout. Default 30 s.
     pub timeout: Option<Duration>,
@@ -146,7 +146,6 @@ impl TinfoilImageRedactor {
             std::env::var("SCREENPIPE_PRIVACY_FILTER_API_KEY")
                 .ok()
                 .or_else(|| std::env::var("SCREENPIPE_LOCAL_API_KEY").ok())
-                .or_else(|| std::env::var("SCREENPIPE_API_AUTH_KEY").ok())
         });
 
         let (bearer, has_auth) = match api_key.as_deref() {
@@ -387,7 +386,6 @@ mod tests {
         // Make sure no env var is leaking in.
         std::env::remove_var("SCREENPIPE_PRIVACY_FILTER_API_KEY");
         std::env::remove_var("SCREENPIPE_LOCAL_API_KEY");
-        std::env::remove_var("SCREENPIPE_API_AUTH_KEY");
         let r = TinfoilImageRedactor::new(cfg());
         assert!(!r.has_auth());
     }

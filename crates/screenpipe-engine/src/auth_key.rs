@@ -319,10 +319,10 @@ pub async fn find_api_auth_key() -> Option<String> {
         }
     }
     // Tauri sidecar processes (pi-agent shelling into bash) inherit the
-    // app's env under different names. Honor those too — without this the
+    // app's env under a different name. Honor it too — without this the
     // agent's `connection list` couldn't authenticate even though the key
     // was right there.
-    for var in ["SCREENPIPE_LOCAL_API_KEY", "SCREENPIPE_API_AUTH_KEY"] {
+    for var in ["SCREENPIPE_LOCAL_API_KEY"] {
         if let Ok(k) = std::env::var(var) {
             if !k.is_empty() {
                 return Some(k);

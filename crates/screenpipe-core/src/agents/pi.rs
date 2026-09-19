@@ -576,9 +576,7 @@ pub(crate) fn pi_event_protocol_error(event: &serde_json::Value) -> Option<&'sta
 pub struct PiExecutor {
     /// Bearer token for the *local* screenpipe-server API (localhost:3030).
     /// Exposed to the Pi subprocess as `SCREENPIPE_LOCAL_API_KEY` so bash/TS
-    /// pipe code can authenticate against the local server. `SCREENPIPE_API_AUTH_KEY`
-    /// is also exported as a deprecated alias (one release) for old pipe.md
-    /// files on disk. None = auth disabled.
+    /// pipe code can authenticate against the local server. None = auth disabled.
     pub api_auth_key: Option<String>,
 }
 
@@ -1282,13 +1280,8 @@ impl PiExecutor {
         }
 
         // Canonical name: SCREENPIPE_LOCAL_API_KEY. The AUTH_KEY alias is
-        // kept ONE release as a deprecated fallback for user-installed
-        // pipe.md files that hardcoded the old name (e.g. an older
-        // meeting-summary install on disk that install_builtin_pipes won't
-        // overwrite). TODO(remove next release): drop SCREENPIPE_API_AUTH_KEY.
         if let Some(ref key) = self.api_auth_key {
             cmd.env("SCREENPIPE_LOCAL_API_KEY", key);
-            cmd.env("SCREENPIPE_API_AUTH_KEY", key); // deprecated alias
         }
 
         // Auto-auth the agent's `curl localhost:3030/...` calls via a bash
@@ -1429,10 +1422,8 @@ impl PiExecutor {
             }
         }
 
-        // See spawn_pi above — TODO(remove next release): drop the deprecated alias.
         if let Some(ref key) = self.api_auth_key {
             cmd.env("SCREENPIPE_LOCAL_API_KEY", key);
-            cmd.env("SCREENPIPE_API_AUTH_KEY", key); // deprecated alias
         }
 
         if let Some(ids) = mcp_server_allowlist {

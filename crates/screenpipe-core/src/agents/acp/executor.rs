@@ -216,7 +216,6 @@ impl AcpExecutor {
         }
         if let Some(key) = Self::pipe_token(working_dir).or_else(|| self.local_api_key.clone()) {
             command.env("SCREENPIPE_LOCAL_API_KEY", &key);
-            command.env("SCREENPIPE_API_AUTH_KEY", key);
         }
         if let Ok(path) = crate::agents::bash_env::ensure_wrapper_in_default_dir() {
             command.env("BASH_ENV", path);

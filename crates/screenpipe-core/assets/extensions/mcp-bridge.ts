@@ -14,10 +14,7 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 const API_BASE = `http://localhost:${process.env.SCREENPIPE_PORT || 3030}/mcp-servers`;
-const AUTH_KEY =
-  process.env.SCREENPIPE_LOCAL_API_KEY ||
-  process.env.SCREENPIPE_API_AUTH_KEY || // deprecated alias, drop next release
-  "";
+const AUTH_KEY = process.env.SCREENPIPE_LOCAL_API_KEY || "";
 const SESSION_ID = process.env.SCREENPIPE_SESSION_ID || "";
 const MCP_ALLOWLIST_RAW = process.env.SCREENPIPE_MCP_SERVER_ALLOWLIST;
 const MCP_ALLOWLIST =
