@@ -541,7 +541,7 @@ fn hot_frame_to_timeseries(hot: &HotFrame, audio_entries: Vec<AudioEntry>) -> Ti
             app_name: hot.app_name.to_string(),
             window_name: hot.window_name.to_string(),
             transcription: String::new(),
-            ocr_text: hot.ocr_text_preview.to_string(),
+            text: hot.ocr_text_preview.to_string(),
             browser_url: hot.browser_url.as_deref().map(String::from),
         },
         audio_entries,
