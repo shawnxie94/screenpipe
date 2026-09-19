@@ -82,8 +82,7 @@ fn join_names<I: IntoIterator<Item = String>>(names: I) -> String {
 }
 
 fn recording_summary(active: u64) -> String {
-    let unit = if active == 1 { "display" } else { "displays" };
-    format!("now recording {} {}", active, unit)
+    format!("正在录制 {} 台显示器", active)
 }
 
 fn format_event(data: &serde_json::Value) -> Option<(String, String)> {
@@ -107,11 +106,11 @@ fn format_event(data: &serde_json::Value) -> Option<(String, String)> {
 
         // Pure plug-in.
         (1, 0) => Some((
-            "display connected".to_string(),
+            "显示器已连接".to_string(),
             format!("{} — {}", pick_name(added[0]), recording_summary(active)),
         )),
         (n, 0) => Some((
-            format!("{} displays connected", n),
+            format!("已连接 {} 台显示器", n),
             format!(
                 "{} — {}",
                 join_names(added.iter().map(|v| pick_name(v))),
@@ -121,11 +120,11 @@ fn format_event(data: &serde_json::Value) -> Option<(String, String)> {
 
         // Pure unplug.
         (0, 1) => Some((
-            "display disconnected".to_string(),
+            "显示器已断开".to_string(),
             format!("{} — {}", pick_name(removed[0]), recording_summary(active)),
         )),
         (0, n) => Some((
-            format!("{} displays disconnected", n),
+            format!("已断开 {} 台显示器", n),
             format!(
                 "{} — {}",
                 join_names(removed.iter().map(|v| pick_name(v))),
@@ -138,7 +137,7 @@ fn format_event(data: &serde_json::Value) -> Option<(String, String)> {
         // at the same time. Reading "+1 / −1" for that is confusing; the
         // user just *switched* to a different display.
         (1, 1) => Some((
-            "switched display".to_string(),
+            "已切换显示器".to_string(),
             format!(
                 "{} → {} — {}",
                 pick_name(removed[0]),
@@ -178,9 +177,9 @@ mod tests {
             "active_count": 2,
         }))
         .unwrap();
-        assert_eq!(t, "display connected");
+        assert_eq!(t, "显示器已连接");
         assert!(b.starts_with("Studio Display"));
-        assert!(b.contains("now recording 2 displays"));
+        assert!(b.contains("正在录制 2 台显示器"));
     }
 
     #[test]
@@ -191,7 +190,7 @@ mod tests {
             "active_count": 3,
         }))
         .unwrap();
-        assert_eq!(t, "3 displays connected");
+        assert_eq!(t, "已连接 3 台显示器");
         assert!(b.contains("A, B, and C"));
     }
 
@@ -203,9 +202,9 @@ mod tests {
             "active_count": 1,
         }))
         .unwrap();
-        assert_eq!(t, "display disconnected");
+        assert_eq!(t, "显示器已断开");
         assert!(b.starts_with("Studio Display"));
-        assert!(b.contains("now recording 1 display"));
+        assert!(b.contains("正在录制 1 台显示器"));
     }
 
     #[test]
@@ -216,9 +215,9 @@ mod tests {
             "active_count": 1,
         }))
         .unwrap();
-        assert_eq!(t, "switched display");
+        assert_eq!(t, "已切换显示器");
         assert!(b.contains("MacBook Pro Display → Studio Display"));
-        assert!(b.contains("now recording 1 display"));
+        assert!(b.contains("正在录制 1 台显示器"));
     }
 
     #[test]

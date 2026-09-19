@@ -251,8 +251,8 @@ pub async fn try_self_heal_at_launch(
 
     if notify_user {
         client::send_typed_with_priority(
-            "recording resumed",
-            "screenpipe hit a temporary database error. your existing database passed a health check, so recording resumed without a rebuild.",
+            "录制已恢复",
+            "screenpipe 遇到一次临时数据库错误。你的现有数据库通过了健康检查，录制已恢复，无需重建。",
             "db_recovery",
             Some(10_000),
             NotificationPriority::Normal,

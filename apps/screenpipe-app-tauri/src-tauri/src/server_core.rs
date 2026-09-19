@@ -727,11 +727,11 @@ impl ServerCore {
                 let msg = if e.kind() == std::io::ErrorKind::AddrInUse {
                     match identify_port_holder(config.port).await {
                         Some(proc) => format!(
-                            "port {} is already in use by {}. close that process or set SCREENPIPE_PORT to a different value",
+                            "端口 {} 已被 {} 占用。请关闭该进程，或将 SCREENPIPE_PORT 设置为其他端口",
                             config.port, proc
                         ),
                         None => format!(
-                            "port {} is already in use by another process. close that process or set SCREENPIPE_PORT to a different value",
+                            "端口 {} 已被其他进程占用。请关闭该进程，或将 SCREENPIPE_PORT 设置为其他端口",
                             config.port
                         ),
                     }

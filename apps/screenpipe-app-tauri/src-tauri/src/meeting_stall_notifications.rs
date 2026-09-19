@@ -79,9 +79,9 @@ fn handle_audio_stall(app: &AppHandle, event: StallEvent) {
         if let Err(e) = app_for_notify
             .notification()
             .builder()
-            .title("screenpipe is not capturing audio")
+            .title("screenpipe 未采集到音频")
             .body(format!(
-                "no audio reached the meeting after {elapsed}s — check mic permissions or restart the recorder"
+                "会议已 {elapsed} 秒未收到音频 — 请检查麦克风权限或重启录制器"
             ))
             .show()
         {
@@ -103,8 +103,8 @@ fn handle_transcript_stall(app: &AppHandle, event: StallEvent) {
     );
 
     client::send_typed_with_actions_and_priority(
-        "live transcript not flowing",
-        format!("audio is still being captured, but the transcript is delayed by {elapsed}s — keep the meeting open while screenpipe retries"),
+        "实时转录停滞",
+        format!("音频仍在采集，但转录已延迟 {elapsed} 秒 — 请保持会议窗口打开，screenpipe 会重试"),
         "meeting",
         Some(30_000),
         Vec::new(),

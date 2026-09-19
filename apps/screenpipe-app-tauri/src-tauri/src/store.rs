@@ -2356,13 +2356,10 @@ impl IcsCalendarSettingsStore {
 /// give the one action that usually fixes it.
 pub fn locked_store_alert_message(detail: &str) -> String {
     format!(
-        "screenpipe could not open your settings, so it stopped before starting.\n\n\
-         Your settings file is encrypted and screenpipe needs the system keychain \
-         to unlock it. This usually means the keychain is locked or was not \
-         available yet, often right after a restart or an OS update.\n\n\
-         Nothing was deleted or overwritten. Your settings are still on disk.\n\n\
-         Unlock your login keychain, then open screenpipe again. If it keeps \
-         happening, send this to support:\n{detail}"
+        "screenpipe 无法读取你的设置，因此在启动前停止了。\n\n\
+         你的设置文件是加密的，screenpipe 需要系统钥匙串才能解锁它。这通常意味着钥匙串处于锁定状态或尚未就绪，常见于刚重启或刚完成系统更新之后。\n\n\
+         没有任何内容被删除或覆盖，你的设置仍保存在磁盘上。\n\n\
+         请解锁你的登录钥匙串，然后重新打开 screenpipe。如果问题反复出现，请把以下内容发送给支持团队：\n{detail}"
     )
 }
 

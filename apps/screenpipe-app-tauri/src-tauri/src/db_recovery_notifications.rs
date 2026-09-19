@@ -78,12 +78,12 @@ fn notify(app: &AppHandle, state: DbRecoveryState) {
 
     let (title, body) = match state {
         DbRecoveryState::RestartFailed => (
-            "recording paused",
-            "screenpipe couldn't restart recording after a database error. reopen screenpipe to continue with protected recovery.",
+            "录制已暂停",
+            "数据库出错后 screenpipe 无法重启录制。请重新打开 screenpipe，以受保护恢复方式继续。",
         ),
         DbRecoveryState::NeedsRecovery => (
-            "recording paused",
-            "your original database is protected. reopen screenpipe to continue with protected recovery.",
+            "录制已暂停",
+            "原始数据库已受保护。请重新打开 screenpipe，以受保护恢复方式继续。",
         ),
     };
 
@@ -94,7 +94,7 @@ fn restart_verification_action() -> serde_json::Value {
     json!({
         "id": "restart-database-verification",
         "action": "restart-database-verification",
-        "label": "restart and verify",
+        "label": "重启并验证",
         "type": "deeplink",
         "url": RESTART_VERIFICATION_DEEPLINK,
         "primary": true,
@@ -116,15 +116,15 @@ fn dismiss_action() -> serde_json::Value {
     json!({
         "id": "dismiss-database-recovery",
         "action": "dismiss-database-recovery",
-        "label": "not now",
+        "label": "暂不",
         "type": "dismiss",
     })
 }
 
 fn send_restart_verification_offer() {
     client::send_typed_with_actions_and_priority(
-        "recording paused — verification required",
-        "screenpipe protected your database after a short read. restart the app to verify the unchanged database before recording resumes.",
+        "录制已暂停 — 需要验证",
+        "读取时发生短暂异常，screenpipe 已保护你的数据库。请重启应用以验证数据库未被更改，然后录制才会恢复。",
         "db_recovery",
         Some(0),
         vec![restart_verification_action(), dismiss_action()],
@@ -155,13 +155,13 @@ pub fn restart_quarantined_database_verification(app: AppHandle) -> Result<(), S
     verification_restart_prerequisite(&database_path)?;
     RECOVERY_ACTIVE
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
-        .map_err(|_| "database recovery is already running".to_string())?;
+        .map_err(|_| "数据库恢复已在进行中".to_string())?;
     if crate::process_exit::QUIT_REQUESTED
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
         .is_err()
     {
         RECOVERY_ACTIVE.store(false, Ordering::SeqCst);
-        return Err("an app restart or quit is already pending".to_string());
+        return Err("已存在待执行的重启或退出".to_string());
     }
 
     info!("user approved fresh-process verification of the quarantined database generation");
@@ -175,11 +175,11 @@ pub fn restart_quarantined_database_verification(app: AppHandle) -> Result<(), S
 
 fn send_recovery_offer() {
     client::send_typed_with_actions_and_priority(
-        "recording paused — database repair needed",
-        "your original database is protected. screenpipe can repair a verified copy and preserve the original. keep at least twice the database size free while it works.",
+        "录制已暂停 — 需要修复数据库",
+        "原始数据库已受保护。screenpipe 可以修复一个经验证的副本并保留原始数据库。修复期间请保留至少两倍于数据库大小的可用空间。",
         "db_recovery",
         Some(0),
-        vec![recovery_action("recover database"), dismiss_action()],
+        vec![recovery_action("修复数据库"), dismiss_action()],
         NotificationPriority::High,
     );
 }
@@ -225,8 +225,8 @@ fn start_quarantined_database_recovery_inner(
     if RECOVERY_ACTIVE.swap(true, Ordering::SeqCst) {
         if initiation.is_interactive() {
             client::send_typed_with_priority(
-                "database repair already running",
-                "keep screenpipe open while it builds and verifies a fresh database.",
+                "数据库修复已在进行中",
+                "在 screenpipe 构建并验证新数据库期间，请保持其打开。",
                 "db_recovery",
                 Some(8_000),
                 NotificationPriority::High,
@@ -238,8 +238,8 @@ fn start_quarantined_database_recovery_inner(
     RECOVERY_QUIT_NOTICE_SHOWN.store(false, Ordering::SeqCst);
     if initiation.is_interactive() {
         client::send_typed_with_priority(
-            "repairing your database",
-            "your original data is protected. screenpipe is building and verifying a fresh copy. keep screenpipe open.",
+            "正在修复你的数据库",
+            "你的原始数据已受保护。screenpipe 正在构建并验证一个新副本。请保持 screenpipe 打开。",
             "db_recovery",
             Some(0),
             NotificationPriority::High,
@@ -252,8 +252,8 @@ fn start_quarantined_database_recovery_inner(
                 RECOVERY_ACTIVE.store(false, Ordering::SeqCst);
                 if initiation.is_interactive() {
                     client::send_typed_with_priority(
-                        "database repaired",
-                        "your original database was preserved. screenpipe is reopening and checking recording.",
+                        "数据库已修复",
+                        "原始数据库已保留。screenpipe 正在重新打开并检查录制。",
                         "db_recovery",
                         Some(0),
                         NotificationPriority::High,
@@ -270,11 +270,11 @@ fn start_quarantined_database_recovery_inner(
                 error!("protected database recovery failed: {recovery_error:#}");
                 if initiation.is_interactive() {
                     client::send_typed_with_actions_and_priority(
-                        "database repair paused",
-                        "your original data is still protected. screenpipe couldn't finish the repair. check free disk space, then retry. technical details were saved to the logs.",
+                        "数据库修复已暂停",
+                        "你的原始数据仍受保护。screenpipe 未能完成修复。请检查可用磁盘空间后重试。技术细节已保存到日志。",
                         "db_recovery",
                         Some(0),
-                        vec![recovery_action("retry repair"), dismiss_action()],
+                        vec![recovery_action("重试修复"), dismiss_action()],
                         NotificationPriority::High,
                     );
                 }
@@ -297,8 +297,8 @@ pub fn notify_recovery_quit_blocked() {
         return;
     }
     client::send_typed_with_priority(
-        "database repair still running",
-        "keep screenpipe open until the repair finishes. your original data remains protected.",
+        "数据库修复仍在进行中",
+        "在修复完成前请保持 screenpipe 打开。你的原始数据仍受保护。",
         "db_recovery",
         Some(8_000),
         NotificationPriority::High,
@@ -324,7 +324,7 @@ mod tests {
 
     #[test]
     fn recovery_action_routes_back_to_the_app_without_technical_details() {
-        let action = recovery_action("recover database");
+        let action = recovery_action("修复数据库");
         assert_eq!(action["type"], "deeplink");
         assert_eq!(action["url"], RECOVERY_DEEPLINK);
         assert_eq!(action["primary"], true);
@@ -334,7 +334,7 @@ mod tests {
     #[test]
     fn restart_verification_action_is_explicit_and_primary() {
         let action = restart_verification_action();
-        assert_eq!(action["label"], "restart and verify");
+        assert_eq!(action["label"], "重启并验证");
         assert_eq!(action["type"], "deeplink");
         assert_eq!(action["url"], RESTART_VERIFICATION_DEEPLINK);
         assert_eq!(action["primary"], true);
@@ -374,7 +374,7 @@ mod tests {
     fn dismiss_action_is_explicit_and_non_primary() {
         let action = dismiss_action();
         assert_eq!(action["type"], "dismiss");
-        assert_eq!(action["label"], "not now");
+        assert_eq!(action["label"], "暂不");
         assert!(action.get("primary").is_none());
     }
 

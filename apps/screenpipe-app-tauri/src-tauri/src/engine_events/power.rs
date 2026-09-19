@@ -89,51 +89,49 @@ pub(super) fn handle(app: &AppHandle, _name: &str, data: &Value) {
     let (title, body) = match (evt.to.as_str(), reason) {
         // ── FullPause: only legitimate cause is critical battery ────────
         ("FullPause", Some("thermal_critical") | Some("thermal_serious")) => (
-            "device overheating — capture paused",
-            "system is too hot — capture stopped to let it cool down.".to_string(),
+            "设备过热 — 采集已暂停",
+            "系统温度过高 — 已停止采集以帮助散热。".to_string(),
         ),
         ("FullPause", Some("os_low_power")) => (
-            "low power mode on — capture paused",
-            "macos low power mode is on. plug in or turn off low power mode to resume.".to_string(),
+            "低电量模式已开启 — 采集已暂停",
+            "macOS 低电量模式已开启。接入电源或关闭低电量模式以恢复。".to_string(),
         ),
         ("FullPause", _) => (
-            "battery critical — capture paused",
+            "电量严重不足 — 采集已暂停",
             format!(
-                "battery at {battery}% — all capture stopped. search and timeline still work \
-                on existing data. plug in to resume."
+                "电量 {battery}% — 已停止全部采集。搜索和时间线仍可使用已有数据。接入电源以恢复。"
             ),
         ),
 
         // ── AudioPaused: vision still runs, audio is off ────────────────
         ("AudioPaused", _) => (
-            "battery low — audio paused",
+            "电量低 — 音频已暂停",
             format!(
-                "battery at {battery}% — audio transcription stopped, screenshots paused. \
-                accessibility metadata still captured."
+                "电量 {battery}% — 音频转录已停止，截图已暂停。辅助功能元数据仍在采集。"
             ),
         ),
 
         // ── Saver: throttled but still capturing ────────────────────────
         ("Saver", Some("os_low_power")) => (
-            "low power mode — saver",
-            "macos low power mode is on — switched to saver to match system throttling."
+            "低电量模式 — 省电档",
+            "macOS 低电量模式已开启 — 已切换到省电档以匹配系统降频。"
                 .to_string(),
         ),
         ("Saver", Some("thermal_serious") | Some("thermal_critical")) => (
-            "device warm — saver",
-            "device is warm — throttling capture to reduce heat.".to_string(),
+            "设备发热 — 省电档",
+            "设备发热 — 已降低采集强度以减少发热。".to_string(),
         ),
         ("Saver", _) => (
-            "battery saver",
+            "省电模式",
             format!(
-                "switched to saver — battery at {battery}%, capture throttled to extend battery."
+                "已切换到省电档 — 电量 {battery}%，已降低采集强度以延长续航。"
             ),
         ),
 
         // ── Balanced: mild step down ────────────────────────────────────
         ("Balanced", _) => (
-            "battery saver: balanced",
-            "switched to balanced — slower capture, lower jpeg quality.".to_string(),
+            "省电模式：均衡档",
+            "已切换到均衡档 — 采集变慢，JPEG 质量降低。".to_string(),
         ),
 
         (other, _) => {

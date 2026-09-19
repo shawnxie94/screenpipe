@@ -269,8 +269,8 @@ async fn apply_shortcuts(app: &AppHandle, config: &ShortcutConfig) -> Result<(),
         |app| {
             let _ = app.emit("shortcut-stop-recording", ());
             crate::notifications::client::send(
-                "recording paused",
-                "capture paused — pipes and search still available",
+                "录制已暂停",
+                "采集已暂停 — pipes 和搜索仍可用",
             );
         },
     )

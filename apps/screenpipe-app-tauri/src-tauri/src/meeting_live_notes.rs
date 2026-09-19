@@ -84,8 +84,8 @@ fn room_change_offer_actions(offer: &MeetingRoomChangeOffer) -> Vec<serde_json::
         })
     };
     vec![
-        action("keep-meeting-note", "keep together", "keep", false),
-        action("start-new-meeting-note", "start new note", "switch", true),
+        action("keep-meeting-note", "保留当前录制", "keep", false),
+        action("start-new-meeting-note", "开始新笔记", "switch", true),
     ]
 }
 
@@ -208,14 +208,14 @@ pub fn start(app: AppHandle) {
             let offer = event.data;
             let platform = offer.platform.trim();
             let platform = if platform.is_empty() {
-                "browser meeting"
+                "浏览器会议"
             } else {
                 platform
             };
             client::send_typed_with_actions_and_priority(
-                "new meeting detected",
+                "检测到新会议",
                 format!(
-                    "{platform} may have switched rooms. Keep one recording or start a new note?"
+                    "{platform}可能切换了会议室。保留当前录制，还是开始新笔记？"
                 ),
                 "meeting",
                 Some(30_000),
@@ -282,7 +282,7 @@ pub fn start(app: AppHandle) {
                 actions.push(json!({
                     "id": "join-meeting",
                     "action": "join-meeting",
-                    "label": "join and take notes",
+                    "label": "加入并记笔记",
                     "type": "meeting_join",
                     "url": url,
                     "primary": true,
@@ -297,13 +297,13 @@ pub fn start(app: AppHandle) {
 
             let minutes = ((data.seconds_until_start as f64) / 60.0).ceil() as i64;
             let header = if minutes <= 1 {
-                "meeting starting in 1 min".to_string()
+                "会议 1 分钟后开始".to_string()
             } else {
-                format!("meeting starting in {minutes} min")
+                format!("会议 {minutes} 分钟后开始")
             };
             client::send_typed_with_actions_and_priority(
                 &header,
-                format!("screenpipe is ready to transcribe: {title}"),
+                format!("screenpipe 已准备好转录：{title}"),
                 "meeting",
                 Some(30_000),
                 actions,
@@ -389,7 +389,7 @@ pub fn start(app: AppHandle) {
             let mut actions = vec![json!({
                 "id": "open-live-notes",
                 "action": "open-live-notes",
-                "label": "open note",
+                "label": "打开笔记",
                 "type": "deeplink",
                 "url": url.clone(),
                 "primary": true,
@@ -401,8 +401,8 @@ pub fn start(app: AppHandle) {
             }
 
             client::send_typed_with_actions_and_priority(
-                "meeting detected",
-                format!("screenpipe is saving this meeting for transcription: {title}"),
+                "检测到会议",
+                format!("screenpipe 正在保存此会议以供转录：{title}"),
                 "meeting",
                 Some(30_000),
                 actions,
@@ -563,7 +563,7 @@ fn build_hd_action(
     // Embed the note deeplink so the click also opens the live note. The JS
     // notification handler reads `deeplinkUrl` after the HD start succeeds.
     if let Some(url) = note_url.filter(|u| !u.trim().is_empty()) {
-        action["label"] = json!("open note + HD");
+        action["label"] = json!("打开笔记 + HD");
         action["deeplinkUrl"] = json!(url);
     }
     Some(action)

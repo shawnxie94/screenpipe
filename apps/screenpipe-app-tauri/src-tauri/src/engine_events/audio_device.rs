@@ -120,13 +120,13 @@ fn show_fallback_engaged(app: AppHandle, data: Value) {
         pinned_raw
     };
     let pinned = if pinned_raw.is_empty() {
-        "your selected mic"
+        "你选择的麦克风"
     } else {
         display_name(pinned_raw)
     };
     let fallback_raw = raw_field(&data, "fallback_device");
     let fallback = if fallback_raw.is_empty() {
-        "the default mic"
+        "默认麦克风"
     } else {
         display_name(fallback_raw)
     };
@@ -134,13 +134,12 @@ fn show_fallback_engaged(app: AppHandle, data: Value) {
     mark_warned(key);
 
     let body = format!(
-        "\"{pinned}\" is offline, so screenpipe is recording from \"{fallback}\" \
-         to keep your audio. it'll switch back automatically when \"{pinned}\" returns."
+        "\"{pinned}\"已离线，screenpipe 正改用\"{fallback}\"录音以保留你的音频。\"{pinned}\"恢复后会自动切回。"
     );
     let payload = serde_json::json!({
         "id": format!("audio_device_fallback:{key}"),
         "type": "capture_stall",
-        "title": "mic offline — recording from backup",
+        "title": "麦克风离线 — 已切换备用设备录音",
         "body": body,
         "actions": [],
         "autoDismissMs": 30000
@@ -154,7 +153,7 @@ fn show_fallback_engaged(app: AppHandle, data: Value) {
 fn show_input_unavailable(app: AppHandle, data: Value) {
     let pinned_raw = raw_field(&data, "pinned_device");
     let pinned = if pinned_raw.is_empty() {
-        "your microphone"
+        "你的麦克风"
     } else {
         display_name(pinned_raw)
     };
@@ -162,14 +161,12 @@ fn show_input_unavailable(app: AppHandle, data: Value) {
     mark_warned(NO_INPUT_KEY);
 
     let body = format!(
-        "\"{pinned}\" went offline and there's no other microphone to record from, \
-         so audio capture is paused. reconnect a mic (or enable one in settings) and \
-         screenpipe will resume automatically."
+        "\"{pinned}\"已离线且没有其他可用麦克风，音频采集已暂停。重新连接麦克风（或在设置中启用一个）后，screenpipe 会自动恢复录制。"
     );
     let payload = serde_json::json!({
         "id": format!("audio_device_fallback:{NO_INPUT_KEY}"),
         "type": "capture_stall",
-        "title": "microphone offline — recording paused",
+        "title": "麦克风离线 — 录制已暂停",
         "body": body,
         "actions": [],
         "autoDismissMs": 60000
@@ -192,17 +189,17 @@ fn show_recovered(app: AppHandle, data: Value) {
     }
 
     let body = if key == NO_INPUT_KEY {
-        "a microphone is available again — screenpipe resumed recording.".to_string()
+        "已有可用麦克风 — screenpipe 已恢复录制。".to_string()
     } else {
         format!(
-            "\"{}\" is back — screenpipe is recording from your selected mic again.",
+            "\"{}\"已恢复 — screenpipe 重新使用你选择的麦克风录音。",
             display_name(pinned_raw)
         )
     };
     let payload = serde_json::json!({
         "id": format!("audio_device_fallback_restored:{key}"),
         "type": "capture_stall",
-        "title": "microphone reconnected",
+        "title": "麦克风已重新连接",
         "body": body,
         "actions": [],
         "autoDismissMs": 8000

@@ -234,7 +234,7 @@ fn save_chat(summary: &str) -> Result<String, String> {
     let id = format!("first-run-{now}");
     let conversation = json!({
         "id": id,
-        "title": "What screenpipe saw so far",
+        "title": "screenpipe 目前看到了什么",
         "titleSource": "fallback",
         "messages": [{
             "id": format!("{id}-assistant"),
@@ -278,14 +278,14 @@ async fn ensure_notification(app: &AppHandle, onboarding: &OnboardingStore) -> R
     }
     crate::notifications::client::send_typed_with_actions_priority_and_id_confirmed(
         &notification_id,
-        "your first summary is ready",
-        "See what screenpipe picked up while you worked.",
+        "你的第一份摘要已生成",
+        "看看 screenpipe 在你工作时捕捉到了什么。",
         "firstRunSummary",
         Some(0),
         vec![json!({
             "id": "open-first-run-summary",
             "action": "open-first-run-summary",
-            "label": "view summary",
+            "label": "查看摘要",
             "type": "deeplink",
             "url": "screenpipe://first-run-summary",
             "primary": true,

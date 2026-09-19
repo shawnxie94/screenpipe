@@ -3,27 +3,27 @@
 <plist version="1.0">
 <dict>
     <key>NSMicrophoneUsageDescription</key>
-    <string>This app requires microphone access to record audio.</string>
+    <string>此应用需要麦克风权限以录制音频。</string>
     <key>NSScreenCaptureUsageDescription</key>
-    <string>This app requires screen capture access to record the screen.</string>
+    <string>此应用需要屏幕录制权限以录制屏幕。</string>
     <key>CGRequestScreenCaptureAccess</key>
-    <string>This app requires screen capture access to record the screen.</string>
+    <string>此应用需要屏幕录制权限以录制屏幕。</string>
     <key>NSAudioCaptureUsageDescription</key>
-    <string>screenpipe captures system audio (via the CoreAudio Process Tap) for local transcription. Specific apps can be excluded by listing their bundle IDs in ~/.screenpipe/audio-exclusions.json.</string>
+    <string>screenpipe 通过 CoreAudio Process Tap 采集系统音频以进行本地转录。可在 ~/.screenpipe/audio-exclusions.json 中列出应用的 bundle ID，将特定应用排除在采集之外。</string>
     <key>NSSystemExtensionUsageDescription</key>
-    <string>This app requires system extension access to capture audio output.</string>
+    <string>此应用需要系统扩展权限以采集音频输出。</string>
     <key>NSRemindersUsageDescription</key>
-    <string>screenpipe saves action items it detects from your screen and audio activity to Apple Reminders.</string>
+    <string>screenpipe 会把从你的屏幕和音频活动中识别到的待办事项保存到 Apple 提醒事项。</string>
     <key>NSCalendarsUsageDescription</key>
-    <string>screenpipe reads your calendar to detect meetings. Your calendar data stays on-device.</string>
+    <string>screenpipe 读取你的日历以检测会议。你的日历数据仅保存在本机。</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
-    <string>screenpipe reads your calendar to detect meetings. Your calendar data stays on-device.</string>
+    <string>screenpipe 读取你的日历以检测会议。你的日历数据仅保存在本机。</string>
     <!-- Required for the Automation (Apple Events) consent prompt. Browser URL
          capture sends Apple Events in-process since #5123 (previously routed
          through osascript, which carried its own usage description); without
          this key macOS denies the request silently and never shows a prompt. -->
     <key>NSAppleEventsUsageDescription</key>
-    <string>screenpipe reads the active tab URL from your browser so captured screens are linked to the page you were on. Your browsing data stays on-device.</string>
+    <string>screenpipe 读取浏览器当前标签页的 URL，以便将截取的屏幕与你在看的网页关联。你的浏览数据仅保存在本机。</string>
     <key>NSAppTransportSecurity</key>
     <dict>
         <key>NSAllowsLocalNetworking</key>

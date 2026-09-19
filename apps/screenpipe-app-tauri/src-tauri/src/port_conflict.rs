@@ -48,17 +48,17 @@ pub fn show_healthy_screenpipe(app: &AppHandle, port: u16) {
     }
 
     let message = if port == 11435 {
-        "another healthy screenpipe is already running but could not be focused. quit the other screenpipe, then reopen this one."
+        "另一个正常的 screenpipe 已在运行，但无法将其调到前台。请先退出另一个 screenpipe，再重新打开本应用。"
             .to_string()
     } else {
         format!(
-            "another healthy screenpipe is already using local port {port}. quit the other screenpipe, then retry recording."
+            "另一个正常的 screenpipe 正在使用本地端口 {port}。请先退出另一个 screenpipe，然后重试录制。"
         )
     };
 
     app.dialog()
         .message(message)
-        .title("screenpipe is already running")
+        .title("screenpipe 已在运行")
         .buttons(MessageDialogButtons::Ok)
         .show(|_| {});
 }
@@ -73,15 +73,15 @@ pub fn show_reclaim_failed(app: &AppHandle, port: u16) {
 
     app.dialog()
         .message(format!(
-            "local port {port} is still in use by an unhealthy process. close it, then retry screenpipe."
+            "本地端口 {port} 仍被异常进程占用。请关闭该进程，然后重试 screenpipe。"
         ))
-        .title("screenpipe could not reclaim its local port")
+        .title("screenpipe 无法收回本地端口")
         .buttons(MessageDialogButtons::Ok)
         .show(|_| {});
 }
 
 pub fn is_error(error: &str, port: u16) -> bool {
-    error.starts_with(&format!("port {port} is already in use"))
+    error.starts_with(&format!("端口 {port} 已被"))
 }
 
 pub async fn reclaim_owner(port: u16, healthy_screenpipe: bool) {

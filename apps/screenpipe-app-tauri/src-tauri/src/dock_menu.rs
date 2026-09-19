@@ -57,7 +57,7 @@ pub fn setup_dock_menu(app_handle: AppHandle) {
                 let menu: id = msg_send![class!(NSMenu), new];
 
                 // "Show screenpipe"
-                let title = NSString::alloc(nil).init_str("Show screenpipe");
+                let title = NSString::alloc(nil).init_str("显示 screenpipe");
                 let action = sel!(showScreenpipe:);
                 let key = NSString::alloc(nil).init_str("");
                 let item: id = msg_send![class!(NSMenuItem), alloc];
@@ -66,7 +66,7 @@ pub fn setup_dock_menu(app_handle: AppHandle) {
                 let _: () = msg_send![menu, addItem: item];
 
                 // "Settings"
-                let title = NSString::alloc(nil).init_str("Settings");
+                let title = NSString::alloc(nil).init_str("设置");
                 let action = sel!(openSettings:);
                 let key = NSString::alloc(nil).init_str("");
                 let item: id = msg_send![class!(NSMenuItem), alloc];

@@ -652,17 +652,17 @@ fn validate_canvas_request(
     }
     if request.notes.len() > MAX_CANVAS_NOTES {
         return Err(format!(
-            "a canvas may contain at most {MAX_CANVAS_NOTES} notes"
+            "画布最多可包含 {MAX_CANVAS_NOTES} 个笔记"
         ));
     }
     if request.arrows.len() > MAX_CANVAS_ARROWS {
         return Err(format!(
-            "a canvas may contain at most {MAX_CANVAS_ARROWS} arrows"
+            "画布最多可包含 {MAX_CANVAS_ARROWS} 条箭头"
         ));
     }
     if request.strokes.len() > MAX_CANVAS_STROKES {
         return Err(format!(
-            "a canvas may contain at most {MAX_CANVAS_STROKES} strokes"
+            "画布最多可包含 {MAX_CANVAS_STROKES} 条笔画"
         ));
     }
 
@@ -695,7 +695,7 @@ fn validate_canvas_request(
             ));
         }
         if note.text.chars().count() > 4_000 {
-            return Err("canvas notes may contain at most 4,000 characters".to_string());
+            return Err("画布笔记最多 4000 字符".to_string());
         }
         validate_canvas_number(note.x, -100_000.0, 100_000.0, "note x")?;
         validate_canvas_number(note.y, -100_000.0, 100_000.0, "note y")?;
@@ -730,7 +730,7 @@ fn validate_canvas_request(
             .as_ref()
             .is_some_and(|label| label.chars().count() > 200)
         {
-            return Err("canvas arrow labels may contain at most 200 characters".to_string());
+            return Err("画布箭头标签最多 200 字符".to_string());
         }
     }
 
@@ -744,7 +744,7 @@ fn validate_canvas_request(
         }
         if stroke.points.len() < 2 || stroke.points.len() > MAX_CANVAS_STROKE_POINTS {
             return Err(format!(
-                "canvas strokes must contain between 2 and {MAX_CANVAS_STROKE_POINTS} points"
+                "画布笔画必须包含 2 到 {MAX_CANVAS_STROKE_POINTS} 个点"
             ));
         }
         for point in &stroke.points {
@@ -761,7 +761,7 @@ fn validate_canvas_document(
     valid_slot_ids: &HashSet<String>,
 ) -> Result<(), String> {
     if document.revision == 0 {
-        return Err("canvas revision must be greater than zero".to_string());
+        return Err("画布修订号必须大于零".to_string());
     }
     validate_canvas_request(
         &SaveKnowledgeViewCanvasRequest {

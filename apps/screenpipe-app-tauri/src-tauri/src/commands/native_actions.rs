@@ -550,16 +550,16 @@ fn run_pipe_from_notification(
         };
         let confirmation = match &outcome {
             Ok(()) => serde_json::json!({
-                "title": format!("{pipe} is running"),
-                "body": "started from your notification — results arrive as a new notification.",
+                "title": format!("{pipe} 正在运行"),
+                "body": "已从通知启动 — 结果将作为新通知送达。",
                 // Toast-only: a "started" echo should not earn an inbox row.
                 "transient": true,
             }),
             Err(e) => {
                 error!("failed to run pipe '{}' from notification action: {}", pipe, e);
                 serde_json::json!({
-                    "title": format!("couldn't run {pipe}"),
-                    "body": format!("the run request failed: {e}"),
+                    "title": format!("无法运行 {pipe}"),
+                    "body": format!("运行请求失败：{e}"),
                 })
             }
         };
@@ -959,8 +959,8 @@ pub(crate) fn dispatch_notification_action(json: String) {
                     .header("Content-Type", "application/json")
                     .body(
                         serde_json::json!({
-                            "title": "HD recording started",
-                            "body": "Capturing this meeting at high frame rate. Stops automatically when the call ends.",
+                            "title": "高清录制已开始",
+                            "body": "正以高帧率采集本次会议。通话结束后自动停止。",
                         })
                         .to_string(),
                     )

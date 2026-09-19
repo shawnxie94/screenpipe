@@ -129,7 +129,7 @@ impl NotificationHistoryEntry {
             "capture paused",
             "not capturing",
             "database needs recovery",
-            "live transcript not flowing",
+            "实时转录停滞",
             "audio paused",
         ]
         .iter()
@@ -431,7 +431,7 @@ mod tests {
 
         let mut display = entry("legacy-display", false);
         display.priority = None;
-        display.title = "switched display".to_string();
+        display.title = "已切换显示器".to_string();
         assert!(!display.is_high_priority());
     }
 }

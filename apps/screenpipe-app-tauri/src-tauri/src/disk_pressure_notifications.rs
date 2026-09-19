@@ -269,7 +269,7 @@ pub(crate) async fn handle(app: &AppHandle, event: DiskSpaceLowEvent) -> DiskPre
         && !crate::local_ui_visibility::is_tray_item_hidden("storage");
     let actions = low_disk_actions(storage_available);
     let delivery = client::send_typed_with_actions_and_priority_confirmed(
-        "recording stopped — disk almost full",
+        "录制已停止 — 磁盘空间不足",
         low_disk_body(
             event.available_bytes,
             event.threshold_bytes,
@@ -301,7 +301,7 @@ fn review_storage_action() -> serde_json::Value {
     json!({
         "id": "review-storage",
         "action": "review-storage",
-        "label": "review storage",
+        "label": "检查存储",
         "type": "deeplink",
         "url": STORAGE_SETTINGS_DEEPLINK,
         "primary": true,
@@ -322,13 +322,12 @@ fn low_disk_body(
     let available = readable_gib(available_bytes);
     let threshold = readable_gib(threshold_bytes);
     let next_step = if storage_available {
-        "review storage to preview cleanup and see the retention options available on this device"
+        "检查存储以预览清理方式，并查看本设备可用的保留策略选项"
     } else {
-        "free disk space before restarting; storage settings are managed by your organization"
+        "重启前请先释放磁盘空间；存储设置由你的组织管理"
     };
     format!(
-        "screenpipe stopped capture because only {available} is free (safety threshold: \
-         {threshold}). {next_step}. search and existing data remain available."
+        "screenpipe 已停止采集，仅剩 {available} 可用（安全阈值：{threshold}）。{next_step}。搜索和已有数据仍可使用。"
     )
 }
 
@@ -357,16 +356,16 @@ mod tests {
             20 * 1024 * 1024 * 1024,
             true,
         );
-        assert!(body.contains("only 1.0 GB is free"));
-        assert!(body.contains("retention options available on this device"));
-        assert!(body.contains("search and existing data remain available"));
+        assert!(body.contains("仅剩 1.0 GB 可用"));
+        assert!(body.contains("本设备可用的保留策略选项"));
+        assert!(body.contains("搜索和已有数据仍可使用"));
     }
 
     #[test]
     fn managed_storage_copy_does_not_offer_an_unavailable_action() {
         let body = low_disk_body(1, 20 * 1024 * 1024 * 1024, false);
-        assert!(body.contains("storage settings are managed by your organization"));
-        assert!(!body.contains("review storage"));
+        assert!(body.contains("存储设置由你的组织管理"));
+        assert!(!body.contains("检查存储"));
         assert!(low_disk_actions(false).is_empty());
     }
 

@@ -773,7 +773,7 @@ pub fn update_show_screenpipe_shortcut(
     let show_window_shortcut = match shortcut_str.parse::<Shortcut>() {
         Ok(s) => s,
         Err(e) => {
-            return Err(format!("failed to parse shortcut: {}", e));
+            return Err(format!("快捷键解析失败：{}", e));
         }
     };
 
@@ -950,7 +950,7 @@ pub async fn get_disk_usage(
         Ok(None) => Err("No disk usage data found".to_string()),
         Err(e) => {
             error!("Failed to get disk usage: {}", e);
-            Err(format!("Failed to get disk usage: {}", e))
+            Err(format!("获取磁盘用量失败：{}", e))
         }
     }
 }
@@ -988,7 +988,7 @@ pub async fn open_google_calendar_auth_window(
     let parsed_url = auth_url.parse().map_err(|e| format!("invalid url: {e}"))?;
     let mut builder =
         WebviewWindowBuilder::new(&app_handle, label, WebviewUrl::External(parsed_url))
-            .title("connect google calendar")
+            .title("连接 Google 日历")
             .inner_size(500.0, 700.0)
             .focused_gated(true);
 
@@ -3410,7 +3410,7 @@ pub async fn open_note_path(path: String) -> Result<(), String> {
         {
             Ok(())
         } else {
-            Err(format!("failed to open note path: {}", path))
+            Err(format!("打开笔记路径失败：{}", path))
         }
     }
     #[cfg(target_os = "windows")]
@@ -3423,7 +3423,7 @@ pub async fn open_note_path(path: String) -> Result<(), String> {
         if open_windows_shell_target(path.clone()).is_ok() {
             Ok(())
         } else {
-            Err(format!("failed to open note path: {}", path))
+            Err(format!("打开笔记路径失败：{}", path))
         }
     }
     #[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
@@ -3432,7 +3432,7 @@ pub async fn open_note_path(path: String) -> Result<(), String> {
         if Command::new("xdg-open").arg(&path).spawn().is_ok() {
             Ok(())
         } else {
-            Err(format!("failed to open note path: {}", path))
+            Err(format!("打开笔记路径失败：{}", path))
         }
     }
 }

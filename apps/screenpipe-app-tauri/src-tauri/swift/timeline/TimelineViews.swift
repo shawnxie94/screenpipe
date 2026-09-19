@@ -159,8 +159,8 @@ struct TimelineFrameCanvas: View {
                 } else {
                     TimelineStatusCard(
                         systemImage: "hourglass",
-                        title: "Loading Timeline",
-                        message: "Fetching your recorded frames...",
+                        title: "正在加载时间线",
+                        message: "正在获取你录制的画面…",
                         showsSpinner: true
                     )
                 }
@@ -171,8 +171,8 @@ struct TimelineFrameCanvas: View {
             case .connectionError(let message):
                 TimelineStatusCard(
                     systemImage: "exclamationmark.triangle",
-                    title: "Connection Error",
-                    message: "Unable to reach your screenpipe data. \(message)",
+                    title: "连接错误",
+                    message: "无法连接你的 screenpipe 数据。\(message)",
                     showsSpinner: false
                 )
             }

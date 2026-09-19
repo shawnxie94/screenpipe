@@ -252,8 +252,8 @@ impl TrayRecordingAction {
 
     fn failure_copy(self) -> (&'static str, &'static str) {
         match self {
-            Self::Start => ("recording could not resume", "resume"),
-            Self::Stop => ("recording could not pause", "pause"),
+            Self::Start => ("录制无法恢复", "恢复"),
+            Self::Stop => ("录制无法暂停", "暂停"),
         }
     }
 }
@@ -314,7 +314,7 @@ fn dispatch_tray_recording_action(
                 tracing::error!(?action, %error, "native tray recording action failed");
                 send_notify(
                     title,
-                    format!("screenpipe could not {verb} capture: {error}"),
+                    format!("screenpipe 无法{verb}录制：{error}"),
                 );
             }
         }
@@ -1038,21 +1038,21 @@ fn recording_status_text(
     audio_capture_status: Option<AudioCaptureStatus>,
 ) -> &'static str {
     match (status, all_capture_disabled, audio_capture_status) {
-        (RecordingStatus::Recording, true, _) => "○ Stopped",
+        (RecordingStatus::Recording, true, _) => "○ 已停止",
         (RecordingStatus::Recording, false, Some(AudioCaptureStatus::WaitingForMeeting)) => {
-            "● Screen recording · audio waiting for meeting"
+            "● 屏幕录制 · 音频等待会议中"
         }
         (
             RecordingStatus::Recording,
             false,
             Some(AudioCaptureStatus::MeetingDetectorUnavailable),
-        ) => "● Screen recording · meeting detection unavailable",
-        (RecordingStatus::Starting, _, _) => "○ Starting…",
-        (RecordingStatus::Recording, _, _) => "● Recording",
-        (RecordingStatus::Paused, _, _) => "◐ Paused",
-        (RecordingStatus::ScheduledPause, _, _) => "○ Outside work hours",
-        (RecordingStatus::Stopped, _, _) => "○ Stopped",
-        (RecordingStatus::Error, _, _) => "○ Error",
+        ) => "● 屏幕录制 · 会议检测不可用",
+        (RecordingStatus::Starting, _, _) => "○ 启动中…",
+        (RecordingStatus::Recording, _, _) => "● 录制中",
+        (RecordingStatus::Paused, _, _) => "◐ 已暂停",
+        (RecordingStatus::ScheduledPause, _, _) => "○ 非工作时间",
+        (RecordingStatus::Stopped, _, _) => "○ 已停止",
+        (RecordingStatus::Error, _, _) => "○ 出错",
     }
 }
 
@@ -1070,7 +1070,7 @@ fn create_dynamic_menu(
             .item(
                 &MenuItemBuilder::with_id(
                     "version",
-                    format!("version {}", app.package_info().version),
+                    format!("版本 {}", app.package_info().version),
                 )
                 .enabled(false)
                 .build(app)?,
@@ -1227,7 +1227,7 @@ fn create_dynamic_menu(
     // Show "fix permissions" when recording is in error state
     if effective_status == RecordingStatus::Error && data.has_permission_issue {
         menu_builder = menu_builder
-            .item(&MenuItemBuilder::with_id("fix_permissions", "⚠ Fix permissions").build(app)?);
+            .item(&MenuItemBuilder::with_id("fix_permissions", "⚠ 修复权限").build(app)?);
     }
 
     // --- Version ---
@@ -1482,7 +1482,7 @@ fn handle_menu_event(app_handle: &AppHandle, event: tauri::menu::MenuEvent) {
                 dispatch_tray_recording_action(
                     app_for_resume,
                     TrayRecordingAction::Start,
-                    Some(("Recording resumed", "screenpipe is recording again.")),
+                    Some(("录制已恢复", "screenpipe 正在继续录制。")),
                 );
             });
             *PAUSE_TIMER.lock().unwrap_or_else(|e| e.into_inner()) = Some(PauseTimer {
@@ -1496,16 +1496,16 @@ fn handle_menu_event(app_handle: &AppHandle, event: tauri::menu::MenuEvent) {
             let pretty = if mins >= 60 {
                 let h = mins / 60;
                 if h == 1 {
-                    "1 hour".to_string()
+                    "1 小时".to_string()
                 } else {
-                    format!("{} hours", h)
+                    format!("{} 小时", h)
                 }
             } else {
-                format!("{} minutes", mins)
+                format!("{} 分钟", mins)
             };
             send_notify(
-                "Recording paused",
-                format!("screenpipe will auto-resume in {}.", pretty),
+                "录制已暂停",
+                format!("screenpipe 将在 {} 后自动恢复。", pretty),
             );
             // Repaint the tray so "Recording" flips to "Paused" immediately.
             let app_for_rebuild = app_handle.clone();
@@ -1810,22 +1810,22 @@ async fn update_menu_if_needed(app: &AppHandle) -> Result<()> {
     let has_perm_issue = new_state.has_permission_issue;
     let audio_capture_status = get_recording_info().audio_capture_status;
     let tooltip: String = if has_perm_issue {
-        "screenpipe — ⚠️ permissions needed".to_string()
+        "screenpipe — ⚠️ 需要权限".to_string()
     } else if effective_status == RecordingStatus::Recording
         && audio_capture_status == Some(AudioCaptureStatus::MeetingDetectorUnavailable)
     {
-        "screenpipe — screen recording; meeting detection unavailable".to_string()
+        "screenpipe — 屏幕录制；会议检测不可用".to_string()
     } else if effective_status == RecordingStatus::Recording
         && audio_capture_status == Some(AudioCaptureStatus::WaitingForMeeting)
     {
-        "screenpipe — screen recording; audio waiting for meeting".to_string()
+        "screenpipe — 屏幕录制；音频等待会议中".to_string()
     } else if effective_status == RecordingStatus::Paused {
         match pause_remaining() {
-            Some(d) => format!("screenpipe — paused, resumes in {}", format_remaining(d)),
-            None => "screenpipe — paused".to_string(),
+            Some(d) => format!("screenpipe — 已暂停，{} 后恢复", format_remaining(d)),
+            None => "screenpipe — 已暂停".to_string(),
         }
     } else if effective_status == RecordingStatus::ScheduledPause {
-        "screenpipe — outside work hours (paused by schedule)".to_string()
+        "screenpipe — 非工作时间（按计划暂停）".to_string()
     } else {
         "screenpipe".to_string()
     };
@@ -1979,7 +1979,7 @@ mod tests {
                 false,
                 Some(AudioCaptureStatus::WaitingForMeeting),
             ),
-            "● Screen recording · audio waiting for meeting"
+            "● 屏幕录制 · 音频等待会议中"
         );
         assert_eq!(
             recording_status_text(
@@ -1987,11 +1987,11 @@ mod tests {
                 false,
                 Some(AudioCaptureStatus::MeetingDetectorUnavailable),
             ),
-            "● Screen recording · meeting detection unavailable"
+            "● 屏幕录制 · 会议检测不可用"
         );
         assert_eq!(
             recording_status_text(RecordingStatus::Recording, false, None),
-            "● Recording"
+            "● 录制中"
         );
     }
 

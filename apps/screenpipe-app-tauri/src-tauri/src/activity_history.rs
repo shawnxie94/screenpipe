@@ -1973,18 +1973,18 @@ async fn generate_inner(
         })?;
     if should_notify_completion(source) {
         crate::notifications::client::send_typed_with_actions_and_priority(
-            "activities updated",
+            "活动已更新",
             if updated.activity_count == 1 {
-                "1 new activity is ready."
+                "1 条新活动已就绪。"
             } else {
-                "Your latest activities are ready."
+                "你最新的活动已就绪。"
             },
             "activity_history",
             Some(20_000),
             vec![json!({
                 "id": "open-activity-history",
                 "action": "open-activity-history",
-                "label": "view activities",
+                "label": "查看活动",
                 "type": "deeplink",
                 "url": "screenpipe://activity",
                 "primary": true,

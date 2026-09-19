@@ -934,24 +934,24 @@ async fn main() {
                 let app_ui_hidden = false;
 
                 let mut app_submenu_builder = SubmenuBuilder::new(app, "screenpipe")
-                    .item(&PredefinedMenuItem::about(app, Some("About screenpipe"), None)?)
+                    .item(&PredefinedMenuItem::about(app, Some("关于 screenpipe"), None)?)
                     .separator();
                 if !app_ui_hidden {
                     app_submenu_builder = app_submenu_builder
-                        .item(&MenuItemBuilder::with_id("settings", "Settings...")
+                        .item(&MenuItemBuilder::with_id("settings", "设置…")
                             .accelerator("CmdOrCtrl+,")
                             .build(app)?)
                         .separator();
                 }
                 let app_submenu = app_submenu_builder
                     .item(
-                        &MenuItemBuilder::with_id("quit_app", "Quit screenpipe")
+                        &MenuItemBuilder::with_id("quit_app", "退出 screenpipe")
                             .accelerator("CmdOrCtrl+Q")
                             .build(app)?,
                     )
                     .build()?;
 
-                let edit_submenu = SubmenuBuilder::new(app, "Edit")
+                let edit_submenu = SubmenuBuilder::new(app, "编辑")
                     .item(&PredefinedMenuItem::undo(app, None)?)
                     .item(&PredefinedMenuItem::redo(app, None)?)
                     .separator()
@@ -966,12 +966,12 @@ async fn main() {
                 // menu-close-window and hides the window only when no tab
                 // consumed the chord. Traffic-light close is unchanged.
                 // Cmd-M still needs a menu key equivalent or AppKit swallows it.
-                let window_submenu = SubmenuBuilder::new(app, "Window")
+                let window_submenu = SubmenuBuilder::new(app, "窗口")
                     .item(&PredefinedMenuItem::minimize(app, None)?)
                     .item(&PredefinedMenuItem::maximize(app, None)?)
                     .separator()
                     .item(
-                        &MenuItemBuilder::with_id("close_window", "Close")
+                        &MenuItemBuilder::with_id("close_window", "关闭")
                             .accelerator("CmdOrCtrl+W")
                             .build(app)?,
                     )
@@ -1111,7 +1111,7 @@ async fn main() {
                 // silently refuses to launch. Say why, and say the settings are
                 // intact, before the process goes away.
                 store::show_fatal_startup_alert(
-                    "screenpipe cannot start",
+                    "screenpipe 无法启动",
                     &store::locked_store_alert_message(&e),
                 );
                 std::io::Error::other(e)

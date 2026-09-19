@@ -198,8 +198,8 @@ enum TimelineBackoff {
     static func retryMessage(attempt: Int) -> String? {
         switch attempt {
         case 0: return nil
-        case 1: return "Loading history... server is warming up"
-        default: return "Timeline is still warming up. Try again in a moment."
+        case 1: return "正在加载历史…服务器正在预热"
+        default: return "时间线仍在预热，请稍后重试。"
         }
     }
 }

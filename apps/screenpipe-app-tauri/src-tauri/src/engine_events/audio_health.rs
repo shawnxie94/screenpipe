@@ -73,15 +73,11 @@ fn show_speaker_silent_notification(app: AppHandle, data: Value) {
         .unwrap_or_default();
 
     let body = if rendering.is_empty() {
-        "you're in a meeting but screenpipe isn't capturing speaker audio, \
-         so the transcript will be missing the other side. check your \
-         playback device, or restart recording."
+        "你正在开会，但 screenpipe 未采集到扬声器音频，转录将缺少对方的发言。请检查播放设备，或重启录制。"
             .to_string()
     } else {
         format!(
-            "you're in a meeting and audio is playing on \"{}\", but screenpipe \
-             isn't capturing speaker audio, so the transcript will be missing \
-             the other side. check your playback device, or restart recording.",
+            "你正在开会，音频正在\"{}\"上播放，但 screenpipe 未采集到扬声器音频，转录将缺少对方的发言。请检查播放设备，或重启录制。",
             rendering
         )
     };
@@ -89,10 +85,10 @@ fn show_speaker_silent_notification(app: AppHandle, data: Value) {
     let payload = serde_json::json!({
         "id": "audio_capture_health_speaker_silent",
         "type": "capture_stall",
-        "title": "meeting audio may not be captured",
+        "title": "会议音频可能未被采集",
         "body": body,
         "actions": [
-            { "label": "RESTART", "action": "restart_recording", "primary": true }
+            { "label": "重启录制", "action": "restart_recording", "primary": true }
         ],
         "autoDismissMs": 30000
     });
@@ -112,17 +108,17 @@ fn show_mic_capture_failed_notification(app: AppHandle, data: Value) {
     let reason = data
         .get("reason")
         .and_then(|v| v.as_str())
-        .unwrap_or("the device may be in exclusive use");
+        .unwrap_or("该设备可能被独占使用");
 
     let body = format!(
-        "{} — recording continues on your default microphone.",
+        "{} — 录制将在默认麦克风上继续。",
         reason
     );
 
     let payload = serde_json::json!({
         "id": "audio_capture_health_mic_capture_failed",
         "type": "capture_stall",
-        "title": "couldn't open your meeting microphone",
+        "title": "无法打开会议麦克风",
         "body": body,
         "actions": [],
         "autoDismissMs": 30000

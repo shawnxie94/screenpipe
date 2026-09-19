@@ -824,13 +824,13 @@ mod tests {
             Some("meeting"),
             None,
             "meeting detected",
-            "screenpipe is saving this meeting for transcription: Google Meet",
+            "screenpipe 正在保存此会议以供转录：Google Meet",
         );
         let second = repeat_key(
             Some("meeting"),
             None,
             "meeting detected",
-            "screenpipe is saving this meeting for transcription: standup",
+            "screenpipe 正在保存此会议以供转录：standup",
         );
         assert!(!check_and_record(&mut ledger, first.clone(), 0, cooldown));
         assert!(
@@ -918,7 +918,7 @@ mod tests {
             Some("meeting"),
             None,
             "meeting detected",
-            "screenpipe is saving this meeting for transcription: Google Meet",
+            "screenpipe 正在保存此会议以供转录：Google Meet",
         );
 
         // `/notify` peeks: nothing recorded yet, so it passes it along.
@@ -962,7 +962,7 @@ mod tests {
     #[test]
     fn asking_the_same_gate_twice_suppresses_a_first_time_alert() {
         let mut ledger = empty_ledger();
-        let key = repeat_key(Some("meeting"), None, "meeting detected", "with alice");
+        let key = repeat_key(Some("meeting"), None, "检测到会议", "with alice");
         let cooldown = repeat_cooldown_ms(Some("meeting"));
 
         // The route clears it and records the delivery.

@@ -460,16 +460,16 @@ fn quit_message(app: &AppHandle, show_minimize: bool) -> String {
         .unwrap_or((true, true));
 
     let stops = match (vision_on, audio_on) {
-        (true, true) => "Screen and audio recording will stop",
-        (true, false) => "Screen recording will stop",
-        (false, true) => "Audio recording will stop",
-        (false, false) => "All recording will stop",
+        (true, true) => "屏幕和音频录制将停止",
+        (true, false) => "屏幕录制将停止",
+        (false, true) => "音频录制将停止",
+        (false, false) => "所有录制将停止",
     };
 
     if show_minimize {
-        format!("{stops}. Minimize to Tray to keep recording in the background.")
+        format!("{stops}。最小化到托盘可在后台继续录制。")
     } else {
-        format!("{stops} when you quit.")
+        format!("退出时{stops}。")
     }
 }
 
@@ -482,11 +482,13 @@ fn show_quit_alert(app: &AppHandle, show_minimize: bool, message: &str) {
     use tauri_nspanel::cocoa::base::{id, nil};
     use tauri_nspanel::cocoa::foundation::NSString;
 
-    // NSAlert binds Return to the first button and Escape only to a button
-    // titled exactly "Cancel", so the order and the literal label matter.
-    const QUIT_BUTTON: &str = "Quit screenpipe";
-    const MINIMIZE_BUTTON: &str = "Minimize to Tray";
-    const CANCEL_BUTTON: &str = "Cancel";
+    // NSAlert binds Return to the first button, but it only auto-binds Escape
+    // to a button titled exactly "Cancel". With a localized title we bind the
+    // Escape key equivalent explicitly so Esc still cancels; the order and
+    // response codes (not the labels) drive the match below.
+    const QUIT_BUTTON: &str = "退出 screenpipe";
+    const MINIMIZE_BUTTON: &str = "最小化到托盘";
+    const CANCEL_BUTTON: &str = "取消";
 
     // NSModalResponse for the first/second added button.
     const FIRST_BUTTON: i64 = 1000;
@@ -500,7 +502,7 @@ fn show_quit_alert(app: &AppHandle, show_minimize: bool, message: &str) {
         // NSAlertStyleInformational — app icon, never a caution-triangle badge.
         let _: () = msg_send![alert, setAlertStyle: 1i64];
 
-        let title = NSString::alloc(nil).init_str("Quit screenpipe?");
+        let title = NSString::alloc(nil).init_str("退出 screenpipe？");
         let _: () = msg_send![alert, setMessageText: title];
         let message = NSString::alloc(nil).init_str(message);
         let _: () = msg_send![alert, setInformativeText: message];
@@ -512,7 +514,11 @@ fn show_quit_alert(app: &AppHandle, show_minimize: bool, message: &str) {
             let _: id = msg_send![alert, addButtonWithTitle: minimize];
         }
         let cancel = NSString::alloc(nil).init_str(CANCEL_BUTTON);
-        let _: id = msg_send![alert, addButtonWithTitle: cancel];
+        let cancel_button: id = msg_send![alert, addButtonWithTitle: cancel];
+        // Localized "取消" no longer matches AppKit's hard-coded "Cancel"
+        // title check, so bind Escape to this button explicitly.
+        let esc_key = NSString::alloc(nil).init_str("\u{1b}");
+        let _: () = msg_send![cancel_button, setKeyEquivalent: esc_key];
 
         // Packaged builds inherit the bundle icon automatically; a bare dev
         // binary has none, so load the repo icon explicitly.

@@ -326,7 +326,7 @@ private struct NativeNotificationFeedbackView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if model.saveState == .submitted {
-                Text("feedback sent")
+                Text("反馈已发送")
                     .font(Brand.swiftUIMonoFont(size: 9))
                     .foregroundColor(.primary.opacity(0.4))
             } else {
@@ -350,7 +350,7 @@ private struct NativeNotificationFeedbackView: View {
 
                 if model.rating == .down {
                     HStack(spacing: 6) {
-                        TextField("what should improve?", text: $model.correction)
+                        TextField("哪里需要改进？", text: $model.correction)
                             .textFieldStyle(.plain)
                             .font(Brand.swiftUIMonoFont(size: 10))
                             .padding(.horizontal, 8)
@@ -374,8 +374,8 @@ private struct NativeNotificationFeedbackView: View {
                         }
                         .buttonStyle(.plain)
                         .disabled(!correctionReady)
-                        .help("send feedback")
-                        .accessibilityLabel("send feedback")
+                        .help("发送反馈")
+                        .accessibilityLabel("发送反馈")
                     }
                 }
             }
@@ -397,7 +397,7 @@ private struct NativeNotificationFeedbackView: View {
                 .overlay(Rectangle().stroke(Color.primary.opacity(0.12), lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(rating == .up ? "useful notification" : "not useful notification")
+        .accessibilityLabel(rating == .up ? "有用的通知" : "没用的通知")
     }
 
     private func sendCorrection() {
@@ -471,7 +471,7 @@ struct NotificationContentView: View {
                 .contentShape(Rectangle())
                 .padding(.horizontal, 14)
                 .padding(.top, 8)
-                .help("open source chat")
+                .help("打开来源对话")
             } else {
                 Text(payload.title)
                     .font(Brand.swiftUIMonoFont(size: 12, weight: .medium))
@@ -527,7 +527,7 @@ struct NotificationContentView: View {
                         )
                     }
                     Spacer()
-                    BrandTextButton(label: "DISMISS →", fontSize: 10) {
+                    BrandTextButton(label: "忽略 →", fontSize: 10) {
                         onDismiss()
                     }
                 }
@@ -557,8 +557,8 @@ struct NotificationContentView: View {
             HStack(spacing: 12) {
                 BrandIconTextButton(
                     systemName: copied ? "checkmark" : "doc.on.doc",
-                    label: copied ? "copied" : "copy",
-                    help: "copy notification"
+                    label: copied ? "已复制" : "复制",
+                    help: "复制通知"
                 ) {
                     copyNotificationText()
                     sendActionPayload(["type": "copy", "value": notificationClipboardText()])
@@ -569,14 +569,14 @@ struct NotificationContentView: View {
                 }
 
                 if payload.source_url != nil {
-                    BrandIconTextButton(systemName: "arrow.up.right.square", label: "source", help: "open source chat") {
+                    BrandIconTextButton(systemName: "arrow.up.right.square", label: "来源", help: "打开来源对话") {
                         onOpenSource()
                     }
                 }
 
                 Spacer(minLength: 0)
 
-                BrandIconTextButton(systemName: "bell", label: "manage", help: "manage notification settings") {
+                BrandIconTextButton(systemName: "bell", label: "管理", help: "管理通知设置") {
                     onDismiss()
                     // Small delay so the panel hides before the window appears
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -687,15 +687,15 @@ struct NotificationContentView: View {
         }
         switch action.type {
         case "copy":
-            return copied ? "copied" : "copy"
+            return copied ? "已复制" : "复制"
         case "source":
-            return "source"
+            return "来源"
         case "deeplink":
-            return "open"
+            return "打开"
         case "dismiss":
-            return "dismiss"
+            return "忽略"
         default:
-            return action.action ?? action.type ?? "action"
+            return action.action ?? action.type ?? "操作"
         }
     }
 
@@ -937,7 +937,7 @@ private struct ViewerOverrideButton: View {
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
-        .help("open in default app")
+        .help("用默认应用打开")
         .onHover { h in
             withAnimation(.linear(duration: Brand.animDuration)) { isHovered = h }
         }
@@ -1425,12 +1425,12 @@ fileprivate func inboxIsHighPriority(_ entry: InboxEntry) -> Bool {
     }
     let title = entry.title.lowercased()
     return [
-        "recording stopped",
-        "capture paused",
-        "not capturing",
-        "database needs recovery",
-        "live transcript not flowing",
-        "audio paused",
+        "recording stopped", "录制已停止",
+        "capture paused", "采集已暂停",
+        "not capturing", "未在采集",
+        "database needs recovery", "数据库需要恢复",
+        "live transcript not flowing", "实时转录停滞",
+        "audio paused", "音频已暂停",
     ].contains { title.contains($0) }
 }
 
@@ -1445,9 +1445,9 @@ fileprivate func inboxTimeAgo(_ ts: String?) -> String {
     }
     guard let d = date else { return "" }
     let diff = Date().timeIntervalSince(d)
-    if diff < 60 { return "just now" }
-    if diff < 3600 { return "\(Int(diff / 60))m ago" }
-    if diff < 86400 { return "\(Int(diff / 3600))h ago" }
+    if diff < 60 { return "刚刚" }
+    if diff < 3600 { return "\(Int(diff / 60)) 分钟前" }
+    if diff < 86400 { return "\(Int(diff / 3600)) 小时前" }
     let df = DateFormatter()
     df.dateStyle = .short
     return df.string(from: d)
@@ -1484,7 +1484,7 @@ private struct InboxRowView: View {
                                     .foregroundColor(.primary)
                                     .lineLimit(1)
                                 if inboxIsHighPriority(entry) {
-                                    Text("high")
+                                    Text("高优先")
                                         .font(Brand.swiftUIMonoFont(size: 7, weight: .medium))
                                         .foregroundColor(.primary.opacity(0.7))
                                         .padding(.horizontal, 5)
@@ -1539,11 +1539,11 @@ private struct InboxRowView: View {
                     }
                     HStack(spacing: 6) {
                         ForEach(Array(inboxRowActions(entry).enumerated()), id: \.offset) { _, action in
-                            BrandTextButton(label: action.label ?? "action", fontSize: 9) {
+                            BrandTextButton(label: action.label ?? "操作", fontSize: 9) {
                                 onRunAction(action)
                             }
                         }
-                        BrandTextButton(label: copied ? "copied" : "copy", fontSize: 9) {
+                        BrandTextButton(label: copied ? "已复制" : "复制", fontSize: 9) {
                             let pb = NSPasteboard.general
                             pb.clearContents()
                             pb.setString("\(entry.title)\n\n\(entry.body)", forType: .string)
@@ -1618,19 +1618,19 @@ private struct InboxListView: View {
         VStack(spacing: 0) {
             VStack(spacing: 7) {
                 HStack {
-                    Text("inbox")
+                    Text("收件箱")
                         .font(Brand.swiftUIMonoFont(size: 11, weight: .medium))
                         .foregroundColor(.primary)
                     Spacer()
                     // Clears both tabs, so it stays reachable from either one —
                     // switching to All just to empty the inbox was busywork.
                     if !entries.isEmpty {
-                        BrandTextButton(label: "clear all", fontSize: 9, action: onClearAll)
+                        BrandTextButton(label: "全部清除", fontSize: 9, action: onClearAll)
                     }
                 }
                 HStack(spacing: 2) {
                     Button(action: { onViewModeChange(.priority) }) {
-                        Text("priority  \(priorityEntries.count)")
+                        Text("优先  \(priorityEntries.count)")
                             .font(Brand.swiftUIMonoFont(size: 9, weight: .medium))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 5)
@@ -1639,7 +1639,7 @@ private struct InboxListView: View {
                     }
                     .buttonStyle(.plain)
                     Button(action: { onViewModeChange(.all) }) {
-                        Text("all  \(entries.count)")
+                        Text("全部  \(entries.count)")
                             .font(Brand.swiftUIMonoFont(size: 9, weight: .medium))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 5)
@@ -1658,12 +1658,12 @@ private struct InboxListView: View {
             if entries.isEmpty || (viewMode == .priority && priorityEntries.isEmpty) {
                 Spacer()
                 VStack(spacing: 4) {
-                    Text(entries.isEmpty ? "no notifications yet" : "you’re caught up")
+                    Text(entries.isEmpty ? "暂无通知" : "已全部看完")
                         .font(Brand.swiftUIMonoFont(size: 10, weight: .medium))
                         .foregroundColor(.primary.opacity(0.8))
                     if !entries.isEmpty {
                         Button(action: { onViewModeChange(.all) }) {
-                            Text("\(entries.count) other \(entries.count == 1 ? "update" : "updates") in all")
+                            Text("「全部」里还有 \(entries.count) 条更新")
                                 .font(Brand.swiftUIMonoFont(size: 9))
                                 .foregroundColor(.secondary)
                         }
@@ -1675,13 +1675,13 @@ private struct InboxListView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         if !priorityEntries.isEmpty {
-                            sectionLabel(viewMode == .priority ? "needs your attention" : "high priority")
+                            sectionLabel(viewMode == .priority ? "需要你关注" : "高优先")
                             ForEach(priorityEntries) { entry in
                                 row(entry)
                             }
                         }
                         if viewMode == .all && !otherEntries.isEmpty {
-                            sectionLabel("other updates")
+                            sectionLabel("其他更新")
                             ForEach(otherEntries) { entry in
                                 row(entry)
                             }

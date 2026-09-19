@@ -550,8 +550,8 @@ fn ocr_unavailable_notification_payload() -> serde_json::Value {
     serde_json::json!({
         "id": "ocr_unavailable",
         "type": "ocr_unavailable",
-        "title": "screen text capture unavailable",
-        "body": "screenpipe is recording screenshots without searchable text. update or reinstall screenpipe; on Debian/Ubuntu, run `sudo apt install tesseract-ocr`, then restart screenpipe.",
+        "title": "屏幕文字采集不可用",
+        "body": "screenpipe 正在录制截图但无法提取文字。请更新或重装 screenpipe；Debian/Ubuntu 请运行 `sudo apt install tesseract-ocr`，然后重启 screenpipe。",
         "actions": [],
         "autoDismissMs": 0
     })
@@ -2018,16 +2018,16 @@ async fn show_port_conflict_notification(app: &tauri::AppHandle, error_msg: &str
         }
     }
     let body = format!(
-        "{}. close that process and restart recording.",
+        "{}。请关闭该进程并重启录制。",
         error_msg.trim_end_matches('.')
     );
     let payload = serde_json::json!({
         "id": "port_conflict",
         "type": "port_conflict",
-        "title": "port conflict — recording stopped",
+        "title": "端口冲突 — 录制已停止",
         "body": body,
         "actions": [
-            { "label": "RESTART", "action": "restart_recording", "primary": true }
+            { "label": "重启录制", "action": "restart_recording", "primary": true }
         ],
         "autoDismissMs": 0
     });
@@ -2050,10 +2050,10 @@ async fn show_capture_stall_notification(app: &tauri::AppHandle, system: &str) -
     let payload = serde_json::json!({
         "id": format!("capture_stall_{}", system),
         "type": "capture_stall",
-        "title": format!("{} capture may be stalled", system),
-        "body": format!("screenpipe has not received recent {} updates. this may recover on its own, but restarting usually fixes it.", system),
+        "title": format!("{} 采集可能已卡住", system),
+        "body": format!("screenpipe 已有一段时间没有收到 {} 的更新。问题可能会自行恢复，但重启录制通常能解决。", system),
         "actions": [
-            { "label": "RESTART", "action": "restart_recording", "primary": true }
+            { "label": "重启录制", "action": "restart_recording", "primary": true }
         ],
         "autoDismissMs": 30000
     });
@@ -2135,7 +2135,7 @@ mod tests {
         assert_eq!(payload["actions"], serde_json::json!([]));
         let body = payload["body"].as_str().unwrap();
         assert!(body.contains("sudo apt install tesseract-ocr"));
-        assert!(body.contains("restart screenpipe"));
+        assert!(body.contains("重启 screenpipe"));
         assert!(!payload.to_string().contains("restart_recording"));
     }
 

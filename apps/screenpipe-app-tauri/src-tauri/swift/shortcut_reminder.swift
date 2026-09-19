@@ -127,9 +127,9 @@ final class OverlayMetrics: ObservableObject {
     /// same `healthSubsystem` from the same payload.
     var healthHeadline: String {
         switch healthSubsystem {
-        case "audio": return "audio needs help"
-        case "screen": return "screen capture needs help"
-        default: return "recording needs help"
+        case "audio": return "音频需要处理"
+        case "screen": return "屏幕采集需要处理"
+        default: return "录制需要处理"
         }
     }
 
@@ -824,12 +824,12 @@ func disclosureContent(
     metrics: OverlayMetrics
 ) -> (String, String?)? {
     switch control {
-    case "brand": return ("screenpipe", "right-click")
-    case "timeline": return ("timeline", overlayShortcut)
-    case "chat": return ("ask chat", chatShortcut)
-    case "search": return ("search", searchShortcut)
-    case "audio": return ("mic capture", metrics.audioActive ? "live" : "idle")
-    case "settings": return ("settings", nil)
+    case "brand": return ("screenpipe", "右键")
+    case "timeline": return ("时间线", overlayShortcut)
+    case "chat": return ("问问聊天", chatShortcut)
+    case "search": return ("搜索", searchShortcut)
+    case "audio": return ("麦克风采集", metrics.audioActive ? "使用中" : "空闲")
+    case "settings": return ("设置", nil)
     default: return nil
     }
 }
@@ -981,7 +981,7 @@ struct ShortcutReminderView: View {
                     // its mouse routing; observed as a dead-click pill).
                     // Collapsed names the failing subsystem (#6126); expanded
                     // stays generic because the action row owns that width.
-                    Text(isExpanded ? "needs help" : metrics.healthHeadline)
+                    Text(isExpanded ? "出现问题" : metrics.healthHeadline)
                         .font(Brand.swiftUIMonoFont(size: 8 * scale, weight: .regular))
                         .foregroundColor(.white.opacity(0.85))
                         .padding(.trailing, isExpanded ? s(8) : s(2))
@@ -1007,7 +1007,7 @@ struct ShortcutReminderView: View {
                         Image(systemName: "power")
                             .font(.system(size: 6 * scale, weight: .bold))
                             .foregroundColor(.white.opacity(0.95))
-                        Text("quit & reopen")
+                        Text("退出并重开")
                             .font(Brand.swiftUIMonoFont(size: 8 * scale, weight: .bold))
                             .foregroundColor(.white.opacity(0.95))
                     }
@@ -1024,7 +1024,7 @@ struct ShortcutReminderView: View {
                             Image(systemName: "arrow.clockwise")
                                 .font(.system(size: 6 * scale, weight: .bold))
                                 .foregroundColor(.white.opacity(0.95))
-                            Text("restart")
+                            Text("重启")
                                 .font(Brand.swiftUIMonoFont(size: 8 * scale, weight: .bold))
                                 .foregroundColor(.white.opacity(0.95))
                         }
@@ -1065,13 +1065,13 @@ struct ShortcutReminderView: View {
     private var fixingView: some View {
         healthProgressView(
             label: metrics.healthDetail.isEmpty
-                ? "fixing recording..."
-                : "fixing — \(metrics.healthDetail)..."
+                ? "正在修复录制…"
+                : "修复中 — \(metrics.healthDetail)…"
         )
     }
 
     private var recoveringView: some View {
-        healthProgressView(label: "checking recovery...")
+        healthProgressView(label: "正在检查恢复…")
     }
 
     private func healthProgressView(label: String) -> some View {
@@ -1104,7 +1104,7 @@ struct ShortcutReminderView: View {
                 .foregroundColor(.green)
                 .padding(.leading, s(8))
 
-            Text("recording again")
+            Text("已恢复录制")
                 .font(Brand.swiftUIMonoFont(size: 8 * scale, weight: .regular))
                 .foregroundColor(.white.opacity(0.85))
                 .padding(.trailing, s(8))
@@ -1150,8 +1150,8 @@ struct ShortcutReminderView: View {
                     .fill(Color.red)
                     .frame(width: c(5), height: c(5))
                     .offset(x: c(2), y: c(-2))
-                    .help("meeting live — hover for transcript")
-                    .accessibilityLabel("meeting live")
+                    .help("会议进行中 — 悬停查看转录")
+                    .accessibilityLabel("会议进行中")
             }
         }
     }
@@ -1232,7 +1232,7 @@ struct MeetingTranscriptPreview: View {
                 Circle()
                     .fill(Color.red)
                     .frame(width: s(7), height: s(7))
-                Text("meeting live")
+                Text("会议进行中")
                     .font(Brand.swiftUIMonoFont(size: 9 * scale, weight: .semibold))
                     .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
@@ -1265,17 +1265,17 @@ struct MeetingTranscriptPreview: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(metrics.meetingPinned ? "unpin transcript" : "pin transcript")
+                .accessibilityLabel(metrics.meetingPinned ? "取消固定转录" : "固定转录")
                 .help(
                     metrics.meetingPinned
-                        ? "unpin — the card hides again when the pointer leaves"
-                        : "pin — keep this card open after the pointer leaves"
+                        ? "取消固定 — 指针移开后此卡片会自动隐藏"
+                        : "固定 — 指针移开后保持此卡片展开"
                 )
                 Button(action: onOpenNote) {
                     HStack(spacing: s(4)) {
                         Image(systemName: "doc.text")
                             .font(.system(size: 8 * scale, weight: .medium))
-                        Text("note")
+                        Text("笔记")
                             .font(Brand.swiftUIMonoFont(size: 8 * scale, weight: .semibold))
                             .lineLimit(1)
                             .fixedSize()
@@ -1288,7 +1288,7 @@ struct MeetingTranscriptPreview: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("open meeting note")
+                .help("打开会议笔记")
                 Button(action: onStop) {
                     HStack(spacing: s(4)) {
                         if metrics.meetingStopping {
@@ -1299,7 +1299,7 @@ struct MeetingTranscriptPreview: View {
                             Image(systemName: "stop.fill")
                                 .font(.system(size: 7 * scale, weight: .medium))
                         }
-                        Text(metrics.meetingStopping ? "stopping" : "stop")
+                        Text(metrics.meetingStopping ? "停止中" : "停止")
                             .font(Brand.swiftUIMonoFont(size: 8 * scale, weight: .semibold))
                             .lineLimit(1)
                             .fixedSize()
@@ -1313,7 +1313,7 @@ struct MeetingTranscriptPreview: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(metrics.meetingStopping)
-                .help("stop this meeting")
+                .help("停止本次会议")
             }
             .padding(.horizontal, s(10))
             .frame(height: s(34))
@@ -1336,7 +1336,7 @@ struct MeetingTranscriptPreview: View {
                         ProgressView()
                             .scaleEffect(0.45 * scale)
                             .frame(width: s(10), height: s(10))
-                        Text("listening for speech…")
+                        Text("正在聆听发言…")
                             .font(Brand.swiftUIMonoFont(size: 8 * scale))
                             .foregroundColor(.white.opacity(0.48))
                     }
@@ -1419,7 +1419,7 @@ private struct DockAppIconButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help("screenpipe — right-click for options")
+        .help("screenpipe — 右键查看选项")
     }
 }
 
@@ -1501,7 +1501,7 @@ private struct OverlayNotificationView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("dismiss notification")
+            .accessibilityLabel("关闭通知")
         }
         .padding(.horizontal, s(10))
         .frame(
@@ -1653,7 +1653,7 @@ class ShortcutReminderController: NSObject, NSWindowDelegate {
     private var healthToolTip: String? {
         guard metrics.healthState == "failure" else { return nil }
         return metrics.healthDetail.isEmpty
-            ? "recording stopped unexpectedly"
+            ? "录制意外停止"
             : metrics.healthDetail
     }
 
@@ -1931,7 +1931,7 @@ class ShortcutReminderController: NSObject, NSWindowDelegate {
                 meetingStopTimeoutWorkItem?.cancel()
                 meetingStopTimeoutWorkItem = nil
                 metrics.meetingStopping = false
-                metrics.meetingStopError = "meeting did not stop — try again"
+                metrics.meetingStopError = "会议未能停止 — 请重试"
             }
             refreshTranscriptPanelVisibility()
         }
@@ -3185,7 +3185,7 @@ class ShortcutReminderController: NSObject, NSWindowDelegate {
         menu.autoenablesItems = false
 
         let snooze = NSMenuItem(
-            title: "Hide for 1 hour",
+            title: "1 小时内不再显示",
             action: #selector(hideShortcutReminderForHour),
             keyEquivalent: ""
         )
@@ -3195,7 +3195,7 @@ class ShortcutReminderController: NSObject, NSWindowDelegate {
         menu.addItem(.separator())
 
         let settings = NSMenuItem(
-            title: "Settings…",
+            title: "设置…",
             action: #selector(openShortcutReminderSettings),
             keyEquivalent: ""
         )
