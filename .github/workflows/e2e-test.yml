@@ -911,6 +911,13 @@ jobs:
         projectPath: "./apps/screenpipe-app-tauri"
         tauriScript: bunx tauri -v
 
+    # Drift gate: the specta-generated tauri.ts must match the current Rust
+    # types. Runs right after Build so the native compile is already warm.
+    - name: Verify generated Tauri bindings are current
+      shell: bash
+      working-directory: ./apps/screenpipe-app-tauri
+      run: bun run bindings:check
+
     - name: Run Spotlight exclusion canary
       shell: bash
       working-directory: ./apps/screenpipe-app-tauri

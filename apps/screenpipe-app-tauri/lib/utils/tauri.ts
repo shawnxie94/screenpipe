@@ -2403,7 +2403,6 @@ async validateDataDir(path: string) : Promise<Result<null, string>> {
 }
 },
 /**
-/**
  * Record that a webview renderer's main event loop is responsive.
  *
  * The macOS renderer watchdog compares this monotonic heartbeat with the
@@ -2971,8 +2970,10 @@ export type SettingsStore =
 disableAudio: boolean;
 /**
  * Audio transcription engine identifier.
- * Values: "whisper-large-v3-turbo", "whisper-large-v3-turbo-quantized",
- * "deepgram", "screenpipe-cloud", etc.
+ * zh-local resolves local engines only: "qwen3-asr" (default) plus the
+ * whisper-large-v3 variants. Legacy cloud strings ("deepgram",
+ * "screenpipe-cloud", "openai-compatible", parakeet) migrate to
+ * "qwen3-asr" when the engine enum parses them.
  */
 audioTranscriptionEngine: string;
 /**
@@ -3072,7 +3073,7 @@ audioChunkDuration: number;
 filterMusic: boolean;
 /**
  * Maximum batch duration in seconds for batch transcription.
- * None = use engine-aware defaults (Deepgram=5000s, OpenAI=3000s, Whisper=600s).
+ * None = use the engine default (600s across the local engines).
  * Also controls the max deferral cap during active meetings.
  */
 batchMaxDurationSecs?: number | null;
@@ -3518,7 +3519,6 @@ showOverlayInScreenRecording?: boolean;
  * New and upgraded installs default to visible until the user opts out.
  */
 hideOverlayInScreenRecording?: boolean;
-/**
 /**
  * When true, the chat window stays above all other windows (default: true).
  */
