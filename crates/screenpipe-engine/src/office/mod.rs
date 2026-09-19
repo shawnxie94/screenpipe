@@ -511,7 +511,6 @@ pub struct OfficeStatusDto {
 }
 
 pub(crate) struct SyncSummary {
-    pub imported: u64,
     pub partial: bool,
 }
 
@@ -554,7 +553,6 @@ async fn run_sync(
         .await
         .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, e.to_string()))?;
 
-    let mut imported: u64 = 0;
     let mut partial = false;
     match provider_enum {
         OfficeProvider::Feishu => {
@@ -636,7 +634,6 @@ async fn run_sync(
                     )?;
                     for object in &page.objects {
                         if register_object(service, object).await? {
-                            imported += 1;
                         }
                     }
                     if page.complete {
@@ -680,7 +677,6 @@ async fn run_sync(
                                 Ok(page) => {
                                     for event in &page.events {
                                         if register_object(service, &event.object).await? {
-                                            imported += 1;
                                         }
                                     }
                                 }
@@ -724,7 +720,6 @@ async fn run_sync(
                 ) {
                     Ok(object) => {
                         if register_object(service, &object).await? {
-                            imported += 1;
                         }
                     }
                     Err(e) if e.code == OfficeErrorCode::CapabilityMissing => {
@@ -871,7 +866,6 @@ async fn run_sync(
                             platform_generated: false,
                         };
                         if register_object(service, &object).await? {
-                            imported += 1;
                         }
                     }
                     // Smart minutes: separate derived source, marked as such.
@@ -891,7 +885,6 @@ async fn run_sync(
                             )
                         {
                             if register_object(service, &minutes).await? {
-                                imported += 1;
                             }
                         }
                     }
@@ -899,7 +892,7 @@ async fn run_sync(
             }
         }
     }
-    Ok(SyncSummary { imported, partial })
+    Ok(SyncSummary { partial })
 }
 
 /// Register one normalized object into the office tables (body + FTS).

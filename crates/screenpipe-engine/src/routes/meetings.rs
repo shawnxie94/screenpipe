@@ -15,9 +15,6 @@ use screenpipe_db::{MeetingRecord, MeetingTranscriptSegment, MEETING_END_REASON_
 use crate::meeting_watcher::audio_process::{
     MeetingRoomChangeResponse, RoomChangeChoice, ROOM_CHANGE_RESPONSE_EVENT,
 };
-use crate::meeting_watcher::shared::telemetry::{
-    capture_detection_decision, capture_detection_feedback,
-};
 use crate::routes::meeting_summary_status::{
     resolve_summary_state, ExecutionSnapshot, SummaryState, SummaryStatusInputs,
 };

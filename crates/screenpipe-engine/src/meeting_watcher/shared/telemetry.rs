@@ -6,9 +6,7 @@ use chrono::{DateTime, Utc};
 use screenpipe_db::MeetingRecord;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use std::collections::BTreeSet;
 
-use crate::meeting_watcher::shared::scanner::ScanResult;
 
 /// zh-local has no hosted analytics layer; detection-health events go to the
 /// local tracing log instead of PostHog. Function signatures and bucketing
@@ -26,28 +24,6 @@ pub(crate) struct MeetingDetectionScanSummary {
     pub has_output_audio: bool,
 }
 
-impl MeetingDetectionScanSummary {
-    pub(crate) fn from_scan_results(scan_results: &[ScanResult], has_output_audio: bool) -> Self {
-        let mut matched_signal_kinds = BTreeSet::new();
-        for result in scan_results {
-            for signal in &result.matched_signals {
-                matched_signal_kinds.insert(signal_kind(signal).to_string());
-            }
-        }
-
-        Self {
-            scan_count: scan_results.len(),
-            in_call_scan_count: scan_results.iter().filter(|r| r.is_in_call).count(),
-            max_signals_found: scan_results
-                .iter()
-                .map(|r| r.signals_found)
-                .max()
-                .unwrap_or(0),
-            matched_signal_kinds: matched_signal_kinds.into_iter().collect(),
-            has_output_audio,
-        }
-    }
-}
 
 pub(crate) fn capture_detection_decision(
     meeting: &MeetingRecord,
@@ -177,67 +153,7 @@ fn flap_bucket(flaps: u32) -> &'static str {
     }
 }
 
-pub(crate) fn capture_detection_feedback(
-    action: &'static str,
-    label: &'static str,
-    meetings: &[MeetingRecord],
-    result: Option<&MeetingRecord>,
-) {
-    if meetings.is_empty() {
-        return;
-    }
 
-    let meeting_event_keys: Vec<String> =
-        meetings.iter().map(|m| meeting_event_key(m.id)).collect();
-    let app_buckets = unique_values(meetings.iter().map(|m| app_bucket(&m.meeting_app)));
-    let source_buckets = unique_values(meetings.iter().map(|m| source_bucket(&m.detection_source)));
-    let duration_buckets = unique_values(meetings.iter().map(duration_bucket));
-    let age_buckets = unique_values(meetings.iter().map(age_bucket));
-    let has_auto_meeting = meetings
-        .iter()
-        .any(|m| source_bucket(&m.detection_source) == "auto");
-    let has_manual_meeting = meetings
-        .iter()
-        .any(|m| source_bucket(&m.detection_source) == "manual");
-
-    let mut props = json!({
-        "action": action,
-        "label": label,
-        "meeting_count": meetings.len(),
-        "meeting_event_keys": meeting_event_keys,
-        "app_buckets": app_buckets,
-        "source_buckets": source_buckets,
-        "duration_buckets": duration_buckets,
-        "age_buckets": age_buckets,
-        "has_auto_meeting": has_auto_meeting,
-        "has_manual_meeting": has_manual_meeting,
-    });
-
-    if let (Some(obj), Some(result)) = (props.as_object_mut(), result) {
-        obj.insert(
-            "result_meeting_event_key".to_string(),
-            json!(meeting_event_key(result.id)),
-        );
-        obj.insert(
-            "result_app_bucket".to_string(),
-            json!(app_bucket(&result.meeting_app)),
-        );
-        obj.insert(
-            "result_source_bucket".to_string(),
-            json!(source_bucket(&result.detection_source)),
-        );
-        obj.insert(
-            "result_duration_bucket".to_string(),
-            json!(duration_bucket(result)),
-        );
-    }
-
-    capture_event_nonblocking("meeting_detection_feedback", props);
-}
-
-fn unique_values<'a>(values: impl Iterator<Item = &'a str>) -> Vec<&'a str> {
-    values.collect::<BTreeSet<_>>().into_iter().collect()
-}
 
 fn meeting_event_key(meeting_id: i64) -> String {
     let mut hasher = Sha256::new();
@@ -329,27 +245,6 @@ fn parse_time(value: &str) -> Option<DateTime<Utc>> {
         .map(|dt| dt.with_timezone(&Utc))
 }
 
-fn signal_kind(signal: &str) -> &'static str {
-    if signal.starts_with("automation_id_contains=") {
-        "automation_id_contains"
-    } else if signal.starts_with("automation_id=") {
-        "automation_id"
-    } else if signal.starts_with("shortcut=") {
-        "keyboard_shortcut"
-    } else if signal.starts_with("role_match=") {
-        "role_match"
-    } else if signal.starts_with("menu_bar_item=") {
-        "menu_bar_item"
-    } else if signal.starts_with("menu_item_id=") {
-        "menu_item_id"
-    } else if signal.starts_with("name_contains=") {
-        "name_contains"
-    } else if signal.starts_with("window_title=") {
-        "window_title"
-    } else {
-        "other"
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -436,17 +331,5 @@ mod tests {
     #[test]
     fn buckets_short_durations() {
         assert_eq!(duration_bucket(&meeting("Arc", "ui_scan")), "2_to_5_min");
-    }
-
-    #[test]
-    fn strips_signal_labels_to_kinds() {
-        assert_eq!(
-            signal_kind("role_match=AXButton:leave call (raw button text)"),
-            "role_match"
-        );
-        assert_eq!(
-            signal_kind("window_title=Zoom Meeting (raw title)"),
-            "window_title"
-        );
     }
 }
