@@ -48,7 +48,7 @@ fn reject_pipe_token(
         return Err((
             StatusCode::FORBIDDEN,
             Json(json!({
-                "error": "pipes may fill assigned Blocks but may not edit Live View Templates"
+                "error": "定时任务可以填充分配的区块，但不能编辑实时视图模板"
             })),
         ));
     }
@@ -114,7 +114,7 @@ pub(crate) async fn save_live_view_handler(
     if id != request.id {
         return Err((
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "path id must match request id" })),
+            Json(json!({ "error": "路径 id 与请求 id 不一致" })),
         ));
     }
     save_live_view(&state.screenpipe_dir, request)

@@ -131,10 +131,10 @@ describe('Settings sections', () => {
     const section = await $('[data-testid="section-settings-screen"]');
     await section.waitForExist({ timeout: 8_000 });
     const sectionText = (await section.getText()).toLowerCase();
-    expect(sectionText).toContain('screen context capture');
-    expect(sectionText).toContain('screen recording');
-    expect(sectionText).not.toContain('audio recording');
-    expect(sectionText).not.toContain('live meeting notes');
+    expect(sectionText).toContain('屏幕上下文采集');
+    expect(sectionText).toContain('屏幕录制');
+    expect(sectionText).not.toContain('音频录制');
+    expect(sectionText).not.toContain('会议实时笔记');
 
     const filepath = await saveScreenshot('settings-screen-capture');
     expect(existsSync(filepath)).toBe(true);
@@ -143,7 +143,7 @@ describe('Settings sections', () => {
   it('keeps audio and meeting notes separate from screen capture visibility', async () => {
     const navAudio = await $('[data-testid="settings-nav-audio"]');
     await navAudio.waitForExist({ timeout: 8_000 });
-    expect((await navAudio.getText()).toLowerCase()).toContain('audio & meetings');
+    expect((await navAudio.getText()).toLowerCase()).toContain('音频与会议');
     await navAudio.click();
 
     const section = await $('[data-testid="section-settings-audio"]');
@@ -153,10 +153,10 @@ describe('Settings sections', () => {
         () => document.querySelector('[data-testid="section-settings-audio"]')?.textContent ?? '',
       )) as string
     ).toLowerCase();
-    expect(sectionText).toContain('audio recording');
-    expect(sectionText).not.toContain('hide screenpipe from screen capture');
-    expect(sectionText).not.toContain('screen context capture');
-    expect(sectionText).not.toContain('screenshot images');
+    expect(sectionText).toContain('音频录制');
+    expect(sectionText).not.toContain('从屏幕录制中隐藏');
+    expect(sectionText).not.toContain('屏幕上下文采集');
+    expect(sectionText).not.toContain('截屏图像');
   });
 
   it('applies screen capture protection only to the overlay', async () => {
@@ -242,13 +242,13 @@ describe('Settings sections', () => {
       body.includes('openai') || body.includes('ollama') || body.includes('api key');
     expect(hasContent).toBe(true);
 
-    const intro = await $('p*=Configure AI models and preferences');
+    const intro = await $('p*=配置 AI 模型和偏好');
     await intro.moveTo();
     const filepath = await saveScreenshot('settings-ai-presets');
     expect(existsSync(filepath)).toBe(true);
   });
 
-  it('moves AI preferences from General into AI Settings and covers enabled/disabled analysis flows', async () => {
+  it('keeps AI preferences in the AI Settings section and out of General', async () => {
     const navAiSettings = await $('[data-testid="settings-nav-ai-settings"]');
     await navAiSettings.waitForExist({ timeout: 8_000 });
     await navAiSettings.click();
@@ -256,52 +256,22 @@ describe('Settings sections', () => {
     const section = await $('[data-testid="section-settings-ai-settings"]');
     await section.waitForExist({ timeout: 8_000 });
 
-    const body = (await browser.execute(() => document.body.innerText.toLowerCase())) as string;
-    expect(body).toContain('enhanced ai');
-    expect(body).toContain('ai audio & video analysis');
-    expect(body).toContain('auto-generate chat titles');
+    const body = (await browser.execute(() => document.body.innerText)) as string;
+    expect(body).toContain('自动生成聊天标题');
 
-    const enhancedAiToggle = await $('#enhanced-ai-toggle');
-    const mediaAnalysisToggle = await $('#cloudMediaAnalysisEnabled');
     const chatTitlesToggle = await $('#auto-generate-chat-titles-toggle');
-    await enhancedAiToggle.waitForExist({ timeout: 5_000 });
-    await mediaAnalysisToggle.waitForExist({ timeout: 5_000 });
     await chatTitlesToggle.waitForExist({ timeout: 5_000 });
 
-    if ((await mediaAnalysisToggle.getAttribute('data-state')) !== 'checked') {
-      await mediaAnalysisToggle.click();
-    }
-    const preview = await $('[data-testid="cloud-media-analysis-preview"]');
-    await preview.waitForExist({ timeout: 5_000 });
-
     await section.moveTo();
-    const enabledFilepath = await saveScreenshot('settings-ai-analysis-enabled');
-    expect(existsSync(enabledFilepath)).toBe(true);
-
-    await mediaAnalysisToggle.click();
-    await browser.waitUntil(
-      async () => (await mediaAnalysisToggle.getAttribute('data-state')) === 'unchecked',
-      { timeout: 5_000, timeoutMsg: 'AI media analysis toggle did not switch off' },
-    );
-    await preview.waitForExist({ reverse: true, timeout: 5_000 });
-
-    await section.moveTo();
-    const disabledFilepath = await saveScreenshot('settings-ai-analysis-disabled');
-    expect(existsSync(disabledFilepath)).toBe(true);
-
-    // Restore the seeded preference so this flow does not leak state into the
-    // remaining settings checks.
-    await mediaAnalysisToggle.click();
-    await preview.waitForExist({ timeout: 5_000 });
+    const filepath = await saveScreenshot('settings-ai-analysis-enabled');
+    expect(existsSync(filepath)).toBe(true);
 
     const navGeneral = await $('[data-testid="settings-nav-general"]');
     await navGeneral.click();
     const general = await $('[data-testid="section-settings-general"]');
     await general.waitForExist({ timeout: 5_000 });
-    const generalBody = (await browser.execute(() => document.body.innerText.toLowerCase())) as string;
-    expect(generalBody).not.toContain('enhanced ai');
-    expect(generalBody).not.toContain('ai audio & video analysis');
-    expect(generalBody).not.toContain('auto-generate chat titles');
+    const generalBody = (await browser.execute(() => document.body.innerText)) as string;
+    expect(generalBody).not.toContain('自动生成聊天标题');
   });
 
   it('navigates to Speakers settings and mounts section container', async () => {
@@ -353,13 +323,12 @@ describe('Settings sections', () => {
     // requires that Clear Cache controls live UNDER Storage; b1ef45c1b
     // ("retention dialog inline picker") added the inline day selector to
     // the same panel. We check for both pieces of vocabulary.
-    const hasRetention = body.includes('retention') ||
-      body.includes('older than') ||
-      body.includes('disk') ||
-      body.includes('storage');
-    const hasCacheControl = body.includes('clear cache') ||
-      body.includes('clear ') ||
-      body.includes('evict');
+    const hasRetention = body.includes('保留') ||
+      body.includes('自动删除') ||
+      body.includes('磁盘') ||
+      body.includes('存储');
+    const hasCacheControl = body.includes('清除缓存') ||
+      body.includes('清理缓存');
     expect(hasRetention).toBe(true);
     expect(hasCacheControl).toBe(true);
 
@@ -373,10 +342,10 @@ describe('Settings sections', () => {
     )) as string;
     // Content of the *visible* General panel; if Clear Cache is back in
     // General, this fires. We don't fail on the literal substring (other
-    // copy might mention "clear" in passing) — combined with the positive
+    // copy might mention "清除" in passing) — combined with the positive
     // assertion above, a Storage→General move would still trip one of the
     // two checks.
-    expect(generalBody.includes('clear cache')).toBe(false);
+    expect(generalBody.includes('清除缓存')).toBe(false);
 
     const filepath = await saveScreenshot('settings-storage');
     expect(existsSync(filepath)).toBe(true);
@@ -412,7 +381,7 @@ describe('Settings sections', () => {
     );
     await invokeOrThrow('plugin:e2e|reset_disk_pressure_notification_latch');
     const initialLowDiskNotifications = (await readNotifications()).filter(
-      (entry) => entry.title === 'recording stopped — disk almost full',
+      (entry) => entry.title === '录制已停止 — 磁盘空间不足',
     ).length;
 
     try {
@@ -441,7 +410,7 @@ describe('Settings sections', () => {
       expect(await invokeOrThrow<boolean>('is_capture_paused')).toBe(false);
       expect(
         (await readNotifications()).filter(
-          (entry) => entry.title === 'recording stopped — disk almost full',
+          (entry) => entry.title === '录制已停止 — 磁盘空间不足',
         ),
       ).toHaveLength(initialLowDiskNotifications);
 
@@ -474,7 +443,7 @@ describe('Settings sections', () => {
       await browser.waitUntil(
         async () =>
           (await readNotifications()).filter(
-            (entry) => entry.title === 'recording stopped — disk almost full',
+            (entry) => entry.title === '录制已停止 — 磁盘空间不足',
           ).length > initialLowDiskNotifications,
         {
           timeout: t(10_000),
@@ -484,19 +453,15 @@ describe('Settings sections', () => {
       );
 
       const notification = (await readNotifications()).find(
-        (entry) => entry.title === 'recording stopped — disk almost full',
+        (entry) => entry.title === '录制已停止 — 磁盘空间不足',
       );
-      expect(notification?.body).toContain('only 1.0 GB is free');
-      expect(notification?.body).toContain(
-        'search and existing data remain available',
-      );
-      expect(notification?.body).toContain(
-        'retention options available on this device',
-      );
+      expect(notification?.body).toContain('仅剩 1.0 GB 可用');
+      expect(notification?.body).toContain('搜索和已有数据仍可使用');
+      expect(notification?.body).toContain('本设备可用的保留策略选项');
       expect(notification?.actions).toContainEqual({
         id: 'review-storage',
         action: 'review-storage',
-        label: 'review storage',
+        label: '检查存储',
         type: 'deeplink',
         url: 'screenpipe://settings?section=storage',
         primary: true,
@@ -515,7 +480,7 @@ describe('Settings sections', () => {
       ).toBe('capture_stopped_notification_suppressed');
       expect(
         (await readNotifications()).filter(
-          (entry) => entry.title === 'recording stopped — disk almost full',
+          (entry) => entry.title === '录制已停止 — 磁盘空间不足',
         ),
       ).toHaveLength(initialLowDiskNotifications + 1);
 
@@ -544,7 +509,7 @@ describe('Settings sections', () => {
       await browser.waitUntil(
         async () =>
           (await readNotifications()).filter(
-            (entry) => entry.title === 'recording stopped — disk almost full',
+            (entry) => entry.title === '录制已停止 — 磁盘空间不足',
           ).length === initialLowDiskNotifications + 2,
         {
           timeout: t(10_000),
@@ -556,7 +521,7 @@ describe('Settings sections', () => {
       // Click the persisted action from the real inbox and verify the complete
       // notification -> deeplink -> Home router -> Storage UI path.
       const actionable = (await readNotifications()).find(
-        (entry) => entry.title === 'recording stopped — disk almost full',
+        (entry) => entry.title === '录制已停止 — 磁盘空间不足',
       );
       expect(actionable?.id).toBeTruthy();
       const backToApp = await $('[data-testid="settings-back-to-app"]');

@@ -319,7 +319,7 @@ async fn recover_from_db_wedge(
             .is_starting_capture
             .store(false, Ordering::SeqCst);
         crate::health::set_boot_error(
-            "database recovery required after a SQLite hard fault; recording was stopped to protect your data",
+            "SQLite 严重故障后数据库需要恢复；为保护你的数据，录制已停止",
         );
         crate::health::set_recording_status(crate::health::RecordingStatus::Error);
         crate::db_relaunch::surface_manual_recovery(

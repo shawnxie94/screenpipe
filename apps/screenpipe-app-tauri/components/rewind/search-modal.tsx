@@ -1760,7 +1760,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     if (!result) return;
 
 
-    const context = `Context from search result:\n${result.app_name} - ${result.window_name}\nTime: ${format(new Date(result.timestamp), "PPpp")}\n\nText:\n${result.text || ""}`;
+    const context = `来自搜索结果的上下文：\n${result.app_name} - ${result.window_name}\n时间：${format(new Date(result.timestamp), "PPpp")}\n\n文本：\n${result.text || ""}`;
 
     // Close search modal first
     onClose();

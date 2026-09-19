@@ -291,13 +291,13 @@ fn is_permanent_output_error(err: &anyhow::Error) -> bool {
 /// hardware-availability condition that won't resolve without a device change.
 fn is_permanent_input_error(err: &anyhow::Error) -> bool {
     let msg = err.to_string();
-    msg.contains("No default input device detected")
+    msg.contains("未检测到默认输入设备")
 }
 
 fn is_permanent_device_start_error(err: &anyhow::Error) -> bool {
     let msg = err.to_string().to_lowercase();
     msg.contains("not found")
-        || msg.contains("no default input device detected")
+        || msg.contains("未检测到默认输入设备")
         || msg.contains("no display audio device found")
 }
 
@@ -2844,7 +2844,7 @@ mod tests {
 
     #[test]
     fn test_is_permanent_input_error() {
-        let permanent = anyhow::anyhow!("No default input device detected");
+        let permanent = anyhow::anyhow!("未检测到默认输入设备");
         assert!(is_permanent_input_error(&permanent));
 
         let transient = anyhow::anyhow!("failed to query default input device: timeout");
@@ -2857,7 +2857,7 @@ mod tests {
             "device Microphone (USB Composite Device) (input) not found"
         )));
         assert!(is_permanent_device_start_error(&anyhow::anyhow!(
-            "No default input device detected"
+            "未检测到默认输入设备"
         )));
         assert!(is_permanent_device_start_error(&anyhow::anyhow!(
             "no display audio device found"

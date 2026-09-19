@@ -50,7 +50,7 @@ pub(crate) async fn delete_time_range_handler(
     if payload.start >= payload.end {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "start must be before end"})),
+            JsonResponse(json!({"error": "start 必须早于 end"})),
         ));
     }
 
@@ -149,7 +149,7 @@ pub(crate) async fn evict_media_handler(
     if payload.start >= payload.end {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "start must be before end"})),
+            JsonResponse(json!({"error": "start 必须早于 end"})),
         ));
     }
 
@@ -279,7 +279,7 @@ pub(crate) async fn storage_preview_handler(
             _ => {
                 return Err((
                     StatusCode::BAD_REQUEST,
-                    JsonResponse(json!({"error": "provide older_than_days or both start and end"})),
+                    JsonResponse(json!({"error": "请提供 older_than_days，或同时提供 start 和 end"})),
                 ))
             }
         }
@@ -288,7 +288,7 @@ pub(crate) async fn storage_preview_handler(
     if start >= end {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "start must be before end"})),
+            JsonResponse(json!({"error": "start 必须早于 end"})),
         ));
     }
 
@@ -351,7 +351,7 @@ pub(crate) async fn delete_device_data_handler(
     if payload.machine_id.trim().is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "machine_id is required"})),
+            JsonResponse(json!({"error": "需要提供 machine_id"})),
         ));
     }
 

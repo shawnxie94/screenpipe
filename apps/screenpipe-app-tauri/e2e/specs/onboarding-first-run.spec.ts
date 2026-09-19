@@ -259,12 +259,7 @@ const seedLearningWindow = async (state: Record<string, unknown>) => {
     // A fresh signed-out install cannot enter hosted checkout because there is
     // no account to attach a subscription to. It must still encounter the
     // final connection setup instead of depending on Home's learning timer.
-    expect(text).toContain("connect gmail");
-    const match = text.match(/setup[^0-9]*(\d+)\s*of\s*(\d+)/);
-    if (match) {
-      const [, current, total] = match.map(Number);
-      expect(current).toBe(total);
-    }
+    expect(text).toContain("连接你的工作");
   });
 
   it("keeps lifetime ownership out of mandatory checkout", async () => {

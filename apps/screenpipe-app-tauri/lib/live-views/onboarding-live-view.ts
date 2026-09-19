@@ -665,9 +665,14 @@ async function refreshDashboard(view: KnowledgeViewDefinition): Promise<number> 
           },
         );
         const body = await jsonBody(response);
+        const bodyError = body.error ? String(body.error) : "";
         if (
           response.ok &&
-          (!body.error || String(body.error).includes("already running"))
+          // 已在运行也算启动成功：任务已在执行，面板仍会被填充。
+          // 同时保留英文分支，兼容尚未汉化的旧引擎。
+          (!bodyError ||
+            bodyError.includes("已在运行") ||
+            bodyError.includes("already running"))
         ) {
           started += 1;
         }

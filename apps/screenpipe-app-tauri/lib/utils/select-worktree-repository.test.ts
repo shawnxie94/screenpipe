@@ -174,7 +174,7 @@ describe("selectWorktreeRepository", () => {
         startingPath: null,
         providerConfig,
       }),
-    ).rejects.toThrow("No nearby Git repository");
+    ).rejects.toThrow("未找到附近的 Git 仓库");
     expect(mocks.startAndPrompt).not.toHaveBeenCalled();
   });
 });

@@ -121,13 +121,13 @@ pub async fn get_activity_ledger(
     Query(mut query): Query<ActivityLedgerQuery>,
 ) -> Result<JsonResponse<ActivityLedgerResponse>, (StatusCode, JsonResponse<Value>)> {
     if query.start_time >= query.end_time {
-        return Err(bad_request("start_time must be before end_time"));
+        return Err(bad_request("start_time 必须早于 end_time"));
     }
     if apply_activity_ledger_history_access(&state.history_access, &mut query, Utc::now()) {
         return Ok(JsonResponse(empty_activity_ledger_response(&query)));
     }
     if query.end_time - query.start_time > Duration::days(31) {
-        return Err(bad_request("activity ledger ranges are limited to 31 days"));
+        return Err(bad_request("活动历史查询范围最多 31 天"));
     }
     if query.refresh {
         crate::activity_ledger::reconcile_range(&state.db, query.start_time, query.end_time)
@@ -136,7 +136,7 @@ pub async fn get_activity_ledger(
                 error!(%error, "activity ledger generation failed");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    JsonResponse(json!({"error": "activity ledger generation failed"})),
+                    JsonResponse(json!({"error": "活动历史生成失败"})),
                 )
             })?;
     }
@@ -155,7 +155,7 @@ pub async fn get_activity_ledger(
             error!(%error, "activity ledger query failed");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(json!({"error": "activity ledger query failed"})),
+                JsonResponse(json!({"error": "活动历史查询失败"})),
             )
         })?;
     let intervals = project_intervals(
@@ -272,7 +272,7 @@ pub async fn get_activity_intervals(
     Query(query): Query<ActivityIntervalsQuery>,
 ) -> Result<JsonResponse<ActivityIntervalsResponse>, (StatusCode, JsonResponse<Value>)> {
     if query.start_time >= query.end_time {
-        return Err(bad_request("start_time must be before end_time"));
+        return Err(bad_request("start_time 必须早于 end_time"));
     }
     let mut start_time = query.start_time;
     let mut end_time = query.end_time;
@@ -381,7 +381,7 @@ pub async fn get_activity_intervals_missing_summary(
     Query(query): Query<ActivityMissingSummariesQuery>,
 ) -> Result<JsonResponse<ActivityIntervalsResponse>, (StatusCode, JsonResponse<Value>)> {
     if query.start_time >= query.end_time {
-        return Err(bad_request("start_time must be before end_time"));
+        return Err(bad_request("start_time 必须早于 end_time"));
     }
     let mut start_time = query.start_time;
     let mut end_time = query.end_time;

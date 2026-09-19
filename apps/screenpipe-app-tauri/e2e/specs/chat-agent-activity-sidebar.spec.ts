@@ -376,7 +376,7 @@ describe("unified recents sidebar", function () {
       await codexWork.$("[data-testid='tool-activity-widget']")
         .getAttribute("data-activity-state"),
     ).toBe("running");
-    expect(await codexWork.getText()).toContain("Finding relevant information");
+    expect(await codexWork.getText()).toContain("正在查找相关信息");
     await browser.waitUntil(
       async () => !(await $("[data-testid='chat-turn-status']").isExisting()),
       { timeout: t(5_000), timeoutMsg: "expected the live Codex tool to own turn status" },

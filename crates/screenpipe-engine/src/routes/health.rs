@@ -2072,7 +2072,7 @@ pub async fn api_list_monitors(
     if monitor_info.is_empty() {
         Err((
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({"error": "No monitors found"})),
+            JsonResponse(json!({"error": "未找到显示器"})),
         ))
     } else {
         Ok(JsonResponse(monitor_info))

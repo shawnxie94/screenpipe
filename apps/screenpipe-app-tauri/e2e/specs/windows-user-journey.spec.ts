@@ -478,9 +478,9 @@ describe("Windows user journey", function () {
       async () => {
         const sectionText = (await screenSection.getText()).toLowerCase();
         return (
-          sectionText.includes("screen context capture") &&
-          sectionText.includes("screen recording") &&
-          !sectionText.includes("audio recording")
+          sectionText.includes("屏幕上下文采集") &&
+          sectionText.includes("屏幕录制") &&
+          !sectionText.includes("音频录制")
         );
       },
       {
@@ -501,9 +501,9 @@ describe("Windows user journey", function () {
     const audioSection = await $('[data-testid="section-settings-audio"]');
     await audioSection.waitForDisplayed({ timeout: t(20_000) });
     const audioText = (await audioSection.getText()).toLowerCase();
-    expect(audioText).toContain("audio recording");
-    expect(audioText).toContain("hide screenpipe from screen capture");
-    expect(audioText).not.toContain("screen context capture");
+    expect(audioText).toContain("音频录制");
+    expect(audioText).not.toContain("从屏幕录制中隐藏");
+    expect(audioText).not.toContain("屏幕上下文采集");
 
     const audioScreenshot = await saveScreenshot("windows-user-journey-audio-settings");
     expect(existsSync(audioScreenshot)).toBe(true);
@@ -1044,7 +1044,7 @@ describe("Windows user journey", function () {
     await retentionModeOff.scrollIntoView();
     await retentionModeOff.click();
     await waitForBodyText(
-      (bodyText) => bodyText.includes("currently: keeping everything forever."),
+      (bodyText) => bodyText.includes("当前：永久保留所有内容。"),
       "Storage settings did not switch retention off before the media preview",
     );
 
@@ -1095,8 +1095,8 @@ describe("Windows user journey", function () {
 
     await waitForBodyText(
       (bodyText) =>
-        bodyText.includes("require api authentication") &&
-        bodyText.includes("all api requests require a valid token"),
+        bodyText.includes("要求 api 认证") &&
+        bodyText.includes("所有 api 请求都需要有效令牌"),
       "Privacy settings did not show the API authentication controls",
     );
 
@@ -1116,9 +1116,9 @@ describe("Windows user journey", function () {
 
       await waitForBodyText(
         (bodyText) =>
-          bodyText.includes("apply & restart") &&
-          bodyText.includes("auth changes to take effect") &&
-          bodyText.includes("existing browser connections"),
+          bodyText.includes("应用并重启") &&
+          bodyText.includes("认证更改生效") &&
+          bodyText.includes("现有浏览器连接"),
         "Privacy API auth toggle did not explain the restart requirement",
       );
 

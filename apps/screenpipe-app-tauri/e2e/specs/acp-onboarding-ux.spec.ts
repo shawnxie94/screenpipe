@@ -123,7 +123,7 @@ describe("ACP onboarding UX", () => {
     const text = (await boundaries.getText()).toLowerCase();
 
     // The claim users most often get wrong, and the reason this panel exists.
-    expect(text).toContain("not passed to");
+    expect(text).toContain("不会传给");
     // Ownership must be attributed on both sides, not just disclaimed.
     expect(text).toContain("screenpipe");
     // Generic copy is what made the previous one-liner useless.

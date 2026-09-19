@@ -3649,7 +3649,7 @@ impl PipeManager {
         let pipe_dir = self.pipes_dir.join(name);
         if !pipe_dir.exists() {
             return anyhow!(
-                "pipe '{}' not found — directory does not exist: {}\nhint: install it first with `screenpipe pipe install <source>`",
+                "定时任务 '{}' 未找到——目录不存在：{}\n提示：先用 `screenpipe pipe install <source>` 安装",
                 name,
                 pipe_dir.display()
             );
@@ -3657,7 +3657,7 @@ impl PipeManager {
         let pipe_md = pipe_dir.join("pipe.md");
         if !pipe_md.exists() {
             return anyhow!(
-                "pipe '{}' not found — directory exists but pipe.md is missing: {}",
+                "定时任务 '{}' 未找到——目录存在但缺少 pipe.md：{}",
                 name,
                 pipe_md.display()
             );
@@ -3665,18 +3665,18 @@ impl PipeManager {
         match std::fs::read_to_string(&pipe_md) {
             Ok(content) => match parse_frontmatter(&content) {
                 Ok(_) => anyhow!(
-                    "pipe '{}' not found in registry but pipe.md looks valid — try restarting or listing pipes first",
+                    "定时任务 '{}' 未在注册表中找到，但 pipe.md 看起来有效——请尝试重启或先列出定时任务",
                     name
                 ),
                 Err(e) => anyhow!(
-                    "pipe '{}' not found — pipe.md has invalid frontmatter: {}\nhint: check the YAML between the --- delimiters in {}",
+                    "定时任务 '{}' 未找到——pipe.md 的 frontmatter 无效：{}\n提示：检查 {} 中 --- 分隔符之间的 YAML",
                     name,
                     e,
                     pipe_md.display()
                 ),
             },
             Err(e) => anyhow!(
-                "pipe '{}' not found — could not read pipe.md: {}",
+                "定时任务 '{}' 未找到——无法读取 pipe.md：{}",
                 name,
                 e
             ),
@@ -3793,8 +3793,8 @@ impl PipeManager {
             let mut running = self.running.lock().await;
             if running.contains_key(name) {
                 return Err(anyhow!(
-                    "pipe '{}' is already running — you may already be executing inside this pipe. \
-                     Do NOT run `screenpipe pipe run` from within a pipe.",
+                    "定时任务 '{}' 已在运行——你可能正在该定时任务内部执行。\
+                     请勿在定时任务内运行 `screenpipe pipe run`。",
                     name
                 ));
             }
@@ -3807,8 +3807,8 @@ impl PipeManager {
                 let mut running = self.running.lock().await;
                 running.remove(name);
                 return Err(anyhow!(
-                    "pipe '{}' is already running (pid {}) — another process is executing this pipe. \
-                     Do NOT run `screenpipe pipe run` from within a pipe.",
+                    "定时任务 '{}' 已在运行（pid {}）——另一个进程正在执行该定时任务。\
+                     请勿在定时任务内运行 `screenpipe pipe run`。",
                     name, existing_pid
                 ));
             } else {
@@ -4391,8 +4391,8 @@ impl PipeManager {
                 let mut running = self.running.lock().await;
                 if running.contains_key(name) {
                     return Err(anyhow!(
-                        "pipe '{}' is already running — you may already be executing inside this pipe. \
-                         Do NOT run `screenpipe pipe run` from within a pipe.",
+                        "定时任务 '{}' 已在运行——你可能正在该定时任务内部执行。\
+                         请勿在定时任务内运行 `screenpipe pipe run`。",
                         name
                     ));
                 }
@@ -4406,8 +4406,8 @@ impl PipeManager {
                     let mut running = self.running.lock().await;
                     running.remove(name);
                     return Err(anyhow!(
-                        "pipe '{}' is already running (pid {}) — another process is executing this pipe. \
-                         Do NOT run `screenpipe pipe run` from within a pipe.",
+                        "定时任务 '{}' 已在运行（pid {}）——另一个进程正在执行该定时任务。\
+                         请勿在定时任务内运行 `screenpipe pipe run`。",
                         name, existing_pid
                     ));
                 } else {
@@ -5039,7 +5039,7 @@ impl PipeManager {
         let (mut config, body) = parse_frontmatter(&content)?;
         if is_enterprise_managed(&config) {
             return Err(anyhow!(
-                "pipe '{}' is managed by your organization and cannot be enabled or disabled locally",
+                "定时任务 '{}' 由组织管理，无法在本地启用或停用",
                 name
             ));
         }
@@ -5086,13 +5086,13 @@ impl PipeManager {
         validate_pipe_identifier(name)?;
         let pipe_md = self.pipes_dir.join(name).join("pipe.md");
         if !pipe_md.exists() {
-            return Err(anyhow!("pipe '{}' not found", name));
+            return Err(anyhow!("定时任务 '{}' 未找到", name));
         }
 
         let content = std::fs::read_to_string(&pipe_md)?;
         if content_is_enterprise_managed(&content) {
             return Err(anyhow!(
-                "pipe '{}' is managed by your organization and cannot be edited locally",
+                "定时任务 '{}' 由组织管理，无法在本地编辑",
                 name
             ));
         }
@@ -5463,7 +5463,7 @@ impl PipeManager {
         validate_pipe_identifier(name)?;
         let dest_dir = self.pipes_dir.join(name);
         if !dest_dir.exists() {
-            return Err(anyhow!("pipe '{}' not found", name));
+            return Err(anyhow!("定时任务 '{}' 未找到", name));
         }
 
         let (mut config, body) = parse_frontmatter(source_md)?;
@@ -5514,7 +5514,7 @@ impl PipeManager {
         if let Ok(content) = std::fs::read_to_string(&pipe_md) {
             if content_is_enterprise_managed(&content) {
                 return Err(anyhow!(
-                    "pipe '{}' is managed by your organization and cannot be deleted locally",
+                    "定时任务 '{}' 由组织管理，无法在本地删除",
                     name
                 ));
             }
@@ -5569,11 +5569,11 @@ impl PipeManager {
         validate_pipe_identifier(name)?;
         let pipe_dir = self.pipes_dir.join(name);
         if !pipe_dir.exists() {
-            return Err(anyhow!("pipe '{}' not found", name));
+            return Err(anyhow!("定时任务 '{}' 未找到", name));
         }
         if self.running.lock().await.contains_key(name) {
             return Err(anyhow!(
-                "pipe '{}' is running; stop it before clearing remembered context",
+                "定时任务 '{}' 正在运行；请先停止再清除记忆上下文",
                 name
             ));
         }
@@ -9303,7 +9303,7 @@ mod tests {
             .await
             .unwrap_err()
             .to_string();
-        assert!(error.contains("not found"));
+        assert!(error.contains("未找到"));
         assert!(!error.contains("invalid pipe identifier"));
     }
 
@@ -10829,7 +10829,7 @@ Run the scheduled task.
             .await
             .unwrap_err()
             .to_string()
-            .contains("managed by your organization"));
+            .contains("由组织管理"));
         assert!(manager
             .update_config(
                 "managed-review",
@@ -10838,13 +10838,13 @@ Run the scheduled task.
             .await
             .unwrap_err()
             .to_string()
-            .contains("managed by your organization"));
+            .contains("由组织管理"));
         assert!(manager
             .delete_pipe("managed-review")
             .await
             .unwrap_err()
             .to_string()
-            .contains("managed by your organization"));
+            .contains("由组织管理"));
         assert!(pipe_dir.exists());
     }
 

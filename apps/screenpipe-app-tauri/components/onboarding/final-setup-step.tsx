@@ -41,8 +41,11 @@ async function checkPipeState(
   const body = await response.json().catch(() => null);
   // The pipe detail route returns a JSON error with HTTP 200 when the pipe is
   // absent. Treat that live response contract as installable, not as an API
-  // startup failure that should be polled forever.
-  if (typeof body?.error === "string" && body.error.includes("not found")) {
+  // startup failure that should be polled forever. 匹配中英文两种后端文案。
+  if (
+    typeof body?.error === "string" &&
+    (body.error.includes("未找到") || body.error.includes("not found"))
+  ) {
     return "missing";
   }
   if (!response.ok) {

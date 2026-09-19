@@ -856,14 +856,14 @@ pub(crate) async fn get_frame_elements(
             error!("frame history lookup failed: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(json!({"error": "frame history lookup failed"})),
+                JsonResponse(json!({"error": "帧历史查询失败"})),
             )
         })? {
             if !state.history_access.allows(timestamp, Utc::now()) {
                 return Err((
                     StatusCode::FORBIDDEN,
                     JsonResponse(json!({
-                        "error": "this content is outside the available 24-hour history",
+                        "error": "该内容超出可用的 24 小时历史范围",
                         "code": "history_access_limited"
                     })),
                 ));

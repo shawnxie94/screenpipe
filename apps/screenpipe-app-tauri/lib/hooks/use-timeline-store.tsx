@@ -395,7 +395,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 				isLoading: currentFrames.length === 0, // Only show loading if no frames
 				loadingProgress: { loaded: currentFrames.length, isStreaming: false },
 				error: null,
-				message: currentFrames.length > 0 ? null : "connecting...",
+				message: currentFrames.length > 0 ? null : "连接中...",
 				isConnected: false,
 			});
 			
@@ -505,7 +505,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 					set((state) => ({
 						error: null,
 						isLoading: false,
-						message: currentFrames.length === 0 ? "waiting for data..." : null,
+						message: currentFrames.length === 0 ? "等待数据..." : null,
 					}));
 					return;
 				}
@@ -630,7 +630,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 				// OPTIMISTIC: Keep showing existing frames, just update connection status
 				set({ 
 					isLoading: currentFrames.length === 0, 
-					message: currentFrames.length === 0 ? "connecting to screenpipe..." : null,
+					message: currentFrames.length === 0 ? "正在连接 screenpipe..." : null,
 					isConnected: false,
 				});
 

@@ -242,7 +242,7 @@ pub(crate) async fn set_structured_output_feedback_handler(
     if permissions.is_some() {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(json!({ "error": "pipes cannot rate their own structured outputs" })),
+            Json(json!({ "error": "定时任务不能为自己的结构化输出评分" })),
         ));
     }
     let target_version = format!(
@@ -340,7 +340,7 @@ pub(crate) async fn set_structured_output_item_action_handler(
     if permissions.is_some() {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(json!({ "error": "pipes cannot act on their own structured output items" })),
+            Json(json!({ "error": "定时任务不能操作自己的结构化输出条目" })),
         ));
     }
     let item_actions = set_output_item_action(

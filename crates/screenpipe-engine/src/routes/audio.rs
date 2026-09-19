@@ -47,21 +47,21 @@ pub(crate) async fn api_list_audio_devices(
     let default_input_device = default_input_device().map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            JsonResponse(json!({"error": format!("Failed to get default input device: {}", e)})),
+            JsonResponse(json!({"error": format!("获取默认输入设备失败：{}", e)})),
         )
     })?;
 
     let default_output_device = default_output_device().await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            JsonResponse(json!({"error": format!("Failed to get default output device: {}", e)})),
+            JsonResponse(json!({"error": format!("获取默认输出设备失败：{}", e)})),
         )
     })?;
 
     let devices = list_audio_devices().await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            JsonResponse(json!({"error": format!("Failed to list audio devices: {}", e)})),
+            JsonResponse(json!({"error": format!("列出音频设备失败：{}", e)})),
         )
     })?;
 
@@ -79,7 +79,7 @@ pub(crate) async fn api_list_audio_devices(
     if response.is_empty() {
         Err((
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({"error": "No audio devices found"})),
+            JsonResponse(json!({"error": "未找到音频设备"})),
         ))
     } else {
         Ok(JsonResponse(response))
@@ -98,7 +98,7 @@ pub(crate) async fn start_audio_device(
             StatusCode::CONFLICT,
             JsonResponse(json!({
                 "success": false,
-                "message": "Audio capture is disabled in settings"
+                "message": "音频采集已在设置中停用"
             })),
         ));
     }
@@ -108,7 +108,7 @@ pub(crate) async fn start_audio_device(
             StatusCode::INTERNAL_SERVER_ERROR,
             JsonResponse(json!({
                 "success": false,
-                "message": format!("Failed to start recording device {}: {}", device_name, e)
+                "message": format!("启动录音设备 {} 失败：{}", device_name, e)
             })),
         ));
     }
@@ -120,7 +120,7 @@ pub(crate) async fn start_audio_device(
 
     Ok(Json(AudioDeviceControlResponse {
         success: true,
-        message: format!("started device: {}", device_name),
+        message: format!("已启动设备：{}", device_name),
     }))
 }
 
@@ -136,7 +136,7 @@ pub(crate) async fn stop_audio_device(
             StatusCode::INTERNAL_SERVER_ERROR,
             JsonResponse(json!({
                 "success": false,
-                "message": format!("Failed to stop recording device {}: {}", device_name, e)
+                "message": format!("停止录音设备 {} 失败：{}", device_name, e)
             })),
         ));
     }
@@ -148,7 +148,7 @@ pub(crate) async fn stop_audio_device(
 
     Ok(Json(AudioDeviceControlResponse {
         success: true,
-        message: format!("stopped recording audio device: {}", device_name),
+        message: format!("已停止录音设备：{}", device_name),
     }))
 }
 
@@ -170,7 +170,7 @@ pub(crate) async fn audio_device_status(
     let all_devices = list_audio_devices().await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            JsonResponse(json!({"error": format!("Failed to list audio devices: {}", e)})),
+            JsonResponse(json!({"error": format!("列出音频设备失败：{}", e)})),
         )
     })?;
     let user_disabled = state.audio_manager.user_disabled_devices().await;
@@ -201,7 +201,7 @@ pub(crate) async fn start_audio(
             StatusCode::CONFLICT,
             JsonResponse(json!({
                 "success": false,
-                "message": "Audio capture is disabled in settings",
+                "message": "音频采集已在设置中停用",
             })),
         ));
     }
@@ -212,7 +212,7 @@ pub(crate) async fn start_audio(
             StatusCode::INTERNAL_SERVER_ERROR,
             JsonResponse(json!({
                 "success": false,
-                "message": format!("Failed to start audio processing: {}", e),
+                "message": format!("启动音频处理失败：{}", e),
             })),
         )),
     }
@@ -228,7 +228,7 @@ pub(crate) async fn stop_audio(
             StatusCode::INTERNAL_SERVER_ERROR,
             JsonResponse(json!({
                 "success": false,
-                "message": format!("Failed to start audio processing: {}", e),
+                "message": format!("启动音频处理失败：{}", e),
             })),
         )),
     }

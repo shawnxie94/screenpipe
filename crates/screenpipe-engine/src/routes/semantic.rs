@@ -197,17 +197,17 @@ fn semantic_actor_error(action: &str, error: sqlx::Error) -> (StatusCode, JsonRe
     match error {
         sqlx::Error::RowNotFound => (
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({"error": "semantic actor or item not found"})),
+            JsonResponse(json!({"error": "未找到语义主体或条目"})),
         ),
         sqlx::Error::Protocol(_) => (
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "invalid semantic actor request"})),
+            JsonResponse(json!({"error": "无效的语义主体请求"})),
         ),
         error => {
             error!("semantic actor {} failed: {}", action, error);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(json!({"error": "semantic actor request failed"})),
+                JsonResponse(json!({"error": "语义主体请求失败"})),
             )
         }
     }

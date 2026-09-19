@@ -299,15 +299,12 @@ impl ServerCore {
                         // Final failure — either non-lock error or exhausted retries
                         let msg = if is_lock {
                             format!(
-                                "Database is locked by another process (likely Spotlight, \
-                                 Time Machine, antivirus, or iCloud/OneDrive sync). After \
-                                 {} attempts the lock did not clear. Close backup/sync tools \
-                                 and relaunch. Underlying error: {}",
+                                "数据库被其他进程占用（可能是 Spotlight、时间机器、杀毒软件或 iCloud/OneDrive 同步）。重试 {} 次后锁定仍未解除。请关闭备份/同步工具后重新启动应用。底层错误：{}",
                                 DB_LOCK_RETRY_DELAYS_SECS.len(),
                                 e
                             )
                         } else {
-                            format!("Failed to initialize database: {}", e)
+                            format!("数据库初始化失败：{}", e)
                         };
                         crate::health::set_boot_error(&msg);
                         return Err(msg);
@@ -322,7 +319,7 @@ impl ServerCore {
                     // handle the case where the loop exited without a match.
                     let e = last_err.unwrap_or_else(|| "unknown error".to_string());
                     let msg = format!(
-                        "Database is locked — exhausted all {} retry attempts. {}",
+                        "数据库被锁定——已重试全部 {} 次。{}",
                         DB_LOCK_RETRY_DELAYS_SECS.len(),
                         e
                     );
@@ -355,7 +352,7 @@ impl ServerCore {
 
         crate::health::set_boot_phase("building_audio", Some("starting audio pipeline"));
         let mut audio_manager = audio_manager_builder.build(db.clone()).await.map_err(|e| {
-            let msg = format!("Failed to build audio manager: {}", e);
+            let msg = format!("构建音频管理器失败：{}", e);
             crate::health::set_boot_error(&msg);
             msg
         })?;
@@ -736,7 +733,7 @@ impl ServerCore {
                         ),
                     }
                 } else {
-                    format!("failed to bind port {}: {}", config.port, e)
+                    format!("绑定端口 {} 失败：{}", config.port, e)
                 };
                 crate::health::set_boot_error(&msg);
                 return Err(msg);
@@ -752,7 +749,7 @@ impl ServerCore {
         let router = match server.try_create_router().await {
             Ok(router) => router,
             Err(error) => {
-                let msg = format!("failed to construct local API router: {error}");
+                let msg = format!("构建本地 API 路由失败：{error}");
                 crate::health::set_boot_error(&msg);
                 crate::health::set_recording_status(crate::health::RecordingStatus::Error);
                 return Err(msg);
@@ -792,9 +789,9 @@ impl ServerCore {
                 return;
             }
             let message = match outcome {
-                Ok(Ok(())) => "local API server stopped unexpectedly".to_string(),
-                Ok(Err(error)) => format!("local API server failed: {error}"),
-                Err(_) => "local API server task panicked".to_string(),
+                Ok(Ok(())) => "本地 API 服务器意外停止".to_string(),
+                Ok(Err(error)) => format!("本地 API 服务器启动失败：{error}"),
+                Err(_) => "本地 API 服务器任务崩溃".to_string(),
             };
             error!("{message}");
             crate::health::set_boot_error(&message);

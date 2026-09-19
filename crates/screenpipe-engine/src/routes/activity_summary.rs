@@ -293,8 +293,8 @@ pub async fn get_activity_summary(
         return Err((
             StatusCode::BAD_REQUEST,
             JsonResponse(json!({
-                "error": "start_time must be before end_time",
-                "hint": "Try start_time=30m ago&end_time=now"
+                "error": "start_time 必须早于 end_time",
+                "hint": "示例：start_time=30m ago&end_time=now"
             })),
         ));
     }

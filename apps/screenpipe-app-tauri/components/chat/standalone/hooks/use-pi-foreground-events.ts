@@ -286,7 +286,7 @@ export function usePiForegroundEvents({
         window.setTimeout(() => {
           piStoppedIntentionallyRef.current = false;
         }, 15_000);
-        const agentName = stringValue(data.agentName, "This agent");
+        const agentName = stringValue(data.agentName, "该 Agent");
         const agentId = stringValue(data.agentId);
         // Install ended without a "ready"; clear the pending install marker so a
         // later instant/cached connect doesn't fire a spurious "ready" toast.

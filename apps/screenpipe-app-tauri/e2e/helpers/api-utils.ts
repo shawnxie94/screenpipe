@@ -24,7 +24,7 @@ export function isSearchBusyResponse(res: FetchResult): boolean {
   }
   const body = res.body as { error?: unknown; retry_after_ms?: unknown };
   return (
-    body.error === "search is busy — retry shortly" &&
+    body.error === "搜索繁忙，请稍后重试" &&
     body.retry_after_ms === 1_000
   );
 }

@@ -134,7 +134,7 @@ describe("Chat turn liveness feedback", function () {
       },
     );
     const stalled = await statusSnapshot();
-    expect(stalled.label).toContain("still working · no update for 31s");
+    expect(stalled.label).toContain("仍在处理 · 已有 31 秒 没有更新");
     expect(stalled.hasLiveGlyph).toBe(false);
     const stalledScreenshot = await saveScreenshot("chat-turn-liveness-stalled");
     expect(existsSync(stalledScreenshot)).toBe(true);

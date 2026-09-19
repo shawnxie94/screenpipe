@@ -90,7 +90,7 @@ pub async fn set_cursor_cloud_key(
     let store = state.secret_store.as_ref().ok_or_else(|| {
         (
             StatusCode::SERVICE_UNAVAILABLE,
-            Json(json!({ "error": "encrypted secret storage is unavailable" })),
+            Json(json!({ "error": "加密密钥存储不可用" })),
         )
     })?;
     match body

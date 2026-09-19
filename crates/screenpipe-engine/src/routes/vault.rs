@@ -49,7 +49,7 @@ pub async fn vault_lock(
     Err((
         StatusCode::CONFLICT,
         JsonResponse(json!({
-            "error": "online vault locking is disabled because the running server owns live SQLite connections; stop screenpipe and run `screenpipe vault lock`"
+            "error": "在线金库锁定不可用：运行中的服务器持有活跃 SQLite 连接；请先停止 screenpipe，再运行 `screenpipe vault lock`"
         })),
     ))
 }
@@ -102,7 +102,7 @@ pub async fn vault_lock_middleware(
     if state.vault.is_locked().await {
         return (
             StatusCode::LOCKED,
-            JsonResponse(json!({ "error": "vault is locked" })),
+            JsonResponse(json!({ "error": "金库已锁定" })),
         )
             .into_response();
     }

@@ -947,7 +947,7 @@ pub fn default_input_device() -> Result<AudioDevice> {
         {
             let device = host
                 .default_input_device()
-                .ok_or(anyhow!("No default input device detected"))?;
+                .ok_or(anyhow!("未检测到默认输入设备"))?;
             Ok(AudioDevice::new(device.name()?, DeviceType::Input))
         }
     }

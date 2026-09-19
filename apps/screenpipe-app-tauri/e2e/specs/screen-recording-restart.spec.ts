@@ -82,11 +82,9 @@ import {
             "[data-testid='screen-recording-restart-button']",
           )?.textContent ?? "",
       }));
-      expect(copy.prompt.toLowerCase()).toContain("restart required");
-      expect(copy.prompt.toLowerCase()).toContain(
-        "screenpipe won't work until you restart",
-      );
-      expect(copy.button.toLowerCase()).toBe("restart screenpipe");
+      expect(copy.prompt).toContain("需要重启");
+      expect(copy.prompt).toContain("重启前 screenpipe 无法正常工作。");
+      expect(copy.button).toBe("重启 screenpipe");
       const button = await $("[data-testid='screen-recording-restart-button']");
       const screenshot = await saveScreenshot(
         "screen-recording-explicit-restart",

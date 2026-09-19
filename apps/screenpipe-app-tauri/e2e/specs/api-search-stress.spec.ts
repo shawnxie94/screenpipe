@@ -29,7 +29,7 @@ describe("Local API search and stability", function () {
   const apiUrl = (path: string) => `http://127.0.0.1:${port}${path}`;
   const authedGet = (path: string) => fetchJson(apiUrl(path), authHeaders(key));
   const isNoDefaultInputDevice = (res: Awaited<ReturnType<typeof authedGet>>) =>
-    res.status === 500 && res.text.includes("No default input device detected");
+    res.status === 500 && res.text.includes("未检测到默认输入设备");
 
   before(async () => {
     await waitForAppReady();

@@ -184,7 +184,7 @@ pub async fn get_pipe(State(pm): State<SharedPipeManager>, Path(id): Path<String
     }
     match mgr.get_pipe(&id).await {
         Some(pipe) => Json(json!({ "data": pipe })),
-        None => Json(json!({ "error": format!("pipe '{}' not found", id) })),
+        None => Json(json!({ "error": format!("定时任务 '{}' 未找到", id) })),
     }
 }
 
@@ -264,7 +264,7 @@ pub async fn run_pipe_now(
 
     if !mgr.has_execution_store() {
         return Json(json!({
-            "error": "pipe execution history is unavailable; refusing to start an untrackable run"
+            "error": "定时任务执行历史不可用；拒绝启动无法跟踪的运行"
         }));
     }
 
@@ -279,7 +279,7 @@ pub async fn run_pipe_now(
     if let Some(summary) = meeting_summary {
         if summary.meeting_id <= 0 || summary.meeting_end.trim().is_empty() {
             return Json(json!({
-                "error": "meeting_summary requires a positive meeting_id and meeting_end"
+                "error": "meeting_summary 需要有效的 meeting_id 和 meeting_end"
             }));
         }
     }
@@ -346,7 +346,7 @@ pub async fn run_pipe_now(
             "execution_id": execution_id,
         })),
         Ok(None) => Json(json!({
-            "error": "pipe run started without a persisted execution id"
+            "error": "定时任务已启动，但没有持久化的执行 ID"
         })),
         Err(e) => Json(json!({ "error": e.to_string() })),
     }
@@ -418,7 +418,7 @@ pub async fn get_pipe_execution(
         Ok(Some(execution)) => (StatusCode::OK, Json(json!({ "data": execution }))),
         Ok(None) => (
             StatusCode::NOT_FOUND,
-            Json(json!({ "error": "execution not found" })),
+            Json(json!({ "error": "未找到该次执行" })),
         ),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -447,7 +447,7 @@ pub async fn get_pipe_session(
         None => {
             return (
                 StatusCode::NOT_FOUND,
-                Json(json!({ "error": "execution not found" })),
+                Json(json!({ "error": "未找到该次执行" })),
             )
         }
     };
@@ -456,7 +456,7 @@ pub async fn get_pipe_session(
         None => {
             return (
                 StatusCode::NOT_FOUND,
-                Json(json!({ "error": "no session file for this execution" })),
+                Json(json!({ "error": "该次执行没有会话文件" })),
             )
         }
     };
@@ -464,7 +464,7 @@ pub async fn get_pipe_session(
         Ok(content) => (StatusCode::OK, Json(json!({ "data": content }))),
         Err(e) => (
             StatusCode::NOT_FOUND,
-            Json(json!({ "error": format!("failed to read session file: {}", e) })),
+            Json(json!({ "error": format!("读取会话文件失败：{}", e) })),
         ),
     }
 }
@@ -513,7 +513,7 @@ pub async fn install_bundled_pipe(
     };
     if let Err(error) = mgr.load_pipes().await {
         return Json(json!({
-            "error": format!("bundled Pipe was copied but could not be loaded: {error}")
+            "error": format!("内置定时任务已复制但无法加载：{error}")
         }));
     }
 

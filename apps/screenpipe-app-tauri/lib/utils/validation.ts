@@ -325,7 +325,7 @@ const findProviderErrorMessage = (value: unknown, depth = 0): string | null => {
 
 export const extractAiProviderErrorMessage = (
   body: string,
-  fallback = "Request failed",
+  fallback = "请求失败",
 ): string => {
   const trimmed = body.trim();
   if (!trimmed) return fallback;

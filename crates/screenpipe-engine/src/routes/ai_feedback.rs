@@ -40,7 +40,7 @@ fn db_error(error: sqlx::Error) -> ApiError {
     tracing::error!(%error, "feedback database operation failed");
     (
         StatusCode::INTERNAL_SERVER_ERROR,
-        Json(json!({ "error": "feedback database operation failed" })),
+        Json(json!({ "error": "反馈数据库操作失败" })),
     )
 }
 
@@ -221,7 +221,7 @@ pub(crate) async fn set_ai_feedback_handler(
     if permissions.is_some() {
         return Err((
             StatusCode::FORBIDDEN,
-            Json(json!({ "error": "pipes cannot rate their own outputs" })),
+            Json(json!({ "error": "定时任务不能为自己的输出评分" })),
         ));
     }
 

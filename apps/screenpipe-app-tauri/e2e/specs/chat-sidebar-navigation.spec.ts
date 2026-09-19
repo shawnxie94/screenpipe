@@ -303,7 +303,7 @@ describe("Home sidebar has one coherent active chat", function () {
     expect(state.foregroundId).not.toBeNull();
     const title = state.title;
 
-    const trigger = await $(`[aria-label="chat options for ${title}"]`);
+    const trigger = await $(`[aria-label="聊天选项：${title}"]`);
     await trigger.waitForDisplayed({ timeout: t(5_000) });
     await trigger.click();
 

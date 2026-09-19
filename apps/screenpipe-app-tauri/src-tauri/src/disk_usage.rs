@@ -379,7 +379,7 @@ pub async fn disk_usage(
 ) -> Result<Option<DiskUsage>, String> {
     let cache_dir = match get_cache_dir()? {
         Some(dir) => dir,
-        None => return Err("Cache directory not found".to_string()),
+        None => return Err("未找到缓存目录".to_string()),
     };
     fs::create_dir_all(&cache_dir).map_err(|e| e.to_string())?;
     disk_usage_in(screenpipe_dir, &cache_dir, freshness).await

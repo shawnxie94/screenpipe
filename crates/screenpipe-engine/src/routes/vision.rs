@@ -61,7 +61,7 @@ fn require_vision_manager(
             StatusCode::CONFLICT,
             JsonResponse(json!({
                 "success": false,
-                "message": "Screen recording is disabled in settings"
+                "message": "屏幕录制已在设置中停用"
             })),
         )
     })
@@ -80,14 +80,14 @@ pub(crate) async fn start_vision_device(
             StatusCode::INTERNAL_SERVER_ERROR,
             JsonResponse(json!({
                 "success": false,
-                "message": format!("Failed to resume monitor {}: {}", monitor_id, e)
+                "message": format!("恢复显示器 {} 的录制失败：{}", monitor_id, e)
             })),
         ));
     }
 
     Ok(JsonResponse(VisionDeviceControlResponse {
         success: true,
-        message: format!("resumed screen recording on monitor {}", monitor_id),
+        message: format!("已恢复显示器 {} 的屏幕录制", monitor_id),
     }))
 }
 
@@ -104,14 +104,14 @@ pub(crate) async fn stop_vision_device(
             StatusCode::INTERNAL_SERVER_ERROR,
             JsonResponse(json!({
                 "success": false,
-                "message": format!("Failed to pause monitor {}: {}", monitor_id, e)
+                "message": format!("暂停显示器 {} 的录制失败：{}", monitor_id, e)
             })),
         ));
     }
 
     Ok(JsonResponse(VisionDeviceControlResponse {
         success: true,
-        message: format!("paused screen recording on monitor {}", monitor_id),
+        message: format!("已暂停显示器 {} 的屏幕录制", monitor_id),
     }))
 }
 

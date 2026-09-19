@@ -257,7 +257,7 @@ describe("Chat workspace tabs and split", function () {
     await browser.waitUntil(
       async () =>
         (await browser.execute(() =>
-          document.body.textContent?.includes("Use your browser login?"),
+          document.body.textContent?.includes("使用你的浏览器登录状态？"),
         )) as boolean,
       {
         timeout: t(5_000),

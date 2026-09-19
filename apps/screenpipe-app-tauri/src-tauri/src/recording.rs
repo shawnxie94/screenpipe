@@ -316,7 +316,7 @@ pub async fn get_available_monitors() -> Result<Vec<MonitorDevice>, String> {
     let monitors = screenpipe_screen::monitor::list_monitors().await;
 
     if monitors.is_empty() {
-        return Err("No monitors found".to_string());
+        return Err("未找到可用显示器".to_string());
     }
 
     let result: Vec<MonitorDevice> = monitors
@@ -615,7 +615,7 @@ pub async fn start_capture(
         let Some(ref core) = *server_guard else {
             warn!("Server not running — requesting full restart");
             let _ = app.emit("request-server-restart", ());
-            return Err("Server not running — full restart requested".to_string());
+            return Err("服务器未运行——已请求完整重启".to_string());
         };
         (core.port, core.local_api_key.clone())
     };
@@ -632,7 +632,7 @@ pub async fn start_capture(
         );
         let _ = app.emit("request-server-restart", ());
         return Err(format!(
-            "Server not responding on port {} — full restart requested",
+            "服务器在端口 {} 无响应——已请求完整重启",
             port
         ));
     }
@@ -642,7 +642,7 @@ pub async fn start_capture(
     let server_guard = state.server.lock().await;
     let server = server_guard
         .as_ref()
-        .ok_or_else(|| "Server not running — cannot start capture".to_string())?;
+        .ok_or_else(|| "服务器未运行——无法开始采集".to_string())?;
     let config = build_config(&app)?;
     let session = CaptureSession::start(server, &config, false).await?;
     drop(server_guard);
@@ -1233,7 +1233,7 @@ async fn spawn_screenpipe_inner(
             {
                 Ok(rt) => rt,
                 Err(e) => {
-                    let msg = format!("Failed to create server runtime: {}", e);
+                    let msg = format!("创建服务器运行时失败：{}", e);
                     crate::health::set_boot_error(&msg);
                     let _ = result_tx.send(Err(msg));
                     return;
@@ -1373,7 +1373,7 @@ async fn spawn_screenpipe_inner(
         Err(_) => {
             state.is_starting.store(false, Ordering::SeqCst);
             state.is_starting_capture.store(false, Ordering::SeqCst);
-            Err("Server startup channel dropped unexpectedly".to_string())
+            Err("服务器启动通道意外中断".to_string())
         }
     }
 }
@@ -1402,7 +1402,7 @@ async fn start_capture_internal(
     let server_guard = state.server.lock().await;
     let server = server_guard
         .as_ref()
-        .ok_or_else(|| "Server not running".to_string())?;
+        .ok_or_else(|| "服务器未运行".to_string())?;
 
     let config = build_config(app)?;
     let session = CaptureSession::start(server, &config, false).await?;

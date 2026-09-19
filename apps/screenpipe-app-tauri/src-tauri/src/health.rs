@@ -740,23 +740,23 @@ fn overlay_failure_detail(
     simulated_break: bool,
 ) -> &'static str {
     if simulated_break {
-        return "simulated recording failure";
+        return "模拟录制故障";
     }
     if failures.vision_process_exhausted {
         return crate::overlay_health::MANUAL_SCREEN_CAPTURE_RECOVERY_DETAIL;
     }
 
     match (failures.audio, failures.vision, failures.persistence) {
-        (true, true, false) => "audio and screen capture are not updating",
-        (false, false, true) => "recording data cannot be saved",
-        (true, false, false) => "audio capture is not updating",
-        (false, true, false) => "screen capture is not updating",
-        (true, _, true) | (_, true, true) => "multiple recording errors detected",
+        (true, true, false) => "音频和画面采集均未更新",
+        (false, false, true) => "无法保存录制数据",
+        (true, false, false) => "音频采集未更新",
+        (false, true, false) => "画面采集未更新",
+        (true, _, true) | (_, true, true) => "检测到多个录制错误",
         (false, false, false) if status == RecordingStatus::Error => {
-            "recording engine could not start"
+            "录制引擎无法启动"
         }
-        (false, false, false) if status == RecordingStatus::Stopped => "recording engine stopped",
-        _ => "recording stopped unexpectedly",
+        (false, false, false) if status == RecordingStatus::Stopped => "录制引擎已停止",
+        _ => "录制意外停止",
     }
 }
 
@@ -772,8 +772,8 @@ fn overlay_failure_detail(
 /// attributed — the pill then keeps its generic wording rather than guessing.
 pub(crate) fn overlay_failure_subsystem(detail: &str) -> &'static str {
     match detail {
-        "audio capture is not updating" => "audio",
-        "screen capture is not updating" => "screen",
+        "音频采集未更新" => "audio",
+        "画面采集未更新" => "screen",
         crate::overlay_health::MANUAL_SCREEN_CAPTURE_RECOVERY_DETAIL
         | crate::overlay_health::MANUAL_PERMISSION_RECOVERY_DETAIL => "screen",
         // "audio and screen capture are not updating", "multiple recording
@@ -2981,7 +2981,7 @@ mod tests {
                     ..CaptureFailureSignals::default()
                 },
                 false,
-                "audio capture is not updating",
+                "音频采集未更新",
             ),
             (
                 RecordingStatus::Recording,
@@ -2990,7 +2990,7 @@ mod tests {
                     ..CaptureFailureSignals::default()
                 },
                 false,
-                "screen capture is not updating",
+                "画面采集未更新",
             ),
             (
                 RecordingStatus::Recording,
@@ -3008,7 +3008,7 @@ mod tests {
                     ..CaptureFailureSignals::default()
                 },
                 false,
-                "recording data cannot be saved",
+                "无法保存录制数据",
             ),
             (
                 RecordingStatus::Recording,
@@ -3018,7 +3018,7 @@ mod tests {
                     ..CaptureFailureSignals::default()
                 },
                 false,
-                "audio and screen capture are not updating",
+                "音频和画面采集均未更新",
             ),
             (
                 RecordingStatus::Recording,
@@ -3028,25 +3028,25 @@ mod tests {
                     ..CaptureFailureSignals::default()
                 },
                 false,
-                "multiple recording errors detected",
+                "检测到多个录制错误",
             ),
             (
                 RecordingStatus::Error,
                 CaptureFailureSignals::default(),
                 false,
-                "recording engine could not start",
+                "录制引擎无法启动",
             ),
             (
                 RecordingStatus::Stopped,
                 CaptureFailureSignals::default(),
                 false,
-                "recording engine stopped",
+                "录制引擎已停止",
             ),
             (
                 RecordingStatus::Recording,
                 CaptureFailureSignals::default(),
                 true,
-                "simulated recording failure",
+                "模拟录制故障",
             ),
         ];
 
@@ -3066,25 +3066,25 @@ mod tests {
     #[test]
     fn overlay_names_a_single_failing_subsystem_and_never_guesses() {
         assert_eq!(
-            overlay_failure_subsystem("audio capture is not updating"),
+            overlay_failure_subsystem("音频采集未更新"),
             "audio",
         );
         assert_eq!(
-            overlay_failure_subsystem("screen capture is not updating"),
+            overlay_failure_subsystem("画面采集未更新"),
             "screen",
         );
 
         // Anything spanning subsystems, or that the engine could not attribute,
         // must stay generic rather than pick a side.
         for generic in [
-            "audio and screen capture are not updating",
-            "multiple recording errors detected",
-            "recording data cannot be saved",
-            "recording engine could not start",
-            "recording engine stopped",
-            "recording stopped unexpectedly",
-            "recording did not restart",
-            "simulated recording failure",
+            "音频和画面采集均未更新",
+            "检测到多个录制错误",
+            "无法保存录制数据",
+            "录制引擎无法启动",
+            "录制引擎已停止",
+            "录制意外停止",
+            "录制未能重启",
+            "模拟录制故障",
             "",
         ] {
             assert_eq!(

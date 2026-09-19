@@ -631,8 +631,8 @@ describe("Context usage per provider", function () {
     const text = await contextPanelText();
     expect(text).toContain("52k / 200k");
     // The honest degradation: one bar, and a line saying why there is no split.
-    expect(text).toContain("without a category breakdown");
-    expect(text).not.toContain("breakdown values are estimated");
+    expect(text).toContain("不提供类别细分");
+    expect(text).not.toContain("细分数值为估算值");
     const hasDisclosure = (await browser.execute(
       () =>
         !!document
@@ -756,7 +756,7 @@ describe("Context usage per provider", function () {
     );
     const text = await contextPanelText();
     expect(text).toContain("screenpipe-e2e");
-    expect(text).toContain("total is reported by the model");
+    expect(text).toContain("总量由模型报告");
     expect(text).not.toContain("without a category breakdown");
 
     const rows = await expandBreakdownRows();

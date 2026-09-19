@@ -30,10 +30,6 @@ interface KnowledgeView {
   id: string;
 }
 
-  path: string;
-  body: Record<string, unknown>;
-}
-
 async function setCssWindowSize(width: number, height: number) {
   const devicePixelRatio = (await browser.execute(
     () => window.devicePixelRatio || 1,
@@ -575,25 +571,25 @@ describe("connected snapshot sharing", function () {
         timeoutMsg: "Obsidian handoff did not open Home Chat",
       },
     );
-    const chatInput = await $(`textarea[placeholder*="Ask about your screen"]`);
+    const chatInput = await $(`textarea[placeholder*="提问或描述任务"]`);
     await chatInput.waitForExist({ timeout: t(20_000) });
     await browser.waitUntil(
       async () =>
         String(await chatInput.getValue()).includes(
-          "Do not create, overwrite, append, or send anything yet",
+          "暂不创建、覆盖、追加或发送任何内容",
         ),
       { timeout: t(20_000), timeoutMsg: "Chat draft was not prefilled" },
     );
     expect(String(await chatInput.getValue())).toContain(
-      "connected Obsidian vault",
+      "已连接的 Obsidian 库",
     );
     expect(String(await chatInput.getValue())).toContain(
-      "ask for approval exactly once",
+      "只征求一次批准",
     );
     const chatBodyText = (await browser.execute(
       () => document.body?.innerText ?? "",
     )) as string;
-    expect(chatBodyText.toLowerCase()).toContain("frozen screenpipe snapshot");
+    expect(chatBodyText.toLowerCase()).toContain("冻结的 screenpipe 快照");
     expect(chatBodyText).not.toContain('"kind":"screenpipe_share_context"');
     expect(
       existsSync(await saveScreenshot("connected-share-chat-draft")),
@@ -728,7 +724,7 @@ describe("connected snapshot sharing", function () {
       ).find(
         (element) =>
           element.textContent?.trim() ===
-          "context from frozen Screenpipe snapshot",
+          "已冻结的 screenpipe 快照",
       );
       label?.parentElement?.parentElement
         ?.querySelector<HTMLButtonElement>("button")

@@ -454,8 +454,11 @@ pub(crate) async fn restart_capture_on_mic_grant(app: tauri::AppHandle) {
                 return;
             }
             Err(e) => {
-                let transient =
-                    e.contains("Server not running") || e.contains("Server not responding");
+                // recording.rs 自汉化起发出中文错误；英文分支兜底旧构建。
+                let transient = e.contains("服务器未运行")
+                    || e.contains("服务器无响应")
+                    || e.contains("Server not running")
+                    || e.contains("Server not responding");
                 if !transient {
                     warn!("start_capture after mic grant: {}", e);
                     return;

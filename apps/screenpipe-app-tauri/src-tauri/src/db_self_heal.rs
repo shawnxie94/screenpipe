@@ -236,7 +236,7 @@ pub async fn try_self_heal_at_launch(
 
     crate::health::set_boot_phase(
         "starting",
-        Some("database verified after a transient fault"),
+        Some("短暂故障后已验证数据库"),
     );
     if let Err(error) = crate::recording::spawn_screenpipe(app.state(), app.clone(), None).await {
         // The marker is already resolved and the generation verified, so the

@@ -513,13 +513,13 @@ pub(crate) async fn register_artifact_handler(
     if payload.source.trim().is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "source must not be empty"})),
+            JsonResponse(json!({"error": "source 不能为空"})),
         ));
     }
     if payload.title.trim().is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "title must not be empty"})),
+            JsonResponse(json!({"error": "title 不能为空"})),
         ));
     }
 
@@ -527,13 +527,13 @@ pub(crate) async fn register_artifact_handler(
     let src_meta = tokio::fs::metadata(src_path).await.map_err(|e| {
         (
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": format!("file_path not accessible: {}", e)})),
+            JsonResponse(json!({"error": format!("file_path 无法访问：{}", e)})),
         )
     })?;
     if src_meta.len() > MAX_FILE_SIZE {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "file exceeds 100 MB limit"})),
+            JsonResponse(json!({"error": "文件超过 100 MB 上限"})),
         ));
     }
 
@@ -551,7 +551,7 @@ pub(crate) async fn register_artifact_handler(
         (
             StatusCode::BAD_REQUEST,
             JsonResponse(
-                json!({"error": "source, source_type, or filename contains invalid characters"}),
+                json!({"error": "source、source_type 或 filename 含有无效字符"}),
             ),
         )
     })?;
@@ -741,7 +741,7 @@ pub(crate) async fn delete_artifact_handler(
     let Some(p) = path else {
         return Err((
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({"error": "output not found"})),
+            JsonResponse(json!({"error": "未找到输出"})),
         ));
     };
 

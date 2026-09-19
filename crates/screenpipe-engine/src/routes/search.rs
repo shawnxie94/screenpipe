@@ -875,7 +875,7 @@ fn search_overloaded_response() -> Response<Body> {
         .header(header::RETRY_AFTER, SEARCH_RETRY_AFTER_SECS.to_string())
         .body(Body::from(
             json!({
-                "error": "search is busy — retry shortly",
+                "error": "搜索繁忙，请稍后重试",
                 "retry_after_ms": SEARCH_RETRY_AFTER_SECS * 1000,
             })
             .to_string(),
@@ -889,7 +889,7 @@ fn search_timeout_response() -> Response<Body> {
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(
             json!({
-                "error": "search query timed out after 30s — try a narrower time range or add filters",
+                "error": "搜索在 30 秒后超时——请缩小时间范围或增加筛选条件",
             })
             .to_string(),
         ))
@@ -1010,7 +1010,7 @@ pub(crate) async fn search(
         return Err((
             StatusCode::BAD_REQUEST,
             JsonResponse(json!({
-                "error": "frame_id and actor_id require content_type=parsed",
+                "error": "frame_id 与 actor_id 需要 content_type=parsed",
             })),
         ));
     }
@@ -1020,7 +1020,7 @@ pub(crate) async fn search(
         return Err((
             StatusCode::BAD_REQUEST,
             JsonResponse(json!({
-                "error": "tags are not supported for this content_type",
+                "error": "此 content_type 不支持 tags",
             })),
         ));
     }

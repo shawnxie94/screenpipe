@@ -98,7 +98,7 @@ fn unavailable() -> (StatusCode, JsonResponse<Value>) {
     (
         StatusCode::SERVICE_UNAVAILABLE,
         JsonResponse(json!({
-            "error": "HD controller unavailable (vision disabled)"
+            "error": "HD 控制器不可用（屏幕录制未启用）"
         })),
     )
 }

@@ -1021,18 +1021,18 @@ function ClaudePanel({
         )}
         {targets.includes("claude") && claudeAppInstalled === false ? (
           <Button variant="outline" onClick={() => openUrl("https://claude.ai/download")} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            <ExternalLink className="h-3 w-3" />get claude desktop
+            <ExternalLink className="h-3 w-3" />获取 Claude Desktop
           </Button>
         ) : targets.includes("claude") ? (
           <Button variant="outline" onClick={openClaude} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            <ExternalLink className="h-3 w-3" />open claude
+            <ExternalLink className="h-3 w-3" />打开 Claude
           </Button>
         ) : null}
       </div>
       {connectError && <PanelConfigError err={connectError} />}
       {state === "connected" && (
         <p className="text-xs text-muted-foreground">
-          <strong>已连接。</strong> Restart Claude and ask: &quot;what did I do in the last 5 minutes?&quot;
+          <strong>已连接。</strong> 重启 Claude 并询问：“我过去 5 分钟做了什么？”
         </p>
       )}
       {targets.includes("claude-code") && (
@@ -1114,7 +1114,7 @@ function CursorPanel({ onConnected, onDisconnected }: { onConnected?: () => void
       <div className="flex flex-wrap gap-2">
         {state === "installed" ? (
           <Button onClick={handleDisconnect} variant="outline" size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            <LogOut className="h-3 w-3" />disconnect
+            <LogOut className="h-3 w-3" />断开连接
           </Button>
         ) : (
           <Button onClick={handleConnect} disabled={state === "installing"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
@@ -1123,11 +1123,11 @@ function CursorPanel({ onConnected, onDisconnected }: { onConnected?: () => void
         )}
         {cursorAppInstalled === false ? (
           <Button variant="outline" onClick={() => openUrl("https://cursor.com/download")} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            <ExternalLink className="h-3 w-3" />get cursor
+            <ExternalLink className="h-3 w-3" />获取 Cursor
           </Button>
         ) : (
           <Button variant="outline" onClick={openCursor} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            <ExternalLink className="h-3 w-3" />open cursor
+            <ExternalLink className="h-3 w-3" />打开 Cursor
           </Button>
         )}
       </div>
@@ -1192,7 +1192,7 @@ function CodexPanel({ onConnected, onDisconnected }: { onConnected?: () => void;
       <div className="flex flex-wrap gap-2">
         {state === "installed" ? (
           <Button onClick={handleDisconnect} variant="outline" size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            <LogOut className="h-3 w-3" />disconnect
+            <LogOut className="h-3 w-3" />断开连接
           </Button>
         ) : (
           <Button onClick={handleConnect} disabled={state === "installing"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
@@ -1200,13 +1200,13 @@ function CodexPanel({ onConnected, onDisconnected }: { onConnected?: () => void;
           </Button>
         )}
         <Button variant="outline" onClick={openCodex} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-          <ExternalLink className="h-3 w-3" />open codex
+          <ExternalLink className="h-3 w-3" />打开 Codex
         </Button>
       </div>
       {connectError && <PanelConfigError err={connectError} />}
       {state === "installed" && (
         <p className="text-xs text-muted-foreground">
-          <strong>已连接。</strong> Open a new Codex session and ask: &quot;what did I do in the last 5 minutes?&quot;
+          <strong>已连接。</strong> 启动新的 Codex 会话并询问：“我过去 5 分钟做了什么？”
         </p>
       )}
       <details className="text-xs text-muted-foreground">
@@ -1258,7 +1258,7 @@ function GrokPanel({ onConnected, onDisconnected }: { onConnected?: () => void; 
       <div className="flex flex-wrap gap-2">
         {state === "installed" ? (
           <Button onClick={handleDisconnect} variant="outline" size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            <LogOut className="h-3 w-3" />disconnect
+            <LogOut className="h-3 w-3" />断开连接
           </Button>
         ) : (
           <Button onClick={handleConnect} disabled={state === "installing"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
@@ -1735,7 +1735,7 @@ function MstyPanel() {
         3. 为工具命名（例如 <strong>screenpipe</strong>），然后点击 <strong>添加</strong>
       </p>
       <Button variant="outline" onClick={() => openUrl("https://msty.app")} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-        <ExternalLink className="h-3 w-3" />open msty
+        <ExternalLink className="h-3 w-3" />打开 Msty
       </Button>
     </div>
   );
@@ -1781,7 +1781,7 @@ function WarpPanel() {
         3. 点击 <strong>保存</strong>。服务器应显示 <strong>运行中</strong>。然后询问 Warp 的代理：<em>“我过去 5 分钟做了什么？”</em>
       </p>
       <Button variant="outline" onClick={() => openUrl("https://www.warp.dev")} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-        <ExternalLink className="h-3 w-3" />open warp
+        <ExternalLink className="h-3 w-3" />打开 Warp
       </Button>
     </div>
   );

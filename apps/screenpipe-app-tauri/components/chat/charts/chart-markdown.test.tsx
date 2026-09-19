@@ -97,7 +97,7 @@ describe("chart fence inside assistant markdown", () => {
     fireEvent.keyDown(screen.getByRole("button", { name: "图表操作" }), {
       key: "ArrowDown",
     });
-    fireEvent.click(screen.getByRole("menuitem", { name: /add to live view/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /添加到实时视图/i }));
 
     expect(onSendPrompt).toHaveBeenCalledOnce();
     expect(onSendPrompt.mock.calls[0][0]).toContain('"title": "time by app"');

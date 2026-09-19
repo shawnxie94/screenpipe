@@ -105,9 +105,8 @@ describe('AI tools catalog', function () {
     await browser.waitUntil(
       async () => {
         const body = (await browser.execute(() => document.body.innerText.toLowerCase())) as string;
-        return body.includes('connections') &&
-          body.includes('ai tools') &&
-          body.includes('choose what your ai can use');
+        return body.includes('ai 工具') &&
+          body.includes('选择你的 ai 可以使用什么');
       },
       { timeout: t(12_000), timeoutMsg: 'Connections did not render the AI tools settings' },
     );
@@ -115,8 +114,8 @@ describe('AI tools catalog', function () {
     await browser.execute(() => {
       const buttons = Array.from(document.querySelectorAll('button'));
       const target = buttons.find((button) =>
-        button.textContent?.trim().toLowerCase() === 'manage' &&
-        button.parentElement?.textContent?.toLowerCase().includes('ai tools'),
+        button.textContent?.trim() === '管理' &&
+        button.parentElement?.textContent?.includes('AI 工具'),
       );
       target?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     });
@@ -126,10 +125,10 @@ describe('AI tools catalog', function () {
         const state = (await browser.execute(() => {
           const headings = Array.from(document.querySelectorAll('h4'));
           const recommended = headings.find((heading) =>
-            heading.textContent?.trim().toLowerCase() === 'recommended',
+            heading.textContent?.trim() === '推荐',
           );
           const included = headings.find((heading) =>
-            heading.textContent?.trim().toLowerCase() === 'included',
+            heading.textContent?.trim() === '内置',
           );
           return {
             body: document.body.innerText.toLowerCase(),
@@ -139,27 +138,27 @@ describe('AI tools catalog', function () {
           };
         })) as { body: string; recommendedComesFirst: boolean };
         return state.recommendedComesFirst &&
-          state.body.includes('community tools can run code') &&
-          state.body.includes('screen history') &&
-          state.body.includes('ready in every agent') &&
-          state.body.includes('screenpipe only') &&
-          state.body.includes('subagents') &&
-          state.body.includes('web agent') &&
-          state.body.includes('ask user');
+          state.body.includes('社区工具可以运行代码') &&
+          state.body.includes('屏幕历史') &&
+          state.body.includes('兼容所有代理') &&
+          state.body.includes('仅 screenpipe') &&
+          state.body.includes('子代理') &&
+          state.body.includes('网页代理') &&
+          state.body.includes('询问用户');
       },
       { timeout: t(12_000), timeoutMsg: 'AI tools catalog did not open' },
     );
 
-    const search = await $('input[placeholder="Search tools..."]');
+    const search = await $('input[placeholder="搜索工具..."]');
     await search.waitForExist({ timeout: t(8_000) });
     await search.setValue('web');
 
     await browser.waitUntil(
       async () => {
         const body = (await browser.execute(() => document.body.innerText.toLowerCase())) as string;
-        return body.includes('web agent') &&
+        return body.includes('网页代理') &&
           body.includes('@demigodmode/pi-web-agent') &&
-          body.includes('delegate work to focused child agents');
+          body.includes('为你的 ai 添加网页研究能力');
       },
       { timeout: t(8_000), timeoutMsg: 'AI tools catalog search did not filter to web agent' },
     );

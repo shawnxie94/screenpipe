@@ -351,7 +351,7 @@ describe("Inline charts in chat", function () {
       },
     );
     expect(actionState?.rendered).toBe(true);
-    expect(actionState?.text.toLowerCase()).toContain("add to live view");
+    expect(actionState?.text.toLowerCase()).toContain("添加到实时视图");
 
     await browser.execute(() => {
       (document.activeElement ?? document).dispatchEvent(

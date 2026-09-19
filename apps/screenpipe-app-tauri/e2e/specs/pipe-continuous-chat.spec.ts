@@ -305,7 +305,7 @@ describe("Pipes: continue in one chat", function () {
     await historySwitch.click();
     const saveError = await $(`[data-testid="pipe-history-error-${PIPE_NAME}"]`);
     await saveError.waitForExist({ timeout: t(10_000) });
-    expect((await saveError.getText()).toLowerCase()).toContain("previous setting restored");
+    expect((await saveError.getText()).toLowerCase()).toContain("已恢复之前的设置");
     expect(await historySwitch.getAttribute("data-state")).toBe("unchecked");
     expect(await readPipeHistorySetting()).toBe(false);
 

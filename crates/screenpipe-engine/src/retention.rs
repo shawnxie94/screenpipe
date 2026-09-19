@@ -140,7 +140,7 @@ pub async fn retention_configure(
     if retention_days < 1 {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "retention_days must be at least 1"})),
+            JsonResponse(json!({"error": "retention_days 至少为 1"})),
         ));
     }
 
@@ -154,7 +154,7 @@ pub async fn retention_configure(
         return Err((
             StatusCode::BAD_REQUEST,
             JsonResponse(
-                json!({"error": format!("retention_days must be at most {MAX_RETENTION_DAYS}")}),
+                json!({"error": format!("retention_days 最大不能超过 {MAX_RETENTION_DAYS}")}),
             ),
         ));
     }
@@ -293,14 +293,14 @@ pub async fn retention_run(
     let runtime = guard.as_ref().ok_or_else(|| {
         (
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "retention not configured"})),
+            JsonResponse(json!({"error": "尚未配置保留策略"})),
         )
     })?;
 
     if !runtime.config.enabled {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "retention is disabled"})),
+            JsonResponse(json!({"error": "自动删除已停用"})),
         ));
     }
 

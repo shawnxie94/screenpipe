@@ -1377,7 +1377,7 @@ export function StandaloneChat({
       block.requestId,
       selectedOptionId ? { selectedOptionId } : { cancelled: true },
       block.sessionId,
-      "could not continue the agent",
+      "无法继续代理会话",
     );
     if (!answered) return false;
     answeredAgentRequestIdsRef.current.add(`${block.sessionId}:${block.requestId}`);
@@ -2001,7 +2001,7 @@ export function StandaloneChat({
         requestId,
         optionId ? { selectedOptionId: optionId } : { cancelled: true },
         sessionId,
-        "could not continue the agent",
+        "无法继续代理会话",
       );
       if (!answered) return false;
       answeredAgentRequestIdsRef.current.add(`${sessionId}:${requestId}`);
@@ -2418,7 +2418,7 @@ export function StandaloneChat({
           disabledReason: composerDisabledReason,
           placeholder:
             isLoading || isStreaming
-              ? "Message will be queued..."
+              ? "消息将加入队列，稍后发送..."
               : homeCardPromptPreview ?? undefined,
           canChat: Boolean(canSendChatMessage) && !codingWorkspace.isLoading,
           isLoading,

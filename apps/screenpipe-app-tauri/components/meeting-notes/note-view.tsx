@@ -1194,7 +1194,7 @@ export function NoteView({
           toast({
             title: "无法保存笔记",
             description:
-              "stopping anyway — your latest edits may not be saved.",
+              "仍会停止——你的最新修改可能未保存。",
             variant: "destructive",
           });
         }

@@ -42,7 +42,7 @@ fn history_forbidden() -> (StatusCode, JsonResponse<Value>) {
     (
         StatusCode::FORBIDDEN,
         JsonResponse(json!({
-            "error": "this content is outside the available 24-hour history",
+            "error": "该内容超出可用的 24 小时历史范围",
             "code": "history_access_limited"
         })),
     )
@@ -63,7 +63,7 @@ async fn require_frame_history_access(
             error!(%error, frame_id, "frame history lookup failed");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(json!({ "error": "frame history lookup failed" })),
+                JsonResponse(json!({ "error": "帧历史查询失败" })),
             )
         })?
     {
@@ -381,7 +381,7 @@ pub async fn get_frame_preview_samples(
             error!(%error, "frame preview sample query failed");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(json!({ "error": "frame preview sample query failed" })),
+                JsonResponse(json!({ "error": "帧预览采样查询失败" })),
             )
         })?;
     let candidates: Vec<_> = candidates
@@ -461,7 +461,7 @@ pub async fn get_frame_preview_media(
             error!(%error, "preview media history lookup failed");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(json!({ "error": "preview media history lookup failed" })),
+                JsonResponse(json!({ "error": "预览媒体历史查询失败" })),
             )
         })?
     {
@@ -477,20 +477,20 @@ pub async fn get_frame_preview_media(
             error!(%error, "preview media lookup failed");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(json!({ "error": "preview media lookup failed" })),
+                JsonResponse(json!({ "error": "预览媒体查询失败" })),
             )
         })?
     else {
         return Err((
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({ "error": "preview media not found" })),
+            JsonResponse(json!({ "error": "未找到预览媒体" })),
         ));
     };
 
     let mut file = File::open(&file_path).await.map_err(|_| {
         (
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({ "error": "preview media not found" })),
+            JsonResponse(json!({ "error": "未找到预览媒体" })),
         )
     })?;
     let file_len = file
@@ -499,7 +499,7 @@ pub async fn get_frame_preview_media(
         .map_err(|_| {
             (
                 StatusCode::NOT_FOUND,
-                JsonResponse(json!({ "error": "preview media not found" })),
+                JsonResponse(json!({ "error": "未找到预览媒体" })),
             )
         })?
         .len();
@@ -617,7 +617,7 @@ pub async fn get_frame_thumbnail(
                 return Err((
                     StatusCode::NOT_FOUND,
                     JsonResponse(json!({
-                        "error": "Frame is on a remote device",
+                        "error": "该帧位于远程设备上",
                         "error_type": "remote_device",
                         "frame_id": frame_id
                     })),
@@ -633,14 +633,14 @@ pub async fn get_frame_thumbnail(
         Ok(None) => {
             return Err((
                 StatusCode::NOT_FOUND,
-                JsonResponse(json!({"error": "Frame not found", "frame_id": frame_id})),
+                JsonResponse(json!({"error": "未找到帧", "frame_id": frame_id})),
             ));
         }
         Err(error) => {
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 JsonResponse(json!({
-                    "error": format!("Database error: {error}"),
+                    "error": format!("数据库错误：{error}"),
                     "frame_id": frame_id
                 })),
             ));
@@ -707,9 +707,9 @@ pub async fn get_frame_thumbnail(
             StatusCode::NOT_FOUND,
             JsonResponse(json!({
                 "error": if query.fallback {
-                    "Frame thumbnail unavailable and no nearby frame available"
+                    "帧缩略图不可用，且没有可用的邻近帧"
                 } else {
-                    "Exact frame thumbnail unavailable"
+                    "该帧的缩略图不可用"
                 },
                 "error_type": if primary.is_snapshot { "snapshot_missing" } else { "frame_unavailable" },
                 "frame_id": frame_id
@@ -717,7 +717,7 @@ pub async fn get_frame_thumbnail(
         )),
         Err(_) => Err((
             StatusCode::REQUEST_TIMEOUT,
-            JsonResponse(json!({"error": "Request timed out", "frame_id": frame_id})),
+            JsonResponse(json!({"error": "请求超时", "frame_id": frame_id})),
         )),
     }
 }
@@ -968,7 +968,7 @@ pub async fn get_frame_data(
                         .unwrap_or((None, None));
 
                     let metadata = json!({
-                        "error": "Frame is on a remote device",
+                        "error": "该帧位于远程设备上",
                         "error_type": "remote_device",
                         "frame_id": frame_id,
                         "timestamp": timestamp,
@@ -1012,7 +1012,7 @@ pub async fn get_frame_data(
                             return Err((
                                 StatusCode::NOT_FOUND,
                                 JsonResponse(json!({
-                                    "error": "Snapshot file missing and no nearby frame available",
+                                    "error": "快照文件缺失且没有可用的邻近帧",
                                     "error_type": "snapshot_missing",
                                     "frame_id": frame_id
                                 })),
@@ -1048,7 +1048,7 @@ pub async fn get_frame_data(
                             Err((
                                 StatusCode::INTERNAL_SERVER_ERROR,
                                 JsonResponse(json!({
-                                    "error": "ffprobe not found - install ffprobe alongside ffmpeg to extract frames from compacted videos",
+                                    "error": "未找到 ffprobe——请随 ffmpeg 一起安装 ffprobe，才能从压缩视频中提取帧",
                                     "error_type": "ffprobe_not_found",
                                     "frame_id": frame_id,
                                     "file_path": file_path,
@@ -1061,7 +1061,7 @@ pub async fn get_frame_data(
                             Err((
                                 StatusCode::GONE,
                                 JsonResponse(json!({
-                                    "error": "Frame unavailable - video file corrupted or missing",
+                                    "error": "帧不可用——视频文件损坏或缺失",
                                     "error_type": "video_corrupted",
                                     "frame_id": frame_id,
                                     "file_path": file_path,
@@ -1073,7 +1073,7 @@ pub async fn get_frame_data(
                             Err((
                                 StatusCode::INTERNAL_SERVER_ERROR,
                                 JsonResponse(json!({
-                                    "error": format!("Failed to extract frame: {}", e),
+                                    "error": format!("提取帧失败：{}", e),
                                     "frame_id": frame_id,
                                     "file_path": file_path
                                 })),
@@ -1085,14 +1085,14 @@ pub async fn get_frame_data(
             Ok(None) => Err((
                 StatusCode::NOT_FOUND,
                 JsonResponse(json!({
-                    "error": "Frame not found",
+                    "error": "未找到帧",
                     "frame_id": frame_id
                 })),
             )),
             Err(e) => Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 JsonResponse(json!({
-                    "error": format!("Database error: {}", e),
+                    "error": format!("数据库错误：{}", e),
                     "frame_id": frame_id
                 })),
             )),
@@ -1106,7 +1106,7 @@ pub async fn get_frame_data(
             Err((
                 StatusCode::REQUEST_TIMEOUT,
                 JsonResponse(json!({
-                    "error": "Request timed out",
+                    "error": "请求超时",
                     "frame_id": frame_id
                 })),
             ))
@@ -1257,7 +1257,7 @@ pub async fn get_next_valid_frame(
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 JsonResponse(json!({
-                    "error": format!("Database error: {}", e),
+                    "error": format!("数据库错误：{}", e),
                     "frame_id": query.frame_id
                 })),
             ));
@@ -1286,7 +1286,7 @@ pub async fn get_next_valid_frame(
     Err((
         StatusCode::NOT_FOUND,
         JsonResponse(json!({
-            "error": "No valid frames found",
+            "error": "未找到有效帧",
             "frame_id": query.frame_id,
             "checked_count": skipped
         })),
@@ -1315,7 +1315,7 @@ pub async fn get_frame_metadata(
         Ok(None) => Err((
             StatusCode::NOT_FOUND,
             JsonResponse(json!({
-                "error": "Frame not found",
+                "error": "未找到帧",
                 "frame_id": frame_id
             })),
         )),
@@ -1324,7 +1324,7 @@ pub async fn get_frame_metadata(
             Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 JsonResponse(json!({
-                    "error": format!("Database error: {}", e),
+                    "error": format!("数据库错误：{}", e),
                     "frame_id": frame_id
                 })),
             ))
@@ -1772,7 +1772,7 @@ pub async fn run_frame_ocr(
         Ok(None) => {
             return Err((
                 StatusCode::NOT_FOUND,
-                JsonResponse(json!({ "error": "Frame not found", "frame_id": frame_id })),
+                JsonResponse(json!({ "error": "未找到帧", "frame_id": frame_id })),
             ));
         }
         Err(e) => {
@@ -1825,7 +1825,7 @@ pub async fn run_frame_ocr(
                     return Err((
                         StatusCode::INTERNAL_SERVER_ERROR,
                         JsonResponse(
-                            json!({ "error": "Failed to load extracted frame from video" }),
+                            json!({ "error": "从视频加载提取帧失败" }),
                         ),
                     ));
                 }

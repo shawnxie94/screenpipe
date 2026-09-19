@@ -299,7 +299,7 @@ describe("Chat durable result cards", function () {
   });
 
   it("opens a created-chat result through the real conversation handoff", async () => {
-    const button = await $('button[aria-label="Open Result-card target"]');
+    const button = await $('button[aria-label="打开 Result-card target"]');
     await button.scrollIntoView({ block: "center" });
     await button.click();
     await browser.waitUntil(

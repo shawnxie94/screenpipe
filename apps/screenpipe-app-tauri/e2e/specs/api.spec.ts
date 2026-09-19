@@ -192,7 +192,7 @@ describe("Local HTTP API", function () {
     );
     expect(res.ok).toBe(false);
     expect(res.status).toBe(409);
-    expect(res.body).toHaveProperty("message", "Audio capture is disabled in settings");
+    expect(res.body).toHaveProperty("message", "音频采集已在设置中停用");
   });
 
   it("POST /audio/device/start — rejects before opening a device while audio is disabled", async () => {
@@ -207,7 +207,7 @@ describe("Local HTTP API", function () {
     );
     expect(res.ok).toBe(false);
     expect(res.status).toBe(409);
-    expect(res.body).toHaveProperty("message", "Audio capture is disabled in settings");
+    expect(res.body).toHaveProperty("message", "音频采集已在设置中停用");
   });
 
   it("GET /connections — authed, returns 2xx with an array body", async function () {

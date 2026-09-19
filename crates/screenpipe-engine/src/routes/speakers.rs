@@ -248,26 +248,26 @@ pub(crate) async fn get_speaker_sample_handler(
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(json!({"error": format!("failed to load audio chunk: {}", e)})),
+                JsonResponse(json!({"error": format!("加载音频片段失败：{}", e)})),
             )
         })?;
     let chunk = chunks.into_iter().next().ok_or_else(|| {
         (
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({"error": "audio chunk not found"})),
+            JsonResponse(json!({"error": "未找到音频片段"})),
         )
     })?;
 
     if chunk.file_path.starts_with("cloud://") {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "cloud audio samples are not playable locally"})),
+            JsonResponse(json!({"error": "云端音频样本无法在本地播放"})),
         ));
     }
     if !is_valid_local_audio_path(&chunk.file_path) {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "audio chunk has no playable local file path"})),
+            JsonResponse(json!({"error": "音频片段没有可播放的本地文件路径"})),
         ));
     }
 
@@ -276,7 +276,7 @@ pub(crate) async fn get_speaker_sample_handler(
             .map_err(|e| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    JsonResponse(json!({"error": format!("failed to decode audio sample: {}", e)})),
+                    JsonResponse(json!({"error": format!("解码音频样本失败：{}", e)})),
                 )
             })?;
 
@@ -287,7 +287,7 @@ pub(crate) async fn get_speaker_sample_handler(
     if start_idx >= end_idx {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "sample range is outside the audio chunk"})),
+            JsonResponse(json!({"error": "采样范围超出音频片段"})),
         ));
     }
 

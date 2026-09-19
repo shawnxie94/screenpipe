@@ -754,7 +754,7 @@ async fn recording_health_return_race(
         return_confirmed,
         false,
         false,
-        "screen capture is not updating",
+        "画面采集未更新",
     )
     .await;
     let overlay_state = crate::overlay_health::current_state_payload();

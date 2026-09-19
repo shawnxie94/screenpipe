@@ -79,7 +79,7 @@ export function useFrameActions(opts: {
 		if (!debouncedFrame?.frameId || !device) return;
 		const rawText = frameContext?.text || textPositions.map((p: any) => p.text).join(" ");
 		const textSnippet = rawText.slice(0, 300);
-		const context = `Context from timeline frame:\n${device.metadata?.app_name || "?"} - ${device.metadata?.window_name || "?"}\nTime: ${currentFrame?.timestamp || "?"}\n\nText:\n${textSnippet}${textSnippet.length >= 300 ? "…" : ""}`;
+		const context = `来自时间线帧的上下文：\n${device.metadata?.app_name || "?"} - ${device.metadata?.window_name || "?"}\n时间：${currentFrame?.timestamp || "?"}\n\n文本：\n${textSnippet}${textSnippet.length >= 300 ? "…" : ""}`;
 		await showChatWithPrefill({ context, frameId: parseInt(debouncedFrame.frameId, 10) });
 		toast({ title: "询问此画面", description: "已打开包含画面上下文的聊天" });
 	}, [debouncedFrame, device, frameContext?.text, textPositions, currentFrame]);
@@ -88,7 +88,7 @@ export function useFrameActions(opts: {
 		if (!debouncedFrame?.frameId || !device) return;
 		const rawText = frameContext?.text || textPositions.map((p: any) => p.text).join(" ");
 		const textSnippet = rawText.slice(0, 300);
-		const context = `Context from timeline frame:\n${device.metadata?.app_name || "?"} - ${device.metadata?.window_name || "?"}\nTime: ${currentFrame?.timestamp || "?"}\n\nText:\n${textSnippet}${textSnippet.length >= 300 ? "…" : ""}`;
+		const context = `来自时间线帧的上下文：\n${device.metadata?.app_name || "?"} - ${device.metadata?.window_name || "?"}\n时间：${currentFrame?.timestamp || "?"}\n\n文本：\n${textSnippet}${textSnippet.length >= 300 ? "…" : ""}`;
 		await showChatWithPrefill({ context, prompt: pipe.prompt, autoSend: true });
 		toast({ title: `${pipe.icon} ${pipe.title}`, description: "正在使用画面上下文运行定时任务" });
 	}, [debouncedFrame, device, frameContext?.text, textPositions, currentFrame]);

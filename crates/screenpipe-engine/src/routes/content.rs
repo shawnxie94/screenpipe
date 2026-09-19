@@ -260,7 +260,7 @@ pub(crate) async fn add_tags(
         _ => {
             return Err((
                 StatusCode::BAD_REQUEST,
-                JsonResponse(json!({"error": "Invalid content type"})),
+                JsonResponse(json!({"error": "无效的内容类型"})),
             ))
         }
     };
@@ -289,7 +289,7 @@ pub(crate) async fn remove_tags(
         _ => {
             return Err((
                 StatusCode::BAD_REQUEST,
-                JsonResponse(json!({"error": "Invalid content type"})),
+                JsonResponse(json!({"error": "无效的内容类型"})),
             ))
         }
     };
@@ -588,7 +588,7 @@ pub(crate) async fn add_to_database(
             error!("Unknown content type: {}", payload.content.content_type);
             return Err((
                 StatusCode::BAD_REQUEST,
-                JsonResponse(json!({"error": "Unsupported content type"})),
+                JsonResponse(json!({"error": "不支持的内容类型"})),
             ));
         }
     }
@@ -702,7 +702,7 @@ pub(crate) async fn execute_raw_sql(
         return Err((
             StatusCode::FORBIDDEN,
             JsonResponse(json!({
-                "error": "raw SQL is unavailable while local history is limited to 24 hours",
+                "error": "本地历史限制为 24 小时期间，raw SQL 不可用",
                 "code": "history_access_limited"
             })),
         ));

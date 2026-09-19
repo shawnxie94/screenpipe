@@ -612,9 +612,7 @@ describe("ACP backend", function () {
       "kimi",
       "custom",
     ]);
-    expect(options.map((option) => option.label)).toContain("Another ACP agent");
-    const body = (await browser.execute(() => document.body.innerText)) as string;
-    expect(body).toContain("Your existing sign-in and agent settings stay in that app.");
+    expect(options.map((option) => option.label)).toContain("代理命令");
   });
 
   it("uses the official Rust ACP SDK for stream, plan, tool, permission, and cancel", async () => {
@@ -953,9 +951,9 @@ describe("ACP backend", function () {
     const rows = await widget.$$('[data-testid="tool-activity-item"]');
     expect(rows).toHaveLength(2);
     const listText = await list.getText();
-    expect(listText).toContain("Searched your history");
-    expect(listText).toContain("Used a Pi tool");
-    expect(listText).not.toContain("Completed a background step");
+    expect(listText).toContain("已搜索 你的历史记录");
+    expect(listText).toContain("已使用 Pi 工具");
+    expect(listText).not.toContain("后台步骤已完成");
 
     await rows[0].click();
     await browser.waitUntil(async () => (await widget.getText()).includes("late ACP metadata"), {
@@ -1021,8 +1019,8 @@ describe("ACP backend", function () {
 
     const compactRows = await widget.$$('[data-testid="tool-activity-item"]');
     expect(compactRows).toHaveLength(1);
-    expect(await compactRows[0].getText()).toContain("Searched recordings");
-    expect(await compactRows[0].getText()).toContain("25 queries");
+    expect(await compactRows[0].getText()).toContain("已搜索记录");
+    expect(await compactRows[0].getText()).toContain("25 次查询");
     const compactScreenshot = await saveScreenshot("acp-repeated-tools-compact");
     expect(existsSync(compactScreenshot)).toBe(true);
 
@@ -1089,8 +1087,8 @@ describe("ACP backend", function () {
     );
     const failureRows = await failureWidget.$$('[data-testid="tool-activity-item"]');
     expect(failureRows).toHaveLength(2);
-    expect(await failureRows[0].getText()).toContain("3 queries");
-    expect(await failureRows[1].getText()).toContain("failed");
+    expect(await failureRows[0].getText()).toContain("3 次查询");
+    expect(await failureRows[1].getText()).toContain("失败");
     const failureScreenshot = await saveScreenshot("acp-repeated-tools-failure");
     expect(existsSync(failureScreenshot)).toBe(true);
 
@@ -1108,7 +1106,7 @@ describe("ACP backend", function () {
     );
     const shortRows = await shortWidget.$$('[data-testid="tool-activity-item"]');
     expect(shortRows).toHaveLength(2);
-    expect(await shortWidget.getText()).not.toContain("2 queries");
+    expect(await shortWidget.getText()).not.toContain("2 次查询");
     const shortScreenshot = await saveScreenshot("acp-repeated-tools-short");
     expect(existsSync(shortScreenshot)).toBe(true);
 

@@ -169,7 +169,7 @@ where
             .map_err(|_| {
                 (
                     StatusCode::BAD_REQUEST,
-                    JsonResponse(json!({"error": "failed to read request body"})),
+                    JsonResponse(json!({"error": "读取请求体失败"})),
                 )
             })?;
         let parsed = if bytes.is_empty() {
@@ -178,7 +178,7 @@ where
             serde_json::from_slice(&bytes).map_err(|e| {
                 (
                     StatusCode::BAD_REQUEST,
-                    JsonResponse(json!({"error": format!("invalid request body: {e}")})),
+                    JsonResponse(json!({"error": format!("请求体无效：{e}")})),
                 )
             })?
         };
@@ -228,7 +228,7 @@ fn require_meeting_history_access(
     Err((
         StatusCode::FORBIDDEN,
         JsonResponse(json!({
-            "error": "this meeting is outside the available 24-hour history",
+            "error": "该会议超出可用的 24 小时历史范围",
             "code": "history_access_limited"
         })),
     ))
@@ -378,7 +378,7 @@ pub(crate) async fn get_meeting_handler(
     let meeting = state.db.get_meeting_by_id(id).await.map_err(|e| {
         (
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({"error": format!("meeting not found: {}", e)})),
+            JsonResponse(json!({"error": format!("未找到会议：{}", e)})),
         )
     })?;
     require_meeting_history_access(&state, &meeting)?;
@@ -542,7 +542,7 @@ pub(crate) async fn get_meeting_summary_status_handler(
     let meeting = state.db.get_meeting_by_id(id).await.map_err(|e| {
         (
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({"error": format!("meeting not found: {}", e)})),
+            JsonResponse(json!({"error": format!("未找到会议：{}", e)})),
         )
     })?;
     require_meeting_history_access(&state, &meeting)?;
@@ -610,7 +610,7 @@ pub(crate) async fn get_meeting_transcript_handler(
     let meeting = state.db.get_meeting_by_id(id).await.map_err(|e| {
         (
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({"error": format!("meeting not found: {}", e)})),
+            JsonResponse(json!({"error": format!("未找到会议：{}", e)})),
         )
     })?;
     require_meeting_history_access(&state, &meeting)?;
@@ -679,7 +679,7 @@ pub(crate) async fn update_meeting_handler(
     let meeting = state.db.get_meeting_by_id(id).await.map_err(|e| {
         (
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({"error": format!("meeting not found: {}", e)})),
+            JsonResponse(json!({"error": format!("未找到会议：{}", e)})),
         )
     })?;
 
@@ -711,7 +711,7 @@ pub(crate) async fn save_meeting_summary_handler(
     if body.summary.trim().is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "summary must not be empty"})),
+            JsonResponse(json!({"error": "摘要不能为空"})),
         ));
     }
     crate::meeting_summary::notes::save_meeting_summary(
@@ -740,7 +740,7 @@ pub(crate) async fn bulk_delete_meetings_handler(
     if body.ids.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "at least 1 meeting id is required"})),
+            JsonResponse(json!({"error": "至少需要 1 个会议 ID"})),
         ));
     }
 
@@ -759,7 +759,7 @@ pub(crate) async fn bulk_delete_meetings_handler(
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
                     JsonResponse(
-                        json!({"error": format!("failed to delete meeting {}: {}", id, e)}),
+                        json!({"error": format!("删除会议 {} 失败：{}", id, e)}),
                     ),
                 ));
             }
@@ -777,7 +777,7 @@ pub(crate) async fn merge_meetings_handler(
     if body.ids.len() < 2 {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "at least 2 meeting ids are required to merge"})),
+            JsonResponse(json!({"error": "合并会议至少需要 2 个会议 ID"})),
         ));
     }
 
@@ -810,7 +810,7 @@ pub(crate) async fn split_meeting_handler(
     if DateTime::parse_from_rfc3339(&body.at).is_err() {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": format!("'at' must be RFC3339, got: {}", body.at)})),
+            JsonResponse(json!({"error": format!("'at' 必须是 RFC3339 格式，实际为：{}", body.at)})),
         ));
     }
 
@@ -856,7 +856,7 @@ pub(crate) async fn start_meeting_handler(
         if status.active && status.active_meeting_id != Some(id) {
             return Err((
                 StatusCode::BAD_REQUEST,
-                JsonResponse(json!({"error": "another meeting is already active"})),
+                JsonResponse(json!({"error": "已有进行中的会议"})),
             ));
         }
 
@@ -866,7 +866,7 @@ pub(crate) async fn start_meeting_handler(
         state.db.get_meeting_by_id(id).await.map_err(|e| {
             (
                 StatusCode::NOT_FOUND,
-                JsonResponse(json!({"error": format!("meeting not found: {}", e)})),
+                JsonResponse(json!({"error": format!("未找到会议：{}", e)})),
             )
         })?;
 
@@ -896,7 +896,7 @@ pub(crate) async fn start_meeting_handler(
             let existing = state.db.get_meeting_by_id(active_id).await.map_err(|e| {
                 (
                     StatusCode::NOT_FOUND,
-                    JsonResponse(json!({"error": format!("meeting not found: {}", e)})),
+                    JsonResponse(json!({"error": format!("未找到会议：{}", e)})),
                 )
             })?;
             let title_update = body
@@ -1010,7 +1010,7 @@ pub(crate) async fn start_meeting_handler(
                     (
                         StatusCode::CONFLICT,
                         JsonResponse(json!({
-                            "error": "another meeting is already active",
+                            "error": "已有进行中的会议",
                         })),
                     )
                 } else {
@@ -1046,7 +1046,7 @@ pub(crate) async fn start_meeting_handler(
     let meeting = state.db.get_meeting_by_id(id).await.map_err(|e| {
         (
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({"error": format!("meeting not found: {}", e)})),
+            JsonResponse(json!({"error": format!("未找到会议：{}", e)})),
         )
     })?;
 
@@ -1095,14 +1095,14 @@ pub(crate) async fn stop_meeting_handler(
                 }
                 return Err((
                     StatusCode::BAD_REQUEST,
-                    JsonResponse(json!({"error": "requested meeting is not the active meeting"})),
+                    JsonResponse(json!({"error": "请求的会议不是当前进行中的会议"})),
                 ));
             }
         }
         None => status.stoppable_meeting_id.ok_or_else(|| {
             (
                 StatusCode::BAD_REQUEST,
-                JsonResponse(json!({"error": "no active meeting"})),
+                JsonResponse(json!({"error": "当前没有进行中的会议"})),
             )
         })?,
     };
@@ -1184,7 +1184,7 @@ pub(crate) async fn stop_meeting_handler(
     let meeting = state.db.get_meeting_by_id(id).await.map_err(|e| {
         (
             StatusCode::NOT_FOUND,
-            JsonResponse(json!({"error": format!("meeting not found: {}", e)})),
+            JsonResponse(json!({"error": format!("未找到会议：{}", e)})),
         )
     })?;
 
@@ -1201,14 +1201,14 @@ pub(crate) async fn resolve_room_change_handler(
     let decision = parse_room_change_choice(&request.decision).ok_or_else(|| {
         (
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": "decision must be 'switch' or 'keep'"})),
+            JsonResponse(json!({"error": "decision 必须是 'switch' 或 'keep'"})),
         )
     })?;
     let status = resolve_meeting_status(&state).await?;
     if status.active_meeting_id != Some(request.meeting_id) {
         return Err((
             StatusCode::CONFLICT,
-            JsonResponse(json!({"error": "the prompted meeting is no longer active"})),
+            JsonResponse(json!({"error": "所提示的会议已不再进行中"})),
         ));
     }
 
@@ -1340,7 +1340,7 @@ pub(crate) async fn export_handler(
                 return Err((
                     StatusCode::FORBIDDEN,
                     JsonResponse(json!({
-                        "error": "the requested export is outside the available 24-hour history",
+                        "error": "请求的导出超出可用的 24 小时历史范围",
                         "code": "history_access_limited"
                     })),
                 ));

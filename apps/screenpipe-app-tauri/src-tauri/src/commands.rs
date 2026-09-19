@@ -944,10 +944,10 @@ pub async fn get_disk_usage(
             Ok(json_value) => Ok(json_value),
             Err(e) => {
                 error!("Failed to serialize disk usage: {}", e);
-                Err(format!("Failed to serialize disk usage: {}", e))
+                Err(format!("序列化磁盘用量失败：{}", e))
             }
         },
-        Ok(None) => Err("No disk usage data found".to_string()),
+        Ok(None) => Err("未找到磁盘用量数据".to_string()),
         Err(e) => {
             error!("Failed to get disk usage: {}", e);
             Err(format!("获取磁盘用量失败：{}", e))
@@ -1842,17 +1842,17 @@ pub async fn disable_keychain_encryption() -> Result<KeychainStatus, String> {
                 crate::secrets::KeyResult::Found(key) => key,
                 crate::secrets::KeyResult::AccessDenied => {
                     return Err(format!(
-                        "Cannot disable encryption yet: {encrypted_count} stored secret(s) are encrypted, but keychain access was denied."
+                        "暂时无法关闭加密：有 {encrypted_count} 个已存储的密钥仍处于加密状态，但钥匙串访问被拒绝。"
                     ));
                 }
                 crate::secrets::KeyResult::NotFound => {
                     return Err(format!(
-                        "Cannot disable encryption yet: {encrypted_count} stored secret(s) are encrypted, but the keychain key was not found."
+                        "暂时无法关闭加密：有 {encrypted_count} 个已存储的密钥仍处于加密状态，但未找到钥匙串密钥。"
                     ));
                 }
                 crate::secrets::KeyResult::Unavailable => {
                     return Err(format!(
-                        "Cannot disable encryption yet: {encrypted_count} stored secret(s) are encrypted, but the keychain is unavailable."
+                        "暂时无法关闭加密：有 {encrypted_count} 个已存储的密钥仍处于加密状态，但钥匙串不可用。"
                     ));
                 }
             };
@@ -1860,14 +1860,14 @@ pub async fn disable_keychain_encryption() -> Result<KeychainStatus, String> {
             let encrypted_store =
                 screenpipe_secrets::SecretStore::open_for_data_dir(&data_dir, Some(key))
                     .await
-                    .map_err(|e| format!("failed to open encrypted secret store: {e}"))?;
+                    .map_err(|e| format!("打开加密密钥库失败：{e}"))?;
             match encrypted_store.decrypt_encrypted_secrets().await {
                 Ok(count) => {
                     tracing::info!("decrypted {} secrets before keychain opt-out", count);
                 }
                 Err(e) => {
                     return Err(format!(
-                        "Cannot disable encryption until encrypted secrets are decrypted: {e}"
+                        "已加密的密钥解密完成前无法关闭加密：{e}"
                     ));
                 }
             }
@@ -2341,7 +2341,7 @@ pub(crate) async fn show_shortcut_reminder_impl(
         .map(crate::window::finalize_webview_window)
         .map_err(|e| {
             log_webview_build_failure(label, "shortcut-reminder", &e);
-            format!("Failed to create shortcut reminder window: {}", e)
+            format!("创建快捷键提醒窗口失败：{}", e)
         })?;
 
     info!("shortcut-reminder window created");
@@ -2580,7 +2580,7 @@ pub async fn show_notification_inbox(app_handle: tauri::AppHandle) -> Result<(),
             let monitor = app_handle
                 .primary_monitor()
                 .map_err(|e| e.to_string())?
-                .ok_or("No primary monitor found")?;
+                .ok_or("未找到主显示器")?;
             let screen_size = monitor.size();
             let scale_factor = monitor.scale_factor();
             ((screen_size.width as f64 / scale_factor) - window_width) / 2.0
@@ -2618,7 +2618,7 @@ pub async fn show_notification_inbox(app_handle: tauri::AppHandle) -> Result<(),
     .map(crate::window::finalize_webview_window)
     .map_err(|e| {
         log_webview_build_failure(label, "notification-inbox", &e);
-        format!("Failed to create notification inbox window: {}", e)
+        format!("创建通知收件箱窗口失败：{}", e)
     })?;
 
     // Click-away dismiss: the inbox is a transient popover, not a window the
@@ -2820,7 +2820,7 @@ pub(crate) async fn deliver_notification_panel(
             let monitor = app_handle
                 .primary_monitor()
                 .map_err(|e| e.to_string())?
-                .ok_or("No primary monitor found")?;
+                .ok_or("未找到主显示器")?;
             let screen_size = monitor.size();
             let scale_factor = monitor.scale_factor();
             let x = (screen_size.width as f64 / scale_factor) - window_width - 16.0;
@@ -2917,7 +2917,7 @@ pub(crate) async fn deliver_notification_panel(
         .map(crate::window::finalize_webview_window)
         .map_err(|e| {
             log_webview_build_failure(label, "notification-panel", &e);
-            format!("Failed to create notification panel window: {}", e)
+            format!("创建通知面板窗口失败：{}", e)
         })?;
 
     info!("notification-panel window created");
@@ -3099,14 +3099,14 @@ fn register_window_shortcuts_inner(app_handle: tauri::AppHandle) -> Result<(), S
             }
         })
         .map_err(|e| {
-            let message = format!("Failed to register Escape shortcut: {e}");
+            let message = format!("注册 Escape 快捷键失败：{e}");
             error!("{}", message);
             message
         })?;
 
     if !global_shortcut.is_registered(escape_shortcut) {
         let message =
-            "Escape shortcut registration returned success but was not retained".to_string();
+            "Escape 快捷键注册返回成功，但实际未被保留".to_string();
         error!("{}", message);
         return Err(message);
     }
@@ -3485,7 +3485,7 @@ pub fn open_windows_shell_target(target: String) -> Result<(), String> {
     #[cfg(not(target_os = "windows"))]
     {
         let _ = target;
-        Err("Windows shell targets are only supported on Windows".to_string())
+        Err("Windows shell 目标仅在 Windows 上受支持".to_string())
     }
 }
 

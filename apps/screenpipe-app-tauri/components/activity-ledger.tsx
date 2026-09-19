@@ -1315,16 +1315,16 @@ function ActivityLedgerSkeleton({ label }: { label: string }) {
 
 function compactEntryContext(entry: ActivityHistoryEntry): string {
   return [
-    `Time: ${entry.start_at} to ${entry.end_at}`,
-    `Kind: ${entry.kind}${entry.meeting_id ? ` (meeting ${entry.meeting_id})` : ""}`,
-    `Activity: ${entry.title}`,
-    `Summary: ${entry.summary}`,
-    `Source artifacts:\n${entry.evidence
+    `时间：${entry.start_at} 至 ${entry.end_at}`,
+    `类型：${entry.kind}${entry.meeting_id ? `（会议 ${entry.meeting_id}）` : ""}`,
+    `活动：${entry.title}`,
+    `摘要：${entry.summary}`,
+    `来源工件：\n${entry.evidence
       .map(
         (evidence) =>
-          `- ${evidence.kind} at ${evidence.at}${
-            evidence.frame_id ? `, frame ${evidence.frame_id}` : ""
-          }${evidence.app_name ? `, app ${evidence.app_name}` : ""}: ${evidence.label}`,
+          `- ${evidence.kind}，位于 ${evidence.at}${
+            evidence.frame_id ? `，画面 ${evidence.frame_id}` : ""
+          }${evidence.app_name ? `，应用 ${evidence.app_name}` : ""}：${evidence.label}`,
       )
       .join("\n")}`,
   ].join("\n");

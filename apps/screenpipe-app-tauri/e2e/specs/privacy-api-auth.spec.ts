@@ -95,7 +95,7 @@ describe("Privacy: API authentication controls", function () {
       async () =>
         (await browser.execute(() => {
           const text = document.body?.innerText?.toLowerCase?.() ?? "";
-          return text.includes("api key copied to clipboard");
+          return text.includes("api 密钥已复制到剪贴板");
         })) as boolean,
       {
         timeout: t(8_000),

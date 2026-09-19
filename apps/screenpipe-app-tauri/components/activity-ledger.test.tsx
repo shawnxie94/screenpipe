@@ -2111,7 +2111,7 @@ describe("ActivityLedger", () => {
       expect(mocks.showChatWithPrefill).toHaveBeenCalledWith(
         expect.objectContaining({
           source: "activity-history-skill",
-          context: expect.stringContaining("frame 67890"),
+          context: expect.stringContaining("画面 67890"),
           prompt: expect.stringContaining("起草一份聚焦的 SKILL.md"),
         }),
       ),
@@ -2132,7 +2132,7 @@ describe("ActivityLedger", () => {
       expect(mocks.showChatWithPrefill).toHaveBeenCalledWith(
         expect.objectContaining({
           source: "activity-history-chat",
-          context: expect.stringContaining("frame 67890"),
+          context: expect.stringContaining("画面 67890"),
           displayLabel: "询问 “Unblocked a customer's onboarding”",
           prompt: "了解更多此活动的详情。",
         }),

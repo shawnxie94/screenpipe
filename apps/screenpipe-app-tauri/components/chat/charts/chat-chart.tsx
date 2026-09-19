@@ -92,7 +92,7 @@ function ChartActions({
           }
         >
           <LayoutDashboard className="h-3.5 w-3.5" aria-hidden="true" />
-          add to live view…
+          添加到实时视图…
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

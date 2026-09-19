@@ -74,17 +74,16 @@ const canRun = !seedFlags.includes("onboarding");
       expect(url.pathname).toBe("/onboarding");
     });
 
-    it("renders the login slide content, not a loading spinner or blank shell", async () => {
+    it("renders the first onboarding slide content, not a loading spinner or blank shell", async () => {
       // The page has a top-level isLoading branch that shows only a
       // spinner — guard against the test passing while the user actually
-      // sees nothing useful. Asserting visible text from login-gate.tsx
-      // (the brand wordmark + tagline) catches both "spinner never
-      // resolved" and "login component threw and got unmounted".
+      // sees nothing useful. Asserting visible text from the permissions
+      // slide (the first step of the flow) catches both "spinner never
+      // resolved" and a thrown/unmounted onboarding component.
       const bodyText = ((await browser.execute(
         () => document.body?.innerText || "",
       )) as string).toLowerCase();
-      expect(bodyText).toContain("screenpipe");
-      expect(bodyText).toContain("ai finally knows what you");
+      expect(bodyText).toContain("捕捉你说的话");
     });
 
     // ─── system-browser login handoff ────────────────────────────────────

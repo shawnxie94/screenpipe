@@ -47,7 +47,7 @@ const usePlatformStore = create<PlatformState>((set) => ({
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : "unknown error",
+        error: error instanceof Error ? error.message : "未知错误",
       });
     }
   },

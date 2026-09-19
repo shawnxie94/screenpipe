@@ -140,7 +140,7 @@ describe("ConnectedShareDialog", () => {
     );
     expect(mocks.showChatWithPrefill).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompt: expect.stringContaining("connected Obsidian vault"),
+        prompt: expect.stringContaining("已连接的 Obsidian 库"),
         displayLabel: expect.stringContaining("Obsidian"),
       }),
     );

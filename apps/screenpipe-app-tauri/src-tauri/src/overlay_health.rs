@@ -41,10 +41,10 @@ const PASSIVE_RECOVERY_CONFIRM_TICKS: u32 = 90;
 const USER_RESTART_TEARDOWN_TIMEOUT: Duration = Duration::from_secs(15);
 
 pub(crate) const MANUAL_SCREEN_CAPTURE_RECOVERY_DETAIL: &str =
-    "restart screenpipe to restore screen capture";
-const MANUAL_RECORDING_RECOVERY_DETAIL: &str = "quit and reopen screenpipe to recover recording";
+    "重启 screenpipe 以恢复画面采集";
+const MANUAL_RECORDING_RECOVERY_DETAIL: &str = "退出并重新打开 screenpipe 以恢复录制";
 pub(crate) const MANUAL_PERMISSION_RECOVERY_DETAIL: &str =
-    "quit and reopen screenpipe to finish screen recording access";
+    "退出并重新打开 screenpipe 以完成屏幕录制授权";
 const MANUAL_RECOVERY_ACTION: &str = "manual-reopen";
 
 fn manual_recovery_detail(detail: &str) -> Option<&'static str> {
@@ -412,7 +412,7 @@ fn apply_failure_detail(
             // health tick only knows the engine did not start, so do not let
             // that generic classification erase the actionable explanation.
             if broken
-                && failure_detail == "recording engine could not start"
+                && failure_detail == "录制引擎无法启动"
                 && is_specific_permission_restart_detail(&inner.last_detail)
             {
                 return effect;
@@ -420,9 +420,9 @@ fn apply_failure_detail(
             let next_detail = if broken && !failure_detail.is_empty() {
                 failure_detail
             } else if previous_state == OverlayHealthState::Fixing {
-                "recording did not restart"
+                "录制未能重启"
             } else if inner.last_detail.is_empty() {
-                "recording stopped unexpectedly"
+                "录制意外停止"
             } else {
                 return effect;
             };
@@ -560,10 +560,10 @@ fn push_state(app: &tauri::AppHandle, state: OverlayHealthState, detail: Option<
 /// say (idle/ready/error).
 fn boot_phase_detail() -> &'static str {
     match crate::health::get_boot_phase_snapshot().phase.as_str() {
-        "starting" => "starting engine",
-        "migrating_database" => "updating database",
-        "building_audio" => "starting audio",
-        "starting_pipes" => "loading pipes",
+        "starting" => "正在启动引擎",
+        "migrating_database" => "正在更新数据库",
+        "building_audio" => "正在启动音频",
+        "starting_pipes" => "正在加载定时任务",
         _ => "",
     }
 }
@@ -796,19 +796,21 @@ fn restart_failure_detail(error: &str) -> &'static str {
     } else if error.contains("screen recording permission")
         || error.contains("需要屏幕录制权限")
     {
-        "screen recording permission is required"
-    } else if error.contains("server not") {
-        "recording engine did not restart"
+        "需要屏幕录制权限"
+    } else if error.contains("server not")
+        || error.contains("服务器未运行")
+        || error.contains("服务器无响应")
+    {
+        "录制引擎未能重启"
     } else {
-        "recording did not restart"
+        "录制未能重启"
     }
 }
 
 fn is_specific_permission_restart_detail(detail: &str) -> bool {
     matches!(
         detail,
-        "screen recording permission is required"
-            | MANUAL_PERMISSION_RECOVERY_DETAIL
+        "需要屏幕录制权限" | MANUAL_PERMISSION_RECOVERY_DETAIL
     )
 }
 
@@ -900,16 +902,16 @@ mod tests {
         assert_eq!(
             build_health_payload(
                 OverlayHealthState::Failure,
-                Some("audio capture is not updating"),
+                Some("音频采集未更新"),
             ),
-            "failure|audio capture is not updating|audio",
+            "failure|音频采集未更新|audio",
         );
         assert_eq!(
             build_health_payload(
                 OverlayHealthState::Failure,
-                Some("screen capture is not updating"),
+                Some("画面采集未更新"),
             ),
-            "failure|screen capture is not updating|screen",
+            "failure|画面采集未更新|screen",
         );
     }
 
@@ -920,21 +922,21 @@ mod tests {
                 OverlayHealthState::Failure,
                 Some(MANUAL_SCREEN_CAPTURE_RECOVERY_DETAIL),
             ),
-            "failure|restart screenpipe to restore screen capture|screen|manual-reopen",
+            "failure|重启 screenpipe 以恢复画面采集|screen|manual-reopen",
         );
         assert_eq!(
             build_health_payload(
                 OverlayHealthState::Failure,
                 Some(MANUAL_RECORDING_RECOVERY_DETAIL),
             ),
-            "failure|quit and reopen screenpipe to recover recording||manual-reopen",
+            "failure|退出并重新打开 screenpipe 以恢复录制||manual-reopen",
         );
         assert_eq!(
             build_health_payload(
                 OverlayHealthState::Failure,
                 Some(MANUAL_PERMISSION_RECOVERY_DETAIL),
             ),
-            "failure|quit and reopen screenpipe to finish screen recording access|screen|manual-reopen",
+            "failure|退出并重新打开 screenpipe 以完成屏幕录制授权|screen|manual-reopen",
         );
     }
 
@@ -945,13 +947,13 @@ mod tests {
         assert_eq!(
             build_health_payload(
                 OverlayHealthState::Failure,
-                Some("audio and screen capture are not updating"),
+                Some("音频和画面采集均未更新"),
             ),
-            "failure|audio and screen capture are not updating",
+            "failure|音频和画面采集均未更新",
         );
         assert_eq!(
-            build_health_payload(OverlayHealthState::Fixing, Some("updating database")),
-            "fixing|updating database",
+            build_health_payload(OverlayHealthState::Fixing, Some("正在更新数据库")),
+            "fixing|正在更新数据库",
         );
     }
 
@@ -976,22 +978,22 @@ mod tests {
     #[test]
     fn no_payload_field_contains_the_separator() {
         for detail in [
-            "audio capture is not updating",
-            "screen capture is not updating",
+            "音频采集未更新",
+            "画面采集未更新",
             MANUAL_SCREEN_CAPTURE_RECOVERY_DETAIL,
             MANUAL_RECORDING_RECOVERY_DETAIL,
             MANUAL_PERMISSION_RECOVERY_DETAIL,
-            "audio and screen capture are not updating",
-            "multiple recording errors detected",
-            "recording data cannot be saved",
-            "recording engine could not start",
-            "recording engine did not restart",
-            "recording engine stopped",
-            "recording stopped unexpectedly",
-            "recording did not restart",
-            "screen recording permission is required",
-            "simulated recording failure",
-            "updating database",
+            "音频和画面采集均未更新",
+            "检测到多个录制错误",
+            "无法保存录制数据",
+            "录制引擎无法启动",
+            "录制引擎未能重启",
+            "录制引擎已停止",
+            "录制意外停止",
+            "录制未能重启",
+            "需要屏幕录制权限",
+            "模拟录制故障",
+            "正在更新数据库",
         ] {
             let payload = build_health_payload(OverlayHealthState::Failure, Some(detail));
             assert!(
@@ -1058,15 +1060,19 @@ mod tests {
         );
         assert_eq!(
             restart_failure_detail("Screen recording permission required"),
-            "screen recording permission is required"
+            "需要屏幕录制权限"
         );
         assert_eq!(
             restart_failure_detail("Server not running — cannot start capture"),
-            "recording engine did not restart"
+            "录制引擎未能重启"
         );
         assert_eq!(
             restart_failure_detail("audio device failed"),
-            "recording did not restart"
+            "录制未能重启"
+        );
+        assert_eq!(
+            restart_failure_detail("服务器未运行——无法开始采集"),
+            "录制引擎未能重启"
         );
     }
 
@@ -1080,28 +1086,28 @@ mod tests {
         );
         assert_eq!(
             restart_failure_detail("需要屏幕录制权限。请授予权限并重启应用。"),
-            "screen recording permission is required"
+            "需要屏幕录制权限"
         );
     }
 
     #[test]
     fn generic_health_tick_keeps_the_specific_permission_restart_detail() {
         let mut inner = test_inner(OverlayHealthState::Failure);
-        inner.last_detail = "screen recording permission is required".to_string();
+        inner.last_detail = "需要屏幕录制权限".to_string();
 
         assert_eq!(
             apply_failure_detail(
                 &mut inner,
                 OverlayHealthState::Failure,
                 true,
-                "recording engine could not start",
+                "录制引擎无法启动",
                 TickEffect::None,
             ),
             TickEffect::None
         );
         assert_eq!(
             inner.last_detail,
-            "screen recording permission is required"
+            "需要屏幕录制权限"
         );
     }
 
@@ -1217,14 +1223,14 @@ mod tests {
             &mut inner,
             OverlayHealthState::Normal,
             true,
-            "audio capture is not updating",
+            "音频采集未更新",
             effect,
         );
         assert_eq!(
             effect,
             TickEffect::PushAndReveal(OverlayHealthState::Failure)
         );
-        assert_eq!(inner.last_detail, "audio capture is not updating");
+        assert_eq!(inner.last_detail, "音频采集未更新");
 
         let effect = transition_tick(&mut inner, true, false, start, "");
         let effect = apply_failure_detail(
@@ -1265,10 +1271,10 @@ mod tests {
             effect,
             TickEffect::Push(
                 OverlayHealthState::Failure,
-                Some("recording did not restart".to_string())
+                Some("录制未能重启".to_string())
             )
         );
-        assert_eq!(inner.last_detail, "recording did not restart");
+        assert_eq!(inner.last_detail, "录制未能重启");
     }
 
     #[test]
@@ -1520,7 +1526,7 @@ mod tests {
     fn transient_passive_recovery_resets_without_false_green_or_silent_stand_down() {
         let start = Instant::now();
         let mut inner = test_inner(OverlayHealthState::Failure);
-        inner.last_detail = "screen capture is not updating".to_string();
+        inner.last_detail = "画面采集未更新".to_string();
 
         assert_eq!(
             transition_tick_with_stand_down(
@@ -1577,7 +1583,7 @@ mod tests {
             ),
             TickEffect::Push(
                 OverlayHealthState::Failure,
-                Some("screen capture is not updating".to_string())
+                Some("画面采集未更新".to_string())
             ),
             "a confirmed relapse must restore the prior failure"
         );

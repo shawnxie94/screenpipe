@@ -132,7 +132,7 @@ export async function selectWorktreeRepository({
   providerConfig: PiProviderConfig;
 }): Promise<CodingWorkspace> {
   if (candidates.length === 0) {
-    throw new Error("No nearby Git repository was found");
+    throw new Error("未找到附近的 Git 仓库");
   }
 
   const deterministicCandidate = deterministicRepositoryCandidate({
@@ -161,7 +161,7 @@ export async function selectWorktreeRepository({
     const event = envelope.event;
     if (event?.type === "error") {
       routeError = String(
-        event.error || event.message || "repository router failed",
+        event.error || event.message || "仓库路由失败",
       );
     } else if (event?.type === "agent_end") {
       routeFinished = true;

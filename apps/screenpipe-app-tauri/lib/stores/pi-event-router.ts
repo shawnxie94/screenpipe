@@ -184,7 +184,7 @@ function previewSnippet(evt: PiInnerEvent): string | null {
 function errorMessage(evt: PiInnerEvent): string | null {
   const m = evt.message;
   if (m?.stopReason === "error") {
-    return m.errorMessage || m.error || "unknown error";
+    return m.errorMessage || m.error || "未知错误";
   }
   return null;
 }

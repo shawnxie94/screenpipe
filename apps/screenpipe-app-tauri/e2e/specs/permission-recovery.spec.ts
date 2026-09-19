@@ -100,8 +100,8 @@ async function expectDeniedPermissionRow(testId: string): Promise<void> {
       const bodyText = ((await browser.execute(
         () => document.body.innerText || "",
       )) as string).toLowerCase();
-      expect(bodyText).toContain("recording paused");
-      expect(bodyText).toContain("closes automatically once fixed");
+      expect(bodyText).toContain("录制已暂停");
+      expect(bodyText).toContain("修复后会自动关闭");
 
       const filepath = await saveScreenshot("permission-recovery-missing-permissions");
       expect(existsSync(filepath)).toBe(true);

@@ -114,25 +114,25 @@ describe("connected share artifacts", () => {
   it("builds a draft-only Chat handoff with an explicit confirmation boundary", () => {
     const prompt = buildConnectedShareChatPrompt("notion");
 
-    expect(prompt).toContain("Do not create or send anything yet");
+    expect(prompt).toContain("暂不创建或发送任何内容");
     expect(prompt).toContain(
-      "do not ask an open-ended destination question first",
+      "不要先问开放式的目的地问题",
     );
-    expect(prompt).toContain("list recent and favorite pages");
+    expect(prompt).toContain("列出最近和收藏的页面");
     expect(prompt).toContain(
-      "Suggest at most three accessible pages or databases",
+      "最多建议三个可访问的页面或数据库",
     );
-    expect(prompt).toContain("nothing was created");
-    expect(prompt).toContain("ask for approval exactly once");
-    expect(prompt).toContain("snapshot attached as context");
+    expect(prompt).toContain("未创建任何内容");
+    expect(prompt).toContain("只征求一次批准");
+    expect(prompt).toContain("已作为上下文附上");
   });
 
   it("keeps Obsidian as an approval-gated Chat handoff", () => {
     const prompt = buildConnectedShareChatPrompt("obsidian");
 
-    expect(prompt).toContain("Do not create, overwrite, append, or send");
-    expect(prompt).toContain("exact vault-relative path");
-    expect(prompt).toContain("ask for approval exactly once");
-    expect(prompt).toContain("Never include the absolute vault path");
+    expect(prompt).toContain("暂不创建、覆盖、追加或发送");
+    expect(prompt).toContain("确切的库内相对路径");
+    expect(prompt).toContain("只征求一次批准");
+    expect(prompt).toContain("绝不在聊天输出中包含库的绝对路径");
   });
 });

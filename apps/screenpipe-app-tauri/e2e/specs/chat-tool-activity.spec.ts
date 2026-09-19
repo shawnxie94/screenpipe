@@ -197,7 +197,7 @@ describe("Chat tool activity progressive disclosure", function () {
     });
 
     const summary = await lastSummary();
-    await browser.waitUntil(async () => (await summary.getText()).includes("Checking the work"), {
+    await browser.waitUntil(async () => (await summary.getText()).includes("正在检查工作结果"), {
       timeout: t(8_000),
       interval: 100,
       timeoutMsg: "running activity never became a friendly test status",
@@ -236,10 +236,10 @@ describe("Chat tool activity progressive disclosure", function () {
       const list = await $('[data-testid="tool-activity-list"]');
       await list.waitForExist({ timeout: t(5_000) });
       const listText = await list.getText();
-      expect(listText).toContain("Loaded PDF skill");
-      expect(listText).toContain("Checked available automations");
-      expect(listText).toContain("Analyzed information");
-      expect(listText).toContain("Checking the work");
+      expect(listText).toContain("已加载PDF 技能");
+      expect(listText).toContain("已检查可用的自动化任务");
+      expect(listText).toContain("已分析信息");
+      expect(listText).toContain("正在检查工作结果");
       expect(listText).toContain("tests: 18 passed, 2 still running");
 
       const body = await visibleBodyText();
@@ -541,7 +541,7 @@ describe("Chat tool activity progressive disclosure", function () {
         },
       ],
     });
-    expect(await (await lastSummary()).getText()).toContain("You stopped after 12s");
+    expect(await (await lastSummary()).getText()).toContain("你已停止，处理耗时 12 秒");
     expect(existsSync(await saveScreenshot("chat-commentary-stopped"))).toBe(true);
 
     const interruptedStart = Date.now() - 14_000;
@@ -566,7 +566,7 @@ describe("Chat tool activity progressive disclosure", function () {
         },
       ],
     });
-    expect(await (await lastSummary()).getText()).toContain("interrupted — app closed mid-task");
+    expect(await (await lastSummary()).getText()).toContain("已中断——应用在任务进行中关闭");
     expect(existsSync(await saveScreenshot("chat-commentary-interrupted"))).toBe(true);
   });
 
@@ -612,8 +612,8 @@ describe("Chat tool activity progressive disclosure", function () {
     const body = await visibleBodyText();
     expect(body).toContain("I configured the fallback order.");
     expect(body).not.toContain("MCP connections");
-    expect(body).not.toContain("Sign in required");
-    expect(body).not.toContain("Needs attention");
+    expect(body).not.toContain("登录后继续");
+    expect(body).not.toContain("需要授权");
     expect(body).not.toContain("No workspace here");
 
     const filepath = await saveScreenshot("chat-mcp-startup-hidden");

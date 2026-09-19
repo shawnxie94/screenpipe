@@ -313,7 +313,7 @@ const learningState = (over: Record<string, unknown> = {}) => ({
     const bodyText = (await browser.execute(
       () => document.body.textContent ?? "",
     )) as string;
-    expect(bodyText).toContain("screenpipe is ready");
+    expect(bodyText).toContain("screenpipe 已就绪");
     expect(
       await browser.execute(
         () => !!document.querySelector('[data-testid="first-run-next-steps"]'),
@@ -476,7 +476,7 @@ const learningState = (over: Record<string, unknown> = {}) => ({
     const bodyText = (await browser.execute(
       () => document.body.textContent ?? "",
     )) as string;
-    expect(bodyText).not.toContain("Learning about your work");
+    expect(bodyText).not.toContain("正在了解你的工作");
   });
 
   it("keeps every background evidence-floor miss out of the interface", async () => {
