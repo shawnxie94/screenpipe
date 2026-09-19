@@ -117,7 +117,6 @@ const ShortcutRow = ({
     stopAudioShortcut: string;
     showChatShortcut: string;
     searchShortcut: string;
-    lockVaultShortcut?: string;
   }) => {
     console.log("syncing shortcuts:", {
       showShortcut: updatedShortcuts.showScreenpipeShortcut,
@@ -155,7 +154,6 @@ const ShortcutRow = ({
         stopAudioShortcut: settings.stopAudioShortcut,
         showChatShortcut: settings.showChatShortcut,
         searchShortcut: settings.searchShortcut,
-        lockVaultShortcut: settings.lockVaultShortcut || "",
       };
       const conflict = Object.entries(allShortcuts).find(
         ([key, value]) =>
@@ -197,7 +195,6 @@ const ShortcutRow = ({
             stopAudioShortcut: shortcut === "stopAudioShortcut" ? keys : settings.stopAudioShortcut,
             showChatShortcut: shortcut === "showChatShortcut" ? keys : settings.showChatShortcut,
             searchShortcut: shortcut === "searchShortcut" ? keys : settings.searchShortcut,
-            lockVaultShortcut: shortcut === "lockVaultShortcut" ? keys : (settings.lockVaultShortcut || ""),
           };
           await syncShortcuts(updatedShortcuts);
 
@@ -250,7 +247,6 @@ const ShortcutRow = ({
       stopAudioShortcut: settings.stopAudioShortcut,
       showChatShortcut: settings.showChatShortcut,
       searchShortcut: settings.searchShortcut,
-      lockVaultShortcut: settings.lockVaultShortcut || "",
     });
 
     if (reminderShortcutKeys.has(shortcut)) {

@@ -53,7 +53,6 @@ const ShortcutSection = () => {
         stopAudioShortcut: defaults.stopAudioShortcut,
         showChatShortcut: defaults.showChatShortcut,
         searchShortcut: defaults.searchShortcut,
-        lockVaultShortcut: defaults.lockVaultShortcut,
         disabledShortcuts: [],
       });
 
@@ -94,8 +93,6 @@ const ShortcutSection = () => {
       <ShortcutRow type="global" shortcut="stopRecordingShortcut" title="停止录制" description="停止屏幕录制" value={settings.stopRecordingShortcut} />
       <ShortcutRow type="global" shortcut="startAudioShortcut" title="开始录制" description="开始音频录制" value={settings.startAudioShortcut} />
       <ShortcutRow type="global" shortcut="stopAudioShortcut" title="停止录制" description="停止音频录制" value={settings.stopAudioShortcut} />
-      {/* TODO: vault lock shortcut disabled — CLI-only for now */}
-      {/* <ShortcutRow type="global" shortcut="lockVaultShortcut" title="lock vault" description="encrypt all data at rest" value={settings.lockVaultShortcut} /> */}
     </>
   );
 

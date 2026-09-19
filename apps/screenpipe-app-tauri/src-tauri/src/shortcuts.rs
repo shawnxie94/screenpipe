@@ -60,7 +60,6 @@ struct ShortcutConfig {
     stop_audio: String,
     show_chat: String,
     search: String,
-    lock_vault: String,
     disabled: Vec<String>,
 }
 
@@ -97,7 +96,6 @@ impl ShortcutConfig {
             },
             show_chat: store.show_chat_shortcut,
             search: store.search_shortcut,
-            lock_vault: store.lock_vault_shortcut,
             disabled: store.disabled_shortcuts,
         })
     }
@@ -111,7 +109,6 @@ impl ShortcutConfig {
             "stop_audio" => "stopAudioShortcut",
             "show_chat" => "showChatShortcut",
             "search" => "searchShortcut",
-            "lock_vault" => "lockVaultShortcut",
             _ => shortcut_type,
         };
         self.disabled.contains(&shortcut_type.to_string())
@@ -176,7 +173,6 @@ pub async fn update_global_shortcuts(
         stop_audio: stop_audio_shortcut,
         show_chat: store_config.show_chat,
         search: store_config.search,
-        lock_vault: store_config.lock_vault,
         disabled: store_config.disabled,
     };
     apply_shortcuts(&app, &config).await

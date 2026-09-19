@@ -1242,8 +1242,6 @@ pub struct SettingsStore {
     pub show_chat_shortcut: String,
     #[serde(rename = "searchShortcut")]
     pub search_shortcut: String,
-    #[serde(rename = "lockVaultShortcut", default)]
-    pub lock_vault_shortcut: String,
     /// Overlay size: "small" (default), "medium" (1.5x), "large" (2x)
     #[serde(rename = "shortcutOverlaySize", default = "default_overlay_size")]
     pub shortcut_overlay_size: String,
@@ -1660,10 +1658,6 @@ impl Default for SettingsStore {
             search_shortcut: "Alt+K".to_string(),
             #[cfg(not(target_os = "windows"))]
             search_shortcut: "Control+Super+K".to_string(),
-            #[cfg(target_os = "windows")]
-            lock_vault_shortcut: "Ctrl+Shift+L".to_string(),
-            #[cfg(not(target_os = "windows"))]
-            lock_vault_shortcut: "Super+Shift+L".to_string(),
             shortcut_overlay_size: "small".to_string(),
             shortcut_overlay_anchor: default_overlay_anchor(),
             shortcut_overlay_display: String::new(),

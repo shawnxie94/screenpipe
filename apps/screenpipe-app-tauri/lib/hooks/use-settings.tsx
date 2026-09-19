@@ -298,7 +298,6 @@ export type Settings = SettingsStore & {
 	 */
 	categoryOwnedFilters?: { apps: string[]; domains: string[] };
 	searchShortcut?: string;
-	lockVaultShortcut?: string;
 	/** When true, audio devices follow system default and auto-switch on changes */
 	useSystemDefaultAudio?: boolean;
 	/** Enable AI workflow event detection (cloud, triggers event-based pipes) */
@@ -629,7 +628,6 @@ let DEFAULT_SETTINGS: Settings = {
 			stopAudioShortcut: "Control+Super+Z",
 			showChatShortcut: "Control+Super+L",
 			searchShortcut: "Control+Super+K",
-			lockVaultShortcut: "Super+Shift+L",
 			disableVision: false,
 			disableScreenshots: false,
 			enableSemanticContext: false,
@@ -696,7 +694,6 @@ export function createDefaultSettingsObject(): Settings {
 		DEFAULT_SETTINGS.searchShortcut = p === "windows" ? "Alt+K" : "Control+Super+K";
 		DEFAULT_SETTINGS.startAudioShortcut = p === "windows" ? "Alt+Shift+A" : "Control+Super+A";
 		DEFAULT_SETTINGS.stopAudioShortcut = p === "windows" ? "Alt+Shift+Z" : "Control+Super+Z";
-		DEFAULT_SETTINGS.lockVaultShortcut = p === "windows" ? "Ctrl+Shift+L" : "Super+Shift+L";
 
 		if (p === "windows") {
 			DEFAULT_SETTINGS.overlayMode = "window";
@@ -740,7 +737,7 @@ export function assertValidAiPresetUpdate(value: Partial<Settings>): void {
 		"aiPresets" in value &&
 		(!Array.isArray(value.aiPresets) || value.aiPresets.length === 0)
 	) {
-		throw new Error("At least one AI preset is required");
+		throw new Error("至少需要一个 AI 预设");
 	}
 }
 

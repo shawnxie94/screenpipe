@@ -19,8 +19,6 @@ import { RecentChatSwitcherController } from "@/components/chat/recent-chat-swit
 import { FeedbackDialog } from "@/components/feedback-dialog";
 import { AdvisoryOverlay } from "@/components/advisory-overlay";
 import { PipeAdvisoryWatcher } from "@/components/pipe-advisory-watcher";
-// TODO: vault lock UI disabled for now — vault is CLI-only until app UX is polished
-// import { VaultLockDialog } from "@/components/vault-lock-dialog";
 import { usePathname, useSearchParams } from "next/navigation";
 import { commands } from "@/lib/utils/tauri";
 import {
@@ -339,7 +337,6 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <RecentChatSwitcherMount />
           </Suspense>
-          {/* TODO: vault lock UI disabled — CLI-only for now */}
           {/* {!isOverlay && <VaultLockDialog />} */}
           {children}
           {!isOverlay && <Toaster />}

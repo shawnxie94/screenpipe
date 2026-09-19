@@ -160,7 +160,6 @@ mod skills;
 // binaries never export TypeScript, so the whole module stays out of them.
 #[cfg(any(debug_assertions, test))]
 mod specta_bindings;
-mod vault;
 mod viewer;
 
 #[cfg(target_os = "macos")]
@@ -204,7 +203,6 @@ use shortcuts::{
     initialize_global_shortcuts, resume_global_shortcuts, suspend_global_shortcuts,
     update_global_shortcuts,
 };
-use vault::{vault_status, vault_unlock};
 use window::RewindWindowId;
 
 #[tauri::command]
@@ -1466,14 +1464,6 @@ async fn main() {
                 }
             }
 
-            // TODO: vault lock app integration disabled — CLI-only for now
-            // let vault_is_locked = data_dir.join(".vault_locked").exists()
-            //     || (data_dir.join("vault.meta").exists()
-            //         && data_dir.join("db.sqlite").exists()
-            //         && screenpipe_vault::crypto::is_encrypted_file(&data_dir.join("db.sqlite")).unwrap_or(false));
-            // if vault_is_locked {
-            //     info!("Vault is locked — skipping server start, waiting for unlock");
-            //     let _ = app_handle.emit("vault-locked-on-startup", ());
             // }
 
             let launch_db_path = data_dir.join("db.sqlite");
