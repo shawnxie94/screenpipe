@@ -249,9 +249,9 @@ export function useHardcodedTiles(): HardcodedTile[] {
     { id: "claude-code", name: "Claude Code", icon: "claude-code", connected: false },
     { id: "warp", name: "Warp", icon: "warp", connected: false },
     { id: "chatgpt", name: "ChatGPT", icon: "chatgpt", connected: chatgptConnected },
-    { id: "custom-mcp", name: "Advanced connections", icon: "custom-mcp", connected: customMcpConnected, detected: customMcpDetected },
+    { id: "custom-mcp", name: "高级连接", icon: "custom-mcp", connected: customMcpConnected, detected: customMcpDetected },
     ...(os === "macos" ? [
-      { id: "browser-url", name: "Browser activity", icon: "browser-url", connected: false },
+      { id: "browser-url", name: "浏览器活动", icon: "browser-url", connected: false },
       { id: "voice-memos", name: "Voice Memos", icon: "voice-memos", connected: false },
     ] as HardcodedTile[] : []),
     ...(os === "macos" ? [{ id: "apple-calendar", name: "Apple Calendar", icon: "apple-calendar", connected: calendarConnected } as HardcodedTile] : []),

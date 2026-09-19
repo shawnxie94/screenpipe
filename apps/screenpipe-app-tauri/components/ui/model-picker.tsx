@@ -49,7 +49,7 @@ export function ModelPicker({
   errorMessage,
   idleMessage,
   emptyMessage,
-  placeholder = "select model",
+  placeholder = "选择模型",
   allowManualEntry = false,
   disabled = false,
   className,
@@ -74,14 +74,14 @@ export function ModelPicker({
 
   const statusText =
     status === "loading"
-      ? "discovering models..."
+      ? "正在发现模型…"
       : status === "error"
-        ? errorMessage || "model discovery failed"
+        ? errorMessage || "模型发现失败"
         : status === "ready" && uniqueModels.length === 0
           ? emptyMessage ||
             (allowManualEntry
-              ? "no models discovered — type a model name manually"
-              : "no models available")
+              ? "未发现模型 — 请手动输入模型名"
+              : "没有可用模型")
           : status === "idle"
             ? idleMessage
             : undefined;
@@ -111,7 +111,7 @@ export function ModelPicker({
             )}
           >
             <span className="truncate">
-              {value || (status === "loading" ? "loading models..." : placeholder)}
+              {value || (status === "loading" ? "正在加载模型…" : placeholder)}
             </span>
             {status === "loading" ? (
               <Loader2 className="ml-2 h-3.5 w-3.5 shrink-0 animate-spin" />
@@ -135,25 +135,25 @@ export function ModelPicker({
             <CommandList>
               {status === "error" && (
                 <div className="border-b px-3 py-2 text-xs text-destructive" role="alert">
-                  {errorMessage || "model discovery failed"}
+                  {errorMessage || "模型发现失败"}
                 </div>
               )}
               {status === "loading" ? (
                 <CommandGroup>
                   <CommandItem disabled value="loading-models">
                     <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                    discovering models...
+                    正在发现模型…
                   </CommandItem>
                 </CommandGroup>
               ) : (
                 <>
                   <CommandEmpty>
                     {status === "idle"
-                      ? idleMessage || "model discovery is not available yet"
-                      : emptyMessage || "no matching models"}
+                      ? idleMessage || "模型发现暂不可用"
+                      : emptyMessage || "没有匹配的模型"}
                   </CommandEmpty>
                   {uniqueModels.length > 0 && (
-                    <CommandGroup heading="models">
+                    <CommandGroup heading="模型">
                       {uniqueModels.map((model) => (
                         <CommandItem
                           key={model}
@@ -175,13 +175,13 @@ export function ModelPicker({
                 </>
               )}
               {allowManualEntry && search.trim() && !exactSearchMatch && (
-                <CommandGroup heading="manual entry">
+                <CommandGroup heading="手动输入">
                   <CommandItem
                     value={`manual ${search.trim()}`}
                     className="rounded-none"
                     onSelect={() => selectModel(search.trim())}
                   >
-                    use “{search.trim()}”
+                    使用“{search.trim()}”
                   </CommandItem>
                 </CommandGroup>
               )}

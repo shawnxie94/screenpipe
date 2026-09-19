@@ -707,7 +707,7 @@ export default function ShortcutReminderPage() {
               {meetingOverlay.stopError ? "停止失败" : latestSpeaker || "实时文字记录"}
             </span>
             <span className="font-mono text-white/80 truncate" style={{ fontSize: `${fontPx}px` }}>
-              {meetingOverlay.stopError || latestTranscript?.text || "listening for speech…"}
+              {meetingOverlay.stopError || latestTranscript?.text || "正在聆听语音…"}
             </span>
           </div>
         </div>

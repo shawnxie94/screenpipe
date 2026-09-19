@@ -428,7 +428,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
     if (state === "running" || state === "stuck") return;
     if (bootPhase?.phase !== "error" || !bootPhase.error) return;
 
-    const isPortConflict = /port.*in use|already in use/i.test(bootPhase.error);
+    const isPortConflict = /端口.*占用|port.*in use|already in use/i.test(bootPhase.error);
     const kind: "port_conflict" | "other" = isPortConflict
       ? "port_conflict"
       : "other";

@@ -946,7 +946,7 @@ const AISection = ({
         auth: { status: "pass", message: "凭据已接受" },
         chat: {
           status: "pass",
-          message: `OK (${latencyMs}ms): "${reply}"`,
+          message: `连接成功（${latencyMs}ms）：“${reply}”`,
           latencyMs,
         },
       }));

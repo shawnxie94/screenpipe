@@ -417,7 +417,7 @@ export const TextOverlay = memo(function TextOverlay({
 									}
 								: {}),
 						}}
-						title={`Open ${link.normalizedUrl}`}
+						title={`打开 ${link.normalizedUrl}`}
 						target="_blank"
 						rel="noopener noreferrer"
 					>

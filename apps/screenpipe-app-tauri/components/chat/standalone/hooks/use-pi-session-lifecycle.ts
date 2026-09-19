@@ -287,7 +287,7 @@ export function usePiSessionLifecycle({
         throw new Error(
           result.status === "error"
             ? result.error
-            : result.data.startupError ?? "Pi did not start",
+            : result.data.startupError ?? "AI 助手未能启动",
         );
       }
       setPiInfo(result.data);

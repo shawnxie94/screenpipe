@@ -51,20 +51,20 @@ function responseError(status: number, payload: unknown): ComposerDictationError
   const gatewayMessage = nestedGatewayMessage(payload);
   if (status === 401 || status === 403) {
     return new ComposerDictationError(
-      "Sign in to use cloud dictation.",
+      "请登录以使用云端听写。",
       "not-authorized",
     );
   }
   if (status === 429) {
     return new ComposerDictationError(
       gatewayMessage ||
-        "Hosted dictation is temporarily unavailable. Try again later.",
+        "云端听写暂不可用，请稍后再试。",
       "rate-limited",
     );
   }
   if (status === 413) {
     return new ComposerDictationError(
-      "That recording is too long. Try a shorter one.",
+      "录音过长，请缩短后重试。",
       "too-large",
     );
   }

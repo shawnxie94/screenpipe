@@ -854,7 +854,7 @@ export async function createOnboardingLiveView(options: {
       dashboardId,
       error instanceof Error
         ? error.message
-        : "Setup stopped before it finished.",
+        : "设置未完成即已停止。",
     );
     throw error;
   }

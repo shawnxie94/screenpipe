@@ -2810,12 +2810,12 @@ function OAuthMcpPanel({
       );
       const body = await res.json();
       if (!res.ok) {
-        setStatusMsg(body?.error ?? `Sign-in failed (HTTP ${res.status})`);
+        setStatusMsg(body?.error ?? `登录失败（HTTP ${res.status}）`);
         return;
       }
       await openUrl(body.data.auth_url);
       setWaiting(true);
-      setStatusMsg("Finish sign-in in the browser…");
+      setStatusMsg("请在浏览器中完成登录…");
       const started = Date.now();
       const poll = async () => {
         if (cancelledRef.current) return;
@@ -3011,7 +3011,7 @@ function ApiKeyMcpPanel({
       });
       if (!probe.ok) {
         const pb = await probe.json().catch(() => ({}));
-        setStatusMsg(pb?.error ?? `${name} rejected the key (HTTP ${probe.status})`);
+        setStatusMsg(pb?.error ?? `${name} 拒绝了该密钥（HTTP ${probe.status}）`);
         return;
       }
       const targetId = serverId ?? mcpRandomId();
@@ -3025,7 +3025,7 @@ function ApiKeyMcpPanel({
       );
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        setStatusMsg(body?.error ?? `Save failed (HTTP ${res.status})`);
+        setStatusMsg(body?.error ?? `保存失败（HTTP ${res.status}）`);
         return;
       }
       setServerId(targetId);

@@ -249,7 +249,7 @@ export function NativeTimelineBridge({
                 variant: "destructive",
                 title: "时间线导出失败",
                 description:
-                  error instanceof Error ? error.message : "Try again.",
+                  error instanceof Error ? error.message : "再试一次。",
               });
             });
         },

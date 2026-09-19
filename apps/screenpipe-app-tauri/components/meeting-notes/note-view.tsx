@@ -1083,7 +1083,7 @@ export function NoteView({
       toast({
         title: "请先结束会议",
         description:
-          "summaries run on the saved transcript after the meeting ends.",
+          "摘要将在会议结束后基于已保存的转写生成。",
       });
       return;
     }
@@ -2721,7 +2721,7 @@ function AudioHealthButton({
               devices: inputs,
               selectedDevices,
               useSystemDefault: settings.useSystemDefaultAudio !== false,
-              fallback: "system default microphone",
+              fallback: "系统默认麦克风",
             })}
             active={
               isLive && !audioDisabled && (inputActive || inputs.length === 0)
@@ -2735,7 +2735,7 @@ function AudioHealthButton({
               devices: outputs,
               selectedDevices,
               useSystemDefault: settings.useSystemDefaultAudio !== false,
-              fallback: "system output",
+              fallback: "系统输出",
             })}
             active={
               isLive && !audioDisabled && (outputActive || outputs.length === 0)

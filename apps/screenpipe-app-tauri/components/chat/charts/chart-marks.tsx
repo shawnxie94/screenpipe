@@ -62,8 +62,8 @@ export function StatChart({ spec, palette }: MarkProps<StatChartSpec>) {
       palette={palette}
       table={
         <DataTable
-          caption={spec.title || "figures"}
-          columns={["figure", "value", "note"]}
+          caption={spec.title || "数值"}
+          columns={["数值", "数值", "备注"]}
           rows={spec.items.map((item) => ({
             header: item.label,
             cells: [formatChartValue(item.value, item.unit), item.note || "—"],
@@ -132,8 +132,8 @@ export function BarChart({ spec, palette }: MarkProps<BarChartSpec>) {
       palette={palette}
       table={
         <DataTable
-          caption={spec.title || "bar chart"}
-          columns={["label", "value"]}
+          caption={spec.title || "柱状图"}
+          columns={["项目", "数值"]}
           rows={spec.items.map((item) => ({
             header: item.label,
             cells: [formatChartValue(item.value, spec.unit)],
@@ -254,8 +254,8 @@ export function LineChart({ spec, palette }: MarkProps<LineChartSpec>) {
       palette={palette}
       table={
         <DataTable
-          caption={spec.title || "line chart"}
-          columns={["label", "value"]}
+          caption={spec.title || "折线图"}
+          columns={["项目", "数值"]}
           rows={spec.items.map((item) => ({
             header: item.label,
             cells: [formatChartValue(item.value, spec.unit)],
@@ -297,7 +297,7 @@ export function LineChart({ spec, palette }: MarkProps<LineChartSpec>) {
       >
         <svg
           role="img"
-          aria-label={`${spec.title || "line chart"} time series`}
+          aria-label={spec.title ? `${spec.title} 时间序列` : "折线图时间序列"}
           viewBox={`0 0 ${VIEWBOX.width} ${VIEWBOX.height}`}
           preserveAspectRatio="none"
           className="h-full w-full"
@@ -374,8 +374,8 @@ export function GroupedBarChart({
       legend={spec.series.map((series) => series.name)}
       table={
         <DataTable
-          caption={spec.title || "grouped bar chart"}
-          columns={["category", ...spec.series.map((series) => series.name)]}
+          caption={spec.title || "分组柱状图"}
+          columns={["类别", ...spec.series.map((series) => series.name)]}
           rows={spec.categories.map((category, categoryIndex) => ({
             header: category,
             cells: spec.series.map((series) =>
@@ -481,8 +481,8 @@ export function StackedBarChart({
       legend={spec.series.map((series) => series.name)}
       table={
         <DataTable
-          caption={spec.title || "stacked bar chart"}
-          columns={["category", ...spec.series.map((series) => series.name)]}
+          caption={spec.title || "堆叠柱状图"}
+          columns={["类别", ...spec.series.map((series) => series.name)]}
           rows={spec.categories.map((category, categoryIndex) => ({
             header: category,
             cells: spec.series.map((series) =>
@@ -579,8 +579,8 @@ export function ProportionChart({
       palette={palette}
       table={
         <DataTable
-          caption={spec.title || "proportion"}
-          columns={["slice", "value", "share"]}
+          caption={spec.title || "占比"}
+          columns={["分项", "数值", "占比"]}
           rows={spec.items.map((item) => ({
             header: item.label,
             cells: [
@@ -667,8 +667,8 @@ export function HeatmapChart({ spec, palette }: MarkProps<HeatmapChartSpec>) {
       palette={palette}
       table={
         <DataTable
-          caption={spec.title || "heatmap"}
-          columns={["row", ...spec.x]}
+          caption={spec.title || "热力图"}
+          columns={["行", ...spec.x]}
           rows={spec.y.map((rowLabel, rowIndex) => ({
             header: rowLabel,
             cells: spec.values[rowIndex].map((value) =>
@@ -777,8 +777,8 @@ export function TimelineChart({ spec, palette }: MarkProps<TimelineChartSpec>) {
       palette={palette}
       table={
         <DataTable
-          caption={spec.title || "timeline"}
-          columns={["block", "from", "to"]}
+          caption={spec.title || "时间线"}
+          columns={["时间块", "开始", "结束"]}
           rows={spec.items.map((item) => ({
             header: item.label,
             cells: [formatClock(item.start), formatClock(item.end)],
@@ -892,8 +892,8 @@ export function CalendarChart({ spec, palette }: MarkProps<CalendarChartSpec>) {
       palette={palette}
       table={
         <DataTable
-          caption={spec.title || "calendar"}
-          columns={["date", "value"]}
+          caption={spec.title || "日历"}
+          columns={["日期", "数值"]}
           rows={spec.items.map((item) => ({
             header: item.date,
             cells: [formatChartValue(item.value, spec.unit)],
@@ -987,8 +987,8 @@ export function FunnelChart({ spec, palette }: MarkProps<FunnelChartSpec>) {
       palette={palette}
       table={
         <DataTable
-          caption={spec.title || "funnel"}
-          columns={["stage", "value", "from prior", "from start"]}
+          caption={spec.title || "漏斗图"}
+          columns={["阶段", "数值", "较前一阶段", "自起始"]}
           rows={spec.items.map((item, index) => ({
             header: item.label,
             cells: [
@@ -1269,8 +1269,8 @@ export function RangeChart({ spec, palette }: MarkProps<RangeChartSpec>) {
       palette={palette}
       table={
         <DataTable
-          caption={spec.title || "range"}
-          columns={["label", "minimum", "middle", "maximum"]}
+          caption={spec.title || "区间"}
+          columns={["项目", "最小值", "中值", "最大值"]}
           rows={spec.items.map((item) => ({
             header: item.label,
             cells: [
@@ -1410,8 +1410,8 @@ export function ScatterChart({ spec, palette }: MarkProps<ScatterChartSpec>) {
       palette={palette}
       table={
         <DataTable
-          caption={spec.title || "scatter"}
-          columns={["label", spec.xLabel, spec.yLabel]}
+          caption={spec.title || "散点图"}
+          columns={["项目", spec.xLabel, spec.yLabel]}
           rows={spec.items.map((item) => ({
             header: item.label,
             cells: [
@@ -1459,7 +1459,7 @@ export function ScatterChart({ spec, palette }: MarkProps<ScatterChartSpec>) {
       >
         <svg
           role="img"
-          aria-label={`${spec.title || "scatter"} plot`}
+          aria-label={spec.title ? `${spec.title} 散点图` : "散点图"}
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
           className="h-full w-full"

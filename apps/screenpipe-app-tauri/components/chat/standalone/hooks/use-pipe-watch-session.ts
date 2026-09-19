@@ -90,8 +90,8 @@ export function usePipeWatchSession({
           execution.error_message?.trim() ||
           execution.stderr?.trim() ||
           (execution.status === "failed"
-            ? "Scheduled task failed with no output."
-            : "Scheduled task completed with no output.");
+            ? "定时任务失败，且没有输出。"
+            : "定时任务已完成，但没有输出。");
         conversation.messages = [{
           id: `pipe-poll-${executionId}`,
           role: "assistant",

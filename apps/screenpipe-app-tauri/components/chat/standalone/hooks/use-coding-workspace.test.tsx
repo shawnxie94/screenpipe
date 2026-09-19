@@ -220,7 +220,7 @@ describe("useCodingWorkspace", () => {
 
     await expect(
       hook.result.current.prepareForPrompt("fix screenpipe"),
-    ).rejects.toThrow("before the first message");
+    ).rejects.toThrow("发送首条消息前需先启用工作树模式");
     expect(mocks.prepare).not.toHaveBeenCalled();
   });
 

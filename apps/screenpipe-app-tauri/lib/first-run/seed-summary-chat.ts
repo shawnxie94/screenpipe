@@ -10,7 +10,7 @@ import type { ChatConversation } from "@/lib/hooks/use-settings";
 // first-run banner, which drags a provider requirement into unrelated
 // components (and their tests) that have no business knowing about chats.
 
-export const FIRST_RUN_CHAT_TITLE = "What screenpipe saw so far";
+export const FIRST_RUN_CHAT_TITLE = "screenpipe 目前看到了什么";
 
 /**
  * Build the durable result without attributing words to the user.

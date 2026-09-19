@@ -70,8 +70,8 @@ describe("parseAgentActionRequest", () => {
   });
 
   it("falls back to a default title when the suffix is empty", () => {
-    expect(agentActionTitle("acp:auth:", "auth")).toBe("sign in to continue");
-    expect(agentActionTitle("acp:permission:", "permission")).toBe("permission needed");
+    expect(agentActionTitle("acp:auth:", "auth")).toBe("登录以继续");
+    expect(agentActionTitle("acp:permission:", "permission")).toBe("需要权限");
   });
 });
 

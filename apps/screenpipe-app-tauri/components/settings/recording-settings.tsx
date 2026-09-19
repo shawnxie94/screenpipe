@@ -1221,9 +1221,9 @@ function TranscriptionDictionary({
     const updated = [...vocabularyWords, ...toAdd.map((w) => ({ word: w }))];
     onChange(updated);
     toast({
-      title: `added ${toAdd.length} terms`,
+      title: `已添加 ${toAdd.length} 个词条`,
       description: newTerms.length > toAdd.length
-        ? `${newTerms.length - toAdd.length} skipped (limit: ${VOCAB_LIMIT})`
+        ? `已跳过 ${newTerms.length - toAdd.length} 个（上限 ${VOCAB_LIMIT}）`
         : undefined,
     });
     setBulkText("");

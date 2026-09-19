@@ -14,8 +14,8 @@ export interface StructuredAssistantOutput {
   label: string;
 }
 
-function countLabel(count: number, singular: string, plural: string): string {
-  return `${count} ${count === 1 ? singular : plural}`;
+function countLabel(count: number, unit: string): string {
+  return `${count} ${unit}`;
 }
 
 /**
@@ -41,17 +41,17 @@ export function parseStructuredAssistantOutput(
 
     let detail: string;
     if (Array.isArray(value)) {
-      detail = countLabel(value.length, "item", "items");
+      detail = countLabel(value.length, "项");
     } else {
       const record = value as Record<string, unknown>;
       detail = Array.isArray(record.entries)
-        ? countLabel(record.entries.length, "entry", "entries")
-        : countLabel(Object.keys(record).length, "field", "fields");
+        ? countLabel(record.entries.length, "条目")
+        : countLabel(Object.keys(record).length, "字段");
     }
 
     return {
       json: JSON.stringify(value, null, 2),
-      label: `structured output · ${detail}`,
+      label: `结构化输出 · ${detail}`,
     };
   } catch {
     return null;

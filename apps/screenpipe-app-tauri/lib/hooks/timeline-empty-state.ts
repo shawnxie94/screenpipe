@@ -50,13 +50,13 @@ export function screenshotsDisabledCta(
 	switch (health?.vision_reason) {
 		case "screenshots_disabled_by_config":
 			return {
-				headline: "Screenshots are turned off",
-				body: "Screenpipe is still capturing text, but screenshots are disabled in settings. Turn them back on to see your timeline.",
+				headline: "截图功能已关闭",
+				body: "screenpipe 仍在采集文字，但截图已在设置中停用。重新开启后即可查看你的时间线。",
 			};
 		case "screenshots_disabled_by_power_profile":
 			return {
-				headline: "Battery saver paused screenshots",
-				body: "Screenpipe stopped taking screenshots to save power. Change the power mode in settings to resume them.",
+				headline: "省电模式已暂停截图",
+				body: "为节省电量，screenpipe 已停止截图。在设置中更改电源模式即可恢复。",
 			};
 		default:
 			return null;

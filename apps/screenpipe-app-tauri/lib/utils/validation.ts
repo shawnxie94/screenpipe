@@ -69,14 +69,14 @@ export const settingsStoreSchema = z.object({
   // AI Settings
   aiPresets: z.array(aiPresetSchema),
   openaiApiKey: z.string(),
-  aiModel: z.string().min(1, "AI model is required"),
+  aiModel: z.string().min(1, "必须填写 AI 模型"),
   customPrompt: z.string().min(10, "自定义提示词至少需要 10 个字符"),
   aiProviderType: aiProviderTypeSchema,
   aiUrl: z.string().url("AI URL 格式无效"),
   aiMaxContextChars: z.number().int().min(1000).max(2000000),
   
   // Audio Settings
-  audioTranscriptionEngine: z.string().min(1, "Audio transcription engine is required"),
+  audioTranscriptionEngine: z.string().min(1, "必须选择音频转写引擎"),
   meetingLiveTranscriptionEnabled: z.boolean().optional(),
   meetingLiveTranscriptionProvider: z.string().optional(),
   audioDevices: z.array(z.string()),
@@ -85,7 +85,7 @@ export const settingsStoreSchema = z.object({
   languages: z.array(z.string()),
   
   // Video Settings
-  ocrEngine: z.string().min(1, "OCR engine is required"),
+  ocrEngine: z.string().min(1, "必须选择 OCR 引擎"),
   monitorIds: z.array(z.string()),
   ignoredWindows: z.array(z.string()),
   includedWindows: z.array(z.string()),
@@ -98,11 +98,11 @@ export const settingsStoreSchema = z.object({
   remoteControlPolicy: remoteControlPolicySchema.optional(),
   semanticContextMode: z.enum(["memory", "computerUse", "both"]).optional(),
   useAllMonitors: z.boolean(),
-  fps: z.number().min(0.1, "FPS must be at least 0.1").max(60, "FPS cannot exceed 60"),
+  fps: z.number().min(0.1, "FPS 至少为 0.1").max(60, "FPS 不能超过 60"),
 
   // System Settings
-  dataDir: z.string().min(1, "Data directory is required"),
-  port: z.number().int().min(1024, "Port must be at least 1024").max(65535, "Port cannot exceed 65535"),
+  dataDir: z.string().min(1, "必须填写数据目录"),
+  port: z.number().int().min(1024, "端口至少为 1024").max(65535, "端口不能超过 65535"),
   useChineseMirror: z.boolean(),
   usePiiRemoval: z.boolean(),
   devMode: z.boolean(),

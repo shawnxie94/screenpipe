@@ -17,11 +17,11 @@ describe("screenshotsDisabledCta", () => {
 	it("names the config and power-profile screenshot-disable states", () => {
 		expect(
 			screenshotsDisabledCta({ vision_reason: "screenshots_disabled_by_config" })?.headline,
-		).toContain("Screenshots are turned off");
+		).toContain("截图功能已关闭");
 		expect(
 			screenshotsDisabledCta({ vision_reason: "screenshots_disabled_by_power_profile" })
 				?.headline,
-		).toContain("Battery saver");
+		).toContain("省电模式");
 	});
 
 	it("never fires for permission, stall, healthy, or missing health", () => {

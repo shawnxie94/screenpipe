@@ -905,7 +905,7 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
           throw new Error(
             startRes.status === "error"
               ? startRes.error
-              : startRes.data.startupError ?? "AI assistant did not restart",
+              : startRes.data.startupError ?? "AI 助手未能重启",
           );
         }
         if (isAttemptForeground()) {
@@ -932,19 +932,19 @@ export function usePiSendTransport(options: PiSendTransportOptions) {
           errorMsg = piPromptStartTimeoutMessage();
           retryPrompt = userMessage;
         } else if (rawError.toLowerCase().includes("already processing")) {
-          errorMsg = "The previous reply was still finishing, so this message was not sent. Retry it in a moment.";
+          errorMsg = "上一条回复尚未完成，此消息未发送，请稍后重试。";
           retryPrompt = userMessage;
         } else if (rawError.includes("Broken pipe") || rawError.includes("not running") || rawError.includes("has died") || rawError.includes("Pi not initialized")) {
           const provider = currentPreset?.provider;
           errorMsg = provider === "native-ollama"
-            ? "Ollama isn't running. Start it with: `ollama serve`"
-            : "AI agent crashed — restarting automatically...";
+            ? "Ollama 未运行，请先执行：`ollama serve`"
+            : "AI 代理已崩溃 — 正在自动重启…";
           retryPrompt = userMessage;
         } else if (providerError) {
           errorMsg = providerError.message;
           retryPrompt = providerError.retryable ? userMessage : undefined;
         } else if (rawError.includes("not found")) {
-          errorMsg = `Model "${currentPreset?.model}" not found. Check your AI preset in settings.`;
+          errorMsg = `未找到模型“${currentPreset?.model}”，请在设置中检查 AI 预设。`;
         } else {
           errorMsg = rawError;
           retryPrompt = userMessage;

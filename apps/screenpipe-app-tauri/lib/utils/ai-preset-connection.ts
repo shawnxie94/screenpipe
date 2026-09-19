@@ -119,14 +119,14 @@ export async function testAiPresetConnection(
   const data = await response.json();
   let reply: string;
   if (isAnthropic) {
-    if (!data.content?.[0]) throw new Error("Provider returned no message");
-    reply = data.content[0].text?.slice(0, 100) || "Valid message received";
+    if (!data.content?.[0]) throw new Error("提供商未返回消息");
+    reply = data.content[0].text?.slice(0, 100) || "已收到有效消息";
   } else {
     if (!data.choices?.[0]?.message) {
-      throw new Error("Provider returned no chat message");
+      throw new Error("提供商未返回聊天消息");
     }
     reply = data.choices[0].message.content?.slice(0, 100) ||
-      "Valid chat response received";
+      "已收到有效聊天回复";
   }
 
   return {

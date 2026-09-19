@@ -12,26 +12,26 @@ import {
 
 describe("large context helpers", () => {
   it("recognizes pasted text documents by generated name and txt extension", () => {
-    expect(isPastedTextDoc({ name: "Pasted text", ext: "txt" })).toBe(true);
-    expect(isPastedTextDoc({ name: "Pasted text 2", ext: "txt" })).toBe(true);
-    expect(isPastedTextDoc({ name: "Pasted text notes", ext: "txt" })).toBe(false);
-    expect(isPastedTextDoc({ name: "Pasted text", ext: "md" })).toBe(false);
+    expect(isPastedTextDoc({ name: "粘贴的文本", ext: "txt" })).toBe(true);
+    expect(isPastedTextDoc({ name: "粘贴的文本 2", ext: "txt" })).toBe(true);
+    expect(isPastedTextDoc({ name: "粘贴的文本 notes", ext: "txt" })).toBe(false);
+    expect(isPastedTextDoc({ name: "粘贴的文本", ext: "md" })).toBe(false);
   });
 
   it("generates the next pasted text document name from existing docs", () => {
-    expect(pastedTextDocName([])).toBe("Pasted text");
+    expect(pastedTextDocName([])).toBe("粘贴的文本");
     expect(
       pastedTextDocName([
-        makePastedTextDoc("one", "Pasted text"),
-        makePastedTextDoc("two", "Pasted text 2"),
+        makePastedTextDoc("one", "粘贴的文本"),
+        makePastedTextDoc("two", "粘贴的文本 2"),
         { name: "Notes", ext: "txt", text: "ignored", truncated: false, charCount: 7 },
       ])
-    ).toBe("Pasted text 3");
+    ).toBe("粘贴的文本 3");
   });
 
   it("builds pasted text document metadata from raw text", () => {
-    expect(makePastedTextDoc("hello", "Pasted text")).toEqual({
-      name: "Pasted text",
+    expect(makePastedTextDoc("hello", "粘贴的文本")).toEqual({
+      name: "粘贴的文本",
       ext: "txt",
       text: "hello",
       truncated: false,

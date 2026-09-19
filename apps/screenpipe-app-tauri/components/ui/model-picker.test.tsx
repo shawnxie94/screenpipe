@@ -24,10 +24,10 @@ describe("ModelPicker", () => {
     );
 
     expect(screen.getByRole("combobox", { name: "模型" })).toHaveTextContent(
-      "loading models...",
+      "正在加载模型…",
     );
     expect(screen.getByRole("status")).toHaveTextContent(
-      "discovering models...",
+      "正在发现模型…",
     );
   });
 

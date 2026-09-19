@@ -237,7 +237,7 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
         <div className="relative">
           <Input
             type={showPassword ? "text" : "password"}
-            placeholder={gmail ? "abcd efgh ijkl mnop" : "app-specific password"}
+            placeholder={gmail ? "abcd efgh ijkl mnop" : "应用专用密码"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="h-8 text-xs pr-8"

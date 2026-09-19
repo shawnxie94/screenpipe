@@ -70,7 +70,7 @@ function normalizeActivation(
       ? "needs_retry"
       : (value.setupStatus ?? "ready"),
     setupError: buildingIsStale
-      ? "Setup stopped before it finished."
+      ? "设置未完成即已停止。"
       : (value.setupError ?? null),
     guideStep: value.guideStep ?? "dashboard",
     createdAt: value.createdAt,

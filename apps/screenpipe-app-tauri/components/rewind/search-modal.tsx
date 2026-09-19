@@ -2863,8 +2863,8 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           {isTagSearch && !isSearchingTags && tagResults.length === 0 && allTags.length === 0 && (
             <div className="py-12 text-center text-sm text-muted-foreground">
               {query.slice(1).trim()
-                ? <>no tags matching &quot;{query.slice(1).trim()}&quot;</>
-                : "no tags found"}
+                ? <>没有匹配“{query.slice(1).trim()}”的标签</>
+                : "未找到标签"}
             </div>
           )}
 
@@ -2913,8 +2913,8 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
             && speakerResults.length === 0 && appSuggestions.length === 0 && (
             <div className="py-12 text-center text-sm text-muted-foreground">
               {entityFilter
-                ? <>no apps or people matching &quot;{entityFilter}&quot;</>
-                : "no apps or people found"}
+                ? <>没有匹配“{entityFilter}”的应用或人员</>
+                : "未找到应用或人员"}
             </div>
           )}
 

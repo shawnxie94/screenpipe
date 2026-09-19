@@ -21,7 +21,7 @@ export interface ParsedAgentAction {
 export function agentActionTitle(rawTitle: string, actionKind: AgentActionKind): string {
   const prefix = `acp:${actionKind}:`;
   const suffix = rawTitle.slice(prefix.length).trim();
-  if (!suffix) return actionKind === "auth" ? "sign in to continue" : "permission needed";
+  if (!suffix) return actionKind === "auth" ? "登录以继续" : "需要权限";
   const humanized = suffix.replace(/[_-]+/g, " ").replace(/\s+/g, " ");
   return humanized.charAt(0).toUpperCase() + humanized.slice(1);
 }

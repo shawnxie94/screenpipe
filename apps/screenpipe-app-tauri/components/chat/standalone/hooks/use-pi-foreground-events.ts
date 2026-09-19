@@ -1453,7 +1453,7 @@ export function usePiForegroundEvents({
                 setMessages((prev) =>
                   prev.map((m) => m.id === msgId ? {
                     ...m,
-                    content: "The previous reply was still finishing, so this message was not sent. Retry it in a moment.",
+                    content: "上一条回复尚未完成，此消息未发送，请稍后重试。",
                     retryPrompt: lastUserMessageRef.current || undefined,
                   } : m)
                 );
@@ -1462,7 +1462,7 @@ export function usePiForegroundEvents({
                 setMessages((prev) =>
                   prev.map((m) => m.id === msgId ? {
                     ...m,
-                    content: "Something went wrong on the server.",
+                    content: "服务器出现问题。",
                     retryPrompt: lastUserMessageRef.current || undefined,
                   } : m)
                 );

@@ -14,7 +14,7 @@ const LARGE_CONTEXT_CHUNK_CHARS = 24_000;
 const LARGE_CONTEXT_PREVIEW_HEAD_CHARS = 3_000;
 const LARGE_CONTEXT_PREVIEW_TAIL_CHARS = 1_500;
 const LARGE_CONTEXT_PROMPT_TAG = "screenpipe-large-context";
-const PASTED_TEXT_DOC_BASE_NAME = "Pasted text";
+const PASTED_TEXT_DOC_BASE_NAME = "粘贴的文本";
 
 export function isPastedTextDoc(doc: Pick<ExtractedDoc, "name" | "ext">) {
   return doc.ext === "txt" && new RegExp(`^${PASTED_TEXT_DOC_BASE_NAME}(?: \\d+)?$`).test(doc.name);

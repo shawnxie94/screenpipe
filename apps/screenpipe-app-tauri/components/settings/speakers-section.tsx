@@ -1077,7 +1077,7 @@ export function SpeakersSection() {
       body: JSON.stringify({ id, name }),
     });
     if (!res.ok) throw new Error("failed");
-    toast({ title: `speaker renamed to "${name}"` });
+    toast({ title: `说话人已重命名为“${name}”` });
     fetchSpeakers();
   };
 

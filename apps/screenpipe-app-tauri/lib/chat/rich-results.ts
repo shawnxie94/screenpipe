@@ -40,7 +40,7 @@ const CHAT_RICH_RESULT_KIND_LABELS: Record<ChatRichResultKind, string> = {
   artifact: "内容文件",
   chat: "聊天",
   "live-view": "实时视图",
-  link: "Web resource",
+  link: "网页资源",
 };
 
 export type ChatRichResult = {

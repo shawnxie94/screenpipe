@@ -218,7 +218,7 @@ export function useCodingWorkspace({
         throw new Error("请先开始一段对话，再启用工作树模式");
       if (lockedRef.current)
         throw new Error(
-          "Worktree mode must be enabled before the first message",
+          "发送首条消息前需先启用工作树模式",
         );
 
       const requestConversationId = conversationId;

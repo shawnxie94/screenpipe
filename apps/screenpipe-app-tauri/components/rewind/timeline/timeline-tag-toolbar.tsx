@@ -16,7 +16,7 @@ import { showChatWithPrefill } from "@/lib/chat-utils";
 import { type TemplatePipe } from "@/lib/hooks/use-pipes";
 import { AnimatePresence, motion } from "framer-motion";
 
-const DEFAULT_TAGS = ["deep work", "meeting", "admin", "break"];
+const DEFAULT_TAGS = ["深度工作", "会议", "事务", "休息"];
 
 // Muted hues for pipe circles
 const PIPE_COLORS = [
@@ -492,7 +492,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 									onClick={() => handleRemoveTag(t)}
 									disabled={isApplying}
 									className="flex-shrink-0 rounded-full hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
-									aria-label={`remove tag ${t}`}
+									aria-label={`移除标签“${t}”`}
 								>
 									<X className="w-2.5 h-2.5" />
 								</button>
@@ -538,7 +538,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 						className="text-xs px-2 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 flex-shrink-0"
 					>
 						<Plus className="w-3 h-3" />
-						add
+						添加
 					</button>
 				</form>
 				</>

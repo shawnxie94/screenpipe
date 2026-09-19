@@ -286,7 +286,7 @@ describe("Chat durable result cards", function () {
     await setTheme("light");
     await positionCardForProof("Scheduled task: Recheck deployment", "start");
     expect(typeof await saveScreenshot("chat-rich-result-kinds-light-top")).toBe("string");
-    await positionCardForProof("Web resource: Screenpipe docs", "end");
+    await positionCardForProof("网页资源: Screenpipe docs", "end");
     expect(typeof await saveScreenshot("chat-rich-result-kinds-light-bottom")).toBe("string");
 
     await setTheme("dark");
