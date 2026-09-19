@@ -94,7 +94,6 @@ pub(crate) enum SearchContentType {
 }
 
 impl SearchContentType {
-    #[allow(dead_code)] // complete search path (pipe permissions + related tags); /search mounts the keyword handler
     fn database_type(&self) -> Option<ContentType> {
         match self {
             Self::All => Some(ContentType::All),
@@ -107,7 +106,6 @@ impl SearchContentType {
         }
     }
 
-    #[allow(dead_code)] // complete search path; /search mounts the keyword handler
     fn permission_name(&self) -> Option<&'static str> {
         match self {
             Self::All => None,
@@ -244,7 +242,6 @@ pub(crate) struct PaginationQuery {
     offset: u32,
 }
 
-#[allow(dead_code)] // complete search path; /search mounts the keyword handler
 fn validate_pipe_search_permissions(
     permissions: &PipePermissions,
     query: &SearchQuery,
@@ -286,7 +283,6 @@ fn validate_pipe_search_permissions(
     Ok(())
 }
 
-#[allow(dead_code)] // complete search path; /search mounts the keyword handler
 fn pipe_can_access_content_item(permissions: &PipePermissions, item: &ContentItem) -> bool {
     let (app_name, window_name, content_type, timestamp) = match item {
         ContentItem::OCR(content) => (
@@ -409,7 +405,6 @@ pub struct SearchResponse {
 
 /// How many co-occurring tags to pull for the `related` block. Spread across
 /// a few namespaces this is plenty of context while staying token-cheap.
-#[allow(dead_code)] // complete search path (related-tags block); not on the keyword /search
 const RELATED_TAGS_LIMIT: u32 = 30;
 
 /// Upper bound on the (auxiliary, opt-in) related-tags query. The memories leg
@@ -418,7 +413,6 @@ const RELATED_TAGS_LIMIT: u32 = 30;
 /// block rather than dragging out the whole search response. Measured cost on a
 /// 200k-frame / 50k-memory DB is ~20ms (cold tag) to ~150ms (hot tag), so 5s is
 /// a generous safety net, not a normal-path limit.
-#[allow(dead_code)] // complete search path (related-tags block); not on the keyword /search
 const RELATED_TAGS_TIMEOUT_SECS: u64 = 5;
 /// Standards-compliant delay advertised when the route-wide search admission
 /// gate is full. The JSON body also carries milliseconds for existing clients.
@@ -973,7 +967,6 @@ fn empty_search_response(
 }
 
 // Update the search function
-#[allow(dead_code)] // full search path (pipe perms, related tags); /search currently mounts the keyword handler
 #[oasgen]
 pub(crate) async fn search(
     Query(mut query): Query<SearchQuery>,
