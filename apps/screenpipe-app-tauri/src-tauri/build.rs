@@ -627,9 +627,8 @@ fn main() {
         // Build the native SwiftUI timeline
         build_native_timeline();
 
-        // Stage macOS runtime sidecars into src-tauri/. Release builds bundle
-        // mlx.metallib as a Tauri externalBin on arm64 so Tauri signs it, and
-        // copy libonnxruntime.dylib via macOS.files on x86_64 for ort load-dynamic.
+        // Stage macOS runtime sidecars into src-tauri/. Release builds copy
+        // libonnxruntime.dylib via macOS.files on x86_64 for ort load-dynamic.
         stage_macos_sidecar_libs();
 
         // Stage permission-flow's resource bundle for Tauri to pick up.
@@ -921,64 +920,14 @@ int shortcut_get_frame(double* x, double* y, double* w, double* h) {
     println!("cargo:rustc-link-lib=static=shortcut_reminder");
 }
 
-/// Stage mlx.metallib and libonnxruntime.dylib into `src-tauri/` for macOS
-/// release bundling.
-/// MLX needs metallib next to the binary at runtime (rfdetr-mlx crashes without it).
+/// Stage libonnxruntime.dylib into `src-tauri/` for macOS release bundling.
 /// x86_64 Intel builds need libonnxruntime.dylib colocated for ort `load-dynamic`.
 /// Same build-time staging pattern as `copy_permission_flow_bundle` (#3990).
 #[cfg(target_os = "macos")]
 fn stage_macos_sidecar_libs() {
-    stage_mlx_metallib();
     stage_libonnxruntime_dylib();
 }
 
-/// Copy mlx.metallib to a known location so release packaging can bundle it as
-/// a Tauri externalBin on aarch64 macOS builds. MLX compiles Metal shaders into
-/// this file during mlx-sys build. Without it, the MLX runtimes (e.g. rfdetr-mlx) crash with
-/// "Failed to load the default metallib".
-#[cfg(target_os = "macos")]
-fn stage_mlx_metallib() {
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-    let metallib = std::path::Path::new(&manifest_dir).join("mlx.metallib");
-    let target_arch =
-        std::env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_else(|_| "aarch64".to_string());
-
-    if target_arch != "aarch64" {
-        let _ = std::fs::remove_file(&metallib);
-        return;
-    }
-
-    let min_size = 1_000_000; // real metallib is ~84MB
-
-    let needs_download =
-        !metallib.exists() || std::fs::metadata(&metallib).map(|m| m.len()).unwrap_or(0) < min_size;
-
-    if needs_download {
-        // Download mlx.metallib (pre-compiled MLX Metal shaders) for the MLX runtimes.
-        // MLX needs this file next to the binary at runtime. The release
-        // workflow exposes the target-suffixed externalBin copy to Tauri.
-        eprintln!("mlx-metallib: downloading from GitHub releases...");
-        let url =
-            "https://github.com/screenpipe/screenpipe/releases/download/mlx-metallib-v0.2.0/mlx.metallib";
-        let status = std::process::Command::new("curl")
-            .args(["-L", "-f", "-o", metallib.to_str().unwrap(), url])
-            .status();
-        match status {
-            Ok(s) if s.success() => {
-                let size = std::fs::metadata(&metallib).map(|m| m.len()).unwrap_or(0);
-                eprintln!("mlx-metallib: downloaded ({} MB)", size / 1_000_000);
-            }
-            _ => println!(
-                "cargo:warning=mlx-metallib: download failed — MLX runtime will crash at runtime"
-            ),
-        }
-    } else {
-        let size = std::fs::metadata(&metallib).map(|m| m.len()).unwrap_or(0);
-        eprintln!("mlx-metallib: already present ({} MB)", size / 1_000_000);
-    }
-
-    sign_macos_sidecar_if_needed(&metallib);
-}
 
 /// Stage libonnxruntime.dylib for x86_64 Intel builds. ort `load-dynamic` resolves
 /// relative paths from the executable, so the dylib must live in Contents/MacOS/.
@@ -1203,8 +1152,8 @@ fn copy_permission_flow_bundle() {
     // Missing source means swift-rs's SwiftPM build didn't emit the bundle
     // (CI cache layering, scratch-path mismatch, etc.). Release builds must
     // ship the real bundle — hard-fail. Debug builds (e2e CI) only need the
-    // path to exist so tauri-build's resource validation passes; same
-    // empty-stub trick mlx.metallib uses above.
+    // path to exist so tauri-build's resource validation passes; an
+    // empty-stub file is enough there.
     if !bundle_src.exists() {
         let is_release = std::env::var("PROFILE").as_deref() == Ok("release");
         let msg = format!(

@@ -7,7 +7,6 @@
             "exceptionDomain": "screenpipe.com",
             "provisioningProfile": null,
             "files": {
-                "MacOS/mlx.metallib": "mlx.metallib",
                 "MacOS/libonnxruntime.dylib": "libonnxruntime.dylib"
             },
             "dmg": {

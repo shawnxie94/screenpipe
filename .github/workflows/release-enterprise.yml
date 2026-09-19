@@ -885,11 +885,9 @@ jobs:
           const config = JSON.parse(fs.readFileSync(path, "utf8"));
           config.bundle ??= {};
           config.bundle.macOS ??= {};
-          config.bundle.externalBin = [...new Set(config.bundle.externalBin ?? [])]
-            .filter((entry) => entry !== "mlx.metallib");
+          config.bundle.externalBin = [...new Set(config.bundle.externalBin ?? [])];
           if (target === "aarch64-apple-darwin") {
             config.bundle.macOS.files = {};
-            config.bundle.externalBin.push("mlx.metallib");
           } else if (target === "x86_64-apple-darwin") {
             config.bundle.macOS.files = {
               "MacOS/libonnxruntime.dylib": "libonnxruntime.dylib",
