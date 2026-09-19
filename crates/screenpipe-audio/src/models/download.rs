@@ -239,31 +239,58 @@ fn classify_download_failure(message: &str) -> Option<&'static str> {
 }
 
 /// Download model from URL with HTTP validation, empty body check, atomic write, and logging.
-async fn download_model(
-    url: &str,
-    filename: &str,
-    cache_dir: &Path,
-    model_path_lock: &'static Mutex<Option<PathBuf>>,
-) -> Result<()> {
-    info!("downloading {} model from {}", filename, url);
-    let response = match reqwest::get(url).await {
-        Ok(response) => response,
-        Err(e) => {
-            // Corporate networks (TLS interception, proxies, firewalls) are the
-            // most common reason a model download fails. The raw reqwest error
-            // is opaque, so attach an actionable hint when we can recognize it.
-            return Err(match download_failure_hint(&e) {
-                Some(hint) => anyhow!(
-                    "failed to download {} from {}: {} ({})",
-                    filename,
-                    url,
-                    hint,
-                    e
-                ),
-                None => anyhow!("failed to download {} from {}: {}", filename, url, e),
-            });
+/// Candidate URLs for a GitHub-hosted raw file, canonical source first.
+/// `github.com/*/raw` and `raw.githubusercontent.com` are unreachable for
+/// many mainland-China networks; cdn.jsdelivr.net mirrors the same content
+/// from a CN-friendly CDN, so it is appended as a fallback candidate.
+fn github_raw_mirrors(url: &str) -> Vec<String> {
+    let mut candidates = vec![url.to_string()];
+    let rest = url
+        .strip_prefix("https://github.com/")
+        .or_else(|| url.strip_prefix("https://raw.githubusercontent.com/"));
+    let Some(rest) = rest else {
+        return candidates;
+    };
+    // Normalize `<owner>/<repo>[/raw/]<ref>/<path>` into repo + ref/path.
+    let repo_and_rest = match rest.split_once("/raw/") {
+        Some((repo, ref_path)) => Some((repo.to_string(), ref_path.to_string())),
+        None => {
+            let mut parts = rest.splitn(4, '/');
+            match (parts.next(), parts.next(), parts.next(), parts.next()) {
+                (Some(owner), Some(repo), Some(ref_part), Some(path)) => {
+                    Some((format!("{owner}/{repo}"), format!("{ref_part}/{path}")))
+                }
+                _ => None,
+            }
         }
     };
+    if let Some((repo, ref_and_path)) = repo_and_rest {
+        // jsDelivr expects a plain branch/tag — `refs/heads/main` → `main`.
+        let ref_and_path = ref_and_path
+            .strip_prefix("refs/heads/")
+            .unwrap_or(&ref_and_path)
+            .to_string();
+        let mirror = format!("https://cdn.jsdelivr.net/gh/{repo}@{ref_and_path}");
+        if !candidates.contains(&mirror) {
+            candidates.push(mirror);
+        }
+    }
+    candidates
+}
+
+/// Fetch one URL, applying the shared failure diagnostics: connection errors
+/// get an actionable hint, non-success statuses and captive-portal HTML pages
+/// are rejected before any body is cached.
+async fn try_fetch_model_bytes(url: &str) -> Result<bytes::Bytes> {
+    let response = reqwest::get(url).await.map_err(|e| {
+        // Corporate networks (TLS interception, proxies, firewalls) are the
+        // most common reason a model download fails. The raw reqwest error
+        // is opaque, so attach an actionable hint when we can recognize it.
+        match download_failure_hint(&e) {
+            Some(hint) => anyhow!("failed to download from {}: {} ({})", url, hint, e),
+            None => anyhow!("failed to download from {}: {}", url, e),
+        }
+    })?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -276,16 +303,12 @@ async fn download_model(
             }
             _ => "",
         };
-        return Err(anyhow!(
-            "download failed: HTTP {} for {}{}",
-            status,
-            url,
-            hint
-        ));
+        return Err(anyhow!("download failed: HTTP {} for {}{}", status, url, hint));
     }
 
     // A captive portal / proxy login page answers 200 OK with an HTML body
-    // instead of the model binary. Detect it before we cache garbage to disk.
+    // instead of the model binary. Treat it as a failed source so the next
+    // mirror candidate gets a chance before we cache garbage to disk.
     if let Some(content_type) = response
         .headers()
         .get(reqwest::header::CONTENT_TYPE)
@@ -293,28 +316,58 @@ async fn download_model(
     {
         if content_type.contains("text/html") {
             return Err(anyhow!(
-                "download for {} returned an HTML page, not the model binary. a captive portal \
-                 or corporate proxy is likely intercepting the request ({})",
-                filename,
+                "download from {} returned an HTML page, not the model binary. a captive portal \
+                 or corporate proxy is likely intercepting the request",
                 url
             ));
         }
     }
 
-    let model_data = match response.bytes().await {
-        Ok(bytes) => bytes,
-        Err(e) => {
-            return Err(match download_failure_hint(&e) {
-                Some(hint) => anyhow!(
-                    "failed reading {} download body: {} ({})",
-                    filename,
-                    hint,
-                    e
-                ),
-                None => anyhow!("failed reading {} download body: {}", filename, e),
-            });
+    let model_data = response.bytes().await.map_err(|e| {
+        match download_failure_hint(&e) {
+            Some(hint) => anyhow!("failed reading download body from {}: {} ({})", url, hint, e),
+            None => anyhow!("failed reading download body from {}: {}", url, e),
         }
-    };
+    })?;
+    if model_data.is_empty() {
+        return Err(anyhow!("download returned empty body from {}", url));
+    }
+    Ok(model_data)
+}
+
+/// Fetch a model file, trying the canonical source first and then any
+/// registered mirrors (see [`github_raw_mirrors`]). Returns the last error
+/// when every source fails.
+pub(crate) async fn fetch_bytes_with_mirrors(url: &str) -> Result<bytes::Bytes> {
+    let candidates = github_raw_mirrors(url);
+    let mut last_err: Option<anyhow::Error> = None;
+    for candidate in &candidates {
+        match try_fetch_model_bytes(candidate).await {
+            Ok(bytes) => {
+                if candidate != url {
+                    info!("downloaded from mirror {} (primary {} unreachable)", candidate, url);
+                }
+                return Ok(bytes);
+            }
+            Err(e) => {
+                warn!("model source {} failed: {}", candidate, e);
+                last_err = Some(e);
+            }
+        }
+    }
+    Err(last_err.unwrap_or_else(|| anyhow!("no download source available for {}", url)))
+}
+
+async fn download_model(
+    url: &str,
+    filename: &str,
+    cache_dir: &Path,
+    model_path_lock: &'static Mutex<Option<PathBuf>>,
+) -> Result<()> {
+    info!("downloading {} model from {}", filename, url);
+    let model_data = fetch_bytes_with_mirrors(url).await.map_err(|e| {
+        anyhow!("failed to download {} from {}: {}", filename, url, e)
+    })?;
     if model_data.is_empty() {
         return Err(anyhow!("download returned empty body for {}", filename));
     }

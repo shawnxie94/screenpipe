@@ -239,7 +239,7 @@ impl RfdetrConfig {
             "downloading rfdetr_v38.onnx (~60 MB) — first-run only"
         );
         let resp = reqwest::Client::new()
-            .get(Self::HF_DOWNLOAD_URL)
+            .get(super::hf_url(Self::HF_DOWNLOAD_URL))
             .send()
             .await
             .map_err(|e| RedactError::Runtime(format!("rfdetr download GET: {e}")))?;

@@ -181,7 +181,7 @@ impl OnnxConfig {
                 }
             }
 
-            let url = format!("{}/{}", Self::HF_REPO_BASE, filename);
+            let url = super::hf_url(&format!("{}/{}", Self::HF_REPO_BASE, filename));
             let tmp = target.with_extension(format!(
                 "{}.partial",
                 target

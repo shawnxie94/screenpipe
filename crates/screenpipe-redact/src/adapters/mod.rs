@@ -50,3 +50,16 @@ pub mod onnx;
 pub mod opf;
 
 pub mod rfdetr;
+
+/// Resolve a Hugging Face URL, honoring `HF_ENDPOINT` (set to
+/// `https://hf-mirror.com` when `use_chinese_mirror` is enabled) so first-run
+/// model downloads also work from networks where huggingface.co is
+/// unreachable. URLs pointed elsewhere are returned unchanged.
+pub(crate) fn hf_url(url: &str) -> String {
+    match std::env::var("HF_ENDPOINT") {
+        Ok(endpoint) if !endpoint.is_empty() => {
+            url.replacen("https://huggingface.co", &endpoint, 1)
+        }
+        _ => url.to_string(),
+    }
+}

@@ -280,7 +280,7 @@ async fn ensure_checkpoint_present(model_dir: &Path) -> Result<(), RedactError> 
 }
 
 async fn download_one(name: &str, expected_sha: &str, dst: &Path) -> Result<(), RedactError> {
-    let url = format!("{HF_BASE_URL}/{name}");
+    let url = super::hf_url(&format!("{HF_BASE_URL}/{name}"));
     let tmp = dst.with_extension("partial");
     let _ = tokio::fs::remove_file(&tmp).await;
 
