@@ -26,6 +26,57 @@ use uuid::Uuid;
 static VIDEO_METADATA_CACHE: LazyLock<RwLock<HashMap<String, (f64, f64)>>> =
     LazyLock::new(|| RwLock::new(HashMap::with_capacity(100)));
 
+/// Frame-timing control for ffmpeg outputs. ffmpeg 5.1 deprecated `-vsync`
+/// and 7.0 removed it in favour of `-fps_mode`; bundled sidecar builds may
+/// predate 5.1, so pick the flag from the probed binary (cached per process).
+#[derive(Clone, Copy)]
+pub(crate) enum FrameTiming {
+    /// Keep every frame with its own timestamp (legacy `-vsync 0`).
+    Passthrough,
+    /// Drop duplicated frames (legacy `-vsync vfr`).
+    Vfr,
+}
+
+/// The two ffmpeg arguments realizing `mode` on the resolved binary.
+pub(crate) fn frame_timing_args(mode: FrameTiming) -> [&'static str; 2] {
+    if ffmpeg_supports_fps_mode() {
+        match mode {
+            FrameTiming::Passthrough => ["-fps_mode", "passthrough"],
+            FrameTiming::Vfr => ["-fps_mode", "vfr"],
+        }
+    } else {
+        match mode {
+            FrameTiming::Passthrough => ["-vsync", "0"],
+            FrameTiming::Vfr => ["-vsync", "vfr"],
+        }
+    }
+}
+
+/// `-fps_mode` exists since ffmpeg 5.1. An unparseable version string is
+/// treated as modern — git master and date-coded builds are post-7.
+fn ffmpeg_supports_fps_mode() -> bool {
+    static SUPPORTS: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *SUPPORTS.get_or_init(|| {
+        ffmpeg_major_minor().map_or(true, |(major, minor)| major > 5 || (major == 5 && minor >= 1))
+    })
+}
+
+/// (major, minor) of the resolved ffmpeg binary.
+fn ffmpeg_major_minor() -> Option<(u32, u32)> {
+    let path = find_ffmpeg_path()?;
+    let out = std::process::Command::new(path).arg("-version").output().ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let token = text.split("version ").nth(1)?.split_whitespace().next()?;
+    let token = token.strip_prefix('n').unwrap_or(token);
+    if token.starts_with("git") || token.contains('-') {
+        return Some((7, 0));
+    }
+    let mut parts = token.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next().unwrap_or("0").parse().ok()?;
+    Some((major, minor))
+}
+
 /// Get ffprobe path from ffmpeg path, handling Windows .exe extension.
 /// Falls back to searching PATH via `which` if ffprobe isn't alongside ffmpeg.
 pub fn get_ffprobe_path(ffmpeg_path: &Path) -> PathBuf {
@@ -332,13 +383,12 @@ pub async fn extract_frame(file_path: &str, offset_index: i64) -> Result<String>
         None => scale.to_string(),
     };
     command
+        .args(frame_timing_args(FrameTiming::Passthrough))
         .args([
             "-vf",
             &filter,
             "-vframes",
             "1",
-            "-vsync",
-            "0",
             "-f",
             "image2pipe",
             "-c:v",
@@ -695,9 +745,9 @@ pub async fn extract_frames_from_video(
 
     // Extract frames using ffmpeg
     let mut cmd = ffmpeg_cmd_async(&ffmpeg_path);
+    cmd.args(["-i", video_path.to_str().unwrap()]);
+    cmd.args(frame_timing_args(FrameTiming::Passthrough));
     cmd.args([
-        "-i",
-        video_path.to_str().unwrap(),
         "-vf",
         &fps_filter,
         "-strict",
@@ -710,8 +760,6 @@ pub async fn extract_frames_from_video(
         "2",
         "-qmax",
         "4",
-        "-vsync",
-        "0",
         "-threads",
         "2",
         "-y",
@@ -1158,15 +1206,13 @@ pub async fn extract_frame_from_video(
     }
     let filter = locator.video_filter("scale=iw:ih,format=yuvj420p");
     command
+        .args(["-i", file_path])
+        .args(frame_timing_args(FrameTiming::Passthrough))
         .args([
-            "-i",
-            file_path,
             "-vf",
             &filter,
             "-vframes",
             "1",
-            "-vsync",
-            "0",
             "-c:v",
             "mjpeg",
             "-strict",
@@ -1477,13 +1523,12 @@ pub async fn extract_high_quality_frame(
         command.args(["-ss", &seek]);
     }
     let filter = locator.video_filter("scale=3840:2160:flags=lanczos");
-    command.args([
-        "-i",
-        file_path,
+    command
+        .args(["-i", file_path])
+        .args(frame_timing_args(FrameTiming::Passthrough))
+        .args([
         "-vframes",
         "1",
-        "-vsync",
-        "0",
         "-vf",
         &filter,
         "-c:v",

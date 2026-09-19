@@ -8,6 +8,8 @@ use chrono::{DateTime, Duration, Utc};
 use dirs::cache_dir;
 use screenpipe_core::find_ffmpeg_path;
 use screenpipe_db::{DatabaseManager, FrameData, OCREntry};
+
+use crate::video_utils::{frame_timing_args, FrameTiming};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, HashMap};
@@ -754,9 +756,9 @@ async fn extract_frame(
     let select_filter = format!("select={select_filter}");
 
     let mut cmd = screenpipe_core::ffmpeg_cmd_async(&ffmpeg);
+    cmd.args(["-i", &video_file_path]);
+    cmd.args(frame_timing_args(FrameTiming::Passthrough));
     cmd.args([
-        "-i",
-        &video_file_path,
         "-vf",
         &format!("{},format=yuv420p,scale=iw*0.8:ih*0.8", select_filter),
         "-strict",
@@ -769,8 +771,6 @@ async fn extract_frame(
         "12",
         "-qmax",
         "15",
-        "-vsync",
-        "0",
         "-threads",
         "1",         // Limit to single thread
         "-cpu-used", // Faster encoding
@@ -939,13 +939,11 @@ async fn extract_frames_individually(
     let mut frames = BTreeMap::new();
     for &offset in offsets {
         let mut cmd = screenpipe_core::ffmpeg_cmd_async(ffmpeg);
+        cmd.args(["-i", video_file_path]);
+        cmd.args(frame_timing_args(FrameTiming::Passthrough));
         cmd.args([
-            "-i",
-            video_file_path,
             "-vf",
             &format!("select=eq(n\\,{offset}),format=yuv420p,scale=iw*0.8:ih*0.8"),
-            "-vsync",
-            "0",
             "-frames:v",
             "1",
             "-f",

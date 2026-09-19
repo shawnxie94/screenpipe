@@ -33,7 +33,7 @@ use screenpipe_db::DatabaseManager;
 use serde::Serialize;
 use tracing::{info, warn};
 
-use crate::video_utils::get_ffprobe_path;
+use crate::video_utils::{frame_timing_args, get_ffprobe_path, FrameTiming};
 
 /// Cap the number of frames we will extract for a single export. A 4h meeting at the typical
 /// capture cadence stays well under this; beyond it the per-frame ffmpeg extraction would take
@@ -513,11 +513,12 @@ async fn extract_chunk_frames_batch(
         "error",
         "-i",
         chunk_path,
+    ]);
+    // passthrough: write exactly the frames `select` kept, no CFR dup/drop.
+    cmd.args(frame_timing_args(FrameTiming::Passthrough));
+    cmd.args([
         "-vf",
         &vf,
-        // passthrough: write exactly the frames `select` kept, no CFR dup/drop.
-        "-vsync",
-        "0",
         "-c:v",
         "png",
         out_pattern.to_str().unwrap(),
@@ -601,6 +602,7 @@ async fn run_mux(
 
     if audio.is_empty() {
         // No audio in range — emit a silent video.
+        cmd.args(frame_timing_args(FrameTiming::Vfr));
         cmd.args([
             "-map",
             "0:v:0",
@@ -612,8 +614,6 @@ async fn run_mux(
             "veryfast",
             "-crf",
             "23",
-            "-vsync",
-            "vfr",
             "-movflags",
             "+faststart",
         ]);
@@ -647,6 +647,7 @@ async fn run_mux(
     }
 
     cmd.arg("-filter_complex").arg(&graph);
+    cmd.args(frame_timing_args(FrameTiming::Vfr));
     cmd.args([
         "-map",
         "0:v:0",
@@ -660,8 +661,6 @@ async fn run_mux(
         "veryfast",
         "-crf",
         "23",
-        "-vsync",
-        "vfr",
         "-c:a",
         "aac",
         "-b:a",
