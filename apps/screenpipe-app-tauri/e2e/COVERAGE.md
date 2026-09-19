@@ -73,7 +73,7 @@ pass/fail/skip counts.
 | Meetings-only audio device ownership | audio-device, local-api, real-ui-e2e | weak (conditional; meetings-only-audio-lifecycle) | weak (conditional; meetings-only-audio-lifecycle) | - |
 | Window lifecycle, focus, and dedupe | window-lifecycle | covered (strong; windows-system-integration, window-lifecycle) | covered (strong; renderer-recovery, window-lifecycle) | covered (strong; window-lifecycle, chat-window) |
 | macOS frozen WebKit renderer recovery | window-lifecycle, tauri-command, real-ui-e2e, local-api | - | covered (strong; renderer-recovery) | - |
-| Meeting note creation and editing | real-ui-e2e | covered (strong; windows-user-journey, meeting-note-bottom-click) | covered (strong; meeting-note-bottom-click, meeting-chat-panel) | covered (strong; meeting-note-bottom-click, meeting-replay-player) |
+| Meeting note creation and editing | real-ui-e2e | covered (strong; windows-user-journey, meeting-note-bottom-click) | covered (strong; meeting-chat-panel, meeting-note-bottom-click) | covered (strong; meeting-note-bottom-click, connected-share) |
 | Pipes discover, install, and play | pipes | covered (strong; pipes, pipes-mcp-connections) | covered (strong; pipes, pipe-continuous-chat) | covered (strong; pipes, pipes-mcp-connections) |
 | Chat window, composer, and streaming state | chat-ai | covered (strong; acp-backend, chat-tool-activity) | covered (strong; acp-backend, chat-tool-activity) | covered (strong; acp-backend, chat-tool-activity) |
 | Conversation-owned coding worktrees | chat-ai | gap | gap | gap |

@@ -302,7 +302,7 @@ export type Settings = SettingsStore & {
 	useSystemDefaultAudio?: boolean;
 	/** Enable AI workflow event detection (cloud, triggers event-based pipes) */
 	/** Audio transcription scheduling: "batch" (default, longer chunks for quality) or "realtime". */
-	transcriptionMode?: "realtime" | "smart" | "batch";
+	transcriptionMode?: "realtime" | "batch";
 	/** Live notes for manually-started meetings. Separate from background 24/7 transcription. */
 	meetingLiveTranscriptionEnabled?: boolean;
 	/** Provider for manually-started live notes. Defaults to the selected transcription engine. */
@@ -1134,7 +1134,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 					.catch(() => {});
 			} catch (error) {
 				console.error("Failed to load settings:", error);
-				setLoadingError(error instanceof Error ? error.message : "Unknown error");
+				setLoadingError(error instanceof Error ? error.message : "未知错误");
 				setIsSettingsLoaded(true);
 			}
 		};
