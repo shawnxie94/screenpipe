@@ -165,6 +165,9 @@ async fn test_add_tags_and_search() {
             ContentItem::Parsed(_) => {
                 unreachable!()
             }
+            ContentItem::Connection(_) => {
+                unreachable!()
+            }
         }
     }
 }
@@ -404,6 +407,9 @@ async fn test_search_by_multiple_tags() {
             }
             ContentItem::Parsed(_) => {
                 panic!("Parsed content should not be included in the results");
+            }
+            ContentItem::Connection(_) => {
+                panic!("Connection content should not be included in the results");
             }
         }
     }
