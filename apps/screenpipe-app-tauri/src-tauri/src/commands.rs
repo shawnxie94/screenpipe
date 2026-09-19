@@ -1795,7 +1795,7 @@ fn scan_chat_entries_by_mtime(dir: &str) -> Result<Vec<ChatDirEntry>, String> {
 #[specta::specta]
 pub async fn enable_keychain_encryption() -> Result<KeychainStatus, String> {
     let key = crate::secrets::get_or_create_key().ok_or_else(|| {
-        "Keychain access denied or unavailable. Credentials will remain unencrypted.".to_string()
+        "无法访问钥匙串或钥匙串不可用。凭据将保持未加密状态。".to_string()
     })?;
 
     let data_dir = screenpipe_core::paths::default_screenpipe_data_dir();

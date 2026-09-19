@@ -1336,7 +1336,7 @@ struct MeetingTranscriptPreview: View {
                         ProgressView()
                             .scaleEffect(0.45 * scale)
                             .frame(width: s(10), height: s(10))
-                        Text("正在聆听发言…")
+                        Text("正在聆听语音…")
                             .font(Brand.swiftUIMonoFont(size: 8 * scale))
                             .foregroundColor(.white.opacity(0.48))
                     }

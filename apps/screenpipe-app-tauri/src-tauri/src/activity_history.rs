@@ -678,7 +678,7 @@ fn event_error_text(event: &Value) -> Option<String> {
             .or_else(|| assistant.get("error"))
             .and_then(Value::as_str)
             .filter(|message| !message.trim().is_empty())
-            .unwrap_or("Activity generation failed")
+            .unwrap_or("活动历史生成失败")
             .trim()
             .to_string(),
     )
@@ -696,14 +696,14 @@ fn classify_activity_run_event(event: &Value, empty_completion_retries: u8) -> A
             } else if empty_completion_retries == 0 {
                 ActivityRunEvent::RetryEmptyCompletion
             } else {
-                ActivityRunEvent::Fail("AI returned an empty activity history".to_string())
+                ActivityRunEvent::Fail("AI 返回了空的活动历史".to_string())
             }
         }
         Some("error") => ActivityRunEvent::Fail(
-            event_error_text(event).unwrap_or_else(|| "Activity generation failed".to_string()),
+            event_error_text(event).unwrap_or_else(|| "活动历史生成失败".to_string()),
         ),
         Some("agent_terminated") => {
-            ActivityRunEvent::Fail("Pi process terminated during activity generation".to_string())
+            ActivityRunEvent::Fail("生成活动历史时 Pi 进程意外终止".to_string())
         }
         _ => ActivityRunEvent::Ignore,
     }
@@ -1247,14 +1247,14 @@ fn parse_document(
         .trim();
     let object_start = unfenced
         .find('{')
-        .ok_or("Activity generation returned no JSON")?;
+        .ok_or("活动历史生成未返回 JSON")?;
     let mut deserializer = serde_json::Deserializer::from_str(&unfenced[object_start..]);
     let value = Value::deserialize(&mut deserializer)
-        .map_err(|error| format!("Activity generation returned invalid JSON: {error}"))?;
+        .map_err(|error| format!("活动历史生成了无效的 JSON：{error}"))?;
     let entries = value
         .get("entries")
         .and_then(Value::as_array)
-        .ok_or("Activity generation returned invalid entries")?;
+        .ok_or("活动历史生成返回了无效条目")?;
     let mut accepted = Vec::with_capacity(entries.len());
     let mut rejected_entries = 0;
     let mut rejected_evidence = 0;
@@ -1334,7 +1334,7 @@ pub(crate) async fn run_background_pi(
     selected_preset_key: Option<&str>,
     task_system_prompt: &str,
 ) -> Result<String, String> {
-    let settings = SettingsStore::get(app)?.ok_or("Settings are not available")?;
+    let settings = SettingsStore::get(app)?.ok_or("设置不可用")?;
     let config = provider_config(&settings, selected_preset_key, task_system_prompt)?;
     let is_agent = config.backend.is_some();
     let session_id = format!("__title:{session_prefix}-{}", uuid::Uuid::new_v4());
@@ -1402,7 +1402,7 @@ pub(crate) async fn run_background_pi(
     let result = match timeout {
         Some(timeout) => tokio::time::timeout(timeout, wait_for_result)
             .await
-            .map_err(|_| "Activity generation timed out".to_string()),
+            .map_err(|_| "活动历史生成超时".to_string()),
         None => Ok(wait_for_result.await),
     };
 
@@ -1805,7 +1805,7 @@ async fn generate_inner(
     source: &'static str,
 ) -> Result<ActivityGenerationResult, String> {
     if start >= end {
-        return Err("Start time must be before end time".to_string());
+        return Err("开始时间必须早于结束时间".to_string());
     }
     let _guard = state.run_lock.lock().await;
     let preflight = preflight_activity(app, start, end).await?;
@@ -1954,7 +1954,7 @@ async fn generate_inner(
     stored.coverage = merge_coverage(stored.coverage);
     write_all(app, &stored)?;
     if source == "manual" {
-        let settings = SettingsStore::get(app)?.ok_or("Settings are not available")?;
+        let settings = SettingsStore::get(app)?.ok_or("设置不可用")?;
         set_next_run(
             app,
             Utc::now() + chrono::Duration::minutes(configured_interval_minutes(&settings) as i64),
@@ -2005,8 +2005,8 @@ fn should_notify_completion(source: &str) -> bool {
 }
 
 fn requested_range(start: String, end: String) -> Result<(DateTime<Utc>, DateTime<Utc>), String> {
-    let start = parse_time(&start).ok_or("Invalid activity start time")?;
-    let end = parse_time(&end).ok_or("Invalid activity end time")?;
+    let start = parse_time(&start).ok_or("无效的活动开始时间")?;
+    let end = parse_time(&end).ok_or("无效的活动结束时间")?;
     Ok((start, end))
 }
 
@@ -2126,7 +2126,7 @@ async fn local_server_is_available(app: &AppHandle) -> bool {
 
 fn set_next_run(app: &AppHandle, at: DateTime<Utc>) -> Result<(), String> {
     let store = store::get_store(app, None).map_err(|error| error.to_string())?;
-    let mut settings = SettingsStore::get(app)?.ok_or("Settings are not available")?;
+    let mut settings = SettingsStore::get(app)?.ok_or("设置不可用")?;
     settings
         .extra
         .insert("activitiesNextRunAt".to_string(), json!(at.to_rfc3339()));
@@ -2415,7 +2415,7 @@ mod tests {
         );
         assert_eq!(
             classify_activity_run_event(&empty, 1),
-            ActivityRunEvent::Fail("AI returned an empty activity history".to_string())
+            ActivityRunEvent::Fail("AI 返回了空的活动历史".to_string())
         );
     }
 
@@ -2473,7 +2473,7 @@ mod tests {
     fn terminated_provider_process_fails_without_waiting_for_timeout() {
         assert_eq!(
             classify_activity_run_event(&json!({ "type": "agent_terminated", "pid": 42 }), 0,),
-            ActivityRunEvent::Fail("Pi process terminated during activity generation".to_string())
+            ActivityRunEvent::Fail("生成活动历史时 Pi 进程意外终止".to_string())
         );
     }
 

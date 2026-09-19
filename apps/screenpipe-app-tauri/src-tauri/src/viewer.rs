@@ -120,10 +120,10 @@ fn friendly_io_error(e: &std::io::Error) -> String {
     use std::io::ErrorKind;
     match e.kind() {
         ErrorKind::NotFound => {
-            "file not found — it may have been moved, deleted, or not created yet".to_string()
+            "文件未找到 — 它可能已被移动、删除或尚未生成".to_string()
         }
         ErrorKind::PermissionDenied => {
-            "permission denied — screenpipe can't read this file".to_string()
+            "没有读取权限 — screenpipe 无法读取此文件".to_string()
         }
         _ => e.to_string(),
     }

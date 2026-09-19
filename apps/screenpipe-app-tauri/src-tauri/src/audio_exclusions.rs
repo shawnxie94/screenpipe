@@ -79,7 +79,7 @@ pub fn read_audio_exclusions() -> Result<Vec<ExcludedApp>, String> {
     let body = match std::fs::read_to_string(&path) {
         Ok(b) => b,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(e) => return Err(format!("read {}: {e}", path.display())),
+        Err(e) => return Err(format!("读取 {} 失败：{e}", path.display())),
     };
     // Tolerate a UTF-8 BOM: the file is hand-editable and Notepad saves
     // "UTF-8 with BOM", which serde_json rejects.
@@ -217,7 +217,7 @@ async fn read_windows_app_metadata(path: &str) -> Result<ExcludedApp, String> {
             .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
     {
         return Err(format!(
-            "{} is not a Windows executable",
+            "{} 不是 Windows 可执行文件",
             app_path.display()
         ));
     }

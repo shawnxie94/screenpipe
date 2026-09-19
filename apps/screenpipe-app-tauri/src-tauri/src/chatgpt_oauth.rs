@@ -79,7 +79,7 @@ async fn read_tokens_from_store() -> Result<Option<OAuthTokens>, String> {
                     Ok(tokens) => return Ok(Some(tokens)),
                     Err(e) => {
                         warn!("read_tokens_from_store: JSON parse failed: {}", e);
-                        return Err(format!("failed to parse stored ChatGPT token: {}", e));
+                        return Err(format!("解析已存储的 ChatGPT 令牌失败：{}", e));
                     }
                 },
                 Ok(None) => return Ok(None), // genuinely not logged in
@@ -103,7 +103,7 @@ async fn read_tokens_from_store() -> Result<Option<OAuthTokens>, String> {
         }
     }
     Err(format!(
-        "secret store unavailable after 3 attempts: {}",
+        "密钥存储在 3 次尝试后仍不可用：{}",
         last_err
     ))
 }
@@ -423,7 +423,7 @@ pub async fn get_valid_token() -> Result<String, String> {
                     Ok(refreshed) => return Ok(refreshed.access_token),
                     Err(RefreshError::ReauthRequired(message)) => return Err(message),
                     Err(retry_err) => {
-                        return Err(format!("token refresh failed after retry: {}", retry_err));
+                        return Err(format!("重试后刷新令牌仍失败：{}", retry_err));
                     }
                 }
             }
@@ -708,8 +708,8 @@ pub async fn chatgpt_oauth_login(
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        error!("token exchange failed ({}): {}", status, body);
-        return Err(format!("token exchange failed ({}): {}", status, body));
+        error!("令牌交换失败（{}）：{}", status, body);
+        return Err(format!("令牌交换失败（{}）：{}", status, body));
     }
 
     let v: serde_json::Value = resp
@@ -812,7 +812,7 @@ pub async fn chatgpt_oauth_models() -> Result<Vec<String>, String> {
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        return Err(format!("models fetch failed ({}): {}", status, body));
+        return Err(format!("获取模型列表失败（{}）：{}", status, body));
     }
 
     let v: serde_json::Value = resp

@@ -107,7 +107,7 @@ async fn poll_and_assign(
     }
 
     Err(format!(
-        "timed out after {} minutes — no input audio found for '{}'",
+        "等待 {} 分钟后超时——未找到「{}」的输入音频",
         (MAX_ATTEMPTS as u64 * POLL_INTERVAL_SECS) / 60,
         name
     ))

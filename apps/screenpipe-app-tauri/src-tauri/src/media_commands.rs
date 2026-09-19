@@ -46,7 +46,7 @@ pub async fn get_media_file(file_path: &str) -> Result<serde_json::Value, String
             Ok(contents) => {
                 // Check for empty or suspiciously small files (might still be writing)
                 if contents.is_empty() {
-                    last_error = "File is empty (may still be writing)".to_string();
+                    last_error = "文件为空（可能仍在写入）".to_string();
                     debug!("{}: {}", last_error, file_path);
                     if attempt < MAX_RETRIES {
                         continue;

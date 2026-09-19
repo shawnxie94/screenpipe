@@ -52,7 +52,7 @@ pub async fn remote_sync_exec_setup(
         "windsurf",
     ];
     if !ALLOWED.contains(&target.as_str()) {
-        return Err(format!("unknown agent target: {target}"));
+        return Err(format!("未知智能体目标：{target}"));
     }
     let cmd = format!("npx -y screenpipe@latest agent setup {target}");
     remote_sync::exec_remote(&config, &cmd)

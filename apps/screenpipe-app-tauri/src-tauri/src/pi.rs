@@ -123,7 +123,7 @@ fn ensure_ephemeral_side_chat_backend_supported(
 ) -> Result<(), String> {
     if is_ephemeral_side_conversation_id(session_id) && uses_acp {
         return Err(
-            "Temporary side chats do not support coding-agent presets because ACP cannot guarantee ephemeral history"
+            "临时侧聊不支持 coding-agent 预设，因为 ACP 无法保证会话历史是临时的"
                 .to_string(),
         );
     }
@@ -343,7 +343,7 @@ fn coding_workspace_resource_args(project_dir: &Path) -> Result<Vec<String>, Str
     }
 
     if args.len() == 1 {
-        return Err("Screenpipe coding resources were not installed".to_string());
+        return Err("Screenpipe 编码资源尚未安装".to_string());
     }
     Ok(args)
 }
@@ -1545,7 +1545,7 @@ fn npm_install_command(install_dir: &Path) -> Command {
 fn verify_pi_package_install(install_dir: &Path) -> Result<(), String> {
     match local_pi_install_integrity_error(install_dir) {
         Some(error) => Err(format!(
-            "Pi install completed but dependency verification failed: {}",
+            "Pi 安装已完成，但依赖校验失败：{}",
             error
         )),
         None => Ok(()),
@@ -1570,7 +1570,7 @@ fn verify_pi_package_install(install_dir: &Path) -> Result<(), String> {
 /// runtime with `Cannot find package '<dep>'` until node_modules is cleared.
 /// Both cases need the same self-heal, so treat them the same.
 fn install_failure_is_self_healable(install_dir: &Path, error: &str) -> bool {
-    if error.contains("dependency verification failed") {
+    if error.contains("依赖校验失败") {
         return true;
     }
     let lower = error.to_lowercase();
@@ -1660,12 +1660,12 @@ fn run_pi_package_install_once(install_dir: &Path, bun: &str) -> Result<(), Stri
                         verify_pi_package_install(install_dir)
                     }
                     Ok(npm_output) => Err(format!(
-                        "{}; npm fallback also failed: {}",
+                        "{}；npm 兜底安装也失败：{}",
                         bun_failure,
                         format_install_failure("npm", &npm_output)
                     )),
                     Err(e) => Err(format!(
-                        "{}; npm fallback could not run: {}",
+                        "{}；npm 兜底安装无法运行：{}",
                         bun_failure, e
                     )),
                 }
@@ -1673,7 +1673,7 @@ fn run_pi_package_install_once(install_dir: &Path, bun: &str) -> Result<(), Stri
                 Err(bun_failure)
             }
         }
-        Err(e) => Err(format!("could not spawn bun: {}", e)),
+        Err(e) => Err(format!("无法启动 bun：{}", e)),
     }
 }
 
@@ -2309,7 +2309,7 @@ async fn ensure_pi_config(
         matches!(config.provider.as_str(), "pi")
     }) {
         return Err(
-            "Screenpipe-hosted AI has been removed. Select a local or third-party provider.".to_string(),
+            "Screenpipe 托管 AI 已下线。请选择本地或第三方提供商。".to_string(),
         );
     }
 
@@ -2612,7 +2612,7 @@ const PI_READY_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(2
 
 /// What a caller sees when an `acp` preset reaches a raw-Pi spawn path.
 pub(crate) const ACP_PRESET_WITHOUT_BACKEND: &str =
-    "This coding-agent preset is missing its agent configuration. Re-select the agent in Settings → AI presets.";
+    "此 coding-agent 预设缺少 agent 配置。请在 设置 → AI 预设 中重新选择 agent。";
 
 /// Map a preset provider onto Pi's internal registry name.
 ///
@@ -2628,9 +2628,9 @@ fn pi_registry_provider(provider: &str, url: &str) -> Result<&'static str, Strin
         "custom" if !url.is_empty() => "custom",
         "acp" => return Err(ACP_PRESET_WITHOUT_BACKEND.to_string()),
         "pi" => {
-            return Err("Screenpipe-hosted AI has been removed. Select a local or third-party provider.".to_string())
+            return Err("Screenpipe 托管 AI 已下线。请选择本地或第三方提供商。".to_string())
         }
-        _ => return Err(format!("Unsupported AI provider: {provider}")),
+        _ => return Err(format!("不支持的 AI 提供商：{provider}")),
     })
 }
 
@@ -2940,11 +2940,11 @@ pub async fn pi_start_inner(
                         let bun_found = find_bun_executable().is_some();
                         if bun_found {
                             let install_err = take_pi_install_error()
-                                .map(|e| format!(" Install error: {}", e))
+                                .map(|e| format!(" 安装错误：{}", e))
                                 .unwrap_or_default();
-                            format!("Pi not found after install attempt.{} Try restarting the app or delete ~/.screenpipe/pi-agent and restart.", install_err)
+                            format!("安装尝试后仍未找到 Pi。{} 请尝试重启应用，或删除 ~/.screenpipe/pi-agent 后重启。", install_err)
                         } else {
-                            format!("Pi not found: bun is not installed. Screenpipe needs bun to run the AI assistant. Expected bundled bun next to the app executable.")
+                            format!("未找到 Pi：bun 尚未安装。Screenpipe 需要 bun 来运行 AI 助手。预期 bun 与应用可执行文件位于同一目录。")
                         }
                     })?
             }
@@ -4683,7 +4683,7 @@ pub async fn pi_acp_probe_agent(app: AppHandle, agent: AcpAgentConfig) -> Result
                     return Err(event
                         .get("error")
                         .and_then(|e| e.as_str())
-                        .unwrap_or("the agent failed to start")
+                        .unwrap_or("代理启动失败")
                         .to_string())
                 }
                 // External-CLI-login agents (Cursor, Kimi, OpenCode): the
@@ -5017,7 +5017,7 @@ fn normalize_pi_package_source(source: &str) -> String {
 fn validate_pi_extension_package_source(source: &str) -> Result<String, String> {
     let source = normalize_pi_package_source(source);
     if source.is_empty() {
-        return Err("Package source is required".to_string());
+        return Err("包来源不能为空".to_string());
     }
 
     let lower = source.to_ascii_lowercase();
@@ -5032,7 +5032,7 @@ fn validate_pi_extension_package_source(source: &str) -> Result<String, String> 
         return Ok(source);
     }
 
-    Err("Only npm: packages and GitHub package URLs can be installed from screenpipe".to_string())
+    Err("screenpipe 仅支持安装 npm: 包和 GitHub 包地址".to_string())
 }
 
 pub(crate) fn npm_package_name_from_source(source: &str) -> Option<String> {
@@ -5143,7 +5143,7 @@ fn package_command_failure(action: &str, output: &Output) -> String {
 
 fn ensure_pi_cli_for_package_command() -> Result<(String, String), String> {
     let bun = find_bun_executable().ok_or(
-        "Could not find bundled bun. Restart screenpipe or reinstall the app before installing Pi extensions.",
+        "未找到内置 bun。安装 Pi 扩展前请重启 screenpipe 或重新安装应用。",
     )?;
     let install_dir = pi_local_install_dir()
         .ok_or_else(|| "Cannot determine home directory for Pi install".to_string())?;
@@ -5158,7 +5158,7 @@ fn ensure_pi_cli_for_package_command() -> Result<(String, String), String> {
     let pi_path = find_local_pi_entrypoint()
         .or_else(find_pi_executable)
         .ok_or_else(|| {
-            "Pi could not be installed. Restart screenpipe and try again.".to_string()
+            "Pi 未能安装完成。请重启 screenpipe 后重试。".to_string()
         })?;
 
     Ok((bun, pi_path))
@@ -5313,7 +5313,7 @@ pub async fn pi_remove_extension_package(
 ) -> Result<Vec<PiExtensionPackage>, String> {
     let source = validate_pi_extension_package_source(&source)?;
     if is_required_pi_extension_package_source(&source) {
-        return Err("Subagents are required by screenpipe and cannot be disabled".to_string());
+        return Err("screenpipe 需要 Subagents 扩展，无法停用".to_string());
     }
     stop_idle_pi_sessions_for_package_change(&state).await?;
     run_pi_package_command(vec!["remove".to_string(), source]).await?;
@@ -6829,7 +6829,7 @@ error: InstallFailed extracting tarball"#;
         // A verification failure is self-healable regardless of tree state.
         assert!(super::install_failure_is_self_healable(
             install_dir,
-            "Pi install completed but dependency verification failed: missing Pi entrypoint"
+            "Pi 安装已完成，但依赖校验失败：missing Pi entrypoint"
         ));
 
         // An EBUSY abort fails before verification runs, but leaves the tree

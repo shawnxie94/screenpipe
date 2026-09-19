@@ -83,10 +83,10 @@ fn parse_summary_time(value: &str) -> Option<DateTime<Utc>> {
 
 fn parse_summary_range(start: &str, end: &str) -> Result<(DateTime<Utc>, DateTime<Utc>), String> {
     let start =
-        parse_summary_time(start).ok_or_else(|| "Invalid activity start time".to_string())?;
-    let end = parse_summary_time(end).ok_or_else(|| "Invalid activity end time".to_string())?;
+        parse_summary_time(start).ok_or_else(|| "无效的活动开始时间".to_string())?;
+    let end = parse_summary_time(end).ok_or_else(|| "无效的活动结束时间".to_string())?;
     if start >= end {
-        return Err("Start time must be before end time".to_string());
+        return Err("开始时间必须早于结束时间".to_string());
     }
     Ok((start, end))
 }
@@ -361,15 +361,15 @@ mod tests {
     fn summary_range_rejects_invalid_and_reversed_bounds() {
         assert_eq!(
             parse_summary_range("not-a-time", "2026-09-11T10:00:00Z").unwrap_err(),
-            "Invalid activity start time"
+            "无效的活动开始时间"
         );
         assert_eq!(
             parse_summary_range("2026-09-11T10:00:00Z", "also-invalid").unwrap_err(),
-            "Invalid activity end time"
+            "无效的活动结束时间"
         );
         assert_eq!(
             parse_summary_range("2026-09-11T10:00:00Z", "2026-09-11T10:00:00Z").unwrap_err(),
-            "Start time must be before end time"
+            "开始时间必须早于结束时间"
         );
     }
 

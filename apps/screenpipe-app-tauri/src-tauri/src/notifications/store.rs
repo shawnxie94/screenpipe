@@ -129,6 +129,7 @@ impl NotificationHistoryEntry {
             "capture paused",
             "not capturing",
             "database needs recovery",
+            "live transcript not flowing",
             "实时转录停滞",
             "audio paused",
         ]

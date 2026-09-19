@@ -62,17 +62,17 @@ fn set_ai_tool_auto_connect_opt_out_in(
     opt_out: bool,
 ) -> Result<(), String> {
     if !AI_TOOL_AUTO_CONNECT_TARGETS.contains(&target) {
-        return Err(format!("unsupported AI tool: {target}"));
+        return Err(format!("不支持的 AI 工具：{target}"));
     }
     let marker = dir.join(target);
     if opt_out {
         std::fs::create_dir_all(dir)
-            .map_err(|error| format!("failed to create {}: {error}", dir.display()))?;
+            .map_err(|error| format!("创建 {} 失败：{error}", dir.display()))?;
         std::fs::write(&marker, b"explicitly disconnected\n")
-            .map_err(|error| format!("failed to write {}: {error}", marker.display()))?;
+            .map_err(|error| format!("写入 {} 失败：{error}", marker.display()))?;
     } else if let Err(error) = std::fs::remove_file(&marker) {
         if error.kind() != std::io::ErrorKind::NotFound {
-            return Err(format!("failed to remove {}: {error}", marker.display()));
+            return Err(format!("移除 {} 失败：{error}", marker.display()));
         }
     }
     Ok(())
@@ -430,7 +430,7 @@ pub fn install_external_agent_skills(target: String) -> Result<Vec<String>, Stri
         "gemini" => "gemini",
         "openclaw" => "openclaw",
         "hermes" => "hermes",
-        _ => return Err(format!("unsupported external agent: {target}")),
+        _ => return Err(format!("不支持的外部智能体：{target}")),
     };
 
     screenpipe_engine::cli::agent::install_skills(cli_target, "http://localhost:3030")
@@ -456,7 +456,7 @@ pub fn remove_external_agent_skills(target: String) -> Result<Vec<String>, Strin
         "gemini" => "gemini",
         "openclaw" => "openclaw",
         "hermes" => "hermes",
-        _ => return Err(format!("unsupported external agent: {target}")),
+        _ => return Err(format!("不支持的外部智能体：{target}")),
     };
 
     screenpipe_engine::cli::agent::remove_skills(cli_target)
@@ -704,7 +704,7 @@ fn managed_team_skill_title(raw: &str, fallback: &str) -> String {
 pub fn import_skill(source_path: String) -> Result<ImportedSkill, String> {
     let src = PathBuf::from(&source_path);
     if !src.is_dir() {
-        return Err(format!("not a folder: {}", src.display()));
+        return Err(format!("不是文件夹：{}", src.display()));
     }
     let skill_md = src.join("SKILL.md");
     if !skill_md.exists() {
@@ -726,13 +726,13 @@ pub fn import_skill(source_path: String) -> Result<ImportedSkill, String> {
         return Err("could not derive a skill name".to_string());
     }
     if RESERVED_SKILL_NAMES.contains(&key.as_str()) {
-        return Err(format!("\"{key}\" is a reserved screenpipe skill name"));
+        return Err(format!("「{key}」是 screenpipe 的保留技能名"));
     }
 
     let dest = skills_store_dir().join(&key);
     if dest.exists() {
         std::fs::remove_dir_all(&dest)
-            .map_err(|e| format!("failed to replace existing skill: {e}"))?;
+            .map_err(|e| format!("替换现有技能失败：{e}"))?;
     }
     screenpipe_core::paths::copy_dir_all(&src, &dest)
         .map_err(|e| format!("failed to copy skill: {e}"))?;
@@ -915,7 +915,7 @@ fn safe_join(base: &Path, rel: &str) -> Result<PathBuf, String> {
     for comp in Path::new(rel).components() {
         match comp {
             Component::Normal(seg) => out.push(seg),
-            _ => return Err(format!("unsafe path in skill: {rel}")),
+            _ => return Err(format!("技能中存在不安全路径：{rel}")),
         }
     }
     Ok(out)
@@ -971,13 +971,13 @@ async fn download_skill_dir(
         if exhausted {
             return Err("GitHub API rate limit reached — try again in a little while, or import the skill folder manually.".to_string());
         }
-        return Err(format!("GitHub denied the request (HTTP {status})"));
+        return Err(format!("GitHub 拒绝了请求（HTTP {status}）"));
     }
     if status == reqwest::StatusCode::NOT_FOUND {
-        return Err(format!("{repo}@{git_ref} not found on GitHub"));
+        return Err(format!("在 GitHub 上未找到 {repo}@{git_ref}"));
     }
     if !status.is_success() {
-        return Err(format!("GitHub tree error (HTTP {status})"));
+        return Err(format!("GitHub 目录树错误（HTTP {status}）"));
     }
 
     let tree: GithubTree = res
@@ -996,26 +996,26 @@ async fn download_skill_dir(
         .collect();
 
     if blobs.is_empty() {
-        return Err(format!("no files found at {repo}/{subpath}"));
+        return Err(format!("在 {repo}/{subpath} 下未找到文件"));
     }
     if blobs.len() > MAX_SKILL_FILES {
         return Err(format!(
-            "skill has too many files ({}); refusing to install",
+            "技能文件过多（{}），拒绝安装",
             blobs.len()
         ));
     }
 
-    std::fs::create_dir_all(dest).map_err(|e| format!("failed to create staging dir: {e}"))?;
+    std::fs::create_dir_all(dest).map_err(|e| format!("创建暂存目录失败：{e}"))?;
 
     let mut total: u64 = 0;
     for entry in blobs {
         if let Some(size) = entry.size {
             if size > MAX_FILE_BYTES {
-                return Err(format!("{} is too large ({size} bytes)", entry.path));
+                return Err(format!("{} 过大（{size} 字节）", entry.path));
             }
             total = total.saturating_add(size);
             if total > MAX_TOTAL_BYTES {
-                return Err("skill exceeds the size limit; refusing to install".to_string());
+                return Err("技能超过大小限制，拒绝安装".to_string());
             }
         }
         let rel = entry.path.strip_prefix(&prefix).unwrap_or(&entry.path);
@@ -1075,7 +1075,7 @@ pub async fn install_registry_skill(
         return Err("could not derive a skill name".to_string());
     }
     if RESERVED_SKILL_NAMES.contains(&key.as_str()) {
-        return Err(format!("\"{key}\" is a reserved screenpipe skill name"));
+        return Err(format!("「{key}」是 screenpipe 的保留技能名"));
     }
 
     let store = skills_store_dir();
@@ -1091,7 +1091,7 @@ pub async fn install_registry_skill(
     let skill_md = staging.join("SKILL.md");
     if !skill_md.exists() {
         let _ = std::fs::remove_dir_all(&staging);
-        return Err(format!("{repo}/{path} has no SKILL.md"));
+        return Err(format!("{repo}/{path} 缺少 SKILL.md"));
     }
     let (fm_name, fm_desc) = parse_skill_frontmatter(&skill_md);
     let display_name = fm_name.unwrap_or_else(|| {
@@ -1107,12 +1107,12 @@ pub async fn install_registry_skill(
     if dest.exists() {
         if let Err(e) = std::fs::remove_dir_all(&dest) {
             let _ = std::fs::remove_dir_all(&staging);
-            return Err(format!("failed to replace existing skill: {e}"));
+            return Err(format!("替换现有技能失败：{e}"));
         }
     }
     if let Err(e) = std::fs::rename(&staging, &dest) {
         let _ = std::fs::remove_dir_all(&staging);
-        return Err(format!("failed to install skill: {e}"));
+        return Err(format!("安装技能失败：{e}"));
     }
 
     info!(

@@ -81,7 +81,7 @@ fn handle_audio_stall(app: &AppHandle, event: StallEvent) {
             .builder()
             .title("screenpipe 未采集到音频")
             .body(format!(
-                "会议已 {elapsed} 秒未收到音频 — 请检查麦克风权限或重启录制器"
+                "会议已 {elapsed} 秒未收到音频 — 请检查麦克风权限或重启录制"
             ))
             .show()
         {

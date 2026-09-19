@@ -787,9 +787,15 @@ fn show_manual_recovery_failure(app: &tauri::AppHandle, detail: &'static str) {
 
 fn restart_failure_detail(error: &str) -> &'static str {
     let error = error.to_ascii_lowercase();
-    if error.contains("screen recording permission was granted") {
+    // English keywords match errors from older builds; the Chinese variants
+    // are what recording.rs emits since localization.
+    if error.contains("screen recording permission was granted")
+        || error.contains("屏幕录制权限已授予")
+    {
         MANUAL_PERMISSION_RECOVERY_DETAIL
-    } else if error.contains("screen recording permission") {
+    } else if error.contains("screen recording permission")
+        || error.contains("需要屏幕录制权限")
+    {
         "screen recording permission is required"
     } else if error.contains("server not") {
         "recording engine did not restart"
@@ -1061,6 +1067,20 @@ mod tests {
         assert_eq!(
             restart_failure_detail("audio device failed"),
             "recording did not restart"
+        );
+    }
+
+    #[test]
+    fn localized_permission_restart_failures_classify_the_same_way() {
+        // recording.rs emits these Chinese messages since localization; the
+        // watchdog must keep mapping them onto the same recovery details.
+        assert_eq!(
+            restart_failure_detail("屏幕录制权限已授予，但 screenpipe 必须重启后才能生效。"),
+            MANUAL_PERMISSION_RECOVERY_DETAIL
+        );
+        assert_eq!(
+            restart_failure_detail("需要屏幕录制权限。请授予权限并重启应用。"),
+            "screen recording permission is required"
         );
     }
 

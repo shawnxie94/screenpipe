@@ -1081,7 +1081,7 @@ async fn spawn_screenpipe_inner(
         crate::health::set_recording_status(crate::health::RecordingStatus::Error);
         crate::port_conflict::show_reclaim_failed(&app, port);
         return Err(format!(
-            "local port {port} is already in use; quit the other screenpipe or app and retry"
+            "本地端口 {port} 已被占用；请退出另一个 screenpipe 或占用该端口的应用后重试"
         ));
     }
 
@@ -1111,10 +1111,10 @@ async fn spawn_screenpipe_inner(
         crate::health::set_recording_status(crate::health::RecordingStatus::Error);
         let error = match &permissions_check.screen_recording {
             OSPermissionStatus::RestartRequired => {
-                "Screen recording permission was granted, but Screenpipe must restart before it can be used."
+                "屏幕录制权限已授予，但 screenpipe 必须重启后才能生效。"
             }
             _ => {
-                "Screen recording permission required. Please grant permission and restart the app."
+                "需要屏幕录制权限。请授予权限并重启应用。"
             }
         };
         return Err(error.to_string());

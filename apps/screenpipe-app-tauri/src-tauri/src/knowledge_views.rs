@@ -597,11 +597,11 @@ impl From<SaveKnowledgeViewRequest> for SaveLiveViewRequest {
 
 fn active_screenpipe_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let settings = SettingsStore::get(app)
-        .map_err(|error| format!("failed to read Screenpipe settings: {error}"))?
+        .map_err(|error| format!("读取 Screenpipe 设置失败：{error}"))?
         .unwrap_or_default();
     crate::config::resolve_data_dir(&settings.data_dir)
         .map(|(path, _)| path)
-        .map_err(|error| format!("failed to prepare Screenpipe data directory: {error}"))
+        .map_err(|error| format!("准备 Screenpipe 数据目录失败：{error}"))
 }
 
 fn canvas_document_path(screenpipe_dir: &Path, view_id: &str) -> PathBuf {
@@ -630,7 +630,7 @@ fn validate_canvas_number(
 ) -> Result<(), String> {
     if !value.is_finite() || value < minimum || value > maximum {
         return Err(format!(
-            "{label} must be a finite number between {minimum} and {maximum}"
+            "{label} 必须是介于 {minimum} 与 {maximum} 之间的有限数字"
         ));
     }
     Ok(())
@@ -641,14 +641,14 @@ fn validate_canvas_request(
     valid_slot_ids: &HashSet<String>,
 ) -> Result<(), String> {
     if !valid_canvas_id(&request.view_id) {
-        return Err("Live View id is invalid".to_string());
+        return Err("实时视图 ID 无效".to_string());
     }
-    validate_canvas_number(request.viewport.x, -100_000.0, 100_000.0, "viewport x")?;
-    validate_canvas_number(request.viewport.y, -100_000.0, 100_000.0, "viewport y")?;
-    validate_canvas_number(request.viewport.zoom, 0.25, 2.5, "viewport zoom")?;
+    validate_canvas_number(request.viewport.x, -100_000.0, 100_000.0, "视口 X")?;
+    validate_canvas_number(request.viewport.y, -100_000.0, 100_000.0, "视口 Y")?;
+    validate_canvas_number(request.viewport.zoom, 0.25, 2.5, "视口缩放")?;
 
     if request.blocks.len() > valid_slot_ids.len() {
-        return Err("canvas contains more Block positions than the Live View".to_string());
+        return Err("画布的区块位置数量超过实时视图的定义".to_string());
     }
     if request.notes.len() > MAX_CANVAS_NOTES {
         return Err(format!(
@@ -670,37 +670,37 @@ fn validate_canvas_request(
     for block in &request.blocks {
         if !valid_slot_ids.contains(&block.slot_id) {
             return Err(format!(
-                "canvas references unknown Block '{}'",
+                "画布引用了未知区块「{}」",
                 block.slot_id
             ));
         }
         if !block_ids.insert(block.slot_id.clone()) {
             return Err(format!(
-                "canvas contains duplicate Block position '{}'",
+                "画布存在重复的区块位置「{}」",
                 block.slot_id
             ));
         }
-        validate_canvas_number(block.x, -100_000.0, 100_000.0, "Block x")?;
-        validate_canvas_number(block.y, -100_000.0, 100_000.0, "Block y")?;
-        validate_canvas_number(block.width, 220.0, 1_600.0, "Block width")?;
-        validate_canvas_number(block.height, 160.0, 1_200.0, "Block height")?;
+            validate_canvas_number(block.x, -100_000.0, 100_000.0, "区块 X")?;
+            validate_canvas_number(block.y, -100_000.0, 100_000.0, "区块 Y")?;
+            validate_canvas_number(block.width, 220.0, 1_600.0, "区块宽度")?;
+            validate_canvas_number(block.height, 160.0, 1_200.0, "区块高度")?;
     }
 
     let mut note_ids = HashSet::new();
     for note in &request.notes {
         if !valid_canvas_id(&note.id) || !note_ids.insert(note.id.clone()) {
             return Err(format!(
-                "canvas note id '{}' is invalid or duplicated",
+                "画布笔记 ID「{}」无效或重复",
                 note.id
             ));
         }
         if note.text.chars().count() > 4_000 {
             return Err("画布笔记最多 4000 字符".to_string());
         }
-        validate_canvas_number(note.x, -100_000.0, 100_000.0, "note x")?;
-        validate_canvas_number(note.y, -100_000.0, 100_000.0, "note y")?;
-        validate_canvas_number(note.width, 140.0, 1_200.0, "note width")?;
-        validate_canvas_number(note.height, 80.0, 1_000.0, "note height")?;
+            validate_canvas_number(note.x, -100_000.0, 100_000.0, "笔记 X")?;
+            validate_canvas_number(note.y, -100_000.0, 100_000.0, "笔记 Y")?;
+            validate_canvas_number(note.width, 140.0, 1_200.0, "笔记宽度")?;
+            validate_canvas_number(note.height, 80.0, 1_000.0, "笔记高度")?;
     }
 
     let mut node_ids = block_ids
@@ -712,7 +712,7 @@ fn validate_canvas_request(
     for arrow in &request.arrows {
         if !valid_canvas_id(&arrow.id) || !arrow_ids.insert(arrow.id.clone()) {
             return Err(format!(
-                "canvas arrow id '{}' is invalid or duplicated",
+                "画布箭头 ID「{}」无效或重复",
                 arrow.id
             ));
         }
@@ -721,7 +721,7 @@ fn validate_canvas_request(
             || !node_ids.contains(&arrow.to_id)
         {
             return Err(format!(
-                "canvas arrow '{}' has an invalid endpoint",
+                "画布箭头「{}」的端点无效",
                 arrow.id
             ));
         }
@@ -738,7 +738,7 @@ fn validate_canvas_request(
     for stroke in &request.strokes {
         if !valid_canvas_id(&stroke.id) || !stroke_ids.insert(stroke.id.clone()) {
             return Err(format!(
-                "canvas stroke id '{}' is invalid or duplicated",
+                "画布笔画 ID「{}」无效或重复",
                 stroke.id
             ));
         }
@@ -748,8 +748,8 @@ fn validate_canvas_request(
             ));
         }
         for point in &stroke.points {
-            validate_canvas_number(point.x, -100_000.0, 100_000.0, "stroke x")?;
-            validate_canvas_number(point.y, -100_000.0, 100_000.0, "stroke y")?;
+            validate_canvas_number(point.x, -100_000.0, 100_000.0, "笔画 X")?;
+            validate_canvas_number(point.y, -100_000.0, 100_000.0, "笔画 Y")?;
         }
     }
 
@@ -787,12 +787,12 @@ fn read_canvas_document(
         return Ok(None);
     }
     let bytes = std::fs::read(&path)
-        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+        .map_err(|error| format!("读取 {} 失败：{error}", path.display()))?;
     let document: KnowledgeViewCanvasDocument = serde_json::from_slice(&bytes)
-        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
+        .map_err(|error| format!("解析 {} 失败：{error}", path.display()))?;
     if document.schema != KNOWLEDGE_VIEW_CANVAS_SCHEMA || document.view_id != view_id {
         return Err(format!(
-            "{} is not a valid canvas document for this Live View",
+            "{} 不是此实时视图的有效画布文档",
             path.display()
         ));
     }
@@ -805,12 +805,12 @@ fn save_canvas_document(
 ) -> Result<KnowledgeViewCanvasDocument, String> {
     let _guard = canvas_store_lock()
         .lock()
-        .map_err(|_| "canvas store lock was poisoned".to_string())?;
+        .map_err(|_| "画布存储锁已失效".to_string())?;
     let template = list_live_view_templates(screenpipe_dir)
         .map_err(|error| error.to_string())?
         .into_iter()
         .find(|template| template.id == request.view_id)
-        .ok_or_else(|| format!("Live View '{}' was not found", request.view_id))?;
+        .ok_or_else(|| format!("未找到实时视图「{}」", request.view_id))?;
     let valid_slot_ids = template
         .blocks
         .into_iter()
@@ -822,12 +822,12 @@ fn save_canvas_document(
     match &existing {
         Some(document) if request.expected_revision != Some(document.revision) => {
             return Err(format!(
-                "canvas revision changed (expected {}, received {:?})",
+                "画布修订号已变化（期望 {}，实际 {:?}）",
                 document.revision, request.expected_revision
             ));
         }
         None if request.expected_revision.is_some() => {
-            return Err("cannot provide expectedRevision when creating a canvas".to_string());
+            return Err("创建画布时不能携带 expectedRevision".to_string());
         }
         _ => {}
     }
@@ -847,24 +847,24 @@ fn save_canvas_document(
     let path = canvas_document_path(screenpipe_dir, &document.view_id);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)
-            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
+            .map_err(|error| format!("创建 {} 失败：{error}", parent.display()))?;
     }
     let bytes = serde_json::to_vec_pretty(&document)
-        .map_err(|error| format!("failed to serialize Live View canvas: {error}"))?;
+        .map_err(|error| format!("序列化实时视图画布失败：{error}"))?;
     crate::store::durable_write(&path, &bytes)
-        .map_err(|error| format!("failed to replace {}: {error}", path.display()))?;
+        .map_err(|error| format!("写入 {} 失败：{error}", path.display()))?;
     Ok(document)
 }
 
 fn remove_canvas_document(screenpipe_dir: &Path, view_id: &str) -> Result<(), String> {
     let _guard = canvas_store_lock()
         .lock()
-        .map_err(|_| "canvas store lock was poisoned".to_string())?;
+        .map_err(|_| "画布存储锁已失效".to_string())?;
     let path = canvas_document_path(screenpipe_dir, view_id);
     match std::fs::remove_file(&path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(format!("failed to remove {}: {error}", path.display())),
+        Err(error) => Err(format!("删除 {} 失败：{error}", path.display())),
     }
 }
 
@@ -883,14 +883,14 @@ pub async fn load_knowledge_view_canvas(
     view_id: String,
 ) -> Result<Option<KnowledgeViewCanvasDocument>, String> {
     if !valid_canvas_id(&view_id) {
-        return Err("Live View id is invalid".to_string());
+        return Err("实时视图 ID 无效".to_string());
     }
     let screenpipe_dir = active_screenpipe_dir(&app)?;
     let template = list_live_view_templates(&screenpipe_dir)
         .map_err(|error| error.to_string())?
         .into_iter()
         .find(|template| template.id == view_id)
-        .ok_or_else(|| format!("Live View '{view_id}' was not found"))?;
+        .ok_or_else(|| format!("未找到实时视图「{view_id}」"))?;
     let valid_slot_ids = template
         .blocks
         .into_iter()
@@ -898,7 +898,7 @@ pub async fn load_knowledge_view_canvas(
         .collect::<HashSet<_>>();
     let _guard = canvas_store_lock()
         .lock()
-        .map_err(|_| "canvas store lock was poisoned".to_string())?;
+        .map_err(|_| "画布存储锁已失效".to_string())?;
     let document = read_canvas_document(&screenpipe_dir, &view_id)?;
     if let Some(document) = document.as_ref() {
         validate_canvas_document(document, &valid_slot_ids)?;
@@ -933,13 +933,13 @@ pub async fn install_knowledge_view_template_kit(
         .map_err(|error| error.to_string())?
         .into_iter()
         .find(|kit| kit.id == request.kit_id)
-        .ok_or_else(|| format!("Live View template '{}' was not found", request.kit_id))?;
+        .ok_or_else(|| format!("未找到实时视图模板「{}」", request.kit_id))?;
     let screenpipe_dir = active_screenpipe_dir(&app)?;
     let pipes_dir = screenpipe_dir.join("pipes");
     for pipe in &kit.pipes {
         install_bundled_pipe(&pipes_dir, &pipe.name).map_err(|error| {
             format!(
-                "failed to install Pipe '{}' for template '{}': {error}",
+                "安装 Pipe「{}」（模板「{}」）失败：{error}",
                 pipe.name, kit.title
             )
         })?;
@@ -1103,7 +1103,7 @@ mod tests {
             canvas_request("canvas-test", Some(first.revision)),
         )
         .unwrap_err();
-        assert!(conflict.contains("canvas revision changed"));
+        assert!(conflict.contains("画布修订号已变化"));
     }
 
     #[test]
@@ -1114,12 +1114,12 @@ mod tests {
         let mut unknown_block = canvas_request("canvas-test", None);
         unknown_block.blocks[0].slot_id = "private-unknown-block".to_string();
         let error = save_canvas_document(dir.path(), unknown_block).unwrap_err();
-        assert!(error.contains("unknown Block"));
+        assert!(error.contains("未知区块"));
 
         let mut dangling_arrow = canvas_request("canvas-test", None);
         dangling_arrow.arrows[0].to_id = "note:missing".to_string();
         let error = save_canvas_document(dir.path(), dangling_arrow).unwrap_err();
-        assert!(error.contains("invalid endpoint"));
+        assert!(error.contains("端点无效"));
     }
 
     #[test]

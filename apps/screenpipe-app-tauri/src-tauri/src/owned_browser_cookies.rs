@@ -643,7 +643,7 @@ fn open_cookie_db_windows(source: &WindowsBrowserSource) -> Result<rusqlite::Con
     } else if old_loc.exists() {
         old_loc
     } else {
-        return Err(format!("{} not installed (no Cookies file)", source.name));
+        return Err(format!("{} 未安装（没有 Cookies 文件）", source.name));
     };
 
     let uri = format!("file:{}?mode=ro&immutable=1", cookies_path.display());
@@ -916,7 +916,7 @@ fn open_cookie_db(source: &KeychainEntry) -> Result<rusqlite::Connection, String
     let library = library_dir().ok_or_else(|| "no $HOME".to_string())?;
     let cookies_path = library.join(source.cookies_path_under_library);
     if !cookies_path.exists() {
-        return Err(format!("{} not installed (no Cookies file)", source.name));
+        return Err(format!("{} 未安装（没有 Cookies 文件）", source.name));
     }
 
     // Open read-only — the SQLite file is also held open for write by
@@ -1091,7 +1091,7 @@ fn safe_storage_entry_trusts_current_app(source: &KeychainEntry) -> Result<bool,
         )
     };
     if status != 0 || item.is_null() {
-        return Err(format!("find keychain item: status {status}"));
+        return Err(format!("查找钥匙串项目失败：状态 {status}"));
     }
     let _item = CfOwned(item.cast_const());
 

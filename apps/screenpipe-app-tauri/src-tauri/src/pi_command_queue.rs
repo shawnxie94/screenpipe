@@ -641,7 +641,7 @@ impl PiQueueHandle {
                 self.state.clear_steer_in_flight();
             }
         }
-        write_result.map_err(|e| format!("stdin write failed: {}", e))
+        write_result.map_err(|e| format!("写入标准输入失败：{}", e))
     }
 
     /// Write a pre-formed RPC command to Pi stdin without stamping a new id.
@@ -666,7 +666,7 @@ impl PiQueueHandle {
         );
         writeln!(*stdin_guard, "{}", cmd_str)
             .and_then(|_| stdin_guard.flush())
-            .map_err(|e| format!("stdin write failed: {}", e))
+            .map_err(|e| format!("写入标准输入失败：{}", e))
     }
 
     /// Write a lifecycle command straight to stdin, bypassing the drain loop,
@@ -1064,7 +1064,7 @@ fn spawn_queue_with_prompt_start_timeouts(
                         if let Some(pid) = &prompt_id {
                             state.dequeue_prompt(pid);
                         }
-                        let _ = cmd.reply.send(Err(format!("stdin write failed: {}", e)));
+                        let _ = cmd.reply.send(Err(format!("写入标准输入失败：{}", e)));
                         continue;
                     }
 
@@ -1250,7 +1250,7 @@ async fn wait_for_prompt_acceptance(
     loop {
         if !*alive_rx.borrow() {
             state.mark_prompt_rejected();
-            return (Err(format!("Pi process died during {cmd_type}")), None);
+            return (Err(format!("Pi 进程在 {cmd_type} 期间退出")), None);
         }
 
         let notified = state.done_notify.notified();
@@ -1267,7 +1267,7 @@ async fn wait_for_prompt_acceptance(
         // accepted, which would strand a user bubble with no assistant reply.
         if !state.is_prompt_pending() {
             state.mark_prompt_rejected();
-            return (Err(format!("{cmd_type} was cancelled before it started")), None);
+            return (Err(format!("{cmd_type} 在开始前被取消")), None);
         }
 
         tokio::select! {
@@ -1280,7 +1280,7 @@ async fn wait_for_prompt_acceptance(
                     }
                     Err(_) => {
                         state.mark_prompt_rejected();
-                        (Err(format!("Pi process died during {cmd_type}")), None)
+                        (Err(format!("Pi 进程在 {cmd_type} 期间退出")), None)
                     }
                 };
             }
@@ -1288,7 +1288,7 @@ async fn wait_for_prompt_acceptance(
             changed = alive_rx.changed() => {
                 if changed.is_err() || !*alive_rx.borrow_and_update() {
                     state.mark_prompt_rejected();
-                    return (Err(format!("Pi process died during {cmd_type}")), None);
+                    return (Err(format!("Pi 进程在 {cmd_type} 期间退出")), None);
                 }
             }
             _ = tokio::time::sleep_until(deadline) => {
@@ -1423,18 +1423,18 @@ async fn wait_for_response_or_terminated(
     cmd_type: &str,
 ) -> Result<(), String> {
     if !*alive_rx.borrow() {
-        return Err(format!("Pi process died during {cmd_type}"));
+        return Err(format!("Pi 进程在 {cmd_type} 期间退出"));
     }
     tokio::select! {
         response = response_rx => {
-            response.unwrap_or_else(|_| Err(format!("Pi process died during {cmd_type}")))
+            response.unwrap_or_else(|_| Err(format!("Pi 进程在 {cmd_type} 期间退出")))
         }
         changed = alive_rx.changed() => {
             let _ = changed;
-            Err(format!("Pi process died during {cmd_type}"))
+            Err(format!("Pi 进程在 {cmd_type} 期间退出"))
         }
         _ = tokio::time::sleep(std::time::Duration::from_secs(300)) => {
-            Err(format!("timed out waiting for {cmd_type} response"))
+            Err(format!("等待 {cmd_type} 响应超时"))
         }
     }
 }

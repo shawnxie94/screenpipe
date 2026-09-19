@@ -53,9 +53,9 @@ fn provider_config_for_chat(
                 .find(|preset| preset.default_preset)
         })
         .or_else(|| settings.ai_presets.first())
-        .ok_or_else(|| "no AI preset is configured for this screenpipe chat".to_string())?;
+        .ok_or_else(|| "此 screenpipe 聊天尚未配置 AI 预设".to_string())?;
     if preset.model.trim().is_empty() && !matches!(&preset.provider, AIProviderType::Acp) {
-        return Err(format!("AI preset '{}' has no model", preset.id));
+        return Err(format!("AI 预设「{}」未设置模型", preset.id));
     }
 
     let is_acp = matches!(&preset.provider, AIProviderType::Acp);

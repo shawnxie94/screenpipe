@@ -1029,7 +1029,7 @@ struct TimelineSpeakerEditor: View {
                 try await model.reassignSpeaker(line, to: name)
                 onClose()
             } catch {
-                self.error = "Could not update this speaker."
+                self.error = "无法更新该说话人。"
                 isSaving = false
             }
         }

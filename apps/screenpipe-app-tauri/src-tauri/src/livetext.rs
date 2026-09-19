@@ -170,7 +170,7 @@ fn get_analyze_worker() -> &'static LatestSlot<AnalyzeRequest> {
                                     let err = extract_and_free(out_error)
                                         .unwrap_or_else(|| "unknown error".to_string());
                                     extract_and_free(out_text);
-                                    return Err(format!("live text analysis failed: {}", err));
+                                    return Err(format!("实时文本分析失败：{}", err));
                                 }
                                 let text = extract_and_free(out_text).unwrap_or_default();
                                 extract_and_free(out_error);
@@ -246,12 +246,12 @@ pub async fn livetext_init(
                         })?;
                         raw as u64
                     } else {
-                        return Err(format!("no panel or window found for '{}'", window_label));
+                        return Err(format!("未找到「{}」对应的面板或窗口", window_label));
                     };
 
                 let status = unsafe { livetext_ffi::lt_init(key.as_ptr(), ns_window_ptr) };
                 if status != 0 {
-                    return Err(format!("lt_init returned error code: {}", status));
+                    return Err(format!("lt_init 返回错误码：{}", status));
                 }
                 info!(
                     "live text overlay initialized for window '{}'",
@@ -383,7 +383,7 @@ pub async fn livetext_update_position(
             livetext_ffi::lt_update_position(key.as_ptr(), frame_id_c.as_ptr(), x, y, w, h)
         });
         if status != 0 {
-            return Err(format!("lt_update_position error: {}", status));
+            return Err(format!("lt_update_position 错误：{}", status));
         }
         return Ok(());
     }
@@ -479,7 +479,7 @@ pub async fn livetext_set_guard_rect(
             livetext_ffi::lt_set_guard_rect(window_c.as_ptr(), key_c.as_ptr(), x, y, w, h)
         });
         if status != 0 {
-            return Err(format!("lt_set_guard_rect error: {}", status));
+            return Err(format!("lt_set_guard_rect 错误：{}", status));
         }
         return Ok(());
     }
