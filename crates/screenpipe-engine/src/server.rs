@@ -1145,46 +1145,6 @@ impl SCServer {
             .route("/ws/meeting-overlay", get(ws_meeting_overlay_handler))
             .route("/ws/meeting-status", get(ws_meeting_status_handler))
             .route("/ws/metrics", get(ws_metrics_handler))
-            // Browser extension bridge — DEPRECATED top-level paths.
-            // Canonical paths now live under /connections/browser/* (see connections_api.rs).
-            // These aliases stay in place because deployed Chrome extensions hardcode
-            // /browser/ws (packages/browser-extension/src/config.ts). Remove only after
-            // a coordinated extension update has shipped to all users.
-            .route(
-                "/browser/ws",
-                get({
-                    let bridge = app_state.browser_bridge.clone();
-                    move |ws: axum::extract::ws::WebSocketUpgrade,
-                          lifecycle: Option<Extension<WebSocketLifecycle>>| {
-                        crate::routes::browser::browser_ws_handler(
-                            ws,
-                            axum::extract::State(bridge),
-                            lifecycle,
-                        )
-                    }
-                }),
-            )
-            .route(
-                "/browser/eval",
-                axum::routing::post({
-                    let bridge = app_state.browser_bridge.clone();
-                    move |body| {
-                        crate::routes::browser::browser_eval_handler(
-                            axum::extract::State(bridge),
-                            body,
-                        )
-                    }
-                }),
-            )
-            .route(
-                "/browser/status",
-                get({
-                    let bridge = app_state.browser_bridge.clone();
-                    move || {
-                        crate::routes::browser::browser_status_handler(axum::extract::State(bridge))
-                    }
-                }),
-            )
             .with_state(app_state.clone())
             .layer(axum::middleware::from_fn_with_state(
                 app_state.clone(),
