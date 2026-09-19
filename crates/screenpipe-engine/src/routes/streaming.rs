@@ -176,12 +176,8 @@ pub struct DeviceMetadata {
     pub file_path: String,
     pub app_name: String,
     pub window_name: String,
-    /// Neutral name for the frame's text. Despite living next to `ocr_text`,
-    /// the content is accessibility-derived for most captures. Prefer this.
+    /// The frame's text — accessibility-derived for most captures, OCR fallback.
     pub text: String,
-    /// @deprecated Legacy alias for `text`, kept for backward compatibility.
-    /// Always equal to `text`. Will be removed in a future major version.
-    pub ocr_text: String,
     pub browser_url: Option<String>,
 }
 
@@ -218,8 +214,7 @@ impl From<TimeSeriesFrame> for StreamTimeSeriesResponse {
                             file_path: device_frame.metadata.file_path,
                             app_name: device_frame.metadata.app_name,
                             window_name: device_frame.metadata.window_name,
-                            text: device_frame.metadata.ocr_text.clone(),
-                            ocr_text: device_frame.metadata.ocr_text,
+                            text: device_frame.metadata.text,
                             browser_url: device_frame.metadata.browser_url,
                         },
                         audio: device_frame
@@ -287,7 +282,7 @@ pub(crate) fn create_time_series_frame(chunk: FrameData) -> TimeSeriesFrame {
                 app_name: device_data.app_name,
                 window_name: device_data.window_name,
                 transcription: transcription_text.clone(),
-                ocr_text: device_data.text,
+                text: device_data.text,
                 browser_url: device_data.browser_url,
             },
             // FIX: Don't duplicate audio entries for each OCR entry
@@ -315,7 +310,7 @@ pub(crate) fn create_time_series_frame(chunk: FrameData) -> TimeSeriesFrame {
                 app_name: "Audio Recording".to_string(),
                 window_name: String::new(),
                 transcription: transcription_text,
-                ocr_text: String::new(),
+                text: String::new(),
                 browser_url: None,
             },
             audio_entries,
@@ -673,7 +668,6 @@ async fn handle_stream_frames_socket(
                                         app_name: hot_frame.app_name.to_string(),
                                         window_name: hot_frame.window_name.to_string(),
                                         text: hot_frame.ocr_text_preview.to_string(),
-                                        ocr_text: hot_frame.ocr_text_preview.to_string(),
                                         browser_url: hot_frame.browser_url.as_deref().map(String::from),
                                     },
                                     audio: audio_entries
@@ -977,12 +971,10 @@ mod tests {
                 create_test_frame_data(1, 0),
             ));
             response.devices[0].frame_id = frame_id;
-            // `text` and its legacy `ocr_text` alias are both sent today. This
-            // deliberately makes the original 100-row batch larger than a
-            // native WebSocket receive ceiling without needing private data.
+            // A single oversized frame must still exceed a native WebSocket
+            // receive ceiling so the batch splitter has real work to do.
             let payload = "x".repeat(512 * 1024);
-            response.devices[0].metadata.text = payload.clone();
-            response.devices[0].metadata.ocr_text = payload;
+            response.devices[0].metadata.text = payload;
             responses.push(response);
         }
 

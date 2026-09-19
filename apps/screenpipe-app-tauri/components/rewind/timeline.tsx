@@ -72,8 +72,6 @@ export interface DeviceMetadata {
 	window_name: string;
 	/** Frame text (accessibility-derived for most captures, OCR fallback). */
 	text: string;
-	/** @deprecated Legacy alias for `text`; the server still sends it but read `text`. */
-	ocr_text?: string;
 	timestamp: string;
 	browser_url?: string;
 }
@@ -842,7 +840,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 		const ocrSamples: string[] = [];
 		selectedFrames.slice(0, 3).forEach((frame) => {
 			frame.devices.forEach((device) => {
-				const frameText = device.metadata.text ?? device.metadata.ocr_text;
+				const frameText = device.metadata.text;
 				if (frameText && frameText.length > 0) {
 					const sample = frameText.slice(0, 200);
 					if (sample.trim()) {

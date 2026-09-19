@@ -734,9 +734,7 @@ impl SCServer {
             .get("/frames/:frame_id", get_frame_data)
             .get("/frames/:frame_id/thumbnail", get_frame_thumbnail)
             .get("/frames/:frame_id/text", get_frame_text_data)
-            .get("/frames/:frame_id/ocr", get_frame_text_data) // deprecated alias
             .post("/frames/:frame_id/text", run_frame_ocr)
-            .post("/frames/:frame_id/ocr", run_frame_ocr) // deprecated alias
             .get("/frames/:frame_id/context", get_frame_context)
             .get("/frames/:frame_id/metadata", get_frame_metadata)
             .get("/frames/next-valid", get_next_valid_frame)

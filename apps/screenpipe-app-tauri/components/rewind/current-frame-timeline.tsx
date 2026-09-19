@@ -211,9 +211,7 @@ export const CurrentFrameTimeline: FC<CurrentFrameTimelineProps> = ({
 	const frameId = device?.frame_id;
 	const filePath = device?.metadata?.file_path?.trim() ?? "";
 	const frameText =
-		device?.metadata?.text?.trim() ||
-		device?.metadata?.ocr_text?.trim() ||
-		"";
+		device?.metadata?.text?.trim() || "";
 	const frameTimeLabel = useMemo(() => {
 		if (!currentFrame?.timestamp) return null;
 		const date = new Date(currentFrame.timestamp);

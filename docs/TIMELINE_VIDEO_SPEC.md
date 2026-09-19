@@ -415,7 +415,7 @@ const failedChunks = useRef(new Set<string>());
 
 Currently, OCR text positions are fetched by `frame_id` and overlaid on the `<img>`. With `<video>`:
 
-- OCR data fetch is unchanged (keyed by `frame_id`, fetched from `/frames/{frame_id}/ocr`)
+- OCR data fetch is unchanged (keyed by `frame_id`, fetched from `/frames/{frame_id}/text`)
 - The overlay `<div>` positions are unchanged (percentage-based, relative to container)
 - `naturalDimensions` come from `video.videoWidth` / `video.videoHeight` instead of `img.naturalWidth`
 - Text selection works the same way (overlay divs positioned over the video)

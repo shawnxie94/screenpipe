@@ -77,7 +77,8 @@ pub struct FrameMetadata {
     pub app_name: String,
     pub window_name: String,
     pub transcription: String,
-    pub ocr_text: String,
+    /// The frame's text — accessibility-derived for most captures, OCR fallback.
+    pub text: String,
     pub browser_url: Option<String>,
 }
 
@@ -259,7 +260,7 @@ impl FrameDiskCache {
                     .map(|a| a.transcription.clone())
                     .collect::<Vec<_>>()
                     .join(" "),
-                ocr_text: device_data.text.clone(),
+                text: device_data.text.clone(),
                 browser_url: device_data.browser_url.clone(),
             },
             frame_size: frame_data.len() as u64,
@@ -870,7 +871,7 @@ async fn extract_frame(
                                 .map(|a| a.transcription.clone())
                                 .collect::<Vec<_>>()
                                 .join(" "),
-                            ocr_text: device_data.text.clone(),
+                            text: device_data.text.clone(),
                             browser_url: device_data.browser_url.clone(),
                         },
                         audio_entries: chunk
