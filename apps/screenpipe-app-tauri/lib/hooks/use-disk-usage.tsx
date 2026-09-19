@@ -95,7 +95,7 @@ export function useDiskUsage() {
         errorMessage.includes("directory")
       ) {
         errorMessage =
-          "Screenpipe data directory not found. Make sure Screenpipe has been initialized.";
+          "未找到 Screenpipe 数据目录。请确认 Screenpipe 已完成初始化。";
       } else if (errorMessage.includes("timeout")) {
         errorMessage =
           "计算超时。请重试或检查是否有非常大的数据集。";

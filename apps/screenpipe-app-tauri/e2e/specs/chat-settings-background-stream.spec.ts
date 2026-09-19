@@ -151,7 +151,7 @@ async function waitForRunningRecentRow(sessionId: string): Promise<void> {
         if (!rowEl) return false;
         return Boolean(
           rowEl.querySelector(
-            '[aria-label="streaming"], [aria-label="thinking"], [aria-label="using tool"]',
+            '[aria-label="生成中"], [aria-label="思考中"], [aria-label="正在使用工具"]',
           ),
         );
       }, sessionId)) as boolean,

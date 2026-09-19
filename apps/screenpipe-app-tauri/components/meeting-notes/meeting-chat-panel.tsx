@@ -520,10 +520,10 @@ function MeetingTurnBody({
           type="button"
           data-testid="meeting-chat-citation"
           data-at={at}
-          aria-label={`jump to transcript at ${new Date(at).toLocaleTimeString([], {
+          aria-label={`跳转到 ${new Date(at).toLocaleTimeString([], {
             hour: "numeric",
             minute: "2-digit",
-          })}`}
+          })} 的转写`}
           onClick={() => onCitationClick(at)}
           className="inline-flex whitespace-nowrap rounded-sm bg-muted/70 px-1 align-baseline font-mono text-[11px] text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground"
         >

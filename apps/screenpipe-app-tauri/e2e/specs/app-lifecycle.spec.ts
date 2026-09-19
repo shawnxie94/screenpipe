@@ -24,6 +24,7 @@ async function expectPageAlive(label: string): Promise<void> {
   expect(state.text).not.toContain("Unhandled Runtime Error");
   expect(state.text).not.toContain("Application error");
   expect(state.text).not.toContain("Something went wrong");
+  expect(state.text).not.toContain("出错了，请重试");
 
   const filepath = await saveScreenshot(`app-lifecycle-${label}`);
   expect(existsSync(filepath)).toBe(true);

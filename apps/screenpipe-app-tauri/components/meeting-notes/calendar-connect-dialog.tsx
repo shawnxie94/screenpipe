@@ -329,8 +329,8 @@ function IcsCalendarConnect({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Paste a private or public ICS/webcal subscription URL. ScreenPipe polls
-        it read-only for upcoming meetings.
+        粘贴私有或公开的 ICS/webcal 订阅链接。screenpipe 会以只读方式
+        轮询即将到来的会议。
       </p>
       <div className="space-y-2">
         <Input

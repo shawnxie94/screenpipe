@@ -218,9 +218,8 @@ export function MeetingAppsPicker({
             <UserX className="h-4 w-4" /> 从会议检测中忽略应用
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Picked apps never auto-start a meeting or live notes — detection
-            stays on for everything else. Separate from the recording
-            &quot;ignored windows&quot; list.
+            被忽略的应用不会自动启动会议或实时笔记——其他应用的检测保持
+            开启。与录制的“忽略窗口”列表相互独立。
           </DialogDescription>
         </DialogHeader>
 
@@ -236,7 +235,7 @@ export function MeetingAppsPicker({
                 {s}
                 <button
                   type="button"
-                  aria-label={`stop ignoring ${s}`}
+                  aria-label={`停止忽略 ${s}`}
                   className="inline-flex rounded-sm focus:outline-none focus:ring-1 focus:ring-ring"
                   onClick={() => onToggle(s)}
                 >

@@ -508,7 +508,7 @@ describe("meeting summary recovery controls", function () {
         }
       ).__meetingSummaryRecoveryReleaseStart?.();
     });
-    const stopAndSummarize = await $('button[aria-label="stop and summarize"]');
+    const stopAndSummarize = await $('button[aria-label="停止并生成摘要"]');
     await stopAndSummarize.waitForDisplayed({ timeout: t(15_000) });
     await waitForVisibleCopy("notes and transcript save automatically");
     expect(

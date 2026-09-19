@@ -39,7 +39,7 @@ const endpointForPreset = (preset: AiPresetConnectionInput): string => {
     case "custom":
       return aiEndpointUrl(preset.url, "chat/completions");
     default:
-      throw new Error("This provider does not use a BYOK connection test");
+      throw new Error("该提供商不支持 BYOK 连接测试");
   }
 };
 

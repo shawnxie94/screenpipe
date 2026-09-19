@@ -117,12 +117,12 @@ const NOTICES: Record<
   higher: {
     label: "额度消耗较快",
     description:
-      "This model uses your monthly AI allowance faster than the default. Switch to Auto to make it last longer.",
+      "此模型消耗月度 AI 额度的速度快于默认模型。切换到 Auto 可以用得更久。",
   },
   highest: {
     label: "额度消耗非常快",
     description:
-      "This model uses your monthly AI allowance much faster than the default. Heavy use can exhaust a month of allowance in a day. Switch to Auto to make it last longer.",
+      "此模型消耗月度 AI 额度的速度远快于默认模型，重度使用可能一天就用完一个月的额度。切换到 Auto 可以用得更久。",
   },
 };
 

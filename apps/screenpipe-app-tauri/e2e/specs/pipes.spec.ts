@@ -512,7 +512,7 @@ describe.skip('Pipes: discover → install → play', function () {
       const actions = Array.from(
         pane.querySelectorAll<HTMLButtonElement>('[data-testid="pipe-card-actions"] button')
       );
-      const runButton = pane.querySelector<HTMLButtonElement>('button[title="run scheduled task"]');
+      const runButton = pane.querySelector<HTMLButtonElement>('button[title="运行定时任务"]');
       const optimizeButton = pane.querySelector<HTMLButtonElement>('button[title^="optimize this scheduled task"]');
       if (!runButton || !optimizeButton) return null;
       return {
@@ -533,7 +533,7 @@ describe.skip('Pipes: discover → install → play', function () {
 
     const played = await browser.execute(() => {
       const pane = document.querySelector<HTMLElement>('[data-testid="pipe-detail"]');
-      const playBtn = pane?.querySelector<HTMLButtonElement>('button[title="run scheduled task"]');
+      const playBtn = pane?.querySelector<HTMLButtonElement>('button[title="运行定时任务"]');
       if (!playBtn || playBtn.disabled) return false;
       playBtn.click();
       return true;
@@ -555,7 +555,7 @@ describe.skip('Pipes: discover → install → play', function () {
       async () =>
         (await browser.execute(() => {
           const pane = document.querySelector<HTMLElement>('[data-testid="pipe-detail"]');
-          return !!pane?.querySelector('button[title="stop scheduled task"]');
+          return !!pane?.querySelector('button[title="停止计划任务"]');
         })) as boolean,
       {
         timeout: 60_000,
@@ -573,7 +573,7 @@ describe.skip('Pipes: discover → install → play', function () {
       async () =>
         (await browser.execute(() => {
           const pane = document.querySelector<HTMLElement>('[data-testid="pipe-detail"]');
-          const stopBtn = pane?.querySelector<HTMLButtonElement>('button[title="stop scheduled task"]');
+          const stopBtn = pane?.querySelector<HTMLButtonElement>('button[title="停止计划任务"]');
           if (!stopBtn || stopBtn.disabled) return false;
           stopBtn.click();
           return true;
@@ -591,8 +591,8 @@ describe.skip('Pipes: discover → install → play', function () {
         (await browser.execute(() => {
           const pane = document.querySelector<HTMLElement>('[data-testid="pipe-detail"]');
           if (!pane) return false;
-          const hasStop = !!pane.querySelector('button[title="stop scheduled task"]');
-          const hasRun = !!pane.querySelector('button[title="run scheduled task"]');
+          const hasStop = !!pane.querySelector('button[title="停止计划任务"]');
+          const hasRun = !!pane.querySelector('button[title="运行定时任务"]');
           return !hasStop && hasRun;
         })) as boolean,
       {

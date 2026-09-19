@@ -98,14 +98,14 @@ describe("Live View Canvas layout evals", () => {
     expect(document?.mode).toBe("canvas");
     expect(document?.blocks.map((block) => block.slotId)).toEqual(ids);
     expect(document?.arrows.map((arrow) => arrow.label)).toEqual([
-      "starts",
-      "moves through",
-      "reveals",
-      "must preserve",
-      "enables",
+      "触发",
+      "流经",
+      "暴露出",
+      "必须保留",
+      "支撑",
     ]);
     expect(document?.notes[0].text).toContain(
-      "Observed workflow → handoffs → friction → controls → improvement",
+      "观察到的流程 → 交接 → 摩擦点 → 控制点 → 改进",
     );
     expect(
       createTemplateCanvasDocument("daily-memory", processView),

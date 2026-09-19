@@ -312,7 +312,7 @@ function LiveViewBlockNode({ id, data }: NodeProps<LiveViewFlowNode>) {
                 data.proposal.status === "accepted" ? "default" : "ghost"
               }
               className="h-6 w-6 rounded-none"
-              aria-label={`accept change to ${slot.title}`}
+              aria-label={`接受对 ${slot.title} 的修改`}
               onClick={(event) => {
                 event.stopPropagation();
                 data.onProposalDecision("accepted");
@@ -328,7 +328,7 @@ function LiveViewBlockNode({ id, data }: NodeProps<LiveViewFlowNode>) {
                 data.proposal.status === "rejected" ? "destructive" : "ghost"
               }
               className="h-6 w-6 rounded-none"
-              aria-label={`reject change to ${slot.title}`}
+              aria-label={`拒绝对 ${slot.title} 的修改`}
               onClick={(event) => {
                 event.stopPropagation();
                 data.onProposalDecision("rejected");
@@ -897,7 +897,7 @@ export function LiveViewCanvas({
         dragHandle: ".canvas-node-drag-handle",
         selected: selection.includes(id),
         deletable: true,
-        ariaLabel: "Canvas note container",
+        ariaLabel: "画布笔记容器",
         data: {
           note,
           tool,

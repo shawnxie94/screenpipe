@@ -337,7 +337,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
               : String(err ?? "未知错误");
         console.error("failed to start screenpipe:", message);
 
-        const kind: "permission" | "other" = /permission/i.test(message)
+        const kind: "permission" | "other" = /permission|权限/i.test(message)
           ? "permission"
           : "other";
 
@@ -691,7 +691,9 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
                                 : String(err ?? "未知错误");
                           setSpawnError(message);
                           setSpawnErrorKind(
-                            /port.*in use|already in use/i.test(message)
+                            /端口.*占用|port.*in use|already in use/i.test(
+                              message,
+                            )
                               ? "port_conflict"
                               : "other",
                           );

@@ -236,7 +236,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 			isLoading: true,
 			loadingProgress: { loaded: 0, isStreaming: false },
 			error: null,
-			message: "loading...",
+			message: "加载中…",
 		}));
 	},
 
@@ -699,7 +699,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 			// OPTIMISTIC: Only show message if no frames
 			if (connectionAttempts === 0 && currentFrames.length === 0) {
 				set({
-					message: "Connection closed",
+					message: "连接已关闭",
 					isLoading: false,
 					loadingProgress: { loaded: 0, isStreaming: false },
 					isConnected: false,

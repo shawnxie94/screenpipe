@@ -297,7 +297,7 @@ export function AttendeesPill({ value, count, onChange }: AttendeesPillProps) {
                   <span className="max-w-[140px] truncate">{name}</span>
                   <button
                     type="button"
-                    aria-label={`Remove ${name}`}
+                    aria-label={`移除 ${name}`}
                     onClick={() => removeAttendee(name)}
                     className="flex h-4 w-4 items-center justify-center text-muted-foreground hover:text-foreground"
                   >

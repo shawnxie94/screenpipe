@@ -174,11 +174,11 @@ export function createTemplateCanvasDocument(
     },
   ].filter((block) => available.has(block.slotId));
   const connections = [
-    ["trigger-and-outcome", "observed-steps", "starts"],
-    ["observed-steps", "handoffs", "moves through"],
-    ["handoffs", "bottlenecks", "reveals"],
-    ["bottlenecks", "controls-and-exceptions", "must preserve"],
-    ["controls-and-exceptions", "improvement-path", "enables"],
+    ["trigger-and-outcome", "observed-steps", "触发"],
+    ["observed-steps", "handoffs", "流经"],
+    ["handoffs", "bottlenecks", "暴露出"],
+    ["bottlenecks", "controls-and-exceptions", "必须保留"],
+    ["controls-and-exceptions", "improvement-path", "支撑"],
   ] as const;
   const arrows = connections
     .filter(([fromId, toId]) => available.has(fromId) && available.has(toId))
@@ -199,7 +199,7 @@ export function createTemplateCanvasDocument(
     notes: [
       {
         id: "process-map-guide",
-        text: "Observed workflow → handoffs → friction → controls → improvement\n\nMove the Blocks and connections until the map matches how the work actually happens.",
+        text: "观察到的流程 → 交接 → 摩擦点 → 控制点 → 改进\n\n移动区块与连接，直到这张图与实际的工作方式一致。",
         x: 64,
         y: 64,
         width: 776,

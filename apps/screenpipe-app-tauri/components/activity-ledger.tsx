@@ -1040,7 +1040,7 @@ function ArtifactPreviewTooltip({
       <TooltipContent
         side="top"
         collisionPadding={16}
-        aria-label={`${artifactName} activity preview`}
+        aria-label={`${artifactName} 活动预览`}
         className="w-80 rounded-none border-border bg-popover p-0 shadow-lg shadow-black/10"
         data-testid="activity-artifact-preview"
       >
@@ -1189,7 +1189,7 @@ function ActivityEntryArtifacts({
     <TooltipProvider delayDuration={300} skipDelayDuration={300}>
       <div
         className="flex items-center gap-1.5"
-        aria-label={`Source artifacts for ${entry.title}`}
+        aria-label={`${entry.title} 的来源工件`}
       >
         {artifacts.map((evidence) => {
           const artifactName =

@@ -158,7 +158,7 @@ async function elementExists(selector: string): Promise<boolean> {
 async function openSidebarConversationMenu(chatId: string): Promise<void> {
   await browser.execute((id: string) => {
     const row = document.querySelector(`[data-testid="chat-row-${id}"]`);
-    const trigger = row?.querySelector<HTMLElement>('[aria-label="Conversation actions"]');
+    const trigger = row?.querySelector<HTMLElement>('[aria-label="会话操作"]');
     trigger?.click();
   }, chatId);
 

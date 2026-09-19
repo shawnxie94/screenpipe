@@ -2166,7 +2166,7 @@ export function NoteView({
             {isLive || !meetingEndClock ? (
               <span className="inline-flex items-center gap-1 font-medium text-foreground">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-foreground motion-reduce:animate-none" />
-                ongoing
+                进行中
               </span>
             ) : (
               <>

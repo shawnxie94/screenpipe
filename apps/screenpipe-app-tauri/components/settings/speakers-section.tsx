@@ -1214,8 +1214,8 @@ export function SpeakersSection() {
             )}
           </div>
           <p className="text-xs text-amber-600/80 dark:text-amber-500/80 mt-1 ml-6">
-            unidentified speakers show as &ldquo;Speaker #N&rdquo; in meeting
-            notes and scheduled tasks. name them below to fix downstream output.
+            未识别的说话人会在会议笔记和定时任务中显示为
+            &ldquo;Speaker #N&rdquo;。在下方为其命名，即可修正后续输出。
           </p>
         </div>
       )}

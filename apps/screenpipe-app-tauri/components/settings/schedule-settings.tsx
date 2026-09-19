@@ -174,7 +174,7 @@ export function ScheduleSettings({
                 设置录制启用的时间段
               </p>
             </div>
-            <HelpTooltip text="Set specific time ranges per day when screen and audio recording should be active. Outside these hours, recording pauses automatically." />
+            <HelpTooltip text="可按天设置启用屏幕与音频录制的具体时间段。时间段之外，录制会自动暂停。" />
           </div>
           <Switch
             checked={enabled}

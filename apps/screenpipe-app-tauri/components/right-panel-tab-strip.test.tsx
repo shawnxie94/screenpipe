@@ -73,7 +73,7 @@ describe("RightPanelTabStrip", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Close alpha.md" }));
+    fireEvent.click(screen.getByRole("button", { name: "关闭 alpha.md" }));
     expect(onClose).toHaveBeenLastCalledWith(tabs[1]);
 
     const bravoTab = screen.getByRole("tab", { name: "bravo.ts" });

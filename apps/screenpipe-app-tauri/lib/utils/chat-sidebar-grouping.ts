@@ -183,7 +183,7 @@ export function validateSidebarGroupName(
     return {
       ok: false,
       reason: "empty",
-      message: "Group name can't be empty.",
+      message: "分组名称不能为空。",
     };
   }
 
@@ -191,7 +191,7 @@ export function validateSidebarGroupName(
     return {
       ok: false,
       reason: "reserved",
-      message: "This group name is reserved. Choose a different name.",
+      message: "该分组名称为保留名称，请换一个。",
     };
   }
 

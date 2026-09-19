@@ -92,7 +92,7 @@ describe("normalizeSettingsArrays", () => {
 describe("assertValidAiPresetUpdate", () => {
   it("rejects an empty preset list at the shared mutation boundary", () => {
     expect(() => assertValidAiPresetUpdate({ aiPresets: [] })).toThrow(
-      "At least one AI preset is required",
+      "至少需要一个 AI 预设",
     );
   });
 

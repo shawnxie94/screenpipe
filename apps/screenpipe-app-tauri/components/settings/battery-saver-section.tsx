@@ -265,7 +265,7 @@ export function BatterySaverSection() {
       {state && (state.thermal_state === "serious" || state.thermal_state === "critical") && (
         <div className="flex items-center gap-2 px-3 py-2 border border-border bg-card rounded text-xs text-muted-foreground">
           <span>
-            System is thermally throttled — battery saver active regardless of preference
+            系统已因过热降频——无论偏好设置如何，省电模式都会保持开启
           </span>
         </div>
       )}

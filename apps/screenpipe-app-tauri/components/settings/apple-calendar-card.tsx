@@ -181,7 +181,7 @@ export function AppleCalendarCard({
         <div className="p-0">
           <div className="flex-1 min-w-0">
             <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-              Reads calendars synced through macOS Internet Accounts. Used for meeting detection and notes.
+              读取通过 macOS 互联网账户同步的日历。用于会议检测与会议笔记。
             </p>
 
             {available ? (

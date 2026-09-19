@@ -706,7 +706,7 @@ export function usePiForegroundEvents({
           emitSessionActivity({ status: "streaming" });
         } else if (data.type === "auto_retry_end" && data.success === false) {
           // Pi exhausted retries on a transient error (rate limit, overloaded, etc.)
-          const errorStr = stringValue(data.finalError, "Request failed after retries");
+          const errorStr = stringValue(data.finalError, "多次重试后仍然失败");
           const quotaErrorType = classifyQuotaError(errorStr);
           const logAutoRetryFailure = quotaErrorType === "daily" || quotaErrorType === "hosted_busy" || quotaErrorType === "rate" || errorStr.includes("model_not_allowed")
             ? console.warn
@@ -816,7 +816,7 @@ export function usePiForegroundEvents({
                 console.warn("[Pi] Agent busy, waiting for it to finish:", fullError);
               } else {
                 setMessages((prev) =>
-                  prev.map((m) => m.id === msgId ? { ...m, content: `Error: ${fullError || "Something went wrong"}` } : m)
+                  prev.map((m) => m.id === msgId ? { ...m, content: `错误：${fullError || "出错了，请重试"}` } : m)
                 );
               }
             }
@@ -1061,7 +1061,7 @@ export function usePiForegroundEvents({
               );
             } else {
               setMessages((prev) =>
-                prev.map((m) => m.id === msgId ? { ...m, content: `Error: ${errMsg}` } : m)
+                prev.map((m) => m.id === msgId ? { ...m, content: `错误：${errMsg}` } : m)
               );
             }
             // Do not clear the active turn here. Pi emits agent_end next, with
@@ -1468,7 +1468,7 @@ export function usePiForegroundEvents({
                 );
               } else {
                 setMessages((prev) =>
-                  prev.map((m) => m.id === msgId ? { ...m, content: `Error: ${errorStr}` } : m)
+                  prev.map((m) => m.id === msgId ? { ...m, content: `错误：${errorStr}` } : m)
                 );
               }
             }
@@ -1492,7 +1492,7 @@ export function usePiForegroundEvents({
           // Pipe execution finished — clean up streaming state
           if (piMessageIdRef.current?.startsWith("pipe-")) {
             const msgId = piMessageIdRef.current;
-            const content = piStreamingTextRef.current || "Scheduled task completed with no output.";
+            const content = piStreamingTextRef.current || "计划任务已完成，但没有输出。";
             const blocksSnapshot = [...piContentBlocksRef.current];
             setMessages((prev) =>
               prev.map((m) => m.id === msgId ? { ...m, content, contentBlocks: blocksSnapshot } : m)

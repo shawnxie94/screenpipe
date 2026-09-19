@@ -1597,7 +1597,7 @@ export function StandaloneChat({
       // glitch — some agents (Cursor) authenticate instantly with no browser.
       if (inner.type === "acp_authenticated") {
         setAcpSignInError(null);
-        toast({ title: `signed in to ${acpAdapterInfo(activePresetRef.current?.acpAgent?.id).name}` });
+        toast({ title: `已登录 ${acpAdapterInfo(activePresetRef.current?.acpAgent?.id).name}` });
       }
       return false;
     }
@@ -1707,7 +1707,7 @@ export function StandaloneChat({
       setAcpSignIn({ kind: "cli", ...info });
       setAcpSignInError(
         wasChecking
-          ? `still not signed in to ${info.agentName}. try signing in again.`
+          ? `仍未登录 ${info.agentName}，请重试登录。`
           : null,
       );
     },

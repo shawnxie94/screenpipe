@@ -63,7 +63,7 @@ export function StatChart({ spec, palette }: MarkProps<StatChartSpec>) {
       table={
         <DataTable
           caption={spec.title || "数值"}
-          columns={["数值", "数值", "备注"]}
+          columns={["指标", "数值", "备注"]}
           rows={spec.items.map((item) => ({
             header: item.label,
             cells: [formatChartValue(item.value, item.unit), item.note || "—"],

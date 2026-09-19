@@ -132,8 +132,8 @@ export function RightPanelTabStrip({
               </button>
               <button
                 type="button"
-                aria-label={`Close ${tab.label}`}
-                title={`Close ${tab.label}`}
+                aria-label={`关闭 ${tab.label}`}
+                title={`关闭 ${tab.label}`}
                 className={cn(
                   "mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-foreground/50",
                   active

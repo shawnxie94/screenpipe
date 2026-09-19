@@ -901,7 +901,7 @@ export function ConnectSection({ integrationId, fields }: { integrationId: strin
   return (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Let screenpipe scheduled tasks call back to this agent. Enter the gateway credentials so scheduled tasks can send events and messages directly to it.
+        允许 screenpipe 定时任务回调此智能体。填写网关凭据后，定时任务即可直接向它发送事件与消息。
       </p>
       {fields.map((field) => (
         <div key={field.key} className="space-y-1">
@@ -1003,9 +1003,8 @@ function SecondKnowledgeCallout({ name }: { name: string }) {
         <p className="text-xs font-semibold text-foreground">构建第二大脑</p>
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Paste one prompt into {name} and it keeps working in the background — segmenting your
-        workflows, summarizing your processes, and building a durable memory of you. Like the
-        digital clone scheduled task, but inside {name}.
+        把一段提示词粘贴进 {name}，它就会在后台持续工作——拆分你的工作流、总结你的
+        流程，并为你积累长期记忆。类似“数字分身”定时任务，但运行在 {name} 内部。
       </p>
       <div className="flex items-center gap-2 flex-wrap">
         <Button size="sm" onClick={copyPrompt} className="h-7 text-xs">

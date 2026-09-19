@@ -196,9 +196,9 @@ async function expectTimelineShell(): Promise<void> {
     async () => {
       const bodyText = ((await browser.execute(() => document.body.innerText || "")) as string).toLowerCase();
       return (
-        bodyText.includes("screen recording is off") ||
-        bodyText.includes("recording... timeline will appear soon") ||
-        bodyText.includes("loading timeline") ||
+        bodyText.includes("屏幕录制已关闭") ||
+        bodyText.includes("正在录制……时间线很快会显示") ||
+        bodyText.includes("正在加载时间线") ||
         (await $('[data-testid="timeline-slider"]').isExisting())
       );
     },
@@ -230,19 +230,19 @@ async function waitForBodyText(
 
 function hasLiveMeetingNoteState(bodyText: string): boolean {
   const liveCaptureLabels = [
-    "recording",
-    "listening",
-    "transcribing",
-    "mic not capturing",
-    "audio disabled",
-    "microphone paused",
-    "audio stalled",
-    "recording only",
+    "录制中",
+    "监听中",
+    "转写中",
+    "麦克风未采集",
+    "音频已禁用",
+    "麦克风已暂停",
+    "音频已停滞",
+    "仅录制",
   ];
 
   return (
-    bodyText.includes("ongoing") &&
-    bodyText.includes("always get consent") &&
+    bodyText.includes("进行中") &&
+    bodyText.includes("务必征得同意") &&
     liveCaptureLabels.some((label) => bodyText.includes(label))
   );
 }
@@ -310,7 +310,7 @@ async function stopMeetingIfVisible(): Promise<void> {
     )
       .trim()
       .toLowerCase();
-    if (label !== "stop" && !ariaLabel.startsWith("stop ")) continue;
+    if (label !== "停止" && !ariaLabel.startsWith("停止")) continue;
 
     await button.scrollIntoView();
     await button.click();
@@ -423,7 +423,7 @@ describe("Windows user journey", function () {
     const homeSection = await $('[data-testid="section-home"]');
     await homeSection.waitForExist({ timeout: t(20_000) });
 
-    await clickFirstDisplayed('button[aria-label="search"]');
+    await clickFirstDisplayed('button[aria-label="搜索"]');
     await waitForWindowHandle("search", t(20_000));
 
     await browser.switchToWindow("search");
@@ -532,14 +532,14 @@ describe("Windows user journey", function () {
 
     await waitForBodyText(
       (bodyText) =>
-        bodyText.includes("new meeting") ||
-        bodyText.includes("no meetings yet") ||
-        bodyText.includes("no past meetings yet"),
+        bodyText.includes("新建会议") ||
+        bodyText.includes("还没有会议") ||
+        bodyText.includes("还没有历史会议"),
       "Meetings section did not show a startable meeting state",
     );
 
     try {
-      await clickFirstButtonWithText("new meeting", t(20_000));
+      await clickFirstButtonWithText("新建会议", t(20_000));
 
       await waitForBodyText(
         hasLiveMeetingNoteState,
@@ -568,9 +568,7 @@ describe("Windows user journey", function () {
             )
               .trim()
               .toLowerCase();
-            if (label === "stop" || ariaLabel.startsWith("stop ")) {
-              return false;
-            }
+            if (label === "停止" || ariaLabel.startsWith("停止")) return false;
           }
           return true;
         },
@@ -583,14 +581,14 @@ describe("Windows user journey", function () {
 
       await waitForBodyText(
         (bodyText) =>
-          bodyText.includes("meeting saved") ||
-          bodyText.includes("finalizing transcript") ||
-          bodyText.includes("summarizing meeting") ||
-          bodyText.includes("summary ready") ||
-          bodyText.includes("summary needs attention") ||
-          bodyText.includes("new meeting") ||
-          bodyText.includes("no meetings yet") ||
-          bodyText.includes("no past meetings yet"),
+          bodyText.includes("会议已保存") ||
+          bodyText.includes("正在完成转写") ||
+          bodyText.includes("正在生成会议摘要") ||
+          bodyText.includes("摘要已就绪") ||
+          bodyText.includes("摘要需要处理") ||
+          bodyText.includes("新建会议") ||
+          bodyText.includes("还没有会议") ||
+          bodyText.includes("还没有历史会议"),
         "Manual meeting did not show a post-stop state",
       );
 
@@ -616,20 +614,20 @@ describe("Windows user journey", function () {
 
     await waitForBodyText(
       (bodyText) =>
-        bodyText.includes("keyboard shortcuts and hotkeys") &&
-        bodyText.includes("open search") &&
-        bodyText.includes("open search when overlay is visible"),
+        bodyText.includes("键盘快捷键与热键") &&
+        bodyText.includes("打开搜索") &&
+        bodyText.includes("悬浮层可见时打开搜索"),
       "Shortcuts settings did not show the open-search hotkey row",
     );
 
-    const recorder = await shortcutRecorderForTitle("open search");
+    const recorder = await shortcutRecorderForTitle("打开搜索");
     const initialShortcutLabel = (await recorder.getText()).replace(/\s+/g, " ").trim();
 
     await recorder.scrollIntoView();
     await recorder.click();
 
     await waitForBodyText(
-      (bodyText) => bodyText.includes("press keys..."),
+      (bodyText) => bodyText.includes("按键中…"),
       "Shortcut recorder did not enter the visible key-capture state",
     );
 
@@ -639,7 +637,7 @@ describe("Windows user journey", function () {
     await browser.keys(["Escape"]);
 
     await browser.waitUntil(
-      async () => !(await getBodyTextLower()).includes("press keys..."),
+      async () => !(await getBodyTextLower()).includes("按键中…"),
       {
         timeout: t(10_000),
         interval: 250,
@@ -647,7 +645,7 @@ describe("Windows user journey", function () {
       },
     );
 
-    const restoredRecorder = await shortcutRecorderForTitle("open search");
+    const restoredRecorder = await shortcutRecorderForTitle("打开搜索");
     const restoredShortcutLabel = (await restoredRecorder.getText()).replace(/\s+/g, " ").trim();
     expect(restoredShortcutLabel).toBe(initialShortcutLabel);
 
@@ -672,9 +670,9 @@ describe("Windows user journey", function () {
     // floating menu owns the temporary one-hour snooze.
     await waitForBodyText(
       (bodyText) =>
-        bodyText.includes("theme, windows, and overlay appearance") &&
-        bodyText.includes("shortcut reminder") &&
-        bodyText.includes("overlay size"),
+        bodyText.includes("主题、窗口和悬浮层外观") &&
+        bodyText.includes("快捷键提醒") &&
+        bodyText.includes("悬浮层尺寸"),
       "Display settings did not show the shortcut reminder controls",
     );
     expect(await $("#shortcut-overlay").isExisting()).toBe(true);
@@ -704,10 +702,10 @@ describe("Windows user journey", function () {
         async () => {
           const state = (await browser.execute(() => ({
             path: window.location.pathname,
-            hasTimelineButton: !!document.querySelector('button[title="Open timeline"]'),
-            hasChatButton: !!document.querySelector('button[title="Open chat"]'),
-            hasSearchButton: !!document.querySelector('button[title="Open search"]'),
-            hasSettingsButton: !!document.querySelector('button[title="Overlay settings"]'),
+            hasTimelineButton: !!document.querySelector('button[title="打开时间线"]'),
+            hasChatButton: !!document.querySelector('button[title="打开聊天"]'),
+            hasSearchButton: !!document.querySelector('button[title="打开搜索"]'),
+            hasSettingsButton: !!document.querySelector('button[title="知迹 — 右键查看选项"]'),
             hasInboxButton: !!document.querySelector('[title="notifications"]'),
           }))) as {
             path: string;
@@ -737,7 +735,7 @@ describe("Windows user journey", function () {
       const reminderScreenshot = await saveScreenshot("windows-user-journey-shortcut-reminder");
       expect(existsSync(reminderScreenshot)).toBe(true);
 
-      const openSearchButton = await $('button[title="Open search"]');
+      const openSearchButton = await $('button[title="打开搜索"]');
       await openSearchButton.waitForDisplayed({ timeout: t(10_000) });
       await openSearchButton.click();
 
@@ -755,7 +753,7 @@ describe("Windows user journey", function () {
 
       await browser.switchToWindow("shortcut-reminder");
       await expandShortcutReminder();
-      const openChatButton = await $('button[title="Open chat"]');
+      const openChatButton = await $('button[title="打开聊天"]');
       await openChatButton.waitForDisplayed({ timeout: t(10_000) });
       await openChatButton.click();
 
@@ -774,7 +772,7 @@ describe("Windows user journey", function () {
 
       await browser.switchToWindow("shortcut-reminder");
       await expandShortcutReminder();
-      const openTimelineButton = await $('button[title="Open timeline"]');
+      const openTimelineButton = await $('button[title="打开时间线"]');
       await openTimelineButton.waitForDisplayed({ timeout: t(10_000) });
       await openTimelineButton.click();
 
@@ -792,15 +790,23 @@ describe("Windows user journey", function () {
 
       await browser.switchToWindow("shortcut-reminder");
       await expandShortcutReminder();
-      const overlaySettingsButton = await $('button[title="Overlay settings"]');
-      await overlaySettingsButton.waitForDisplayed({ timeout: t(10_000) });
-      await overlaySettingsButton.click();
+      // The dock's settings entry is the brand button's context menu (the old
+      // dedicated "Overlay settings" button is gone), and WebDriver pointer
+      // events are not reliably delivered to the 22x16 WebView2 window, so
+      // dispatch the same bubbling event the hover fallback above uses.
+      await browser.execute(() => {
+        document
+          .querySelector<HTMLElement>('button[title="知迹 — 右键查看选项"]')
+          ?.dispatchEvent(
+            new MouseEvent("contextmenu", { bubbles: true, button: 2, buttons: 2 }),
+          );
+      });
 
       // Match Wispr Flow's progressive disclosure: the floating bar offers a
       // one-hour snooze and links to the persistent control in Display.
-      const hideForHourButton = await $('button[title="Hide for 1 hour"]');
+      const hideForHourButton = await $('button[title="隐藏 1 小时"]');
       await hideForHourButton.waitForDisplayed({ timeout: t(10_000) });
-      const persistentSettingsButton = await $('button[title="Open overlay settings"]');
+      const persistentSettingsButton = await $('button[title="打开悬浮层设置"]');
       await persistentSettingsButton.waitForDisplayed({ timeout: t(10_000) });
       await expectShortcutReminderVisible(true, t(20_000));
     } finally {
@@ -947,9 +953,9 @@ describe("Windows user journey", function () {
       await expectCurrentSettingsSection("notifications", t(20_000));
       await waitForBodyText(
         (bodyText) =>
-          bodyText.includes("control which notifications screenpipe sends you") &&
-          bodyText.includes("display changes") &&
-          bodyText.includes("meeting live notes"),
+          bodyText.includes("控制知迹向你发送哪些通知") &&
+          bodyText.includes("显示变化") &&
+          bodyText.includes("会议实时笔记"),
         "Notification settings did not open from the bell footer",
       );
 
@@ -961,7 +967,7 @@ describe("Windows user journey", function () {
       const settingsScreenshot = await saveScreenshot("windows-user-journey-notification-settings");
       expect(existsSync(settingsScreenshot)).toBe(true);
 
-      const backToApp = await $('//button[.//span[normalize-space(.)="Back to app"]]');
+      const backToApp = await $('//button[.//span[normalize-space(.)="返回应用"]]');
       await backToApp.waitForDisplayed({ timeout: t(10_000) });
       await backToApp.click();
 

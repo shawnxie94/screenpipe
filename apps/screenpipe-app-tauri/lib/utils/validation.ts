@@ -23,7 +23,7 @@ export const embeddedLLMSchema = z.object({
 export const aiProviderTypeSchema = z.enum(["openai", "openai-chatgpt", "native-ollama", "custom", "pi", "anthropic", "acp"]);
 
 export const aiPresetSchema = z.object({
-  id: z.string().min(1, "预设名称必填").regex(/^[a-zA-Z0-9\s\-_]+$/, "Only letters, numbers, spaces, hyphens, and underscores allowed").refine(
+  id: z.string().min(1, "预设名称必填").regex(/^[a-zA-Z0-9\s\-_]+$/, "只能包含字母、数字、空格、连字符和下划线").refine(
     (val) => !val.trim().toLowerCase().endsWith("copy"),
     "预设名称不能以“copy”结尾"
   ),

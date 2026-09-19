@@ -2693,7 +2693,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
 
           {selectedApp && !isLoadingAppFrames && appFrames.length === 0 && (
             <EmptyMessage
-              title={`No screen history for ${selectedApp.name}`}
+              title={`${selectedApp.name} 暂无屏幕历史`}
               hint="帧可能已被保留策略移除"
             />
           )}

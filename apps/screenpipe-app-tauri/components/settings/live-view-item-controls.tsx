@@ -69,7 +69,7 @@ export function LiveViewItemControls({
   return (
     <div
       className="mt-2 flex flex-wrap items-center gap-1"
-      aria-label={`actions for ${title}`}
+      aria-label={`${title} 的操作`}
     >
       {actions.has("snooze") && (
         <Popover open={snoozeOpen} onOpenChange={setSnoozeOpen}>
@@ -139,7 +139,7 @@ export function LiveViewItemControls({
               id={`live-view-item-${itemId}-not-right-panel`}
               data-testid={`live-view-item-${itemId}-not-right-panel`}
               role="group"
-              aria-label={`what is not right about ${title}`}
+              aria-label={`${title} 有哪些不对的地方`}
               className="order-last mt-1 w-full flex-none border border-border bg-background p-3 sm:max-w-2xl"
               onKeyDown={(event) => {
                 if (event.key !== "Escape") return;

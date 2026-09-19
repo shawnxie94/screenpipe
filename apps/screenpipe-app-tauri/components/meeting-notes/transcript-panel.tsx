@@ -982,9 +982,9 @@ export function TranscriptPanel({
   const transcriptStateLabel = transcriptState === "recovering"
     ? "恢复中"
     : transcriptState === "已保存的转写"
-      ? "转录已保存"
+      ? "转写已保存"
     : transcriptState === "实时转写"
-        ? "实时转录"
+        ? "实时转写"
           : transcriptState === "监听中"
           ? "监听中"
           : transcriptState;
@@ -1044,7 +1044,7 @@ export function TranscriptPanel({
           <div
             role="separator"
             aria-orientation="horizontal"
-            aria-label="调整转录面板大小"
+            aria-label="调整转写面板大小"
             tabIndex={0}
             title="拖动调整大小 · 双击重置"
             onPointerDown={handleResizeStart}
@@ -1134,10 +1134,10 @@ export function TranscriptPanel({
                   title={
                     searchOpen
                       ? "隐藏搜索"
-                      : `搜索转录（${isMac ? "⌘F" : "Ctrl+F"}）`
+                      : `搜索转写（${isMac ? "⌘F" : "Ctrl+F"}）`
                   }
                   aria-label={
-                    searchOpen ? "隐藏转录搜索" : "搜索转录"
+                    searchOpen ? "隐藏转写搜索" : "搜索转写"
                   }
                   aria-pressed={searchOpen}
                 >
@@ -1153,8 +1153,8 @@ export function TranscriptPanel({
                   size="sm"
                   onClick={onClose}
                   className="h-7 w-7 p-0"
-                  title="关闭转录"
-                  aria-label="关闭转录"
+                  title="关闭转写"
+                  aria-label="关闭转写"
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -1185,7 +1185,7 @@ export function TranscriptPanel({
             {loading && !loaded && (
               <div className="flex items-center justify-center py-8 text-xs text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" />
-                正在加载转录…
+                正在加载转写…
               </div>
             )}
 
@@ -1238,7 +1238,7 @@ export function TranscriptPanel({
               onClick={() => scrollToLatest()}
               className="absolute bottom-3 right-3 h-8 w-8 rounded-full border border-border bg-background/95 p-0 shadow-lg backdrop-blur hover:bg-accent"
               title="跟随实时转写"
-              aria-label="跟随实时转录"
+              aria-label="跟随实时转写"
             >
               <ArrowDown className="h-3.5 w-3.5" />
               {hasUnseenLive && (
@@ -1270,7 +1270,7 @@ export const TranscriptRows = React.memo(function TranscriptRows({
   return (
     <ol
       className={cn("space-y-0.5 pb-10 pt-3", className ?? "px-4")}
-      aria-label="会议转录"
+      aria-label="会议转写"
     >
       {blocks.map((block, index) => (
         <SpeakerParagraph

@@ -186,8 +186,8 @@ export async function preserveFirstRunMedia(
  */
 export function mediaMarkdown(media: FirstRunMedia): string {
   const label = media.appName
-    ? `What your screen looked like in ${media.appName}`
-    : "What your screen looked like";
+    ? `你在 ${media.appName} 中的屏幕画面`
+    : "你的屏幕画面";
   return media.kind === "video"
     ? `[${label}](${media.path})`
     : `![${label}](${media.path})`;

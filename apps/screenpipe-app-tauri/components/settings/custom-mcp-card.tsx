@@ -431,7 +431,7 @@ function ServerRow({
         onClick={handleDelete}
         disabled={removing}
         className="h-6 px-2 text-muted-foreground hover:text-destructive shrink-0"
-        aria-label={`Remove ${server.name}`}
+        aria-label={`移除 ${server.name}`}
       >
         {removing ? (
           <Loader2 className="h-3 w-3 animate-spin" />

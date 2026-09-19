@@ -79,7 +79,7 @@ export function SearchResultStrip({
 							transition: "all 120ms ease-out",
 							zIndex: isActive ? 2 : 1,
 						}}
-						title={`Match ${i + 1}`}
+						title={`匹配 ${i + 1}`}
 					/>
 				);
 			})}

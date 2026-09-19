@@ -195,7 +195,7 @@ async function chooseRowAction(sessionId: string, action: string): Promise<void>
   const opened = await browser.execute((id: string) => {
     const rowElement = document.querySelector(`[data-testid="chat-row-${id}"]`);
     const button = rowElement?.querySelector<HTMLButtonElement>(
-      'button[aria-label="conversation actions"]',
+      'button[aria-label="会话操作"]',
     );
     if (!button) return false;
     button.focus();

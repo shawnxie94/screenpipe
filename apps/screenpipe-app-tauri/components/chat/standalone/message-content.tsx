@@ -1675,11 +1675,16 @@ export function MessageContent({
   ) : null;
 
   const openFeedback = useFeedbackStore((s) => s.openFeedback);
+  // English variants match messages persisted by older builds; the Chinese
+  // variants are what current producers emit.
   const isErrorMessage = !isUser && (
     !!message.retryPrompt ||
+    message.content.startsWith("错误：") ||
     message.content.startsWith("Error:") ||
+    message.content.includes("出错了，请重试") ||
     message.content.includes("Something went wrong") ||
     message.content.includes("crashed") ||
+    message.content.includes("多次重试后仍然失败") ||
     message.content.includes("failed after retries")
   );
 
@@ -1872,7 +1877,7 @@ export function MessageContent({
                 key={`text-${group.key}`}
                 data-message-phase={group.phase}
                 data-testid={!isUser && group.phase === "commentary" ? "assistant-commentary" : undefined}
-                aria-label={!isUser && group.phase === "commentary" ? "Assistant progress update" : undefined}
+                aria-label={!isUser && group.phase === "commentary" ? "助手进度更新" : undefined}
                 className={!isUser && group.phase === "commentary" ? "text-foreground/75" : undefined}
               >
                 <MarkdownBlock

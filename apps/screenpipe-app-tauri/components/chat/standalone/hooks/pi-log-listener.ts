@@ -41,28 +41,28 @@ export function registerPiLogListener({
       patchActiveMessage(
         setMessages,
         piMessageIdRef.current,
-        "This model requires an upgrade — try a different model in your AI preset.",
+        "当前模型需要升级 — 请在你的 AI 预设中换一个模型。",
       );
     } else if (line.includes("429") || line.includes("rate") || line.includes("daily_limit")) {
       cancelStreamingMessageRender();
       patchActiveMessage(
         setMessages,
         piMessageIdRef.current,
-        "Rate limited — try again in a moment or switch to a different model.",
+        "请求频率受限 — 请稍后再试或换一个模型。",
       );
     } else if (line.includes("content must be a string") || line.includes("does not support images") || line.includes("image_url is not supported")) {
       cancelStreamingMessageRender();
       patchActiveMessage(
         setMessages,
         piMessageIdRef.current,
-        "This model doesn't support images — switch to Auto or use GPT-5.6 Luna.",
+        "当前模型不支持图片 — 请切换到 Auto 或使用 GPT-5.6 Luna。",
       );
     } else if (line.includes("not found") || line.includes("ECONNREFUSED") || line.includes("connection refused")) {
       let hint = line;
       if (line.includes("not found")) {
-        hint = `Model not found: ${line}. Check your AI preset in settings.`;
+        hint = `未找到模型：${line}。请在设置中检查你的 AI 预设。`;
       } else if (line.includes("ECONNREFUSED") || line.includes("connection refused")) {
-        hint = "Cannot connect to Ollama — is it running? Start with: ollama serve";
+        hint = "无法连接 Ollama — 它在运行吗？请先执行：ollama serve";
       }
       toast({ title: "Pi 代理错误", description: hint, variant: "destructive" });
     }

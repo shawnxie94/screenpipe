@@ -220,7 +220,7 @@ describe("Chat workspace tabs and split", function () {
           () =>
             document
               .querySelector<HTMLInputElement>(
-                'input[aria-label="Browser address"]',
+                'input[aria-label="浏览器地址"]',
               )
               ?.value.endsWith("/first") === true,
         )) as boolean,
@@ -273,7 +273,7 @@ describe("Chat workspace tabs and split", function () {
         '[data-testid="right-panel-tab-strip"]',
       );
       const address = document.querySelector<HTMLInputElement>(
-        'input[aria-label="Browser address"]',
+        'input[aria-label="浏览器地址"]',
       );
       return {
         toolbarHeight: toolbar?.getBoundingClientRect().height ?? 0,
@@ -315,7 +315,7 @@ describe("Chat workspace tabs and split", function () {
     await $(`button[role="tab"][aria-label="${TITLES[CHAT_B]}"]`).click();
     await waitForForeground(CHAT_B);
 
-    await openContextItem(CHAT_A, "Open in split");
+    await openContextItem(CHAT_A, "在分屏中打开");
     const split = await $('[data-testid="chat-split-pane"]');
     await split.waitForExist({ timeout: t(8_000) });
     expect(await split.getText()).toContain(`E2E-WORKSPACE ${TITLES[CHAT_A]}`);
@@ -323,7 +323,7 @@ describe("Chat workspace tabs and split", function () {
     await browser.execute((title: string) => {
       document
         .querySelector<HTMLButtonElement>(
-          `button[aria-label="Work in ${title}"]`,
+          `button[aria-label="在“${title}”中工作"]`,
         )
         ?.click();
     }, TITLES[CHAT_A]);
@@ -345,7 +345,7 @@ describe("Chat workspace tabs and split", function () {
     );
 
     await saveScreenshot("chat-workspace-tabs-split");
-    await $('button[aria-label="Close split view"]').click();
+    await $('button[aria-label="关闭分屏"]').click();
     await browser.waitUntil(
       async () =>
         !(await browser.execute(() =>
@@ -372,7 +372,7 @@ describe("Chat workspace tabs and split", function () {
       true,
     );
 
-    await $('button[aria-label="New chat tab"]').click();
+    await $('button[aria-label="新建聊天标签"]').click();
     await browser.waitUntil(
       async () => {
         const ids = await openTabIds();

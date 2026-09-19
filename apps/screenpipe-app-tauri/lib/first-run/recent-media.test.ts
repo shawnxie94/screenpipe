@@ -178,13 +178,13 @@ describe("preserveFirstRunMedia", () => {
 describe("mediaMarkdown", () => {
   it("links video so the renderer swaps in a player", () => {
     const md = mediaMarkdown({ path: screenChunk, kind: "video", appName: "Cursor" });
-    expect(md).toBe(`[What your screen looked like in Cursor](${screenChunk})`);
+    expect(md).toBe(`[你在 Cursor 中的屏幕画面](${screenChunk})`);
     expect(md.startsWith("!")).toBe(false);
   });
 
   it("uses image syntax for a still frame", () => {
     expect(mediaMarkdown({ path: "/d/f.jpeg", kind: "image" })).toBe(
-      "![What your screen looked like](/d/f.jpeg)",
+      "![你的屏幕画面](/d/f.jpeg)",
     );
   });
 });

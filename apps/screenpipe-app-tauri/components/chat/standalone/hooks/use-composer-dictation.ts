@@ -237,7 +237,7 @@ export function useComposerDictation({
       !navigator.mediaDevices?.getUserMedia ||
       typeof MediaRecorder === "undefined"
     ) {
-      setError("Microphone dictation isn't available on this device.");
+      setError("此设备不支持麦克风听写。");
       updateStatus("error");
       return;
     }
@@ -274,7 +274,7 @@ export function useComposerDictation({
         ++generationRef.current;
         recorderStoppingRef.current = false;
         stopStream();
-        setError("The microphone stopped unexpectedly. Try again.");
+        setError("麦克风意外停止，请重试。");
         updateStatus("error");
       };
       recorder.onstop = () => {

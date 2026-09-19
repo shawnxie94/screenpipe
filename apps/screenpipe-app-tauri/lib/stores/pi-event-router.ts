@@ -621,7 +621,7 @@ function appendAgentActionRequest(sid: string, payload: PiInnerEvent): boolean {
   store.actions.appendMessage(sid, agentActionMessage(parsed, sid) as unknown as MutableMessage);
   store.actions.patch(sid, {
     status: "tool",
-    preview: parsed.actionKind === "auth" ? "sign-in needed" : "permission needed",
+    preview: parsed.actionKind === "auth" ? "需要登录" : "需要权限",
     lastContentAt: Date.now(),
   });
   return true;

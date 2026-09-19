@@ -115,7 +115,7 @@ async function openPipeAdvanced(): Promise<void> {
   await myPipes.waitForExist({ timeout: t(10_000) });
   await myPipes.click();
 
-  const search = await $('input[placeholder="search scheduled tasks..."]');
+  const search = await $('input[placeholder="搜索定时任务..."]');
   await search.waitForExist({ timeout: t(20_000) });
   await search.setValue(PIPE_NAME);
 

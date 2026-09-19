@@ -473,7 +473,7 @@ export function AudioTranscript({
 
 		await showChatWithPrefill({
 			context: "",
-			prompt: `可以重新转录这段音频吗，时间范围为${timeRange}？`,
+			prompt: `可以重新转写这段音频吗，时间范围为${timeRange}？`,
 			autoSend: true,
 			source: "retranscribe-button",
 		});

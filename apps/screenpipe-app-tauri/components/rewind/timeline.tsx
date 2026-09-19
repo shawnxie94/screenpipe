@@ -1135,11 +1135,11 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 						<MonitorOff className="w-8 h-8 text-muted-foreground" />
 					</div>
 					<h3 className="text-lg font-mono font-semibold uppercase tracking-wide mb-2">
-						Timeline Disabled
+						时间线已停用
 					</h3>
 					<p className="text-sm font-mono text-muted-foreground leading-relaxed">
-						The timeline is turned off in settings. Re-enable it under
-						Display settings to browse your recorded history.
+						时间线已在设置中关闭。请在显示设置中重新开启，
+						以浏览你的录制历史。
 					</p>
 				</div>
 			</div>
@@ -1402,7 +1402,7 @@ export default function Timeline({ embedded = false }: { embedded?: boolean }) {
 							<button
 								type="button"
 								className="flex items-center gap-1.5 max-w-lg min-w-0 px-3 py-1 rounded-full bg-black/70 backdrop-blur-sm border border-white/10 hover:bg-black/80 hover:border-white/20 transition-colors cursor-pointer pointer-events-auto"
-								title={`Open ${openableUrl}`}
+								title={`打开 ${openableUrl}`}
 								onClick={async (e) => {
 									e.stopPropagation();
 									try {

@@ -69,7 +69,7 @@ export function ChatSplitPane({
           ? "order-first border-r border-border/60"
           : "border-l border-border/60",
       )}
-      aria-label={`Split view: ${title}`}
+      aria-label={`分屏：${title}`}
       data-testid="chat-split-pane"
       data-side={side}
     >

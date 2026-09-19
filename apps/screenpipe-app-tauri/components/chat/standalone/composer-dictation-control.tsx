@@ -140,7 +140,7 @@ export function ComposerDictationControl({
       >
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
         <span className="font-mono text-[10px]">
-          {isTranscribing ? "正在转录" : "正在请求麦克风"}
+          {isTranscribing ? "正在转写" : "正在请求麦克风"}
         </span>
         <Button
           type="button"
@@ -228,7 +228,7 @@ export function ComposerDictationControl({
             </kbd>
           </div>
           <p className="mt-1 text-muted-foreground">
-            点击即可切换，也可在说话时按住。音频会发送到已配置的转录服务。
+            点击即可切换，也可在说话时按住。音频会发送到已配置的转写服务。
           </p>
         </TooltipContent>
       </Tooltip>

@@ -206,7 +206,7 @@ export function TimelineTagToolbar({ anchorRect, onAskAI, onRunPipe, templatePip
 		try {
 			await showChatWithPrefill({
 				context: "",
-				prompt: `请先读取 screenpipe-api skill，然后重新转录 ${start} 到 ${end} 的音频。重新转录后，询问我是否要为转录中的不同说话人分配姓名。`,
+				prompt: `请先读取 screenpipe-api skill，然后重新转写 ${start} 到 ${end} 的音频。重新转写后，询问我是否要为转写中的不同说话人分配姓名。`,
 				autoSend: true,
 				source: "retranscribe-button",
 			});

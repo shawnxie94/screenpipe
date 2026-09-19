@@ -41,11 +41,11 @@ describe("Tray: native recording status", function () {
     await invokeOrThrow("plugin:e2e|set_tray_recording_status", {
       status: "starting",
     });
-    await waitForInstalledTrayStatus("Starting");
+    await waitForInstalledTrayStatus("启动中");
 
     await invokeOrThrow("plugin:e2e|set_tray_recording_status", {
       status: "recording",
     });
-    await waitForInstalledTrayStatus("Recording");
+    await waitForInstalledTrayStatus("录制中");
   });
 });

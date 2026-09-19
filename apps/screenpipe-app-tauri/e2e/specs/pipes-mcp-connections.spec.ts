@@ -180,7 +180,7 @@ async function selectPipeTypeFilter(type: 'scheduled' | 'manual' | 'triggered'):
 }
 
 async function waitForPipeRow(): Promise<void> {
-  const search = await $('input[placeholder="search scheduled tasks..."]');
+  const search = await $('input[placeholder="搜索定时任务..."]');
   if (await search.isExisting()) {
     await search.setValue(PIPE_NAME);
   }

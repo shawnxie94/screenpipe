@@ -570,7 +570,7 @@ describe("pi-event-router: background ACP action requests", () => {
 
     const session = useChatStore.getState().sessions.A;
     expect(session.status).toBe("tool");
-    expect(session.preview).toBe("permission needed");
+    expect(session.preview).toBe("需要权限");
     expect(session.unread).toBe(true);
     expect(agentActionsFor("A")).toEqual([
       expect.objectContaining({
@@ -603,7 +603,7 @@ describe("pi-event-router: background ACP action requests", () => {
     const session = useChatStore.getState().sessions["fresh-acp"];
     expect(session).toBeDefined();
     expect(session.status).toBe("tool");
-    expect(session.preview).toBe("sign-in needed");
+    expect(session.preview).toBe("需要登录");
     expect(agentActionsFor("fresh-acp")).toEqual([
       expect.objectContaining({
         actionKind: "auth",

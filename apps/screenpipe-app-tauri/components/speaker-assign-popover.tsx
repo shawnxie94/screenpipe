@@ -168,7 +168,7 @@ export function SpeakerAssignPopover({
 					const undoResult = await undoResp.json();
 					toast({
 					title: "已撤销",
-					description: `已恢复 ${undoResult.restored} 条转录`,
+					description: `已恢复 ${undoResult.restored} 条转写`,
 					});
 				};
 

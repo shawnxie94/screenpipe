@@ -101,7 +101,7 @@ describe("Timeline daily summary", function () {
     const screenshot = await saveScreenshot("timeline-daily-summary-pi-cached");
     expect(existsSync(screenshot)).toBe(true);
 
-    const close = await $('button[aria-label="Close daily summary"]');
+    const close = await $('button[aria-label="关闭每日摘要"]');
     await close.click();
     await browser.waitUntil(
       async () => (await trigger.getAttribute("aria-expanded")) === "false",

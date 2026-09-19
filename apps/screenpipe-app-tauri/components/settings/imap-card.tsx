@@ -179,10 +179,9 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
   return (
     <div className="space-y-3">
       <p className="text-[11px] text-muted-foreground">
-        Read-only inbox access over IMAP. For Gmail this uses an app password —
-        no Google sign-in screens, nothing to verify. Google doesn&apos;t let apps
-        create app passwords automatically, so it takes one copy-paste — and we
-        auto-detect the copy, so you never even paste.
+        通过 IMAP 以只读方式访问收件箱。Gmail 使用应用专用密码——不会弹出
+        Google 登录页面，也无需额外验证。Google 不允许应用自动创建应用专用密码，
+        所以只需复制一次——我们会自动检测到复制内容，你连粘贴都不用。
       </p>
       <div className="space-y-1">
         <Label className="text-xs">电子邮件</Label>
@@ -219,12 +218,12 @@ export function ImapCard({ onChanged }: { onChanged?: () => void } = {}) {
             size="sm"
             className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal"
           >
-            <ExternalLink className="h-3 w-3" />get app password
+            <ExternalLink className="h-3 w-3" />获取应用专用密码
           </Button>
           {watching && (
             <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
               <Loader2 className="h-3 w-3 animate-spin" />
-              create the app password on Google&apos;s page and copy it — screenpipe will connect automatically
+              在 Google 页面上创建应用专用密码并复制——screenpipe 会自动完成连接
             </p>
           )}
           <p className="text-[11px] text-muted-foreground">
