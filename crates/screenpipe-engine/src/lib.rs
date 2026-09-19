@@ -80,6 +80,7 @@ pub mod process_priority;
 pub mod recording_config;
 pub mod recording_coverage;
 pub mod retention;
+mod route_registry;
 pub mod routes;
 pub mod schedule_monitor;
 mod semantic_worker;
