@@ -610,7 +610,7 @@ let DEFAULT_SETTINGS: Settings = {
 			ignoredMeetingApps: [],
 
 			audioChunkDuration: 30,
-			useChineseMirror: false,
+			useChineseMirror: true,
 			languages: [],
 			embeddedLLM: {
 				enabled: false,

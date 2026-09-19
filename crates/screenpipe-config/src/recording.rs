@@ -836,7 +836,7 @@ impl Default for RecordingSettings {
             port: 3030,
             power_mode: None,
             keep_computer_awake: false,
-            use_chinese_mirror: false,
+            use_chinese_mirror: true,
             device_tier: None,
             schedule_enabled: false,
             schedule_rules: vec![],
