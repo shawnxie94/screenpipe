@@ -262,39 +262,26 @@ Patterns: `GROUP BY date(timestamp)` (daily), `GROUP BY strftime('%H:00', timest
 
 ```bash
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections"            # list all integrations (40+)
+  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections"          # list local integrations
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/telegram"   # status + non-secret settings
+  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/ntfy"     # status + non-secret settings
 ```
 
-Each entry's `description` is self-describing — for control surfaces (browsers, gateways, OAuth proxies) it includes the exact endpoint + body shape. Read it before guessing. If not connected, tell the user to set it up from the Connections page in the desktop app.
+Each entry's `description` is self-describing — for control surfaces (browsers, agents, import channels) it includes the exact endpoint + body shape. Read it before guessing. If not connected, tell the user to set it up from the Connections page in the desktop app.
 
-Connection reads return status and declared non-secret settings only. Stored secrets never appear in API responses. Use local boundaries:
-- **Telegram**: `POST /connections/telegram/send` with `{"text":"..."}`
-- **n8n / Zapier / Make**: `POST /connections/<id>/proxy` with arbitrary JSON
-- **Discord**: `POST /connections/discord/proxy` with `{"content":"..."}`
-- **Teams webhook**: `POST /connections/teams/proxy` with `{"text":"..."}`
+Connection reads return status and declared non-secret settings only. Stored secrets never appear in API responses. Current integrations are local-first — there is no hosted push service:
+- **ntfy (push notifications)**: `POST /connections/<id>/proxy` with the notification body (plain text or JSON); the server resolves the secret topic URL so it never enters the model context.
+- **Obsidian / Logseq (local vaults)**: no HTTP API — write `.md` files straight to the configured directory with bash, as each `description` instructs.
+- **Agents (claude_code, codex, openclaw, hermes)**: drive a local coding agent; endpoints live in each `description`.
+- **IMAP (read)**: dedicated routes — `GET /connections/imap/messages`, `GET /connections/imap/mailboxes`.
 
-**API proxy integrations** — credentials stay server-side. Call the local wildcard proxy; it injects auth and forwards upstream. There is no `/connections/<id>/token` endpoint.
+**Send-only webhook proxy** — for integrations whose target URL is itself a secret, `POST /connections/<id>/proxy` forwards the body with auth resolved server-side. The generic credential proxy `POST /connections/<id>/proxy/<upstream-path>` only activates for integrations that declare a proxy config; there is no `/connections/<id>/token` endpoint.
 
-```bash
-# GitHub create issue (repo from pipe settings). Same shape for comments: .../issues/42/comments {"body":...}
-curl -X POST "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/github/proxy/repos/OWNER/REPO/issues" \
-  -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  -H "Content-Type: application/json" -d '{"title":"Bug","body":"Steps..."}'
-
-# Generic OAuth proxy (Zoom, Vercel, Google Docs, Microsoft 365, ...)
-curl -X POST "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/<id>/proxy/<upstream-api-path>" \
-  -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  -H "Content-Type: application/json" -d '{...}'
-```
-Don't call `https://api.github.com/...` directly from a pipe — use the proxy.
-
-**Calendar** — use calendar endpoints for appointments/upcoming events. If `/connections` shows `ics-calendar.connected: true`, include ICS results too before saying the calendar is empty:
+**Calendar** — appointments and upcoming events:
 ```bash
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
   "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/calendar/events?hours_back=0&hours_ahead=72"
-# also: /connections/google-calendar/events , /connections/ics-calendar/events
+# also: /connections/ics-calendar/events
 ```
 
 **Browser control (`owned-default`)** — an embedded browser, shown in the chat. Cookies persist (isolated profile); password fields are stripped from snapshots. Try snapshot first; reach for eval only when needed.
@@ -312,6 +299,18 @@ curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
 curl -X POST -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" -H "Content-Type: application/json" \
   -d '{"code":"return [...document.querySelectorAll(\".title>a\")].slice(0,5).map(a=>a.innerText)"}' \
   "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/browsers/owned-default/eval"
+```
+
+**Connector channels — office & RSS (separate surface)**
+
+These are import channels with their own REST surface, searched via `content_type=connection` on the main search endpoint:
+```bash
+curl "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/channels"                      # aggregate status
+curl "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/office/feishu"                 # Feishu status
+curl "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/office/feishu/search?q=关键词" # imported content
+curl "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/office/feishu/agenda?hours_ahead=8"
+curl "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/office/tencent-meeting"
+curl "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/rss"
 ```
 
 ---
