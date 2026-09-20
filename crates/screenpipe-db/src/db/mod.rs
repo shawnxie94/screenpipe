@@ -455,6 +455,7 @@ mod accessibility;
 mod activity_ledger;
 mod audio;
 pub mod connector;
+pub mod documents;
 pub mod office;
 pub use self::connector::{
     ConnectorConnectionRow, ConnectorConnectionUpdate, ConnectorObjectDraft, ConnectorObjectRow,

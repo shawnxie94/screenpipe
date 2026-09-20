@@ -4,7 +4,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo, useLayoutEffect } from "react";
-import { Search, X, Loader2, Clock, MessageSquare, User, ArrowLeft, Mic, Volume2, Hash, Tag, Monitor, Keyboard, ClipboardCopy, AppWindow, Plug } from "lucide-react";
+import { Search, X, Loader2, Clock, MessageSquare, User, ArrowLeft, Mic, Volume2, Hash, Tag, Monitor, Keyboard, ClipboardCopy, AppWindow, Plug, FileText, FolderOpen } from "lucide-react";
 import {
   useKeywordSearchStore,
   SearchMatch,
@@ -44,6 +44,11 @@ import { NearViewport } from "./near-viewport";
 import { localFetch, getApiBaseUrl, appendAuthToken } from "@/lib/api";
 import { searchInputBehaviorProps } from "@/lib/search-input-behavior";
 import { usePlatform } from "@/lib/hooks/use-platform";
+import { importLocalDocument } from "@/lib/utils/document-import";
+import { DOC_PICKER_EXTENSIONS } from "@/lib/pi/extract-document";
+import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
+import { readFile } from "@tauri-apps/plugin-fs";
+import { toast } from "@/components/ui/use-toast";
 
 interface SpeakerResult {
   id: number;
@@ -91,6 +96,21 @@ const PROVIDER_LABELS: Record<string, string> = {
   rss: "RSS",
 };
 
+// Locally imported document (手动导入的本地文档) — /documents/search results.
+// Rows reveal the original file (or managed copy) instead of navigating.
+interface DocumentHit {
+  sha256: string;
+  file_name: string;
+  ext: string;
+  original_path: string | null;
+  managed_path: string | null;
+  imported_at: string;
+  ordinal: number;
+  snippet: string;
+}
+
+const documentHitKey = (hit: DocumentHit) => `${hit.sha256}/${hit.ordinal}`;
+
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -108,7 +128,8 @@ type SearchResultType =
   | "app"
   | "speaker_transcription"
   | "tagged_frame"
-  | "connection";
+  | "connection"
+  | "document";
 
 type SearchSelectionMethod = "click" | "keyboard";
 
@@ -741,7 +762,13 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   const entityFilter = parseEntityFilter(query) ?? "";
 
   // Content type filter
-  type ContentFilter = "all" | "screen" | "input" | "chats" | "connections";
+  type ContentFilter =
+    | "all"
+    | "screen"
+    | "input"
+    | "chats"
+    | "connections"
+    | "documents";
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
 
   // A selectable row, identified so selection survives lists being re-sorted
@@ -749,6 +776,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     | { kind: "chat"; id: string }
     | { kind: "uievent"; id: string }
     | { kind: "connection"; id: string }
+    | { kind: "document"; id: string }
     | { kind: "frame"; index: number };
 
   // Connection search state. Rows live only in this scope; every fetch
@@ -757,6 +785,63 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   const [connectionResults, setConnectionResults] = useState<ConnectionHit[]>([]);
   const [isLoadingConnections, setIsLoadingConnections] = useState(false);
   const connectionRequestRef = useRef(0);
+
+  // Local document import state (手动导入的本地文档). Same fetch contract as
+  // connections: one wholesale-replaced page per scope activation/query.
+  const [documentResults, setDocumentResults] = useState<DocumentHit[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isImportingDocuments, setIsImportingDocuments] = useState(false);
+  const documentRequestRef = useRef(0);
+  const documentResultsRef = useRef<DocumentHit[]>([]);
+  documentResultsRef.current = documentResults;
+
+  // Pick document files and run each through the import pipeline. The chat
+  // composer's attachment path is deliberately untouched — importing adds a
+  // persistent evidence source, it does not attach to the next message.
+  const handleImportDocuments = useCallback(async () => {
+    if (isImportingDocuments) return;
+    let selected: string[] | null = null;
+    try {
+      const picked = await openFileDialog({
+        multiple: true,
+        filters: [{ name: "Documents", extensions: [...DOC_PICKER_EXTENSIONS] }],
+      });
+      if (!picked) return;
+      selected = Array.isArray(picked) ? picked : [picked];
+    } catch (err) {
+      console.error("document file picker error:", err);
+      return;
+    }
+    setIsImportingDocuments(true);
+    try {
+      const results = [];
+      for (const path of selected) {
+        const name = path.split(/[\\/]/).pop() || path;
+        results.push(
+          await importLocalDocument({
+            name,
+            originalPath: path,
+            loadBytes: () => readFile(path),
+          }),
+        );
+      }
+      const failed = results.filter((r) => r.status === "failed");
+      if (failed.length > 0) {
+        toast({
+          title: `导入失败 ${failed.length} 个文件`,
+          description: failed.map((f) => `${f.name}：${f.reason}`).join("\n"),
+          variant: "destructive",
+        });
+      }
+      const succeeded = results.filter((r) => r.status !== "failed").length;
+      if (succeeded > 0) {
+        toast({ title: `已导入 ${succeeded} 个文档` });
+        setSearchEpoch((e) => e + 1);
+      }
+    } finally {
+      setIsImportingDocuments(false);
+    }
+  }, [isImportingDocuments]);
 
   // Chat search state. Seed from the prewarm cache so a reopened search window
   // paints its recent chats on the first frame instead of after a disk scan.
@@ -1080,6 +1165,14 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       return items;
     }
 
+    if (contentFilter === "documents") {
+      if (isLoadingDocuments) return items;
+      for (const hit of documentResults) {
+        items.push({ kind: "document", id: documentHitKey(hit) });
+      }
+      return items;
+    }
+
     // Empty state: the recent chats strip is the only content, so it owns
     // selection — this is what makes Enter work the moment search opens.
     if (contentFilter === "all" && !query.trim()) {
@@ -1108,10 +1201,13 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     connectionResults,
     contentFilter,
     debouncedQuery,
+    documentHitKey,
+    documentResults,
     filteredChats,
     filteredResults,
     isLoadingChats,
     isLoadingConnections,
+    isLoadingDocuments,
     isEntitySearch,
     isTagSearch,
     query,
@@ -1569,6 +1665,62 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     // `query` (live) re-runs the fetch the moment the text changes so Enter's
     // row list never lags the input; results only repaint on the debounced pass.
   }, [isOpen, contentFilter, debouncedQuery, searchEpoch]);
+
+  // Local documents scope: FTS over imported document chunks. Empty query is
+  // a valid browse (most recent first). Same wholesale-replace contract as
+  // the connections scope above.
+  useEffect(() => {
+    if (!isOpen || contentFilter !== "documents") return;
+    const requestId = ++documentRequestRef.current;
+    const controller = new AbortController();
+    (async () => {
+      setIsLoadingDocuments(true);
+      try {
+        const params = new URLSearchParams({ limit: "30" });
+        const q = debouncedQuery.trim();
+        if (q) params.set("q", q);
+        const resp = await localFetch(`/documents/search?${params}`, {
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]),
+        });
+        if (resp.ok && requestId === documentRequestRef.current) {
+          const data = await resp.json();
+          setDocumentResults((data?.data ?? []) as DocumentHit[]);
+        }
+      } catch {
+        // Aborts and transient failures keep the previous page visible.
+      } finally {
+        if (requestId === documentRequestRef.current) setIsLoadingDocuments(false);
+      }
+    })();
+    return () => {
+      controller.abort();
+    };
+  }, [isOpen, contentFilter, debouncedQuery, searchEpoch]);
+
+  // Reveal the original file (or the managed copy) for a document hit.
+  const revealDocumentHit = useCallback(async (hit: DocumentHit) => {
+    try {
+      const resp = await localFetch("/documents/reveal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sha256: hit.sha256 }),
+      });
+      if (!resp.ok) {
+        const data = (await resp.json().catch(() => null)) as { message?: string } | null;
+        toast({
+          title: "无法打开来源文件",
+          description: data?.message ?? `HTTP ${resp.status}`,
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "无法打开来源文件",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
+      });
+    }
+  }, []);
 
   // Search speakers. @ queries are immediate; normal text queries wait for the
   // first keyword pass so names do not slow down the first result.
@@ -2131,6 +2283,14 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           if (!item) break;
           if (item.kind === "chat") {
             handleOpenChatResult(item.id, "keyboard");
+          } else if (item.kind === "document") {
+            const hit = documentResultsRef.current.find(
+              (d) => documentHitKey(d) === item.id,
+            );
+            if (hit) {
+              trackSearchResultSelected("document", "keyboard", "drilldown");
+              void revealDocumentHit(hit);
+            }
           } else if (item.kind === "connection") {
             const hit = connectionResultsRef.current.find(
               (c) => connectionHitKey(c) === item.id,
@@ -2401,6 +2561,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     input: "键盘或剪贴板匹配",
     chats: "聊天",
     connections: "接入内容",
+    documents: "导入文档",
   };
 
   // Scope lives in the search bar rather than as a row of chips above the
@@ -2429,6 +2590,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           { key: "input" as ContentFilter, label: "按键", icon: Keyboard },
           { key: "chats" as ContentFilter, label: "聊天", icon: MessageSquare },
           { key: "connections" as ContentFilter, label: "接入", icon: Plug },
+          { key: "documents" as ContentFilter, label: "文档", icon: FileText },
         ] as const).map(({ key, label, icon: Icon }) => {
           const isActive = contentFilter === key;
           return (
@@ -2479,7 +2641,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
         <span>{activeNavItem.kind === "frame" ? "←→↑↓ 切换" : "↑↓ 切换"}</span>
         {/* Every non-chat row resolves to a moment — a frame, or the instant a
             line was typed or copied — and Enter opens the main timeline there. */}
-        <span>{activeNavItem.kind === "chat" ? "⏎ 打开聊天" : activeNavItem.kind === "connection" ? "⏎ 打开原文" : "⏎ 跳到时间线"}</span>
+        <span>{activeNavItem.kind === "chat" ? "⏎ 打开聊天" : activeNavItem.kind === "connection" ? "⏎ 打开原文" : activeNavItem.kind === "document" ? "⏎ 显示原文件" : "⏎ 跳到时间线"}</span>
         {activeNavItem.kind === "frame" && (
           <span className="flex items-center gap-1" suppressHydrationWarning>
             <MessageSquare className="w-2.5 h-2.5" />
@@ -3128,6 +3290,92 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                         </span>
                         <span className="text-[11px] font-mono text-muted-foreground shrink-0 mt-0.5">
                           {when ? formatRelativeTime(when) : ""}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Locally imported documents (文档): FTS hits over manually imported
+              files. Rows reveal the original file in the file manager — there
+              is no frame to jump to, so Enter never navigates the timeline. */}
+          {contentFilter === "documents" && (
+            <>
+              <div className="flex items-center justify-between px-2 pb-1">
+                <span className="text-xs text-muted-foreground">
+                  手动导入的本地文档，可全文搜索并回到原始文件
+                </span>
+                <button
+                  onClick={() => void handleImportDocuments()}
+                  disabled={isImportingDocuments}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs transition-colors hover:bg-muted disabled:opacity-50"
+                >
+                  {isImportingDocuments ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <FolderOpen className="h-3 w-3" />
+                  )}
+                  导入文档
+                </button>
+              </div>
+              {!isLoadingDocuments && documentResults.length === 0 && !queryBelowMinimum && (
+                <EmptyMessage
+                  title={trimmedQuery ? "没有匹配的文档" : "还没有导入文档"}
+                  hint={
+                    trimmedQuery
+                      ? "换个词试试，或导入更多文档"
+                      : "点击右上角“导入文档”选择文件后，即可全文搜索"
+                  }
+                />
+              )}
+              {documentResults.length > 0 && (
+                <div className="flex flex-col">
+                  <SectionLabel>文档</SectionLabel>
+                  {documentResults.map((hit) => {
+                    const navKey = `document:${documentHitKey(hit)}`;
+                    const pos = navPositions.get(navKey);
+                    const firstOfDoc = hit.ordinal === 0 || !hit.snippet;
+                    return (
+                      <button
+                        key={navKey}
+                        data-nav-index={pos}
+                        onClick={() => {
+                          trackSearchResultSelected("document", "click", "drilldown");
+                          void revealDocumentHit(hit);
+                        }}
+                        onMouseEnter={() => pos !== undefined && setNavIndex(pos)}
+                        className={cn(
+                          "w-full flex items-start gap-2.5 px-2 py-2 rounded text-left transition-colors",
+                          isNavActive(navKey) ? "bg-muted" : "hover:bg-muted/50",
+                        )}
+                      >
+                        <FileText className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0 mt-0.5" />
+                        <span className="flex-1 min-w-0">
+                          <span className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm truncate">{hit.file_name}</span>
+                            <span className="shrink-0 px-1.5 py-px text-[10px] rounded-md border border-border text-muted-foreground">
+                              {hit.ext || "file"}
+                            </span>
+                            {!firstOfDoc && (
+                              <span className="shrink-0 text-[10px] text-muted-foreground">
+                                #{hit.ordinal + 1}
+                              </span>
+                            )}
+                          </span>
+                          {hit.snippet && (
+                            <span className="block text-xs text-muted-foreground truncate mt-0.5">
+                              {hit.snippet}
+                            </span>
+                          )}
+                          <span className="block text-[10px] text-muted-foreground/70 truncate mt-0.5">
+                            {hit.original_path ?? hit.managed_path ?? ""}
+                          </span>
+                        </span>
+                        <span className="text-[11px] font-mono text-muted-foreground shrink-0 mt-0.5">
+                          {hit.imported_at ? formatRelativeTime(hit.imported_at) : ""}
                         </span>
                       </button>
                     );

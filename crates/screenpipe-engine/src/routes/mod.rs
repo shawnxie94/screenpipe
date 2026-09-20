@@ -12,6 +12,7 @@ pub mod cloud_agents;
 pub mod connect_broker;
 pub mod content;
 pub mod data;
+pub mod documents;
 pub mod elements;
 pub mod frames;
 pub mod health;

@@ -634,6 +634,10 @@ impl crate::server::SCServer {
         );
         let router = router.nest("/tasks", crate::tasks::routes());
         let router = router.nest(
+            "/documents",
+            crate::routes::documents::documents_routes(),
+        );
+        let router = router.nest(
             "/connections",
             crate::connections_api::router(
                 cm,
