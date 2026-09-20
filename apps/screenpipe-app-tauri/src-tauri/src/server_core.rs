@@ -20,8 +20,7 @@ use screenpipe_audio::core::engine::AudioTranscriptionEngine;
 use screenpipe_db::DatabaseManager;
 use screenpipe_engine::{
     hot_frame_cache::HotFrameCache, power::PowerManagerHandle, server::bind_listener,
-    start_power_manager_with_pref, start_sleep_monitor, RecordingConfig,
-    SCServer,
+    start_power_manager_with_pref, start_sleep_monitor, RecordingConfig, SCServer,
 };
 use tokio::sync::Notify;
 use tracing::{error, info, warn};
@@ -213,9 +212,6 @@ impl ServerCore {
     pub async fn start(
         config: &RecordingConfig,
         on_pipe_output: Option<screenpipe_core::pipes::OnPipeOutputLine>,
-        owned_browser: Option<
-            std::sync::Arc<screenpipe_connect::connections::browser::OwnedBrowser>,
-        >,
     ) -> Result<Self, String> {
         info!("Starting server core on port {}", config.port);
         crate::health::set_boot_phase("starting", Some("starting server"));
@@ -430,7 +426,6 @@ impl ServerCore {
         server.manual_meeting = Some(manual_meeting.clone());
         server.api_auth = config.api_auth;
         server.api_auth_key = config.api_auth_key.clone();
-        server.owned_browser = owned_browser;
 
         // Handles to the background schedulers created below, kept on Self so
         // `shutdown()` can stop them (they hold DB / secret-pool references).
@@ -506,9 +501,8 @@ impl ServerCore {
             pipe_store,
             config.port,
         );
-        pipe_manager.set_scheduler_run_guard(Arc::new(|| {
-            crate::headless::scheduled_pipe_skip_reason()
-        }));
+        pipe_manager
+            .set_scheduler_run_guard(Arc::new(|| crate::headless::scheduled_pipe_skip_reason()));
         pipe_manager.set_max_non_template_pipes(config.max_non_template_pipes);
         let mcp_session_access =
             screenpipe_core::pipes::mcp_access::McpSessionAccessRegistry::new();
@@ -875,7 +869,7 @@ impl ServerCore {
                     placeholder,
                     cfg,
                 )
-                    .spawn_with_shutdown(redact_shutdown.clone());
+                .spawn_with_shutdown(redact_shutdown.clone());
             }
         }
 
@@ -956,8 +950,8 @@ impl ServerCore {
                     pipeline_arc,
                     cfg,
                 )
-                    .with_database_error_hook(redact_database_error_hook.clone())
-                    .spawn_with_shutdown(redact_shutdown.clone());
+                .with_database_error_hook(redact_database_error_hook.clone())
+                .spawn_with_shutdown(redact_shutdown.clone());
             } else {
                 // Local mode: spawn the download+load off the boot path
                 // so a slow first-run HF pull doesn't block the app

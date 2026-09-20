@@ -1453,14 +1453,13 @@
         "chat",
         "chat-tabs",
         "chat-split-pane",
-        "owned-browser",
-        "browser-session-consent",
         "right-panel-tabs"
       ],
       "criticality": "high",
       "confidence": "strong",
       "ux": "real-user-flow",
-      "notes": "Native pointer clicks reach tabs, close, and new-chat controls above the window drag region; unused mount placeholders do not create extra untitled tabs. Multiple real chats remain in a non-destructive working set, a second live transcript stays visible, and promoting it swaps primary composer ownership. Back-to-back owned-browser navigation and consent events keep the login prompt visible without a false loading animation, retain the current address, and render both browser chrome rows at 36px."
+      "notes": "Native pointer clicks reach tabs, close, and new-chat controls above the window drag region; unused mount placeholders do not create extra untitled tabs. Multiple real chats remain in a non-destructive working set, a second live transcript stays visible, and promoting it swaps primary composer ownership.",
+      "tests": 1
     },
     {
       "spec": "connected-share.spec.ts",
@@ -2170,45 +2169,6 @@
       "notes": "Pre-grant reassurance in setup: the login slide carries the storage-locality line and the pause affordance on one line (the only slide every platform sees, since permissions auto-advances on non-mac); the mac permissions slide keeps that promise collapsed to a single line below the permission wheel and on expand renders the data dir the running app actually resolved rather than a reconstructed ~/.screenpipe, with an open action pointed at that path; collapsed and expanded states are both asserted to fit inside the fixed-size onboarding window; and the timeline slide states the capture bounds (incognito skipped, per-app exclusions) where the capture decision is made. The mac assertions share one visit because the slide auto-advances 600ms after all grants land."
     },
     {
-      "spec": "owned-browser-tabs.spec.ts",
-      "platforms": [
-        "windows",
-        "macos"
-      ],
-      "layers": [
-        "chat-ai",
-        "real-ui-e2e"
-      ],
-      "features": [
-        "owned-browser",
-        "right-panel-tabs",
-        "native-child-webviews"
-      ],
-      "criticality": "high",
-      "confidence": "strong",
-      "ux": "command",
-      "notes": "A surviving app window drives two native child webviews after the home automation context is replaced, then verifies retained per-tab URLs and close cleanup through the E2E harness."
-    },
-    {
-      "spec": "owned-browser.spec.ts",
-      "platforms": [
-        "windows",
-        "macos"
-      ],
-      "layers": [
-        "os-integration",
-        "window-lifecycle"
-      ],
-      "features": [
-        "owned-browser",
-        "window-lifecycle"
-      ],
-      "criticality": "low",
-      "confidence": "smoke",
-      "ux": "command",
-      "notes": "Embedded agent browser hides safely without an attached child."
-    },
-    {
       "spec": "permission-recovery.spec.ts",
       "platforms": [
         "macos"
@@ -2843,64 +2803,6 @@
       "confidence": "strong",
       "ux": "real-user-flow",
       "notes": "Windows-first real UX journey across search, timeline, separate screen/audio settings, meetings, notifications, storage, and privacy."
-    },
-    {
-      "spec": "zz-owned-browser-background-nav.spec.ts",
-      "platforms": [
-        "windows",
-        "macos"
-      ],
-      "layers": [
-        "os-integration",
-        "window-lifecycle"
-      ],
-      "features": [
-        "owned-browser",
-        "window-lifecycle"
-      ],
-      "criticality": "low",
-      "confidence": "smoke",
-      "ux": "command",
-      "notes": "Owned browser background navigation visibility."
-    },
-    {
-      "spec": "zzz-browser-state-chat-switch.spec.ts",
-      "platforms": [
-        "windows",
-        "macos"
-      ],
-      "layers": [
-        "real-ui-e2e",
-        "storage-privacy"
-      ],
-      "features": [
-        "chat",
-        "owned-browser"
-      ],
-      "criticality": "high",
-      "confidence": "strong",
-      "ux": "synthetic",
-      "notes": "Synthetic E2E (zzz- prefix, search-driven): starts from a fresh chat with no conversation file, seeds browser state before the first durable save, then verifies auto-save persists that state and it survives a switch away and back. Keeps native visibility assertions out of this spec because post-zz window state is too brittle; deeper save/merge coverage lives in focused tests."
-    },
-    {
-      "spec": "zzz-owned-browser-headless.spec.ts",
-      "platforms": [
-        "windows",
-        "macos"
-      ],
-      "layers": [
-        "os-integration",
-        "window-lifecycle",
-        "local-api"
-      ],
-      "features": [
-        "owned-browser",
-        "window-lifecycle"
-      ],
-      "criticality": "high",
-      "confidence": "strong",
-      "ux": "mixed",
-      "notes": "Headless owned browser for background pipes (#4248): with the sidebar never opened, a background eval and navigate-and-scrape over the local API lazily create a hidden offscreen child webview, return a real JS result (6*7 -> 42; document.readyState), and stay invisible; is_ready reflects real serviceability; the same singleton is then adopted into the sidebar panel (page state survives, no second webview). Search-driven and runs last because attaching the child to home tears down home's WebDriver handle."
     }
   ]
 }

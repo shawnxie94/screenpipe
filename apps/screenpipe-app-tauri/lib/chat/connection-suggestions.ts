@@ -251,14 +251,11 @@ function suggestionForConnection(connection: ConnectedIntegration): Suggestion |
   if (lower.includes("docs") || lower.includes("sheets") || lower.includes("notion") || lower.includes("obsidian") || lower.includes("logseq")) {
     return { ...base, text: `将 ${name} 最近的文件整理成准备清单` };
   }
-  if (lower.includes("github") || lower.includes("jira")) {
+  if (lower.includes("github")) {
     return { ...base, text: `在 ${name} 中查找与当前工作相关的未完成任务` };
   }
   if (lower.includes("hubspot") || lower.includes("zendesk")) {
     return { ...base, text: `根据 ${name} 准备客户通话简报` };
-  }
-  if (lower.includes("zoom")) {
-    return { ...base, text: `从 ${name} 获取最近的会议简报` };
   }
   if (connection.category?.toLowerCase() === "browser" || lower.includes("browser")) {
     return { ...base, text: `使用 ${name} 读取当前页面` };
@@ -316,7 +313,7 @@ function setupDescriptionForConnection(connection: ConnectionListItem): string {
   if (lower.includes("email")) return "将邮件带入聊天";
   if (lower.includes("slack")) return "搜索团队讨论";
   if (lower.includes("github")) return "使用代码仓库和问题单";
-  if (lower.includes("github") || lower.includes("jira")) return "跟踪项目工作";
+  if (lower.includes("github")) return "跟踪项目工作";
   if (lower.includes("calendar")) return "根据日历事件准备";
   if (lower.includes("notion") || lower.includes("docs") || lower.includes("obsidian")) return "搜索你的文档";
   if (lower.includes("browser")) return "阅读当前页面";
@@ -338,7 +335,6 @@ export function buildConnectionSetupSuggestions(
     "github",
     "github-issues",
     "google-docs",
-    "jira",
   ];
 
   const fallbackRank = (connection: ConnectionListItem) => {

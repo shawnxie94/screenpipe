@@ -9,14 +9,15 @@
 //! meeting platform URL/profile before this watcher starts or resumes a meeting.
 
 use crate::meeting_watcher::shared::calendar::{
-    calendar_boundary_crossed, calendar_room_identities_now,
+    calendar_boundary_crossed, calendar_room_identities_now, merge_calendar_updates,
 };
 use crate::meeting_watcher::shared::ignore::{
     browser_window_matches_meeting, contains_normalized_term, is_browser_app,
     meeting_app_is_ignored_with_terms, normalize_ignored_meeting_apps,
 };
-use crate::meeting_watcher::shared::profiles::{load_detection_profiles, MeetingDetectionProfile};
-use crate::meeting_watcher::shared::calendar::merge_calendar_updates;
+use crate::meeting_watcher::shared::profiles::{
+    load_active_detection_profiles, MeetingDetectionProfile,
+};
 use crate::meeting_watcher::shared::telemetry::{
     capture_detection_decision, capture_detection_outcome, capture_detection_transition,
     MeetingDetectionTransitionTelemetry,
@@ -113,7 +114,7 @@ pub async fn run_audio_process_meeting_detection_loop(
     close_orphaned_meetings_on_start: bool,
     ignored_meeting_apps: Vec<String>,
 ) {
-    let profiles = load_detection_profiles();
+    let profiles = load_active_detection_profiles();
     let ignored_terms = normalize_ignored_meeting_apps(&ignored_meeting_apps);
     let mut tracker = StickyProcessTracker::new(STICKY_PROCESS_WINDOW);
     let mut state = AudioProcessMeetingState::Idle;
@@ -209,11 +210,8 @@ pub async fn run_audio_process_meeting_detection_loop(
         }
 
         while let Some(event) = cal_sub.next().now_or_never().flatten() {
-            let incoming: Vec<CalendarEventSignal> = event
-                .data
-                .into_iter()
-                .filter(|e| !e.is_all_day)
-                .collect();
+            let incoming: Vec<CalendarEventSignal> =
+                event.data.into_iter().filter(|e| !e.is_all_day).collect();
             merge_calendar_updates(&mut calendar_events, incoming);
         }
 

@@ -9,6 +9,9 @@ mod native_actions;
 // Public so the generated command registry can name the handler by full path.
 pub(crate) mod overlay_anchor;
 
+#[cfg(target_os = "macos")]
+use crate::window::GatedPanelPlacement;
+use crate::window::GatedWindowPlacement;
 use crate::{
     native_notification, native_shortcut_reminder,
     store::{
@@ -17,9 +20,6 @@ use crate::{
     },
     window::{RewindWindowId, ShowRewindWindow},
 };
-#[cfg(target_os = "macos")]
-use crate::window::GatedPanelPlacement;
-use crate::window::GatedWindowPlacement;
 use sha2::{Digest, Sha256};
 use tauri::{Emitter, Manager};
 use tauri_plugin_opener::OpenerExt;
@@ -260,8 +260,7 @@ pub struct LowDiskGuardConfig {
 pub fn get_low_disk_guard_config() -> LowDiskGuardConfig {
     LowDiskGuardConfig {
         threshold_bytes: screenpipe_events::LOW_DISK_THRESHOLD_BYTES,
-        check_interval_seconds:
-            screenpipe_engine::disk_pressure::LOW_DISK_CHECK_INTERVAL_SECS,
+        check_interval_seconds: screenpipe_engine::disk_pressure::LOW_DISK_CHECK_INTERVAL_SECS,
     }
 }
 
@@ -421,8 +420,8 @@ pub fn get_chats_dir() -> Result<String, String> {
     let chats = data_dir.join("chats");
     std::fs::create_dir_all(&chats).map_err(|e| e.to_string())?;
 
-    let is_isolated = std::env::var("SCREENPIPE_E2E_SEED").is_ok()
-        || crate::dev_isolation::is_active();
+    let is_isolated =
+        std::env::var("SCREENPIPE_E2E_SEED").is_ok() || crate::dev_isolation::is_active();
     if !is_isolated {
         if let Some(home) = dirs::home_dir() {
             let legacy = home.join(".screenpipe").join("chats");
@@ -1309,8 +1308,14 @@ mod search_navigation_origin_tests {
 
     #[test]
     fn accepts_only_timeline_host_labels() {
-        assert_eq!(validated_timeline_origin(Some("home")).unwrap(), Some("home"));
-        assert_eq!(validated_timeline_origin(Some("main")).unwrap(), Some("main"));
+        assert_eq!(
+            validated_timeline_origin(Some("home")).unwrap(),
+            Some("home")
+        );
+        assert_eq!(
+            validated_timeline_origin(Some("main")).unwrap(),
+            Some("main")
+        );
         assert_eq!(
             validated_timeline_origin(Some("main-window")).unwrap(),
             Some("main-window")
@@ -1794,9 +1799,8 @@ fn scan_chat_entries_by_mtime(dir: &str) -> Result<Vec<ChatDirEntry>, String> {
 #[tauri::command]
 #[specta::specta]
 pub async fn enable_keychain_encryption() -> Result<KeychainStatus, String> {
-    let key = crate::secrets::get_or_create_key().ok_or_else(|| {
-        "无法访问钥匙串或钥匙串不可用。凭据将保持未加密状态。".to_string()
-    })?;
+    let key = crate::secrets::get_or_create_key()
+        .ok_or_else(|| "无法访问钥匙串或钥匙串不可用。凭据将保持未加密状态。".to_string())?;
 
     let data_dir = screenpipe_core::paths::default_screenpipe_data_dir();
     if let Err(e) = screenpipe_secrets::mark_encryption_enabled(&data_dir) {
@@ -1866,9 +1870,7 @@ pub async fn disable_keychain_encryption() -> Result<KeychainStatus, String> {
                     tracing::info!("decrypted {} secrets before keychain opt-out", count);
                 }
                 Err(e) => {
-                    return Err(format!(
-                        "已加密的密钥解密完成前无法关闭加密：{e}"
-                    ));
+                    return Err(format!("已加密的密钥解密完成前无法关闭加密：{e}"));
                 }
             }
         }
@@ -2081,9 +2083,7 @@ pub(crate) async fn maybe_show_shortcut_reminder_on_startup(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn snooze_shortcut_reminder_for_hour(
-    app_handle: tauri::AppHandle,
-) -> Result<(), String> {
+pub async fn snooze_shortcut_reminder_for_hour(app_handle: tauri::AppHandle) -> Result<(), String> {
     let mut store = crate::store::SettingsStore::get(&app_handle)?.unwrap_or_default();
     let until = chrono::Utc::now()
         .timestamp()
@@ -3105,8 +3105,7 @@ fn register_window_shortcuts_inner(app_handle: tauri::AppHandle) -> Result<(), S
         })?;
 
     if !global_shortcut.is_registered(escape_shortcut) {
-        let message =
-            "Escape 快捷键注册返回成功，但实际未被保留".to_string();
+        let message = "Escape 快捷键注册返回成功，但实际未被保留".to_string();
         error!("{}", message);
         return Err(message);
     }

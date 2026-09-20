@@ -197,16 +197,7 @@ dispatch2 = "0.3"
 core-graphics-helmer-fork = "0.24.0"
 nokhwa-bindings-macos = { git = "https://github.com/CapSoftware/nokhwa", rev = "0d3d1f30a78b" }
 tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", rev = "18ffb9a201fbf6fedfaa382fd4b92315ea30ab1a" }
-# Owned-browser cookie inheritance (see src/owned_browser_cookies.rs):
-# read Arc/Chrome's `Cookies` SQLite, pull the AES-128 key from the
-# macOS Keychain (`Arc Safe Storage`), AES-CBC decrypt each
-# `encrypted_value`, then inject via `WKHTTPCookieStore.setCookie` so
-# the agent's webview ships with the user's logged-in sessions instead
-# of an empty cookie jar.
 rusqlite = { version = "=0.39.0", features = ["bundled"] }
-security-framework = "3.7.0"
-aes = "0.8.4"
-cbc = "0.1.2"
 hmac = "0.12.1"
 pbkdf2 = "0.12.2"
 sha1 = "0.10"

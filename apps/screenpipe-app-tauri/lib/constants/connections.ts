@@ -42,8 +42,6 @@ export const CONNECTION_CATEGORY_BY_ID: Record<string, string> = {
 
   // Meetings — meeting & voice note-takers
   "tencent-meeting": "Meetings",
-  krisp: "Meetings",
-  plaud: "Meetings",
 
   // Calendar — all scheduling tools together
   "apple-calendar": "Calendar",
@@ -52,7 +50,6 @@ export const CONNECTION_CATEGORY_BY_ID: Record<string, string> = {
 
   // Communication — messaging & email
   feishu: "Communication",
-  whatsapp: "Communication",
   email: "Communication",
   imap: "Communication",
 
@@ -64,12 +61,8 @@ export const CONNECTION_CATEGORY_BY_ID: Record<string, string> = {
   // Documents — docs, spreadsheets, wikis & whiteboards
   excalidraw: "Documents",
 
-  // Notifications — push alert services
-  ntfy: "Notifications",
-
   // System — OS-level capture sources & features
   "browser-url": "System",
-  "user-browser": "System",
   "voice-memos": "System",
 };
 
@@ -121,8 +114,6 @@ export const CONNECTION_HARDCODED_DESCRIPTIONS: Record<string, string> = {
   "msty": "在 screenpipe 中使用你的 Msty 模型",
   "obsidian": "将屏幕记忆同步到你的 Obsidian 保险库",
   "notion": "用屏幕上下文搜索 Notion 页面",
-  "krisp": "搜索 Krisp 会议记录和笔记",
-  "plaud": "搜索 Plaud 录音和文字记录",
   "excalidraw": "搜索和编辑你的 Excalidraw+ 白板",
   "custom-mcp": "连接另一个工具或数据源",
   "skills": "为你的 AI 添加可复用的指令和工作流",
@@ -158,7 +149,6 @@ export const DEVICE_CONNECTION_ORDER = [
   "email",
   "imap",
   // Then the rest of the daily-context surface.
-  "whatsapp",
   "obsidian",
   "logseq",
   "browser-url",
@@ -175,14 +165,11 @@ export const DEVICE_CONNECTION_ORDER = [
   "lmstudio",
   "msty",
   "anythingllm",
-  // Meeting & doc satellites.
-  "krisp",
-  "plaud",
+  // Document satellites.
   "excalidraw",
   // Plumbing last.
   "hermes",
   "openclaw",
-  "ntfy",
   "remote-agent",
   "custom-mcp",
   "pi-extensions",

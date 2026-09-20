@@ -79,11 +79,11 @@ describe("connection suggestions", () => {
   it("still sorts connected tiles first inside category groups", () => {
     // compareConnectionTiles also drives the grouped list, where showing what
     // is already wired up first is correct.
-    const group = [tile("krisp"), tile("ntfy", { connected: true })].sort(
+    const group = [tile("rss"), tile("email", { connected: true })].sort(
       compareConnectionTiles,
     );
 
-    expect(group.map((t) => t.id)).toEqual(["ntfy", "krisp"]);
+    expect(group.map((t) => t.id)).toEqual(["email", "rss"]);
   });
 });
 

@@ -269,8 +269,7 @@ mod tests {
 
     /// End-to-end: the shim adds `x-screenpipe-session: <id>` to local API
     /// calls when `SCREENPIPE_SESSION_ID` is set, and never leaks it to
-    /// third-party hosts. This is the production path that lets a background
-    /// pipe's owned-browser navigation be ignored by an unrelated chat.
+    /// third-party hosts.
     #[test]
     #[cfg(unix)]
     fn shim_tags_session_header_for_local_only() {
@@ -301,7 +300,7 @@ mod tests {
             .env("SCREENPIPE_LOCAL_API_KEY", "sp-test")
             .env("SCREENPIPE_SESSION_ID", "conv-abc-123")
             .arg("-c")
-            .arg("curl -X POST http://localhost:3030/connections/browsers/owned-default/navigate")
+            .arg("curl http://localhost:3030/health")
             .status()
             .unwrap();
         assert!(status.success());

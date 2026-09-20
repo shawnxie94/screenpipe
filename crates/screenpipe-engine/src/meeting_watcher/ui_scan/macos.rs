@@ -628,7 +628,7 @@ mod live_tests {
     #[test]
     #[ignore]
     fn test_live_meeting_detection() {
-        let profiles = load_detection_profiles();
+        let profiles = load_active_detection_profiles();
         println!("\n=== Loaded {} profiles ===", profiles.len());
 
         // Step 1: find running meeting apps

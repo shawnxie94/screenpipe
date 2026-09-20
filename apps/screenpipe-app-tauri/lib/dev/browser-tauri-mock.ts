@@ -161,7 +161,6 @@ const NOOP_COMMANDS = new Set([
   "open_login_window",
   "open_viewer_window",
   "open_permission_settings",
-  "owned_browser_hide",
   "reencrypt_store",
   "refresh_tray_menu",
   "request_permission",

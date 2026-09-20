@@ -281,20 +281,6 @@ async completeOnboarding() : Promise<Result<null, string>> {
 }
 },
 /**
- * Mark the current app run as explicitly cleared to read browser Safe Storage.
- * Used by the owned-browser cookie menu's enable-and-retry action so the next
- * navigate can proceed to the macOS Keychain prompt without showing a second
- * in-app confirmation card.
- */
-async confirmBrowserCookieAccessForSession() : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("confirm_browser_cookie_access_for_session") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Copy a frame deeplink (screenpipe://frame/N) to clipboard. Native API only.
  */
 async copyDeeplinkToClipboard(frameId: number) : Promise<Result<null, string>> {
@@ -517,14 +503,6 @@ async getAudioDevices() : Promise<Result<AudioDeviceInfo[], string>> {
  */
 async getBootPhase() : Promise<BootPhaseSnapshot> {
     return await TAURI_INVOKE("get_boot_phase");
-},
-/**
- * Read the current runtime value of the global cookie-access flag.
- * Frontend calls this on startup to hydrate the AtomicBool from the
- * persisted store value.
- */
-async getBrowserCookieAccessGranted() : Promise<boolean> {
-    return await TAURI_INVOKE("get_browser_cookie_access_granted");
 },
 /**
  * Returns per-browser automation permission status for all installed Chromium browsers.
@@ -1073,131 +1051,6 @@ async overlayDismissIncident() : Promise<Result<null, string>> {
 async overlayRestartRecording() : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("overlay_restart_recording") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Clear all browsing data for the owned-browser webview: cookies, injected
- * cookies, site storage, and cache. This resets the current shared owned
- * browser slate; per-chat isolation belongs to the follow-up PR.
- */
-async ownedBrowserClearBrowsingData() : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("owned_browser_clear_browsing_data") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Hide the embedded webview without destroying it. Equivalent to calling
- * `set_bounds` with zero dimensions, but more explicit at the call site.
- */
-async ownedBrowserHide() : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("owned_browser_hide") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Move through the selected webview's own navigation history. A missing tab
- * id addresses the agent-controlled default browser.
- */
-async ownedBrowserHistory(tabId: string | null, direction: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("owned_browser_history", { tabId, direction }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Navigate the embedded webview to `url`.
- *
- * Frontend restore/reload calls pass the foreground conversation id as
- * `owner`, so the entire browser lifecycle stays scoped to that chat. Retry
- * paths that are continuing a pipe/chat-owned navigation (for example after an
- * extension or cookie-consent flow) can pass the original `owner` through so
- * the follow-up navigate does not look like a fresh restore in every chat.
- */
-async ownedBrowserNavigate(url: string, owner: string | null, reveal: boolean | null) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("owned_browser_navigate", { url, owner, reveal }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async ownedBrowserResolveSessionAccess(requestId: string, allow: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("owned_browser_resolve_session_access", { requestId, allow }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Position and size the embedded child webview. The frontend sends
- * viewport-relative coords from the same window that hosts the child, so
- * they can be applied as parent-local bounds. Call with width/height = 0
- * to hide.
- */
-async ownedBrowserSetBounds(parent: string, x: number, y: number, width: number, height: number) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("owned_browser_set_bounds", { parent, x, y, width, height }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async ownedBrowserTabClearBrowsingData(tabId: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("owned_browser_tab_clear_browsing_data", { tabId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async ownedBrowserTabClose(tabId: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("owned_browser_tab_close", { tabId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async ownedBrowserTabHide(tabId: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("owned_browser_tab_hide", { tabId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Navigate one user-created browser tab without touching the agent-controlled
- * default tab. If its native child is not mounted yet, the URL is consumed by
- * the first bounds update.
- */
-async ownedBrowserTabNavigate(tabId: string, url: string, owner: string | null) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("owned_browser_tab_navigate", { tabId, url, owner }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Position one user-created browser tab. Every tab owns a distinct native
- * child webview and retains its page state while another tab is visible.
- */
-async ownedBrowserTabSetBounds(tabId: string, parent: string, x: number, y: number, width: number, height: number) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("owned_browser_tab_set_bounds", { tabId, parent, x, y, width, height }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2053,31 +1906,6 @@ async setAppScreenCaptureProtection(hidden: boolean) : Promise<Result<ScreenCapt
 async setAutostart(enabled: boolean) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("set_autostart", { enabled }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Persist the global browser cookie-access permission. Called from the
- * frontend when the user clicks "Use browser session" in the prompt card
- * or toggles the setting in the settings page.
- */
-async setBrowserCookieAccessGranted(granted: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_browser_cookie_access_granted", { granted }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Hydrate/update the complete browser cookie access state. `granted=false`
- * with `disabled=false` means first-run unknown: prompt once if cookies exist.
- */
-async setBrowserCookieAccessState(granted: boolean, disabled: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_browser_cookie_access_state", { granted, disabled }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -3153,10 +2981,9 @@ disableMeetingDetector?: boolean;
  * while leaving detection on for everything else. Case-insensitive
  * substring match against the running app's name/process AND the matched
  * detection profile's identifiers (native names + browser URL patterns),
- * so an entry can be what the user sees ("Discord") or a service domain
- * ("meet.google.com"). Use when one app trips the detector spuriously
- * (an always-open Teams, a Discord call you don't want logged) but you
- * still want Zoom/Meet/etc. detected. Empty = detect all known apps.
+ * so an entry can be what the user sees ("Discord") or a service domain.
+ * Use when one app trips the detector spuriously but you still want other
+ * supported call apps detected. Empty = detect all known apps.
  */
 ignoredMeetingApps?: string[];
 /**

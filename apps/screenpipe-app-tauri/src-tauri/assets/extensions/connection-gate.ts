@@ -43,8 +43,6 @@ const MCP_OAUTH_PROVIDERS: Record<string, string> = {
   monday: "https://mcp.monday.com/mcp",
   clickup: "https://mcp.clickup.com/mcp",
   airtable: "https://mcp.airtable.com/mcp",
-  confluence: "https://mcp.atlassian.com/v1/mcp",
-  jira: "https://mcp.atlassian.com/v1/mcp",
   notion: "https://mcp.notion.com/mcp",
 };
 
@@ -118,7 +116,7 @@ async function enrichConnection(connection: ConnectionItem, signal?: AbortSignal
   };
 }
 
-// Gmail and Zoom connect through Composio's managed auth: the desktop app
+// Gmail and the Google productivity apps connect through Composio's managed auth: the desktop app
 // registers one shared MCP server whose URL points at screenpipe.com's
 // passthrough. That server only exists after a successful connect, so its
 // presence IS the connected signal. Gmail has no /connections entry at all
@@ -132,7 +130,6 @@ const COMPOSIO_CONNECTIONS: Record<
   { name: string; category: string }
 > = {
   gmail: { name: "Gmail", category: "Communication" },
-  zoom: { name: "Zoom", category: "Meetings" },
   "google-drive": { name: "Google Drive", category: "Documents" },
   "google-docs": { name: "Google Docs", category: "Documents" },
   "google-sheets": { name: "Google Sheets", category: "Documents" },
@@ -180,7 +177,7 @@ function composioSyntheticConnection(id: string, serverId: string): ConnectionIt
     mcp: true,
     mcp_server_id: serverId,
     category: meta.category,
-    description: `${meta.name} via Composio managed auth. Discover tools with sp_mcp_list_tools (server_id "${serverId}"), then call them with sp_mcp_call — e.g. GMAIL_* / GOOGLEDRIVE_* / GOOGLEDOCS_* / GOOGLESHEETS_* / ZOOM_* tools through COMPOSIO_SEARCH_TOOLS and COMPOSIO_MULTI_EXECUTE_TOOL. The user may have connected multiple ${meta.name} accounts (labeled with aliases like "work" or "personal"); tool calls default to the most recently connected account, and when the user names a specific one (e.g. "my work gmail"), pass the account parameter with that alias.`,
+    description: `${meta.name} via Composio managed auth. Discover tools with sp_mcp_list_tools (server_id "${serverId}"), then call them with sp_mcp_call — e.g. GMAIL_* / GOOGLEDRIVE_* / GOOGLEDOCS_* / GOOGLESHEETS_* tools through COMPOSIO_SEARCH_TOOLS and COMPOSIO_MULTI_EXECUTE_TOOL. The user may have connected multiple ${meta.name} accounts (labeled with aliases like "work" or "personal"); tool calls default to the most recently connected account, and when the user names a specific one (e.g. "my work gmail"), pass the account parameter with that alias.`,
   };
 }
 
@@ -249,8 +246,8 @@ export default function (pi: ExtensionAPI) {
         const enrichedConnections = await Promise.all(
           connections.map((connection) => enrichConnection(connection, signal))
         );
-        // Gmail (and Zoom, if its legacy integration ever goes away) exists
-        // only as a Composio-backed frontend tile — synthesize entries so the
+        // Gmail exists only as a Composio-backed frontend tile — synthesize
+        // entries so the
         // model learns they are reachable through the Composio MCP server.
         const composioServer = await findComposioServer(signal);
         if (composioServer) {

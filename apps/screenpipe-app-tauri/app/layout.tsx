@@ -13,7 +13,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Suspense, useEffect } from "react";
 import { ShortcutTracker } from "@/components/shortcut-reminder";
 import { PipeInstallDialog } from "@/components/pipe-install-dialog";
-import { BrowserPairingDialog } from "@/components/browser-pairing-dialog";
 import { CloseTabOrWindowShortcut } from "@/components/close-tab-or-window-shortcut";
 import { RecentChatSwitcherController } from "@/components/chat/recent-chat-switcher-controller";
 import { FeedbackDialog } from "@/components/feedback-dialog";
@@ -331,7 +330,6 @@ export default function RootLayout({
               while the "sign in required" screen is showing. */}
           {!isOverlay && <ShortcutTracker />}
           {!isOverlay && <PipeInstallDialog />}
-          {!isOverlay && <BrowserPairingDialog />}
           <WebviewGestureControls />
           <CloseTabOrWindowShortcut />
           <Suspense fallback={null}>

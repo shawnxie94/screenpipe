@@ -160,8 +160,6 @@ async fn handle_focus(
         );
     if startup_handoff {
         info!("autostart: ignored duplicate OS startup focus handoff");
-    } else if payload.target.as_deref() == Some("browser_pairing") {
-        let _ = (ShowRewindWindow::Home { page: None }).show(&state.app_handle);
     } else {
         match crate::deep_link::handoff_window(payload.deep_link_url.as_deref()) {
             crate::deep_link::HandoffWindow::Home => {
@@ -211,27 +209,8 @@ fn is_allowed_local_origin(origin: &HeaderValue) -> bool {
     }
 }
 
-/// The browser bridge intentionally calls `/focus` from its extension page so
-/// the user can approve pairing in the desktop app. Extension origins cannot
-/// be sent by an ordinary website, and this exception is limited to the focus
-/// route; sensitive endpoints such as `/auth` remain local-origin only.
-fn is_allowed_browser_extension_origin(origin: &HeaderValue) -> bool {
-    let Ok(origin) = origin.to_str() else {
-        return false;
-    };
-    let Ok(uri) = origin.parse::<axum::http::Uri>() else {
-        return false;
-    };
-
-    matches!(
-        uri.scheme_str(),
-        Some("chrome-extension") | Some("moz-extension")
-    ) && uri.host().is_some()
-}
-
-fn is_allowed_control_origin(path: &str, origin: &HeaderValue) -> bool {
+fn is_allowed_control_origin(_path: &str, origin: &HeaderValue) -> bool {
     is_allowed_local_origin(origin)
-        || (path == "/focus" && is_allowed_browser_extension_origin(origin))
 }
 
 /// Whether a `Host` header points at loopback. Defeats DNS rebinding, where a
@@ -258,9 +237,8 @@ fn is_allowed_local_host(host: &HeaderValue) -> bool {
 
 /// Origin-validation guard for every control-server endpoint.
 /// Rejects any request carrying a non-local `Origin` (malicious web page) or a
-/// non-local `Host` (DNS rebinding). The one scoped exception is `/focus` from
-/// a browser-extension origin, which preserves the existing pairing flow.
-/// Requests with neither header — a local process using curl, a pipe, an agent
+/// non-local `Host` (DNS rebinding). Requests with neither header — a local
+/// process using curl, a pipe, an agent
 /// — still pass: loopback bind is not an authorization boundary, so a same-user
 /// process can reach this regardless. Closing that residual requires a
 /// capability token handed to first-party callers (tracked as a follow-up);
@@ -624,8 +602,8 @@ curl -X POST http://localhost:11435/notify \
 #[cfg(test)]
 mod tests {
     use super::{
-        focus_handoff_matches_current_exe, is_allowed_browser_extension_origin,
-        is_allowed_local_host, is_allowed_local_origin, with_control_server_boundary,
+        focus_handoff_matches_current_exe, is_allowed_local_host, is_allowed_local_origin,
+        with_control_server_boundary,
     };
     use axum::{
         body::Body,
@@ -667,25 +645,6 @@ mod tests {
             "null",
         ] {
             assert!(!is_allowed_local_origin(&origin(o)), "should reject {o}");
-        }
-    }
-
-    #[test]
-    fn accepts_only_browser_extension_schemes_as_extension_origins() {
-        for o in [
-            "chrome-extension://abcdefghijklmnop",
-            "moz-extension://01234567-89ab-cdef-0123-456789abcdef",
-        ] {
-            assert!(
-                is_allowed_browser_extension_origin(&origin(o)),
-                "should accept {o}"
-            );
-        }
-        for o in ["https://evil.com", "file://extension.html", "null"] {
-            assert!(
-                !is_allowed_browser_extension_origin(&origin(o)),
-                "should reject {o}"
-            );
         }
     }
 
@@ -819,34 +778,6 @@ mod tests {
             let response = guarded_router().oneshot(request).await.unwrap();
             assert_eq!(response.status(), StatusCode::NO_CONTENT);
         }
-    }
-
-    #[tokio::test]
-    async fn allows_browser_extension_origin_only_on_focus_route() {
-        let extension_origin = Some("chrome-extension://abcdefghijklmnop");
-        let host = Some("127.0.0.1:11435");
-
-        let focus_response = guarded_router()
-            .oneshot(guarded_request(
-                Method::POST,
-                "/focus",
-                extension_origin,
-                host,
-            ))
-            .await
-            .unwrap();
-        assert_eq!(focus_response.status(), StatusCode::NO_CONTENT);
-
-        let auth_response = guarded_router()
-            .oneshot(guarded_request(
-                Method::POST,
-                "/auth",
-                extension_origin,
-                host,
-            ))
-            .await
-            .unwrap();
-        assert_eq!(auth_response.status(), StatusCode::FORBIDDEN);
     }
 
     #[tokio::test]

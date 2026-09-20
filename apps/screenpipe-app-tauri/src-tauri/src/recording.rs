@@ -85,10 +85,7 @@ pub(crate) fn server_access_allowed(_store: &SettingsStore) -> bool {
     true
 }
 
-pub(crate) fn recording_access_allowed(
-    _app: &tauri::AppHandle,
-    _store: &SettingsStore,
-) -> bool {
+pub(crate) fn recording_access_allowed(_app: &tauri::AppHandle, _store: &SettingsStore) -> bool {
     true
 }
 
@@ -190,10 +187,7 @@ pub struct RecordingState {
 
 /// Install a fully constructed capture session before activating any monitor
 /// that can synchronously request its teardown.
-pub(crate) fn install_capture_session(
-    slot: &mut Option<CaptureSession>,
-    session: CaptureSession,
-) {
+pub(crate) fn install_capture_session(slot: &mut Option<CaptureSession>, session: CaptureSession) {
     *slot = Some(session);
     slot.as_ref()
         .expect("capture session was just installed")
@@ -631,10 +625,7 @@ pub async fn start_capture(
             port
         );
         let _ = app.emit("request-server-restart", ());
-        return Err(format!(
-            "服务器在端口 {} 无响应——已请求完整重启",
-            port
-        ));
+        return Err(format!("服务器在端口 {} 无响应——已请求完整重启", port));
     }
 
     restore_interrupted_meeting_for_capture_restart(&state).await?;
@@ -1113,9 +1104,7 @@ async fn spawn_screenpipe_inner(
             OSPermissionStatus::RestartRequired => {
                 "屏幕录制权限已授予，但 screenpipe 必须重启后才能生效。"
             }
-            _ => {
-                "需要屏幕录制权限。请授予权限并重启应用。"
-            }
+            _ => "需要屏幕录制权限。请授予权限并重启应用。",
         };
         return Err(error.to_string());
     }
@@ -1196,27 +1185,15 @@ async fn spawn_screenpipe_inner(
     // topic with either a per-run or stable continued session id (see the matching
     // helper in `apps/screenpipe-app-tauri/lib/events/types.ts`).
     let app_for_pipe = app.clone();
-    let app_for_owned = app.clone();
     let app_for_port_conflict = app.clone();
 
-    // Owned-browser: create the connect-side instance and kick off the
-    // webview install in the background. The engine starts immediately;
-    // the handle attaches when the WebviewWindow is ready.
-    //
-    // `spawn_install_when_ready` survives tray-only mode by listening for
-    // `window-focused` events instead of giving up after a fixed budget.
-    let owned_browser = screenpipe_connect::connections::browser::OwnedBrowser::default_instance();
-    crate::owned_browser::spawn_install_when_ready(
-        app_for_owned,
-        recording_config.data_dir.clone(),
-        owned_browser.clone(),
-    );
     let pipe_agent_events = crate::agent_event_emitter::PipeAgentEventEmitter::new(app_for_pipe);
-    let on_pipe_output: Option<screenpipe_core::pipes::OnPipeOutputLine> = Some(
-        std::sync::Arc::new(move |pipe_name: &str, exec_id: i64, continues_chat: bool, line: &str| {
-            pipe_agent_events.emit_line(pipe_name, exec_id, continues_chat, line);
-        }),
-    );
+    let on_pipe_output: Option<screenpipe_core::pipes::OnPipeOutputLine> =
+        Some(std::sync::Arc::new(
+            move |pipe_name: &str, exec_id: i64, continues_chat: bool, line: &str| {
+                pipe_agent_events.emit_line(pipe_name, exec_id, continues_chat, line);
+            },
+        ));
 
     // Oneshot for result
     let (result_tx, result_rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
@@ -1242,13 +1219,7 @@ async fn spawn_screenpipe_inner(
 
             server_runtime.block_on(async move {
                 // Phase 1: Start server
-                let server = match ServerCore::start(
-                    &recording_config,
-                    on_pipe_output,
-                    Some(owned_browser),
-                )
-                .await
-                {
+                let server = match ServerCore::start(&recording_config, on_pipe_output).await {
                     Ok(s) => s,
                     Err(e) => {
                         error!("Failed to start server core: {}", e);

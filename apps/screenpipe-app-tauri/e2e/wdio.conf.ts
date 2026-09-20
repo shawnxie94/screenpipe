@@ -98,7 +98,7 @@ export const config: TestrunnerConfig = {
   // CI-only: retry a whole spec file on transient WebDriver glitches
   // (e.g. "Session not found" on WebKit) before failing the run. The suite has
   // a distributed ~1-flaky-failure-per-run rate spread across different specs
-  // (focus-server, owned-browser, timeline, etc.), so a single retry wasn't
+  // (focus-server, timeline, window-lifecycle, etc.), so a single retry wasn't
   // enough and a different spec reddened E2E almost every run. Three retries
   // make a genuine flake (which passes most of the time) very unlikely to
   // survive, while a truly broken spec still fails every attempt.

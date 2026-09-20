@@ -123,8 +123,7 @@ fn ensure_ephemeral_side_chat_backend_supported(
 ) -> Result<(), String> {
     if is_ephemeral_side_conversation_id(session_id) && uses_acp {
         return Err(
-            "临时侧聊不支持 coding-agent 预设，因为 ACP 无法保证会话历史是临时的"
-                .to_string(),
+            "临时侧聊不支持 coding-agent 预设，因为 ACP 无法保证会话历史是临时的".to_string(),
         );
     }
     Ok(())
@@ -311,10 +310,7 @@ fn coding_workspace_resource_args(project_dir: &Path) -> Result<Vec<String>, Str
     let mut extension_names = MANAGED_PI_EXTENSION_FILES
         .iter()
         .copied()
-        .chain([
-            "chat-control.ts",
-            "context-usage.ts",
-        ])
+        .chain(["chat-control.ts", "context-usage.ts"])
         .collect::<Vec<_>>();
     extension_names.sort();
     extension_names.dedup();
@@ -1544,10 +1540,7 @@ fn npm_install_command(install_dir: &Path) -> Command {
 
 fn verify_pi_package_install(install_dir: &Path) -> Result<(), String> {
     match local_pi_install_integrity_error(install_dir) {
-        Some(error) => Err(format!(
-            "Pi 安装已完成，但依赖校验失败：{}",
-            error
-        )),
+        Some(error) => Err(format!("Pi 安装已完成，但依赖校验失败：{}", error)),
         None => Ok(()),
     }
 }
@@ -1664,10 +1657,7 @@ fn run_pi_package_install_once(install_dir: &Path, bun: &str) -> Result<(), Stri
                         bun_failure,
                         format_install_failure("npm", &npm_output)
                     )),
-                    Err(e) => Err(format!(
-                        "{}；npm 兜底安装无法运行：{}",
-                        bun_failure, e
-                    )),
+                    Err(e) => Err(format!("{}；npm 兜底安装无法运行：{}", bun_failure, e)),
                 }
             } else {
                 Err(bun_failure)
@@ -1925,8 +1915,7 @@ fn seed_pi_project_trust(project_dir: &str) -> Result<(), String> {
     }
     let body = serde_json::to_string_pretty(&map)
         .map_err(|e| format!("Failed to serialize trust.json: {}", e))?;
-    std::fs::write(&trust_path, body)
-        .map_err(|e| format!("Failed to write trust.json: {}", e))?;
+    std::fs::write(&trust_path, body).map_err(|e| format!("Failed to write trust.json: {}", e))?;
     debug!("seeded pi project trust for {:?}", trust_path);
     Ok(())
 }
@@ -2164,9 +2153,7 @@ fn anthropic_model_requires_adaptive_thinking(model: &str) -> bool {
 /// We merge instead of rebuilding from scratch to avoid a race condition where
 /// concurrent pipes overwrite each other's providers.
 #[cfg(test)]
-async fn build_models_json(
-    provider_config: Option<&PiProviderConfig>,
-) -> serde_json::Value {
+async fn build_models_json(provider_config: Option<&PiProviderConfig>) -> serde_json::Value {
     build_models_json_with_provider(provider_config).await
 }
 
@@ -2302,15 +2289,9 @@ async fn build_models_json_with_provider(
 }
 
 /// Write pi's provider config (models.json + auth.json).
-async fn ensure_pi_config(
-    provider_config: Option<&PiProviderConfig>,
-) -> Result<(), String> {
-    if provider_config.is_some_and(|config| {
-        matches!(config.provider.as_str(), "pi")
-    }) {
-        return Err(
-            "Screenpipe 托管 AI 已下线。请选择本地或第三方提供商。".to_string(),
-        );
+async fn ensure_pi_config(provider_config: Option<&PiProviderConfig>) -> Result<(), String> {
+    if provider_config.is_some_and(|config| matches!(config.provider.as_str(), "pi")) {
+        return Err("Screenpipe 托管 AI 已下线。请选择本地或第三方提供商。".to_string());
     }
 
     let config_dir = get_pi_config_dir()?;
@@ -2432,10 +2413,7 @@ async fn stop_session_if_idle(state: &PiState, sid: &str) -> PiInfo {
         };
         if idle_stop_decision(
             manager.starting,
-            pi_session_has_in_flight_work(
-                manager.queue_state.as_ref(),
-                &manager.pending_responses,
-            ),
+            pi_session_has_in_flight_work(manager.queue_state.as_ref(), &manager.pending_responses),
         ) == IdleStopDecision::Keep
         {
             if manager.starting {
@@ -2533,8 +2511,7 @@ pub async fn pi_start_and_prompt(
     if !started.running {
         return Err("Pi did not start".to_string());
     }
-    let request_id =
-        pi_prompt_inner(&app, state.inner(), &session_id, message, None, None).await?;
+    let request_id = pi_prompt_inner(&app, state.inner(), &session_id, message, None, None).await?;
     info!(
         "pi_start_and_prompt stage=prompt_accepted session='{}' request_id='{}'",
         session_id, request_id
@@ -2627,9 +2604,7 @@ fn pi_registry_provider(provider: &str, url: &str) -> Result<&'static str, Strin
         "anthropic" => "anthropic-byok",
         "custom" if !url.is_empty() => "custom",
         "acp" => return Err(ACP_PRESET_WITHOUT_BACKEND.to_string()),
-        "pi" => {
-            return Err("Screenpipe 托管 AI 已下线。请选择本地或第三方提供商。".to_string())
-        }
+        "pi" => return Err("Screenpipe 托管 AI 已下线。请选择本地或第三方提供商。".to_string()),
         _ => return Err(format!("不支持的 AI 提供商：{provider}")),
     })
 }
@@ -2684,8 +2659,7 @@ pub async fn pi_start_inner(
         .map(|workspace| workspace.path().to_path_buf())
         .unwrap_or_else(|| PathBuf::from(&project_dir));
     let launch_dir_key = screenpipe_core::agents::worktree::portable_path(&launch_dir);
-    let launch_fingerprint =
-        pi_launch_fingerprint(&launch_dir_key, provider_config.as_ref());
+    let launch_fingerprint = pi_launch_fingerprint(&launch_dir_key, provider_config.as_ref());
     let mut extension_safe_mode = pi_extension_safe_mode_enabled(&project_dir);
     let sid = session_id.to_string();
 
@@ -3308,12 +3282,10 @@ pub async fn pi_start_inner(
         apply_local_api_context(&mut cmd, &api);
     }
 
-    // Tag this chat's local API calls with its session id so the owned-browser
-    // sidebar reveals the agent's browser only in the chat that launched it.
+    // Tag this chat's local API calls with its session id so runtime activity
+    // remains attributable to the conversation that launched the agent.
     // `sid` equals the frontend `conversationId`; the bash shim forwards it as
-    // x-screenpipe-session and the navigate handler rides it to the frontend.
-    // If the user switches to another chat mid-run, this agent's later
-    // navigations no longer match the on-screen conversation and stay hidden.
+    // x-screenpipe-session for request correlation across the local runtime.
     cmd.env("SCREENPIPE_SESSION_ID", &sid);
 
     // Chat session ID for per-session artifact isolation
@@ -3402,7 +3374,10 @@ pub async fn pi_start_inner(
         .map_err(|e| format!("Failed to spawn pi: {}", e))?;
 
     let pid = child.id();
-    info!("pi_start stage=process_spawned session='{}' pid={}", sid, pid);
+    info!(
+        "pi_start stage=process_spawned session='{}' pid={}",
+        sid, pid
+    );
 
     // Take stdin for writing commands
     let stdin = child
@@ -3437,7 +3412,9 @@ pub async fn pi_start_inner(
         m.is_acp = use_acp;
         m.starting = true;
         m.release_when_idle = false;
-        m.project_dir = Some(screenpipe_core::agents::worktree::portable_path(&launch_dir));
+        m.project_dir = Some(screenpipe_core::agents::worktree::portable_path(
+            &launch_dir,
+        ));
         m.launch_fingerprint = Some(launch_fingerprint);
         m.last_activity = std::time::Instant::now();
         // Fresh flag for this session — old reader threads keep their own Arc
@@ -3581,8 +3558,7 @@ pub async fn pi_start_inner(
             }
 
             if let Some(event) = parsed.as_ref() {
-                if event_type.as_deref() == Some("error")
-                    && sid_clone.contains("activity-history")
+                if event_type.as_deref() == Some("error") && sid_clone.contains("activity-history")
                 {
                     error!(
                         "Pi provider error (session {}): {}",
@@ -4122,15 +4098,7 @@ pub async fn pi_prompt(
     display_preview: Option<String>,
 ) -> Result<String, String> {
     let sid = session_id.unwrap_or_else(|| "chat".to_string());
-    pi_prompt_inner(
-        &app,
-        state.inner(),
-        &sid,
-        message,
-        images,
-        display_preview,
-    )
-    .await
+    pi_prompt_inner(&app, state.inner(), &sid, message, images, display_preview).await
 }
 
 pub(crate) async fn pi_prompt_inner(
@@ -5142,9 +5110,8 @@ fn package_command_failure(action: &str, output: &Output) -> String {
 }
 
 fn ensure_pi_cli_for_package_command() -> Result<(String, String), String> {
-    let bun = find_bun_executable().ok_or(
-        "未找到内置 bun。安装 Pi 扩展前请重启 screenpipe 或重新安装应用。",
-    )?;
+    let bun = find_bun_executable()
+        .ok_or("未找到内置 bun。安装 Pi 扩展前请重启 screenpipe 或重新安装应用。")?;
     let install_dir = pi_local_install_dir()
         .ok_or_else(|| "Cannot determine home directory for Pi install".to_string())?;
     std::fs::create_dir_all(&install_dir)
@@ -5157,9 +5124,7 @@ fn ensure_pi_cli_for_package_command() -> Result<(String, String), String> {
 
     let pi_path = find_local_pi_entrypoint()
         .or_else(find_pi_executable)
-        .ok_or_else(|| {
-            "Pi 未能安装完成。请重启 screenpipe 后重试。".to_string()
-        })?;
+        .ok_or_else(|| "Pi 未能安装完成。请重启 screenpipe 后重试。".to_string())?;
 
     Ok((bun, pi_path))
 }
@@ -7879,7 +7844,10 @@ error: InstallFailed extracting tarball"#;
         // Screenpipe skills materialize under the fresh project's .pi/skills.
         super::ensure_screenpipe_skill(project_dir).expect("seed skills");
         let skills_dir = project.path().join(".pi").join("skills");
-        assert!(skills_dir.is_dir(), "skills dir must exist on a fresh profile");
+        assert!(
+            skills_dir.is_dir(),
+            "skills dir must exist on a fresh profile"
+        );
         assert!(
             std::fs::read_dir(&skills_dir)
                 .expect("read skills")
@@ -7888,8 +7856,7 @@ error: InstallFailed extracting tarball"#;
             "at least one screenpipe skill must be seeded on a fresh profile"
         );
 
-        super::ensure_context_usage_extension(project_dir)
-            .expect("seed context-usage extension");
+        super::ensure_context_usage_extension(project_dir).expect("seed context-usage extension");
         assert!(
             project
                 .path()

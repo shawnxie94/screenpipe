@@ -1356,15 +1356,6 @@ dependencies = [
 
 [[package]]
 name = "block-padding"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a8894febbff9f758034a5b8e12d87918f56dfc64a8e1fe757d65e29041538d93"
-dependencies = [
- "generic-array 0.14.7",
-]
-
-[[package]]
-name = "block-padding"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "710f1dd022ef4e93f8a438b4ba958de7f64308434fa6a87104481645cc30068b"
@@ -1658,15 +1649,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dec551ab6e7578819132c713a93c022a05d60159dc86e7a7050223577484c55a"
 dependencies = [
  "rustversion",
-]
-
-[[package]]
-name = "cbc"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26b52a9543ae338f279b96b0b9fed9c8093744685043739079ce85cd58f289a6"
-dependencies = [
- "cipher 0.4.4",
 ]
 
 [[package]]
@@ -5948,7 +5930,6 @@ version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "879f10e63c20629ecabbb64a8010319738c66a5cd0c29b02d63d272b03751d01"
 dependencies = [
- "block-padding 0.3.3",
  "generic-array 0.14.7",
 ]
 
@@ -5958,7 +5939,7 @@ version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4250ce6452e92010fdf7268ccc5d14faa80bb12fc741938534c58f16804e03c7"
 dependencies = [
- "block-padding 0.4.2",
+ "block-padding",
  "hybrid-array",
 ]
 
@@ -8880,7 +8861,7 @@ checksum = "63d440a804ec8d6fafbb6b84471e013286658d373248927692ab3366686220ca"
 dependencies = [
  "aes 0.9.0",
  "aes-gcm 0.11.0",
- "cbc 0.2.1",
+ "cbc",
  "der 0.8.0",
  "pbkdf2 0.13.0",
  "rand_core 0.10.1",
@@ -10129,10 +10110,10 @@ checksum = "da7c230e0ed9cbeb92fbad6c8848985d6df2a1464c0dc247a021abd666e9005e"
 dependencies = [
  "aes 0.9.0",
  "bitflags 2.11.0",
- "block-padding 0.4.2",
+ "block-padding",
  "byteorder",
  "bytes",
- "cbc 0.2.1",
+ "cbc",
  "cipher 0.5.2",
  "crypto-bigint 0.7.5",
  "ctr 0.10.1",
@@ -10618,7 +10599,6 @@ dependencies = [
 name = "screenpipe-app"
 version = "2.7.13"
 dependencies = [
- "aes 0.8.4",
  "aes-gcm 0.10.3",
  "anyhow",
  "arboard",
@@ -10629,7 +10609,6 @@ dependencies = [
  "block",
  "block2 0.6.2",
  "bytes",
- "cbc 0.1.2",
  "cc",
  "chrono",
  "cocoa 0.26.1",
@@ -10683,7 +10662,6 @@ dependencies = [
  "screenpipe-screen",
  "screenpipe-secrets",
  "screenpipe-vault",
- "security-framework",
  "serde",
  "serde_json",
  "serde_yaml",

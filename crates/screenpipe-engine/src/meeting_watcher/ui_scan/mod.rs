@@ -82,7 +82,7 @@ pub async fn run_meeting_detection_loop(
     close_orphaned_meetings_on_start: bool,
     ignored_meeting_apps: Vec<String>,
 ) {
-    let profiles = load_detection_profiles();
+    let profiles = load_active_detection_profiles();
     let scanner = Arc::new(MeetingUiScanner::new());
     let mut state = MeetingState::Idle;
     let base_interval = scan_interval.unwrap_or(ACTIVE_SCAN_INTERVAL);
@@ -182,11 +182,8 @@ pub async fn run_meeting_detection_loop(
         // Drain pending calendar events (non-blocking).
         // Each publish replaces the full list, so we keep only the latest.
         while let Some(event) = cal_sub.next().now_or_never().flatten() {
-            let incoming: Vec<CalendarEventSignal> = event
-                .data
-                .into_iter()
-                .filter(|e| !e.is_all_day)
-                .collect();
+            let incoming: Vec<CalendarEventSignal> =
+                event.data.into_iter().filter(|e| !e.is_all_day).collect();
             merge_calendar_updates(&mut calendar_events, incoming);
         }
 

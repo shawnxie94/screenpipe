@@ -5,6 +5,7 @@
 //! transitions, profile signal matching, and lifecycle persistence.
 
 use super::*;
+use crate::meeting_watcher::shared::profiles::load_detection_profiles;
 
 #[test]
 fn output_audio_keepalive_requires_real_voice_not_just_a_chunk() {

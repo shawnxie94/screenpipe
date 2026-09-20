@@ -378,14 +378,11 @@ Common patterns: `GROUP BY date(timestamp)` (daily), `GROUP BY strftime('%H:00',
 ```bash
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
   "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections"          # list local integrations
-curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/ntfy"     # status + non-secret settings
 ```
 
-Each entry's `description` is self-describing — for control surfaces (browsers, agents, import channels) it includes the exact endpoint + body shape. Read it before guessing. If not connected, tell the user to set it up from the Connections page in the desktop app.
+Each entry's `description` is self-describing. Read it before guessing. If not connected, tell the user to set it up from the Connections page in the desktop app.
 
-Connection reads return status and declared non-secret settings only. Stored secrets never appear in API responses. Current integrations are local-first — there is no hosted push service:
-- **ntfy (push notifications)**: `POST /connections/<id>/proxy` with the notification body (plain text or JSON); the server resolves the secret topic URL so it never enters the model context.
+Connection reads return status and declared non-secret settings only. Stored secrets never appear in API responses. Current integrations are local-first:
 - **Obsidian / Logseq (local vaults)**: no HTTP API — write `.md` files straight to the configured directory with bash, as each `description` instructs.
 - **Agents (claude_code, codex, openclaw, hermes)**: drive a local coding agent; endpoints live in each `description`.
 - **IMAP (read)**: dedicated routes — `GET /connections/imap/messages`, `GET /connections/imap/mailboxes`.
@@ -397,23 +394,6 @@ Connection reads return status and declared non-secret settings only. Stored sec
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
   "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/calendar/events?hours_back=0&hours_ahead=72"
 # also: /connections/ics-calendar/events
-```
-
-**Browser control (`owned-default`)** — an embedded browser, shown in the chat. Cookies persist (isolated profile); password fields are stripped from snapshots. Try snapshot first; reach for eval only when needed.
-```bash
-# Navigate → {"ok":true,"url":"<final>"}
-curl -X POST -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" -H "Content-Type: application/json" \
-  -d '{"url":"https://en.wikipedia.org/wiki/Giraffe"}' \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/browsers/owned-default/navigate"
-
-# Snapshot (no JS) → {title, url, tree:"[h1] ...\n  [a] ... → /href", truncated}. Best for "what's on the page?".
-curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/browsers/owned-default/snapshot"
-
-# Eval (escape hatch) — arbitrary JS return value, for clicks / values the snapshot tree omits.
-curl -X POST -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" -H "Content-Type: application/json" \
-  -d '{"code":"return [...document.querySelectorAll(\".title>a\")].slice(0,5).map(a=>a.innerText)"}' \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/browsers/owned-default/eval"
 ```
 
 **Connector channels — office & RSS (separate surface)**

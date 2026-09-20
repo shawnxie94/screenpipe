@@ -231,30 +231,6 @@ export function classifyCurl(cmd: string): CurlPresentation | null {
     return { label: `获取了说话人 #${id}` };
   }
 
-  if (path === "/connections/browsers/owned-default/navigate") {
-    const body = curlBodyJson(cmd);
-    if (body && typeof body.url === "string") {
-      const target = webTargetFromUrlString(body.url, "navigate");
-      if (target) return { label: `在代理浏览器中打开了 ${target.domain}`, webTarget: target };
-    }
-    return { label: "在代理浏览器中导航" };
-  }
-  if (path === "/connections/browsers/owned-default/eval") {
-    const body = curlBodyJson(cmd);
-    if (body && typeof body.url === "string") {
-      const target = webTargetFromUrlString(body.url, "eval");
-      if (target) return { label: `在 ${target.domain} 上运行了 JS`, webTarget: target };
-    }
-    return { label: "在代理浏览器中运行了 JS" };
-  }
-  if (path.startsWith("/connections/browsers/") && path.endsWith("/act")) {
-    const body = curlBodyJson(cmd);
-    const action = body && typeof body.action === "string" ? body.action : "act";
-    const ref = body && typeof body.ref === "string" ? ` #${body.ref.replace(/^#/, "")}` : "";
-    return { label: `在代理浏览器中执行了 ${action}${ref}` };
-  }
-  if (path.startsWith("/connections/browsers/")) return { label: "代理浏览器操作" };
-
   if (path === "/connections") {
     return { label: "列出了连接", connectionIconName: "connections" };
   }

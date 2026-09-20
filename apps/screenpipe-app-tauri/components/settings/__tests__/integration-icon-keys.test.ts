@@ -16,7 +16,7 @@ import { connectionNameToId } from "../../../lib/utils/connection-chip";
 describe("INTEGRATION_ICON_KEYS", () => {
   it("is non-empty and includes core integrations", () => {
     expect(INTEGRATION_ICON_KEYS.size).toBeGreaterThan(0);
-    for (const id of ["obsidian", "feishu", "ntfy", "claude"]) {
+    for (const id of ["obsidian", "feishu", "rss", "claude"]) {
       expect(INTEGRATION_ICON_KEYS.has(id)).toBe(true);
     }
   });
@@ -36,11 +36,11 @@ describe("INTEGRATION_ICON_KEYS", () => {
 
 describe("isMcpOAuthProviderTileConnected", () => {
   it("treats an enabled MCP provider server as a connected tile", () => {
-    expect(isMcpOAuthProviderTileConnected("jira", false, { jira: true })).toBe(true);
+    expect(isMcpOAuthProviderTileConnected("notion", false, { notion: true })).toBe(true);
   });
 
   it("preserves existing API connections for MCP-backed providers", () => {
-    expect(isMcpOAuthProviderTileConnected("jira", true, { jira: false })).toBe(true);
+    expect(isMcpOAuthProviderTileConnected("notion", true, { notion: false })).toBe(true);
   });
 
   it("does not apply MCP provider state to unrelated connections", () => {

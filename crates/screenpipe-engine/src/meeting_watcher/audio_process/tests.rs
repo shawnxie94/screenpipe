@@ -6,9 +6,9 @@
 
 use super::*;
 use crate::meeting_watcher::shared::calendar::{
-    find_calendar_event_for_meeting, find_overlapping_calendar_event, stable_event_key,
-    CalendarMatchMethod,
+    find_calendar_event_for_meeting, stable_event_key, CalendarMatchMethod,
 };
+use crate::meeting_watcher::shared::profiles::load_detection_profiles;
 use screenpipe_db::DatabaseManager;
 
 fn chrome_process() -> AudioInputProcess {

@@ -130,16 +130,6 @@ pub struct AppState {
     pub vault: screenpipe_vault::VaultManager,
     /// Active manually-started meeting id (set via POST /meetings/start, cleared via POST /meetings/stop)
     pub manual_meeting: Arc<tokio::sync::RwLock<Option<i64>>>,
-    /// Browser extension bridge — relays JS eval requests to the connected extension
-    pub browser_bridge: Arc<crate::routes::browser::BrowserBridge>,
-    /// Registry of every browser the agent can drive — user's real browser via
-    /// the extension, the app-managed owned webview, future remote-CDP backends.
-    /// `GET /connections/browsers` lists what's here.
-    pub browser_registry: Arc<screenpipe_connect::connections::browser::BrowserRegistry>,
-    /// The owned-browser instance (Tauri-managed webview) registered into
-    /// `browser_registry`. Held separately so the desktop shell can attach a
-    /// transport handle after the engine has started.
-    pub owned_browser: Arc<screenpipe_connect::connections::browser::OwnedBrowser>,
     /// When true, non-localhost requests require Authorization: Bearer <api_key>
     pub api_auth: bool,
     /// The API key to validate against (from SCREENPIPE_API_KEY or auth.json)
@@ -184,11 +174,6 @@ pub struct SCServer {
     pub mcp_session_access: Option<screenpipe_core::pipes::mcp_access::McpSessionAccessRegistry>,
     /// Shared manual meeting lock — pass in from binary so persister and server share the same state.
     pub manual_meeting: Option<Arc<tokio::sync::RwLock<Option<i64>>>>,
-    /// Owned browser instance — set by the desktop shell so it can attach an
-    /// OwnedWebviewHandle once the Tauri WebviewWindow is created. If unset,
-    /// the engine creates a default unattached instance and owned-browser
-    /// requests return 503 until a handle is wired up.
-    pub owned_browser: Option<Arc<screenpipe_connect::connections::browser::OwnedBrowser>>,
     /// Require auth for remote API access
     pub api_auth: bool,
     /// API key for remote auth validation
@@ -246,8 +231,6 @@ pub(crate) fn is_api_auth_exempt_path(path: &str) -> bool {
         || path == "/ws/health"
         || path == "/audio/device/status"
         || path == "/vision/device/status"
-        || path == "/connections/browser/pair/start"
-        || path == "/connections/browser/pair/status"
         || path == "/notify"
         || path.starts_with("/pipes/store")
 }
@@ -295,7 +278,6 @@ impl SCServer {
             pipe_permissions: Arc::new(DashMap::new()),
             mcp_session_access: None,
             manual_meeting: None,
-            owned_browser: None,
             api_auth: false,
             api_auth_key: None,
             secret_store: None,
@@ -751,8 +733,6 @@ mod tests {
             "/health",
             "/ws/health",
             "/audio/device/status",
-            "/connections/browser/pair/start",
-            "/connections/browser/pair/status",
             "/notify",
             "/pipes/store",
             "/pipes/store/foo",

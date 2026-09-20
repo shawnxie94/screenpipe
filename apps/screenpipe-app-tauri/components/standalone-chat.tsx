@@ -10,12 +10,10 @@ import { deleteConversationFile } from "@/lib/chat-storage";
 import { writeActiveAiPresetId } from "@/lib/active-ai-preset";
 import { useSettings } from "@/lib/hooks/use-settings";
 import { cn } from "@/lib/utils";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SchedulePromptDialog } from "@/components/chat/schedule-prompt-dialog";
 import { AcpSignInDialog, type AcpSignInRequest } from "@/components/chat/standalone/acp-sign-in-dialog";
 import { acpAdapterInfo } from "@/lib/utils/preset-appearance";
-import { BrowserSidebar } from "@/components/browser-sidebar";
 import { toast } from "@/components/ui/use-toast";
 import type { AIPreset, JsonValue } from "@/lib/utils/tauri";
 // OpenAI SDK no longer used directly — all providers route through Pi agent
@@ -751,22 +749,9 @@ export function StandaloneChat({
     consumePendingAttachments,
     stagePendingAttachments,
   } = useNextTurnAttachments(conversationId);
-  const {
-    filePreview,
-    openFilePreview,
-    closeFilePreview,
-    selectFilePreview,
-    setFilePreviewPanelOpen,
-  } = useChatFilePreview(conversationId);
+  const { openFilePreview } = useChatFilePreview(conversationId);
   const { inspectorOpen, setInspectorOpen, outputs: inspectorOutputs, sources: inspectorSources } =
     useChatInspector(messages, pipeRunArtifactSource);
-  const [browserPanelState, setBrowserPanelState] = useState({
-    hasUrl: false,
-    open: false,
-  });
-  const sidePanelHasContent =
-    (filePreview?.paths.length ?? 0) > 0 || browserPanelState.hasUrl;
-  const sidePanelOpen = browserPanelState.open;
   const inspectorHasContent =
     inspectorOutputs.length > 0 ||
     inspectorSources.length > 0;
@@ -778,28 +763,6 @@ export function StandaloneChat({
   const toggleInspector = useCallback(() => {
     setInspectorOpen(!inspectorOpen);
   }, [inspectorOpen, setInspectorOpen]);
-
-  const toggleBrowserPanel = useCallback(() => {
-    if (sidePanelHasContent) {
-      window.dispatchEvent(
-        new CustomEvent("screenpipe:browser-sidebar-toggle", {
-          detail: { action: "toggle" },
-        }),
-      );
-    }
-  }, [sidePanelHasContent]);
-
-  const handlePanelStateChange = useCallback(
-    (nextState: { hasUrl: boolean; open: boolean }) => {
-      setBrowserPanelState((currentState) =>
-        currentState.hasUrl === nextState.hasUrl &&
-        currentState.open === nextState.open
-          ? currentState
-          : nextState,
-      );
-    },
-    [],
-  );
 
   const currentQueueSessionId = conversationId ?? piSessionIdRef.current;
   const {
@@ -2201,9 +2164,7 @@ export function StandaloneChat({
         isMac={isMac}
         isFullscreen={isFullscreen}
         hideInlineHistory={hideInlineHistory}
-        hasRightActions={
-          hideInlineHistory || inspectorHasContent || inspectorOpen || sidePanelHasContent
-        }
+        hasRightActions={hideInlineHistory || inspectorHasContent || inspectorOpen}
         showHistory={showHistory}
         settings={settings}
         reloadStore={reloadStore}
@@ -2221,41 +2182,12 @@ export function StandaloneChat({
               sources={inspectorSources}
               onOpenFile={openFilePreview}
             />
-            {hideInlineHistory ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (sidePanelHasContent) {
-                    toggleBrowserPanel();
-                  } else {
-                    window.dispatchEvent(
-                      new CustomEvent("screenpipe:browser-sidebar-new-tab"),
-                    );
-                  }
-                }}
-                className={cn(
-                  "h-7 w-7",
-                  sidePanelOpen && "bg-muted ring-2 ring-primary ring-offset-1 ring-offset-background",
-                )}
-                title={sidePanelHasContent ? "切换侧边栏" : "打开浏览器标签页"}
-                aria-label={sidePanelHasContent ? "切换侧边栏" : "打开浏览器标签页"}
-                aria-pressed={sidePanelOpen}
-              >
-                {sidePanelOpen ? (
-                  <PanelRightClose size={14} />
-                ) : (
-                  <PanelRightOpen size={14} />
-                )}
-              </Button>
-            ) : null}
+
           </div>
         }
       />
 
-      <div className="flex-1 flex min-h-0" data-browser-panel-host>
+      <div className="flex-1 flex min-h-0">
       <div className="relative flex-1 flex flex-col min-w-0" data-firstrun-target="messages">
       <ChatMainPane
         firstRunLearningEnabled={firstRunLearningEnabled}
@@ -2525,26 +2457,6 @@ export function StandaloneChat({
         />
       ) : null}
 
-      {/* Agent-controlled embedded browser. Slides in from the right when
-          the agent navigates (or when restoring a chat that has saved
-          state). The actual page is rendered by a Tauri WebviewWindow
-          positioned over the placeholder div inside this component. */}
-      <BrowserSidebar
-        conversationId={conversationId}
-        additionalReservedWidth={
-          splitChatId && splitChatId !== conversationId ? 320 : 0
-        }
-        // Session id the agent process runs under (the value tagged as the
-        // navigation `owner` via x-screenpipe-session). Lets the sidebar reveal
-        // this chat's own agent navigations even if `conversationId` state lags.
-        agentSessionId={piSessionIdRef.current}
-        filePreview={filePreview}
-        onReplaceFilePreviewPath={openFilePreview}
-        onCloseFilePreviewPath={closeFilePreview}
-        onSelectFilePreviewPath={selectFilePreview}
-        onSetPanelOpen={setFilePreviewPanelOpen}
-        onPanelStateChange={handlePanelStateChange}
-      />
       </div> {/* End of horizontal chat+browser split */}
 
 

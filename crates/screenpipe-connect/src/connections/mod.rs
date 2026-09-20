@@ -8,14 +8,12 @@
 //! Pi receives credential-safe proxy or local endpoint instructions. Stored
 //! credentials are never rendered into model context.
 
-pub mod browser;
 pub mod claude_code;
 pub mod codex;
 pub mod email;
 pub mod hermes;
 pub mod imap;
 pub mod logseq;
-pub mod ntfy;
 pub mod obsidian;
 pub mod openclaw;
 
@@ -273,7 +271,6 @@ pub fn all_integrations() -> Vec<Box<dyn Integration>> {
         Box::new(imap::Imap),
         Box::new(obsidian::Obsidian),
         Box::new(logseq::Logseq),
-        Box::new(ntfy::Ntfy),
         Box::new(claude_code::ClaudeCode),
         Box::new(codex::Codex),
         Box::new(openclaw::OpenClaw),
@@ -970,7 +967,7 @@ mod tests {
             .mount(&server)
             .await;
         let client = build_client_for_with_timeouts(
-            &ntfy::Ntfy,
+            &email::Email,
             std::time::Duration::from_secs(1),
             std::time::Duration::from_millis(50),
         );
@@ -982,55 +979,6 @@ mod tests {
             .unwrap_err();
 
         assert!(error.is_timeout());
-    }
-
-    #[tokio::test]
-    async fn named_manual_instances_count_as_connected() {
-        let dir = temp_screenpipe_dir();
-        let mgr = ConnectionManager::new(dir.clone(), None);
-
-        let mut creds = Map::new();
-        creds.insert(
-            "topic_url".to_string(),
-            Value::String("https://ntfy.sh/e2e-topic".to_string()),
-        );
-        mgr.connect_instance("ntfy", Some("work"), creds)
-            .await
-            .unwrap();
-
-        let ntfy = mgr
-            .list()
-            .await
-            .into_iter()
-            .find(|connection| connection.def.id == "ntfy")
-            .unwrap();
-        assert!(ntfy.connected);
-
-        let _ = std::fs::remove_dir_all(dir);
-    }
-
-    #[tokio::test]
-    async fn render_context_includes_named_manual_instances() {
-        let dir = temp_screenpipe_dir();
-        let mgr = ConnectionManager::new(dir.clone(), None);
-
-        let mut creds = Map::new();
-        creds.insert(
-            "topic_url".to_string(),
-            Value::String("https://ntfy.sh/e2e-topic".to_string()),
-        );
-        mgr.connect_instance("ntfy", Some("work"), creds)
-            .await
-            .unwrap();
-
-        let context = render_context(&dir, 3030, None).await;
-        assert!(context.contains("## ntfy (ntfy, instance: work)"));
-        // No remaining integration registers a proxy, and the credential
-        // value must never leak into the model context regardless.
-        assert!(!context.contains("/proxy/<api-path>"));
-        assert!(!context.contains("https://ntfy.sh/e2e-topic"));
-
-        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[tokio::test]
@@ -1066,5 +1014,4 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(dir);
     }
-
 }

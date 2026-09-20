@@ -60,13 +60,6 @@ mod tests {
             None,
         ));
         assert!(!should_suppress_legacy_launchagent_focus(
-            Some("screenpipe"),
-            "screenpipe",
-            &[] as &[&str],
-            None,
-            Some("browser_pairing"),
-        ));
-        assert!(!should_suppress_legacy_launchagent_focus(
             None,
             "screenpipe",
             &executable,

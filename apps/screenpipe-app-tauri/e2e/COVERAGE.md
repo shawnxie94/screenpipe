@@ -10,9 +10,9 @@ and layer declared in the manifest, weighted by confidence and criticality.
 
 - Manifest: `e2e/coverage-map.json`
 - Specs directory: `e2e/specs`
-- Mapped specs: 123
-- Declared test blocks: 364
-- Weighted coverage points: 292.5
+- Mapped specs: 118
+- Declared test blocks: 362
+- Weighted coverage points: 291.4
 
 Confidence weights: strong=1.0, partial=0.7, conditional=0.4, smoke=0.3.
 Criticality weights: high=1.0, medium=0.7, low=0.4.
@@ -23,9 +23,9 @@ can execute more runtime cases than this number shows.
 
 | Platform | Specs | Declared tests | Weighted points | Layers | Features | Critical score |
 | --- | --- | --- | --- | --- | --- | --- |
-| windows | 97 | 312 | 261.8 | 14 | 110 | 81% |
-| macos | 119 | 326 | 262.3 | 14 | 118 | 84% |
-| linux | 86 | 272 | 232.2 | 13 | 107 | 76% |
+| windows | 92 | 310 | 260.6 | 14 | 107 | 81% |
+| macos | 114 | 324 | 261.2 | 14 | 115 | 84% |
+| linux | 86 | 271 | 231.2 | 13 | 105 | 76% |
 
 ## Runtime Results
 
@@ -39,18 +39,18 @@ pass/fail/skip counts.
 | --- | --- | --- | --- |
 | audio-device | 4 specs / 32 tests / 21.8 pts | 2 specs / 4 tests / 1.6 pts | - |
 | capture-ocr | 2 specs / 16 tests / 6.4 pts | 9 specs / 13 tests / 5.8 pts | 1 specs / 3 tests / 1.2 pts |
-| chat-ai | 37 specs / 87 tests / 71.3 pts | 46 specs / 109 tests / 83.8 pts | 35 specs / 86 tests / 70.8 pts |
-| local-api | 28 specs / 114 tests / 95.0 pts | 36 specs / 106 tests / 89.5 pts | 23 specs / 82 tests / 73.2 pts |
+| chat-ai | 36 specs / 86 tests / 70.3 pts | 45 specs / 108 tests / 82.8 pts | 35 specs / 85 tests / 69.8 pts |
+| local-api | 27 specs / 114 tests / 95.0 pts | 35 specs / 106 tests / 89.5 pts | 23 specs / 82 tests / 73.2 pts |
 | notifications | 4 specs / 26 tests / 17.3 pts | 2 specs / 4 tests / 3.1 pts | 2 specs / 4 tests / 3.1 pts |
 | onboarding | 9 specs / 38 tests / 33.8 pts | 10 specs / 39 tests / 34.2 pts | 9 specs / 38 tests / 33.8 pts |
-| os-integration | 7 specs / 32 tests / 26.9 pts | 15 specs / 30 tests / 18.4 pts | 2 specs / 15 tests / 10.8 pts |
+| os-integration | 4 specs / 31 tests / 26.8 pts | 12 specs / 29 tests / 18.3 pts | 2 specs / 15 tests / 10.8 pts |
 | performance | 3 specs / 45 tests / 45.0 pts | 5 specs / 36 tests / 31.8 pts | 2 specs / 30 tests / 30.0 pts |
 | pipes | 5 specs / 15 tests / 15.0 pts | 6 specs / 20 tests / 20.0 pts | 5 specs / 15 tests / 15.0 pts |
-| real-ui-e2e | 70 specs / 210 tests / 180.5 pts | 83 specs / 221 tests / 188.5 pts | 65 specs / 188 tests / 167.5 pts |
+| real-ui-e2e | 68 specs / 209 tests / 179.5 pts | 81 specs / 220 tests / 187.5 pts | 65 specs / 187 tests / 166.5 pts |
 | settings | 9 specs / 33 tests / 30.9 pts | 9 specs / 25 tests / 22.3 pts | 8 specs / 24 tests / 21.9 pts |
-| storage-privacy | 10 specs / 44 tests / 35.3 pts | 10 specs / 29 tests / 28.1 pts | 7 specs / 22 tests / 21.1 pts |
+| storage-privacy | 9 specs / 44 tests / 35.3 pts | 9 specs / 29 tests / 28.1 pts | 7 specs / 22 tests / 21.1 pts |
 | tauri-command | 22 specs / 60 tests / 48.0 pts | 29 specs / 75 tests / 58.3 pts | 22 specs / 63 tests / 49.8 pts |
-| window-lifecycle | 21 specs / 69 tests / 58.5 pts | 22 specs / 52 tests / 38.9 pts | 16 specs / 44 tests / 34.4 pts |
+| window-lifecycle | 18 specs / 68 tests / 58.4 pts | 19 specs / 51 tests / 38.8 pts | 16 specs / 44 tests / 34.4 pts |
 
 ## Critical Feature Matrix
 
@@ -94,7 +94,7 @@ pass/fail/skip counts.
 
 ## Execution Integrity
 
-- Specs that claim coverage but contain zero executable test blocks: owned-browser-tabs.spec.ts, zz-owned-browser-background-nav.spec.ts, zzz-browser-state-chat-switch.spec.ts, zzz-owned-browser-headless.spec.ts. They assert nothing and no longer count toward any critical feature.
+- Every mapped spec declares at least one executable test block.
 - Declared coverage below is NOT reconciled against execution: no runtime results
   were supplied. Specs can self-skip on hosted runners (no display, vision off,
   recording disabled) and still read as covered. Run `e2e:coverage:runtime` (or pass
@@ -157,7 +157,7 @@ pass/fail/skip counts.
 | chat-turn-liveness.spec.ts | windows, macos, linux | chat-ai, real-ui-e2e | chat, chat-streaming, offline-recovery | high | strong | real-user-flow | 1 | The real desktop chat turns off its active phosphor signal and explains that a message is saved when WebView connectivity drops, restores active state on reconnect, and exposes a silent harness after the bounded no-event deadline. |
 | chat-window.spec.ts | windows, macos, linux | chat-ai, window-lifecycle, real-ui-e2e | chat, window-lifecycle | high | strong | real-user-flow | 2 | Opens Chat and focuses the composer for typing. A chat saved from the floating window syncs into Home's Recents without becoming a second Home working tab. |
 | chat-within-session-context-loss.spec.ts | macos | chat-ai | chat, chat-context | medium | conditional | synthetic | 5 | macOS-only within-chat context retention regression. |
-| chat-workspace-tabs.spec.ts | windows, macos, linux | chat-ai, real-ui-e2e | chat, chat-tabs, chat-split-pane, owned-browser, browser-session-consent, right-panel-tabs | high | strong | real-user-flow | 2 | Native pointer clicks reach tabs, close, and new-chat controls above the window drag region; unused mount placeholders do not create extra untitled tabs. Multiple real chats remain in a non-destructive working set, a second live transcript stays visible, and promoting it swaps primary composer ownership. Back-to-back owned-browser navigation and consent events keep the login prompt visible without a false loading animation, retain the current address, and render both browser chrome rows at 36px. |
+| chat-workspace-tabs.spec.ts | windows, macos, linux | chat-ai, real-ui-e2e | chat, chat-tabs, chat-split-pane, right-panel-tabs | high | strong | real-user-flow | 1 | Native pointer clicks reach tabs, close, and new-chat controls above the window drag region; unused mount placeholders do not create extra untitled tabs. Multiple real chats remain in a non-destructive working set, a second live transcript stays visible, and promoting it swaps primary composer ownership. |
 | connected-share.spec.ts | windows, macos, linux | real-ui-e2e, local-api | meeting-notes, brain-overview, live-views, connections | high | strong | real-user-flow | 1 | Exercises the Send snapshot dialog from meeting notes and Live Views across disconnected setup, connected direct-send, receipt, and Chat-draft destinations, with mocked connection APIs and screenshot coverage. |
 | db-hard-fault-fail-closed.spec.ts | windows, macos, linux | local-api, tauri-command, real-ui-e2e | database-hard-fault-containment, app-launch | high | strong | mixed | 1 | Opt-in packaged-desktop regression: causes real SQLITE_CORRUPT in the isolated E2E database, then proves the engine API and database owners stop while the desktop stays alive and does not respawn across the watchdog window. |
 | first-run-agent-handoff.spec.ts | windows, macos, linux | onboarding, real-ui-e2e | onboarding, first-run-learning, mcp-registration | high | partial | real-user-flow | 4 | Agent handoff beside the first-run summary: the summary stays primary and clickable whether or not an agent is offered, an offered target is never nameless or unclickable, the filesystem probe cannot break the ready banner or the summary click-through, opening the result collapses into the compact setup dock, and the paste instruction appears only after the handoff runs. Waits for the async probe before concluding absence. Does not assert WHICH agent: detectAiTools resolves the real home in the webview (SCREENPIPE_E2E_AI_TOOLS_HOME is Rust-only), so selection is host-dependent and is covered in lib/first-run/agent-handoff.test.ts and use-agent-handoff.test.ts. |
@@ -192,8 +192,6 @@ pass/fail/skip counts.
 | onboarding-h1-follow-up.spec.ts | windows, macos, linux | onboarding, notifications, pipes, real-ui-e2e | onboarding, notifications, pipes | high | strong | real-user-flow | 1 | A due H1 activation runs its real Pipe, sends one visible prompt through the app-control notification server, and remains exactly-once across repeated scheduler ticks. |
 | onboarding-redirect.spec.ts | windows, macos, linux | onboarding, real-ui-e2e, window-lifecycle | onboarding, app-launch | high | conditional | real-user-flow | 5 | Opt-in no-onboarding seed verifies onboarding redirect. |
 | onboarding-trust-affordances.spec.ts | windows, macos, linux | onboarding, real-ui-e2e, tauri-command | onboarding, settings-privacy-api-auth, storage-retention | high | strong | real-user-flow | 4 | Pre-grant reassurance in setup: the login slide carries the storage-locality line and the pause affordance on one line (the only slide every platform sees, since permissions auto-advances on non-mac); the mac permissions slide keeps that promise collapsed to a single line below the permission wheel and on expand renders the data dir the running app actually resolved rather than a reconstructed ~/.screenpipe, with an open action pointed at that path; collapsed and expanded states are both asserted to fit inside the fixed-size onboarding window; and the timeline slide states the capture bounds (incognito skipped, per-app exclusions) where the capture decision is made. The mac assertions share one visit because the slide auto-advances 600ms after all grants land. |
-| owned-browser-tabs.spec.ts | windows, macos | chat-ai, real-ui-e2e | owned-browser, right-panel-tabs, native-child-webviews | high | strong | command | 0 | A surviving app window drives two native child webviews after the home automation context is replaced, then verifies retained per-tab URLs and close cleanup through the E2E harness. |
-| owned-browser.spec.ts | windows, macos | os-integration, window-lifecycle | owned-browser, window-lifecycle | low | smoke | command | 1 | Embedded agent browser hides safely without an attached child. |
 | permission-recovery.spec.ts | macos | os-integration, real-ui-e2e, window-lifecycle | permission-recovery, window-lifecycle | high | conditional | real-user-flow | 2 | macOS-only recovery window for missing TCC permissions. |
 | pi-extensions.spec.ts | windows, macos, linux | real-ui-e2e, settings | ai-tools, connections, pi-extensions | medium | strong | real-user-flow | 1 | Opens Home -> Connections, opens the first AI tools setting, verifies the common tool toggles are first and directly visible in the modal, checks plain-language built-ins and compatibility labels, filters the package search, and captures a screenshot. Read-only smoke: does not install packages. |
 | pii-redaction-coordination.spec.ts | windows, macos, linux | real-ui-e2e, local-api, performance | app-launch, health, local-api-load | high | strong | api | 1 | Starts the opt-in local ONNX text reconciliation worker in the desktop app, redacts a 24-row SQLite backlog, and probes WebDriver plus health responsiveness while it runs. |
@@ -224,6 +222,3 @@ pass/fail/skip counts.
 | windows-core-recording.spec.ts | windows | capture-ocr, local-api, audio-device, notifications, storage-privacy, real-ui-e2e | capture-ocr, local-api-auth, local-api-search, audio-device-health, timeline, low-disk-recording-guard | high | conditional | mixed | 13 | Windows recording-enabled lane; low-disk coverage requires teardown of a real CaptureSession and continued API/search availability, while hosted runners can skip only frame-dependent OCR assertions. |
 | windows-system-integration.spec.ts | windows | os-integration, local-api, audio-device, window-lifecycle, performance | app-launch, local-api-auth, audio-device-health, window-lifecycle, os-process-health, webview-stability | high | strong | mixed | 15 | Windows display, WebView2, loopback, process, Defender, audio, focus, and crash-report checks. |
 | windows-user-journey.spec.ts | windows | real-ui-e2e, settings, notifications, storage-privacy, window-lifecycle | home-search, timeline, settings-recording, screen-share-privacy, meeting-notes, shortcut-reminder, notifications, storage-retention, settings-privacy-api-auth | high | strong | real-user-flow | 9 | Windows-first real UX journey across search, timeline, separate screen/audio settings, meetings, notifications, storage, and privacy. |
-| zz-owned-browser-background-nav.spec.ts | windows, macos | os-integration, window-lifecycle | owned-browser, window-lifecycle | low | smoke | command | 0 | Owned browser background navigation visibility. |
-| zzz-browser-state-chat-switch.spec.ts | windows, macos | real-ui-e2e, storage-privacy | chat, owned-browser | high | strong | synthetic | 0 | Synthetic E2E (zzz- prefix, search-driven): starts from a fresh chat with no conversation file, seeds browser state before the first durable save, then verifies auto-save persists that state and it survives a switch away and back. Keeps native visibility assertions out of this spec because post-zz window state is too brittle; deeper save/merge coverage lives in focused tests. |
-| zzz-owned-browser-headless.spec.ts | windows, macos | os-integration, window-lifecycle, local-api | owned-browser, window-lifecycle | high | strong | mixed | 0 | Headless owned browser for background pipes (#4248): with the sidebar never opened, a background eval and navigate-and-scrape over the local API lazily create a hidden offscreen child webview, return a real JS result (6*7 -> 42; document.readyState), and stay invisible; is_ready reflects real serviceability; the same singleton is then adopted into the sidebar panel (page state survives, no second webview). Search-driven and runs last because attaching the child to home tears down home's WebDriver handle. |

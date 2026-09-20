@@ -53,12 +53,10 @@ import { IcsCalendarCard } from "./ics-calendar-card";
 import { RssCard } from "./rss-card";
 import { RemoteAgentCard } from "./remote-agent-card";
 import { BrowserUrlCard } from "./browser-url-card";
-import { UserBrowserCard } from "./user-browser-card";
 import { VoiceMemosCard } from "./voice-memos-card";
 import { CustomMcpCard } from "./custom-mcp-card";
 import { SkillsCard } from "./skills-card";
 import { PiExtensionsCard } from "./pi-extensions-card";
-import { WhatsAppPanel } from "./whatsapp-panel";
 import { areExternalAgentSkillsInstalled } from "@/lib/external-agent-skills";
 // Shared MCP matrix (build/install/uninstall per tool) — same module the
 // onboarding connect-all uses, so connect and disconnect can never drift.
@@ -254,13 +252,11 @@ async function detectInstalledConnectionIds(): Promise<Set<string>> {
       addIf("cursor", macAppExists("Cursor")),
       addIf("chatgpt", macAppExists("ChatGPT")),
       addIf("warp", macAppExists("Warp")),
-      addIf("whatsapp", macAppExists("WhatsApp")),
       addIf("anythingllm", macAppExists("AnythingLLM")),
       addIf("ollama", macAppExists("Ollama")),
       addIf("lmstudio", macAppExists("LM Studio")),
       addIf("msty", macAppExists("Msty", "Msty Studio")),
       addIf("obsidian", macAppExists("Obsidian").then(async (app) => app || !!(await getObsidianConfigPath()))),
-      addIf("krisp", macAppExists("Krisp")),
       addIf("codex", getCodexConfigPath().then(pathExists)),
       addIf("grok", getGrokConfigPath().then(pathExists)),
       addIf("claude-code", hasClaudeCode),
@@ -291,11 +287,6 @@ async function detectInstalledConnectionIds(): Promise<Set<string>> {
         ...program("Warp", "Warp.exe"),
         ...windowsApps("Warp.exe"),
       ])),
-      addIf("whatsapp", anyPathExists([
-        local("WhatsApp", "WhatsApp.exe"),
-        local("Programs", "WhatsApp", "WhatsApp.exe"),
-        ...windowsApps("WhatsApp.exe"),
-      ])),
       addIf("anythingllm", anyPathExists([
         local("Programs", "AnythingLLM", "AnythingLLM.exe"),
         ...program("AnythingLLM", "AnythingLLM.exe"),
@@ -314,10 +305,6 @@ async function detectInstalledConnectionIds(): Promise<Set<string>> {
         local("Programs", "Msty Studio", "Msty Studio.exe"),
         ...program("Msty", "Msty.exe"),
         ...program("Msty Studio", "Msty Studio.exe"),
-      ])),
-      addIf("krisp", anyPathExists([
-        local("Programs", "Krisp", "Krisp.exe"),
-        ...program("Krisp", "Krisp.exe"),
       ])),
       addIf("codex", getCodexConfigPath().then(pathExists)),
       addIf("grok", getGrokConfigPath().then(pathExists)),
@@ -363,10 +350,6 @@ async function detectInstalledConnectionIds(): Promise<Set<string>> {
         ...desktop("dev.warp.Warp.desktop", "warp-terminal.desktop", "warp.desktop"),
         ...bin("warp-terminal", "warp"),
       ])),
-      addIf("whatsapp", anyPathExists([
-        homeConfig("WhatsApp"),
-        ...desktop("whatsapp.desktop", "io.github.mimbrero.WhatsAppDesktop.desktop"),
-      ])),
       addIf("anythingllm", anyPathExists([
         homeConfig("AnythingLLM"),
         ...desktop("anythingllm.desktop", "AnythingLLM.desktop"),
@@ -388,10 +371,6 @@ async function detectInstalledConnectionIds(): Promise<Set<string>> {
       addIf("obsidian", anyPathExists([
         getObsidianConfigPath(),
         ...desktop("obsidian.desktop", "md.obsidian.Obsidian.desktop"),
-      ])),
-      addIf("krisp", anyPathExists([
-        homeConfig("Krisp"),
-        ...desktop("krisp.desktop", "Krisp.desktop"),
       ])),
       addIf("codex", getCodexConfigPath().then(pathExists)),
       addIf("grok", getGrokConfigPath().then(pathExists)),
@@ -518,18 +497,14 @@ const INTEGRATION_ICONS: Record<string, React.ReactNode> = {
     msty: <img src="/images/msty.webp" alt="Msty" className="w-5 h-5 rounded" />,
     ollama: <img src="/images/ollama.png" alt="Ollama" className="w-5 h-5 rounded" />,
     lmstudio: <img src="/images/lmstudio.png" alt="LM Studio" className="w-5 h-5 rounded" />,
-    whatsapp: <img src="/images/whatsapp.svg" alt="WhatsApp" className="w-5 h-5" />,
     obsidian: (
       <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#7C3AED">
         <path d="M19.355 18.538a68.967 68.959 0 0 0 1.858-2.954.81.81 0 0 0-.062-.9c-.516-.685-1.504-2.075-2.042-3.362-.553-1.321-.636-3.375-.64-4.377a1.707 1.707 0 0 0-.358-1.05l-3.198-4.064a3.744 3.744 0 0 1-.076.543c-.106.503-.307 1.004-.536 1.5-.134.29-.29.6-.446.914l-.31.626c-.516 1.068-.997 2.227-1.132 3.59-.124 1.26.046 2.73.815 4.481.128.011.257.025.386.044a6.363 6.363 0 0 1 3.326 1.505c.916.79 1.744 1.922 2.415 3.5zM8.199 22.569c.073.012.146.02.22.02.78.024 2.095.092 3.16.29.87.16 2.593.64 4.01 1.055 1.083.316 2.198-.548 2.355-1.664.114-.814.33-1.735.725-2.58l-.01.005c-.67-1.87-1.522-3.078-2.416-3.849a5.295 5.295 0 0 0-2.778-1.257c-1.54-.216-2.952.19-3.84.45.532 2.218.368 4.829-1.425 7.531zM5.533 9.938c-.023.1-.056.197-.098.29L2.82 16.059a1.602 1.602 0 0 0 .313 1.772l4.116 4.24c2.103-3.101 1.796-6.02.836-8.3-.728-1.73-1.832-3.081-2.55-3.831zM9.32 14.01c.615-.183 1.606-.465 2.745-.534-.683-1.725-.848-3.233-.716-4.577.154-1.552.7-2.847 1.235-3.95.113-.235.223-.454.328-.664.149-.297.288-.577.419-.86.217-.47.379-.885.46-1.27.08-.38.08-.72-.014-1.043-.095-.325-.297-.675-.68-1.06a1.6 1.6 0 0 0-1.475.36l-4.95 4.452a1.602 1.602 0 0 0-.513.952l-.427 2.83c.672.59 2.328 2.316 3.335 4.711.09.21.175.43.253.653z"/>
       </svg>
     ),
-    krisp: <img src="/images/krisp.svg" alt="Krisp" className="w-5 h-5 dark:invert" />,
-    plaud: <img src="/images/plaud.png" alt="Plaud" className="w-5 h-5 dark:invert" />,
     excalidraw: <img src="/images/excalidraw.svg" alt="Excalidraw" className="w-5 h-5" />,
     logseq: <img src="/images/logseq.png" alt="Logseq" className="w-5 h-5 rounded" />,
     notion: <img src="/images/notion.svg" alt="Notion" className="w-5 h-5 dark:invert" />,
-    ntfy: <img src="/images/ntfy.png" alt="ntfy" className="w-5 h-5 rounded" />,
     "browser-url": <img src="/images/browser-url.svg" alt="浏览器 URL" className="w-5 h-5 rounded" />,
     // user-browser: your real Chrome/Arc/Edge via the screenpipe extension.
     // The arrow-out-of-square hints at "drives an external browser".
@@ -607,9 +582,7 @@ export const TRY_IN_CHAT_PROMPTS: Record<string, string> = {
   "apple-calendar": "这周我有什么会议？",
   "ics-calendar": "这周有什么活动？",
   imap: "总结我最近的邮件",
-  krisp: "在我的会议记录中搜索行动项",
   excalidraw: "我最近的 Excalidraw 白板里有什么？",
-  whatsapp: "我的 WhatsApp 最新消息是什么？",
   "browser-url": "我今天访问了哪些网站？",
   "voice-memos": "我最近在语音备忘录里录了什么？",
 };
@@ -2042,7 +2015,7 @@ export interface IntegrationInfo {
   connected: boolean;
 }
 
-// Cloud-managed service connections (Gmail, Google Drive/Docs/Sheets, Zoom)
+// Cloud-managed service connections (Gmail, Google Drive/Docs/Sheets)
 // were removed with the local-only conversion: their auth was brokered by the
 // screenpipe.com account, which no longer exists. The tiles stay discoverable
 // so old deep links do not 404, but the panel only explains the retirement.
@@ -2665,7 +2638,7 @@ export function ApiIntegrationPanel({ integration, onRefresh }: {
 }
 
 // ---------------------------------------------------------------------------
-// Featured OAuth MCP cards (Krisp, Plaud)
+// Featured OAuth MCP cards
 // ---------------------------------------------------------------------------
 //
 // Some providers expose their data (meeting transcripts, recordings, notes)
@@ -2676,8 +2649,6 @@ export function ApiIntegrationPanel({ integration, onRefresh }: {
 // handled generically in screenpipe-connect's mcp_servers.rs, so a new provider
 // only needs its display name + MCP URL here.
 
-const KRISP_MCP_URL = "https://mcp.krisp.ai/mcp";
-const PLAUD_MCP_URL = "https://mcp.plaud.ai/mcp";
 // Providers that run a first-party remote MCP server whose OAuth supports
 // Dynamic Client Registration (RFC 7591). For these, the tile connects in
 // one click via OAuthMcpPanel — no API key and no human-created
@@ -2692,7 +2663,6 @@ export const MCP_OAUTH_PROVIDERS: {
   url: string;
   description: React.ReactNode;
 }[] = [
-  { id: "jira", name: "Jira", url: "https://mcp.atlassian.com/v1/mcp", description: <>连接 Atlassian，让 AI 搜索和管理你的 Jira 问题（以及 Confluence 页面）。使用 Atlassian 的 OAuth 登录 — 无需 API 密钥，知迹永远不会看到你的密码。</> },
   { id: "notion", name: "Notion", url: "https://mcp.notion.com/mcp", description: <>连接 Notion，让 AI 搜索、读取和写入你的页面和数据库。使用 Notion 的 OAuth 登录 — 无需 API 密钥，知迹永远不会看到你的密码。</> },
 ];
 
@@ -3212,8 +3182,6 @@ export function ConnectionsSection({
   const [customMcpConnected, setCustomMcpConnected] = useState(false);
   const [customMcpServerCount, setCustomMcpServerCount] = useState(0);
   const [customMcpEnabledCount, setCustomMcpEnabledCount] = useState(0);
-  const [krispConnected, setKrispConnected] = useState(false);
-  const [plaudConnected, setPlaudConnected] = useState(false);
   // Per-provider connection status for the MCP-OAuth tiles (keyed by id).
   const [mcpProviderConnected, setMcpProviderConnected] = useState<Record<string, boolean>>({});
   const [excalidrawConnected, setExcalidrawConnected] = useState(false);
@@ -3279,8 +3247,6 @@ export function ConnectionsSection({
         setCustomMcpConnected(false);
         setCustomMcpServerCount(0);
         setCustomMcpEnabledCount(0);
-        setKrispConnected(false);
-        setPlaudConnected(false);
         setMcpProviderConnected({});
         setExcalidrawConnected(false);
         return;
@@ -3291,8 +3257,6 @@ export function ConnectionsSection({
       setCustomMcpServerCount(list.length);
       setCustomMcpEnabledCount(enabled.length);
       setCustomMcpConnected(enabled.length > 0);
-      setKrispConnected(list.some(s => s.enabled && (s.url ?? "").replace(/\/+$/, "") === KRISP_MCP_URL));
-      setPlaudConnected(list.some(s => s.enabled && (s.url ?? "").replace(/\/+$/, "") === PLAUD_MCP_URL));
       const providerStatuses = await Promise.all(
         MCP_OAUTH_PROVIDERS.map(async p => {
           const server = list.find(s => (s.url ?? "").replace(/\/+$/, "") === p.url.replace(/\/+$/, ""));
@@ -3315,8 +3279,6 @@ export function ConnectionsSection({
       setCustomMcpConnected(false);
       setCustomMcpServerCount(0);
       setCustomMcpEnabledCount(0);
-      setKrispConnected(false);
-      setPlaudConnected(false);
       setMcpProviderConnected({});
       setExcalidrawConnected(false);
     });
@@ -3403,15 +3365,12 @@ export function ConnectionsSection({
       { id: "ics-calendar", name: "其他日历", icon: "ics-calendar", connected: false },
       { id: "rss", name: "RSS 订阅", icon: "rss", connected: false, description: "导入 RSS/Atom 条目，可全文检索" },
       { id: "remote-agent", name: "常驻 AI", icon: "remote-agent", connected: false },
-      { id: "whatsapp", name: "WhatsApp", icon: "whatsapp", connected: false, detected: detectedConnectionIds.has("whatsapp") },
       { id: "anythingllm", name: "AnythingLLM", icon: "anythingllm", connected: false, detected: detectedConnectionIds.has("anythingllm") },
       { id: "ollama", name: "Ollama", icon: "ollama", connected: false, detected: detectedConnectionIds.has("ollama") },
       { id: "lmstudio", name: "LM Studio", icon: "lmstudio", connected: false, detected: detectedConnectionIds.has("lmstudio") },
       { id: "msty", name: "Msty", icon: "msty", connected: false, detected: detectedConnectionIds.has("msty") },
       { id: "obsidian", name: "Obsidian", icon: "obsidian", connected: false, detected: detectedConnectionIds.has("obsidian") },
       { id: "notion", name: "Notion", icon: "notion", connected: false, detected: detectedConnectionIds.has("notion") },
-      { id: "krisp", name: "Krisp", icon: "krisp", connected: krispConnected, detected: detectedConnectionIds.has("krisp") },
-      { id: "plaud", name: "Plaud", icon: "plaud", connected: plaudConnected },
       { id: "excalidraw", name: "Excalidraw", icon: "excalidraw", connected: excalidrawConnected },
       { id: "feishu", name: "飞书", icon: "feishu", connected: officeStatuses["feishu"]?.auth_status === "authorized", description: "只读导入所选文档与会话消息" },
       { id: "tencent-meeting", name: "腾讯会议", icon: "tencent-meeting", connected: officeStatuses["tencent-meeting"]?.auth_status === "authorized", description: "只读导入会议转写与智能纪要" },
@@ -3470,7 +3429,7 @@ export function ConnectionsSection({
       category: CONNECTION_CATEGORY_BY_ID[tile.id] ?? tile.category ?? "Other",
       description: tile.description ?? CONNECTION_HARDCODED_DESCRIPTIONS[tile.id],
     }));
-  }, [os, claudeInstalled, cursorInstalled, codexInstalled, grokInstalled, chatgptConnected, browserUrlConnected, browserUrlDetected, integrations, appleCalendarConnected, customMcpConnected, customMcpServerCount, krispConnected, plaudConnected, mcpProviderConnected, excalidrawConnected, importedSkillsCount, detectedConnectionIds ]);
+  }, [os, claudeInstalled, cursorInstalled, codexInstalled, grokInstalled, chatgptConnected, browserUrlConnected, browserUrlDetected, integrations, appleCalendarConnected, customMcpConnected, customMcpServerCount, mcpProviderConnected, excalidrawConnected, importedSkillsCount, detectedConnectionIds ]);
 
   const isDefaultView = !search.trim() && categoryFilter === ALL_CONNECTION_CATEGORIES;
 
@@ -3567,11 +3526,11 @@ export function ConnectionsSection({
     if (!selected) return null;
     // Providers with a first-party remote MCP (OAuth + DCR) connect in one
     // click — this intercepts both old API-key tiles (Linear, Stripe, …) and
-    // connector-OAuth tiles (Notion, Jira) before the switch below.
+    // connector-OAuth tiles (Notion) before the switch below.
     const mcpProvider = MCP_OAUTH_PROVIDERS.find(p => p.id === selected);
     if (mcpProvider) {
       // Anyone already connected the old way (API key, or connector OAuth for
-      // Notion/Jira) keeps that connection — the credential and pipes are
+      // Notion) keeps that connection — the credential and pipes are
       // untouched. Surface it under an "advanced" disclosure so they can still
       // see/rotate/remove it; otherwise the one-click OAuth is the primary path.
       const existing = selectedIntegration;
@@ -3623,7 +3582,6 @@ export function ConnectionsSection({
         onDisconnected={() => setGrokInstalled(false)}
       />;
       case "chatgpt": return <ChatGptPanel />;
-      case "user-browser": return <UserBrowserCard />;
       case "browser-url": return <BrowserUrlCard onStatusChange={setBrowserUrlConnected} />;
       case "voice-memos": return <VoiceMemosCard />;
       case "apple-calendar": return <AppleCalendarCard onStatusChange={setAppleCalendarConnected} />;
@@ -3633,30 +3591,14 @@ export function ConnectionsSection({
       case "google-docs":
       case "google-drive":
       case "google-sheets":
-      case "gmail":
-      case "zoom": return <CloudServiceRetiredCard name={selectedIntegration?.name ?? selected} />;
+      case "gmail": return <CloudServiceRetiredCard name={selectedIntegration?.name ?? selected} />;
       case "ics-calendar": return <IcsCalendarCard />;
       case "rss": return <RssCard />;
       case "remote-agent": return <RemoteAgentCard />;
-      case "whatsapp": return <WhatsAppPanel />;
       case "anythingllm": return <AnythingLLMPanel />;
       case "custom-mcp": return <CustomMcpCard />;
       case "skills": return <SkillsCard onChanged={loadSkillsCount} />;
       case "pi-extensions": return <PiExtensionsCard />;
-      case "krisp": return <OAuthMcpPanel
-        name="Krisp"
-        mcpUrl={KRISP_MCP_URL}
-        description={<>连接 Krisp，让 AI 搜索你的会议转写、笔记和行动项。登录由 Krisp 的 OAuth 处理，知迹永远不会看到你的密码。</>}
-        onConnected={() => setKrispConnected(true)}
-        onDisconnected={() => setKrispConnected(false)}
-      />;
-      case "plaud": return <OAuthMcpPanel
-        name="Plaud"
-        mcpUrl={PLAUD_MCP_URL}
-        description={<>连接 Plaud，让 AI 搜索你的 Plaud 录音、转写、摘要和笔记。登录由 Plaud 的 OAuth 处理，知迹永远不会看到你的密码。</>}
-        onConnected={() => setPlaudConnected(true)}
-        onDisconnected={() => setPlaudConnected(false)}
-      />;
       case "excalidraw": return <ApiKeyMcpPanel
         name="Excalidraw"
         mcpUrl={EXCALIDRAW_MCP_URL}

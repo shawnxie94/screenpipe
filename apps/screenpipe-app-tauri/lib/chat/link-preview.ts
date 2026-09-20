@@ -14,16 +14,12 @@ export type LinkPreviewProvider =
   | "gmail"
   | "outlook"
   | "google-calendar"
-  | "google-meet"
-  | "zoom"
   | "linear"
-  | "jira"
   | "google-drive"
   | "google-docs"
   | "notion"
   | "figma"
-  | "slack"
-  | "teams";
+  | "slack";
 
 export type LinkPreviewCategory =
   | "web"
@@ -235,20 +231,6 @@ function recognizeProvider(
     );
     return parsed;
   }
-  if (host === "meet.google.com") {
-    parsed.provider = provider(
-      "google-meet",
-      "Google Meet",
-      "calendar",
-      "会议",
-    );
-    return parsed;
-  }
-  if (isHost(host, "zoom.us")) {
-    parsed.provider = provider("zoom", "Zoom", "calendar", "会议");
-    return parsed;
-  }
-
   if (host === "linear.app") {
     const issueIndex = segments.indexOf("issue");
     const issueKey = issueIndex >= 0 ? segments[issueIndex + 1] : undefined;
@@ -264,19 +246,6 @@ function recognizeProvider(
     );
     return parsed;
   }
-  if (isHost(host, "atlassian.net")) {
-    const browseIndex = segments.indexOf("browse");
-    const issueKey = browseIndex >= 0 ? segments[browseIndex + 1] : undefined;
-    parsed.provider = provider(
-      "jira",
-      "Jira",
-      "issue",
-      issueKey && ISSUE_KEY.test(issueKey) ? `问题 ${issueKey}` : "问题",
-      issueKey && ISSUE_KEY.test(issueKey) ? issueKey : undefined,
-    );
-    return parsed;
-  }
-
   if (host === "docs.google.com") {
     const documentType = segments[0];
     const [label, objectLabel] =
@@ -338,18 +307,6 @@ function recognizeProvider(
     );
     return parsed;
   }
-  if (host === "teams.microsoft.com" || host === "teams.live.com") {
-    parsed.provider = provider(
-      "teams",
-      "Microsoft Teams",
-      "chat",
-      segments.includes("l") || segments.includes("message")
-        ? "消息"
-        : "工作区",
-    );
-    return parsed;
-  }
-
   return parsed;
 }
 

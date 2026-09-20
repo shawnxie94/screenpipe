@@ -7,7 +7,6 @@ pub mod activity_summary;
 pub mod ai_feedback;
 pub mod artifacts;
 pub mod audio;
-pub mod browser;
 pub mod capture;
 pub mod cloud_agents;
 pub mod connect_broker;

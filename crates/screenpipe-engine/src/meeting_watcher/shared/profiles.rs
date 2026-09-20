@@ -499,7 +499,6 @@ pub fn load_detection_profiles() -> Vec<MeetingDetectionProfile> {
                     "jitsi meet",
                     "chime",
                     "amazon chime",
-                    "google meet",
                     "cal.com",
                     "daily.co",
                 ],
@@ -578,4 +577,79 @@ pub fn load_detection_profiles() -> Vec<MeetingDetectionProfile> {
     ];
     profiles.extend(crate::meeting_watcher::ui_scan::discord_profile());
     profiles
+}
+
+/// Runtime meeting profiles. The raw catalog remains available to unit tests
+/// as characterization data, while the collector only activates generic/local
+/// profiles and the supported domestic channels.
+pub fn load_active_detection_profiles() -> Vec<MeetingDetectionProfile> {
+    load_detection_profiles()
+        .into_iter()
+        .filter(|profile| {
+            let ids = &profile.app_identifiers;
+            !ids.macos_app_names.iter().any(|name| {
+                matches!(
+                    *name,
+                    "microsoft teams"
+                        | "teams"
+                        | "msteams"
+                        | "zoom.us"
+                        | "zoom"
+                        | "facetime"
+                        | "google meet"
+                )
+            }) && !ids
+                .windows_process_names
+                .iter()
+                .any(|name| matches!(*name, "ms-teams.exe" | "teams.exe" | "zoom.exe"))
+                && !ids.browser_url_patterns.iter().any(|pattern| {
+                    pattern.contains("meet.google.com")
+                        || pattern.contains("teams.microsoft.com")
+                        || pattern.contains("teams.live.com")
+                        || pattern.contains("zoom.us")
+                })
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::load_active_detection_profiles;
+
+    #[test]
+    fn active_profiles_exclude_retired_platforms() {
+        let active = load_active_detection_profiles();
+        let haystack = active
+            .iter()
+            .flat_map(|profile| {
+                profile
+                    .app_identifiers
+                    .macos_app_names
+                    .iter()
+                    .chain(profile.app_identifiers.windows_process_names.iter())
+                    .chain(profile.app_identifiers.browser_url_patterns.iter())
+                    .chain(profile.app_identifiers.browser_title_patterns.iter())
+                    .copied()
+            })
+            .collect::<Vec<_>>();
+
+        for retired in [
+            "microsoft teams",
+            "teams",
+            "ms-teams.exe",
+            "zoom.us",
+            "zoom.exe",
+            "facetime",
+            "meet.google.com",
+            "teams.microsoft.com",
+            "teams.live.com",
+        ] {
+            assert!(
+                !haystack
+                    .iter()
+                    .any(|value| value.to_lowercase().contains(retired)),
+                "retired meeting signal remains active: {retired}"
+            );
+        }
+    }
 }

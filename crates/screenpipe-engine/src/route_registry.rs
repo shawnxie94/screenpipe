@@ -226,15 +226,6 @@ impl crate::server::SCServer {
                 .manual_meeting
                 .clone()
                 .unwrap_or_else(|| Arc::new(tokio::sync::RwLock::new(None))),
-            browser_bridge: crate::routes::browser::BrowserBridge::new(),
-            browser_registry: screenpipe_connect::connections::browser::BrowserRegistry::new(),
-            // Reuse the desktop-shell-supplied owned browser if present so its
-            // already-attached OwnedWebviewHandle survives. Otherwise fall back
-            // to a default unattached instance — useful for CLI / tests /
-            // headless deployments.
-            owned_browser: self.owned_browser.clone().unwrap_or_else(
-                screenpipe_connect::connections::browser::OwnedBrowser::default_instance,
-            ),
             api_auth: self.api_auth,
             api_auth_key: self.api_auth_key.clone(),
             secret_store: self.secret_store.clone(),
@@ -242,19 +233,6 @@ impl crate::server::SCServer {
             vision_manager: self.vision_manager.clone(),
         });
 
-        // Populate the registry so /connections/browsers shows both kinds
-        // immediately. The user-browser is wired to the existing bridge;
-        // the owned-browser is a stub until the desktop shell attaches its
-        // OwnedWebviewHandle.
-        {
-            use screenpipe_connect::connections::browser::UserBrowser;
-            let user = UserBrowser::default_instance(app_state.browser_bridge.clone());
-            app_state.browser_registry.register(user).await;
-            app_state
-                .browser_registry
-                .register(app_state.owned_browser.clone())
-                .await;
-        }
         spawn_artifact_search_backfill(self.db.clone());
 
         // Restrict CORS to localhost origins (Tauri webview + local development).
@@ -661,8 +639,6 @@ impl crate::server::SCServer {
                 cm,
                 self.screenpipe_dir.clone(),
                 self.secret_store.clone(),
-                app_state.browser_bridge.clone(),
-                app_state.browser_registry.clone(),
                 self.api_auth_key.clone(),
             ),
         );

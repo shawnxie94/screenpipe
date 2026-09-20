@@ -177,7 +177,7 @@ describe.skip("Focus server", function () {
     const args = ["--e2e", "second-instance", `ts=${Date.now()}`];
 
     const res = await postFocus({
-      target: "browser_pairing",
+      target: null,
       deep_link_url: deepLink,
       args,
     });

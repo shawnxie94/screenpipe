@@ -48,7 +48,7 @@ export const audioSearchIndex: SettingsField[] = [
   { label: "转写引擎", keywords: ["whisper", "cloud", "stt"] },
   { label: "会议实时笔记", keywords: ["captions", "meeting", "live"], conditional: true },
   { label: "附加输入文本到笔记", keywords: ["note", "append"], conditional: true },
-  { label: "自动会议检测", keywords: ["zoom", "teams", "meet"], conditional: true },
+  { label: "自动会议检测", keywords: ["meeting", "call"], conditional: true },
   { label: "自动选择音频设备", keywords: ["devices", "bluetooth"], conditional: true },
   { label: "语言", keywords: ["transcript language", "language"], conditional: true },
   { label: "自定义词汇", keywords: ["vocabulary", "names", "jargon", "replacement"], conditional: true },
@@ -2782,7 +2782,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                 <div>
                   <h3 className="text-sm font-medium text-foreground flex items-center gap-1.5">
                     自动会议检测
-                    <HelpTooltip text="检测会议应用（Zoom、Teams、Meet、Discord 通话等），自动开始/结束会议和实时笔记。如果它在不该开始的时候开始了会议，可关闭并改为手动开始。" />
+                    <HelpTooltip text="检测通话应用，自动开始/结束会议和实时笔记。如果它在不该开始的时候开始了会议，可关闭并改为手动开始。" />
                   </h3>
                   <p className="text-xs text-muted-foreground">检测到通话应用时自动开始会议</p>
                 </div>

@@ -39,14 +39,8 @@ use window::ShowRewindWindow;
 
 mod activity_history;
 mod activity_summaries;
-mod first_run_summary;
-mod focus_handoff;
-#[allow(deprecated)]
-mod icons;
 mod agent_event_emitter;
 mod audio_exclusions;
-mod knowledge_views;
-mod office_runtime;
 mod calendar;
 mod capture_session;
 mod chat_control;
@@ -59,16 +53,21 @@ mod db_relaunch;
 mod db_self_heal;
 mod deep_link;
 mod dev_isolation;
-mod disk_usage;
 mod disk_pressure_notifications;
+mod disk_usage;
 #[cfg(feature = "e2e")]
 mod e2e;
 mod embedded_server;
 mod events;
 mod feedback_redact;
+mod first_run_summary;
+mod focus_handoff;
 mod google_calendar;
 mod hardware;
+#[allow(deprecated)]
+mod icons;
 mod ics_calendar;
+mod knowledge_views;
 mod livetext;
 #[cfg(target_os = "macos")]
 mod livetext_ffi;
@@ -77,21 +76,21 @@ mod local_ui_visibility;
 mod meeting_export;
 mod meeting_live_notes;
 mod meeting_stall_notifications;
+mod office_runtime;
 mod overlay_health;
-mod owned_browser;
-mod owned_browser_transport;
 // Cross-platform shape: macOS reads Arc/Chrome/Brave/Edge cookies and
 // injects via WKHTTPCookieStore; other platforms compile to a stub
 // `cookies_for_host` that returns empty until Windows (DPAPI + AES-256-
 // GCM + WebView2) and Linux (libsecret + webkit2gtk) readers land.
 mod engine_events;
+#[cfg(target_os = "linux")]
+mod linux_webkit_env;
 mod monitor_events;
-mod owned_browser_cookies;
 mod permissions;
 mod pi;
 mod pi_command_queue;
-mod power_awake;
 mod port_conflict;
+mod power_awake;
 mod process_exit;
 mod provider_automations;
 mod recording;
@@ -102,9 +101,9 @@ mod server_core;
 #[cfg(target_os = "macos")]
 #[allow(deprecated)]
 mod space_monitor;
+mod stale_tier;
 mod store;
 mod tray;
-mod stale_tier;
 mod voice_training;
 mod window;
 mod windows_ca_bundle;
@@ -114,8 +113,6 @@ mod windows_crash_dump;
 mod windows_overlay;
 #[cfg(target_os = "windows")]
 mod windows_webview_env;
-#[cfg(target_os = "linux")]
-mod linux_webkit_env;
 
 pub use server::*;
 
@@ -147,10 +144,10 @@ mod health;
 mod log_files;
 mod media_commands;
 mod native_notification;
-mod native_shortcut_reminder;
-mod native_timeline;
 #[cfg(target_os = "windows")]
 mod native_overlay_win;
+mod native_shortcut_reminder;
+mod native_timeline;
 mod notifications;
 mod safe_icon;
 mod shortcuts;
@@ -530,7 +527,6 @@ async fn main() {
     #[cfg(target_os = "windows")]
     windows_crash_dump::install();
 
-
     // Install a panic hook that logs to stderr BEFORE the default hook runs.
     // This is critical because panics inside `tao::send_event` (called from Obj-C)
     // hit `panic_cannot_unwind` → `abort()`, and the default hook's output may be lost.
@@ -866,7 +862,6 @@ async fn main() {
     let app = app
         .plugin(tauri_plugin_webdriver::init())
         .plugin(e2e::plugin());
-
 
     #[cfg(target_os = "macos")]
     let app = app.plugin(tauri_nspanel::init());
@@ -1432,7 +1427,6 @@ async fn main() {
 
             // Startup permission gate: check CRITICAL permissions immediately after onboarding
             // and show recovery window only if screen or mic is missing.
-            // Browser automation is optional — never blocks startup (see #2510).
             // Uses retry loop because CGPreflightScreenCaptureAccess can return false
             // transiently on startup before TCC fully initializes.
             #[cfg(target_os = "macos")]
@@ -1537,11 +1531,9 @@ async fn main() {
                 // topic dropped — every pipe stdout line goes out on
                 // `agent_event` with a per-run or stable continued session id.
                 let app_for_pipe = app_handle.clone();
-                // Separate clone for the owned-browser install path — the
-                // on_pipe_output closure below captures app_for_pipe by
-                // move, so we need a distinct handle that survives into
-                // the server thread.
-                let app_for_owned = app_handle.clone();
+                // Keep a distinct handle for the server-start error path: the
+                // on_pipe_output closure below captures app_for_pipe by move.
+                let app_for_startup_error = app_handle.clone();
                 let pipe_agent_events =
                     crate::agent_event_emitter::PipeAgentEventEmitter::new(app_for_pipe);
                 let on_pipe_output: Option<screenpipe_core::pipes::OnPipeOutputLine> = Some(
@@ -1665,29 +1657,8 @@ async fn main() {
 
                             info!("Starting server core + capture on dedicated runtime...");
 
-                            // Owned-browser: create the connect-side instance now so the
-                            // engine can register it in the BrowserRegistry on startup.
-                            // Webview build is async — kick it off in the background and
-                            // attach the handle once the WebviewWindow is ready. Until
-                            // then, /connections/browsers/owned-default/eval returns 503.
-                            //
-                            // `spawn_install_when_ready` survives tray-only mode by
-                            // listening for `window-focused` events instead of giving
-                            // up after a fixed budget.
-                            let owned_browser =
-                                screenpipe_connect::connections::browser::OwnedBrowser::default_instance();
-                            crate::owned_browser::spawn_install_when_ready(
-                                app_for_owned.clone(),
-                                config.data_dir.clone(),
-                                owned_browser.clone(),
-                            );
-
                             // Phase 1: Start server core
-                            let server = match server_core::ServerCore::start(
-                                &config,
-                                on_pipe_output,
-                                Some(owned_browser),
-                            )
+                            let server = match server_core::ServerCore::start(&config, on_pipe_output)
                             .await
                             {
                                 Ok(s) => s,
@@ -1695,7 +1666,7 @@ async fn main() {
                                     error!("Failed to start server core: {}", e);
                                     if crate::port_conflict::is_error(&e, config.port) {
                                         crate::port_conflict::show_reclaim_failed(
-                                            &app_for_owned,
+                                            &app_for_startup_error,
                                             config.port,
                                         );
                                     }
@@ -2101,7 +2072,6 @@ mod autostart_arg_tests {
         assert!(classify_login_launch(false, true));
         assert!(classify_login_launch(true, true));
     }
-
 }
 
 #[cfg(test)]

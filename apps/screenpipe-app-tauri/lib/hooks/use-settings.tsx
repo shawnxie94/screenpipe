@@ -218,10 +218,8 @@ export interface ChatConversation {
 	 *  Absent on files written before CAS landed — treated as 0, which makes
 	 *  legacy writers merge rather than clobber. */
 	rev?: number;
-	/** Last URL the agent navigated the embedded browser sidebar to.
-	 *  Drives the right-side `<BrowserSidebar />` panel: when the user
-	 *  re-opens this conversation the panel restores to this URL.
-	 *  Cleared (set to undefined) when the user closes the sidebar. */
+	/** Legacy browser state retained for backwards-compatible conversation
+	 *  deserialization. Browser control is no longer exposed by the app. */
 	browserState?: {
 		url: string;
 		updatedAt: number;
@@ -465,9 +463,8 @@ export type Settings = SettingsStore & {
 	 */
 	listenOnLan?: boolean;
 	encryptStore?: boolean;
-	/** Global blanket permission: allow screenpipe to copy browser cookies
-	 *  into the owned browser so the agent can browse sites the user is
-	 *  logged into. Revocable from the owned-browser cookie menu.
+	/** Legacy browser-cookie permission retained only for settings
+	 *  deserialization; browser automation no longer consumes this field.
 	 *  Undefined = not decided yet, false = disabled, true = enabled. */
 	browserCookieAccessGranted?: boolean;
 	/** Windows-only: when true, closing the Home window hides it to the system
@@ -1123,15 +1120,6 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 				// such as SCREENPIPE_PORT. Refresh after applying the persisted
 				// fallback so every window talks to the server that actually started.
 				await refreshApiConfig();
-
-				// Hydrate Rust's owned-browser runtime cache from persisted settings.
-				// This prevents the cookie-access prompt from reappearing after restart.
-				await commands
-					.setBrowserCookieAccessState(
-						loadedSettings.browserCookieAccessGranted === true,
-						loadedSettings.browserCookieAccessGranted === false,
-					)
-					.catch(() => {});
 			} catch (error) {
 				console.error("Failed to load settings:", error);
 				setLoadingError(error instanceof Error ? error.message : "未知错误");

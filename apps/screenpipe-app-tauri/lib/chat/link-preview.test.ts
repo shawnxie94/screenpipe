@@ -81,27 +81,9 @@ describe("parseLinkPreview", () => {
       "事件",
     ],
     [
-      "https://meet.google.com/abc-defg-hij",
-      "google-meet",
-      "Google Meet",
-      "会议",
-    ],
-    [
-      "https://screenpipe.zoom.us/j/123456789?pwd=private",
-      "zoom",
-      "Zoom",
-      "会议",
-    ],
-    [
       "https://app.slack.com/client/T000/C000/thread-id",
       "slack",
       "Slack",
-      "消息",
-    ],
-    [
-      "https://teams.microsoft.com/l/message/private-thread-id",
-      "teams",
-      "Microsoft Teams",
       "消息",
     ],
     [
@@ -121,12 +103,6 @@ describe("parseLinkPreview", () => {
       "google-drive",
       "Google Drive",
       "文件",
-    ],
-    [
-      "https://screenpipe.atlassian.net/browse/SCR-123",
-      "jira",
-      "Jira",
-      "问题 SCR-123",
     ],
   ])(
     "recognizes private provider %s without creating a remote request",

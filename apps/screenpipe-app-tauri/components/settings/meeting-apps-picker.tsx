@@ -30,17 +30,11 @@ function formatCount(n: number): string {
  * Curated meeting apps the detector knows about. `value` is the canonical
  * string stored in the ignore list; `match` terms dedupe these against the
  * user's recently-used apps (so e.g. "Webex" appears once) and detect whether
- * an entry is already ignored. Google Meet has no native app — its value is
- * the URL pattern the detector matches in the browser.
+ * an entry is already ignored.
  */
 const MEETING_APPS: { label: string; value: string; match: string[] }[] = [
-  { label: "Zoom", value: "zoom", match: ["zoom"] },
-  { label: "Microsoft Teams", value: "teams", match: ["teams", "microsoft teams", "msteams"] },
-  { label: "Google Meet", value: "meet.google.com", match: ["meet.google.com", "google meet"] },
   { label: "Discord", value: "discord", match: ["discord"] },
   { label: "Webex", value: "webex", match: ["webex"] },
-  { label: "FaceTime", value: "facetime", match: ["facetime"] },
-  { label: "WhatsApp", value: "whatsapp", match: ["whatsapp"] },
   { label: "Telegram", value: "telegram", match: ["telegram"] },
   { label: "Signal", value: "signal", match: ["signal"] },
 ];
@@ -251,7 +245,7 @@ export function MeetingAppsPicker({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索应用，或输入服务名称（例如 meet.google.com）..."
+            placeholder="搜索应用，或输入服务名称..."
             className="pl-8 h-8 text-sm"
             autoFocus
           />

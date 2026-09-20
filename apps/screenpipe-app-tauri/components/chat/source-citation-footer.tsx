@@ -73,7 +73,6 @@ const CONNECTION_SOURCE_ICON_PATHS: Array<[string, string]> = [
   ["google docs", "/images/google-docs.svg"],
   ["granola", "/images/granola.png"],
   ["hubspot", "/images/hubspot.png"],
-  ["jira", "/images/jira.png"],
   ["limitless", "/images/limitless.svg"],
   ["linear", "/images/linear.svg"],
   ["logseq", "/images/logseq.png"],
@@ -91,7 +90,6 @@ const CONNECTION_SOURCE_ICON_PATHS: Array<[string, string]> = [
   ["resend", "/images/resend.svg"],
   ["voice-memos", "/images/voice-memos.svg"],
   ["voice memos", "/images/voice-memos.svg"],
-  ["whatsapp", "/images/whatsapp.svg"],
   ["zapier", "/images/zapier.png"],
 ];
 
