@@ -462,6 +462,7 @@ pub use self::office::{
 };
 pub use self::connector::{
     ConnectorConnectionRow, ConnectorConnectionUpdate, ConnectorObjectDraft, ConnectorObjectRow,
+    ConnectorSyncRunRow, ConnectorUpsertOutcome,
 };
 pub mod tasks;
 mod util;

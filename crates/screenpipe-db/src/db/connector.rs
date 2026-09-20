@@ -46,6 +46,8 @@ pub struct ConnectorObjectRow {
 
 /// A fetched object to persist. `namespace` scopes identity within the
 /// channel (e.g. the feed URL for RSS), mirroring office's account_namespace.
+/// `content_hash` (SHA-256 of the normalized body) enables cross-identity
+/// dedup and no-op upserts; `None` opts out (empty bodies).
 #[derive(Debug, Clone, Default)]
 pub struct ConnectorObjectDraft {
     pub connector: String,
@@ -55,9 +57,22 @@ pub struct ConnectorObjectDraft {
     pub revision: Option<String>,
     pub title: Option<String>,
     pub body_text: String,
+    pub content_hash: Option<String>,
     pub event_at: Option<DateTime<Utc>>,
     pub fetched_at: DateTime<Utc>,
     pub source_url: Option<String>,
+}
+
+/// Outcome of one upsert, for sync-run accounting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConnectorUpsertOutcome {
+    /// New row created.
+    Created,
+    /// Same identity with unchanged content (or user-erased suppression) —
+    /// nothing written.
+    Unchanged,
+    /// Same content already stored under a different identity — skipped.
+    Duplicate,
 }
 
 /// Partial connection update — `None` fields keep their column values.
@@ -74,6 +89,20 @@ pub struct ConnectorConnectionUpdate {
     pub last_error_code: Option<String>,
     pub last_error_message: Option<String>,
     pub clear_errors: bool,
+}
+
+/// One finalized sync attempt, as surfaced in the channel status payload.
+#[derive(Debug, sqlx::FromRow, serde::Serialize)]
+pub struct ConnectorSyncRunRow {
+    pub id: i64,
+    pub started_at: String,
+    pub finished_at: Option<String>,
+    pub status: String,
+    pub processed: i64,
+    pub skipped: i64,
+    pub failed: i64,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
 }
 
 impl DatabaseManager {
@@ -129,9 +158,19 @@ impl DatabaseManager {
     /// Connector syncs are in-process tasks — nothing can legitimately still
     /// be running after a restart, so a row marked running/queued at startup is
     /// a crashed run. Left alone, the running guard would lock the channel out
-    /// of syncing forever. Returns the number of rows reset.
+    /// of syncing forever. Returns the number of rows reset. History rows left
+    /// open by the same crash are closed as failed.
     pub async fn connector_reset_stale_sync_runs(&self) -> Result<u64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
+        sqlx::query(
+            "UPDATE connector_sync_runs SET status = 'failed', \
+             finished_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), \
+             error_code = 'interrupted', \
+             error_message = '同步进程重启，上一次运行被中断' \
+             WHERE status = 'running'",
+        )
+        .execute(&mut **tx.conn())
+        .await?;
         let result = sqlx::query(
             "UPDATE connector_connections SET sync_status = 'failed', \
              last_error_code = 'interrupted', \
@@ -241,13 +280,16 @@ impl DatabaseManager {
         Ok(revision)
     }
 
-    /// Insert or update an imported object plus its FTS projection. Returns
-    /// true when the object was created. User-erased objects (state='deleted')
-    /// are never resurrected.
+    /// Insert or update an imported object plus its FTS projection. Content
+    /// unchanged since the stored hash skips the row update and FTS rewrite
+    /// entirely (the common case when re-syncing a feed); new identities
+    /// whose content hash already exists under a different identity are
+    /// skipped as duplicates. User-erased objects (state='deleted') are never
+    /// resurrected.
     pub async fn connector_upsert_object(
         &self,
         draft: &ConnectorObjectDraft,
-    ) -> Result<bool, SqlxError> {
+    ) -> Result<ConnectorUpsertOutcome, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let fetched = connector_format_ts(draft.fetched_at);
         let event = draft.event_at.map(connector_format_ts);
@@ -256,9 +298,9 @@ impl DatabaseManager {
             .split_whitespace()
             .collect::<Vec<_>>()
             .join(" ");
-        let existing: Option<(String,)> = sqlx::query_as(
-            "SELECT state FROM connector_objects WHERE connector = ?1 AND namespace = ?2 \
-             AND object_kind = ?3 AND object_id = ?4",
+        let existing: Option<(String, Option<String>)> = sqlx::query_as(
+            "SELECT state, content_hash FROM connector_objects WHERE connector = ?1 \
+             AND namespace = ?2 AND object_kind = ?3 AND object_id = ?4",
         )
         .bind(&draft.connector)
         .bind(&draft.namespace)
@@ -266,19 +308,70 @@ impl DatabaseManager {
         .bind(&draft.object_id)
         .fetch_optional(&mut **tx.conn())
         .await?;
-        if matches!(existing.as_ref(), Some((s,)) if s == "deleted") {
+        if let Some((state, stored_hash)) = existing {
+            if state == "deleted" {
+                tx.commit().await?;
+                return Ok(ConnectorUpsertOutcome::Unchanged);
+            }
+            // Content unchanged: keep the original fetched_at — the row is a
+            // confirmation the feed still carries it, not a new observation.
+            if stored_hash.is_some() && stored_hash == draft.content_hash {
+                tx.commit().await?;
+                return Ok(ConnectorUpsertOutcome::Unchanged);
+            }
+            sqlx::query(
+                "UPDATE connector_objects SET revision = ?5, title = ?6, body_text = ?7, \
+                 content_hash = ?8, event_at = ?9, fetched_at = ?10, source_url = ?11, \
+                 state = 'active', \
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') \
+                 WHERE connector = ?1 AND namespace = ?2 AND object_kind = ?3 AND object_id = ?4",
+            )
+            .bind(&draft.connector)
+            .bind(&draft.namespace)
+            .bind(&draft.object_kind)
+            .bind(&draft.object_id)
+            .bind(&draft.revision)
+            .bind(&draft.title)
+            .bind(&normalized)
+            .bind(&draft.content_hash)
+            .bind(&event)
+            .bind(&fetched)
+            .bind(&draft.source_url)
+            .execute(&mut **tx.conn())
+            .await?;
+            Self::connector_replace_fts(
+                &mut tx,
+                &draft.connector,
+                &draft.namespace,
+                &draft.object_kind,
+                &draft.object_id,
+                &normalized,
+                draft.title.as_deref(),
+            )
+            .await?;
             tx.commit().await?;
-            return Ok(false);
+            return Ok(ConnectorUpsertOutcome::Unchanged);
         }
-        let created = existing.is_none();
+        // New identity: same content must not land twice under a different
+        // guid or feed URL (syndicated posts).
+        if let Some(hash) = &draft.content_hash {
+            let duplicate: Option<(String,)> = sqlx::query_as(
+                "SELECT object_id FROM connector_objects \
+                 WHERE connector = ?1 AND content_hash = ?2 AND state != 'deleted' LIMIT 1",
+            )
+            .bind(&draft.connector)
+            .bind(hash)
+            .fetch_optional(&mut **tx.conn())
+            .await?;
+            if duplicate.is_some() {
+                tx.commit().await?;
+                return Ok(ConnectorUpsertOutcome::Duplicate);
+            }
+        }
         sqlx::query(
             "INSERT INTO connector_objects (connector, namespace, object_kind, object_id, \
-             revision, title, body_text, event_at, fetched_at, source_url, state) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 'active') \
-             ON CONFLICT (connector, namespace, object_kind, object_id) DO UPDATE SET \
-             revision = ?5, title = ?6, body_text = ?7, event_at = ?8, fetched_at = ?9, \
-             source_url = ?10, state = 'active', \
-             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')",
+             revision, title, body_text, content_hash, event_at, fetched_at, source_url, state) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 'active')",
         )
         .bind(&draft.connector)
         .bind(&draft.namespace)
@@ -287,25 +380,47 @@ impl DatabaseManager {
         .bind(&draft.revision)
         .bind(&draft.title)
         .bind(&normalized)
+        .bind(&draft.content_hash)
         .bind(&event)
         .bind(&fetched)
         .bind(&draft.source_url)
         .execute(&mut **tx.conn())
         .await?;
-        // FTS: same Chinese unigram/bigram projection as the office tables.
-        let fts_body = crate::text_normalizer::chinese_project(&format!(
-            "{} {}",
-            draft.title.clone().unwrap_or_default(),
-            normalized
-        ));
+        Self::connector_replace_fts(
+            &mut tx,
+            &draft.connector,
+            &draft.namespace,
+            &draft.object_kind,
+            &draft.object_id,
+            &normalized,
+            draft.title.as_deref(),
+        )
+        .await?;
+        tx.commit().await?;
+        Ok(ConnectorUpsertOutcome::Created)
+    }
+
+    /// Rewrite the FTS projection for one object (delete + insert inside the
+    /// caller's transaction).
+    async fn connector_replace_fts(
+        tx: &mut super::ImmediateTx,
+        connector: &str,
+        namespace: &str,
+        object_kind: &str,
+        object_id: &str,
+        normalized: &str,
+        title: Option<&str>,
+    ) -> Result<(), SqlxError> {
+        let fts_body =
+            crate::text_normalizer::chinese_project(&format!("{} {}", title.unwrap_or(""), normalized));
         sqlx::query(
             "DELETE FROM connector_objects_fts WHERE connector = ?1 AND namespace = ?2 \
              AND object_kind = ?3 AND object_id = ?4",
         )
-        .bind(&draft.connector)
-        .bind(&draft.namespace)
-        .bind(&draft.object_kind)
-        .bind(&draft.object_id)
+        .bind(connector)
+        .bind(namespace)
+        .bind(object_kind)
+        .bind(object_id)
         .execute(&mut **tx.conn())
         .await?;
         sqlx::query(
@@ -313,15 +428,14 @@ impl DatabaseManager {
              object_kind, object_id) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         )
         .bind(&fts_body)
-        .bind(&draft.title)
-        .bind(&draft.connector)
-        .bind(&draft.namespace)
-        .bind(&draft.object_kind)
-        .bind(&draft.object_id)
+        .bind(title)
+        .bind(connector)
+        .bind(namespace)
+        .bind(object_kind)
+        .bind(object_id)
         .execute(&mut **tx.conn())
         .await?;
-        tx.commit().await?;
-        Ok(created)
+        Ok(())
     }
 
     pub async fn connector_imported_object_count(
@@ -605,6 +719,75 @@ impl DatabaseManager {
         tx.commit().await?;
         Ok(())
     }
+
+    /// Open a sync-run row and return its id. One row per sync attempt —
+    /// answers "what did the last sync actually do" from history.
+    pub async fn connector_sync_run_start(
+        &self,
+        connector: &str,
+        key: &str,
+    ) -> Result<i64, SqlxError> {
+        let mut tx = self.begin_immediate_with_retry().await?;
+        let (id,): (i64,) = sqlx::query_as(
+            "INSERT INTO connector_sync_runs (connector, key, started_at) \
+             VALUES (?1, ?2, strftime('%Y-%m-%dT%H:%M:%fZ','now')) RETURNING id",
+        )
+        .bind(connector)
+        .bind(key)
+        .fetch_one(&mut **tx.conn())
+        .await?;
+        tx.commit().await?;
+        Ok(id)
+    }
+
+    /// Finalize a sync-run row with its outcome counts.
+    pub async fn connector_sync_run_finish(
+        &self,
+        id: i64,
+        status: &str,
+        processed: i64,
+        skipped: i64,
+        failed: i64,
+        error_code: Option<&str>,
+        error_message: Option<&str>,
+    ) -> Result<(), SqlxError> {
+        let mut tx = self.begin_immediate_with_retry().await?;
+        sqlx::query(
+            "UPDATE connector_sync_runs SET finished_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'), \
+             status = ?2, processed = ?3, skipped = ?4, failed = ?5, \
+             error_code = ?6, error_message = ?7 WHERE id = ?1",
+        )
+        .bind(id)
+        .bind(status)
+        .bind(processed)
+        .bind(skipped)
+        .bind(failed)
+        .bind(error_code)
+        .bind(error_message)
+        .execute(&mut **tx.conn())
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Most recent sync runs for one channel, newest first.
+    pub async fn connector_sync_runs_recent(
+        &self,
+        connector: &str,
+        key: &str,
+        limit: u32,
+    ) -> Result<Vec<ConnectorSyncRunRow>, SqlxError> {
+        sqlx::query_as(
+            "SELECT id, started_at, finished_at, status, processed, skipped, failed, \
+             error_code, error_message FROM connector_sync_runs \
+             WHERE connector = ?1 AND key = ?2 ORDER BY id DESC LIMIT ?3",
+        )
+        .bind(connector)
+        .bind(key)
+        .bind(limit.max(1) as i64)
+        .fetch_all(&self.pool)
+        .await
+    }
 }
 
 #[cfg(test)]
@@ -626,27 +809,111 @@ mod tests {
             revision: None,
             title: Some(title.to_string()),
             body_text: body.to_string(),
+            content_hash: None,
             event_at: None,
             fetched_at: Utc::now(),
             source_url: None,
         }
     }
 
+    fn hashed_draft(
+        connector: &str,
+        ns: &str,
+        id: &str,
+        title: &str,
+        body: &str,
+        hash: &str,
+    ) -> ConnectorObjectDraft {
+        ConnectorObjectDraft {
+            content_hash: Some(hash.to_string()),
+            ..draft(connector, ns, id, title, body)
+        }
+    }
+
     #[tokio::test]
     async fn upsert_dedups_and_updates() {
         let db = db().await;
-        assert!(db
-            .connector_upsert_object(&draft("rss", "feed-a", "i1", "标题", "内容一"))
-            .await
-            .unwrap());
+        assert_eq!(
+            db.connector_upsert_object(&draft("rss", "feed-a", "i1", "标题", "内容一"))
+                .await
+                .unwrap(),
+            ConnectorUpsertOutcome::Created
+        );
         // Same identity: update, not create.
-        assert!(!db
-            .connector_upsert_object(&draft("rss", "feed-a", "i1", "标题改", "内容一改"))
-            .await
-            .unwrap());
+        assert_eq!(
+            db.connector_upsert_object(&draft("rss", "feed-a", "i1", "标题改", "内容一改"))
+                .await
+                .unwrap(),
+            ConnectorUpsertOutcome::Unchanged
+        );
         assert_eq!(
             db.connector_imported_object_count("rss").await.unwrap(),
             1
+        );
+    }
+
+    #[tokio::test]
+    async fn unchanged_content_skips_rewrite() {
+        let db = db().await;
+        let first_at = Utc::now();
+        let mut first = hashed_draft("rss", "feed-a", "i1", "标题", "  内容  一  ", "h1");
+        first.fetched_at = first_at;
+        assert_eq!(
+            db.connector_upsert_object(&first).await.unwrap(),
+            ConnectorUpsertOutcome::Created
+        );
+        // Same identity, same content hash: nothing written — the original
+        // fetched_at survives instead of being bumped every sync.
+        let mut again = hashed_draft("rss", "feed-a", "i1", "标题", "内容 一", "h1");
+        again.fetched_at = first_at + chrono::Duration::hours(1);
+        assert_eq!(
+            db.connector_upsert_object(&again).await.unwrap(),
+            ConnectorUpsertOutcome::Unchanged
+        );
+        let row: (String, Option<String>) = sqlx::query_as(
+            "SELECT fetched_at, content_hash FROM connector_objects \
+             WHERE connector = 'rss' AND object_id = 'i1'",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(row.0, crate::db::connector::connector_format_ts(first_at));
+        assert_eq!(row.1.as_deref(), Some("h1"));
+    }
+
+    #[tokio::test]
+    async fn duplicate_content_under_new_identity_skips() {
+        let db = db().await;
+        assert_eq!(
+            db.connector_upsert_object(&hashed_draft(
+                "rss", "feed-a", "i1", "标题", "正文", "h1"
+            ))
+            .await
+            .unwrap(),
+            ConnectorUpsertOutcome::Created
+        );
+        // Same content under a different guid/namespace: duplicate, not a
+        // second row.
+        assert_eq!(
+            db.connector_upsert_object(&hashed_draft(
+                "rss", "feed-b", "i2", "标题", "正文", "h1"
+            ))
+            .await
+            .unwrap(),
+            ConnectorUpsertOutcome::Duplicate
+        );
+        assert_eq!(
+            db.connector_imported_object_count("rss").await.unwrap(),
+            1
+        );
+        // A different hash under the new identity still lands.
+        assert_eq!(
+            db.connector_upsert_object(&hashed_draft(
+                "rss", "feed-b", "i2", "另一篇", "另一正文", "h2"
+            ))
+            .await
+            .unwrap(),
+            ConnectorUpsertOutcome::Created
         );
     }
 
@@ -658,10 +925,12 @@ mod tests {
             .unwrap();
         assert_eq!(db.connector_erase("rss").await.unwrap(), 1);
         // Re-import after erase: suppressed.
-        assert!(!db
-            .connector_upsert_object(&draft("rss", "feed-a", "i1", "t", "b"))
-            .await
-            .unwrap());
+        assert_eq!(
+            db.connector_upsert_object(&draft("rss", "feed-a", "i1", "t", "b"))
+                .await
+                .unwrap(),
+            ConnectorUpsertOutcome::Unchanged
+        );
         assert_eq!(
             db.connector_imported_object_count("rss").await.unwrap(),
             0
@@ -730,5 +999,47 @@ mod tests {
         );
         db.connector_clear_cursors("rss").await.unwrap();
         assert_eq!(db.connector_get_cursor("rss", "", "feed:a").await.unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn sync_run_lifecycle_round_trips() {
+        let db = db().await;
+        let id = db.connector_sync_run_start("rss", "").await.unwrap();
+        // Newest-first listing shows the open run.
+        let open = db.connector_sync_runs_recent("rss", "", 5).await.unwrap();
+        assert_eq!(open.len(), 1);
+        assert_eq!(open[0].id, id);
+        assert_eq!(open[0].status, "running");
+        assert_eq!(open[0].processed, 0);
+
+        db.connector_sync_run_finish(id, "partial", 3, 10, 1, None, None)
+            .await
+            .unwrap();
+        let runs = db.connector_sync_runs_recent("rss", "", 5).await.unwrap();
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].status, "partial");
+        assert_eq!(runs[0].processed, 3);
+        assert_eq!(runs[0].skipped, 10);
+        assert_eq!(runs[0].failed, 1);
+        assert!(runs[0].finished_at.is_some());
+
+        // Second run lists above the first.
+        let id2 = db.connector_sync_run_start("rss", "").await.unwrap();
+        assert_ne!(id2, id);
+        let runs = db.connector_sync_runs_recent("rss", "", 1).await.unwrap();
+        assert_eq!(runs[0].id, id2);
+    }
+
+    #[tokio::test]
+    async fn startup_reset_closes_run_history_left_open_by_a_crash() {
+        let db = db().await;
+        let id = db.connector_sync_run_start("rss", "").await.unwrap();
+        db.connector_reset_stale_sync_runs().await.unwrap();
+        let runs = db.connector_sync_runs_recent("rss", "", 5).await.unwrap();
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].id, id);
+        assert_eq!(runs[0].status, "failed");
+        assert_eq!(runs[0].error_code.as_deref(), Some("interrupted"));
+        assert!(runs[0].finished_at.is_some());
     }
 }

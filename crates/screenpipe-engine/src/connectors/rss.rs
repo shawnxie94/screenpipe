@@ -5,21 +5,31 @@
 //! skeleton. Connection = the configured feed list (no external identity),
 //! scope = the feed URLs, sync = fetch + parse + upsert into the shared
 //! `connector_*` store with per-feed cursors, search = shared FTS.
+//!
+//! Fetch hygiene: conditional requests (ETag / If-Modified-Since persisted as
+//! a per-feed `http:` cursor, 304 skips the feed), a response size cap, and a
+//! per-run `connector_sync_runs` row recording processed/skipped/failed.
+//! Content hash on the normalized body gives cross-identity dedup and no-op
+//! upserts for unchanged feeds (see `connector_upsert_object`).
 
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use sha2::{Digest, Sha256};
 use tokio_util::sync::CancellationToken;
 
-use screenpipe_db::{ConnectorConnectionUpdate, ConnectorObjectDraft, DatabaseManager};
+use screenpipe_db::{ConnectorConnectionUpdate, ConnectorObjectDraft, ConnectorUpsertOutcome, DatabaseManager};
 
 use super::ConnectorError;
 
 pub const CONNECTOR_ID: &str = "rss";
 const KEY: &str = "rss";
 const FETCH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+/// Response size cap per feed. Feeds are XML metadata, not media — anything
+/// beyond this is a misbehaving or hostile source.
+const MAX_FEED_BYTES: usize = 10 * 1024 * 1024;
 
 fn now_iso() -> String {
     Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Micros, true)
@@ -39,6 +49,39 @@ impl RssScope {
     fn is_empty(&self) -> bool {
         self.feed_urls.is_empty()
     }
+}
+
+/// Conditional-request validators persisted per feed as a `http:` cursor so
+/// re-syncs send If-None-Match / If-Modified-Since and a 304 costs nothing.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct FeedValidators {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    etag: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    last_modified: Option<String>,
+}
+
+fn validators_cursor_key(url: &str) -> String {
+    format!("http:{url}")
+}
+
+async fn load_validators(db: &DatabaseManager, url: &str) -> FeedValidators {
+    db.connector_get_cursor(CONNECTOR_ID, KEY, &validators_cursor_key(url))
+        .await
+        .ok()
+        .flatten()
+        .and_then(|v| serde_json::from_str(&v).ok())
+        .unwrap_or_default()
+}
+
+/// SHA-256 of the normalized body — the cross-identity dedup key. Empty
+/// bodies opt out (a missing body must not collide with other missing bodies).
+fn content_hash(body: &str) -> Option<String> {
+    let normalized = body.split_whitespace().collect::<Vec<_>>().join(" ");
+    if normalized.is_empty() {
+        return None;
+    }
+    Some(hex::encode(Sha256::digest(normalized.as_bytes())))
 }
 
 pub struct RssService {
@@ -84,6 +127,12 @@ impl RssService {
             .db
             .connector_imported_object_count(CONNECTOR_ID)
             .await?;
+        let last_run = self
+            .db
+            .connector_sync_runs_recent(CONNECTOR_ID, KEY, 1)
+            .await?
+            .into_iter()
+            .next();
         Ok(json!({
             "connector": CONNECTOR_ID,
             "key": KEY,
@@ -96,6 +145,7 @@ impl RssService {
             "imported_objects": imported.max(0) as u64,
             "last_error_code": row.last_error_code,
             "last_error_message": row.last_error_message,
+            "last_run": last_run,
         }))
     }
 
@@ -178,7 +228,31 @@ impl RssService {
             cancel: self.cancel.child_token(),
         };
         tokio::spawn(async move {
-            let summary = run_sync(&service, &scope).await;
+            // History row for this attempt; `run_sync` finalizes it on the
+            // success/partial/cancelled paths, the failed path is finalized
+            // here because the error bypasses `run_sync`'s own bookkeeping.
+            let run_id = match service.db.connector_sync_run_start(CONNECTOR_ID, KEY).await {
+                Ok(id) => Some(id),
+                Err(e) => {
+                    tracing::warn!("rss connector: 无法记录同步运行: {e}");
+                    None
+                }
+            };
+            let summary = run_sync(&service, &scope, run_id).await;
+            if let (Some(run_id), Err(e)) = (run_id, &summary) {
+                let _ = service
+                    .db
+                    .connector_sync_run_finish(
+                        run_id,
+                        "failed",
+                        0,
+                        0,
+                        0,
+                        Some(&e.code),
+                        Some(&e.message),
+                    )
+                    .await;
+            }
             let (sync_status, error_code, error_message) = match &summary {
                 Ok(partial) => (
                     if *partial { "partial" } else { "idle" }.to_string(),
@@ -284,24 +358,50 @@ impl RssService {
 }
 
 /// Fetch + persist every feed. Returns true when some feed failed (partial).
-async fn run_sync(service: &RssService, scope: &RssScope) -> Result<bool, ConnectorError> {
+/// `run_id` (when the history row opened successfully) is finalized here with
+/// the outcome counts and status — success/partial/cancelled all flow through.
+async fn run_sync(
+    service: &RssService,
+    scope: &RssScope,
+    run_id: Option<i64>,
+) -> Result<bool, ConnectorError> {
     let client = reqwest::Client::builder()
         .timeout(FETCH_TIMEOUT)
         .build()
         .map_err(|e| ConnectorError::new("http_error", e.to_string(), 500).transient())?;
     let mut failures = 0usize;
+    let mut processed = 0i64;
+    let mut skipped = 0i64;
+    let mut cancelled = false;
     for url in &scope.feed_urls {
         if service.cancel.is_cancelled() {
+            cancelled = true;
             break;
         }
-        match fetch_feed(&client, url).await {
-            Ok(items) => {
+        let validators = load_validators(&service.db, url).await;
+        match fetch_feed(&client, url, &validators).await {
+            Ok(FeedFetch::NotModified) => {}
+            Ok(FeedFetch::Items(items, new_validators)) => {
+                // Persist the validators so the next run can send conditional
+                // headers; best-effort — a lost cursor only costs one full
+                // re-fetch.
+                let _ = service
+                    .db
+                    .connector_set_cursor(
+                        CONNECTOR_ID,
+                        KEY,
+                        &validators_cursor_key(url),
+                        &serde_json::to_string(&new_validators).unwrap_or_default(),
+                    )
+                    .await;
                 let fetched_at = Utc::now();
                 for item in items {
                     if service.cancel.is_cancelled() {
+                        cancelled = true;
                         break;
                     }
-                    let _ = service
+                    let hash = content_hash(&item.body);
+                    let outcome = service
                         .db
                         .connector_upsert_object(
                             &(ConnectorObjectDraft {
@@ -312,14 +412,20 @@ async fn run_sync(service: &RssService, scope: &RssScope) -> Result<bool, Connec
                                 revision: None,
                                 title: item.title,
                                 body_text: item.body,
+                                content_hash: hash,
                                 event_at: item.published,
                                 fetched_at,
                                 source_url: item.link,
                             }),
                         )
                         .await?;
+                    match outcome {
+                        ConnectorUpsertOutcome::Created => processed += 1,
+                        ConnectorUpsertOutcome::Unchanged
+                        | ConnectorUpsertOutcome::Duplicate => skipped += 1,
+                    }
                     // Cursor: newest item seen per feed (observability; item
-                    // dedup relies on object identity).
+                    // dedup relies on object identity + content hash).
                     let _ = service
                         .db
                         .connector_set_cursor(
@@ -337,7 +443,35 @@ async fn run_sync(service: &RssService, scope: &RssScope) -> Result<bool, Connec
             }
         }
     }
+    let status = if cancelled {
+        "cancelled"
+    } else if failures > 0 {
+        "partial"
+    } else {
+        "succeeded"
+    };
+    if let Some(run_id) = run_id {
+        let _ = service
+            .db
+            .connector_sync_run_finish(
+                run_id,
+                status,
+                processed,
+                skipped,
+                failures as i64,
+                None,
+                None,
+            )
+            .await;
+    }
     Ok(failures > 0)
+}
+
+/// Outcome of one feed fetch.
+enum FeedFetch {
+    /// Server answered 304 Not Modified — the feed is unchanged.
+    NotModified,
+    Items(Vec<FeedItem>, FeedValidators),
 }
 
 struct FeedItem {
@@ -352,13 +486,24 @@ struct FeedItem {
 async fn fetch_feed(
     client: &reqwest::Client,
     url: &str,
-) -> Result<Vec<FeedItem>, ConnectorError> {
-    let response = client
+    validators: &FeedValidators,
+) -> Result<FeedFetch, ConnectorError> {
+    let mut request = client
         .get(url)
-        .header("accept", "application/rss+xml, application/atom+xml, application/xml, text/xml, */*")
+        .header("accept", "application/rss+xml, application/atom+xml, application/xml, text/xml, */*");
+    if let Some(etag) = &validators.etag {
+        request = request.header(reqwest::header::IF_NONE_MATCH, etag);
+    }
+    if let Some(last_modified) = &validators.last_modified {
+        request = request.header(reqwest::header::IF_MODIFIED_SINCE, last_modified);
+    }
+    let response = request
         .send()
         .await
         .map_err(|e| ConnectorError::new("fetch_failed", format!("{url}: {e}"), 502).transient())?;
+    if response.status() == reqwest::StatusCode::NOT_MODIFIED {
+        return Ok(FeedFetch::NotModified);
+    }
     if !response.status().is_success() {
         return Err(ConnectorError::new(
             "fetch_failed",
@@ -367,11 +512,41 @@ async fn fetch_feed(
         )
         .transient());
     }
+    // Declared size first (cheap rejection), actual size after the read (the
+    // body may arrive without Content-Length).
+    if let Some(len) = response.content_length() {
+        if len as usize > MAX_FEED_BYTES {
+            return Err(ConnectorError::new(
+                "feed_too_large",
+                format!("{url}: 订阅响应 {} 字节，超过 {MAX_FEED_BYTES} 上限", len),
+                400,
+            ));
+        }
+    }
+    let validators = FeedValidators {
+        etag: response
+            .headers()
+            .get(reqwest::header::ETAG)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_string),
+        last_modified: response
+            .headers()
+            .get(reqwest::header::LAST_MODIFIED)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_string),
+    };
     let bytes = response
         .bytes()
         .await
         .map_err(|e| ConnectorError::new("fetch_failed", format!("{url}: {e}"), 502).transient())?;
-    parse_feed(url, &bytes)
+    if bytes.len() > MAX_FEED_BYTES {
+        return Err(ConnectorError::new(
+            "feed_too_large",
+            format!("{url}: 订阅响应 {} 字节，超过 {MAX_FEED_BYTES} 上限", bytes.len()),
+            400,
+        ));
+    }
+    Ok(FeedFetch::Items(parse_feed(url, &bytes)?, validators))
 }
 
 fn parse_feed(url: &str, bytes: &[u8]) -> Result<Vec<FeedItem>, ConnectorError> {
@@ -518,6 +693,35 @@ mod tests {
     #[test]
     fn parse_rejects_non_feed_bytes() {
         assert!(parse_feed("https://example.com/x", b"<html><body>not a feed</body></html>").is_err());
+    }
+
+    #[test]
+    fn content_hash_is_stable_and_skips_empty_bodies() {
+        let a = content_hash("这是  正文\t内容\n");
+        let b = content_hash("这是 正文 内容");
+        assert_eq!(a, b, "whitespace-normalized bodies must hash identically");
+        assert!(a.is_some());
+        assert_ne!(a, content_hash("另一篇正文"));
+        assert_eq!(content_hash("   \n\t "), None, "empty bodies opt out");
+    }
+
+    #[test]
+    fn validators_round_trip_through_cursor_json() {
+        let v = FeedValidators {
+            etag: Some("\"abc-123\"".to_string()),
+            last_modified: Some("Sat, 19 Sep 2026 00:00:00 GMT".to_string()),
+        };
+        let json = serde_json::to_string(&v).unwrap();
+        let back: FeedValidators = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.etag.as_deref(), Some("\"abc-123\""));
+        assert_eq!(
+            back.last_modified.as_deref(),
+            Some("Sat, 19 Sep 2026 00:00:00 GMT")
+        );
+        // Empty validators survive the round trip too (feed without headers).
+        let empty: FeedValidators = serde_json::from_str("{}").unwrap();
+        assert_eq!(empty.etag, None);
+        assert_eq!(empty.last_modified, None);
     }
 
     #[test]

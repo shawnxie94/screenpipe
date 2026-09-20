@@ -10979,6 +10979,7 @@ dependencies = [
  "fastrand",
  "feed-rs",
  "futures",
+ "hex",
  "hostname",
  "http-body-util",
  "hyper-util",
