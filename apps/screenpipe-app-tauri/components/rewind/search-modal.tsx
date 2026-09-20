@@ -44,7 +44,8 @@ import { NearViewport } from "./near-viewport";
 import { localFetch, getApiBaseUrl, appendAuthToken } from "@/lib/api";
 import { searchInputBehaviorProps } from "@/lib/search-input-behavior";
 import { usePlatform } from "@/lib/hooks/use-platform";
-import { importLocalDocument } from "@/lib/utils/document-import";
+import { importLocalDocument, summarizeImportResults } from "@/lib/utils/document-import";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { DOC_PICKER_EXTENSIONS } from "@/lib/pi/extract-document";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { readFile } from "@tauri-apps/plugin-fs";
@@ -795,9 +796,47 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   const documentResultsRef = useRef<DocumentHit[]>([]);
   documentResultsRef.current = documentResults;
 
-  // Pick document files and run each through the import pipeline. The chat
-  // composer's attachment path is deliberately untouched — importing adds a
-  // persistent evidence source, it does not attach to the next message.
+  // Run picked/dropped document file paths through the import pipeline. The
+  // chat composer's attachment path is deliberately untouched — importing adds
+  // a persistent evidence source, it does not attach to the next message.
+  // The busy flag lives in a ref so this callback stays stable and the
+  // drag-drop listener below doesn't resubscribe on every import toggle.
+  const isImportingDocumentsRef = useRef(false);
+  const importDocumentPaths = useCallback(async (paths: string[]) => {
+    if (isImportingDocumentsRef.current) return;
+    isImportingDocumentsRef.current = true;
+    setIsImportingDocuments(true);
+    try {
+      const results = [];
+      for (const path of paths) {
+        const name = path.split(/[\\/]/).pop() || path;
+        results.push(
+          await importLocalDocument({
+            name,
+            originalPath: path,
+            loadBytes: () => readFile(path),
+          }),
+        );
+      }
+      const { failed, succeeded } = summarizeImportResults(results);
+      if (failed.length > 0) {
+        toast({
+          title: `导入失败 ${failed.length} 个文件`,
+          description: failed.map((f) => `${f.name}：${f.reason}`).join("\n"),
+          variant: "destructive",
+        });
+      }
+      if (succeeded > 0) {
+        toast({ title: `已导入 ${succeeded} 个文档` });
+        setSearchEpoch((e) => e + 1);
+      }
+    } finally {
+      isImportingDocumentsRef.current = false;
+      setIsImportingDocuments(false);
+    }
+  }, []);
+
+  // Pick document files and run each through the import pipeline.
   const handleImportDocuments = useCallback(async () => {
     if (isImportingDocuments) return;
     let selected: string[] | null = null;
@@ -812,36 +851,35 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       console.error("document file picker error:", err);
       return;
     }
-    setIsImportingDocuments(true);
-    try {
-      const results = [];
-      for (const path of selected) {
-        const name = path.split(/[\\/]/).pop() || path;
-        results.push(
-          await importLocalDocument({
-            name,
-            originalPath: path,
-            loadBytes: () => readFile(path),
-          }),
-        );
+    await importDocumentPaths(selected);
+  }, [isImportingDocuments, importDocumentPaths]);
+
+  // Drag-and-drop entry for the documents scope. Same webview-level drag
+  // events the chat composer uses: while the search window is open, any file
+  // dragged in shows a drop hint and lands in the import pipeline on release.
+  const [isDraggingDocFile, setIsDraggingDocFile] = useState(false);
+  useEffect(() => {
+    if (!isOpen) return;
+    const unlisten = getCurrentWebview().onDragDropEvent((event) => {
+      if (event.payload.type === "enter" || event.payload.type === "over") {
+        setIsDraggingDocFile(true);
+      } else if (event.payload.type === "drop") {
+        setIsDraggingDocFile(false);
+        const paths = event.payload.paths;
+        if (paths && paths.length > 0) {
+          // Surface the results where the user can see them: imported
+          // documents live in the 文档 scope, not the one they dragged over.
+          setContentFilter("documents");
+          void importDocumentPaths(paths);
+        }
+      } else {
+        setIsDraggingDocFile(false);
       }
-      const failed = results.filter((r) => r.status === "failed");
-      if (failed.length > 0) {
-        toast({
-          title: `导入失败 ${failed.length} 个文件`,
-          description: failed.map((f) => `${f.name}：${f.reason}`).join("\n"),
-          variant: "destructive",
-        });
-      }
-      const succeeded = results.filter((r) => r.status !== "failed").length;
-      if (succeeded > 0) {
-        toast({ title: `已导入 ${succeeded} 个文档` });
-        setSearchEpoch((e) => e + 1);
-      }
-    } finally {
-      setIsImportingDocuments(false);
-    }
-  }, [isImportingDocuments]);
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, [isOpen, importDocumentPaths]);
 
   // Chat search state. Seed from the prewarm cache so a reopened search window
   // paints its recent chats on the first frame instead of after a disk scan.
@@ -3327,7 +3365,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                   hint={
                     trimmedQuery
                       ? "换个词试试，或导入更多文档"
-                      : "点击右上角“导入文档”选择文件后，即可全文搜索"
+                      : "点击右上角“导入文档”选择文件，或直接把文件拖进搜索窗口，即可全文搜索"
                   }
                 />
               )}
@@ -3814,18 +3852,30 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     </>
   );
 
+  // Drop hint while a file is dragged over the open search window. purely
+  // visual — pointer-events none so the drop still reaches the webview.
+  const renderDocumentDropOverlay = () =>
+    isDraggingDocFile ? (
+      <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm pointer-events-none">
+        <div className="rounded-lg border-2 border-dashed border-primary/60 bg-card/90 px-6 py-4 text-sm text-foreground shadow-sm">
+          松开以导入文档
+        </div>
+      </div>
+    ) : null;
+
   if (standalone || embedded) {
     return (
       <div
         ref={cardRef}
         className={cn(
-          "flex flex-col bg-card/95 backdrop-blur-xl",
+          "relative flex flex-col bg-card/95 backdrop-blur-xl",
           // Standalone hugs its content: the window resizes to match, so a
           // stretched card would just paint white space under short lists.
           // Deliberately not max-h-full: the card must be free to exceed the
           // current (80px) window height, or measuring it could never grow it.
           standalone ? "h-fit rounded-lg border border-border/50 shadow-2xl overflow-hidden" : "h-full",
         )}>
+        {renderDocumentDropOverlay()}
         {/* Search Input — Raycast-style large input */}
         <div className={cn(
           "flex items-center gap-3 px-5 border-b border-border/50",
@@ -3933,6 +3983,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
 
       {/* Modal */}
       <div className="relative w-full max-w-4xl mx-4 bg-card border border-border shadow-2xl overflow-hidden rounded-lg isolate">
+        {renderDocumentDropOverlay()}
         {/* Search Input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
           <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />

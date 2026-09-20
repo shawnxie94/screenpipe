@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   importLocalDocument,
   sha256Hex,
+  summarizeImportResults,
 } from "@/lib/utils/document-import";
 
 // jsdom lacks crypto.subtle — node's webcrypto covers it.
@@ -102,5 +103,26 @@ describe("importLocalDocument", () => {
       await sha256Hex(new TextEncoder().encode("hello import slice")),
     );
     expect(await sha256Hex(bytes)).toHaveLength(64);
+  });
+});
+
+describe("summarizeImportResults", () => {
+  it("splits a mixed batch into failures and success count", () => {
+    const results = [
+      { name: "a.md", status: "imported" as const },
+      { name: "b.png", status: "failed" as const, reason: "不支持的文件类型 .png" },
+      { name: "c.md", status: "duplicate" as const },
+      { name: "d.pdf", status: "failed" as const, reason: "解析失败" },
+    ];
+    expect(summarizeImportResults(results)).toEqual({
+      failed: results.filter((r) => r.status === "failed"),
+      succeeded: 2,
+    });
+  });
+
+  it("reports a clean batch with no failures", () => {
+    expect(
+      summarizeImportResults([{ name: "a.md", status: "imported" }]),
+    ).toEqual({ failed: [], succeeded: 1 });
   });
 });

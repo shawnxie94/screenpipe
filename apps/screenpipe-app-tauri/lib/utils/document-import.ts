@@ -170,6 +170,15 @@ export async function importLocalDocument(
   return { name: input.name, status: uploaded.status };
 }
 
+/** Split batch results into the toast summary the callers render. */
+export function summarizeImportResults(results: LocalDocumentImportResult[]): {
+  failed: LocalDocumentImportResult[];
+  succeeded: number;
+} {
+  const failed = results.filter((r) => r.status === "failed");
+  return { failed, succeeded: results.length - failed.length };
+}
+
 async function uploadErrorMessage(resp: Response): Promise<string> {
   try {
     const data = (await resp.json()) as { message?: string };
