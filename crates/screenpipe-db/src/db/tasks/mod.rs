@@ -935,18 +935,21 @@ mod tests {
         let db = test_db().await;
         let (first_run, created) = db.task_start_run(&request("pipe.run")).await.unwrap();
         assert!(created);
-        assert!(db.task_claim_run(&first_run, "w", 30).await.unwrap().is_some());
+        assert!(db
+            .task_claim_run(&first_run, "w", 30)
+            .await
+            .unwrap()
+            .is_some());
         expire_lease(&db, &first_run).await;
 
         let reaped = db.task_reap_expired().await.unwrap();
         assert_eq!(reaped, 1, "expired lease requeues the run");
 
-        let state: String =
-            sqlx::query_scalar("SELECT state FROM task_runs WHERE run_id = ?1")
-                .bind(&first_run)
-                .fetch_one(&db.pool)
-                .await
-                .unwrap();
+        let state: String = sqlx::query_scalar("SELECT state FROM task_runs WHERE run_id = ?1")
+            .bind(&first_run)
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
         assert_eq!(
             state, "queued",
             "a fresh attempt can pick the run back up after expiry"

@@ -7,7 +7,6 @@ use screenpipe_db::MeetingRecord;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 
-
 /// zh-local has no hosted analytics layer; detection-health events go to the
 /// local tracing log instead of PostHog. Function signatures and bucketing
 /// stay identical to upstream so future syncs keep applying cleanly.
@@ -23,7 +22,6 @@ pub(crate) struct MeetingDetectionScanSummary {
     pub matched_signal_kinds: Vec<String>,
     pub has_output_audio: bool,
 }
-
 
 pub(crate) fn capture_detection_decision(
     meeting: &MeetingRecord,
@@ -153,8 +151,6 @@ fn flap_bucket(flaps: u32) -> &'static str {
     }
 }
 
-
-
 fn meeting_event_key(meeting_id: i64) -> String {
     let mut hasher = Sha256::new();
     hasher.update(b"local");
@@ -168,16 +164,10 @@ fn app_bucket(app: &str) -> &'static str {
     let app = app.to_lowercase();
     if app == "manual" {
         "manual"
-    } else if app.contains("zoom") {
-        "zoom"
-    } else if app.contains("teams") {
-        "teams"
     } else if app.contains("slack") {
         "slack"
     } else if app.contains("discord") {
         "discord"
-    } else if app.contains("facetime") {
-        "facetime"
     } else if app.contains("signal") {
         "signal"
     } else if app.contains("whatsapp") {
@@ -245,7 +235,6 @@ fn parse_time(value: &str) -> Option<DateTime<Utc>> {
         .map(|dt| dt.with_timezone(&Utc))
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -281,7 +270,7 @@ mod tests {
         }
         assert!(props.contains("\"flap_bucket\":\"high\""));
         assert!(props.contains("\"end_reason\":\"auto_timeout\""));
-        assert!(props.contains("\"app_bucket\":\"zoom\""));
+        assert!(props.contains("\"app_bucket\":\"other_meeting_app\""));
     }
 
     #[test]
@@ -317,7 +306,7 @@ mod tests {
     #[test]
     fn buckets_apps_without_raw_names() {
         assert_eq!(app_bucket("Arc"), "browser_meeting");
-        assert_eq!(app_bucket("zoom.us"), "zoom");
+        assert_eq!(app_bucket("zoom.us"), "other_meeting_app");
         assert_eq!(app_bucket("Unexpected Vendor"), "other_meeting_app");
     }
 

@@ -186,8 +186,6 @@ async fn main() -> Result<()> {
         }
     }
 
-
-
     let report = build_report(reports);
     if let Some(path) = &args.out {
         if let Some(parent) = path.parent() {
@@ -662,10 +660,7 @@ fn build_report(scenarios: Vec<ReplayScenarioReport>) -> ReplayReport {
         .count();
     let background_scores: Vec<&ReplayScenarioReport> = scenarios
         .iter()
-        .filter(|scenario| {
-            scenario.status == "pass"
-                && scenario.mode == ReplayMode::Background
-        })
+        .filter(|scenario| scenario.status == "pass" && scenario.mode == ReplayMode::Background)
         .collect();
     let avg_background_der = mean(background_scores.iter().filter_map(|s| s.der));
     let avg_background_speaker_error = mean(

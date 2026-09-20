@@ -42,9 +42,7 @@ pub(crate) fn parse_overlay_anchor(action: &str) -> Option<&str> {
 pub(crate) fn parse_overlay_display(action: &str) -> Option<&str> {
     let display = action.strip_prefix("set_overlay_display:")?;
     let looks_like_uuid = display.len() == 36
-        && display
-            .chars()
-            .all(|c| c.is_ascii_hexdigit() || c == '-')
+        && display.chars().all(|c| c.is_ascii_hexdigit() || c == '-')
         && display
             .char_indices()
             .filter(|(_, c)| *c == '-')
@@ -556,7 +554,10 @@ fn run_pipe_from_notification(
                 "transient": true,
             }),
             Err(e) => {
-                error!("failed to run pipe '{}' from notification action: {}", pipe, e);
+                error!(
+                    "failed to run pipe '{}' from notification action: {}",
+                    pipe, e
+                );
                 serde_json::json!({
                     "title": format!("无法运行 {pipe}"),
                     "body": format!("运行请求失败：{e}"),
@@ -917,10 +918,7 @@ pub(crate) fn dispatch_notification_action(json: String) {
             .and_then(|v| v.as_str())
             == Some("record-hd")
     {
-        let body = parsed
-            .as_ref()
-            .and_then(|v| v.get("body"))
-            .cloned();
+        let body = parsed.as_ref().and_then(|v| v.get("body")).cloned();
         let deeplink_url = parsed
             .as_ref()
             .and_then(|v| v.get("deeplinkUrl").or_else(|| v.get("deeplink_url")))
@@ -1506,7 +1504,10 @@ mod tests {
             "context": { "meeting_id": 147 },
         }))
         .expect("open_in_chat pipe action should build a prefill");
-        assert_eq!(prefill["prompt"], "run the meeting-summary pipe with the provided context");
+        assert_eq!(
+            prefill["prompt"],
+            "run the meeting-summary pipe with the provided context"
+        );
         assert_eq!(prefill["autoSend"], true);
         assert_eq!(prefill["targetWindow"], "chat");
         assert!(prefill["context"]

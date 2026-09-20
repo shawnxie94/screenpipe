@@ -89,27 +89,26 @@ pub async fn stt(
     alternate_stt: Option<AlternateSttEngine>,
 ) -> Result<String> {
     let _ = device;
-    let transcription: Result<String> = if *audio_transcription_engine
-        == AudioTranscriptionEngine::Disabled
-    {
-        Ok(String::new())
-    } else if *audio_transcription_engine == AudioTranscriptionEngine::Qwen3Asr {
-        // Qwen3-ASR via alternate STT engine (audiopipe)
-        if let Some(ref engine) = alternate_stt {
-            let mut engine = engine
-                .lock()
-                .map_err(|e| anyhow::anyhow!("stt model lock: {}", e))?;
-            engine.transcribe(audio, sample_rate)
+    let transcription: Result<String> =
+        if *audio_transcription_engine == AudioTranscriptionEngine::Disabled {
+            Ok(String::new())
+        } else if *audio_transcription_engine == AudioTranscriptionEngine::Qwen3Asr {
+            // Qwen3-ASR via alternate STT engine (audiopipe)
+            if let Some(ref engine) = alternate_stt {
+                let mut engine = engine
+                    .lock()
+                    .map_err(|e| anyhow::anyhow!("stt model lock: {}", e))?;
+                engine.transcribe(audio, sample_rate)
+            } else {
+                Err(anyhow::anyhow!(
+                    "{} model not initialized",
+                    audio_transcription_engine
+                ))
+            }
         } else {
-            Err(anyhow::anyhow!(
-                "{} model not initialized",
-                audio_transcription_engine
-            ))
-        }
-    } else {
-        // Existing Whisper implementation
-        process_with_whisper(audio, languages, whisper_state, vocabulary).await
-    };
+            // Existing Whisper implementation
+            process_with_whisper(audio, languages, whisper_state, vocabulary).await
+        };
 
     // Post-processing: apply vocabulary replacements
     match transcription {

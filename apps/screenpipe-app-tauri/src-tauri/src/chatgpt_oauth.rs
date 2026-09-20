@@ -102,10 +102,7 @@ async fn read_tokens_from_store() -> Result<Option<OAuthTokens>, String> {
             }
         }
     }
-    Err(format!(
-        "密钥存储在 3 次尝试后仍不可用：{}",
-        last_err
-    ))
+    Err(format!("密钥存储在 3 次尝试后仍不可用：{}", last_err))
 }
 
 async fn write_tokens_to_store(tokens: &OAuthTokens) -> Result<(), String> {
@@ -573,8 +570,6 @@ async fn wait_for_callback(listener: tokio::net::TcpListener) -> Result<String, 
 }
 
 // ── Tauri commands ─────────────────────────────────────────────────────
-
-
 
 /// Frontend hook for browser OAuth flows that complete by polling (MCP and
 /// Composio). Best-effort activation after browser OAuth without changing

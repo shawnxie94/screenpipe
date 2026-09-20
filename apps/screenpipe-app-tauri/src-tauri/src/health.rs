@@ -752,9 +752,7 @@ fn overlay_failure_detail(
         (true, false, false) => "音频采集未更新",
         (false, true, false) => "画面采集未更新",
         (true, _, true) | (_, true, true) => "检测到多个录制错误",
-        (false, false, false) if status == RecordingStatus::Error => {
-            "录制引擎无法启动"
-        }
+        (false, false, false) if status == RecordingStatus::Error => "录制引擎无法启动",
         (false, false, false) if status == RecordingStatus::Stopped => "录制引擎已停止",
         _ => "录制意外停止",
     }
@@ -3065,14 +3063,8 @@ mod tests {
     /// writing a frame every second.
     #[test]
     fn overlay_names_a_single_failing_subsystem_and_never_guesses() {
-        assert_eq!(
-            overlay_failure_subsystem("音频采集未更新"),
-            "audio",
-        );
-        assert_eq!(
-            overlay_failure_subsystem("画面采集未更新"),
-            "screen",
-        );
+        assert_eq!(overlay_failure_subsystem("音频采集未更新"), "audio",);
+        assert_eq!(overlay_failure_subsystem("画面采集未更新"), "screen",);
 
         // Anything spanning subsystems, or that the engine could not attribute,
         // must stay generic rather than pick a side.

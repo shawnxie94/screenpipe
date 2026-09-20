@@ -451,10 +451,7 @@ fn load_screenpipe_agents_context(data_dir: &Path) -> Option<String> {
     None
 }
 
-fn build_first_turn_context(
-    agents_context: Option<String>,
-    user_prompt: Option<String>,
-) -> String {
+fn build_first_turn_context(agents_context: Option<String>, user_prompt: Option<String>) -> String {
     [
         Some(SCREENPIPE_TOOLS_HINT.to_string()),
         agents_context,
@@ -541,7 +538,6 @@ enum AgentInstaller {
     ShellScript { url: String },
 }
 
-
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CatalogAgent {
@@ -566,9 +562,6 @@ struct CatalogAgent {
     #[serde(default)]
     http_mcp: bool,
 }
-
-
-
 
 /// Run a `terminal`-type ACP auth method's login: the agent's own launch
 /// command plus the method's `args` (e.g. `bun x <adapter> --cli auth login
@@ -5599,7 +5592,6 @@ mod tests {
         assert_eq!(default_option_value(&session, "fast", "yes"), None);
         assert_eq!(default_option_value(&session, "gone", "a"), None);
     }
-
 
     #[test]
     fn claude_adapter_launches_with_subscription_auth_hidden() {

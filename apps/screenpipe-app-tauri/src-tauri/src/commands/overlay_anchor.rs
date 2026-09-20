@@ -27,12 +27,8 @@ const BASE_ANCHOR_MARGIN: f64 = 4.0;
 /// `swift/shortcut_reminder.swift` and `OVERLAY_ANCHORS` in
 /// `app/shortcut-reminder/overlay-anchor.ts`. Anything else is ignored rather
 /// than persisted, so a bad payload can never strand the pill off screen.
-pub(crate) const SHORTCUT_OVERLAY_ANCHORS: [&str; 4] = [
-    "top-center",
-    "right-center",
-    "bottom-center",
-    "left-center",
-];
+pub(crate) const SHORTCUT_OVERLAY_ANCHORS: [&str; 4] =
+    ["top-center", "right-center", "bottom-center", "left-center"];
 
 /// Matches `default_overlay_anchor` in `store.rs`.
 const DEFAULT_OVERLAY_ANCHOR: &str = "top-center";
@@ -282,7 +278,10 @@ mod tests {
             anchor_pill_origin("bottom-right", AREA, PILL, 1.0),
             anchor_pill_origin("bottom-center", AREA, PILL, 1.0)
         );
-        assert_eq!(resolve_stored_overlay_anchor("top-right"), Some("top-center"));
+        assert_eq!(
+            resolve_stored_overlay_anchor("top-right"),
+            Some("top-center")
+        );
         assert_eq!(
             resolve_stored_overlay_anchor("bottom-left"),
             Some("bottom-center")

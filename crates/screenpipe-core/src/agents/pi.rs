@@ -137,7 +137,10 @@ pub fn read_global_pi_models_from(path: &std::path::Path) -> Vec<PiGlobalProvide
     let parsed: serde_json::Value = match serde_json::from_str(&raw) {
         Ok(v) => v,
         Err(_) => {
-            warn!("pi: ignoring unparseable global models.json at {}", path.display());
+            warn!(
+                "pi: ignoring unparseable global models.json at {}",
+                path.display()
+            );
             return Vec::new();
         }
     };
@@ -536,7 +539,6 @@ pub fn apply_custom_provider_compat(provider: &mut serde_json::Value) {
     }
 }
 
-
 pub(crate) const MALFORMED_TOOL_USE_ERROR: &str =
     "provider_protocol_error: assistant ended with toolUse but emitted no executable tool call";
 
@@ -582,9 +584,7 @@ pub struct PiExecutor {
 
 impl PiExecutor {
     pub fn new() -> Self {
-        Self {
-            api_auth_key: None,
-        }
+        Self { api_auth_key: None }
     }
 
     /// Attach the local server's api_auth_key so Pi's bash tool can include
@@ -597,8 +597,6 @@ impl PiExecutor {
     fn render_screenpipe_api_skill() -> String {
         include_str!("../../assets/skills/screenpipe-api/SKILL.md").to_string()
     }
-
-
 
     /// Ensure screenpipe skills exist in `project_dir/.pi/skills/`.
     pub fn ensure_screenpipe_skill(project_dir: &Path) -> Result<()> {
@@ -1003,7 +1001,10 @@ impl PiExecutor {
 
         if ext_path.exists() {
             std::fs::remove_file(&ext_path)?;
-            info!("retired hosted web-search extension removed from {:?}", ext_path);
+            info!(
+                "retired hosted web-search extension removed from {:?}",
+                ext_path
+            );
         }
 
         Ok(())
@@ -1603,9 +1604,16 @@ impl AgentExecutor for PiExecutor {
         continue_session: bool,
     ) -> Result<AgentOutput> {
         let resolved_provider = provider
-            .ok_or_else(|| anyhow!("pipe AI provider is not configured; choose a local or third-party provider"))?
+            .ok_or_else(|| {
+                anyhow!(
+                    "pipe AI provider is not configured; choose a local or third-party provider"
+                )
+            })?
             .to_string();
-        if matches!(resolved_provider.as_str(), "screenpipe" | "screenpipe-cloud" | "pi") {
+        if matches!(
+            resolved_provider.as_str(),
+            "screenpipe" | "screenpipe-cloud" | "pi"
+        ) {
             return Err(anyhow!(
                 "Screenpipe-hosted AI has been removed; choose a local or third-party provider"
             ));
@@ -1613,8 +1621,7 @@ impl AgentExecutor for PiExecutor {
 
         let resolved_model = Self::resolve_model(model, &resolved_provider);
 
-        Self::ensure_pi_config(provider, Some(&resolved_model), provider_url)
-        .await?;
+        Self::ensure_pi_config(provider, Some(&resolved_model), provider_url).await?;
         // Use filtered skills if permissions are configured, unfiltered otherwise
         Self::ensure_screenpipe_skill_auto(working_dir)?;
 
@@ -1659,8 +1666,7 @@ impl AgentExecutor for PiExecutor {
                 "pi model not found, re-merging managed providers (stderr: {})",
                 output.stderr.trim()
             );
-            Self::ensure_pi_config(provider, Some(&resolved_model), provider_url)
-            .await?;
+            Self::ensure_pi_config(provider, Some(&resolved_model), provider_url).await?;
             return self
                 .spawn_pi(
                     &pi_path,
@@ -1697,17 +1703,23 @@ impl AgentExecutor for PiExecutor {
         _executor_config: Option<&serde_json::Value>,
     ) -> Result<AgentOutput> {
         let resolved_provider = provider
-            .ok_or_else(|| anyhow!("pipe AI provider is not configured; choose a local or third-party provider"))?
+            .ok_or_else(|| {
+                anyhow!(
+                    "pipe AI provider is not configured; choose a local or third-party provider"
+                )
+            })?
             .to_string();
-        if matches!(resolved_provider.as_str(), "screenpipe" | "screenpipe-cloud" | "pi") {
+        if matches!(
+            resolved_provider.as_str(),
+            "screenpipe" | "screenpipe-cloud" | "pi"
+        ) {
             return Err(anyhow!(
                 "Screenpipe-hosted AI has been removed; choose a local or third-party provider"
             ));
         }
         let resolved_model = Self::resolve_model(model, &resolved_provider);
 
-        Self::ensure_pi_config(provider, Some(&resolved_model), provider_url)
-        .await?;
+        Self::ensure_pi_config(provider, Some(&resolved_model), provider_url).await?;
         // Use filtered skills if permissions are configured, unfiltered otherwise
         Self::ensure_screenpipe_skill_auto(working_dir)?;
         Self::ensure_web_search_extension(working_dir)?;
@@ -1755,8 +1767,7 @@ impl AgentExecutor for PiExecutor {
                 "pi model not found, re-merging managed providers (stderr: {})",
                 output.stderr.trim()
             );
-            Self::ensure_pi_config(provider, Some(&resolved_model), provider_url)
-            .await?;
+            Self::ensure_pi_config(provider, Some(&resolved_model), provider_url).await?;
             output = self
                 .spawn_pi_streaming(
                     &pi_path,
@@ -1911,7 +1922,6 @@ impl AgentExecutor for PiExecutor {
     fn name(&self) -> &str {
         "pi"
     }
-
 }
 
 /// Screenpipe's private pi agent dir (models.json, auth.json, sessions, …).
@@ -3552,7 +3562,11 @@ mod tests {
 
         let providers = read_global_pi_models_from(&path);
         let names: Vec<&str> = providers.iter().map(|p| p.name.as_str()).collect();
-        assert_eq!(names, vec!["minimax", "ollama"], "screenpipe + no-models filtered");
+        assert_eq!(
+            names,
+            vec!["minimax", "ollama"],
+            "screenpipe + no-models filtered"
+        );
 
         let minimax = &providers[0];
         assert_eq!(minimax.title, "MINIMAX");
@@ -3597,7 +3611,11 @@ mod tests {
 
         let providers = read_global_pi_models_from(&path);
         assert_eq!(providers.len(), 1);
-        assert_eq!(providers[0].models.len(), 1, "only MiniMax-M3 has a string id");
+        assert_eq!(
+            providers[0].models.len(),
+            1,
+            "only MiniMax-M3 has a string id"
+        );
         assert_eq!(providers[0].models[0].id, "MiniMax-M3");
     }
 
@@ -3649,7 +3667,6 @@ mod tests {
         assert_eq!(pi_event_protocol_error(&valid), None);
     }
 
-
     #[test]
     fn bundled_read_skills_keep_the_live_database_behind_screenpipe() {
         let api_skill = include_str!("../../assets/skills/screenpipe-api/SKILL.md");
@@ -3662,8 +3679,6 @@ mod tests {
         assert!(api_skill.contains("MCP `query_recordings`"));
         assert!(cli_skill.contains("SQL analysis through Screenpipe"));
     }
-
-
 
     #[cfg(windows)]
     #[test]

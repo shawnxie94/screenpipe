@@ -291,7 +291,6 @@ impl ActivityHistoryState {
     }
 }
 
-
 fn repair_run_failure(error: &str) -> String {
     format!("activity_quality_failed:repair_run_failed:{error}")
 }
@@ -579,35 +578,35 @@ fn provider_config(
         preset.model.clone()
     };
     Ok(PiProviderConfig {
-            backend: is_acp.then_some(PiBackend::Acp),
-            acp_agent,
-            provider: serde_json::to_value(&preset.provider)
-                .ok()
-                .and_then(|value| value.as_str().map(str::to_owned))
-                .unwrap_or_else(|| "custom".to_string()),
-            url: preset.url.clone(),
-            model,
-            api_key: preset.api_key.clone(),
-            max_tokens: preset.max_tokens.clamp(2_048, 8_192),
-            max_context_chars: Some(preset.max_context_chars),
-            system_prompt: Some(
-                [preset.prompt.trim(), task_system_prompt]
-                    .into_iter()
-                    .filter(|part| !part.is_empty())
-                    .collect::<Vec<_>>()
-                    .join("\n\n"),
-            ),
-            // Activity generation preloads a bounded evidence snapshot below;
-            // disabling tools prevents the model from entering an unbounded
-            // terminal/API exploration loop before returning JSON.
-            allowed_tools: Some(Vec::new()),
-            resume_session_id: None,
-            // Generation runs with no window open and no approval card to show,
-            // so an agent that asks before reading would hang until the run
-            // times out. Unattended answers those requests the way a scheduled
-            // task does.
-            unattended: is_acp,
-        })
+        backend: is_acp.then_some(PiBackend::Acp),
+        acp_agent,
+        provider: serde_json::to_value(&preset.provider)
+            .ok()
+            .and_then(|value| value.as_str().map(str::to_owned))
+            .unwrap_or_else(|| "custom".to_string()),
+        url: preset.url.clone(),
+        model,
+        api_key: preset.api_key.clone(),
+        max_tokens: preset.max_tokens.clamp(2_048, 8_192),
+        max_context_chars: Some(preset.max_context_chars),
+        system_prompt: Some(
+            [preset.prompt.trim(), task_system_prompt]
+                .into_iter()
+                .filter(|part| !part.is_empty())
+                .collect::<Vec<_>>()
+                .join("\n\n"),
+        ),
+        // Activity generation preloads a bounded evidence snapshot below;
+        // disabling tools prevents the model from entering an unbounded
+        // terminal/API exploration loop before returning JSON.
+        allowed_tools: Some(Vec::new()),
+        resume_session_id: None,
+        // Generation runs with no window open and no approval card to show,
+        // so an agent that asks before reading would hang until the run
+        // times out. Unattended answers those requests the way a scheduled
+        // task does.
+        unattended: is_acp,
+    })
 }
 
 fn final_assistant_text(event: &Value) -> Option<String> {
@@ -825,12 +824,7 @@ fn repair_prompt_with_context(
 - 保留精确活动区间，并拆分超过 15 分钟的空档。
 
 使用草稿中已有的证据和上述校验详情。不要调用工具或再次查询 API。只返回修正后的 JSON。"#,
-        base = generation_prompt_with_context(
-            start,
-            end,
-            audit.minimum_entries,
-            context,
-        ),
+        base = generation_prompt_with_context(start, end, audit.minimum_entries, context,),
         draft = draft,
         parse_error = audit.parse_error,
         rejected_entries = audit.rejected_entries,
@@ -1016,7 +1010,13 @@ async fn activity_evidence_snapshot(
     let audio = evidence_rows(app, &query("audio")).await?;
 
     let lines = render_snapshot_lines(
-        start, end, preflight, ledger, meetings, &accessibility, &audio,
+        start,
+        end,
+        preflight,
+        ledger,
+        meetings,
+        &accessibility,
+        &audio,
     );
 
     // Total-character budget; Spanish / CJK titles are multi-byte, so count
@@ -1112,10 +1112,7 @@ fn render_snapshot_lines(
     if !meetings.is_empty() {
         lines.push("已知会议锚点:".to_string());
         for meeting in meetings {
-            let end = meeting
-                .meeting_end
-                .as_deref()
-                .unwrap_or("ongoing");
+            let end = meeting.meeting_end.as_deref().unwrap_or("ongoing");
             lines.push(format!(
                 "  meeting_id={} {}→{}",
                 meeting.id,
@@ -1205,7 +1202,12 @@ async fn evidence_rows(
 /// on relative ordering within the window instead of calendar noise.
 fn compact_time(time: DateTime<Utc>) -> String {
     let local = time.with_timezone(&Local);
-    format!("{:02}:{:02}:{:02}", local.hour(), local.minute(), local.second())
+    format!(
+        "{:02}:{:02}:{:02}",
+        local.hour(),
+        local.minute(),
+        local.second()
+    )
 }
 /// Collapse newlines/tabs into spaces and cap length — captured text and
 /// accessibility rows can span several lines, which would otherwise break
@@ -1245,9 +1247,7 @@ fn parse_document(
         .trim_start_matches("```")
         .trim_end_matches("```")
         .trim();
-    let object_start = unfenced
-        .find('{')
-        .ok_or("活动历史生成未返回 JSON")?;
+    let object_start = unfenced.find('{').ok_or("活动历史生成未返回 JSON")?;
     let mut deserializer = serde_json::Deserializer::from_str(&unfenced[object_start..]);
     let value = Value::deserialize(&mut deserializer)
         .map_err(|error| format!("活动历史生成了无效的 JSON：{error}"))?;
@@ -1392,9 +1392,7 @@ pub(crate) async fn run_background_pi(
                     )
                     .await?;
                 }
-                ActivityRunEvent::Fail(error) => {
-                    return Err(agent_failure(is_agent, error))
-                }
+                ActivityRunEvent::Fail(error) => return Err(agent_failure(is_agent, error)),
                 ActivityRunEvent::Ignore => {}
             }
         }
@@ -2142,9 +2140,7 @@ const LEGACY_AUTO_NARRATIVE_ENABLED: bool = true;
 
 pub fn start(app: AppHandle) {
     if !LEGACY_AUTO_NARRATIVE_ENABLED {
-        info!(
-            "activity history: automatic narrative generation retired by switch"
-        );
+        info!("activity history: automatic narrative generation retired by switch");
         return;
     }
     tauri::async_runtime::spawn(async move {
@@ -2274,21 +2270,39 @@ mod tests {
         }];
 
         let lines = render_snapshot_lines(
-            start, end, &preflight, &ledger, &meetings, &accessibility, &audio,
+            start,
+            end,
+            &preflight,
+            &ledger,
+            &meetings,
+            &accessibility,
+            &audio,
         );
         let rendered = lines.join("\n");
 
         // Key semantic fields present, in flat one-line form.
-        assert!(rendered.contains("活动概览: 数据状态=ok, 活跃时长=42.0 分钟"), "{rendered}");
+        assert!(
+            rendered.contains("活动概览: 数据状态=ok, 活跃时长=42.0 分钟"),
+            "{rendered}"
+        );
         assert!(rendered.contains("应用使用: Code (42min)"), "{rendered}");
         // Screen text kept on (was previously suppressed) and squashed.
-        assert!(rendered.contains("fn generate_inner(   app: AppHandle"), "{rendered}");
+        assert!(
+            rendered.contains("fn generate_inner(   app: AppHandle"),
+            "{rendered}"
+        );
         // Ledger keeps title/app — the semantic fields.
-        assert!(rendered.contains("task「写代码」 (app: Code)"), "{rendered}");
+        assert!(
+            rendered.contains("task「写代码」 (app: Code)"),
+            "{rendered}"
+        );
         // Meetings keep the id (the output contract references it).
         assert!(rendered.contains("meeting_id=7"), "{rendered}");
         // Audio keeps meeting_id link + transcript.
-        assert!(rendered.contains("这轮把生成上下文改干净 (meeting_id=7)"), "{rendered}");
+        assert!(
+            rendered.contains("这轮把生成上下文改干净 (meeting_id=7)"),
+            "{rendered}"
+        );
         // No raw JSON brace-noise.
         assert!(!rendered.contains("{data_status"), "{rendered}");
     }
@@ -2559,12 +2573,8 @@ mod tests {
         let end = parse_time("2026-08-19T11:00:00Z").unwrap();
 
         let generation = generation_prompt(start, end, 1);
-        assert!(generation.contains(
-            "不要调用工具、使用终端、运行 Shell 命令或再次查询 API"
-        ));
-        assert!(
-            generation.contains("title、summary 和 evidence.label 使用简体中文")
-        );
+        assert!(generation.contains("不要调用工具、使用终端、运行 Shell 命令或再次查询 API"));
+        assert!(generation.contains("title、summary 和 evidence.label 使用简体中文"));
 
         let audit = QualityAudit {
             rejected_entries: 0,
@@ -2735,7 +2745,10 @@ mod tests {
         );
     }
 
-    fn settings_with_presets(selected: &str, presets: Vec<crate::store::AIPreset>) -> SettingsStore {
+    fn settings_with_presets(
+        selected: &str,
+        presets: Vec<crate::store::AIPreset>,
+    ) -> SettingsStore {
         let mut settings = SettingsStore::default();
         settings.ai_presets = presets;
         settings
@@ -3097,6 +3110,4 @@ mod tests {
             "activity_quality_failed:repair_run_failed:HTTP 429 daily_cost_limit_exceeded"
         );
     }
-
 }
-

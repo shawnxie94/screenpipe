@@ -550,9 +550,7 @@ pub(crate) async fn register_artifact_handler(
     .ok_or_else(|| {
         (
             StatusCode::BAD_REQUEST,
-            JsonResponse(
-                json!({"error": "source、source_type 或 filename 含有无效字符"}),
-            ),
+            JsonResponse(json!({"error": "source、source_type 或 filename 含有无效字符"})),
         )
     })?;
     let dest_str = dest.to_string_lossy().to_string();

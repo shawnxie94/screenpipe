@@ -4,9 +4,7 @@
 
 //! Database write-wedge detection and bounded in-process recovery.
 
-use super::{
-    bounded_teardown, spawn_screenpipe_inner, RecordingState, TeardownOutcome,
-};
+use super::{bounded_teardown, spawn_screenpipe_inner, RecordingState, TeardownOutcome};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
@@ -90,10 +88,7 @@ enum DbWedgeShutdownAction {
     QuitApp,
 }
 
-fn db_wedge_shutdown_action(
-    outcome: TeardownOutcome,
-    hard_faulted: bool,
-) -> DbWedgeShutdownAction {
+fn db_wedge_shutdown_action(outcome: TeardownOutcome, hard_faulted: bool) -> DbWedgeShutdownAction {
     match outcome {
         TeardownOutcome::Completed => DbWedgeShutdownAction::RespawnInProcess,
         TeardownOutcome::Failed(_) | TeardownOutcome::TimedOut if hard_faulted => {
@@ -272,23 +267,23 @@ async fn recover_from_db_wedge(
             return;
         }
         DbWedgeShutdownAction::QuitApp => {
-        // This is deliberately narrower than the broad DB-init error policy in
-        // `db_relaunch`: the current database generation has already raised a
-        // confirmed SQLite hard fault, all writer admission is closed, and its
-        // shutdown has failed to prove all old pools are closed. A relaunch is
-        // also unsafe because a fresh process would immediately reopen the
-        // possibly damaged file. Exit fully and require offline recovery.
-        error!(
-            "db wedge auto-recovery: hard-fault server shutdown exceeded {:?}; \
+            // This is deliberately narrower than the broad DB-init error policy in
+            // `db_relaunch`: the current database generation has already raised a
+            // confirmed SQLite hard fault, all writer admission is closed, and its
+            // shutdown has failed to prove all old pools are closed. A relaunch is
+            // also unsafe because a fresh process would immediately reopen the
+            // possibly damaged file. Exit fully and require offline recovery.
+            error!(
+                "db wedge auto-recovery: hard-fault server shutdown exceeded {:?}; \
              quitting app to guarantee every SQLite connection is released before recovery",
-            DB_WEDGE_SERVER_SHUTDOWN_TIMEOUT
-        );
-        drop(server_guard);
-        drop(capture_guard);
-        recording_state.is_starting.store(false, Ordering::SeqCst);
-        recording_state.last_spawn_epoch.store(0, Ordering::SeqCst);
-        crate::process_exit::request_app_quit(app.clone());
-        return;
+                DB_WEDGE_SERVER_SHUTDOWN_TIMEOUT
+            );
+            drop(server_guard);
+            drop(capture_guard);
+            recording_state.is_starting.store(false, Ordering::SeqCst);
+            recording_state.last_spawn_epoch.store(0, Ordering::SeqCst);
+            crate::process_exit::request_app_quit(app.clone());
+            return;
         }
     }
     // Keep the state guards until shutdown completes. The dedicated server
@@ -465,10 +460,7 @@ mod tests {
             DbWedgeShutdownAction::QuitApp
         );
         assert_eq!(
-            db_wedge_shutdown_action(
-                TeardownOutcome::Failed("shutdown failed".to_string()),
-                true,
-            ),
+            db_wedge_shutdown_action(TeardownOutcome::Failed("shutdown failed".to_string()), true,),
             DbWedgeShutdownAction::QuitApp
         );
         assert_eq!(

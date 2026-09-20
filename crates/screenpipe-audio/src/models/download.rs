@@ -303,7 +303,12 @@ async fn try_fetch_model_bytes(url: &str) -> Result<bytes::Bytes> {
             }
             _ => "",
         };
-        return Err(anyhow!("download failed: HTTP {} for {}{}", status, url, hint));
+        return Err(anyhow!(
+            "download failed: HTTP {} for {}{}",
+            status,
+            url,
+            hint
+        ));
     }
 
     // A captive portal / proxy login page answers 200 OK with an HTML body
@@ -323,12 +328,18 @@ async fn try_fetch_model_bytes(url: &str) -> Result<bytes::Bytes> {
         }
     }
 
-    let model_data = response.bytes().await.map_err(|e| {
-        match download_failure_hint(&e) {
-            Some(hint) => anyhow!("failed reading download body from {}: {} ({})", url, hint, e),
+    let model_data = response
+        .bytes()
+        .await
+        .map_err(|e| match download_failure_hint(&e) {
+            Some(hint) => anyhow!(
+                "failed reading download body from {}: {} ({})",
+                url,
+                hint,
+                e
+            ),
             None => anyhow!("failed reading download body from {}: {}", url, e),
-        }
-    })?;
+        })?;
     if model_data.is_empty() {
         return Err(anyhow!("download returned empty body from {}", url));
     }
@@ -345,7 +356,10 @@ pub(crate) async fn fetch_bytes_with_mirrors(url: &str) -> Result<bytes::Bytes> 
         match try_fetch_model_bytes(candidate).await {
             Ok(bytes) => {
                 if candidate != url {
-                    info!("downloaded from mirror {} (primary {} unreachable)", candidate, url);
+                    info!(
+                        "downloaded from mirror {} (primary {} unreachable)",
+                        candidate, url
+                    );
                 }
                 return Ok(bytes);
             }
@@ -365,9 +379,9 @@ async fn download_model(
     model_path_lock: &'static Mutex<Option<PathBuf>>,
 ) -> Result<()> {
     info!("downloading {} model from {}", filename, url);
-    let model_data = fetch_bytes_with_mirrors(url).await.map_err(|e| {
-        anyhow!("failed to download {} from {}: {}", filename, url, e)
-    })?;
+    let model_data = fetch_bytes_with_mirrors(url)
+        .await
+        .map_err(|e| anyhow!("failed to download {} from {}: {}", filename, url, e))?;
     if model_data.is_empty() {
         return Err(anyhow!("download returned empty body for {}", filename));
     }

@@ -27,11 +27,7 @@ const MANIFEST_FILE: &str = ".screenpipe-agent-skills.json";
 const MAX_NAME_CHARS: usize = 80;
 const MAX_DESCRIPTION_CHARS: usize = 500;
 const MAX_INSTRUCTIONS_BYTES: usize = 64 * 1024;
-const RESERVED_SKILLS: &[&str] = &[
-    "screenpipe-api",
-    "screenpipe-cli",
-    "render-html-report",
-];
+const RESERVED_SKILLS: &[&str] = &["screenpipe-api", "screenpipe-cli", "render-html-report"];
 
 static SKILL_STORE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 

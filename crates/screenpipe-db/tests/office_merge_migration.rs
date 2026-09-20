@@ -33,7 +33,10 @@ async fn run_migrations_before_merge(pool: &sqlx::SqlitePool) {
         if m.version >= MERGE_VERSION {
             break;
         }
-        sqlx::raw_sql(sqlx::AssertSqlSafe(m.sql.as_str())).execute(pool).await.unwrap();
+        sqlx::raw_sql(sqlx::AssertSqlSafe(m.sql.as_str()))
+            .execute(pool)
+            .await
+            .unwrap();
     }
 }
 
@@ -41,7 +44,10 @@ async fn run_merge_migration(pool: &sqlx::SqlitePool) {
     let migrator = sqlx::migrate!("./src/migrations");
     for m in migrator.migrations.iter() {
         if m.version >= MERGE_VERSION {
-            sqlx::raw_sql(sqlx::AssertSqlSafe(m.sql.as_str())).execute(pool).await.unwrap();
+            sqlx::raw_sql(sqlx::AssertSqlSafe(m.sql.as_str()))
+                .execute(pool)
+                .await
+                .unwrap();
         }
     }
 }
@@ -124,12 +130,11 @@ async fn office_merge_migration_moves_data_faithfully() {
     assert_eq!(meta["account_namespace"], "acct-1");
 
     // Scope revision carried over.
-    let (revision,): (i64,) = sqlx::query_as(
-        "SELECT revision FROM connector_scopes WHERE connector = 'office:feishu'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
+    let (revision,): (i64,) =
+        sqlx::query_as("SELECT revision FROM connector_scopes WHERE connector = 'office:feishu'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(revision, 3);
 
     // Object: metadata holds the office-only fields.

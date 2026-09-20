@@ -41,7 +41,8 @@ pub(crate) async fn read_tail(path: &Path, max_bytes: u64) -> anyhow::Result<Str
     let mut buf = Vec::with_capacity(len.min(max_bytes) as usize);
     let truncated = len > max_bytes;
     if truncated {
-        file.seek(std::io::SeekFrom::End(-(max_bytes as i64))).await?;
+        file.seek(std::io::SeekFrom::End(-(max_bytes as i64)))
+            .await?;
     }
     file.take(max_bytes).read_to_end(&mut buf).await?;
 

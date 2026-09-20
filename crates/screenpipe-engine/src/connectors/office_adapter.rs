@@ -10,8 +10,8 @@ use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 
-use crate::office::{OfficeService, OfficeServiceError};
 use crate::connectors::{Connector, ConnectorError};
+use crate::office::{OfficeService, OfficeServiceError};
 use screenpipe_connect::office::types::OfficeScope;
 use screenpipe_db::DatabaseManager;
 
@@ -103,11 +103,7 @@ impl Connector for OfficeConnector {
         Ok(self.inner.disconnect(key, local_data).await?)
     }
 
-    async fn search(
-        &self,
-        query: &str,
-        limit: u32,
-    ) -> Result<serde_json::Value, ConnectorError> {
+    async fn search(&self, query: &str, limit: u32) -> Result<serde_json::Value, ConnectorError> {
         let rows = self.inner.search(None, query, limit).await?;
         Ok(serde_json::to_value(rows).unwrap_or(json!([])))
     }

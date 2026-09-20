@@ -400,7 +400,11 @@ mod tests {
 
     #[test]
     fn local_engines_unsafe_without_avx2_on_x86() {
-        for engine in ["whisper-tiny", "whisper-large-v3-turbo-quantized", "qwen3-asr"] {
+        for engine in [
+            "whisper-tiny",
+            "whisper-large-v3-turbo-quantized",
+            "qwen3-asr",
+        ] {
             // Removed cloud engines are never unsafe on the safety path
             assert!(!is_engine_unsafe(engine, DeviceTier::Mid));
         }

@@ -3809,7 +3809,8 @@ impl PipeManager {
                 return Err(anyhow!(
                     "定时任务 '{}' 已在运行（pid {}）——另一个进程正在执行该定时任务。\
                      请勿在定时任务内运行 `screenpipe pipe run`。",
-                    name, existing_pid
+                    name,
+                    existing_pid
                 ));
             } else {
                 info!(
@@ -4408,7 +4409,8 @@ impl PipeManager {
                     return Err(anyhow!(
                         "定时任务 '{}' 已在运行（pid {}）——另一个进程正在执行该定时任务。\
                          请勿在定时任务内运行 `screenpipe pipe run`。",
-                        name, existing_pid
+                        name,
+                        existing_pid
                     ));
                 } else {
                     info!(
@@ -5091,10 +5093,7 @@ impl PipeManager {
 
         let content = std::fs::read_to_string(&pipe_md)?;
         if content_is_enterprise_managed(&content) {
-            return Err(anyhow!(
-                "定时任务 '{}' 由组织管理，无法在本地编辑",
-                name
-            ));
+            return Err(anyhow!("定时任务 '{}' 由组织管理，无法在本地编辑", name));
         }
 
         // A caller that wraps its fields in a `config` envelope would otherwise
@@ -5513,10 +5512,7 @@ impl PipeManager {
         let pipe_md = dir.join("pipe.md");
         if let Ok(content) = std::fs::read_to_string(&pipe_md) {
             if content_is_enterprise_managed(&content) {
-                return Err(anyhow!(
-                    "定时任务 '{}' 由组织管理，无法在本地删除",
-                    name
-                ));
+                return Err(anyhow!("定时任务 '{}' 由组织管理，无法在本地删除", name));
             }
         }
 
@@ -6563,19 +6559,13 @@ impl PipeManager {
                                         qr.remove(&pipe_name);
                                     }
                                     remove_pid_file(&pipes_dir_for_log, &pipe_name);
-                                    if !e
-                                        .to_string()
-                                        .starts_with("pipe_task_already_active:")
-                                    {
+                                    if !e.to_string().starts_with("pipe_task_already_active:") {
                                         if let (Some((event, key)), Some(store)) =
                                             (&claim_for_release, store_ref.as_ref())
                                         {
-                                            let _ = store.release_event_run(
-                                                &pipe_name,
-                                                event,
-                                                key,
-                                            )
-                                            .await;
+                                            let _ = store
+                                                .release_event_run(&pipe_name, event, key)
+                                                .await;
                                         }
                                     }
                                     return;
@@ -10776,9 +10766,11 @@ Run the scheduled task.
             manager.get_pipe("day-recap").await.unwrap().config.effort,
             PipeEffort::High
         );
-        assert!(std::fs::read_to_string(pipes_dir.clone().join("day-recap/pipe.md"))
-            .unwrap()
-            .contains("effort: high"));
+        assert!(
+            std::fs::read_to_string(pipes_dir.clone().join("day-recap/pipe.md"))
+                .unwrap()
+                .contains("effort: high")
+        );
 
         let error = manager
             .update_config(

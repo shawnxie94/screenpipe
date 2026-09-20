@@ -1440,9 +1440,6 @@ pub(crate) async fn search(
 
     debug!("search completed: found {} results", total);
 
-
-
-
     let response = SearchResponse {
         data: content_items,
         pagination: PaginationInfo {

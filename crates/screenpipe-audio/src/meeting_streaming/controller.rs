@@ -962,15 +962,15 @@ async fn readiness_error(
 ) -> Option<String> {
     match config.provider {
         MeetingStreamingProvider::Disabled => None,
-        MeetingStreamingProvider::SelectedEngine => match transcription_engine.read().await.as_ref()
-        {
-            Some(engine) if engine.config() == AudioTranscriptionEngine::Disabled => Some(
-                "Choose an audio transcription engine to use live meeting notes"
-                    .to_string(),
-            ),
-            Some(_) => None,
-            None => Some("Selected transcription engine is still loading".to_string()),
-        },
+        MeetingStreamingProvider::SelectedEngine => {
+            match transcription_engine.read().await.as_ref() {
+                Some(engine) if engine.config() == AudioTranscriptionEngine::Disabled => Some(
+                    "Choose an audio transcription engine to use live meeting notes".to_string(),
+                ),
+                Some(_) => None,
+                None => Some("Selected transcription engine is still loading".to_string()),
+            }
+        }
     }
 }
 
@@ -1216,13 +1216,8 @@ mod tests {
         // until the first transcript arrives. With no engine yet it reports a
         // clear readiness error instead of silently dropping live notes.
         let transcription_engine = Arc::new(RwLock::new(None));
-        let config = MeetingStreamingConfig::from_settings(
-            true,
-            "selected-engine",
-            None,
-            None,
-            None,
-        );
+        let config =
+            MeetingStreamingConfig::from_settings(true, "selected-engine", None, None, None);
         assert!(config.live_transcription_ready());
         let err = readiness_error(&config, &transcription_engine).await;
         assert_eq!(
@@ -1237,8 +1232,7 @@ mod tests {
         let transcription_engine = Arc::new(RwLock::new(None));
         let mut active = None;
         // Disabled provider: live transcription off, background recording stays.
-        let config =
-            MeetingStreamingConfig::from_settings(true, "disabled", None, None, None);
+        let config = MeetingStreamingConfig::from_settings(true, "disabled", None, None, None);
 
         start_streaming_session(
             &config,

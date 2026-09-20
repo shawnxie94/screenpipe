@@ -97,7 +97,6 @@ pub(crate) async fn delete_time_range_handler(
         }
     }
 
-
     // Evict the range from the in-memory hot frame cache. Without this the
     // /stream/frames WS keeps re-emitting cached entries that point at
     // mp4/jpeg files we just unlinked — which made the timeline "jump
@@ -279,7 +278,9 @@ pub(crate) async fn storage_preview_handler(
             _ => {
                 return Err((
                     StatusCode::BAD_REQUEST,
-                    JsonResponse(json!({"error": "请提供 older_than_days，或同时提供 start 和 end"})),
+                    JsonResponse(
+                        json!({"error": "请提供 older_than_days，或同时提供 start 和 end"}),
+                    ),
                 ))
             }
         }

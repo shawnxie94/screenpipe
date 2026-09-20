@@ -284,10 +284,7 @@ async fn bench_tag_filter_scaling() {
     runs("All  tags=person:ada", ContentType::All, ada.clone()).await;
 
     // counts (used for pagination total; must also be index-bound)
-    for (label, ct) in [
-        ("OCR", ContentType::OCR),
-        ("All", ContentType::All),
-    ] {
+    for (label, ct) in [("OCR", ContentType::OCR), ("All", ContentType::All)] {
         let t = Instant::now();
         let total = db
             .count_search_results_with_tags(
@@ -414,16 +411,16 @@ async fn bench_related_tags_scaling() {
     )
     .await;
 
-
-    let counts: (i64, i64) = sqlx::query_as(
-        "SELECT (SELECT COUNT(*) FROM frames), (SELECT COUNT(*) FROM vision_tags)",
-    )
-    .fetch_one(&db.pool)
-    .await
-    .unwrap();
+    let counts: (i64, i64) =
+        sqlx::query_as("SELECT (SELECT COUNT(*) FROM frames), (SELECT COUNT(*) FROM vision_tags)")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
     println!(
         "seeded in {:?}: frames={} vision_tags={}",
-        seed.elapsed(), counts.0, counts.1
+        seed.elapsed(),
+        counts.0,
+        counts.1
     );
 
     // ---- query plan: confirm the vision/audio legs ride the tag indexes and

@@ -65,12 +65,7 @@ mod ffi {
         pub fn shortcut_set_meeting_active(active: c_int);
         pub fn shortcut_set_meeting_stop_result(succeeded: c_int);
         pub fn shortcut_set_health_state(state: *const c_char) -> c_int;
-        pub fn shortcut_get_frame(
-            x: *mut f64,
-            y: *mut f64,
-            w: *mut f64,
-            h: *mut f64,
-        ) -> c_int;
+        pub fn shortcut_get_frame(x: *mut f64, y: *mut f64, w: *mut f64, h: *mut f64) -> c_int;
         // Reached only through the e2e command surface below.
         #[cfg_attr(not(feature = "e2e"), allow(dead_code))]
         pub fn shortcut_get_meeting_overlay_state(

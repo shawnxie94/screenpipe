@@ -79,8 +79,8 @@ fn has_enough_evidence(snapshot: &Value, elapsed_seconds: i64) -> bool {
 
 async fn fetch_snapshot(app: &AppHandle, started_at: DateTime<Utc>) -> Result<Value, String> {
     let api = local_api_context_from_app(app);
-    let mut url = reqwest::Url::parse(&api.url("/activity-summary"))
-        .map_err(|error| error.to_string())?;
+    let mut url =
+        reqwest::Url::parse(&api.url("/activity-summary")).map_err(|error| error.to_string())?;
     url.query_pairs_mut()
         .append_pair("start_time", &started_at.to_rfc3339())
         .append_pair("end_time", &Utc::now().to_rfc3339())
@@ -117,7 +117,10 @@ fn clipped(value: Option<&str>, max: usize) -> String {
 fn build_facts(snapshot: &Value, elapsed_seconds: i64) -> String {
     let mut lines = vec![
         format!("minutes_since_setup: {}", (elapsed_seconds / 60).max(1)),
-        format!("screens_indexed: {}", number(snapshot, "total_frames") as i64),
+        format!(
+            "screens_indexed: {}",
+            number(snapshot, "total_frames") as i64
+        ),
     ];
     if let Some(apps) = snapshot.get("apps").and_then(Value::as_array) {
         let names = apps
@@ -139,7 +142,11 @@ fn build_facts(snapshot: &Value, elapsed_seconds: i64) -> String {
                 let title = clipped(window.get("window_name").and_then(Value::as_str), 160);
                 (!title.is_empty()).then(|| {
                     let app = clipped(window.get("app_name").and_then(Value::as_str), 80);
-                    if app.is_empty() { format!("- {title}") } else { format!("- {title} in {app}") }
+                    if app.is_empty() {
+                        format!("- {title}")
+                    } else {
+                        format!("- {title} in {app}")
+                    }
                 })
             })
             .collect::<Vec<_>>();
@@ -181,8 +188,14 @@ fn validate_candidate(raw: &str) -> Result<String, String> {
     }
     let lower = text.to_lowercase();
     let rejected = [
-        "i'm sorry", "i am sorry", "as an ai", "window_titles", "screens_indexed",
-        "minutes_since_setup", "observations:", "the rules",
+        "i'm sorry",
+        "i am sorry",
+        "as an ai",
+        "window_titles",
+        "screens_indexed",
+        "minutes_since_setup",
+        "observations:",
+        "the rules",
     ];
     if rejected.iter().any(|token| lower.contains(token)) {
         return Err("AI returned a rejected first-run summary".to_string());
@@ -271,8 +284,7 @@ async fn ensure_notification(app: &AppHandle, onboarding: &OnboardingStore) -> R
         .ok_or("first-run summary is ready without a chat id")?;
     let notification_id = notification_id(chat_id);
     if onboarding.first_run_summary_notification_sent_at.is_some()
-        && onboarding.first_run_summary_notification_id.as_deref()
-            == Some(notification_id.as_str())
+        && onboarding.first_run_summary_notification_id.as_deref() == Some(notification_id.as_str())
     {
         return Ok(());
     }
@@ -365,7 +377,10 @@ async fn tick(app: &AppHandle, state: &FirstRunSummaryState) -> Result<(), Strin
         return Ok(());
     }
 
-    info!(elapsed_seconds, "first-run summary: evidence ready; starting native generation");
+    info!(
+        elapsed_seconds,
+        "first-run summary: evidence ready; starting native generation"
+    );
     update_state(app, "writing", None, None)?;
     let facts = build_facts(&snapshot, elapsed_seconds);
     let result = if crate::store::trial_activation_dev_force_enabled() {
@@ -481,7 +496,9 @@ mod tests {
 
     #[test]
     fn each_summary_gets_a_distinct_notification_id() {
-        assert_ne!(notification_id("first-run-1"), notification_id("first-run-2"));
+        assert_ne!(
+            notification_id("first-run-1"),
+            notification_id("first-run-2")
+        );
     }
-
 }

@@ -15,9 +15,7 @@ pub fn configure() {
         // This runs before Tauri creates GTK/WebKit objects. NVIDIA's GBM path
         // can otherwise leave AppImage windows transparent or frozen.
         std::env::set_var(DMABUF_RENDERER_ENV, "1");
-        eprintln!(
-            "screenpipe: disabled WebKit DMABuf rendering for NVIDIA AppImage compatibility"
-        );
+        eprintln!("screenpipe: disabled WebKit DMABuf rendering for NVIDIA AppImage compatibility");
     }
 }
 

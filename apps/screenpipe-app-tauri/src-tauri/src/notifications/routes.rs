@@ -582,7 +582,6 @@ pub struct NotifyPayload {
     pub source_url: Option<String>,
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -704,11 +703,19 @@ mod tests {
     fn transient_classification_drives_whether_notify_writes_a_row() {
         // The two families cluttering the inbox today: meeting lifecycle and
         // ambient status. Both still deliver, neither leaves a row.
-        assert!(resolve_transient(None, "meeting", NotificationPriority::High));
+        assert!(resolve_transient(
+            None,
+            "meeting",
+            NotificationPriority::High
+        ));
         assert!(resolve_transient(None, "system", NotificationPriority::Low));
 
         // Pipe output and recording failures keep their row.
-        assert!(!resolve_transient(None, "pipe", NotificationPriority::Normal));
+        assert!(!resolve_transient(
+            None,
+            "pipe",
+            NotificationPriority::Normal
+        ));
         assert!(!resolve_transient(
             None,
             "capture_stall",

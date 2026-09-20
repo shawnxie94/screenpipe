@@ -8,8 +8,8 @@
 //! no secrets on argv.
 
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::process::Stdio;
+use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::io::AsyncReadExt;
@@ -336,7 +336,12 @@ async fn probe_version(path: &Path) -> Option<String> {
     // it so the pinned-version comparison is about the version itself.
     let version = text
         .split_whitespace()
-        .find(|tok| tok.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false))
+        .find(|tok| {
+            tok.chars()
+                .next()
+                .map(|c| c.is_ascii_digit())
+                .unwrap_or(false)
+        })
         .or_else(|| text.split_whitespace().last())
         .map(|tok| tok.trim_start_matches('v').to_string());
     let _ = (FEISHU_CLI_VERSION, TENCENT_MEETING_CLI_VERSION);
@@ -382,7 +387,10 @@ mod tests {
             "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then echo \"fake 1.0.65\"; exit 0; fi\nif [ \"$2\" = \"--secret\" ]; then echo \"NEVER\"; exit 1; fi\necho '{\"ok\":true}'\n",
         );
         let runner = CliRunner::new(dir.clone());
-        let dependency = dep(Some(cli.to_string_lossy().to_string()), Some("1.0.65".into()));
+        let dependency = dep(
+            Some(cli.to_string_lossy().to_string()),
+            Some("1.0.65".into()),
+        );
         let command = OfficeCommand::FeishuAuthStatus;
         let out = runner
             .run(&dependency, &command, CancellationToken::new())
@@ -399,9 +407,16 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let cli = fake_cli(&dir, "fake-cli", "#!/bin/sh\necho x\n");
         let runner = CliRunner::new(dir.clone());
-        let dependency = dep(Some(cli.to_string_lossy().to_string()), Some("9.9.9".into()));
+        let dependency = dep(
+            Some(cli.to_string_lossy().to_string()),
+            Some("9.9.9".into()),
+        );
         let err = runner
-            .run(&dependency, &OfficeCommand::FeishuAuthStatus, CancellationToken::new())
+            .run(
+                &dependency,
+                &OfficeCommand::FeishuAuthStatus,
+                CancellationToken::new(),
+            )
             .await
             .unwrap_err();
         assert_eq!(err.code, OfficeErrorCode::CliUnsupportedVersion);
@@ -414,7 +429,10 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let cli = fake_cli(&dir, "fake-cli", "#!/bin/sh\nsleep 30\necho done\n");
         let runner = CliRunner::new(dir.clone());
-        let dependency = dep(Some(cli.to_string_lossy().to_string()), Some("1.0.65".into()));
+        let dependency = dep(
+            Some(cli.to_string_lossy().to_string()),
+            Some("1.0.65".into()),
+        );
         let token = CancellationToken::new();
         let t2 = token.clone();
         tokio::spawn(async move {
@@ -426,8 +444,15 @@ mod tests {
             .run(&dependency, &OfficeCommand::FeishuAuthStatus, token)
             .await
             .unwrap_err();
-        assert_eq!(err.code, OfficeErrorCode::CliTimeout, "cancelled runs surface as CliTimeout/cancelled");
-        assert!(started.elapsed() < Duration::from_secs(5), "cancel must not wait out the full timeout");
+        assert_eq!(
+            err.code,
+            OfficeErrorCode::CliTimeout,
+            "cancelled runs surface as CliTimeout/cancelled"
+        );
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "cancel must not wait out the full timeout"
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
@@ -436,11 +461,22 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("office-runner-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         // 3 MiB of output exceeds the 2 MiB cap.
-        let cli = fake_cli(&dir, "fake-cli", "#!/bin/sh\nhead -c 3145728 /dev/zero | tr '\\0' 'a'\n");
+        let cli = fake_cli(
+            &dir,
+            "fake-cli",
+            "#!/bin/sh\nhead -c 3145728 /dev/zero | tr '\\0' 'a'\n",
+        );
         let runner = CliRunner::new(dir.clone());
-        let dependency = dep(Some(cli.to_string_lossy().to_string()), Some("1.0.65".into()));
+        let dependency = dep(
+            Some(cli.to_string_lossy().to_string()),
+            Some("1.0.65".into()),
+        );
         let out = runner
-            .run(&dependency, &OfficeCommand::FeishuAuthStatus, CancellationToken::new())
+            .run(
+                &dependency,
+                &OfficeCommand::FeishuAuthStatus,
+                CancellationToken::new(),
+            )
             .await
             .unwrap();
         assert!(out.truncated, "oversized output must be flagged truncated");

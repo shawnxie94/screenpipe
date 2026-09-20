@@ -22,9 +22,9 @@
 
 pub mod connections;
 pub mod ics_calendar;
-pub mod office;
 pub mod mcp_servers;
 pub mod mdns;
+pub mod office;
 pub mod remote_sync;
 pub mod sync_scheduler;
 

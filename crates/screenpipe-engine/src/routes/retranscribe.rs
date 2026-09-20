@@ -346,25 +346,20 @@ pub async fn retranscribe_handler(
     }
 
     // 3. Build unified TranscriptionEngine for this retranscription request
-    let transcription_engine = match TranscriptionEngine::new(
-        engine.clone(),
-        languages,
-        effective_vocabulary,
-    )
-    .await
-    {
-        Ok(e) => e,
-        Err(e) => {
-            error!(
-                "failed to create transcription engine for retranscribe: {}",
-                e
-            );
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("failed to initialize transcription engine: {}", e),
-            );
-        }
-    };
+    let transcription_engine =
+        match TranscriptionEngine::new(engine.clone(), languages, effective_vocabulary).await {
+            Ok(e) => e,
+            Err(e) => {
+                error!(
+                    "failed to create transcription engine for retranscribe: {}",
+                    e
+                );
+                return error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to initialize transcription engine: {}", e),
+                );
+            }
+        };
 
     // 4. Process each chunk
     let mut results = Vec::new();
@@ -552,22 +547,17 @@ pub async fn retranscribe_meeting_handler(
     );
 
     let languages = state.audio_manager.languages().await;
-    let transcription_engine = match TranscriptionEngine::new(
-        engine.clone(),
-        languages,
-        vocabulary,
-    )
-    .await
-    {
-        Ok(engine) => engine,
-        Err(e) => {
-            error!("meeting retranscribe: failed to initialize engine: {}", e);
-            return Err(json_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("failed to initialize transcription engine: {}", e),
-            ));
-        }
-    };
+    let transcription_engine =
+        match TranscriptionEngine::new(engine.clone(), languages, vocabulary).await {
+            Ok(engine) => engine,
+            Err(e) => {
+                error!("meeting retranscribe: failed to initialize engine: {}", e);
+                return Err(json_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to initialize transcription engine: {}", e),
+                ));
+            }
+        };
 
     let batches = group_meeting_chunks(&chunks, max_batch_duration);
     let mut pending = Vec::new();

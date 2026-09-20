@@ -1073,8 +1073,7 @@ impl OnboardingStore {
 
     fn apply_trial_activation_rollout(&mut self, enabled: bool) -> bool {
         if enabled
-            || (!self.blocks_trial_activation_app()
-                && !self.blocks_trial_activation_recording())
+            || (!self.blocks_trial_activation_app() && !self.blocks_trial_activation_recording())
         {
             return false;
         }
@@ -1459,16 +1458,6 @@ impl Default for AIPreset {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioEngineResolution {
@@ -1480,7 +1469,6 @@ pub struct AudioEngineResolution {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub enum AudioEngineFallbackReason {}
-
 
 #[derive(Serialize, Deserialize, Type, Clone)]
 #[serde(default)]
@@ -1853,9 +1841,7 @@ impl SettingsStore {
         settings.experimental_meeting_piggyback =
             screenpipe_config::default_experimental_meeting_piggyback();
         // userName setting wins; no cloud name/email fallback exists anymore.
-        settings.user_name = settings
-            .user_name
-            .filter(|s| !s.trim().is_empty());
+        settings.user_name = settings.user_name.filter(|s| !s.trim().is_empty());
         // Remote emergency stops are intentionally applied after the flattened
         // recording settings (including Enterprise-managed values). Remote
         // config can only turn these reviewed controls off; it cannot force
@@ -1944,9 +1930,6 @@ impl SettingsStore {
         config
     }
 
-
-
-
     pub fn audio_engine_resolution(&self) -> AudioEngineResolution {
         let engine = self.recording.audio_transcription_engine.clone();
         AudioEngineResolution {
@@ -1987,8 +1970,7 @@ fn restore_headed_mode_for_consumer(
     true
 }
 
-const WINDOWS_TIMELINE_WINDOW_MODE_MIGRATION: &str =
-    "windowsTimelineWindowModeMigrationV1";
+const WINDOWS_TIMELINE_WINDOW_MODE_MIGRATION: &str = "windowsTimelineWindowModeMigrationV1";
 
 /// Move existing Windows installs off the legacy borderless fullscreen overlay.
 ///
@@ -2191,9 +2173,7 @@ pub fn init_store(app: &AppHandle) -> Result<SettingsStore, String> {
         && can_run_settings_migrations
         && migrate_windows_timeline_to_window_mode(&mut store)
     {
-        tracing::info!(
-            "settings migration: selected window mode for the Windows timeline overlay"
-        );
+        tracing::info!("settings migration: selected window mode for the Windows timeline overlay");
         should_save = true;
     }
 
@@ -2304,7 +2284,6 @@ impl CloudSyncSettingsStore {
         Ok(())
     }
 }
-
 
 // ─── ICS Calendar Settings ───────────────────────────────────────────────────
 

@@ -106,16 +106,13 @@ pub(super) fn handle(app: &AppHandle, _name: &str, data: &Value) {
         // ── AudioPaused: vision still runs, audio is off ────────────────
         ("AudioPaused", _) => (
             "电量低 — 音频已暂停",
-            format!(
-                "电量 {battery}% — 音频转录已停止，截图已暂停。辅助功能元数据仍在采集。"
-            ),
+            format!("电量 {battery}% — 音频转录已停止，截图已暂停。辅助功能元数据仍在采集。"),
         ),
 
         // ── Saver: throttled but still capturing ────────────────────────
         ("Saver", Some("os_low_power")) => (
             "低电量模式 — 省电档",
-            "macOS 低电量模式已开启 — 已切换到省电档以匹配系统降频。"
-                .to_string(),
+            "macOS 低电量模式已开启 — 已切换到省电档以匹配系统降频。".to_string(),
         ),
         ("Saver", Some("thermal_serious") | Some("thermal_critical")) => (
             "设备发热 — 省电档",
@@ -123,9 +120,7 @@ pub(super) fn handle(app: &AppHandle, _name: &str, data: &Value) {
         ),
         ("Saver", _) => (
             "省电模式",
-            format!(
-                "已切换到省电档 — 电量 {battery}%，已降低采集强度以延长续航。"
-            ),
+            format!("已切换到省电档 — 电量 {battery}%，已降低采集强度以延长续航。"),
         ),
 
         // ── Balanced: mild step down ────────────────────────────────────

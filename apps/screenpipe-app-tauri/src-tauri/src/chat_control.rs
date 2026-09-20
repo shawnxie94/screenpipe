@@ -78,33 +78,32 @@ fn provider_config_for_chat(
         None
     };
     Ok(PiProviderConfig {
-            backend: is_acp.then_some(PiBackend::Acp),
-            acp_agent,
-            provider: provider_name(&preset.provider),
-            url: preset.url.clone(),
-            model: if preset.model.trim().is_empty() {
-                preset
-                    .acp_agent
-                    .as_ref()
-                    .map(|agent| agent.id.clone())
-                    .unwrap_or_default()
-            } else {
-                preset.model.clone()
-            },
-            api_key: preset.api_key.clone(),
-            max_tokens: preset.max_tokens,
-            max_context_chars: Some(preset.max_context_chars),
-            system_prompt: (!preset.prompt.trim().is_empty())
-                .then(|| preset.prompt.trim().to_string()),
-            allowed_tools: None,
-            resume_session_id: conversation
-                .get("acpSessionId")
-                .and_then(Value::as_str)
-                .map(str::to_string),
-            // Chat is the attended surface: its approval cards are visible, so
-            // the runtime must keep asking rather than deciding for the user.
-            unattended: false,
-        })
+        backend: is_acp.then_some(PiBackend::Acp),
+        acp_agent,
+        provider: provider_name(&preset.provider),
+        url: preset.url.clone(),
+        model: if preset.model.trim().is_empty() {
+            preset
+                .acp_agent
+                .as_ref()
+                .map(|agent| agent.id.clone())
+                .unwrap_or_default()
+        } else {
+            preset.model.clone()
+        },
+        api_key: preset.api_key.clone(),
+        max_tokens: preset.max_tokens,
+        max_context_chars: Some(preset.max_context_chars),
+        system_prompt: (!preset.prompt.trim().is_empty()).then(|| preset.prompt.trim().to_string()),
+        allowed_tools: None,
+        resume_session_id: conversation
+            .get("acpSessionId")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        // Chat is the attended surface: its approval cards are visible, so
+        // the runtime must keep asking rather than deciding for the user.
+        unattended: false,
+    })
 }
 
 #[async_trait]

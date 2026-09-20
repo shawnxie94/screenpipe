@@ -235,14 +235,14 @@ impl ActivityIntervalDetail {
             retention: record
                 .retention
                 .into_iter()
-                .map(|(source_type, kept, dropped, drop_reason)| {
-                    ActivityLedgerRetentionEntry {
+                .map(
+                    |(source_type, kept, dropped, drop_reason)| ActivityLedgerRetentionEntry {
                         source_type,
                         kept,
                         dropped,
                         drop_reason,
-                    }
-                })
+                    },
+                )
                 .collect(),
         }
     }
@@ -276,11 +276,18 @@ pub async fn get_activity_intervals(
     }
     let mut start_time = query.start_time;
     let mut end_time = query.end_time;
-    if clamp_history_range(&state.history_access, &mut start_time, &mut end_time, Utc::now()) {
+    if clamp_history_range(
+        &state.history_access,
+        &mut start_time,
+        &mut end_time,
+        Utc::now(),
+    ) {
         return Ok(JsonResponse(empty_intervals_response(&query)));
     }
     if end_time - start_time > Duration::days(31) {
-        return Err(bad_request("activity interval ranges are limited to 31 days"));
+        return Err(bad_request(
+            "activity interval ranges are limited to 31 days",
+        ));
     }
     let records = state
         .db
@@ -385,14 +392,23 @@ pub async fn get_activity_intervals_missing_summary(
     }
     let mut start_time = query.start_time;
     let mut end_time = query.end_time;
-    if clamp_history_range(&state.history_access, &mut start_time, &mut end_time, Utc::now()) {
-        return Ok(JsonResponse(empty_intervals_response(&ActivityIntervalsQuery {
-            start_time,
-            end_time,
-        })));
+    if clamp_history_range(
+        &state.history_access,
+        &mut start_time,
+        &mut end_time,
+        Utc::now(),
+    ) {
+        return Ok(JsonResponse(empty_intervals_response(
+            &ActivityIntervalsQuery {
+                start_time,
+                end_time,
+            },
+        )));
     }
     if end_time - start_time > Duration::days(31) {
-        return Err(bad_request("activity interval ranges are limited to 31 days"));
+        return Err(bad_request(
+            "activity interval ranges are limited to 31 days",
+        ));
     }
     let limit = query.limit.clamp(1, 1000);
     let records = state
@@ -754,12 +770,7 @@ mod tests {
         row.keywords = Some(vec!["ledger".to_string(), "retention".to_string()]);
         row.summary_band = Some("short".to_string());
         row.retention = vec![
-            (
-                "frame".to_string(),
-                2,
-                10,
-                Some("unchanged".to_string()),
-            ),
+            ("frame".to_string(), 2, 10, Some("unchanged".to_string())),
             ("audio".to_string(), 4, 0, None),
         ];
 

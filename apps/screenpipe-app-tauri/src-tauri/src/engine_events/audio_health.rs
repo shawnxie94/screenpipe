@@ -110,10 +110,7 @@ fn show_mic_capture_failed_notification(app: AppHandle, data: Value) {
         .and_then(|v| v.as_str())
         .unwrap_or("该设备可能被独占使用");
 
-    let body = format!(
-        "{} — 录制将在默认麦克风上继续。",
-        reason
-    );
+    let body = format!("{} — 录制将在默认麦克风上继续。", reason);
 
     let payload = serde_json::json!({
         "id": "audio_capture_health_mic_capture_failed",

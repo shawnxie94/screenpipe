@@ -758,9 +758,7 @@ pub(crate) async fn bulk_delete_meetings_handler(
             Err(e) => {
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    JsonResponse(
-                        json!({"error": format!("删除会议 {} 失败：{}", id, e)}),
-                    ),
+                    JsonResponse(json!({"error": format!("删除会议 {} 失败：{}", id, e)})),
                 ));
             }
         }
@@ -795,7 +793,6 @@ pub(crate) async fn merge_meetings_handler(
         )
     })?;
 
-
     Ok(JsonResponse(meeting))
 }
 
@@ -810,7 +807,9 @@ pub(crate) async fn split_meeting_handler(
     if DateTime::parse_from_rfc3339(&body.at).is_err() {
         return Err((
             StatusCode::BAD_REQUEST,
-            JsonResponse(json!({"error": format!("'at' 必须是 RFC3339 格式，实际为：{}", body.at)})),
+            JsonResponse(
+                json!({"error": format!("'at' 必须是 RFC3339 格式，实际为：{}", body.at)}),
+            ),
         ));
     }
 

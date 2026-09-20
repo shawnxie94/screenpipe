@@ -40,8 +40,7 @@ const PASSIVE_RECOVERY_CONFIRM_TICKS: u32 = 90;
 /// bound, keep the app running and ask the user to quit and reopen it manually.
 const USER_RESTART_TEARDOWN_TIMEOUT: Duration = Duration::from_secs(15);
 
-pub(crate) const MANUAL_SCREEN_CAPTURE_RECOVERY_DETAIL: &str =
-    "重启 screenpipe 以恢复画面采集";
+pub(crate) const MANUAL_SCREEN_CAPTURE_RECOVERY_DETAIL: &str = "重启 screenpipe 以恢复画面采集";
 const MANUAL_RECORDING_RECOVERY_DETAIL: &str = "退出并重新打开 screenpipe 以恢复录制";
 pub(crate) const MANUAL_PERMISSION_RECOVERY_DETAIL: &str =
     "退出并重新打开 screenpipe 以完成屏幕录制授权";
@@ -359,10 +358,7 @@ fn transition_tick_with_stand_down(
                     TickEffect::Push(OverlayHealthState::Failure, None)
                 } else if boot_detail != inner.last_detail {
                     inner.last_detail = boot_detail.to_string();
-                    TickEffect::Push(
-                        OverlayHealthState::Fixing,
-                        Some(boot_detail.to_string()),
-                    )
+                    TickEffect::Push(OverlayHealthState::Fixing, Some(boot_detail.to_string()))
                 } else {
                     TickEffect::None
                 }
@@ -437,10 +433,7 @@ fn apply_failure_detail(
             if matches!(effect, TickEffect::PushAndReveal(_)) {
                 effect
             } else {
-                TickEffect::Push(
-                    OverlayHealthState::Failure,
-                    Some(next_detail.to_string()),
-                )
+                TickEffect::Push(OverlayHealthState::Failure, Some(next_detail.to_string()))
             }
         }
         OverlayHealthState::Normal | OverlayHealthState::Recovered => {
@@ -618,13 +611,8 @@ pub async fn on_tick(
                 boot_detail,
             )
         };
-        let effect = apply_failure_detail(
-            &mut inner,
-            previous_state,
-            broken,
-            failure_detail,
-            effect,
-        );
+        let effect =
+            apply_failure_detail(&mut inner, previous_state, broken, failure_detail, effect);
         (effect, inner.last_detail.clone())
     };
 
@@ -637,7 +625,11 @@ pub async fn on_tick(
             push_state(app, s, detail.as_deref());
         }
         TickEffect::PushAndReveal(s) => {
-            push_state(app, s, (!state_detail.is_empty()).then_some(state_detail.as_str()));
+            push_state(
+                app,
+                s,
+                (!state_detail.is_empty()).then_some(state_detail.as_str()),
+            );
             reveal_overlay_if_hidden(app).await;
         }
         TickEffect::PushAndUnreveal(s) => {
@@ -793,8 +785,7 @@ fn restart_failure_detail(error: &str) -> &'static str {
         || error.contains("屏幕录制权限已授予")
     {
         MANUAL_PERMISSION_RECOVERY_DETAIL
-    } else if error.contains("screen recording permission")
-        || error.contains("需要屏幕录制权限")
+    } else if error.contains("screen recording permission") || error.contains("需要屏幕录制权限")
     {
         "需要屏幕录制权限"
     } else if error.contains("server not")
@@ -900,17 +891,11 @@ mod tests {
     #[test]
     fn health_payload_carries_the_failing_subsystem() {
         assert_eq!(
-            build_health_payload(
-                OverlayHealthState::Failure,
-                Some("音频采集未更新"),
-            ),
+            build_health_payload(OverlayHealthState::Failure, Some("音频采集未更新"),),
             "failure|音频采集未更新|audio",
         );
         assert_eq!(
-            build_health_payload(
-                OverlayHealthState::Failure,
-                Some("画面采集未更新"),
-            ),
+            build_health_payload(OverlayHealthState::Failure, Some("画面采集未更新"),),
             "failure|画面采集未更新|screen",
         );
     }
@@ -945,10 +930,7 @@ mod tests {
     #[test]
     fn health_payload_omits_the_subsystem_when_the_cause_is_not_attributable() {
         assert_eq!(
-            build_health_payload(
-                OverlayHealthState::Failure,
-                Some("音频和画面采集均未更新"),
-            ),
+            build_health_payload(OverlayHealthState::Failure, Some("音频和画面采集均未更新"),),
             "failure|音频和画面采集均未更新",
         );
         assert_eq!(
@@ -1105,10 +1087,7 @@ mod tests {
             ),
             TickEffect::None
         );
-        assert_eq!(
-            inner.last_detail,
-            "需要屏幕录制权限"
-        );
+        assert_eq!(inner.last_detail, "需要屏幕录制权限");
     }
 
     #[test]
@@ -1150,13 +1129,7 @@ mod tests {
         );
 
         assert_eq!(
-            transition_tick(
-                &mut inner,
-                false,
-                true,
-                recovered_at + RECOVERED_HOLD,
-                "",
-            ),
+            transition_tick(&mut inner, false, true, recovered_at + RECOVERED_HOLD, "",),
             TickEffect::None,
             "the recovered pill must remain at the exact hold boundary"
         );
@@ -1260,13 +1233,8 @@ mod tests {
             start + FIXING_TIMEOUT + Duration::from_millis(1),
             "",
         );
-        let effect = apply_failure_detail(
-            &mut inner,
-            OverlayHealthState::Fixing,
-            false,
-            "",
-            effect,
-        );
+        let effect =
+            apply_failure_detail(&mut inner, OverlayHealthState::Fixing, false, "", effect);
         assert_eq!(
             effect,
             TickEffect::Push(
@@ -1344,7 +1312,10 @@ mod tests {
         let start = Instant::now();
         let mut inner = test_inner(OverlayHealthState::Failure);
         assert!(begin_fixing(&mut inner, start));
-        assert!(!begin_fixing(&mut inner, start), "double restart must be ignored");
+        assert!(
+            !begin_fixing(&mut inner, start),
+            "double restart must be ignored"
+        );
 
         for offset in [1, 2, 15] {
             assert_eq!(
@@ -1372,13 +1343,7 @@ mod tests {
         );
         assert_eq!(inner.healthy_ticks, 1);
         assert_eq!(
-            transition_tick(
-                &mut inner,
-                false,
-                true,
-                start + Duration::from_secs(16),
-                "",
-            ),
+            transition_tick(&mut inner, false, true, start + Duration::from_secs(16), "",),
             TickEffect::Push(OverlayHealthState::Recovered, None)
         );
     }
@@ -1414,37 +1379,16 @@ mod tests {
             TickEffect::None,
             "unchanged boot detail must not spam the surfaces"
         );
-        transition_tick(
-            &mut inner,
-            false,
-            true,
-            start + Duration::from_secs(3),
-            "",
-        );
+        transition_tick(&mut inner, false, true, start + Duration::from_secs(3), "");
         assert_eq!(inner.healthy_ticks, 1);
-        transition_tick(
-            &mut inner,
-            false,
-            false,
-            start + Duration::from_secs(4),
-            "",
-        );
-        assert_eq!(inner.healthy_ticks, 0, "an unhealthy tick resets confirmation");
-        transition_tick(
-            &mut inner,
-            false,
-            true,
-            start + Duration::from_secs(5),
-            "",
-        );
+        transition_tick(&mut inner, false, false, start + Duration::from_secs(4), "");
         assert_eq!(
-            transition_tick(
-                &mut inner,
-                false,
-                true,
-                start + Duration::from_secs(6),
-                "",
-            ),
+            inner.healthy_ticks, 0,
+            "an unhealthy tick resets confirmation"
+        );
+        transition_tick(&mut inner, false, true, start + Duration::from_secs(5), "");
+        assert_eq!(
+            transition_tick(&mut inner, false, true, start + Duration::from_secs(6), "",),
             TickEffect::Push(OverlayHealthState::Recovered, None)
         );
     }
@@ -1455,13 +1399,7 @@ mod tests {
         let mut inner = test_inner(OverlayHealthState::Failure);
         begin_fixing(&mut inner, start);
         assert_eq!(
-            transition_tick(
-                &mut inner,
-                false,
-                false,
-                start + FIXING_TIMEOUT,
-                "",
-            ),
+            transition_tick(&mut inner, false, false, start + FIXING_TIMEOUT, "",),
             TickEffect::None
         );
         assert_eq!(
@@ -1511,13 +1449,7 @@ mod tests {
         transition_tick(&mut inner, false, true, start, "");
         assert_eq!(inner.state, OverlayHealthState::Recovered);
         assert_eq!(
-            transition_tick(
-                &mut inner,
-                true,
-                false,
-                start + Duration::from_secs(1),
-                "",
-            ),
+            transition_tick(&mut inner, true, false, start + Duration::from_secs(1), "",),
             TickEffect::Push(OverlayHealthState::Failure, None)
         );
     }
@@ -1702,7 +1634,10 @@ mod tests {
             (4, 3),
             (4, 4),
         ] {
-            assert!(transitions_seen[from][to], "missing transition {from} -> {to}");
+            assert!(
+                transitions_seen[from][to],
+                "missing transition {from} -> {to}"
+            );
         }
     }
 }

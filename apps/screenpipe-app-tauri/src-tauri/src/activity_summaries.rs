@@ -82,8 +82,7 @@ fn parse_summary_time(value: &str) -> Option<DateTime<Utc>> {
 }
 
 fn parse_summary_range(start: &str, end: &str) -> Result<(DateTime<Utc>, DateTime<Utc>), String> {
-    let start =
-        parse_summary_time(start).ok_or_else(|| "无效的活动开始时间".to_string())?;
+    let start = parse_summary_time(start).ok_or_else(|| "无效的活动开始时间".to_string())?;
     let end = parse_summary_time(end).ok_or_else(|| "无效的活动结束时间".to_string())?;
     if start >= end {
         return Err("开始时间必须早于结束时间".to_string());
@@ -99,9 +98,8 @@ fn interval_starts_in_range(
     start: DateTime<Utc>,
     end: DateTime<Utc>,
 ) -> bool {
-    parse_summary_time(&record.start_at).is_some_and(|interval_start| {
-        interval_start >= start && interval_start < end
-    })
+    parse_summary_time(&record.start_at)
+        .is_some_and(|interval_start| interval_start >= start && interval_start < end)
 }
 
 /// Meeting criterion fixed on the B01 spans read: the recorded meeting
@@ -123,7 +121,8 @@ fn interval_kind(
     let overlap_ms = meeting_spans
         .iter()
         .map(|(span_start, span_end)| {
-            (interval_end.min(*span_end) - interval_start.max(*span_start)).num_milliseconds()
+            (interval_end.min(*span_end) - interval_start.max(*span_start))
+                .num_milliseconds()
                 .max(0)
         })
         .sum::<i64>();
@@ -172,9 +171,12 @@ async fn load_interval_summaries(
     for record in &records {
         // No persisted summary yet → the interval is not served; the timeline
         // falls back to the KV narrative as a whole when nothing is ready.
-        let Some(summary) = record.summary.as_deref().map(str::trim).filter(|summary| {
-            !summary.is_empty()
-        }) else {
+        let Some(summary) = record
+            .summary
+            .as_deref()
+            .map(str::trim)
+            .filter(|summary| !summary.is_empty())
+        else {
             continue;
         };
         if !interval_starts_in_range(record, start, end) {
@@ -400,11 +402,27 @@ mod tests {
         let end = at("2026-09-11T11:00:00Z");
 
         // Inclusive start boundary, exclusive end boundary.
-        assert!(interval_starts_in_range(&record("2026-09-11T10:00:00Z"), start, end));
-        assert!(interval_starts_in_range(&record("2026-09-11T10:59:59Z"), start, end));
+        assert!(interval_starts_in_range(
+            &record("2026-09-11T10:00:00Z"),
+            start,
+            end
+        ));
+        assert!(interval_starts_in_range(
+            &record("2026-09-11T10:59:59Z"),
+            start,
+            end
+        ));
         // Overlapping from an earlier page or starting at/after the end.
-        assert!(!interval_starts_in_range(&record("2026-09-11T09:59:59Z"), start, end));
-        assert!(!interval_starts_in_range(&record("2026-09-11T11:00:00Z"), start, end));
+        assert!(!interval_starts_in_range(
+            &record("2026-09-11T09:59:59Z"),
+            start,
+            end
+        ));
+        assert!(!interval_starts_in_range(
+            &record("2026-09-11T11:00:00Z"),
+            start,
+            end
+        ));
         // Unparseable timestamps never count as in range.
         assert!(!interval_starts_in_range(&record("garbage"), start, end));
     }
@@ -436,17 +454,26 @@ mod tests {
 
         // 30 of 40 minutes covered: over half → meeting.
         assert_eq!(
-            interval_kind(&record, &[span("2026-09-11T10:10:00Z", "2026-09-11T10:40:00Z")]),
+            interval_kind(
+                &record,
+                &[span("2026-09-11T10:10:00Z", "2026-09-11T10:40:00Z")]
+            ),
             "meeting"
         );
         // Exactly half counts as meeting ("重叠过半" at the >= boundary).
         assert_eq!(
-            interval_kind(&record, &[span("2026-09-11T10:20:00Z", "2026-09-11T10:40:00Z")]),
+            interval_kind(
+                &record,
+                &[span("2026-09-11T10:20:00Z", "2026-09-11T10:40:00Z")]
+            ),
             "meeting"
         );
         // 19 of 40 minutes: below half → work. Multiple spans accumulate.
         assert_eq!(
-            interval_kind(&record, &[span("2026-09-11T10:21:00Z", "2026-09-11T10:40:00Z")]),
+            interval_kind(
+                &record,
+                &[span("2026-09-11T10:21:00Z", "2026-09-11T10:40:00Z")]
+            ),
             "work"
         );
         assert_eq!(
@@ -668,12 +695,7 @@ mod tests {
             Some(("会议摘要。", "[]", "short")),
         )
         .await;
-        seed_meeting(
-            &db,
-            "2026-09-11T10:05:00Z",
-            "2026-09-11T10:35:00Z",
-        )
-        .await;
+        seed_meeting(&db, "2026-09-11T10:05:00Z", "2026-09-11T10:35:00Z").await;
         // 10:45–11:25 with only a 10-minute meeting overlap: below half → work.
         seed_interval(
             &db,
@@ -687,12 +709,7 @@ mod tests {
             Some(("工作摘要。", "[]", "short")),
         )
         .await;
-        seed_meeting(
-            &db,
-            "2026-09-11T11:00:00Z",
-            "2026-09-11T11:10:00Z",
-        )
-        .await;
+        seed_meeting(&db, "2026-09-11T11:00:00Z", "2026-09-11T11:10:00Z").await;
 
         let response = load_interval_summaries(
             &db,

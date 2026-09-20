@@ -3490,10 +3490,8 @@ async fn do_capture(
                     params.use_pii_removal,
                 ));
             }
-            Some(_) => {
-            }
-            None => {
-            }
+            Some(_) => {}
+            None => {}
         }
     }
     let deduped = elements_ref_frame_id.is_some();

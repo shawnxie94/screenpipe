@@ -1202,10 +1202,7 @@ fn compute_data_status(
     }
 }
 
-fn compute_query_status(
-    q: Option<&str>,
-    snippets: &[ActivitySnippet],
-) -> String {
+fn compute_query_status(q: Option<&str>, snippets: &[ActivitySnippet]) -> String {
     if q.is_none() {
         return "not_requested".to_string();
     }
@@ -1609,7 +1606,6 @@ mod tests {
         let s = compute_query_status(None, &[]);
         assert_eq!(s, "not_requested");
     }
-
 
     #[test]
     fn query_status_matched_with_snippet() {

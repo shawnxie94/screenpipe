@@ -25,16 +25,10 @@ use screenpipe_core::paths;
 use screenpipe_db::DatabaseManager;
 use screenpipe_engine::{
     cli::{
-        audio::handle_audio_command,
-        mcp::handle_mcp_command,
-        pipe::handle_pipe_command,
-        profile::handle_profile_command,
-        search::handle_search_command,
-        status::handle_status_command,
-        sync::handle_sync_command,
-        view::handle_view_command,
-        vision::handle_vision_command,
-        Cli, Command, RecordArgSources,
+        audio::handle_audio_command, mcp::handle_mcp_command, pipe::handle_pipe_command,
+        profile::handle_profile_command, search::handle_search_command,
+        status::handle_status_command, sync::handle_sync_command, view::handle_view_command,
+        vision::handle_vision_command, Cli, Command, RecordArgSources,
     },
     crash_log,
     high_fps_controller::HighFpsController,
@@ -414,16 +408,12 @@ async fn main() -> anyhow::Result<()> {
         .into_recording_config(local_data_dir.clone(), &record_arg_sources)
         .await?;
 
-
     // mDNS LAN discovery is opt-in (off by default) so we don't trigger the
     // macOS "Local Network" permission prompt unless the user wants it.
     screenpipe_connect::mdns::set_enabled(record_args.enable_mdns);
 
     // Store the guard in a variable that lives for the entire main function
-    let _log_guard = Some(setup_logging(
-        &local_data_dir,
-        record_args.debug,
-    )?);
+    let _log_guard = Some(setup_logging(&local_data_dir, record_args.debug)?);
 
     if let Err(e) = screenpipe_engine::power::set_keep_awake(config.keep_computer_awake) {
         warn!("failed to apply keep-awake setting: {}", e);
@@ -1096,7 +1086,6 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     }
-
 
     // Initialize pipe manager
     let pipes_dir = local_data_dir.join("pipes");

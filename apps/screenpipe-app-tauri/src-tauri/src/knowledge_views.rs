@@ -16,8 +16,8 @@ use screenpipe_engine::live_views::{
     LiveViewSource, LiveViewTemplateBlock, LiveViewTimeRange, SaveLiveViewRequest,
 };
 use screenpipe_engine::structured_outputs::{
-    OutputFeedbackRating, OutputFeedbackSummary, OutputItemActionSummary,
-    OutputItemDisposition, StructuredOutputValue,
+    OutputFeedbackRating, OutputFeedbackSummary, OutputItemActionSummary, OutputItemDisposition,
+    StructuredOutputValue,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -651,56 +651,41 @@ fn validate_canvas_request(
         return Err("画布的区块位置数量超过实时视图的定义".to_string());
     }
     if request.notes.len() > MAX_CANVAS_NOTES {
-        return Err(format!(
-            "画布最多可包含 {MAX_CANVAS_NOTES} 个笔记"
-        ));
+        return Err(format!("画布最多可包含 {MAX_CANVAS_NOTES} 个笔记"));
     }
     if request.arrows.len() > MAX_CANVAS_ARROWS {
-        return Err(format!(
-            "画布最多可包含 {MAX_CANVAS_ARROWS} 条箭头"
-        ));
+        return Err(format!("画布最多可包含 {MAX_CANVAS_ARROWS} 条箭头"));
     }
     if request.strokes.len() > MAX_CANVAS_STROKES {
-        return Err(format!(
-            "画布最多可包含 {MAX_CANVAS_STROKES} 条笔画"
-        ));
+        return Err(format!("画布最多可包含 {MAX_CANVAS_STROKES} 条笔画"));
     }
 
     let mut block_ids = HashSet::new();
     for block in &request.blocks {
         if !valid_slot_ids.contains(&block.slot_id) {
-            return Err(format!(
-                "画布引用了未知区块「{}」",
-                block.slot_id
-            ));
+            return Err(format!("画布引用了未知区块「{}」", block.slot_id));
         }
         if !block_ids.insert(block.slot_id.clone()) {
-            return Err(format!(
-                "画布存在重复的区块位置「{}」",
-                block.slot_id
-            ));
+            return Err(format!("画布存在重复的区块位置「{}」", block.slot_id));
         }
-            validate_canvas_number(block.x, -100_000.0, 100_000.0, "区块 X")?;
-            validate_canvas_number(block.y, -100_000.0, 100_000.0, "区块 Y")?;
-            validate_canvas_number(block.width, 220.0, 1_600.0, "区块宽度")?;
-            validate_canvas_number(block.height, 160.0, 1_200.0, "区块高度")?;
+        validate_canvas_number(block.x, -100_000.0, 100_000.0, "区块 X")?;
+        validate_canvas_number(block.y, -100_000.0, 100_000.0, "区块 Y")?;
+        validate_canvas_number(block.width, 220.0, 1_600.0, "区块宽度")?;
+        validate_canvas_number(block.height, 160.0, 1_200.0, "区块高度")?;
     }
 
     let mut note_ids = HashSet::new();
     for note in &request.notes {
         if !valid_canvas_id(&note.id) || !note_ids.insert(note.id.clone()) {
-            return Err(format!(
-                "画布笔记 ID「{}」无效或重复",
-                note.id
-            ));
+            return Err(format!("画布笔记 ID「{}」无效或重复", note.id));
         }
         if note.text.chars().count() > 4_000 {
             return Err("画布笔记最多 4000 字符".to_string());
         }
-            validate_canvas_number(note.x, -100_000.0, 100_000.0, "笔记 X")?;
-            validate_canvas_number(note.y, -100_000.0, 100_000.0, "笔记 Y")?;
-            validate_canvas_number(note.width, 140.0, 1_200.0, "笔记宽度")?;
-            validate_canvas_number(note.height, 80.0, 1_000.0, "笔记高度")?;
+        validate_canvas_number(note.x, -100_000.0, 100_000.0, "笔记 X")?;
+        validate_canvas_number(note.y, -100_000.0, 100_000.0, "笔记 Y")?;
+        validate_canvas_number(note.width, 140.0, 1_200.0, "笔记宽度")?;
+        validate_canvas_number(note.height, 80.0, 1_000.0, "笔记高度")?;
     }
 
     let mut node_ids = block_ids
@@ -711,19 +696,13 @@ fn validate_canvas_request(
     let mut arrow_ids = HashSet::new();
     for arrow in &request.arrows {
         if !valid_canvas_id(&arrow.id) || !arrow_ids.insert(arrow.id.clone()) {
-            return Err(format!(
-                "画布箭头 ID「{}」无效或重复",
-                arrow.id
-            ));
+            return Err(format!("画布箭头 ID「{}」无效或重复", arrow.id));
         }
         if arrow.from_id == arrow.to_id
             || !node_ids.contains(&arrow.from_id)
             || !node_ids.contains(&arrow.to_id)
         {
-            return Err(format!(
-                "画布箭头「{}」的端点无效",
-                arrow.id
-            ));
+            return Err(format!("画布箭头「{}」的端点无效", arrow.id));
         }
         if arrow
             .label
@@ -737,10 +716,7 @@ fn validate_canvas_request(
     let mut stroke_ids = HashSet::new();
     for stroke in &request.strokes {
         if !valid_canvas_id(&stroke.id) || !stroke_ids.insert(stroke.id.clone()) {
-            return Err(format!(
-                "画布笔画 ID「{}」无效或重复",
-                stroke.id
-            ));
+            return Err(format!("画布笔画 ID「{}」无效或重复", stroke.id));
         }
         if stroke.points.len() < 2 || stroke.points.len() > MAX_CANVAS_STROKE_POINTS {
             return Err(format!(
@@ -786,15 +762,12 @@ fn read_canvas_document(
     if !path.exists() {
         return Ok(None);
     }
-    let bytes = std::fs::read(&path)
-        .map_err(|error| format!("读取 {} 失败：{error}", path.display()))?;
+    let bytes =
+        std::fs::read(&path).map_err(|error| format!("读取 {} 失败：{error}", path.display()))?;
     let document: KnowledgeViewCanvasDocument = serde_json::from_slice(&bytes)
         .map_err(|error| format!("解析 {} 失败：{error}", path.display()))?;
     if document.schema != KNOWLEDGE_VIEW_CANVAS_SCHEMA || document.view_id != view_id {
-        return Err(format!(
-            "{} 不是此实时视图的有效画布文档",
-            path.display()
-        ));
+        return Err(format!("{} 不是此实时视图的有效画布文档", path.display()));
     }
     Ok(Some(document))
 }
@@ -870,7 +843,9 @@ fn remove_canvas_document(screenpipe_dir: &Path, view_id: &str) -> Result<(), St
 
 #[tauri::command]
 #[specta::specta]
-pub async fn list_knowledge_views(app: tauri::AppHandle) -> Result<Vec<KnowledgeViewDefinition>, String> {
+pub async fn list_knowledge_views(
+    app: tauri::AppHandle,
+) -> Result<Vec<KnowledgeViewDefinition>, String> {
     list_live_views(&active_screenpipe_dir(&app)?)
         .map(|views| views.into_iter().map(Into::into).collect())
         .map_err(|error| error.to_string())
@@ -983,7 +958,10 @@ pub async fn delete_knowledge_view(app: tauri::AppHandle, id: String) -> Result<
 mod tests {
     use super::*;
 
-    fn canvas_request(view_id: &str, expected_revision: Option<u64>) -> SaveKnowledgeViewCanvasRequest {
+    fn canvas_request(
+        view_id: &str,
+        expected_revision: Option<u64>,
+    ) -> SaveKnowledgeViewCanvasRequest {
         SaveKnowledgeViewCanvasRequest {
             view_id: view_id.to_string(),
             expected_revision,

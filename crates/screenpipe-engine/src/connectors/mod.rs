@@ -15,8 +15,8 @@ use serde_json::json;
 
 pub mod auto_sync;
 pub mod office_adapter;
-pub mod rss;
 pub mod routes;
+pub mod rss;
 
 /// Channel-agnostic service error carrying an HTTP status for the REST layer.
 #[derive(Debug, Clone)]
@@ -72,11 +72,8 @@ pub trait Connector: Send + Sync {
 
     async fn refresh(&self, key: &str) -> Result<serde_json::Value, ConnectorError>;
 
-    async fn save_scope(
-        &self,
-        key: &str,
-        scope: &serde_json::Value,
-    ) -> Result<i64, ConnectorError>;
+    async fn save_scope(&self, key: &str, scope: &serde_json::Value)
+        -> Result<i64, ConnectorError>;
 
     async fn start_sync(&self, key: &str, expected_revision: i64) -> Result<i64, ConnectorError>;
 
@@ -84,11 +81,7 @@ pub trait Connector: Send + Sync {
 
     async fn disconnect(&self, key: &str, local_data: &str) -> Result<(), ConnectorError>;
 
-    async fn search(
-        &self,
-        query: &str,
-        limit: u32,
-    ) -> Result<serde_json::Value, ConnectorError>;
+    async fn search(&self, query: &str, limit: u32) -> Result<serde_json::Value, ConnectorError>;
 }
 
 /// Aggregate index payload for `/connections/channels`.

@@ -1824,9 +1824,7 @@ pub async fn run_frame_ocr(
                 _ => {
                     return Err((
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        JsonResponse(
-                            json!({ "error": "从视频加载提取帧失败" }),
-                        ),
+                        JsonResponse(json!({ "error": "从视频加载提取帧失败" })),
                     ));
                 }
             },

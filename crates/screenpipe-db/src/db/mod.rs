@@ -31,11 +31,10 @@ use crate::{
     AudioChunkProcessingSnapshot, AudioChunksResponse, AudioDevice, AudioEntry, AudioResult,
     AudioResultRaw, ChunkOutcome, ContentType, DeviceType, Element, ElementRow, ElementSource,
     FrameData, FrameRow, FrameRowLight, FrameWindowData, InsertUiEvent, MeetingRecord,
-    MeetingTranscriptSegment, NewDiarizationSegment, OCREntry,
-    OCRResult, OCRResultRaw, OcrEngine, OcrTextBlock, Order, ReplacementAudioTranscription,
-    SearchMatch, SearchMatchGroup, SearchResult, Speaker, TagContentType,
-    TextBounds, TextPosition, TimeSeriesChunk, UiContent, UiEventRecord, UiEventRow, VideoMetadata,
-    MAX_TRANSCRIPTION_ATTEMPTS,
+    MeetingTranscriptSegment, NewDiarizationSegment, OCREntry, OCRResult, OCRResultRaw, OcrEngine,
+    OcrTextBlock, Order, ReplacementAudioTranscription, SearchMatch, SearchMatchGroup,
+    SearchResult, Speaker, TagContentType, TextBounds, TextPosition, TimeSeriesChunk, UiContent,
+    UiEventRecord, UiEventRow, VideoMetadata, MAX_TRANSCRIPTION_ATTEMPTS,
 };
 
 /// Time window (in seconds) to check for similar transcriptions across devices.
@@ -457,12 +456,12 @@ mod activity_ledger;
 mod audio;
 pub mod connector;
 pub mod office;
-pub use self::office::{
-    OfficeConnectionRow, OfficeConnectionUpdate, OfficeObjectDraft, OfficeObjectRow,
-};
 pub use self::connector::{
     ConnectorConnectionRow, ConnectorConnectionUpdate, ConnectorObjectDraft, ConnectorObjectRow,
     ConnectorSyncRunRow, ConnectorUpsertOutcome,
+};
+pub use self::office::{
+    OfficeConnectionRow, OfficeConnectionUpdate, OfficeObjectDraft, OfficeObjectRow,
 };
 pub mod tasks;
 mod util;
@@ -484,8 +483,8 @@ mod write_ops;
 
 pub use self::activity_ledger::{
     ActivityActionDraft, ActivityActionRecord, ActivityEvidenceDraft, ActivityEvidenceRecord,
-    ActivityIntervalDraft, ActivityIntervalRecord, ActivityLedgerObservation, ActivitySummaryRow,
-    ActivitySummaryEvidenceRef, ActivityTaskDraft,
+    ActivityIntervalDraft, ActivityIntervalRecord, ActivityLedgerObservation,
+    ActivitySummaryEvidenceRef, ActivitySummaryRow, ActivityTaskDraft,
 };
 pub use self::semantic::{
     SemanticActor, SemanticActorAlias, SemanticActorReference, SemanticAttachResult,

@@ -143,7 +143,10 @@ async fn post_notification(payload: &serde_json::Value) -> Result<(), String> {
         match client.post(&url).json(payload).send().await {
             Ok(response) if response.status().is_success() => {
                 match response.json::<serde_json::Value>().await {
-                    Ok(body) if body.get("success").and_then(serde_json::Value::as_bool) == Some(true) => {
+                    Ok(body)
+                        if body.get("success").and_then(serde_json::Value::as_bool)
+                            == Some(true) =>
+                    {
                         return Ok(());
                     }
                     Ok(_) => {
@@ -162,10 +165,7 @@ async fn post_notification(payload: &serde_json::Value) -> Result<(), String> {
             }
         }
         if attempt + 1 < ATTEMPTS {
-            tokio::time::sleep(std::time::Duration::from_millis(
-                100 * (attempt as u64 + 1),
-            ))
-            .await;
+            tokio::time::sleep(std::time::Duration::from_millis(100 * (attempt as u64 + 1))).await;
         }
     }
 

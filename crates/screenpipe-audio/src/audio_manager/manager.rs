@@ -455,9 +455,7 @@ async fn ensure_and_process_audio_input(
     audio: AudioInput,
     vad_engine: Arc<Mutex<Box<dyn VadEngine + Send>>>,
     segmentation_model_path: Option<PathBuf>,
-    embedding_manager: Arc<
-        std::sync::Mutex<crate::speaker::embedding_manager::EmbeddingManager>,
-    >,
+    embedding_manager: Arc<std::sync::Mutex<crate::speaker::embedding_manager::EmbeddingManager>>,
     embedding_extractor: Option<
         Arc<std::sync::Mutex<crate::speaker::embedding::EmbeddingExtractor>>,
     >,
@@ -468,12 +466,7 @@ async fn ensure_and_process_audio_input(
     filter_music: bool,
 ) {
     let active = match ensure_transcription_engine_loaded(
-        loaded,
-        slot,
-        builds,
-        config,
-        languages,
-        vocabulary,
+        loaded, slot, builds, config, languages, vocabulary,
     )
     .await
     {
@@ -1453,9 +1446,7 @@ impl AudioManager {
             move |engine| {
                 runtime_transcription_config_matches(requested_for_match.as_ref(), &engine.config())
             },
-            move || {
-                TranscriptionEngine::new(audio_transcription_engine, languages, vocabulary)
-            },
+            move || TranscriptionEngine::new(audio_transcription_engine, languages, vocabulary),
         )
         .await
     }
@@ -1516,9 +1507,8 @@ impl AudioManager {
 
             // Max deferral cap: hardcoded per engine. This lets meetings
             // accumulate audio up to the engine's optimal capacity.
-            let max_deferral_secs = super::reconciliation::default_max_batch_duration_secs(
-                &audio_transcription_engine,
-            );
+            let max_deferral_secs =
+                super::reconciliation::default_max_batch_duration_secs(&audio_transcription_engine);
             let mut deferral_started: Option<std::time::Instant> = None;
 
             // Lazy engine state: loaded on the first voiced chunk, dropped after

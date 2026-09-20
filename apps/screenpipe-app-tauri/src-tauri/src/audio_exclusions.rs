@@ -216,10 +216,7 @@ async fn read_windows_app_metadata(path: &str) -> Result<ExcludedApp, String> {
             .and_then(|extension| extension.to_str())
             .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
     {
-        return Err(format!(
-            "{} 不是 Windows 可执行文件",
-            app_path.display()
-        ));
+        return Err(format!("{} 不是 Windows 可执行文件", app_path.display()));
     }
 
     let name = app_path

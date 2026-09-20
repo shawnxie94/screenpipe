@@ -709,7 +709,6 @@ pub struct RecordingSettings {
     #[serde(rename = "useChineseMirror")]
     pub use_chinese_mirror: bool,
 
-
     /// Detected hardware tier ("high", "mid", "low").
     /// Set once on first launch; `None` for existing installs (treated as High).
     #[serde(

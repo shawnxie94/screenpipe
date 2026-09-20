@@ -26,7 +26,6 @@ use tokio::sync::watch;
 use tokio::time::Instant as DeadlineInstant;
 use tracing::{debug, info, warn};
 
-
 /// Remembered parse runs for screens this process already stored. Bounded so a
 /// long session cannot grow the worker's memory with stale app states.
 const SEMANTIC_RUN_CACHE_CAPACITY: usize = 256;
@@ -83,7 +82,6 @@ impl SemanticProjectionSender {
         let _ = frame_id;
         replaced
     }
-
 }
 
 pub(crate) fn spawn_semantic_projection_worker(
@@ -271,8 +269,7 @@ async fn run_semantic_projection_worker(
                 false
             }
         });
-        if let Err(error) = process_semantic_job(&db, &registry, &job, &mut state).await
-        {
+        if let Err(error) = process_semantic_job(&db, &registry, &job, &mut state).await {
             warn!(
                 frame_id = job.frame_id,
                 %error,
@@ -708,7 +705,7 @@ mod tests {
         assert_eq!(normalize_locale_hint("x".repeat(65)), None);
     }
 
-        #[tokio::test]
+    #[tokio::test]
     async fn unchanged_screen_stores_once_and_batches_later_frames() {
         let db = DatabaseManager::new("sqlite::memory:", Default::default())
             .await

@@ -10,14 +10,14 @@
 use std::sync::Arc;
 
 use chrono::DateTime;
-use serde::Serialize;
 use screenpipe_connect::office::runner::CliRunner;
-use screenpipe_connect::office::types::{
-    OfficeAuthStatus, OfficeCommand, OfficeError, OfficeErrorCode,
-    OfficeObjectKind, OfficeProvider, OfficeRuntimeStatus, OfficeScope, OfficeSyncStatus,
-};
 use screenpipe_connect::office::types::OfficeObject;
-use screenpipe_db::{OfficeConnectionUpdate, OfficeObjectDraft, DatabaseManager};
+use screenpipe_connect::office::types::{
+    OfficeAuthStatus, OfficeCommand, OfficeError, OfficeErrorCode, OfficeObjectKind,
+    OfficeProvider, OfficeRuntimeStatus, OfficeScope, OfficeSyncStatus,
+};
+use screenpipe_db::{DatabaseManager, OfficeConnectionUpdate, OfficeObjectDraft};
+use serde::Serialize;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 
@@ -70,17 +70,12 @@ impl From<OfficeError> for OfficeServiceError {
 
 impl From<sqlx::Error> for OfficeServiceError {
     fn from(e: sqlx::Error) -> Self {
-        OfficeServiceError::new(
-            OfficeErrorCode::ProviderError,
-            format!("db_error:{e}"),
-            500,
-        )
+        OfficeServiceError::new(OfficeErrorCode::ProviderError, format!("db_error:{e}"), 500)
     }
 }
 
 pub(crate) fn now_iso() -> String {
-    chrono::Utc::now()
-        .to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
 }
 
 #[derive(Clone)]
@@ -119,11 +114,7 @@ impl OfficeService {
             .office_get_connection(provider.as_str())
             .await?
             .ok_or_else(|| {
-                OfficeServiceError::new(
-                    OfficeErrorCode::ProviderError,
-                    "连接行初始化失败",
-                    500,
-                )
+                OfficeServiceError::new(OfficeErrorCode::ProviderError, "连接行初始化失败", 500)
             })?;
         let scope = self
             .db
@@ -131,7 +122,10 @@ impl OfficeService {
             .await?
             .and_then(|(json, _)| serde_json::from_str::<OfficeScope>(&json).ok())
             .unwrap_or_default();
-        let imported = self.db.office_imported_object_count(provider.as_str()).await?;
+        let imported = self
+            .db
+            .office_imported_object_count(provider.as_str())
+            .await?;
         Ok(Self::dto(provider, &row, scope, imported))
     }
 
@@ -197,8 +191,7 @@ impl OfficeService {
             {
                 Ok(identity) => {
                     updates.account_namespace = Some(identity.account_id.clone());
-                    updates.auth_status =
-                        Some(OfficeAuthStatus::Authorized.as_str().to_string());
+                    updates.auth_status = Some(OfficeAuthStatus::Authorized.as_str().to_string());
                     updates.last_error_code = None;
                     updates.last_error_message = None;
                     updates.clear_errors = true;
@@ -338,11 +331,7 @@ impl OfficeService {
             .office_get_connection(provider)
             .await?
             .ok_or_else(|| {
-                OfficeServiceError::new(
-                    OfficeErrorCode::ScopeInvalid,
-                    "连接不存在",
-                    400,
-                )
+                OfficeServiceError::new(OfficeErrorCode::ScopeInvalid, "连接不存在", 400)
             })?;
         if row.scope_revision != expected_revision {
             return Err(OfficeServiceError::new(
@@ -444,7 +433,11 @@ impl OfficeService {
     /// Disconnect: stop reading, disable imported objects; `erase` also
     /// deletes imported content with re-import suppression. Never touches the
     /// user's global CLI login.
-    pub async fn disconnect(&self, provider: &str, local_data: &str) -> Result<(), OfficeServiceError> {
+    pub async fn disconnect(
+        &self,
+        provider: &str,
+        local_data: &str,
+    ) -> Result<(), OfficeServiceError> {
         Self::provider(provider)?;
         if local_data == "erase" {
             self.db.office_erase(provider).await?;
@@ -633,8 +626,7 @@ async fn run_sync(
                         chat_id,
                     )?;
                     for object in &page.objects {
-                        if register_object(service, object).await? {
-                        }
+                        if register_object(service, object).await? {}
                     }
                     if page.complete {
                         service
@@ -676,8 +668,7 @@ async fn run_sync(
                             ) {
                                 Ok(page) => {
                                     for event in &page.events {
-                                        if register_object(service, &event.object).await? {
-                                        }
+                                        if register_object(service, &event.object).await? {}
                                     }
                                 }
                                 Err(e) => {
@@ -718,10 +709,7 @@ async fn run_sync(
                     &identity.account_id,
                     doc_ref,
                 ) {
-                    Ok(object) => {
-                        if register_object(service, &object).await? {
-                        }
-                    }
+                    Ok(object) => if register_object(service, &object).await? {},
                     Err(e) if e.code == OfficeErrorCode::CapabilityMissing => {
                         partial = true;
                     }
@@ -759,7 +747,9 @@ async fn run_sync(
                     }
                     next_token = next;
                 }
-                list.into_iter().map(|(id, subject, _)| (id, subject)).collect()
+                list.into_iter()
+                    .map(|(id, subject, _)| (id, subject))
+                    .collect()
             } else {
                 scope
                     .meeting_ids
@@ -865,8 +855,7 @@ async fn run_sync(
                             },
                             platform_generated: false,
                         };
-                        if register_object(service, &object).await? {
-                        }
+                        if register_object(service, &object).await? {}
                     }
                     // Smart minutes: separate derived source, marked as such.
                     let command = OfficeCommand::TencentSmartMinutes {
@@ -884,8 +873,7 @@ async fn run_sync(
                                 &recording_id,
                             )
                         {
-                            if register_object(service, &minutes).await? {
-                            }
+                            if register_object(service, &minutes).await? {}
                         }
                     }
                 }
@@ -920,10 +908,7 @@ async fn register_object(
         event_at: object.event_at,
         fetched_at: chrono::Utc::now(),
         source_url: object.source_url.clone(),
-        activity_anchor: object
-            .anchors
-            .first()
-            .map(|(k, v)| format!("{k}:{v}")),
+        activity_anchor: object.anchors.first().map(|(k, v)| format!("{k}:{v}")),
         platform_generated: object.platform_generated,
     };
     service
@@ -969,7 +954,11 @@ pub fn spawn_feishu_calendar_publisher(
         let service = OfficeService::new(db.clone(), managed_dir);
         loop {
             if let Err(e) = publish_feishu_calendar_once(&service).await {
-                debug!("feishu calendar publisher: {} {}", e.code.as_str(), e.message);
+                debug!(
+                    "feishu calendar publisher: {} {}",
+                    e.code.as_str(),
+                    e.message
+                );
             }
             tokio::time::sleep(std::time::Duration::from_secs(60)).await;
         }
@@ -981,9 +970,7 @@ async fn publish_feishu_calendar_once(service: &OfficeService) -> Result<(), Off
         .db
         .office_get_connection(OfficeProvider::Feishu.as_str())
         .await?
-        .ok_or_else(|| {
-            OfficeServiceError::new(OfficeErrorCode::ScopeInvalid, "未连接", 0)
-        })?;
+        .ok_or_else(|| OfficeServiceError::new(OfficeErrorCode::ScopeInvalid, "未连接", 0))?;
     if row.auth_status != OfficeAuthStatus::Authorized.as_str() {
         return Err(OfficeServiceError::new(
             OfficeErrorCode::ScopeInvalid,
@@ -995,9 +982,7 @@ async fn publish_feishu_calendar_once(service: &OfficeService) -> Result<(), Off
         .db
         .office_get_scope(OfficeProvider::Feishu.as_str())
         .await?
-        .map(|(json, _)| {
-            serde_json::from_str::<OfficeScope>(&json).unwrap_or_default()
-        })
+        .map(|(json, _)| serde_json::from_str::<OfficeScope>(&json).unwrap_or_default())
         .unwrap_or_default();
     if !scope.sync_calendar_events {
         return Err(OfficeServiceError::new(
@@ -1020,11 +1005,7 @@ async fn publish_feishu_calendar_once(service: &OfficeService) -> Result<(), Off
     )
     .await?;
 
-    let signals: Vec<serde_json::Value> = page
-        .events
-        .iter()
-        .map(feishu_calendar_signal)
-        .collect();
+    let signals: Vec<serde_json::Value> = page.events.iter().map(feishu_calendar_signal).collect();
     info!(
         "feishu calendar publisher: published {} calendar event signal(s)",
         signals.len()
@@ -1044,10 +1025,7 @@ async fn fetch_feishu_calendar_page(
     end_iso: String,
 ) -> Result<screenpipe_connect::office::feishu::CalendarPage, OfficeServiceError> {
     let dependency = service.runner.discover(OfficeProvider::Feishu).await;
-    let command = OfficeCommand::FeishuCalendarEvents {
-        start_iso,
-        end_iso,
-    };
+    let command = OfficeCommand::FeishuCalendarEvents { start_iso, end_iso };
     let output = service
         .runner
         .run(&dependency, &command, service.cancel.child_token())
@@ -1068,7 +1046,9 @@ async fn fetch_feishu_calendar_page(
 
 /// Bus signal shape consumed by the meeting detector (`CalendarEventSignal`,
 /// camelCase over the wire).
-fn feishu_calendar_signal(event: &screenpipe_connect::office::feishu::FeishuCalendarEvent) -> serde_json::Value {
+fn feishu_calendar_signal(
+    event: &screenpipe_connect::office::feishu::FeishuCalendarEvent,
+) -> serde_json::Value {
     serde_json::json!({
         "id": format!("feishu:{}", event.object.object_id),
         "title": event.object.title.clone().unwrap_or_default(),
@@ -1083,7 +1063,9 @@ fn feishu_calendar_signal(event: &screenpipe_connect::office::feishu::FeishuCale
 
 /// UI agenda shape consumed by `fetchUpcomingCalendarSnapshot` (snake_case,
 /// mirroring the native-calendar route).
-fn feishu_agenda_event(event: &screenpipe_connect::office::feishu::FeishuCalendarEvent) -> serde_json::Value {
+fn feishu_agenda_event(
+    event: &screenpipe_connect::office::feishu::FeishuCalendarEvent,
+) -> serde_json::Value {
     serde_json::json!({
         "id": format!("feishu:{}", event.object.object_id),
         "title": event.object.title.clone().unwrap_or_default(),
@@ -1117,11 +1099,12 @@ impl OfficeService {
             .db
             .office_get_connection(OfficeProvider::Feishu.as_str())
             .await?
-            .ok_or_else(|| {
-                OfficeServiceError::new(OfficeErrorCode::ScopeInvalid, "未连接", 0)
-            })?;
+            .ok_or_else(|| OfficeServiceError::new(OfficeErrorCode::ScopeInvalid, "未连接", 0))?;
         if row.auth_status != OfficeAuthStatus::Authorized.as_str() {
-            return Ok(FeishuAgenda { connected: false, events: Vec::new() });
+            return Ok(FeishuAgenda {
+                connected: false,
+                events: Vec::new(),
+            });
         }
         let scope = self
             .db
@@ -1130,7 +1113,10 @@ impl OfficeService {
             .map(|(json, _)| serde_json::from_str::<OfficeScope>(&json).unwrap_or_default())
             .unwrap_or_default();
         if !scope.sync_calendar_events {
-            return Ok(FeishuAgenda { connected: false, events: Vec::new() });
+            return Ok(FeishuAgenda {
+                connected: false,
+                events: Vec::new(),
+            });
         }
 
         let now = chrono::Utc::now();

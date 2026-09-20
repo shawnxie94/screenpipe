@@ -506,23 +506,10 @@ async fn extract_chunk_frames_batch(
         .join("+");
     let vf = format!("select={select},{}", normalize_vf(w, h));
     let mut cmd = ffmpeg_cmd_async(ffmpeg_path);
-    cmd.args([
-        "-nostdin",
-        "-y",
-        "-loglevel",
-        "error",
-        "-i",
-        chunk_path,
-    ]);
+    cmd.args(["-nostdin", "-y", "-loglevel", "error", "-i", chunk_path]);
     // passthrough: write exactly the frames `select` kept, no CFR dup/drop.
     cmd.args(frame_timing_args(FrameTiming::Passthrough));
-    cmd.args([
-        "-vf",
-        &vf,
-        "-c:v",
-        "png",
-        out_pattern.to_str().unwrap(),
-    ]);
+    cmd.args(["-vf", &vf, "-c:v", "png", out_pattern.to_str().unwrap()]);
     run_checked(cmd, "batch frame extraction").await
 }
 

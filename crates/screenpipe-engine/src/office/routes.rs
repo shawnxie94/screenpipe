@@ -35,10 +35,7 @@ pub(crate) fn office_routes() -> Router<Arc<AppState>> {
 }
 
 fn service(state: &Arc<AppState>) -> OfficeService {
-    OfficeService::new(
-        state.db.clone(),
-        state.screenpipe_dir.join("office-cli"),
-    )
+    OfficeService::new(state.db.clone(), state.screenpipe_dir.join("office-cli"))
 }
 
 fn err_response(e: OfficeServiceError) -> Response {
@@ -46,7 +43,11 @@ fn err_response(e: OfficeServiceError) -> Response {
         0 => StatusCode::INTERNAL_SERVER_ERROR,
         s => StatusCode::from_u16(s).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
     };
-    (status, Json(json!({ "code": e.as_str(), "message": e.message }))).into_response()
+    (
+        status,
+        Json(json!({ "code": e.as_str(), "message": e.message })),
+    )
+        .into_response()
 }
 
 async fn list_office(State(state): State<Arc<AppState>>) -> Response {

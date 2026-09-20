@@ -18,7 +18,6 @@ use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
 use tracing::{debug, info, warn};
 
-
 /// Handle one frame of `permission_lost`, `permission_restored`, or
 /// `permission_needed`. Called from [`super::dispatch`].
 pub(super) fn handle(app: &AppHandle, name: &str, data: &Value) {

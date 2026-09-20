@@ -25,10 +25,7 @@ pub fn office_service(app: &AppHandle) -> Option<OfficeService> {
     let state = app.try_state::<RecordingState>()?;
     let guard = state.server.try_lock().ok()?;
     let core = guard.as_ref()?;
-    Some(OfficeService::new(
-        core.db.clone(),
-        managed_dir(&data_dir),
-    ))
+    Some(OfficeService::new(core.db.clone(), managed_dir(&data_dir)))
 }
 
 pub fn managed_dir(data_dir: &PathBuf) -> PathBuf {

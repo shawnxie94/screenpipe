@@ -185,7 +185,9 @@ pub enum OfficeCommand {
     /// Account + scope check (`auth status --json --verify`).
     FeishuAuthStatus,
     /// Fetch one document by id.
-    FeishuDocFetch { doc_id: String },
+    FeishuDocFetch {
+        doc_id: String,
+    },
     /// Messages of one chat within an explicit time window (ISO 8601).
     FeishuMessages {
         chat_id: String,
@@ -195,26 +197,49 @@ pub enum OfficeCommand {
         limit: u32,
     },
     /// One message by id (detail/edit state).
-    FeishuMessageDetail { message_id: String },
+    FeishuMessageDetail {
+        message_id: String,
+    },
     /// Chat list so the user can pick conversation scope in the UI.
-    FeishuChatList { cursor: Option<String>, limit: u32 },
+    FeishuChatList {
+        cursor: Option<String>,
+        limit: u32,
+    },
     /// Primary-calendar events within an explicit window (ISO 8601).
     /// `calendar +agenda` has no pagination flags; one shot per window.
-    FeishuCalendarEvents { start_iso: String, end_iso: String },
+    FeishuCalendarEvents {
+        start_iso: String,
+        end_iso: String,
+    },
 
     // -- tencent-meeting (tmeet) -------------------------------------------
     TencentAuthStatus,
     /// Meetings the account can access within an explicit window (ISO 8601).
-    TencentMeetingList { start_iso: String, end_iso: String, cursor: Option<String>, limit: u32 },
+    TencentMeetingList {
+        start_iso: String,
+        end_iso: String,
+        cursor: Option<String>,
+        limit: u32,
+    },
     /// Cloud recordings of one meeting.
-    TencentRecordList { meeting_id: String, cursor: Option<String>, limit: u32 },
+    TencentRecordList {
+        meeting_id: String,
+        cursor: Option<String>,
+        limit: u32,
+    },
     /// Full transcript text of one recording.
-    TencentTranscriptGet { recording_id: String },
+    TencentTranscriptGet {
+        recording_id: String,
+    },
     /// Transcript paragraphs of one recording (tmeet 1.0.16 returns them in
     /// one shot — no pid cursor on this CLI).
-    TencentTranscriptParagraphs { recording_id: String },
+    TencentTranscriptParagraphs {
+        recording_id: String,
+    },
     /// AI smart minutes (platform-generated summary).
-    TencentSmartMinutes { recording_id: String },
+    TencentSmartMinutes {
+        recording_id: String,
+    },
 }
 
 impl OfficeCommand {
@@ -223,7 +248,12 @@ impl OfficeCommand {
     pub fn as_argv(&self) -> Vec<String> {
         match self {
             OfficeCommand::FeishuAuthStatus => {
-                vec!["auth".into(), "status".into(), "--json".into(), "--verify".into()]
+                vec![
+                    "auth".into(),
+                    "status".into(),
+                    "--json".into(),
+                    "--verify".into(),
+                ]
             }
             OfficeCommand::FeishuDocFetch { doc_id } => vec![
                 "docs".into(),
@@ -519,7 +549,10 @@ mod tests {
     #[test]
     fn provider_ids_and_versions() {
         assert_eq!(OfficeProvider::Feishu.as_str(), "feishu");
-        assert_eq!(OfficeProvider::from_str("tencent-meeting"), Some(OfficeProvider::TencentMeeting));
+        assert_eq!(
+            OfficeProvider::from_str("tencent-meeting"),
+            Some(OfficeProvider::TencentMeeting)
+        );
         assert_eq!(OfficeProvider::Feishu.cli_binary_name(), "lark-cli");
         assert_eq!(OfficeProvider::TencentMeeting.pinned_version(), "1.0.16");
         assert!(OfficeProvider::from_str("wps").is_none());

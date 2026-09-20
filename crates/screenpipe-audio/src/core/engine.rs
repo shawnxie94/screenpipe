@@ -46,7 +46,10 @@ impl std::str::FromStr for AudioTranscriptionEngine {
             // parakeet-mlx have no Chinese support, deepgram /
             // openai-compatible were cloud engines. Map stored configs to
             // the local default instead of failing to parse.
-            "deepgram" | "openai-compatible" | "parakeet" | "parakeet-tdt-0.6b-v2"
+            "deepgram"
+            | "openai-compatible"
+            | "parakeet"
+            | "parakeet-tdt-0.6b-v2"
             | "parakeet-mlx" => Ok(Self::Qwen3Asr),
             _ => Err(format!("unknown audio engine: {s}")),
         }

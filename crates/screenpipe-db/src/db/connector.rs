@@ -112,13 +112,11 @@ impl DatabaseManager {
         key: &str,
     ) -> Result<(), SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
-        sqlx::query(
-            "INSERT OR IGNORE INTO connector_connections (connector, key) VALUES (?1, ?2)",
-        )
-        .bind(connector)
-        .bind(key)
-        .execute(&mut **tx.conn())
-        .await?;
+        sqlx::query("INSERT OR IGNORE INTO connector_connections (connector, key) VALUES (?1, ?2)")
+            .bind(connector)
+            .bind(key)
+            .execute(&mut **tx.conn())
+            .await?;
         tx.commit().await?;
         Ok(())
     }
@@ -411,8 +409,11 @@ impl DatabaseManager {
         normalized: &str,
         title: Option<&str>,
     ) -> Result<(), SqlxError> {
-        let fts_body =
-            crate::text_normalizer::chinese_project(&format!("{} {}", title.unwrap_or(""), normalized));
+        let fts_body = crate::text_normalizer::chinese_project(&format!(
+            "{} {}",
+            title.unwrap_or(""),
+            normalized
+        ));
         sqlx::query(
             "DELETE FROM connector_objects_fts WHERE connector = ?1 AND namespace = ?2 \
              AND object_kind = ?3 AND object_id = ?4",
@@ -438,10 +439,7 @@ impl DatabaseManager {
         Ok(())
     }
 
-    pub async fn connector_imported_object_count(
-        &self,
-        connector: &str,
-    ) -> Result<i64, SqlxError> {
+    pub async fn connector_imported_object_count(&self, connector: &str) -> Result<i64, SqlxError> {
         sqlx::query_scalar(
             "SELECT COUNT(*) FROM connector_objects WHERE connector = ?1 AND state = 'active'",
         )
@@ -453,10 +451,7 @@ impl DatabaseManager {
     /// Disable every active object of the channel (retain-in-data mode on
     /// disconnect). Returns the disabled (kind, id) pairs; FTS rows are
     /// dropped so disabled content stops surfacing.
-    pub async fn connector_disable_all_objects(
-        &self,
-        connector: &str,
-    ) -> Result<u64, SqlxError> {
+    pub async fn connector_disable_all_objects(&self, connector: &str) -> Result<u64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         let rows: Vec<(String, String, String)> = sqlx::query_as(
             "SELECT namespace, object_kind, object_id FROM connector_objects \
@@ -618,11 +613,12 @@ impl DatabaseManager {
             let count_sql = format!(
                 "SELECT COUNT(*) FROM connector_objects o WHERE o.state = 'active' {time_pred}"
             );
-            let rows = sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(page_sql.as_str()))
-                .bind(start_time)
-                .bind(end_time)
-                .fetch_all(&self.pool)
-                .await?;
+            let rows =
+                sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(page_sql.as_str()))
+                    .bind(start_time)
+                    .bind(end_time)
+                    .fetch_all(&self.pool)
+                    .await?;
             let total = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(count_sql.as_str()))
                 .bind(start_time)
                 .bind(end_time)
@@ -651,12 +647,13 @@ impl DatabaseManager {
                      AND o.object_id = f.object_id \
                  WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred}"
             );
-            let rows = sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(page_sql.as_str()))
-                .bind(start_time)
-                .bind(end_time)
-                .bind(&projected)
-                .fetch_all(&self.pool)
-                .await?;
+            let rows =
+                sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(page_sql.as_str()))
+                    .bind(start_time)
+                    .bind(end_time)
+                    .bind(&projected)
+                    .fetch_all(&self.pool)
+                    .await?;
             let total = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(count_sql.as_str()))
                 .bind(start_time)
                 .bind(end_time)
@@ -846,10 +843,7 @@ mod tests {
                 .unwrap(),
             ConnectorUpsertOutcome::Unchanged
         );
-        assert_eq!(
-            db.connector_imported_object_count("rss").await.unwrap(),
-            1
-        );
+        assert_eq!(db.connector_imported_object_count("rss").await.unwrap(), 1);
     }
 
     #[tokio::test]
@@ -885,31 +879,29 @@ mod tests {
     async fn duplicate_content_under_new_identity_skips() {
         let db = db().await;
         assert_eq!(
-            db.connector_upsert_object(&hashed_draft(
-                "rss", "feed-a", "i1", "标题", "正文", "h1"
-            ))
-            .await
-            .unwrap(),
+            db.connector_upsert_object(&hashed_draft("rss", "feed-a", "i1", "标题", "正文", "h1"))
+                .await
+                .unwrap(),
             ConnectorUpsertOutcome::Created
         );
         // Same content under a different guid/namespace: duplicate, not a
         // second row.
         assert_eq!(
-            db.connector_upsert_object(&hashed_draft(
-                "rss", "feed-b", "i2", "标题", "正文", "h1"
-            ))
-            .await
-            .unwrap(),
+            db.connector_upsert_object(&hashed_draft("rss", "feed-b", "i2", "标题", "正文", "h1"))
+                .await
+                .unwrap(),
             ConnectorUpsertOutcome::Duplicate
         );
-        assert_eq!(
-            db.connector_imported_object_count("rss").await.unwrap(),
-            1
-        );
+        assert_eq!(db.connector_imported_object_count("rss").await.unwrap(), 1);
         // A different hash under the new identity still lands.
         assert_eq!(
             db.connector_upsert_object(&hashed_draft(
-                "rss", "feed-b", "i2", "另一篇", "另一正文", "h2"
+                "rss",
+                "feed-b",
+                "i2",
+                "另一篇",
+                "另一正文",
+                "h2"
             ))
             .await
             .unwrap(),
@@ -931,10 +923,7 @@ mod tests {
                 .unwrap(),
             ConnectorUpsertOutcome::Unchanged
         );
-        assert_eq!(
-            db.connector_imported_object_count("rss").await.unwrap(),
-            0
-        );
+        assert_eq!(db.connector_imported_object_count("rss").await.unwrap(), 0);
     }
 
     #[tokio::test]
@@ -963,17 +952,21 @@ mod tests {
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].object_id, "i1");
 
-        let hits = db.connector_search("rss", "english body", 10).await.unwrap();
+        let hits = db
+            .connector_search("rss", "english body", 10)
+            .await
+            .unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].object_id, "i2");
 
         // Disabled content stops surfacing.
         db.connector_disable_all_objects("rss").await.unwrap();
-        assert!(db.connector_search("rss", "english", 10).await.unwrap().is_empty());
-        assert_eq!(
-            db.connector_imported_object_count("rss").await.unwrap(),
-            0
-        );
+        assert!(db
+            .connector_search("rss", "english", 10)
+            .await
+            .unwrap()
+            .is_empty());
+        assert_eq!(db.connector_imported_object_count("rss").await.unwrap(), 0);
     }
 
     #[tokio::test]
@@ -992,13 +985,18 @@ mod tests {
         assert_eq!(revision, r2);
         assert!(scope.contains("a.example"));
 
-        db.connector_set_cursor("rss", "", "feed:a", "item-42").await.unwrap();
+        db.connector_set_cursor("rss", "", "feed:a", "item-42")
+            .await
+            .unwrap();
         assert_eq!(
             db.connector_get_cursor("rss", "", "feed:a").await.unwrap(),
             Some("item-42".to_string())
         );
         db.connector_clear_cursors("rss").await.unwrap();
-        assert_eq!(db.connector_get_cursor("rss", "", "feed:a").await.unwrap(), None);
+        assert_eq!(
+            db.connector_get_cursor("rss", "", "feed:a").await.unwrap(),
+            None
+        );
     }
 
     #[tokio::test]

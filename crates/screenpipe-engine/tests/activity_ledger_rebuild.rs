@@ -62,14 +62,9 @@ async fn rebuild_tick_produces_active_intervals() {
     let start = at("2026-09-12T09:00:00Z");
     let end = at("2026-09-12T09:10:00Z");
 
-    let intervals = reconcile_range_with_policy(
-        &db,
-        start,
-        end,
-        SegmentationPolicy::default(),
-    )
-    .await
-    .unwrap();
+    let intervals = reconcile_range_with_policy(&db, start, end, SegmentationPolicy::default())
+        .await
+        .unwrap();
     assert!(intervals > 0, "① tick 必须有可观测产出（活跃间隔）");
     assert_eq!(
         intervals,
@@ -99,10 +94,9 @@ async fn rebuild_keeps_same_object_continuity_and_splits_identities() {
     let start = at("2026-09-12T09:00:00Z");
     let end = at("2026-09-12T09:30:00Z");
 
-    let intervals =
-        reconcile_range_with_policy(&db, start, end, SegmentationPolicy::default())
-            .await
-            .unwrap();
+    let intervals = reconcile_range_with_policy(&db, start, end, SegmentationPolicy::default())
+        .await
+        .unwrap();
     let keys = active_interval_keys(&db).await;
     assert_eq!(intervals, keys.len());
     assert!(keys.len() >= 2, "跨身份切换必须独立成段：{keys:?}");
@@ -167,7 +161,11 @@ async fn evidence_stays_strictly_before_the_interval_end_within_one_millisecond(
         .await
         .unwrap();
     assert_eq!(rows.len(), 2, "跨身份边界必须独立成段");
-    let parse = |value: &str| DateTime::parse_from_rfc3339(value).unwrap().with_timezone(&Utc);
+    let parse = |value: &str| {
+        DateTime::parse_from_rfc3339(value)
+            .unwrap()
+            .with_timezone(&Utc)
+    };
     let first = &rows[0];
     assert_eq!(first.start_at, "2026-09-12T09:00:00.100+00:00");
     assert_eq!(first.end_at, "2026-09-12T09:00:30.100650+00:00");

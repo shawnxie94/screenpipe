@@ -57,14 +57,19 @@ pub(crate) fn frame_timing_args(mode: FrameTiming) -> [&'static str; 2] {
 fn ffmpeg_supports_fps_mode() -> bool {
     static SUPPORTS: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *SUPPORTS.get_or_init(|| {
-        ffmpeg_major_minor().map_or(true, |(major, minor)| major > 5 || (major == 5 && minor >= 1))
+        ffmpeg_major_minor().map_or(true, |(major, minor)| {
+            major > 5 || (major == 5 && minor >= 1)
+        })
     })
 }
 
 /// (major, minor) of the resolved ffmpeg binary.
 fn ffmpeg_major_minor() -> Option<(u32, u32)> {
     let path = find_ffmpeg_path()?;
-    let out = std::process::Command::new(path).arg("-version").output().ok()?;
+    let out = std::process::Command::new(path)
+        .arg("-version")
+        .output()
+        .ok()?;
     let text = String::from_utf8_lossy(&out.stdout);
     let token = text.split("version ").nth(1)?.split_whitespace().next()?;
     let token = token.strip_prefix('n').unwrap_or(token);
@@ -1527,20 +1532,20 @@ pub async fn extract_high_quality_frame(
         .args(["-i", file_path])
         .args(frame_timing_args(FrameTiming::Passthrough))
         .args([
-        "-vframes",
-        "1",
-        "-vf",
-        &filter,
-        "-c:v",
-        "png",
-        "-compression_level",
-        "0",
-        "-preset",
-        "veryslow",
-        "-qscale:v",
-        "1",
-        output_path.to_str().unwrap(),
-    ]);
+            "-vframes",
+            "1",
+            "-vf",
+            &filter,
+            "-c:v",
+            "png",
+            "-compression_level",
+            "0",
+            "-preset",
+            "veryslow",
+            "-qscale:v",
+            "1",
+            output_path.to_str().unwrap(),
+        ]);
 
     #[cfg(windows)]
     {

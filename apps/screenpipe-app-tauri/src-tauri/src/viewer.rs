@@ -119,12 +119,8 @@ fn resolve_local_path_in(path: &str, data_dir: &Path) -> PathBuf {
 fn friendly_io_error(e: &std::io::Error) -> String {
     use std::io::ErrorKind;
     match e.kind() {
-        ErrorKind::NotFound => {
-            "文件未找到 — 它可能已被移动、删除或尚未生成".to_string()
-        }
-        ErrorKind::PermissionDenied => {
-            "没有读取权限 — screenpipe 无法读取此文件".to_string()
-        }
+        ErrorKind::NotFound => "文件未找到 — 它可能已被移动、删除或尚未生成".to_string(),
+        ErrorKind::PermissionDenied => "没有读取权限 — screenpipe 无法读取此文件".to_string(),
         _ => e.to_string(),
     }
 }

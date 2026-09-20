@@ -434,4 +434,3 @@ mod local_api_auth_tests {
 // run would lose cloud auth (STT, screenpipe-cloud pipes) once the app has
 // migrated the token out of store.bin.
 // ---------------------------------------------------------------------------
-

@@ -42,7 +42,11 @@ fn service(state: &Arc<AppState>) -> Arc<dyn Connector> {
 
 fn err_response(e: ConnectorError) -> Response {
     let status = StatusCode::from_u16(e.http).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-    (status, Json(json!({ "code": e.code, "message": e.message }))).into_response()
+    (
+        status,
+        Json(json!({ "code": e.code, "message": e.message })),
+    )
+        .into_response()
 }
 
 async fn status(State(state): State<Arc<AppState>>) -> Response {
@@ -74,10 +78,7 @@ struct SyncRequest {
     expected_revision: i64,
 }
 
-async fn start_sync(
-    State(state): State<Arc<AppState>>,
-    Json(req): Json<SyncRequest>,
-) -> Response {
+async fn start_sync(State(state): State<Arc<AppState>>, Json(req): Json<SyncRequest>) -> Response {
     match service(&state).start_sync(KEY, req.expected_revision).await {
         Ok(run_id) => Json(json!({ "run_id": run_id })).into_response(),
         Err(e) => err_response(e),
@@ -89,10 +90,7 @@ struct ControlRequest {
     action: String,
 }
 
-async fn control(
-    State(state): State<Arc<AppState>>,
-    Json(req): Json<ControlRequest>,
-) -> Response {
+async fn control(State(state): State<Arc<AppState>>, Json(req): Json<ControlRequest>) -> Response {
     match service(&state).control(KEY, &req.action).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => err_response(e),
@@ -120,11 +118,11 @@ struct SearchQuery {
     limit: Option<u32>,
 }
 
-async fn search(
-    State(state): State<Arc<AppState>>,
-    Query(q): Query<SearchQuery>,
-) -> Response {
-    match service(&state).search(&q.query, q.limit.unwrap_or(20)).await {
+async fn search(State(state): State<Arc<AppState>>, Query(q): Query<SearchQuery>) -> Response {
+    match service(&state)
+        .search(&q.query, q.limit.unwrap_or(20))
+        .await
+    {
         Ok(hits) => Json(hits).into_response(),
         Err(e) => err_response(e),
     }

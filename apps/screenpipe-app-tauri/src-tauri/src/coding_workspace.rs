@@ -83,7 +83,11 @@ fn authorize_repository(
     if route.created_at.elapsed() > WORKTREE_ROUTE_TTL {
         return Err("This worktree route is missing, expired, or already used".to_string());
     }
-    if !route.candidates.iter().any(|candidate| candidate == &requested) {
+    if !route
+        .candidates
+        .iter()
+        .any(|candidate| candidate == &requested)
+    {
         routes.insert(route_session_id.to_string(), route);
         return Err("The selected repository was not in the discovered candidate list".to_string());
     }
@@ -289,21 +293,22 @@ mod tests {
         std::fs::create_dir_all(&allowed).unwrap();
         std::fs::create_dir_all(&rejected).unwrap();
         let allowed = allowed.canonicalize().unwrap();
-        let route_session_id = format!(
-            "__worktree-route:test:{}",
-            uuid::Uuid::new_v4()
-        );
+        let route_session_id = format!("__worktree-route:test:{}", uuid::Uuid::new_v4());
         register_route(&route_session_id, "conversation-a", vec![allowed.clone()]);
 
-        assert!(authorize_repository(&route_session_id, rejected.to_str().unwrap())
-            .unwrap_err()
-            .contains("candidate list"));
+        assert!(
+            authorize_repository(&route_session_id, rejected.to_str().unwrap())
+                .unwrap_err()
+                .contains("candidate list")
+        );
         let (conversation_id, selected, _) =
             authorize_repository(&route_session_id, allowed.to_str().unwrap()).unwrap();
         assert_eq!(conversation_id, "conversation-a");
         assert_eq!(selected, allowed);
-        assert!(authorize_repository(&route_session_id, selected.to_str().unwrap())
-            .unwrap_err()
-            .contains("already used"));
+        assert!(
+            authorize_repository(&route_session_id, selected.to_str().unwrap())
+                .unwrap_err()
+                .contains("already used")
+        );
     }
 }

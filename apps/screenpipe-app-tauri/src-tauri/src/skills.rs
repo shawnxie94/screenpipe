@@ -85,21 +85,16 @@ async fn set_ai_tool_auto_connect_opt_out_serialized_in(
     opt_out: bool,
 ) -> Result<(), String> {
     let _guard = AI_TOOL_AUTO_CONNECT_LOCK.lock().await;
-    tokio::task::spawn_blocking(move || {
-        set_ai_tool_auto_connect_opt_out_in(&dir, &target, opt_out)
-    })
-    .await
-    .map_err(|error| format!("failed to save AI tool connection choice: {error}"))?
+    tokio::task::spawn_blocking(move || set_ai_tool_auto_connect_opt_out_in(&dir, &target, opt_out))
+        .await
+        .map_err(|error| format!("failed to save AI tool connection choice: {error}"))?
 }
 
 /// Persist the user's explicit Settings choice. Automatic launch reconciliation
 /// skips opted-out targets until the user explicitly connects them again.
 #[tauri::command]
 #[specta::specta]
-pub async fn set_ai_tool_auto_connect_opt_out(
-    target: String,
-    opt_out: bool,
-) -> Result<(), String> {
+pub async fn set_ai_tool_auto_connect_opt_out(target: String, opt_out: bool) -> Result<(), String> {
     set_ai_tool_auto_connect_opt_out_serialized_in(
         ai_tool_auto_connect_opt_out_dir(),
         target,
@@ -322,9 +317,6 @@ fn managed_team_skill_dir_name(artifact_id: &str) -> Result<String, String> {
     ))
 }
 
-
-
-
 fn parse_skill_frontmatter_text(raw: &str) -> (Option<String>, Option<String>) {
     let normalized = raw.replace("\r\n", "\n");
     let Some(rest) = normalized.strip_prefix("---\n") else {
@@ -354,10 +346,6 @@ fn parse_skill_frontmatter_text(raw: &str) -> (Option<String>, Option<String>) {
         description.filter(|value| !value.is_empty()),
     )
 }
-
-
-
-
 
 fn parse_legacy_managed_team_skill_marker(raw: &str) -> Option<(String, u64)> {
     let line = raw
@@ -415,7 +403,6 @@ fn is_managed_team_skill_file(path: &Path) -> bool {
         .map(is_managed_team_skill_dir)
         .unwrap_or(false)
 }
-
 
 /// Install the two built-in screenpipe skills into a supported external agent.
 /// Explicit Settings actions still call this narrow command; native launch
@@ -686,7 +673,6 @@ pub fn list_imported_skills() -> Result<Vec<ImportedSkill>, String> {
     Ok(out)
 }
 
-
 fn managed_team_skill_title(raw: &str, fallback: &str) -> String {
     raw.lines()
         .find_map(|line| line.strip_prefix("# ").map(str::trim))
@@ -694,7 +680,6 @@ fn managed_team_skill_title(raw: &str, fallback: &str) -> String {
         .unwrap_or(fallback)
         .to_string()
 }
-
 
 /// Copy a skill folder into the screenpipe store. `source_path` is the folder
 /// that directly contains `SKILL.md` (from a scan result or the folder picker).
@@ -731,8 +716,7 @@ pub fn import_skill(source_path: String) -> Result<ImportedSkill, String> {
 
     let dest = skills_store_dir().join(&key);
     if dest.exists() {
-        std::fs::remove_dir_all(&dest)
-            .map_err(|e| format!("替换现有技能失败：{e}"))?;
+        std::fs::remove_dir_all(&dest).map_err(|e| format!("替换现有技能失败：{e}"))?;
     }
     screenpipe_core::paths::copy_dir_all(&src, &dest)
         .map_err(|e| format!("failed to copy skill: {e}"))?;
@@ -999,10 +983,7 @@ async fn download_skill_dir(
         return Err(format!("在 {repo}/{subpath} 下未找到文件"));
     }
     if blobs.len() > MAX_SKILL_FILES {
-        return Err(format!(
-            "技能文件过多（{}），拒绝安装",
-            blobs.len()
-        ));
+        return Err(format!("技能文件过多（{}），拒绝安装", blobs.len()));
     }
 
     std::fs::create_dir_all(dest).map_err(|e| format!("创建暂存目录失败：{e}"))?;
@@ -1305,5 +1286,4 @@ mod tests {
         assert!(safe_join(base, "/etc/passwd").is_err());
         assert!(safe_join(base, "a/../../b").is_err());
     }
-
 }

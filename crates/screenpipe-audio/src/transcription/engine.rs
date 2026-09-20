@@ -63,7 +63,6 @@ async fn load_whisper_context_with_cpu_fallback(
     }
 }
 
-
 /// Unified transcription engine that owns the runtime state for whatever backend is configured.
 /// Only the selected model is loaded — no dummy Whisper downloads for non-Whisper engines.
 #[derive(Clone)]

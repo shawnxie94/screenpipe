@@ -13,8 +13,8 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use screenpipe_db::{
-    DatabaseManager, TaskControl, TaskDefinition, TaskKind, TaskOrigin,
-    TaskResourceClass, TaskRetryPolicy, TaskRunRequest, TaskState, TaskTrigger,
+    DatabaseManager, TaskControl, TaskDefinition, TaskKind, TaskOrigin, TaskResourceClass,
+    TaskRetryPolicy, TaskRunRequest, TaskState, TaskTrigger,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -670,10 +670,7 @@ async fn update_definition(
 }
 
 fn is_managed_definition_id(definition_id: &str) -> bool {
-    matches!(
-        definition_id,
-        "activity.summary" | "pipe.run"
-    )
+    matches!(definition_id, "activity.summary" | "pipe.run")
 }
 
 async fn start_run(

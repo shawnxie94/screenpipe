@@ -124,12 +124,11 @@ fn attempt_timeout(file_len: u64, remaining: Duration) -> Duration {
     size_aware.min(remaining)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::{attempt_timeout, get_media_file, get_mime_type};
     use std::time::Duration;
-    use wiremock::matchers::{path};
+    use wiremock::matchers::path;
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[test]
@@ -186,5 +185,4 @@ mod tests {
         assert_eq!(media["data"], "AAEC/w==");
         assert_eq!(media["mimeType"], "video/mp4");
     }
-
 }

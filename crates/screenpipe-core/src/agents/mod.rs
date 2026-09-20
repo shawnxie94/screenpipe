@@ -218,5 +218,4 @@ pub trait AgentExecutor: Send + Sync {
 
     /// Human-readable agent name, e.g. `"pi"`, `"claude-code"`.
     fn name(&self) -> &str;
-
 }

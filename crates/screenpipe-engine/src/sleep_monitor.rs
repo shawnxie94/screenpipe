@@ -551,7 +551,6 @@ fn on_will_sleep() {
     // mid-COMMIT), then block until resumed on wake. This ensures no
     // SQLite I/O happens while the disk is asleep.
     screenpipe_db::request_write_pause();
-
 }
 
 /// Called when system wakes from sleep

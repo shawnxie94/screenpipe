@@ -214,9 +214,7 @@ pub fn start(app: AppHandle) {
             };
             client::send_typed_with_actions_and_priority(
                 "检测到新会议",
-                format!(
-                    "{platform}可能切换了会议室。保留当前录制，还是开始新笔记？"
-                ),
+                format!("{platform}可能切换了会议室。保留当前录制，还是开始新笔记？"),
                 "meeting",
                 Some(30_000),
                 room_change_offer_actions(&offer),

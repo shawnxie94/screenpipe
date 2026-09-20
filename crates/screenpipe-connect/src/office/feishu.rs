@@ -15,8 +15,12 @@ use serde_json::Value;
 
 /// Parse `auth status --json --verify`.
 pub fn parse_auth_status(stdout: &str) -> Result<OfficeAccountIdentity, OfficeError> {
-    let value: Value = serde_json::from_str(stdout)
-        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("auth status 不是合法 JSON: {e}")))?;
+    let value: Value = serde_json::from_str(stdout).map_err(|e| {
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("auth status 不是合法 JSON: {e}"),
+        )
+    })?;
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         return Err(OfficeError::new(
             OfficeErrorCode::AuthExpired,
@@ -51,20 +55,32 @@ pub fn parse_auth_status(stdout: &str) -> Result<OfficeAccountIdentity, OfficeEr
 /// either granted or explicitly missing — never silently treated as granted.
 pub fn parse_scope_check(stdout: &str) -> Result<bool, OfficeError> {
     let value: Value = serde_json::from_str(stdout).map_err(|e| {
-        OfficeError::new(OfficeErrorCode::ProviderError, format!("auth check 不是合法 JSON: {e}"))
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("auth check 不是合法 JSON: {e}"),
+        )
     })?;
     Ok(value.get("ok").and_then(Value::as_bool) == Some(true))
 }
 
 /// Parse `im +chat-list --json` → (chat_id, name) pairs + next page token.
-pub fn parse_chat_list(stdout: &str) -> Result<(Vec<(String, String)>, Option<String>), OfficeError> {
-    let value: Value = serde_json::from_str(stdout)
-        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("chat-list 不是合法 JSON: {e}")))?;
+pub fn parse_chat_list(
+    stdout: &str,
+) -> Result<(Vec<(String, String)>, Option<String>), OfficeError> {
+    let value: Value = serde_json::from_str(stdout).map_err(|e| {
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("chat-list 不是合法 JSON: {e}"),
+        )
+    })?;
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         return Err(envelope_error(&value));
     }
-    let items = first_array(&value, &["/data/items", "/data/chats", "/items", "/data/list"])
-        .ok_or_else(|| OfficeError::new(OfficeErrorCode::ProviderError, "chat-list 缺少 items"))?;
+    let items = first_array(
+        &value,
+        &["/data/items", "/data/chats", "/items", "/data/list"],
+    )
+    .ok_or_else(|| OfficeError::new(OfficeErrorCode::ProviderError, "chat-list 缺少 items"))?;
     let mut chats = Vec::new();
     for item in items {
         let Some(id) = item
@@ -105,8 +121,12 @@ pub fn parse_chat_messages(
     account_namespace: &str,
     chat_id: &str,
 ) -> Result<MessagePage, OfficeError> {
-    let value: Value = serde_json::from_str(stdout)
-        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("消息列表不是合法 JSON: {e}")))?;
+    let value: Value = serde_json::from_str(stdout).map_err(|e| {
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("消息列表不是合法 JSON: {e}"),
+        )
+    })?;
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         return Err(envelope_error(&value));
     }
@@ -127,8 +147,16 @@ pub fn parse_chat_messages(
         let body_text = extract_message_text(item);
         let event_at = item
             .get("create_time")
-            .and_then(|t| t.as_str().and_then(parse_feishu_time).or_else(|| t.as_i64().map(feishu_ms_to_utc)))
-            .or_else(|| item.get("timestamp").and_then(Value::as_i64).map(feishu_ms_to_utc));
+            .and_then(|t| {
+                t.as_str()
+                    .and_then(parse_feishu_time)
+                    .or_else(|| t.as_i64().map(feishu_ms_to_utc))
+            })
+            .or_else(|| {
+                item.get("timestamp")
+                    .and_then(Value::as_i64)
+                    .map(feishu_ms_to_utc)
+            });
         let sender = item
             .pointer("/sender/id")
             .or_else(|| item.get("sender_id"))
@@ -188,8 +216,12 @@ pub fn parse_doc_fetch(
     account_namespace: &str,
     doc_ref: &str,
 ) -> Result<OfficeObject, OfficeError> {
-    let value: Value = serde_json::from_str(stdout)
-        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("文档输出不是合法 JSON: {e}")))?;
+    let value: Value = serde_json::from_str(stdout).map_err(|e| {
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("文档输出不是合法 JSON: {e}"),
+        )
+    })?;
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         return Err(envelope_error(&value));
     }
@@ -294,7 +326,9 @@ fn parse_feishu_time(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
             chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
                 .ok()
                 .and_then(|d| d.and_hms_opt(0, 0, 0))
-                .map(|dt| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(dt, chrono::Utc))
+                .map(|dt| {
+                    chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(dt, chrono::Utc)
+                })
         })
         // Message create_time is local wall time without seconds or offset,
         // e.g. "2026-09-18 09:00" — interpret it in the machine's timezone.
@@ -357,7 +391,10 @@ mod tests {
         assert_eq!(page.objects[0].actor.as_deref(), Some("ou_a"));
         assert!(page.objects[0].event_at.is_some());
         assert_eq!(page.next_cursor.as_deref(), Some("tok-2"));
-        assert!(!page.complete, "window high-water must not advance on partial pages");
+        assert!(
+            !page.complete,
+            "window high-water must not advance on partial pages"
+        );
         let last = &page.objects[1];
         assert_eq!(last.body_text, "收到");
     }
@@ -407,7 +444,8 @@ mod tests {
 
     #[test]
     fn permission_error_is_typed() {
-        let stdout = r#"{"ok":false,"error":{"code":99991672,"message":"Restricted: rate limited"}}"#;
+        let stdout =
+            r#"{"ok":false,"error":{"code":99991672,"message":"Restricted: rate limited"}}"#;
         let page = parse_chat_messages(stdout, "acc", "oc_1").unwrap_err();
         assert_eq!(page.code, OfficeErrorCode::RateLimited);
     }
@@ -441,8 +479,12 @@ pub fn parse_calendar_events(
     stdout: &str,
     account_namespace: &str,
 ) -> Result<CalendarPage, OfficeError> {
-    let value: Value = serde_json::from_str(stdout)
-        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("日历输出不是合法 JSON: {e}")))?;
+    let value: Value = serde_json::from_str(stdout).map_err(|e| {
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("日历输出不是合法 JSON: {e}"),
+        )
+    })?;
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         return Err(envelope_error(&value));
     }
@@ -518,9 +560,7 @@ pub fn parse_calendar_events(
                 end_display
             )
         };
-        body_text = format!("{}\n{}", header, body_text)
-            .trim()
-            .to_string();
+        body_text = format!("{}\n{}", header, body_text).trim().to_string();
         let status = item.get("status").and_then(Value::as_str);
         let meeting_url = ["/vchat/meeting_url", "/hangout_link", "/meeting_url"]
             .iter()
@@ -542,10 +582,7 @@ pub fn parse_calendar_events(
                 .pointer("/organizer_calendar_id")
                 .and_then(Value::as_str)
                 .map(str::to_string),
-            anchors: vec![(
-                "calendar_event_id".to_string(),
-                event_id.to_string(),
-            )],
+            anchors: vec![("calendar_event_id".to_string(), event_id.to_string())],
             completeness: OfficeCompleteness::Full,
             platform_generated: false,
         };

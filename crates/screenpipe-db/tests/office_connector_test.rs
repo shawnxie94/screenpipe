@@ -40,7 +40,10 @@ async fn upsert_is_idempotent_and_fts_is_searchable() {
     let second = db.office_upsert_object(&d).await.unwrap();
     assert!(!second, "re-import must not re-create (idempotent)");
 
-    let hits = db.office_search(Some("feishu"), "项目复盘", 10).await.unwrap();
+    let hits = db
+        .office_search(Some("feishu"), "项目复盘", 10)
+        .await
+        .unwrap();
     assert!(!hits.is_empty(), "fts must find the object");
     assert_eq!(hits[0].0.object_id, "chat-1/msg-1");
 }
@@ -48,12 +51,20 @@ async fn upsert_is_idempotent_and_fts_is_searchable() {
 #[tokio::test]
 async fn disable_and_erase_lifecycle() {
     let db = test_db().await;
-    db.office_upsert_object(&draft("message", "m1", "keep this")).await.unwrap();
-    db.office_upsert_object(&draft("message", "m2", "drop this")).await.unwrap();
+    db.office_upsert_object(&draft("message", "m1", "keep this"))
+        .await
+        .unwrap();
+    db.office_upsert_object(&draft("message", "m2", "drop this"))
+        .await
+        .unwrap();
 
     // Disable everything except m1.
     let disabled = db
-        .office_disable_out_of_scope("feishu", "acct-1", &[("message".to_string(), "m1".to_string())])
+        .office_disable_out_of_scope(
+            "feishu",
+            "acct-1",
+            &[("message".to_string(), "m1".to_string())],
+        )
         .await
         .unwrap();
     assert_eq!(disabled.len(), 1);
@@ -68,22 +79,40 @@ async fn disable_and_erase_lifecycle() {
     assert_eq!(erased, 2);
     let hits = db.office_search(Some("feishu"), "keep", 10).await.unwrap();
     assert!(hits.is_empty(), "erased objects must not surface");
-    db.office_upsert_object(&draft("message", "m1", "keep this")).await.unwrap();
+    db.office_upsert_object(&draft("message", "m1", "keep this"))
+        .await
+        .unwrap();
     let hits = db.office_search(Some("feishu"), "keep", 10).await.unwrap();
-    assert!(hits.is_empty(), "re-import after erase must stay suppressed");
+    assert!(
+        hits.is_empty(),
+        "re-import after erase must stay suppressed"
+    );
 }
 
 #[tokio::test]
 async fn cursors_roundtrip() {
     let db = test_db().await;
-    assert!(db.office_get_cursor("feishu", "chat:c1:messages").await.unwrap().is_none());
-    db.office_set_cursor("feishu", "chat:c1:messages", "2026-09-14T10:00:00Z").await.unwrap();
+    assert!(db
+        .office_get_cursor("feishu", "chat:c1:messages")
+        .await
+        .unwrap()
+        .is_none());
+    db.office_set_cursor("feishu", "chat:c1:messages", "2026-09-14T10:00:00Z")
+        .await
+        .unwrap();
     assert_eq!(
-        db.office_get_cursor("feishu", "chat:c1:messages").await.unwrap().as_deref(),
+        db.office_get_cursor("feishu", "chat:c1:messages")
+            .await
+            .unwrap()
+            .as_deref(),
         Some("2026-09-14T10:00:00Z")
     );
     db.office_clear_cursors("feishu").await.unwrap();
-    assert!(db.office_get_cursor("feishu", "chat:c1:messages").await.unwrap().is_none());
+    assert!(db
+        .office_get_cursor("feishu", "chat:c1:messages")
+        .await
+        .unwrap()
+        .is_none());
 }
 #[tokio::test]
 async fn save_scope_bumps_connection_scope_revision() {
@@ -118,7 +147,9 @@ async fn save_scope_bumps_connection_scope_revision() {
 #[tokio::test]
 async fn connector_search_page_matches_browses_and_counts() {
     let db = test_db().await;
-    db.office_upsert_object(&draft("message", "m1", "季度目标对齐会议")).await.unwrap();
+    db.office_upsert_object(&draft("message", "m1", "季度目标对齐会议"))
+        .await
+        .unwrap();
     let mut old = draft("document", "d1", "季度总结文档");
     old.event_at = Some(Utc::now() - Duration::hours(48));
     db.office_upsert_object(&old).await.unwrap();
@@ -140,7 +171,10 @@ async fn connector_search_page_matches_browses_and_counts() {
     assert_eq!(page2.len(), 1);
 
     // Browse (empty query) returns recent items newest-first.
-    let (rows, total) = db.connector_search_page("", None, None, 10, 0).await.unwrap();
+    let (rows, total) = db
+        .connector_search_page("", None, None, 10, 0)
+        .await
+        .unwrap();
     assert_eq!(total, 2);
     assert_eq!(rows[0].object_id, "m1");
 
@@ -154,7 +188,12 @@ async fn connector_search_page_matches_browses_and_counts() {
     assert_eq!(rows[0].object_id, "m1");
 
     // Disabled rows never surface.
-    db.office_disable_out_of_scope("feishu", "acct-1", &[]).await.unwrap();
-    let (_, total) = db.connector_search_page("季度", None, None, 10, 0).await.unwrap();
+    db.office_disable_out_of_scope("feishu", "acct-1", &[])
+        .await
+        .unwrap();
+    let (_, total) = db
+        .connector_search_page("季度", None, None, 10, 0)
+        .await
+        .unwrap();
     assert_eq!(total, 0);
 }

@@ -104,12 +104,8 @@ async fn main() -> anyhow::Result<()> {
         vocab.len()
     );
 
-    let engine = TranscriptionEngine::new(
-        Arc::new(engine_enum),
-        vec![Language::English],
-        vocab,
-    )
-    .await?;
+    let engine =
+        TranscriptionEngine::new(Arc::new(engine_enum), vec![Language::English], vocab).await?;
 
     let mut ids: Vec<String> = Vec::new();
     for entry in std::fs::read_dir(&corpus)? {

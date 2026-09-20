@@ -53,14 +53,15 @@ impl Default for DiskPressureNotificationState {
 impl DiskPressureNotificationState {
     fn from_path(path: PathBuf) -> Self {
         let notification_sent = match std::fs::read_to_string(&path) {
-            Ok(raw) => serde_json::from_str::<PersistedNotificationState>(&raw)
-                .unwrap_or_else(|error| {
+            Ok(raw) => {
+                serde_json::from_str::<PersistedNotificationState>(&raw).unwrap_or_else(|error| {
                     warn!(
                         path = %path.display(),
                         "ignoring invalid disk-pressure notification state: {error}"
                     );
                     PersistedNotificationState::default()
-                }),
+                })
+            }
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 PersistedNotificationState::default()
             }
@@ -111,10 +112,8 @@ impl DiskPressureNotificationState {
             data_dir: Some(data_dir.clone()),
         };
         let raw = serde_json::to_string(&persisted).map_err(|error| error.to_string())?;
-        let write_result = screenpipe_core::atomic_io::write_atomic_full(
-            &self.path, &raw,
-        )
-        .map_err(|error| error.to_string());
+        let write_result = screenpipe_core::atomic_io::write_atomic_full(&self.path, &raw)
+            .map_err(|error| error.to_string());
 
         // Even if persistence fails, suppress duplicate alerts for this process.
         // A later process may alert once more rather than silently hiding a
@@ -314,11 +313,7 @@ fn low_disk_actions(storage_available: bool) -> Vec<serde_json::Value> {
         .unwrap_or_default()
 }
 
-fn low_disk_body(
-    available_bytes: u64,
-    threshold_bytes: u64,
-    storage_available: bool,
-) -> String {
+fn low_disk_body(available_bytes: u64, threshold_bytes: u64, storage_available: bool) -> String {
     let available = readable_gib(available_bytes);
     let threshold = readable_gib(threshold_bytes);
     let next_step = if storage_available {
@@ -351,11 +346,7 @@ mod tests {
         assert_eq!(readable_gib(20 * 1024 * 1024 * 1024), "20.0 GB");
         assert_eq!(readable_gib(512 * 1024 * 1024), "0.5 GB");
 
-        let body = low_disk_body(
-            1024 * 1024 * 1024,
-            20 * 1024 * 1024 * 1024,
-            true,
-        );
+        let body = low_disk_body(1024 * 1024 * 1024, 20 * 1024 * 1024 * 1024, true);
         assert!(body.contains("仅剩 1.0 GB 可用"));
         assert!(body.contains("本设备可用的保留策略选项"));
         assert!(body.contains("搜索和已有数据仍可使用"));
@@ -398,9 +389,8 @@ mod tests {
     #[tokio::test]
     async fn recovery_requires_hysteresis_and_the_same_data_volume() {
         let temp = tempfile::tempdir().unwrap();
-        let state = DiskPressureNotificationState::from_path(
-            temp.path().join(NOTIFICATION_STATE_FILE),
-        );
+        let state =
+            DiskPressureNotificationState::from_path(temp.path().join(NOTIFICATION_STATE_FILE));
         assert!(state.try_begin_notification("test-data").await);
         state.complete_notification().await.unwrap();
 
@@ -429,9 +419,8 @@ mod tests {
     #[tokio::test]
     async fn failed_delivery_rearms_the_in_process_latch() {
         let temp = tempfile::tempdir().unwrap();
-        let state = DiskPressureNotificationState::from_path(
-            temp.path().join(NOTIFICATION_STATE_FILE),
-        );
+        let state =
+            DiskPressureNotificationState::from_path(temp.path().join(NOTIFICATION_STATE_FILE));
         assert!(state.try_begin_notification("test-data").await);
         state.cancel_notification().await;
         assert!(state.try_begin_notification("test-data").await);

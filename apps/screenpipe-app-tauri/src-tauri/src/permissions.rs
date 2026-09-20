@@ -758,11 +758,7 @@ pub async fn reset_permission(
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(format!(
-                "tccutil reset {} 失败：{}",
-                service,
-                stderr.trim()
-            ));
+            return Err(format!("tccutil reset {} 失败：{}", service, stderr.trim()));
         }
 
         if matches!(permission, OSPermission::Calendar) {

@@ -956,7 +956,6 @@ impl RecordArgSources {
             || self.ignore_incognito_windows
             || self.enhanced_incognito_detection
             || self.ignored_meeting_apps
-
             || self.transcription_mode
             || self.disable_telemetry
             || self.video_quality

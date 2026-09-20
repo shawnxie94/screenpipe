@@ -140,8 +140,7 @@ impl SileroVad {
         // https://github.com/snakers4/silero-vad/discussions/471
         let url =
             "https://github.com/snakers4/silero-vad/raw/master/src/silero_vad/data/silero_vad.onnx";
-        let model_data =
-            crate::models::download::fetch_bytes_with_mirrors(url).await?;
+        let model_data = crate::models::download::fetch_bytes_with_mirrors(url).await?;
 
         let cache_dir = Self::get_cache_dir()?;
         tokio::fs::create_dir_all(&cache_dir).await?;

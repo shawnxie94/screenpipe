@@ -725,10 +725,7 @@ fn apply_negotiated_controls(
         task.available_actions = available_actions_for(task, control);
         if !task.available_actions.is_empty() {
             task.manageability = "in_app".to_owned();
-            task.lifecycle_note = format!(
-                "managed through a live {} ACP session",
-                task.provider
-            );
+            task.lifecycle_note = format!("managed through a live {} ACP session", task.provider);
         }
     }
 }
@@ -772,7 +769,10 @@ fn list_provider_automations_sync() -> Vec<ProviderAutomation> {
         }
     }
     let mut tasks: Vec<_> = by_key.into_values().collect();
-    apply_negotiated_controls(&mut tasks, &list_control_sessions_in(&control_sessions_root()));
+    apply_negotiated_controls(
+        &mut tasks,
+        &list_control_sessions_in(&control_sessions_root()),
+    );
     tasks.sort_by(|left, right| {
         left.provider
             .cmp(&right.provider)

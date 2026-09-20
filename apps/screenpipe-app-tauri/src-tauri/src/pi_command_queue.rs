@@ -2700,12 +2700,9 @@ mod tests {
             "the rejection proves a real turn still owns the process"
         );
         assert!(
-            tokio::time::timeout(
-                std::time::Duration::from_millis(200),
-                &mut followup_reply,
-            )
-            .await
-            .is_err(),
+            tokio::time::timeout(std::time::Duration::from_millis(200), &mut followup_reply,)
+                .await
+                .is_err(),
             "follow-up must remain parked until the real turn ends"
         );
 
@@ -2720,7 +2717,9 @@ mod tests {
         .expect("follow-up should be written after the real turn ends");
         state.mark_agent_active();
         assert_eq!(
-            followup_reply.await.expect("follow-up reply channel stays open"),
+            followup_reply
+                .await
+                .expect("follow-up reply channel stays open"),
             Ok(())
         );
 

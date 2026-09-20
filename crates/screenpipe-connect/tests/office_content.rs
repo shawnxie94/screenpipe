@@ -31,7 +31,10 @@ fn feishu_pagination_and_long_content_preserve_identity_time_and_body() {
     let page = parse_chat_messages(&payload.to_string(), "account-a", "oc_chat")
         .expect("valid paginated message page");
     assert_eq!(page.next_cursor.as_deref(), Some("page-2"));
-    assert!(!page.complete, "a cursor-bearing page cannot advance the high-water mark");
+    assert!(
+        !page.complete,
+        "a cursor-bearing page cannot advance the high-water mark"
+    );
     assert_eq!(page.objects.len(), 1);
     let object = &page.objects[0];
     assert_eq!(object.object_id, "om_long_1");
@@ -110,8 +113,8 @@ fn tencent_time_transcript_cursor_and_generated_summary_are_distinct() {
         "ok": true,
         "data": {"minutes": "- 决定保留方案A"}
     });
-    let summary = parse_smart_minutes(&summary_payload.to_string(), "account-a", "record-1")
-        .unwrap();
+    let summary =
+        parse_smart_minutes(&summary_payload.to_string(), "account-a", "record-1").unwrap();
     assert_eq!(summary.object_kind, OfficeObjectKind::Summary);
     assert!(summary.platform_generated);
     assert_eq!(summary.anchors[0].1, "record-1");

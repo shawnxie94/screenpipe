@@ -31,11 +31,7 @@ pub(crate) fn auto_sync_interval() -> Duration {
 
 /// Guards evaluated before kicking a sync. Shared by both channel flavors so
 /// the semantics stay identical: authorized, toggled on, nothing in flight.
-pub(crate) fn should_auto_sync(
-    auth_status: &str,
-    auto_sync: bool,
-    sync_status: &str,
-) -> bool {
+pub(crate) fn should_auto_sync(auth_status: &str, auto_sync: bool, sync_status: &str) -> bool {
     auth_status == OfficeAuthStatus::Authorized.as_str()
         && auto_sync
         && sync_status != OfficeSyncStatus::Running.as_str()
@@ -50,10 +46,7 @@ pub fn spawn_auto_sync(db: Arc<DatabaseManager>, managed_dir: std::path::PathBuf
         info!("auto sync: disabled (SCREENPIPE_AUTO_SYNC_SECS=0)");
         return;
     }
-    info!(
-        "auto sync: enabled, interval {}s",
-        interval.as_secs()
-    );
+    info!("auto sync: enabled, interval {}s", interval.as_secs());
     tokio::spawn(async move {
         loop {
             tokio::time::sleep(interval).await;
@@ -86,11 +79,7 @@ async fn office_auto_sync_tick(
         .office_get_connection(provider)
         .await?
         .ok_or_else(|| {
-            crate::office::OfficeServiceError::new(
-                OfficeErrorCode::ScopeInvalid,
-                "未连接",
-                0,
-            )
+            crate::office::OfficeServiceError::new(OfficeErrorCode::ScopeInvalid, "未连接", 0)
         })?;
     let auto_sync = service
         .db
@@ -116,10 +105,7 @@ async fn office_auto_sync_tick(
 
 async fn rss_auto_sync_tick(db: &Arc<DatabaseManager>) -> Result<(), String> {
     let service = RssService::new(db.clone());
-    let row = service
-        .status()
-        .await
-        .map_err(|e| e.message.clone())?;
+    let row = service.status().await.map_err(|e| e.message.clone())?;
     // The status payload carries the persisted scope (feed list + toggle);
     // auth is derived from a non-empty feed list.
     let auto_sync = row

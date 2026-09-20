@@ -59,5 +59,4 @@ async fn full_router_exposes_openapi_and_private_axum_routes() {
         .await
         .expect("request OpenAPI document");
     assert_eq!(spec.status(), StatusCode::OK);
-
 }

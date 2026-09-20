@@ -30,11 +30,7 @@ fn is_overlay_window(label: &str) -> bool {
 /// and screen sharing. Capture protection is deliberately limited to overlay
 /// windows; Home, Settings, and other regular app windows remain capturable.
 /// E2E builds stay capturable so visual assertions remain possible.
-pub(crate) fn should_protect_window(
-    settings: &SettingsStore,
-    label: &str,
-    e2e_mode: bool,
-) -> bool {
+pub(crate) fn should_protect_window(settings: &SettingsStore, label: &str, e2e_mode: bool) -> bool {
     if e2e_mode {
         return false;
     }
@@ -49,10 +45,7 @@ pub(crate) fn overlay_is_capturable(settings: &SettingsStore) -> bool {
 /// label helper but must follow the same overlay-only preference.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub(crate) fn native_overlay_is_capturable(app: &AppHandle) -> bool {
-    let settings = SettingsStore::get(app)
-        .ok()
-        .flatten()
-        .unwrap_or_default();
+    let settings = SettingsStore::get(app).ok().flatten().unwrap_or_default();
     overlay_is_capturable(&settings)
 }
 
@@ -60,16 +53,15 @@ fn apply_to_window_with_settings(
     window: &WebviewWindow,
     settings: &SettingsStore,
 ) -> Result<(), String> {
-    let protected = should_protect_window(
-        settings,
-        window.label(),
-        crate::config::is_e2e_mode(),
-    );
+    let protected = should_protect_window(settings, window.label(), crate::config::is_e2e_mode());
 
     #[cfg(any(target_os = "macos", target_os = "windows"))]
-    window
-        .set_content_protected(protected)
-        .map_err(|error| format!("failed to update {} capture protection: {error}", window.label()))?;
+    window.set_content_protected(protected).map_err(|error| {
+        format!(
+            "failed to update {} capture protection: {error}",
+            window.label()
+        )
+    })?;
 
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     let _ = protected;
@@ -114,9 +106,7 @@ pub fn set_app_screen_capture_protection(
         .unwrap_or_default();
     settings.hide_overlay_in_screen_recording = hidden;
 
-    crate::native_shortcut_reminder::set_capture_protected(
-        hidden && !crate::config::is_e2e_mode(),
-    );
+    crate::native_shortcut_reminder::set_capture_protected(hidden && !crate::config::is_e2e_mode());
 
     let mut errors = Vec::new();
     for window in app_handle.webview_windows().values() {
@@ -133,9 +123,7 @@ pub fn set_app_screen_capture_protection(
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_app_screen_capture_protection(
-    app_handle: AppHandle,
-) -> ScreenCaptureProtectionStatus {
+pub fn get_app_screen_capture_protection(app_handle: AppHandle) -> ScreenCaptureProtectionStatus {
     let requested_hidden = SettingsStore::get(&app_handle)
         .ok()
         .flatten()
@@ -156,8 +144,16 @@ mod tests {
         assert!(!should_protect_window(&settings, "settings", false));
         assert!(!should_protect_window(&settings, "main", false));
         assert!(!should_protect_window(&settings, "chat", false));
-        assert!(!should_protect_window(&settings, "shortcut-reminder", false));
-        assert!(!should_protect_window(&settings, "notification-panel", false));
+        assert!(!should_protect_window(
+            &settings,
+            "shortcut-reminder",
+            false
+        ));
+        assert!(!should_protect_window(
+            &settings,
+            "notification-panel",
+            false
+        ));
 
         let mut settings = settings;
         settings.hide_overlay_in_screen_recording = true;

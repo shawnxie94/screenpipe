@@ -1539,7 +1539,10 @@ mod tests {
             );
             assert!(!markdown.trim().is_empty(), "{name} is empty");
             assert!(markdown.starts_with("---\n"), "{name} lacks front-matter");
-            assert!(markdown.contains("\ndescription:"), "{name} lacks description");
+            assert!(
+                markdown.contains("\ndescription:"),
+                "{name} lacks description"
+            );
         }
 
         // install_skills_in writes every built-in skill (temp home, never the

@@ -96,7 +96,8 @@ const MEETING_PAYLOAD_BUILDER_END: &str = "  curl -sf -X POST";
 const MEETING_CONNECTION_RENDER_START: &str =
     "  bun -e 'const d=await Bun.file(\"/tmp/conn.json\")";
 const MEETING_REVIEW_ACTION_START: &str = "          {\"label\": \"在聊天中查看\"";
-const MEETING_ACTION_RULE_START: &str = "每个按钮都映射到其 `/connections` `description` 里的一个连接端点";
+const MEETING_ACTION_RULE_START: &str =
+    "每个按钮都映射到其 `/connections` `description` 里的一个连接端点";
 const MEETING_MEDIA_START: &str = "第 2c 步——默认跳过这一步";
 const MEETING_MEDIA_END: &str = "第 2d 步——给每个不同的说话人";
 const MEETING_NAMING_START: &str = "第 2d 步——给每个不同的说话人";
@@ -911,7 +912,9 @@ mod tests {
             .expect("source-search instruction should migrate");
         assert!(!fixed.contains("buildMeetingSummarizeInstructions"));
         assert!(fixed.contains("screenpipe API search is required"));
-        assert!(fixed.contains("never run recursive `find` or `grep` over the user's home or `~/.screenpipe`"));
+        assert!(fixed.contains(
+            "never run recursive `find` or `grep` over the user's home or `~/.screenpipe`"
+        ));
         assert!(fixed.ends_with("read the screenpipe skill first.\n"));
         assert!(migrate_builtin_pipe_text("meeting-summary", &fixed).is_none());
     }
@@ -1114,7 +1117,9 @@ mod tests {
             .expect("recursive post-summary actions should migrate");
         assert!(fixed.contains(r#""type": "chat""#));
         assert!(fixed.contains("Do not rerun meeting-summary"));
-        assert!(fixed.contains("绝不要在摘要后按钮上使用 `type: \"pipe\"` 配合 `pipe: \"meeting-summary\"`"));
+        assert!(fixed.contains(
+            "绝不要在摘要后按钮上使用 `type: \"pipe\"` 配合 `pipe: \"meeting-summary\"`"
+        ));
         assert!(!fixed.contains(LEGACY_MEETING_REVIEW_ACTION));
         assert!(migrate_builtin_pipe_text("meeting-summary", &fixed).is_none());
     }
@@ -1169,7 +1174,9 @@ mod tests {
         assert!(body.contains("绝不要依赖 `jq`"));
         assert!(body.contains(r#""type": "chat""#));
         assert!(body.contains("Do not rerun meeting-summary"));
-        assert!(body.contains("绝不要在摘要后按钮上使用 `type: \"pipe\"` 配合 `pipe: \"meeting-summary\"`"));
+        assert!(body.contains(
+            "绝不要在摘要后按钮上使用 `type: \"pipe\"` 配合 `pipe: \"meeting-summary\"`"
+        ));
         assert!(!body.contains(r#""type": "pipe", "pipe": "meeting-summary""#));
         assert!(!body.contains("$(jq"));
         assert!(!body.contains("\n  jq "));

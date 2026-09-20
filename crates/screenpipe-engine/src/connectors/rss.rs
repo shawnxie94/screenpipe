@@ -20,7 +20,9 @@ use serde_json::json;
 use sha2::{Digest, Sha256};
 use tokio_util::sync::CancellationToken;
 
-use screenpipe_db::{ConnectorConnectionUpdate, ConnectorObjectDraft, ConnectorUpsertOutcome, DatabaseManager};
+use screenpipe_db::{
+    ConnectorConnectionUpdate, ConnectorObjectDraft, ConnectorUpsertOutcome, DatabaseManager,
+};
 
 use super::ConnectorError;
 
@@ -106,11 +108,7 @@ impl RssService {
     /// is configured.
     pub async fn status(&self) -> Result<serde_json::Value, ConnectorError> {
         self.db
-            .connector_update_connection(
-                CONNECTOR_ID,
-                KEY,
-                ConnectorConnectionUpdate::default(),
-            )
+            .connector_update_connection(CONNECTOR_ID, KEY, ConnectorConnectionUpdate::default())
             .await?;
         let row = self
             .db
@@ -150,14 +148,10 @@ impl RssService {
     }
 
     /// Validate and persist the feed list. Returns the new scope revision.
-    pub async fn save_scope(
-        &self,
-        scope: &RssScope,
-    ) -> Result<i64, ConnectorError> {
+    pub async fn save_scope(&self, scope: &RssScope) -> Result<i64, ConnectorError> {
         for url in &scope.feed_urls {
-            let parsed = url::Url::parse(url).map_err(|_| {
-                ConnectorError::bad_request(format!("无效的订阅地址: {url}"))
-            })?;
+            let parsed = url::Url::parse(url)
+                .map_err(|_| ConnectorError::bad_request(format!("无效的订阅地址: {url}")))?;
             if parsed.scheme() != "http" && parsed.scheme() != "https" {
                 return Err(ConnectorError::bad_request(format!(
                     "订阅地址必须是 http(s): {url}"
@@ -176,7 +170,12 @@ impl RssService {
                 KEY,
                 ConnectorConnectionUpdate {
                     auth_status: Some(
-                        if scope.is_empty() { "disconnected" } else { "authorized" }.to_string(),
+                        if scope.is_empty() {
+                            "disconnected"
+                        } else {
+                            "authorized"
+                        }
+                        .to_string(),
                     ),
                     ..Default::default()
                 },
@@ -329,9 +328,7 @@ impl RssService {
         } else {
             self.db.connector_disable_all_objects(CONNECTOR_ID).await?;
         }
-        self.db
-            .connector_clear_cursors(CONNECTOR_ID)
-            .await?;
+        self.db.connector_clear_cursors(CONNECTOR_ID).await?;
         self.db
             .connector_update_connection(
                 CONNECTOR_ID,
@@ -351,7 +348,11 @@ impl RssService {
     }
 
     /// Search imported items via the shared FTS index.
-    pub async fn search(&self, query: &str, limit: u32) -> Result<serde_json::Value, ConnectorError> {
+    pub async fn search(
+        &self,
+        query: &str,
+        limit: u32,
+    ) -> Result<serde_json::Value, ConnectorError> {
         let rows = self.db.connector_search(CONNECTOR_ID, query, limit).await?;
         Ok(json!({ "items": rows }))
     }
@@ -421,8 +422,9 @@ async fn run_sync(
                         .await?;
                     match outcome {
                         ConnectorUpsertOutcome::Created => processed += 1,
-                        ConnectorUpsertOutcome::Unchanged
-                        | ConnectorUpsertOutcome::Duplicate => skipped += 1,
+                        ConnectorUpsertOutcome::Unchanged | ConnectorUpsertOutcome::Duplicate => {
+                            skipped += 1
+                        }
                     }
                     // Cursor: newest item seen per feed (observability; item
                     // dedup relies on object identity + content hash).
@@ -488,9 +490,10 @@ async fn fetch_feed(
     url: &str,
     validators: &FeedValidators,
 ) -> Result<FeedFetch, ConnectorError> {
-    let mut request = client
-        .get(url)
-        .header("accept", "application/rss+xml, application/atom+xml, application/xml, text/xml, */*");
+    let mut request = client.get(url).header(
+        "accept",
+        "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
+    );
     if let Some(etag) = &validators.etag {
         request = request.header(reqwest::header::IF_NONE_MATCH, etag);
     }
@@ -542,7 +545,10 @@ async fn fetch_feed(
     if bytes.len() > MAX_FEED_BYTES {
         return Err(ConnectorError::new(
             "feed_too_large",
-            format!("{url}: 订阅响应 {} 字节，超过 {MAX_FEED_BYTES} 上限", bytes.len()),
+            format!(
+                "{url}: 订阅响应 {} 字节，超过 {MAX_FEED_BYTES} 上限",
+                bytes.len()
+            ),
             400,
         ));
     }
@@ -554,10 +560,7 @@ fn parse_feed(url: &str, bytes: &[u8]) -> Result<Vec<FeedItem>, ConnectorError> 
         .map_err(|e| ConnectorError::new("feed_invalid", format!("{url}: {e}"), 400))?;
     let mut out = Vec::new();
     for item in feed.entries {
-        let link = item
-            .links
-            .first()
-            .map(|l| l.href.clone());
+        let link = item.links.first().map(|l| l.href.clone());
         // feed-rs initialises `id` when the feed omits it (hash of the link
         // or a UUID), so identity is always stable.
         let id = item.id.clone();
@@ -692,7 +695,11 @@ mod tests {
 
     #[test]
     fn parse_rejects_non_feed_bytes() {
-        assert!(parse_feed("https://example.com/x", b"<html><body>not a feed</body></html>").is_err());
+        assert!(parse_feed(
+            "https://example.com/x",
+            b"<html><body>not a feed</body></html>"
+        )
+        .is_err());
     }
 
     #[test]

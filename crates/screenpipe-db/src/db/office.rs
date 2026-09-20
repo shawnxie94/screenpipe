@@ -35,7 +35,6 @@ fn conn_id(provider: &str) -> String {
     format!("office:{provider}")
 }
 
-
 /// Connection-level fields with no generic column, packed into
 /// `connector_connections.metadata`.
 #[derive(Debug, Default, serde::Deserialize, serde::Serialize)]
@@ -172,9 +171,7 @@ impl From<ConnectorConnRaw> for OfficeConnectionRow {
             cli_path: meta.cli_path,
             cli_version: meta.cli_version,
             credential_ref: meta.credential_ref,
-            runtime_status: meta
-                .runtime_status
-                .unwrap_or_else(|| "missing".to_string()),
+            runtime_status: meta.runtime_status.unwrap_or_else(|| "missing".to_string()),
             auth_status: r.auth_status,
             sync_status: r.sync_status,
             connection_revision: r.connection_revision,
@@ -240,13 +237,11 @@ impl DatabaseManager {
         tx: &mut ImmediateTx,
         provider: &str,
     ) -> Result<(), SqlxError> {
-        sqlx::query(
-            "INSERT OR IGNORE INTO connector_connections (connector, key) VALUES (?1, ?2)",
-        )
-        .bind(conn_id(provider))
-        .bind(provider)
-        .execute(&mut **tx.conn())
-        .await?;
+        sqlx::query("INSERT OR IGNORE INTO connector_connections (connector, key) VALUES (?1, ?2)")
+            .bind(conn_id(provider))
+            .bind(provider)
+            .execute(&mut **tx.conn())
+            .await?;
         Ok(())
     }
 
@@ -261,11 +256,20 @@ impl DatabaseManager {
         // Office-specific fields live in metadata; read-merge-write inside the
         // same transaction the generic columns are updated in.
         let meta_field_updates = [
-            updates.account_namespace.clone().map(|v| ("account_namespace", v)),
+            updates
+                .account_namespace
+                .clone()
+                .map(|v| ("account_namespace", v)),
             updates.cli_path.clone().map(|v| ("cli_path", v)),
             updates.cli_version.clone().map(|v| ("cli_version", v)),
-            updates.credential_ref.clone().map(|v| ("credential_ref", v)),
-            updates.runtime_status.clone().map(|v| ("runtime_status", v)),
+            updates
+                .credential_ref
+                .clone()
+                .map(|v| ("credential_ref", v)),
+            updates
+                .runtime_status
+                .clone()
+                .map(|v| ("runtime_status", v)),
         ];
         let has_meta_updates = meta_field_updates.iter().any(|u| u.is_some());
         if has_meta_updates {
@@ -277,8 +281,7 @@ impl DatabaseManager {
             .bind(provider)
             .fetch_optional(&mut **tx.conn())
             .await?;
-            let mut meta: OfficeConnectionMeta =
-                parse_meta(current.map(|(m,)| m));
+            let mut meta: OfficeConnectionMeta = parse_meta(current.map(|(m,)| m));
             for update in meta_field_updates.into_iter().flatten() {
                 match update {
                     ("account_namespace", v) => meta.account_namespace = Some(v),
@@ -455,7 +458,11 @@ impl DatabaseManager {
         .await
     }
 
-    pub async fn office_save_scope(&self, provider: &str, scope_json: &str) -> Result<i64, SqlxError> {
+    pub async fn office_save_scope(
+        &self,
+        provider: &str,
+        scope_json: &str,
+    ) -> Result<i64, SqlxError> {
         let mut tx = self.begin_immediate_with_retry().await?;
         self.office_ensure_connection_tx(&mut tx, provider).await?;
         sqlx::query(
@@ -617,7 +624,16 @@ impl DatabaseManager {
         kind: &str,
         id: &str,
     ) -> Result<Option<OfficeObjectRow>, SqlxError> {
-        let raw: Option<(Option<String>, Option<String>, String, Option<String>, String, Option<String>, Option<String>, String)> = sqlx::query_as(
+        let raw: Option<(
+            Option<String>,
+            Option<String>,
+            String,
+            Option<String>,
+            String,
+            Option<String>,
+            Option<String>,
+            String,
+        )> = sqlx::query_as(
             "SELECT revision, title, body_text, event_at, fetched_at, source_url, metadata, state \
              FROM connector_objects WHERE connector = ?1 AND namespace = ?2 \
              AND object_kind = ?3 AND object_id = ?4",

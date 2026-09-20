@@ -198,13 +198,7 @@ mod tests {
         ];
 
         for (persisted, expected) in cases {
-            let config = MeetingStreamingConfig::from_settings(
-                true,
-                persisted,
-                None,
-                None,
-                None,
-            );
+            let config = MeetingStreamingConfig::from_settings(true, persisted, None, None, None);
 
             assert_eq!(config.provider, expected, "persisted={persisted}");
         }
@@ -212,13 +206,8 @@ mod tests {
 
     #[test]
     fn disabled_live_transcription_does_not_promote_cloud() {
-        let config = MeetingStreamingConfig::from_settings(
-            false,
-            "selected-engine",
-            None,
-            None,
-            None,
-        );
+        let config =
+            MeetingStreamingConfig::from_settings(false, "selected-engine", None, None, None);
 
         assert_eq!(config.provider, MeetingStreamingProvider::SelectedEngine);
         assert!(!config.enabled);

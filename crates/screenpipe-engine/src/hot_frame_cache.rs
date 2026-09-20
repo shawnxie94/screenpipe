@@ -700,8 +700,12 @@ mod tests {
     async fn intern_dedups_repeated_strings() {
         let cache = HotFrameCache::new();
         let now = Utc::now();
-        cache.push_frame(test_frame(1, now, "SameApp", "Window A")).await;
-        cache.push_frame(test_frame(2, now, "SameApp", "Window B")).await;
+        cache
+            .push_frame(test_frame(1, now, "SameApp", "Window A"))
+            .await;
+        cache
+            .push_frame(test_frame(2, now, "SameApp", "Window B"))
+            .await;
 
         let frames = cache.frames.read().await;
         assert_eq!(frames.len(), 2);

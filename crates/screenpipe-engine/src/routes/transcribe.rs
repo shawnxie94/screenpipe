@@ -181,8 +181,7 @@ pub async fn transcribe_handler(
             }
         };
         let languages = audio_manager.languages().await;
-        match TranscriptionEngine::new(engine, languages, vec![]).await
-        {
+        match TranscriptionEngine::new(engine, languages, vec![]).await {
             Ok(e) => e,
             Err(e) => {
                 error!("failed to create transcription engine: {}", e);

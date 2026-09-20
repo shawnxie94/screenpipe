@@ -21,8 +21,12 @@ pub fn parse_auth_status(stdout: &str) -> Result<OfficeAccountIdentity, OfficeEr
     if !trimmed.starts_with('{') {
         return parse_auth_status_text(trimmed);
     }
-    let value: Value = serde_json::from_str(trimmed)
-        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("auth status 不是合法 JSON: {e}")))?;
+    let value: Value = serde_json::from_str(trimmed).map_err(|e| {
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("auth status 不是合法 JSON: {e}"),
+        )
+    })?;
     if value.get("ok").and_then(Value::as_bool) == Some(false)
         || value.get("error").is_some() && value.get("user").is_none()
     {
@@ -80,7 +84,10 @@ fn parse_auth_status_text(text: &str) -> Result<OfficeAccountIdentity, OfficeErr
     if !text.starts_with("Logged in") {
         return Err(OfficeError::new(
             OfficeErrorCode::ProviderError,
-            format!("无法识别腾讯会议授权状态输出：{}", text.chars().take(80).collect::<String>()),
+            format!(
+                "无法识别腾讯会议授权状态输出：{}",
+                text.chars().take(80).collect::<String>()
+            ),
         ));
     }
     let account_id = text
@@ -110,14 +117,24 @@ fn parse_auth_status_text(text: &str) -> Result<OfficeAccountIdentity, OfficeErr
 pub fn parse_meeting_list(
     stdout: &str,
 ) -> Result<(Vec<(String, String, Option<i64>)>, Option<String>, bool), OfficeError> {
-    let value: Value = serde_json::from_str(stdout)
-        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("会议列表不是合法 JSON: {e}")))?;
+    let value: Value = serde_json::from_str(stdout).map_err(|e| {
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("会议列表不是合法 JSON: {e}"),
+        )
+    })?;
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         return Err(envelope_error(&value));
     }
     let items = first_array(
         &value,
-        &["/data/meeting_list", "/data/meetings", "/meeting_list", "/data/list", "/data"],
+        &[
+            "/data/meeting_list",
+            "/data/meetings",
+            "/meeting_list",
+            "/data/list",
+            "/data",
+        ],
     )
     .map(|v| v.as_slice())
     .unwrap_or(&[]);
@@ -137,10 +154,11 @@ pub fn parse_meeting_list(
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_string();
-        let start = item
-            .get("start_time")
-            .and_then(Value::as_i64)
-            .or_else(|| item.get("start_time").and_then(Value::as_str).and_then(|s| s.parse().ok()));
+        let start = item.get("start_time").and_then(Value::as_i64).or_else(|| {
+            item.get("start_time")
+                .and_then(Value::as_str)
+                .and_then(|s| s.parse().ok())
+        });
         meetings.push((id.to_string(), subject, start));
     }
     // tmeet pagination: `has_more` + opaque `next_page_token` string.
@@ -160,11 +178,13 @@ pub fn parse_meeting_list(
 }
 
 /// Parse `record list` → recording ids of one meeting + page token.
-pub fn parse_record_list(
-    stdout: &str,
-) -> Result<(Vec<String>, Option<String>, bool), OfficeError> {
-    let value: Value = serde_json::from_str(stdout)
-        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("录制列表不是合法 JSON: {e}")))?;
+pub fn parse_record_list(stdout: &str) -> Result<(Vec<String>, Option<String>, bool), OfficeError> {
+    let value: Value = serde_json::from_str(stdout).map_err(|e| {
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("录制列表不是合法 JSON: {e}"),
+        )
+    })?;
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         let err = envelope_error(&value);
         // No cloud recording is a normal per-meeting state, not a failure.
@@ -176,9 +196,17 @@ pub fn parse_record_list(
         }
         return Err(err);
     }
-    let items = first_array(&value, &["/data/record_list", "/record_list", "/data/recordings", "/data/list"])
-        .map(|v| v.as_slice())
-        .unwrap_or(&[]);
+    let items = first_array(
+        &value,
+        &[
+            "/data/record_list",
+            "/record_list",
+            "/data/recordings",
+            "/data/list",
+        ],
+    )
+    .map(|v| v.as_slice())
+    .unwrap_or(&[]);
     let mut recordings = Vec::new();
     for item in items {
         let Some(id) = item
@@ -217,8 +245,12 @@ pub struct ParagraphPage {
 /// Parse `record transcript-paragraphs --json`. Unknown speakers stay empty;
 /// segment timestamps are preserved per paragraph.
 pub fn parse_transcript_paragraphs(stdout: &str) -> Result<ParagraphPage, OfficeError> {
-    let value: Value = serde_json::from_str(stdout)
-        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("转写输出不是合法 JSON: {e}")))?;
+    let value: Value = serde_json::from_str(stdout).map_err(|e| {
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("转写输出不是合法 JSON: {e}"),
+        )
+    })?;
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         let code = match value.pointer("/error/code").and_then(Value::as_i64) {
             Some(c) if is_processing(c) => OfficeErrorCode::TranscriptPending,
@@ -235,11 +267,21 @@ pub fn parse_transcript_paragraphs(stdout: &str) -> Result<ParagraphPage, Office
     }
     let paragraphs = first_array(
         &value,
-        &["/data/paragraphs", "/paragraphs", "/data/paragraph_list", "/data/segments"],
+        &[
+            "/data/paragraphs",
+            "/paragraphs",
+            "/data/paragraph_list",
+            "/data/segments",
+        ],
     )
     .ok_or_else(|| OfficeError::new(OfficeErrorCode::TranscriptPending, "转写尚未生成段落"))?;
-    if paragraphs.is_empty() && value.pointer("/data/status").and_then(Value::as_str) == Some("processing") {
-        return Err(OfficeError::new(OfficeErrorCode::TranscriptPending, "转写处理中"));
+    if paragraphs.is_empty()
+        && value.pointer("/data/status").and_then(Value::as_str) == Some("processing")
+    {
+        return Err(OfficeError::new(
+            OfficeErrorCode::TranscriptPending,
+            "转写处理中",
+        ));
     }
     let mut lines = Vec::new();
     for p in paragraphs {
@@ -267,7 +309,12 @@ pub fn parse_transcript_paragraphs(stdout: &str) -> Result<ParagraphPage, Office
         .pointer("/data/next_pid")
         .or_else(|| value.pointer("/next_pid"))
         .and_then(Value::as_u64)
-        .or_else(|| paragraphs.last().and_then(|p| p.get("pid")).and_then(Value::as_u64));
+        .or_else(|| {
+            paragraphs
+                .last()
+                .and_then(|p| p.get("pid"))
+                .and_then(Value::as_u64)
+        });
     let total = value
         .pointer("/data/total")
         .or_else(|| value.pointer("/total"))
@@ -284,8 +331,12 @@ pub fn parse_transcript_paragraphs(stdout: &str) -> Result<ParagraphPage, Office
 
 /// Parse `record transcript-get --json` (full transcript text).
 pub fn parse_transcript_get(stdout: &str) -> Result<String, OfficeError> {
-    let value: Value = serde_json::from_str(stdout)
-        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("转写输出不是合法 JSON: {e}")))?;
+    let value: Value = serde_json::from_str(stdout).map_err(|e| {
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("转写输出不是合法 JSON: {e}"),
+        )
+    })?;
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         return Err(envelope_error(&value));
     }
@@ -302,8 +353,12 @@ pub fn parse_smart_minutes(
     account_namespace: &str,
     recording_id: &str,
 ) -> Result<OfficeObject, OfficeError> {
-    let value: Value = serde_json::from_str(stdout)
-        .map_err(|e| OfficeError::new(OfficeErrorCode::ProviderError, format!("智能纪要不是合法 JSON: {e}")))?;
+    let value: Value = serde_json::from_str(stdout).map_err(|e| {
+        OfficeError::new(
+            OfficeErrorCode::ProviderError,
+            format!("智能纪要不是合法 JSON: {e}"),
+        )
+    })?;
     if value.get("ok").and_then(Value::as_bool) == Some(false) {
         return Err(envelope_error(&value));
     }
@@ -311,10 +366,16 @@ pub fn parse_smart_minutes(
     let body: String = ["minutes", "summary", "content"]
         .iter()
         .find_map(|k| data.get(k).and_then(Value::as_str).map(str::to_string))
-        .or_else(|| data.get("minutes").and_then(|m| serde_json::to_string(m).ok()))
+        .or_else(|| {
+            data.get("minutes")
+                .and_then(|m| serde_json::to_string(m).ok())
+        })
         .unwrap_or_default();
     if body.is_empty() {
-        return Err(OfficeError::new(OfficeErrorCode::CapabilityMissing, "智能纪要尚未生成"));
+        return Err(OfficeError::new(
+            OfficeErrorCode::CapabilityMissing,
+            "智能纪要尚未生成",
+        ));
     }
     Ok(OfficeObject {
         provider: OfficeProvider::TencentMeeting,

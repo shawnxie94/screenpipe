@@ -500,12 +500,18 @@ mod tests {
 
     #[test]
     fn parses_plain_actions() {
-        assert_eq!(TimelineAction::parse("close_window"), TimelineAction::CloseWindow);
+        assert_eq!(
+            TimelineAction::parse("close_window"),
+            TimelineAction::CloseWindow
+        );
         assert_eq!(
             TimelineAction::parse("return_to_activity"),
             TimelineAction::ReturnToActivity
         );
-        assert_eq!(TimelineAction::parse("open_search"), TimelineAction::OpenSearch);
+        assert_eq!(
+            TimelineAction::parse("open_search"),
+            TimelineAction::OpenSearch
+        );
         assert_eq!(TimelineAction::parse("open_chat"), TimelineAction::OpenChat);
         assert_eq!(
             TimelineAction::parse("toggle_sidebar"),
@@ -516,7 +522,10 @@ mod tests {
             TimelineAction::OpenRecordingSettings
         );
         assert_eq!(TimelineAction::parse("copy_text"), TimelineAction::CopyText);
-        assert_eq!(TimelineAction::parse("delete_range"), TimelineAction::DeleteRange);
+        assert_eq!(
+            TimelineAction::parse("delete_range"),
+            TimelineAction::DeleteRange
+        );
     }
 
     #[test]
