@@ -45,7 +45,11 @@ describe("importLocalDocument", () => {
 
     const result = await importLocalDocument(input());
 
-    expect(result).toEqual({ name: "notes.md", status: "imported" });
+    expect(result).toEqual({
+      name: "notes.md",
+      status: "imported",
+      sha256: "abc",
+    });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [uploadPath, uploadInit] = fetchMock.mock.calls[0];
     expect(uploadPath).toContain("/documents/import?filename=notes.md");
@@ -96,6 +100,14 @@ describe("importLocalDocument", () => {
     const [failedPath, failedInit] = fetchMock.mock.calls[1];
     expect(failedPath).toContain("/documents/import-failed");
     expect(JSON.parse(failedInit.body).sha256).toBe("abc");
+  });
+
+  it("reports the stored sha256 so callers can link locations", async () => {
+    fetchMock
+      .mockResolvedValueOnce(okJson({ sha256: "dup-sha", status: "duplicate" }))
+      .mockResolvedValueOnce(okJson({ sha256: "dup-sha", state: "ready" }));
+    const result = await importLocalDocument(input());
+    expect(result.sha256).toBe("dup-sha");
   });
 
   it("computes stable sha-256", async () => {

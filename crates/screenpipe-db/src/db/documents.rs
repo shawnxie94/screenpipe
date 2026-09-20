@@ -35,6 +35,61 @@ pub struct LocalDocumentRow {
     pub updated_at: String,
 }
 
+/// A user-chosen watch directory for auto-ingest. Explicit consent only.
+#[derive(Debug, Clone, serde::Serialize, sqlx::FromRow)]
+pub struct DocumentSourceRow {
+    pub id: String,
+    pub path: String,
+    pub enabled: bool,
+    pub include_exts: String,
+    pub exclude_globs: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// One watched file location under a source directory. Identity is the path,
+/// not the content: the same bytes at two paths keep two location rows that
+/// point at the same `source_documents` sha256.
+#[derive(Debug, Clone, serde::Serialize, sqlx::FromRow)]
+pub struct DocumentLocationRow {
+    pub source_id: String,
+    pub path: String,
+    pub sha256: String,
+    pub file_name: String,
+    pub ext: String,
+    pub size_bytes: i64,
+    pub modified_ms: i64,
+    pub state: String,
+    pub error_message: Option<String>,
+    pub imported_at: Option<String>,
+    pub last_seen_at: String,
+    pub updated_at: String,
+}
+
+/// Result of reconciling an on-disk scan against stored locations. Files whose
+/// size changed (or that were never seen) need a (re-)import; everything else
+/// is either untouched or was just marked missing.
+#[derive(Debug, Default, PartialEq)]
+pub struct DocumentScanDiff {
+    /// Paths that are new or changed and must be imported.
+    pub to_import: Vec<String>,
+    /// Paths that existed in the DB but not on disk (now marked missing).
+    pub missing: Vec<String>,
+}
+
+/// One scanned file as reported by the native watcher/reconciler.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct ScannedFile {
+    pub path: String,
+    pub file_name: String,
+    pub ext: String,
+    pub size_bytes: i64,
+    /// Persisted mtime fingerprint (unix epoch millis). Size alone misses
+    /// same-length edits; this is the stable per-file change signal.
+    #[serde(default)]
+    pub modified_ms: i64,
+}
+
 /// One search hit: the document plus the matching chunk with an FTS snippet.
 #[derive(Debug, Clone, serde::Serialize, sqlx::FromRow)]
 pub struct LocalDocumentHit {
@@ -341,6 +396,246 @@ impl DatabaseManager {
              state, truncated, chunk_count, error_message, imported_at, updated_at \
              FROM source_documents ORDER BY imported_at DESC LIMIT ?1",
         )
+        .bind(limit.clamp(1, 500) as i64)
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    /// Register a watch directory. Returns `false` when the path is already
+    /// watched (the caller then updates the existing source instead).
+    pub async fn document_source_add(
+        &self,
+        id: &str,
+        path: &str,
+        include_exts: &str,
+        exclude_globs: &str,
+    ) -> Result<bool, sqlx::Error> {
+        let exists: Option<(String,)> =
+            sqlx::query_as("SELECT id FROM document_sources WHERE path = ?1")
+                .bind(path)
+                .fetch_optional(&self.pool)
+                .await?;
+        if exists.is_some() {
+            return Ok(false);
+        }
+        sqlx::query(
+            "INSERT INTO document_sources (id, path, include_exts, exclude_globs) \
+             VALUES (?1, ?2, ?3, ?4)",
+        )
+        .bind(id)
+        .bind(path)
+        .bind(include_exts)
+        .bind(exclude_globs)
+        .execute(&self.pool)
+        .await?;
+        Ok(true)
+    }
+
+    pub async fn document_source_list(&self) -> Result<Vec<DocumentSourceRow>, sqlx::Error> {
+        sqlx::query_as::<_, DocumentSourceRow>(
+            "SELECT id, path, enabled, include_exts, exclude_globs, created_at, updated_at \
+             FROM document_sources ORDER BY created_at",
+        )
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    /// Update enable flag and/or filters. `None` leaves a field unchanged.
+    pub async fn document_source_update(
+        &self,
+        id: &str,
+        enabled: Option<bool>,
+        include_exts: Option<&str>,
+        exclude_globs: Option<&str>,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "UPDATE document_sources SET \
+             enabled = COALESCE(?2, enabled), \
+             include_exts = COALESCE(?3, include_exts), \
+             exclude_globs = COALESCE(?4, exclude_globs), \
+             updated_at = ?5 \
+             WHERE id = ?1",
+        )
+        .bind(id)
+        .bind(enabled)
+        .bind(include_exts)
+        .bind(exclude_globs)
+        .bind(now_ts())
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    /// Remove a source and its location rows. The managed document copies and
+    /// their searchable text stay — auto-ingest only ever adds.
+    pub async fn document_source_remove(&self, id: &str) -> Result<(), sqlx::Error> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("DELETE FROM document_locations WHERE source_id = ?1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("DELETE FROM document_sources WHERE id = ?1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Reconcile one source's on-disk scan against stored locations:
+    /// mark vanished files missing (delete keeps the managed copy), refresh
+    /// `last_seen_at` for files still there, and return the paths that need
+    /// importing (never seen, or size changed since the last import).
+    pub async fn document_source_scan_diff(
+        &self,
+        source_id: &str,
+        files: &[ScannedFile],
+    ) -> Result<DocumentScanDiff, sqlx::Error> {
+        let now = now_ts();
+        let mut diff = DocumentScanDiff::default();
+        let mut tx = self.pool.begin().await?;
+
+        let stored: Vec<(String, String, i64, i64, String)> = sqlx::query_as(
+            "SELECT path, sha256, size_bytes, modified_ms, state FROM document_locations \
+             WHERE source_id = ?1 AND state != 'missing'",
+        )
+        .bind(source_id)
+        .fetch_all(&mut *tx)
+        .await?;
+        let on_disk: std::collections::HashSet<&str> =
+            files.iter().map(|f| f.path.as_str()).collect();
+        for (path, _sha, _size, _modified, _state) in &stored {
+            if !on_disk.contains(path.as_str()) {
+                sqlx::query(
+                    "UPDATE document_locations SET state = 'missing', updated_at = ?3 \
+                     WHERE source_id = ?1 AND path = ?2",
+                )
+                .bind(source_id)
+                .bind(path)
+                .bind(&now)
+                .execute(&mut *tx)
+                .await?;
+                diff.missing.push(path.clone());
+            }
+        }
+
+        for file in files {
+            let existing: Option<(String, String, i64, i64)> = sqlx::query_as(
+                "SELECT sha256, state, size_bytes, modified_ms FROM document_locations \
+                 WHERE source_id = ?1 AND path = ?2",
+            )
+            .bind(source_id)
+            .bind(&file.path)
+            .fetch_optional(&mut *tx)
+            .await?;
+            match existing {
+                None => {
+                    sqlx::query(
+                        "INSERT INTO document_locations \
+                         (source_id, path, file_name, ext, size_bytes, modified_ms, state, last_seen_at) \
+                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'pending', ?7)",
+                    )
+                    .bind(source_id)
+                    .bind(&file.path)
+                    .bind(&file.file_name)
+                    .bind(&file.ext)
+                    .bind(file.size_bytes)
+                    .bind(file.modified_ms)
+                    .bind(&now)
+                    .execute(&mut *tx)
+                    .await?;
+                    diff.to_import.push(file.path.clone());
+                }
+                Some((_sha256, state, size_bytes, modified_ms)) => {
+                    sqlx::query(
+                        "UPDATE document_locations SET last_seen_at = ?3, updated_at = ?3, \
+                         file_name = ?4, ext = ?5, size_bytes = ?6, modified_ms = ?7 \
+                         WHERE source_id = ?1 AND path = ?2",
+                    )
+                    .bind(source_id)
+                    .bind(&file.path)
+                    .bind(&now)
+                    .bind(&file.file_name)
+                    .bind(&file.ext)
+                    .bind(file.size_bytes)
+                    .bind(file.modified_ms)
+                    .execute(&mut *tx)
+                    .await?;
+                    // Re-import when the last import never finished or the
+                    // file changed on disk. Size alone misses same-length
+                    // edits, so the persisted mtime fingerprint decides.
+                    let changed =
+                        size_bytes != file.size_bytes || modified_ms != file.modified_ms;
+                    if state != "imported" || changed {
+                        diff.to_import.push(file.path.clone());
+                    }
+                }
+            }
+        }
+
+        tx.commit().await?;
+        Ok(diff)
+    }
+
+    /// Record a location's import outcome. A missing content hash (import
+    /// failed before hashing) leaves the sha empty so a later attempt can
+    /// still fill it in; the state records what happened for observability.
+    pub async fn document_location_set_import_state(
+        &self,
+        source_id: &str,
+        path: &str,
+        sha256: Option<&str>,
+        state: &str,
+        error_message: Option<&str>,
+    ) -> Result<(), sqlx::Error> {
+        let now = now_ts();
+        match sha256 {
+            Some(sha) => {
+                sqlx::query(
+                    "UPDATE document_locations SET sha256 = ?3, state = ?4, \
+                     error_message = ?5, imported_at = CASE WHEN ?4 = 'imported' THEN ?6 \
+                     ELSE imported_at END, updated_at = ?6 \
+                     WHERE source_id = ?1 AND path = ?2",
+                )
+                .bind(source_id)
+                .bind(path)
+                .bind(sha)
+                .bind(state)
+                .bind(error_message)
+                .bind(&now)
+                .execute(&self.pool)
+                .await?;
+            }
+            None => {
+                sqlx::query(
+                    "UPDATE document_locations SET state = ?3, error_message = ?4, \
+                     updated_at = ?5 WHERE source_id = ?1 AND path = ?2",
+                )
+                .bind(source_id)
+                .bind(path)
+                .bind(state)
+                .bind(error_message)
+                .bind(&now)
+                .execute(&self.pool)
+                .await?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Location rows for one source (status surface for the settings UI).
+    pub async fn document_location_list(
+        &self,
+        source_id: &str,
+        limit: u32,
+    ) -> Result<Vec<DocumentLocationRow>, sqlx::Error> {
+        sqlx::query_as::<_, DocumentLocationRow>(
+            "SELECT source_id, path, sha256, file_name, ext, size_bytes, modified_ms, state, \
+             error_message, imported_at, last_seen_at, updated_at \
+             FROM document_locations WHERE source_id = ?1 \
+             ORDER BY updated_at DESC LIMIT ?2",
+        )
+        .bind(source_id)
         .bind(limit.clamp(1, 500) as i64)
         .fetch_all(&self.pool)
         .await

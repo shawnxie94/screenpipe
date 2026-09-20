@@ -41,6 +41,14 @@ pub(crate) fn documents_routes() -> Router<std::sync::Arc<AppState>> {
         .route("/search", get(search_documents))
         .route("/list", get(list_documents))
         .route("/reveal", post(reveal_document))
+        // Directory auto-ingest: watch-source CRUD plus the scan/location
+        // reconciliation the native watcher drives.
+        .route("/sources", get(list_sources).post(add_source))
+        .route("/sources/update", post(update_source))
+        .route("/sources/remove", post(remove_source))
+        .route("/sources/scan", post(scan_source))
+        .route("/locations/imported", post(location_imported))
+        .route("/locations", get(list_locations))
 }
 
 #[derive(Deserialize)]
@@ -383,5 +391,240 @@ fn reveal_in_file_manager(path: &std::path::Path) -> Result<(), String> {
         Ok(status) if status.success() => Ok(()),
         Ok(status) => Err(format!("文件管理器退出码 {status}")),
         Err(e) => Err(e.to_string()),
+    }
+}
+
+// --- Directory auto-ingest (Roadmap step 2) --------------------------------
+//
+// The desktop app owns the watcher and the scanning; the engine owns the
+// truth about which sources exist and which locations still need importing.
+// The native side POSTs a full directory scan, the engine diffs it against
+// `document_locations` (marking vanishances missing, never deleting managed
+// copies) and answers with the paths that need importing.
+
+/// GET /documents/sources — the user-chosen watch directories.
+async fn list_sources(State(state): State<std::sync::Arc<AppState>>) -> Response {
+    match state.db.document_source_list().await {
+        Ok(rows) => (StatusCode::OK, Json(json!({ "data": rows }))).into_response(),
+        Err(e) => err_json(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "list_failed",
+            format!("读取目录源失败：{e}"),
+        ),
+    }
+}
+
+#[derive(Deserialize)]
+struct AddSourceBody {
+    path: String,
+    #[serde(default)]
+    id: Option<String>,
+    #[serde(default)]
+    include_exts: Option<String>,
+    #[serde(default)]
+    exclude_globs: Option<String>,
+}
+
+/// POST /documents/sources — register a watch directory (idempotent per path).
+async fn add_source(
+    State(state): State<std::sync::Arc<AppState>>,
+    Json(body): Json<AddSourceBody>,
+) -> Response {
+    let path = body.path.trim().to_string();
+    if path.is_empty() {
+        return err_json(StatusCode::BAD_REQUEST, "missing_path", "缺少目录路径".to_string());
+    }
+    let id = body
+        .id
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    match state
+        .db
+        .document_source_add(
+            &id,
+            &path,
+            body.include_exts.as_deref().unwrap_or(""),
+            body.exclude_globs.as_deref().unwrap_or(""),
+        )
+        .await
+    {
+        Ok(true) => (
+            StatusCode::OK,
+            Json(json!({ "id": id, "path": path, "created": true })),
+        )
+            .into_response(),
+        Ok(false) => (
+            StatusCode::OK,
+            Json(json!({ "id": id, "path": path, "created": false })),
+        )
+            .into_response(),
+        Err(e) => err_json(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "db_failed",
+            format!("写入目录源失败：{e}"),
+        ),
+    }
+}
+
+#[derive(Deserialize)]
+struct UpdateSourceBody {
+    id: String,
+    #[serde(default)]
+    enabled: Option<bool>,
+    #[serde(default)]
+    include_exts: Option<String>,
+    #[serde(default)]
+    exclude_globs: Option<String>,
+}
+
+/// POST /documents/sources/update — flip enable or change filters.
+async fn update_source(
+    State(state): State<std::sync::Arc<AppState>>,
+    Json(body): Json<UpdateSourceBody>,
+) -> Response {
+    match state
+        .db
+        .document_source_update(
+            &body.id,
+            body.enabled,
+            body.include_exts.as_deref(),
+            body.exclude_globs.as_deref(),
+        )
+        .await
+    {
+        Ok(()) => (StatusCode::OK, Json(json!({ "updated": true }))).into_response(),
+        Err(e) => err_json(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "db_failed",
+            format!("更新目录源失败：{e}"),
+        ),
+    }
+}
+
+#[derive(Deserialize)]
+struct RemoveSourceBody {
+    id: String,
+}
+
+/// POST /documents/sources/remove — stop watching; managed copies stay.
+async fn remove_source(
+    State(state): State<std::sync::Arc<AppState>>,
+    Json(body): Json<RemoveSourceBody>,
+) -> Response {
+    match state.db.document_source_remove(&body.id).await {
+        Ok(()) => (StatusCode::OK, Json(json!({ "removed": true }))).into_response(),
+        Err(e) => err_json(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "db_failed",
+            format!("删除目录源失败：{e}"),
+        ),
+    }
+}
+
+#[derive(Deserialize)]
+struct ScanSourceBody {
+    source_id: String,
+    files: Vec<screenpipe_db::ScannedFile>,
+}
+
+/// POST /documents/sources/scan — apply one reconcile/scan for a source and
+/// answer which paths need importing now.
+async fn scan_source(
+    State(state): State<std::sync::Arc<AppState>>,
+    Json(body): Json<ScanSourceBody>,
+) -> Response {
+    match state
+        .db
+        .document_source_scan_diff(&body.source_id, &body.files)
+        .await
+    {
+        Ok(diff) => (
+            StatusCode::OK,
+            Json(json!({
+                "to_import": diff.to_import,
+                "missing": diff.missing,
+            })),
+        )
+            .into_response(),
+        Err(e) => err_json(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "db_failed",
+            format!("目录扫描对账失败：{e}"),
+        ),
+    }
+}
+
+#[derive(Deserialize)]
+struct LocationImportedBody {
+    source_id: String,
+    path: String,
+    #[serde(default)]
+    sha256: Option<String>,
+    /// "imported" or "failed" (a duplicate upload still counts as imported —
+    /// the content is managed and searchable).
+    status: String,
+    #[serde(default)]
+    error: Option<String>,
+}
+
+/// POST /documents/locations/imported — the importer page reports one file's
+/// outcome so the location row stops showing as pending.
+async fn location_imported(
+    State(state): State<std::sync::Arc<AppState>>,
+    Json(body): Json<LocationImportedBody>,
+) -> Response {
+    let status = match body.status.as_str() {
+        "imported" => "imported",
+        "failed" => "failed",
+        other => {
+            return err_json(
+                StatusCode::BAD_REQUEST,
+                "bad_status",
+                format!("未知状态 {other}"),
+            )
+        }
+    };
+    match state
+        .db
+        .document_location_set_import_state(
+            &body.source_id,
+            &body.path,
+            body.sha256.as_deref(),
+            status,
+            body.error.as_deref(),
+        )
+        .await
+    {
+        Ok(()) => (StatusCode::OK, Json(json!({ "recorded": true }))).into_response(),
+        Err(e) => err_json(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "db_failed",
+            format!("记录导入状态失败：{e}"),
+        ),
+    }
+}
+
+#[derive(Deserialize)]
+struct LocationsQuery {
+    source_id: String,
+    #[serde(default)]
+    limit: Option<u32>,
+}
+
+/// GET /documents/locations?source_id=&limit= — per-source location states.
+async fn list_locations(
+    State(state): State<std::sync::Arc<AppState>>,
+    Query(q): Query<LocationsQuery>,
+) -> Response {
+    match state
+        .db
+        .document_location_list(&q.source_id, q.limit.unwrap_or(200))
+        .await
+    {
+        Ok(rows) => (StatusCode::OK, Json(json!({ "data": rows }))).into_response(),
+        Err(e) => err_json(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "list_failed",
+            format!("读取文件位置失败：{e}"),
+        ),
     }
 }

@@ -34,6 +34,9 @@ export interface LocalDocumentImportResult {
   name: string;
   status: LocalDocumentImportStatus;
   reason?: string;
+  /** Content hash once known — lets callers (directory auto-ingest) link the
+   *  file location back to the managed document record. */
+  sha256?: string;
 }
 
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
@@ -167,7 +170,7 @@ export async function importLocalDocument(
     return { name: input.name, status: "failed", reason };
   }
 
-  return { name: input.name, status: uploaded.status };
+  return { name: input.name, status: uploaded.status, sha256: uploaded.sha256 };
 }
 
 /** Split batch results into the toast summary the callers render. */

@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { commands } from "@/lib/utils/tauri";
+import { DocumentSourcesSettings } from "./document-sources-settings";
 import { useOnboarding } from "@/lib/hooks/use-onboarding";
 import type { SettingsField } from "./settings-search";
 import { ONBOARDING_GOALS } from "@/lib/live-views/onboarding-goals";
@@ -208,6 +209,8 @@ export default function GeneralSettings() {
           </div>
         </CardContent>
       </Card>
+
+      <DocumentSourcesSettings />
 
       <Card className="border-border bg-card">
         <CardContent className="px-3 py-2.5">

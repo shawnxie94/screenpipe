@@ -55,6 +55,7 @@ mod deep_link;
 mod dev_isolation;
 mod disk_pressure_notifications;
 mod disk_usage;
+mod document_sources;
 #[cfg(feature = "e2e")]
 mod e2e;
 mod embedded_server;
@@ -1935,6 +1936,11 @@ async fn main() {
                 tokio::time::sleep(tokio::time::Duration::from_secs(20)).await;
                 local_retention::auto_start_retention(&app_handle_clone).await;
             });
+
+            // Start the document directory auto-ingest service (watchers,
+            // 15-min reconcile, hidden importer webview). It waits for the
+            // embedded engine internally before its first reconcile.
+            document_sources::init(&app_handle);
 
             Ok(())
         })

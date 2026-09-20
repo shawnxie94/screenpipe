@@ -60,3 +60,155 @@ async fn full_router_exposes_openapi_and_private_axum_routes() {
         .expect("request OpenAPI document");
     assert_eq!(spec.status(), StatusCode::OK);
 }
+
+#[tokio::test]
+async fn document_source_routes_register_scan_and_locations() {
+    let router = build_full_router().await;
+
+    // Register a watch directory (idempotent per path).
+    let add = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/documents/sources")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    r#"{"path": "/tmp/router-contract-docs", "exclude_globs": "node_modules"}"#,
+                ))
+                .unwrap(),
+        )
+        .await
+        .expect("add source");
+    assert_eq!(add.status(), StatusCode::OK);
+    let added: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(add.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    let source_id = added["id"].as_str().unwrap().to_string();
+    assert_eq!(added["created"], json_bool(true));
+
+    // Listing includes it.
+    let list = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/documents/sources")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(list.status(), StatusCode::OK);
+
+    // Scan: two files → both need importing.
+    let scan = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/documents/sources/scan")
+                .header("content-type", "application/json")
+                .body(Body::from(format!(
+                    r#"{{"source_id": "{source_id}", "files": [
+                        {{"path": "/tmp/router-contract-docs/a.md", "file_name": "a.md", "ext": "md", "size_bytes": 10, "modified_ms": 1234}},
+                        {{"path": "/tmp/router-contract-docs/b.md", "file_name": "b.md", "ext": "md", "size_bytes": 20}}]}}"#
+                )))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(scan.status(), StatusCode::OK);
+    let scanned: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(scan.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(scanned["to_import"].as_array().unwrap().len(), 2);
+
+    // Report one imported; locations list reflects the state.
+    let imported = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/documents/locations/imported")
+                .header("content-type", "application/json")
+                .body(Body::from(format!(
+                    r#"{{"source_id": "{source_id}", "path": "/tmp/router-contract-docs/a.md", "sha256": "abc", "status": "imported"}}"#
+                )))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(imported.status(), StatusCode::OK);
+
+    let locations = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(format!("/documents/locations?source_id={source_id}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(locations.status(), StatusCode::OK);
+    let rows: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(locations.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(rows["data"].as_array().unwrap().len(), 2);
+
+    // Rescan with only b.md present: a.md goes missing, b.md stays imported.
+    let rescan = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/documents/sources/scan")
+                .header("content-type", "application/json")
+                .body(Body::from(format!(
+                    r#"{{"source_id": "{source_id}", "files": [
+                        {{"path": "/tmp/router-contract-docs/b.md", "file_name": "b.md", "ext": "md", "size_bytes": 20}}]}}"#
+                )))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let rescanned: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(rescan.into_body(), usize::MAX)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        rescanned["missing"].as_array().unwrap(),
+        &vec![serde_json::Value::String(
+            "/tmp/router-contract-docs/a.md".into()
+        )]
+    );
+
+    // Remove the source; locations drop with it.
+    let removed = router
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/documents/sources/remove")
+                .header("content-type", "application/json")
+                .body(Body::from(format!(r#"{{"id": "{source_id}"}}"#)))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(removed.status(), StatusCode::OK);
+}
+
+fn json_bool(v: bool) -> serde_json::Value {
+    serde_json::Value::Bool(v)
+}
