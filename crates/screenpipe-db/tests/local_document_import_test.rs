@@ -330,6 +330,43 @@ async fn missing_mark_writes_timestamp_not_path() {
 }
 
 #[tokio::test]
+async fn file_backed_document_source_writes_use_write_pool() {
+    let temp_dir = tempfile::tempdir().expect("tempdir");
+    let db_path = temp_dir.path().join("db.sqlite");
+    let db = DatabaseManager::new(db_path.to_str().unwrap(), Default::default())
+        .await
+        .expect("file-backed db init");
+
+    assert!(db
+        .document_source_add("s1", "/tmp/docs", "md", "node_modules")
+        .await
+        .expect("source add must write through the writer pool"));
+    db.document_source_update("s1", Some(false), None, Some("build"))
+        .await
+        .expect("source update must write through the writer pool");
+    db.document_source_scan_diff(
+        "s1",
+        &[scanned("/tmp/docs/readme.md", "readme.md", "md", 5)],
+    )
+    .await
+    .expect("location scan must write through the writer pool");
+    db.document_location_set_import_state(
+        "s1",
+        "/tmp/docs/readme.md",
+        Some("sha-readme"),
+        "imported",
+        None,
+    )
+    .await
+    .expect("location state must write through the writer pool");
+
+    let source = db.document_source_list().await.unwrap().remove(0);
+    assert!(!source.enabled);
+    assert_eq!(source.exclude_globs, "build");
+    assert_eq!(db.document_location_list("s1", 10).await.unwrap().len(), 1);
+}
+
+#[tokio::test]
 async fn same_size_edit_reimports_via_modified_time() {
     let db = test_db().await;
     db.document_source_add("s1", "/tmp/docs", "", "").await.unwrap();

@@ -194,12 +194,14 @@ impl DatabaseManager {
         original_path: Option<&str>,
         managed_path: Option<&str>,
     ) -> Result<bool, sqlx::Error> {
+        let mut tx = self.begin_immediate_with_retry().await?;
         let existing: Option<(String,)> =
             sqlx::query_as("SELECT sha256 FROM source_documents WHERE sha256 = ?1")
                 .bind(sha256)
-                .fetch_optional(&self.pool)
+                .fetch_optional(&mut **tx.conn())
                 .await?;
         if existing.is_some() {
+            tx.commit().await?;
             return Ok(false);
         }
         sqlx::query(
@@ -213,8 +215,9 @@ impl DatabaseManager {
         .bind(size_bytes)
         .bind(original_path)
         .bind(managed_path)
-        .execute(&self.pool)
+        .execute(&mut **tx.conn())
         .await?;
+        tx.commit().await?;
         Ok(true)
     }
 
@@ -238,6 +241,7 @@ impl DatabaseManager {
         }
 
         if text.trim().is_empty() {
+            let mut tx = self.begin_immediate_with_retry().await?;
             sqlx::query(
                 "UPDATE source_documents SET state = 'failed', \
                  error_message = ?2, chunk_count = 0, truncated = 0, updated_at = ?3 \
@@ -246,20 +250,21 @@ impl DatabaseManager {
             .bind(sha256)
             .bind("未解析出可搜索的文字（文件为空或仅含图像/扫描内容）")
             .bind(now_ts())
-            .execute(&self.pool)
+            .execute(&mut **tx.conn())
             .await?;
+            tx.commit().await?;
             return Ok("failed");
         }
 
         let chunks = chunk_text(text.trim());
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query("DELETE FROM source_document_chunks WHERE sha256 = ?1")
             .bind(sha256)
-            .execute(&mut *tx)
+            .execute(&mut **tx.conn())
             .await?;
         sqlx::query("DELETE FROM source_documents_fts WHERE sha256 = ?1")
             .bind(sha256)
-            .execute(&mut *tx)
+            .execute(&mut **tx.conn())
             .await?;
         for (ordinal, body) in chunks.iter().enumerate() {
             sqlx::query(
@@ -268,7 +273,7 @@ impl DatabaseManager {
             .bind(sha256)
             .bind(ordinal as i64)
             .bind(body)
-            .execute(&mut *tx)
+            .execute(&mut **tx.conn())
             .await?;
             let fts_body = crate::text_normalizer::chinese_project(body);
             sqlx::query(
@@ -277,7 +282,7 @@ impl DatabaseManager {
             .bind(&fts_body)
             .bind(sha256)
             .bind(ordinal as i64)
-            .execute(&mut *tx)
+            .execute(&mut **tx.conn())
             .await?;
         }
         sqlx::query(
@@ -288,7 +293,7 @@ impl DatabaseManager {
         .bind(truncated)
         .bind(chunks.len() as i64)
         .bind(now_ts())
-        .execute(&mut *tx)
+        .execute(&mut **tx.conn())
         .await?;
         tx.commit().await?;
         Ok("ready")
@@ -313,10 +318,14 @@ impl DatabaseManager {
             // still recorded exactly once per file.
             None => {
                 let mut hasher = sha2::Sha256::new();
-                Digest::update(&mut hasher, format!("path:{:?}:{}", original_path, file_name));
+                Digest::update(
+                    &mut hasher,
+                    format!("path:{:?}:{}", original_path, file_name),
+                );
                 format!("path-{}", hex::encode(Digest::finalize(hasher)))
             }
         };
+        let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
             "INSERT INTO source_documents (sha256, file_name, ext, size_bytes, \
              original_path, state, error_message) \
@@ -331,8 +340,9 @@ impl DatabaseManager {
         .bind(original_path)
         .bind(reason)
         .bind(now_ts())
-        .execute(&self.pool)
+        .execute(&mut **tx.conn())
         .await?;
+        tx.commit().await?;
         Ok(())
     }
 
@@ -387,10 +397,7 @@ impl DatabaseManager {
     }
 
     /// Import status listing (all states) for observability surfaces.
-    pub async fn document_list(
-        &self,
-        limit: u32,
-    ) -> Result<Vec<LocalDocumentRow>, sqlx::Error> {
+    pub async fn document_list(&self, limit: u32) -> Result<Vec<LocalDocumentRow>, sqlx::Error> {
         sqlx::query_as::<_, LocalDocumentRow>(
             "SELECT sha256, file_name, ext, size_bytes, original_path, managed_path, \
              state, truncated, chunk_count, error_message, imported_at, updated_at \
@@ -410,12 +417,14 @@ impl DatabaseManager {
         include_exts: &str,
         exclude_globs: &str,
     ) -> Result<bool, sqlx::Error> {
+        let mut tx = self.begin_immediate_with_retry().await?;
         let exists: Option<(String,)> =
             sqlx::query_as("SELECT id FROM document_sources WHERE path = ?1")
                 .bind(path)
-                .fetch_optional(&self.pool)
+                .fetch_optional(&mut **tx.conn())
                 .await?;
         if exists.is_some() {
+            tx.commit().await?;
             return Ok(false);
         }
         sqlx::query(
@@ -426,8 +435,9 @@ impl DatabaseManager {
         .bind(path)
         .bind(include_exts)
         .bind(exclude_globs)
-        .execute(&self.pool)
+        .execute(&mut **tx.conn())
         .await?;
+        tx.commit().await?;
         Ok(true)
     }
 
@@ -448,6 +458,7 @@ impl DatabaseManager {
         include_exts: Option<&str>,
         exclude_globs: Option<&str>,
     ) -> Result<(), sqlx::Error> {
+        let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query(
             "UPDATE document_sources SET \
              enabled = COALESCE(?2, enabled), \
@@ -461,22 +472,23 @@ impl DatabaseManager {
         .bind(include_exts)
         .bind(exclude_globs)
         .bind(now_ts())
-        .execute(&self.pool)
+        .execute(&mut **tx.conn())
         .await?;
+        tx.commit().await?;
         Ok(())
     }
 
     /// Remove a source and its location rows. The managed document copies and
     /// their searchable text stay — auto-ingest only ever adds.
     pub async fn document_source_remove(&self, id: &str) -> Result<(), sqlx::Error> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_immediate_with_retry().await?;
         sqlx::query("DELETE FROM document_locations WHERE source_id = ?1")
             .bind(id)
-            .execute(&mut *tx)
+            .execute(&mut **tx.conn())
             .await?;
         sqlx::query("DELETE FROM document_sources WHERE id = ?1")
             .bind(id)
-            .execute(&mut *tx)
+            .execute(&mut **tx.conn())
             .await?;
         tx.commit().await?;
         Ok(())
@@ -493,14 +505,14 @@ impl DatabaseManager {
     ) -> Result<DocumentScanDiff, sqlx::Error> {
         let now = now_ts();
         let mut diff = DocumentScanDiff::default();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_immediate_with_retry().await?;
 
         let stored: Vec<(String, String, i64, i64, String)> = sqlx::query_as(
             "SELECT path, sha256, size_bytes, modified_ms, state FROM document_locations \
              WHERE source_id = ?1 AND state != 'missing'",
         )
         .bind(source_id)
-        .fetch_all(&mut *tx)
+        .fetch_all(&mut **tx.conn())
         .await?;
         let on_disk: std::collections::HashSet<&str> =
             files.iter().map(|f| f.path.as_str()).collect();
@@ -513,7 +525,7 @@ impl DatabaseManager {
                 .bind(source_id)
                 .bind(path)
                 .bind(&now)
-                .execute(&mut *tx)
+                .execute(&mut **tx.conn())
                 .await?;
                 diff.missing.push(path.clone());
             }
@@ -526,7 +538,7 @@ impl DatabaseManager {
             )
             .bind(source_id)
             .bind(&file.path)
-            .fetch_optional(&mut *tx)
+            .fetch_optional(&mut **tx.conn())
             .await?;
             match existing {
                 None => {
@@ -542,7 +554,7 @@ impl DatabaseManager {
                     .bind(file.size_bytes)
                     .bind(file.modified_ms)
                     .bind(&now)
-                    .execute(&mut *tx)
+                    .execute(&mut **tx.conn())
                     .await?;
                     diff.to_import.push(file.path.clone());
                 }
@@ -559,13 +571,12 @@ impl DatabaseManager {
                     .bind(&file.ext)
                     .bind(file.size_bytes)
                     .bind(file.modified_ms)
-                    .execute(&mut *tx)
+                    .execute(&mut **tx.conn())
                     .await?;
                     // Re-import when the last import never finished or the
                     // file changed on disk. Size alone misses same-length
                     // edits, so the persisted mtime fingerprint decides.
-                    let changed =
-                        size_bytes != file.size_bytes || modified_ms != file.modified_ms;
+                    let changed = size_bytes != file.size_bytes || modified_ms != file.modified_ms;
                     if state != "imported" || changed {
                         diff.to_import.push(file.path.clone());
                     }
@@ -589,6 +600,7 @@ impl DatabaseManager {
         error_message: Option<&str>,
     ) -> Result<(), sqlx::Error> {
         let now = now_ts();
+        let mut tx = self.begin_immediate_with_retry().await?;
         match sha256 {
             Some(sha) => {
                 sqlx::query(
@@ -603,7 +615,7 @@ impl DatabaseManager {
                 .bind(state)
                 .bind(error_message)
                 .bind(&now)
-                .execute(&self.pool)
+                .execute(&mut **tx.conn())
                 .await?;
             }
             None => {
@@ -616,10 +628,11 @@ impl DatabaseManager {
                 .bind(state)
                 .bind(error_message)
                 .bind(&now)
-                .execute(&self.pool)
+                .execute(&mut **tx.conn())
                 .await?;
             }
         }
+        tx.commit().await?;
         Ok(())
     }
 
@@ -654,6 +667,10 @@ mod tests {
         for chunk in &chunks {
             assert!(chunk.len() <= 1300, "chunks must stay bounded");
         }
-        assert_eq!(chunks, chunk_text(&long), "same text must split identically");
+        assert_eq!(
+            chunks,
+            chunk_text(&long),
+            "same text must split identically"
+        );
     }
 }

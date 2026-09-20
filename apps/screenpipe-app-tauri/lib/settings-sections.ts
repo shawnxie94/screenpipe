@@ -24,11 +24,12 @@ export type SettingsSection =
   | "permissions"
   | "storage"
   | "notifications"
-  | "speakers";
+  | "speakers"
+  | "documents";
 
 export const ALL_SETTINGS_SECTIONS: SettingsSection[] = [
   "display", "general", "ai", "ai-settings", "activities", "recording", "audio", "shortcuts", "notifications",
-  "privacy", "permissions", "storage", "speakers",
+  "privacy", "permissions", "storage", "speakers", "documents",
 ];
 
 /** Retired section ids that still arrive from old deep links and notifications. */

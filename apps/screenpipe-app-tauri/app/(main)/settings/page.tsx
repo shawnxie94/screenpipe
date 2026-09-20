@@ -19,6 +19,7 @@ import {
   SlidersHorizontal,
   KeyRound,
   ListChecks,
+  FolderOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
@@ -47,6 +48,7 @@ import { PermissionsSection, searchIndex as permissionsSearchIndex } from "@/com
 import { StorageSection, searchIndex as storageSearchIndex } from "@/components/settings/storage-section";
 import { NotificationsSettings, searchIndex as notificationsSearchIndex } from "@/components/settings/notifications-settings";
 import { SpeakersSection, searchIndex as speakersSearchIndex } from "@/components/settings/speakers-section";
+import { DocumentSourcesSettings } from "@/components/settings/document-sources-settings";
 import { searchIndex as powerSearchIndex } from "@/components/settings/battery-saver-section";
 import { SettingsSearchInput, SettingsSearchPopover, searchSettingsNav, scrollToSettingsField, type IndexedSettingsField, type SettingsField } from "@/components/settings/settings-search";
 import { ExperimentalShortcutGuide } from "@/components/shortcut-guide";
@@ -150,6 +152,7 @@ function SettingsContent() {
         // of its own directly below the one it belongs to.
         { id: "speakers" as const, label: "说话人", icon: <Users className="h-4 w-4" /> },
         { id: "storage" as const, label: "磁盘与保留", icon: <HardDrive className="h-4 w-4" /> },
+        { id: "documents" as const, label: "文档", icon: <FolderOpen className="h-4 w-4" /> },
         { id: "privacy" as const, label: "隐私", icon: <Shield className="h-4 w-4" /> },
         ...(showPermissions
           ? [{ id: "permissions" as const, label: "权限", icon: <KeyRound className="h-4 w-4" /> }]
@@ -276,6 +279,7 @@ function SettingsContent() {
       case "storage":       return <StorageSection />;
       case "notifications": return <NotificationsSettings />;
       case "speakers":      return <SpeakersSection />;
+      case "documents":    return <DocumentSourcesSettings />;
     }
   };
 
