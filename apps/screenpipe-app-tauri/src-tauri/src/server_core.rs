@@ -689,7 +689,8 @@ impl ServerCore {
         let server = server
             .with_pipe_manager(shared_pipe_manager.clone())
             .with_mcp_session_access(mcp_session_access)
-            .with_high_fps_controller(high_fps_controller.clone());
+            .with_high_fps_controller(high_fps_controller.clone())
+            .with_embedding(config.embedding.clone());
 
         // Install pi agent in background
         tokio::spawn(async move {

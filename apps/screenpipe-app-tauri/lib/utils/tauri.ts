@@ -2981,9 +2981,10 @@ disableMeetingDetector?: boolean;
  * while leaving detection on for everything else. Case-insensitive
  * substring match against the running app's name/process AND the matched
  * detection profile's identifiers (native names + browser URL patterns),
- * so an entry can be what the user sees ("Discord") or a service domain.
- * Use when one app trips the detector spuriously but you still want other
- * supported call apps detected. Empty = detect all known apps.
+ * so an entry can be what the user sees ("Discord") or a service domain
+ * ("meet.google.com"). Use when one app trips the detector spuriously
+ * (an always-open Teams, a Discord call you don't want logged) but you
+ * still want Zoom/Meet/etc. detected. Empty = detect all known apps.
  */
 ignoredMeetingApps?: string[];
 /**
@@ -3251,6 +3252,28 @@ keepComputerAwake?: boolean;
  * Use Chinese mirror for Hugging Face model downloads.
  */
 useChineseMirror: boolean;
+/**
+ * Unified hybrid retrieval: enable the dense embedding leg. Stays off
+ * until the user configures an embedding provider (privacy boundary).
+ */
+embeddingEnabled?: boolean;
+/**
+ * OpenAI-compatible embeddings endpoint root, e.g. http://host:3000/v1.
+ */
+embeddingBaseUrl?: string;
+/**
+ * API key for the embedding provider (kept in the settings store like
+ * the other provider keys).
+ */
+embeddingApiKey?: string;
+/**
+ * Embedding model id served by the provider.
+ */
+embeddingModel?: string;
+/**
+ * Vector dimension of the embedding model (index stores it per vector).
+ */
+embeddingDim?: number;
 /**
  * Detected hardware tier ("high", "mid", "low").
  * Set once on first launch; `None` for existing installs (treated as High).

@@ -8,11 +8,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useSettings, type Settings } from "@/lib/hooks/use-settings";
 import { MessageSquare } from "lucide-react";
+import { EmbeddingProviderCard, searchIndex as embeddingSearchIndex } from "./embedding-provider-card";
 import type { SettingsField } from "./settings-search";
 
 /** Settings search index for this section. Co-located with the component so adding a field here means updating one file. See `SettingsField` in `./settings-search` for the schema. */
 export const searchIndex: SettingsField[] = [
   { label: "自动生成聊天标题", keywords: ["chat", "tokens", "标题", "自动生成"] },
+  ...embeddingSearchIndex,
 ];
 
 export function AISettings() {
@@ -54,6 +56,8 @@ export function AISettings() {
           </div>
         </CardContent>
       </Card>
+
+      <EmbeddingProviderCard />
     </div>
   );
 }
