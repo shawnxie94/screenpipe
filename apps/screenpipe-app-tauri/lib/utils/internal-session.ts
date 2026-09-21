@@ -33,6 +33,13 @@ export type InternalSessionCategory =
   | "live-view"
   | "brain-task";
 export const INTERNAL_ACTIVITY_HISTORY_PREFIX = `${INTERNAL_TITLE_PREFIX}activity-history-`;
+/**
+ * Quality-audit repair passes of an activity-history generation. They are
+ * internal retries of the SAME generation window, not distinct timeline
+ * entries — surfacing them showed one generation as two identical
+ * "活动时间线" rows, so they stay hidden.
+ */
+export const INTERNAL_ACTIVITY_HISTORY_REPAIR_PREFIX = `${INTERNAL_TITLE_PREFIX}activity-history-repair-`;
 export const INTERNAL_LIVE_VIEW_PREFIX = `${INTERNAL_TITLE_PREFIX}live-view-`;
 export const INTERNAL_KNOWLEDGE_TASK_PREFIX = `${INTERNAL_TITLE_PREFIX}knowledge-`;
 /**
@@ -65,9 +72,18 @@ export function isInternalAgentSession(sessionId: string): boolean {
  * Pure function over the session id — cheap enough to call on every
  * `pi_event` envelope before the early-return check.
  */
+export function isActivityHistoryRepairSession(sessionId: string): boolean {
+  return sessionId.startsWith(INTERNAL_ACTIVITY_HISTORY_REPAIR_PREFIX);
+}
+
 export function getInternalSessionCategory(
   sessionId: string,
 ): InternalSessionCategory | null {
+  // Repair passes stay hidden even though their ids carry the
+  // activity-history prefix — check them before the broader prefix.
+  if (isActivityHistoryRepairSession(sessionId)) {
+    return null;
+  }
   if (sessionId.startsWith(INTERNAL_ACTIVITY_HISTORY_PREFIX)) {
     return "activity-history";
   }

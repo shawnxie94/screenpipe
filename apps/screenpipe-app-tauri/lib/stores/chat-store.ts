@@ -31,6 +31,7 @@ import {
   messagesHaveCompletedReply,
 } from "@/lib/chat-dedup";
 import {
+  isActivityHistoryRepairSession,
   getInternalSessionCategory,
   type InternalSessionCategory,
 } from "@/lib/utils/internal-session";
@@ -1322,7 +1323,11 @@ export function selectInternalSystemActivitySessions(
           || session.internalCategory === "live-view"
           || session.internalCategory === "brain-task")
         && !session.hidden
-        && !isEphemeralSideConversation(session),
+        && !isEphemeralSideConversation(session)
+        // Repair passes predate this filter and may carry a persisted
+        // "activity-history" category — exclude them by id so one
+        // generation never shows as two identical timeline rows.
+        && !isActivityHistoryRepairSession(session.id),
     )
     .sort(compareForSidebar);
 }

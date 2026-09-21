@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getInternalSessionCategory,
+  isActivityHistoryRepairSession,
   isInternalAgentSession,
   isInternalTitleSession,
 } from "../internal-session";
@@ -69,6 +70,31 @@ describe("internal-session", () => {
 
     it("returns null for the worktree prefix even though isInternalAgentSession matches", () => {
       expect(getInternalSessionCategory("__worktree-route:abc")).toBeNull();
+    });
+  });
+
+  describe("activity-history repair sessions (quality-audit retries)", () => {
+    it("classifies repair passes as hidden, not as timeline entries", () => {
+      expect(
+        getInternalSessionCategory("__title:activity-history-repair-abc-123"),
+      ).toBeNull();
+      expect(
+        isActivityHistoryRepairSession("__title:activity-history-repair-abc-123"),
+      ).toBe(true);
+    });
+
+    it("keeps first-pass generation runs visible", () => {
+      expect(getInternalSessionCategory("__title:activity-history-abc-123")).toBe(
+        "activity-history",
+      );
+      expect(
+        isActivityHistoryRepairSession("__title:activity-history-abc-123"),
+      ).toBe(false);
+    });
+
+    it("does not treat other internal sessions as repair runs", () => {
+      expect(isActivityHistoryRepairSession("__title:live-view-abc")).toBe(false);
+      expect(isActivityHistoryRepairSession("chat-123")).toBe(false);
     });
   });
 });
