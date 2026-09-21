@@ -2478,7 +2478,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                 </h3>
               </div>
               <Select
-                value={settings.audioCaptureMode ?? "always"}
+                value={settings.audioCaptureMode ?? "meetings-only"}
                 onValueChange={(value) => handleSettingsChange({ audioCaptureMode: value as "always" | "meetings-only" | "disabled" }, true)}
               >
                 <SelectTrigger className="w-[200px] h-7 text-xs">
@@ -2490,7 +2490,7 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                 </SelectContent>
               </Select>
             </div>
-            <AudioCaptureModePreview mode={settings.audioCaptureMode ?? "always"} />
+            <AudioCaptureModePreview mode={settings.audioCaptureMode ?? "meetings-only"} />
           </CardContent>
         </Card>
         )}

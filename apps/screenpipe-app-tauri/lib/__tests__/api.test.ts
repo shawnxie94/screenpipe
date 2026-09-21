@@ -20,6 +20,13 @@ let api: ApiModule;
 let originalFetch: typeof window.fetch;
 let transport: ReturnType<typeof vi.fn>;
 
+function markTauriContext(): void {
+  Object.defineProperty(window, "__TAURI_INTERNALS__", {
+    configurable: true,
+    value: {},
+  });
+}
+
 function requestHeaders(callIndex = 0): Headers {
   const init = transport.mock.calls[callIndex]?.[1] as RequestInit | undefined;
   return new Headers(init?.headers);
@@ -28,6 +35,7 @@ function requestHeaders(callIndex = 0): Headers {
 describe("local API URL boundary", () => {
   beforeEach(async () => {
     vi.resetModules();
+    markTauriContext();
     tauriMocks.getLocalApiConfig.mockReset();
     tauriMocks.getLocalApiConfig.mockResolvedValue({
       key: "local-secret",
@@ -45,6 +53,41 @@ describe("local API URL boundary", () => {
 
   afterEach(() => {
     window.fetch = originalFetch;
+    delete (window as Window & { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+  });
+
+  it("retries a transient Tauri IPC failure before falling back to defaults", async () => {
+    vi.resetModules();
+    tauriMocks.getLocalApiConfig.mockReset();
+    tauriMocks.getLocalApiConfig
+      .mockRejectedValueOnce(new Error("IPC not ready"))
+      .mockResolvedValue({
+        key: "dev-secret",
+        port: 3130,
+        auth_enabled: true,
+      });
+
+    const retryApi = await import("../api");
+    await retryApi.ensureApiReady();
+
+    expect(retryApi.getApiPort()).toBe(3130);
+    expect(tauriMocks.getLocalApiConfig).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshes the configured port after the first local request fails", async () => {
+    tauriMocks.getLocalApiConfig.mockResolvedValue({
+      key: "dev-secret",
+      port: 3130,
+      auth_enabled: true,
+    });
+    transport
+      .mockRejectedValueOnce(new TypeError("connection refused"))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }));
+
+    await api.localFetch("/search/records?q=pi%20agent");
+
+    expect(transport.mock.calls[0]?.[0]).toBe("http://localhost:3030/search/records?q=pi%20agent");
+    expect(transport.mock.calls[1]?.[0]).toBe("http://localhost:3130/search/records?q=pi%20agent");
   });
 
   it.each([

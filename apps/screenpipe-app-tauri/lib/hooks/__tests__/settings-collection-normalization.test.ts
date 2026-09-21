@@ -11,6 +11,10 @@ import {
 } from "@/lib/hooks/use-settings";
 
 describe("normalizeSettingsArrays", () => {
+  it("defaults audio capture to meetings-only", () => {
+    expect(createDefaultSettingsObject().audioCaptureMode).toBe("meetings-only");
+  });
+
   it("repairs every defaulted array without filling legacy scalar defaults", () => {
     const defaults = createDefaultSettingsObject();
     const settings = { ...defaults, audioCaptureMode: undefined } as Settings;

@@ -77,19 +77,44 @@ function installLocalFetchInterceptor(): void {
 }
 
 async function readLocalApiConfig(maxRetries: number): Promise<LocalApiConfig | null> {
+  // Browser/SSR builds have no Tauri IPC. Keep their default path immediate;
+  // Tauri windows expose the IPC bridge before invoking generated commands.
+  if (
+    typeof window !== "undefined" &&
+    !("__TAURI_INTERNALS__" in (window as Window & { __TAURI_INTERNALS__?: unknown }))
+  ) {
+    return null;
+  }
+
+  let commands: typeof import("@/lib/utils/tauri").commands;
   try {
-    const { commands } = await import("@/lib/utils/tauri");
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+    ({ commands } = await import("@/lib/utils/tauri"));
+  } catch {
+    // Not in Tauri context (tests, SSR) — defaults are fine.
+    return null;
+  }
+
+  let invocationFailures = 0;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
       const config = await (commands.getLocalApiConfig() as Promise<LocalApiConfig>);
+      invocationFailures = 0;
       applyApiConfig(config);
       if (config.key || !config.auth_enabled) {
         return config;
       }
+    } catch {
+      // The standalone search window can load before Tauri IPC is ready. Retry
+      // transient invocation failures, but keep browser/SSR fallback bounded.
+      invocationFailures += 1;
+      if (invocationFailures >= 3) return null;
+    }
+
+    if (attempt < maxRetries - 1) {
       await new Promise((r) => setTimeout(r, 500));
     }
-  } catch {
-    // Not in Tauri context (tests, SSR) — defaults are fine.
   }
+
   return null;
 }
 
@@ -235,9 +260,12 @@ export async function localFetch(
 ): Promise<Response> {
   await ensureInitialized();
 
-  const url = path.startsWith("http")
-    ? path
-    : `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+  const isAbsoluteUrl = path.startsWith("http");
+  const buildUrl = () =>
+    isAbsoluteUrl
+      ? path
+      : `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+  let url = buildUrl();
 
   const fetchWithCurrentAuth = () => {
     // Only attach the bearer key when the target is the local API. `localFetch`
@@ -254,9 +282,26 @@ export async function localFetch(
     return fetch(url, init);
   };
 
-  const response = await fetchWithCurrentAuth();
+  let response: Response;
+  try {
+    response = await fetchWithCurrentAuth();
+  } catch (error) {
+    // A standalone window can issue its first request while IPC config is still
+    // unavailable. Refresh once, rebuild the URL, and retry the local request
+    // so a dev override such as SCREENPIPE_PORT=3130 is not lost forever.
+    // Preserve cancellation semantics: an aborted caller must not trigger a
+    // second request or wait through API-config refresh.
+    if (isAbsoluteUrl || (error instanceof Error && error.name === "AbortError")) {
+      throw error;
+    }
+    await refreshApiConfig();
+    url = buildUrl();
+    response = await fetchWithCurrentAuth();
+  }
+
   if ((response.status === 401 || response.status === 403) && isLocalApiUrl(url)) {
     await refreshApiConfig();
+    url = buildUrl();
     return fetchWithCurrentAuth();
   }
 

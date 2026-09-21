@@ -906,12 +906,14 @@ function createSettingsStore() {
 			needsUpdate = true;
 		}
 
-		// NOTE: audioCaptureMode is intentionally NOT backfilled for existing
-		// installs. Their stored settings have no value for it, so the engine's
-		// serde default ("always") and the UI's `?? "always"` fallback keep them on
-		// continuous capture — without writing anything to their store. Only brand-new
-		// installs default to "meetings-only" (via createDefaultSettingsObject, which
-		// get() returns directly when there are no stored settings).
+		// Migrate stores created before audioCaptureMode existed. The new default is
+		// meetings-only so an omitted field cannot start background audio capture or
+		// local/API transcription outside a detected meeting. Preserve an explicit
+		// "always" choice made by the user.
+		if (settings.audioCaptureMode === undefined) {
+			settings.audioCaptureMode = "meetings-only";
+			needsUpdate = true;
+		}
 
 		if ((settings as any).user) {
 			// This build has no Screenpipe account services. Drop the cached

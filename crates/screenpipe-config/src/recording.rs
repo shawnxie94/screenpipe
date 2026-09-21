@@ -224,11 +224,10 @@ pub struct RecordingSettings {
     // transcribe audio while a meeting is detected (audio outside meetings is
     // dropped — cutting cloud-transcription cost, disk, and the PII/transcription
     // CPU pipeline; requires the meeting detector, else falls back to continuous);
-    // "disabled" maps to `disableAudio = true`. Defaults to "always" so existing
-    // config files and the CLI never switch silently; new desktop installs opt
-    // into "meetings_only" via first-run defaults (existing app users migrate to
-    // "always"). Detail in `default_audio_capture_mode`.
-    /// When to capture audio: "always" (default), "meetings_only", or "disabled".
+    // "disabled" maps to `disableAudio = true`. New defaults use
+    // "meetings_only"; users who explicitly selected "always" keep that choice.
+    // Detail in `default_audio_capture_mode`.
+    /// When to capture audio: "always", "meetings_only" (default), or "disabled".
     #[serde(rename = "audioCaptureMode", default = "default_audio_capture_mode")]
     pub audio_capture_mode: String,
 
@@ -885,12 +884,11 @@ fn default_embedding_dim() -> u32 {
     1024
 }
 
-/// Default audio capture mode. "always" = continuous capture, the historical
-/// behavior. Kept as the deserialization default so existing config files and
-/// the CLI never silently switch to meetings-only; the desktop app opts new
-/// installs into "meetings_only" through its first-run defaults.
+/// Default audio capture mode. New and missing values use "meetings_only"
+/// so background recording and local/API transcription do not start outside a
+/// detected meeting. An explicit stored "always" value remains unchanged.
 fn default_audio_capture_mode() -> String {
-    "always".to_string()
+    "meetings_only".to_string()
 }
 
 /// Default `false` for deserialization outside the desktop settings lifecycle.
@@ -1203,7 +1201,7 @@ mod tests {
         assert_eq!(settings.transcription_mode, "batch"); // default, wasn't in JSON
         assert_eq!(settings.power_mode, None); // default
         assert!(settings.vocabulary.is_empty()); // default
-        assert_eq!(settings.audio_capture_mode, "always"); // backward-compatible default
+        assert_eq!(settings.audio_capture_mode, "meetings_only"); // privacy-preserving default
         assert!(!settings.enhanced_incognito_detection); // old stores stay permission-free
     }
 
