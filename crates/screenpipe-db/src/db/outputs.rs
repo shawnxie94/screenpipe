@@ -372,18 +372,34 @@ impl DatabaseManager {
                 .await;
         }
 
+        // CJK queries route to the projected companion FTS once its backfill
+        // covers the corpus (SPEC S1); legacy table stays authoritative else.
+        let cjk_route = crate::text_normalizer::contains_cjk(query)
+            && self.cjk_covered("outputs").await.unwrap_or(false);
+        let fts_table = if cjk_route {
+            "outputs_cjk_fts"
+        } else {
+            "output_search_fts"
+        };
+        let fts_expr = if cjk_route {
+            crate::text_normalizer::chinese_query_match(query, false)
+        } else {
+            fts_query.clone()
+        };
+
         let mut sql = String::from(
             "SELECT o.id, o.source, o.source_type, o.title, o.kind, o.original_path, o.output_path, \
              o.size_bytes, o.preview, o.metadata, o.saf_kind, o.artifact_id, o.saf_version, \
              o.created_at, o.updated_at \
-             FROM output_search_fts f \
+             FROM {FTS} f \
              JOIN outputs o ON o.id = f.rowid \
-             WHERE output_search_fts MATCH ?1",
+             WHERE {FTS} MATCH ?1",
         );
-        let mut binds: Vec<String> = vec![fts_query.clone()];
+        let mut binds: Vec<String> = vec![fts_expr.clone()];
         append_artifact_output_filters(&mut sql, &mut binds, source, saf_kind, include_internal);
+        sql = sql.replace("{FTS}", fts_table);
         sql.push_str(&format!(
-            " ORDER BY bm25(output_search_fts), o.updated_at DESC LIMIT ?{} OFFSET ?{}",
+            " ORDER BY bm25({fts_table}), o.updated_at DESC LIMIT ?{} OFFSET ?{}",
             binds.len() + 1,
             binds.len() + 2
         ));
@@ -401,11 +417,11 @@ impl DatabaseManager {
 
         let mut count_sql = String::from(
             "SELECT COUNT(*) \
-             FROM output_search_fts f \
+             FROM {FTS} f \
              JOIN outputs o ON o.id = f.rowid \
-             WHERE output_search_fts MATCH ?1",
+             WHERE {FTS} MATCH ?1",
         );
-        let mut count_binds: Vec<String> = vec![fts_query];
+        let mut count_binds: Vec<String> = vec![fts_expr];
         append_artifact_output_filters(
             &mut count_sql,
             &mut count_binds,
@@ -413,6 +429,7 @@ impl DatabaseManager {
             saf_kind,
             include_internal,
         );
+        let count_sql = count_sql.replace("{FTS}", fts_table);
         let mut count_query = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(count_sql));
         for b in &count_binds {
             count_query = count_query.bind(b);

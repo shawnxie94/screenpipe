@@ -26,6 +26,12 @@ pub struct RecordingConfig {
     pub port: u16,
     pub data_dir: PathBuf,
 
+    /// Unified hybrid retrieval dense leg (SPEC
+    /// sqlite://artifact/spec/unified-hybrid-retrieval). `None` keeps the
+    /// dense leg off — the privacy default until the user configures a
+    /// provider in the app settings.
+    pub embedding: Option<crate::retrieval::embedder::EmbedderConfig>,
+
     // Feature toggles
     pub disable_audio: bool,
     pub disable_vision: bool,
@@ -272,6 +278,7 @@ impl RecordingConfig {
             audio_chunk_duration: settings.audio_chunk_duration.max(0) as u64,
             port: settings.port,
             data_dir,
+            embedding: crate::retrieval::embedder::EmbedderConfig::from_settings(settings),
             disable_audio: settings.disable_audio
                 || settings.audio_capture_mode.eq_ignore_ascii_case("disabled"),
             disable_vision: settings.disable_vision,

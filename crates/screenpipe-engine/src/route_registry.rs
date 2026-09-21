@@ -164,6 +164,11 @@ impl crate::server::SCServer {
             self.screenpipe_dir.join("office-cli"),
         );
 
+        // Unified hybrid retrieval background worker: drives the CJK FTS
+        // projection backfills and, when an embedding provider is configured,
+        // the dense index queue. Every part no-ops until it has work.
+        crate::retrieval::spawn_retrieval_indexer(self.db.clone(), self.embedding.clone());
+
         let app_state = Arc::new(AppState {
             db: self.db.clone(),
             history_access: self.history_access.clone(),

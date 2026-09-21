@@ -457,6 +457,7 @@ mod audio;
 pub mod connector;
 pub mod documents;
 pub mod office;
+pub mod retrieval;
 pub use self::connector::{
     ConnectorConnectionRow, ConnectorConnectionUpdate, ConnectorObjectDraft, ConnectorObjectRow,
     ConnectorSyncRunRow, ConnectorUpsertOutcome,

@@ -388,6 +388,13 @@ fn is_cjk(c: char) -> bool {
         0x4E00..=0x9FFF | 0x3400..=0x4DBF | 0xF900..=0xFAFF | 0x2E80..=0x2EFF)
 }
 
+/// True when the text contains at least one CJK ideograph. Query routing uses
+/// this to decide between the legacy raw-text FTS legs and the projected CJK
+/// companion tables.
+pub fn contains_cjk(text: &str) -> bool {
+    text.chars().any(is_cjk)
+}
+
 /// Project text into index tokens: latin alphanumerics kept, CJK runs →
 /// prefixed unigrams + bigrams. Byte cost ~3.8x the original for typical
 /// Chinese text (measured in preflight probe).

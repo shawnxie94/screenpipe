@@ -79,6 +79,7 @@ pub mod privacy_filter;
 pub mod process_priority;
 pub mod recording_config;
 pub mod recording_coverage;
+pub mod retrieval;
 pub mod retention;
 mod route_registry;
 pub mod routes;

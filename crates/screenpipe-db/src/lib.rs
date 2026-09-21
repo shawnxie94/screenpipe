@@ -62,6 +62,10 @@ pub use db::{
     MEETING_END_REASON_ROOM_CHANGED, MEETING_END_REASON_SHUTDOWN,
 };
 pub use db::documents::{DocumentLocationRow, DocumentScanDiff, DocumentSourceRow, ScannedFile};
+pub use db::retrieval::{
+    chunk_transcript_rows, chunk_uid_key, chunk_uid_parts, dense_key, DenseHit, QueuedChunk,
+    QueuedMeta, RetrievalChunkInput,
+};
 pub use recovery::{
     probe_quarantined_generation_health, rebuild_recovered_fts5_indexes,
     verify_fresh_sqlite_recovery_candidate, QuarantineHealthProbe, RecoveryVerification,
@@ -73,7 +77,9 @@ pub use screenpipe_sqlite_coordinator::{
     sqlite_quarantine_marker_path, sqlite_quarantine_self_heal_prerequisite, SqliteFileIdentity,
     SqliteQuarantineMarker, SqliteQuarantineSelfHealPrerequisite,
 };
-pub use text_normalizer::{expand_search_query, sanitize_fts5_query};
+pub use text_normalizer::{
+    contains_cjk, expand_search_query, sanitize_fts5_query,
+};
 pub use types::*;
 pub use write_queue::{
     is_retryable_write_stall, is_write_lock_contention, is_write_pool_starved, request_write_pause,

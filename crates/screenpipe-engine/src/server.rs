@@ -174,6 +174,8 @@ pub struct SCServer {
     pub mcp_session_access: Option<screenpipe_core::pipes::mcp_access::McpSessionAccessRegistry>,
     /// Shared manual meeting lock — pass in from binary so persister and server share the same state.
     pub manual_meeting: Option<Arc<tokio::sync::RwLock<Option<i64>>>>,
+    /// Unified hybrid retrieval dense-leg provider (None = dense off).
+    pub embedding: Option<crate::retrieval::embedder::EmbedderConfig>,
     /// Require auth for remote API access
     pub api_auth: bool,
     /// API key for remote auth validation
@@ -278,6 +280,7 @@ impl SCServer {
             pipe_permissions: Arc::new(DashMap::new()),
             mcp_session_access: None,
             manual_meeting: None,
+            embedding: None,
             api_auth: false,
             api_auth_key: None,
             secret_store: None,
@@ -295,6 +298,15 @@ impl SCServer {
         controller: Arc<crate::high_fps_controller::HighFpsController>,
     ) -> Self {
         self.high_fps_controller = Some(controller);
+        self
+    }
+
+    /// Configure the dense retrieval leg from the app settings.
+    pub fn with_embedding(
+        mut self,
+        embedding: Option<crate::retrieval::embedder::EmbedderConfig>,
+    ) -> Self {
+        self.embedding = embedding;
         self
     }
 

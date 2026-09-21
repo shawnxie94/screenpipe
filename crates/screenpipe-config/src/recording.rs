@@ -709,6 +709,28 @@ pub struct RecordingSettings {
     #[serde(rename = "useChineseMirror")]
     pub use_chinese_mirror: bool,
 
+    /// Unified hybrid retrieval: enable the dense embedding leg. Stays off
+    /// until the user configures an embedding provider (privacy boundary).
+    #[serde(rename = "embeddingEnabled", default)]
+    pub embedding_enabled: bool,
+
+    /// OpenAI-compatible embeddings endpoint root, e.g. http://host:3000/v1.
+    #[serde(rename = "embeddingBaseUrl", default)]
+    pub embedding_base_url: String,
+
+    /// API key for the embedding provider (kept in the settings store like
+    /// the other provider keys).
+    #[serde(rename = "embeddingApiKey", default)]
+    pub embedding_api_key: String,
+
+    /// Embedding model id served by the provider.
+    #[serde(rename = "embeddingModel", default = "default_embedding_model")]
+    pub embedding_model: String,
+
+    /// Vector dimension of the embedding model (index stores it per vector).
+    #[serde(rename = "embeddingDim", default = "default_embedding_dim")]
+    pub embedding_dim: u32,
+
     /// Detected hardware tier ("high", "mid", "low").
     /// Set once on first launch; `None` for existing installs (treated as High).
     #[serde(
@@ -836,6 +858,11 @@ impl Default for RecordingSettings {
             power_mode: None,
             keep_computer_awake: false,
             use_chinese_mirror: true,
+            embedding_enabled: false,
+            embedding_base_url: String::new(),
+            embedding_api_key: String::new(),
+            embedding_model: default_embedding_model(),
+            embedding_dim: default_embedding_dim(),
             device_tier: None,
             schedule_enabled: false,
             schedule_rules: vec![],
@@ -848,6 +875,14 @@ impl Default for RecordingSettings {
 
 fn default_true() -> bool {
     true
+}
+
+fn default_embedding_model() -> String {
+    "qwen3-embedding-0.6b-8bit".to_string()
+}
+
+fn default_embedding_dim() -> u32 {
+    1024
 }
 
 /// Default audio capture mode. "always" = continuous capture, the historical

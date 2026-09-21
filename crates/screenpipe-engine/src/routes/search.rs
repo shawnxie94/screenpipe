@@ -129,6 +129,10 @@ pub(crate) struct SearchQuery {
     pagination: PaginationQuery,
     #[serde(default)]
     content_type: SearchContentType,
+    /// `time` (legacy, default) or `relevance` (hybrid RRF fusion over the
+    /// sparse FTS legs + the dense embedding leg; SPEC S3).
+    #[serde(default)]
+    mode: Option<String>,
     /// Result ordering. Defaults to newest-first for existing callers; sync
     /// consumers use ascending order so a bounded page cannot skip backlog.
     #[serde(default)]
@@ -1027,6 +1031,22 @@ pub(crate) async fn search(
 
     let wholly_before_history_cutoff =
         apply_search_query_history_access(&state.history_access, &mut query, Utc::now());
+
+    // Hybrid relevance mode: RRF fusion over sparse legs + dense KNN. Runs
+    // after the permission/privacy/history gates above so it inherits every
+    // guard the legacy path has.
+    if query
+        .mode
+        .as_deref()
+        .map(|m| m.eq_ignore_ascii_case("relevance"))
+        .unwrap_or(false)
+    {
+        if wholly_before_history_cutoff {
+            return Ok(empty_search_response(&query, format, &fields));
+        }
+        return search_relevance(&state, &query).await;
+    }
+
     if wholly_before_history_cutoff {
         return Ok(empty_search_response(&query, format, &fields));
     }
@@ -1656,6 +1676,7 @@ mod tests {
                 offset: 0,
             },
             content_type,
+            mode: None,
             order: Order::Descending,
             input_context_only: false,
             start_time: None,
@@ -2189,6 +2210,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            mode: None,
             order: Order::Descending,
             input_context_only: false,
             start_time: None,
@@ -2223,6 +2245,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            mode: None,
             order: Order::Descending,
             input_context_only: false,
             start_time: None,
@@ -2265,6 +2288,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            mode: None,
             order: Order::Descending,
             input_context_only: false,
             start_time: None,
@@ -2299,6 +2323,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            mode: None,
             order: Order::Descending,
             input_context_only: false,
             start_time: None,
@@ -2348,6 +2373,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            mode: None,
             order: Order::Descending,
             input_context_only: false,
             start_time: None,
@@ -2393,6 +2419,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            mode: None,
             order: Order::Descending,
             input_context_only: false,
             start_time: None,
@@ -2556,3 +2583,373 @@ mod tests {
         assert!(result.contains("...(truncated"));
     }
 }
+
+use crate::retrieval::embedder::{embed_texts, EmbedderConfig};
+use crate::retrieval::fusion::{rrf_fuse, rank_with_decay, HybridHit, HybridSearchResponse, RankedLeg, DEFAULT_LAMBDA, DEFAULT_TAU_DAYS, RRF_K};
+use std::collections::HashMap;
+
+/// Search-mode handler for `/search?mode=relevance`. Gathers ranked
+/// candidates from the sparse FTS legs and the dense KNN leg, fuses them
+/// with RRF + time decay, and returns the top slice. Failure of the dense
+/// leg degrades the response (sparse-only) instead of failing the request.
+pub async fn search_relevance(
+    state: &AppState,
+    query: &crate::routes::search::SearchQuery,
+) -> Result<Response, (StatusCode, axum::Json<serde_json::Value>)> {
+    let text = query.q.clone().unwrap_or_default();
+    let limit = query.pagination.limit.clamp(1, 200);
+    let leg_limit = (limit * 3).clamp(20, 120);
+    let now = Utc::now();
+
+    // key -> display metadata for assembly after fusion.
+    let mut display: HashMap<String, HybridHit> = HashMap::new();
+    let mut timestamps: HashMap<String, f64> = HashMap::new();
+    let mut legs_used: Vec<String> = Vec::new();
+    let mut legs: Vec<RankedLeg> = Vec::new();
+    let mut degraded = false;
+
+    fn push_hit(
+        display: &mut HashMap<String, HybridHit>,
+        timestamps: &mut HashMap<String, f64>,
+        key: String,
+        source_type: &str,
+        source_pk: &str,
+        ts_epoch: Option<f64>,
+        hit: HybridHit,
+    ) {
+        timestamps.entry(key.clone()).or_insert(ts_epoch.unwrap_or(0.0));
+        display
+            .entry(key.clone())
+            .or_insert_with(|| HybridHit {
+                source_type: source_type.to_string(),
+                source_pk: source_pk.to_string(),
+                score: 0.0,
+                legs: Vec::new(),
+                ts: hit.ts,
+                app: hit.app,
+                window_name: hit.window_name,
+                text: hit.text,
+            });
+    }
+
+    // --- Sparse legs -------------------------------------------------------
+    // Frames leg (OCR + a11y consolidated in frames_fts / frames_cjk_fts).
+    if !text.trim().is_empty() {
+        match state
+            .db
+            .search_with_tags_ordered_lightweight(
+                &text,
+                ContentType::OCR,
+                leg_limit,
+                0,
+                query.start_time,
+                query.end_time,
+                query.app_name.as_deref(),
+                query.window_name.as_deref(),
+                query.min_length,
+                query.max_length,
+                None,
+                query.frame_name.as_deref(),
+                query.browser_url.as_deref(),
+                query.focused,
+                None,
+                None,
+                None,
+                None,
+                false,
+                &[],
+                Order::Descending,
+            )
+            .await
+        {
+            Ok(results) => {
+                legs_used.push("frames".into());
+                let mut ranked: Vec<String> = Vec::new();
+                for result in results {
+                    let (frame_id, ts_epoch, text_out, app, window) = match &result {
+                        SearchResult::OCR(o) => (
+                            o.frame_id,
+                            Some(o.timestamp.timestamp_millis() as f64 / 1000.0),
+                            Some(ocr_text_snippet(&o.ocr_text)),
+                            Some(o.app_name.clone()),
+                            Some(o.window_name.clone()),
+                        ),
+                        SearchResult::Audio(a) => (
+                            a.audio_chunk_id,
+                            Some(a.timestamp.timestamp_millis() as f64 / 1000.0),
+                            Some(snippet(&a.transcription)),
+                            Some(a.device_name.clone()),
+                            None,
+                        ),
+                        _ => continue,
+                    };
+                    let key = format!("ocr:{frame_id}");
+                    ranked.push(key.clone());
+                    push_hit(
+                        &mut display,
+                        &mut timestamps,
+                        key,
+                        "ocr",
+                        &frame_id.to_string(),
+                        ts_epoch,
+                        HybridHit {
+                            source_type: "ocr".into(),
+                            source_pk: frame_id.to_string(),
+                            score: 0.0,
+                            legs: Vec::new(),
+                            ts: Some(now.to_rfc3339()),
+                            app,
+                            window_name: window,
+                            text: text_out,
+                        },
+                    );
+                    if let Some(t) = ts_epoch {
+                        timestamps.entry(format!("ocr:{frame_id}")).or_insert(t);
+                    }
+                }
+                legs.push(("frames", ranked));
+            }
+            Err(error) => {
+                tracing::warn!(%error, "frames sparse leg failed");
+            }
+        }
+
+        // Audio transcripts leg.
+        match state
+            .db
+            .search_audio_ordered(
+                &text,
+                leg_limit,
+                0,
+                query.start_time,
+                query.end_time,
+                query.min_length,
+                query.max_length,
+                query.speaker_ids.clone(),
+                None,
+                None,
+                None,
+                &[],
+                Order::Descending,
+            )
+            .await
+        {
+            Ok(results) => {
+                legs_used.push("audio".into());
+                let mut ranked: Vec<String> = Vec::new();
+                for a in results {
+                    let key = format!("audio:{}", a.audio_chunk_id);
+                    ranked.push(key.clone());
+                    let ts_epoch = Some(a.timestamp.timestamp_millis() as f64 / 1000.0);
+                    push_hit(
+                        &mut display,
+                        &mut timestamps,
+                        key.clone(),
+                        "audio",
+                        &a.audio_chunk_id.to_string(),
+                        ts_epoch,
+                        HybridHit {
+                            source_type: "audio".into(),
+                            source_pk: a.audio_chunk_id.to_string(),
+                            score: 0.0,
+                            legs: Vec::new(),
+                            ts: Some(a.timestamp.to_rfc3339()),
+                            app: Some(a.device_name.clone()),
+                            window_name: None,
+                            text: Some(snippet(&a.transcription)),
+                        },
+                    );
+                    timestamps.entry(key).or_insert(ts_epoch.unwrap_or(0.0));
+                }
+                legs.push(("audio", ranked));
+            }
+            Err(error) => {
+                tracing::warn!(%error, "audio sparse leg failed");
+            }
+        }
+
+        // Imported documents leg.
+        match state.db.document_search(&text, leg_limit).await {
+            Ok(docs) => {
+                legs_used.push("documents".into());
+                let mut ranked: Vec<String> = Vec::new();
+                for d in docs {
+                    let key = format!("document:{}", d.sha256);
+                    ranked.push(key.clone());
+                    let ts_epoch = parse_epoch_secs(&d.imported_at);
+                    push_hit(
+                        &mut display,
+                        &mut timestamps,
+                        key.clone(),
+                        "document",
+                        &d.sha256.clone(),
+                        ts_epoch,
+                        HybridHit {
+                            source_type: "document".into(),
+                            source_pk: d.sha256.clone(),
+                            score: 0.0,
+                            legs: Vec::new(),
+                            ts: Some(d.imported_at.clone()),
+                            app: Some("document".into()),
+                            window_name: Some(d.file_name.clone()),
+                            text: Some(if d.snippet.is_empty() {
+                                d.file_name.clone()
+                            } else {
+                                d.snippet.clone()
+                            }),
+                        },
+                    );
+                    timestamps.entry(key).or_insert(ts_epoch.unwrap_or(0.0));
+                }
+                legs.push(("documents", ranked));
+            }
+            Err(error) => {
+                tracing::warn!(%error, "documents sparse leg failed");
+            }
+        }
+    }
+
+    // --- Dense leg ---------------------------------------------------------
+    let config = EmbedderConfig::from_env();
+    if config.is_none() {
+        degraded = true;
+    }
+    if let Some(config) = &config {
+        match embed_texts(config, &[text.clone()]).await {
+            Ok(vectors) if vectors.len() == 1 => {
+                match state
+                    .db
+                    .search_retrieval_embeddings(&config.model, &vectors[0], 100, None)
+                    .await
+                {
+                    Ok(hits) => {
+                        legs_used.push("dense".into());
+                        let mut transcript_ranked: Vec<String> = Vec::new();
+                        let mut document_ranked: Vec<String> = Vec::new();
+                        for hit in hits {
+                            let key = format!("{}:{}", hit.source_type, hit.source_pk);
+                            match hit.source_type.as_str() {
+                                "transcript" => {
+                                    // Map to the audio-leg key space so both
+                                    // legs fuse on one candidate.
+                                    let chunk_id: Option<(i64, String, String)> = state
+                                        .db
+                                        .get_transcription_meta(hit.source_pk.parse().unwrap_or(0))
+                                        .await
+                                        .ok()
+                                        .flatten();
+                                    if let Some((chunk_id, chunk_text, ts)) = chunk_id {
+                                        let fused_key = format!("audio:{chunk_id}");
+                                        transcript_ranked.push(fused_key.clone());
+                                        display
+                                            .entry(fused_key.clone())
+                                            .or_insert_with(|| HybridHit {
+                                                source_type: "audio".into(),
+                                                source_pk: chunk_id.to_string(),
+                                                score: 0.0,
+                                                legs: Vec::new(),
+                                                ts: if ts.is_empty() { None } else { Some(ts) },
+                                                app: Some("audio".into()),
+                                                window_name: None,
+                                                text: Some(snippet(&chunk_text)),
+                                            });
+                                        continue;
+                                    }
+                                    transcript_ranked.push(key.clone());
+                                }
+                                "document" => {
+                                    document_ranked.push(key.clone());
+                                }
+                                other => {
+                                    tracing::debug!(source_type = other, "unknown dense source");
+                                    continue;
+                                }
+                            }
+                            let _ = &key;
+                        }
+                        if !transcript_ranked.is_empty() {
+                            legs.push(("dense_transcripts", transcript_ranked));
+                        }
+                        if !document_ranked.is_empty() {
+                            legs.push(("dense_documents", document_ranked));
+                        }
+                    }
+                    Err(error) => {
+                        tracing::warn!(%error, "dense KNN failed");
+                        degraded = true;
+                    }
+                }
+            }
+            Ok(_) => {
+                degraded = true;
+            }
+            Err(error) => {
+                tracing::warn!(%error, "query embedding failed");
+                degraded = true;
+            }
+        }
+    }
+
+    // --- Fuse, rank, slice --------------------------------------------------
+    let fused = rrf_fuse(legs, RRF_K);
+    let ranked = rank_with_decay(
+        fused,
+        &timestamps,
+        now.timestamp_millis() as f64 / 1000.0,
+        DEFAULT_LAMBDA,
+        DEFAULT_TAU_DAYS,
+    );
+
+    let offset = query.pagination.offset as usize;
+    let results: Vec<HybridHit> = ranked
+        .into_iter()
+        .skip(offset)
+        .take(limit as usize)
+        .map(|(key, score, legs)| {
+            let mut hit = display.remove(&key).unwrap_or_else(|| HybridHit {
+                source_type: key.split(':').next().unwrap_or("unknown").to_string(),
+                source_pk: key.split(':').nth(1).unwrap_or("").to_string(),
+                score: 0.0,
+                legs: Vec::new(),
+                ts: None,
+                app: None,
+                window_name: None,
+                text: None,
+            });
+            hit.score = score;
+            hit.legs = legs;
+            hit
+        })
+        .collect();
+
+    let response = HybridSearchResponse {
+        results,
+        degraded,
+        legs_used,
+    };
+    Ok((
+        StatusCode::OK,
+        axum::Json(serde_json::to_value(response).unwrap_or_default()),
+    )
+        .into_response())
+}
+
+fn snippet(text: &str) -> String {
+    let trimmed = text.trim();
+    let mut out: String = trimmed.chars().take(240).collect();
+    if out.len() < trimmed.len() {
+        out.push('…');
+    }
+    out
+}
+
+fn ocr_text_snippet(text: &str) -> String {
+    snippet(text)
+}
+
+fn parse_epoch_secs(ts: &str) -> Option<f64> {
+    chrono::DateTime::parse_from_rfc3339(ts)
+        .ok()
+        .map(|d| d.timestamp_millis() as f64 / 1000.0)
+}
+

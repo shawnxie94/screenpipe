@@ -772,6 +772,19 @@ impl DatabaseManager {
         let fts_query = frame_fts_parts.join(" ");
         let has_fts = !fts_query.trim().is_empty();
 
+        // CJK text queries (no app/window column filters) route to the
+        // projected companion FTS once its backfill covers the corpus; the
+        // legacy frames_fts stays authoritative otherwise (SPEC S1).
+        let cjk_route = has_fts
+            && frame_fts_parts.len() == 1
+            && crate::text_normalizer::contains_cjk(query)
+            && self.cjk_covered("frames").await.unwrap_or(false);
+        let cjk_match = if cjk_route {
+            crate::text_normalizer::chinese_query_match(query, false)
+        } else {
+            String::new()
+        };
+
         let start_condition = if start_time.is_some() {
             "AND frames.timestamp >= ?2"
         } else {
@@ -840,12 +853,16 @@ impl DatabaseManager {
         GROUP BY frames.id
         ORDER BY candidates.timestamp {order_dir}, candidates.id {order_dir}
         "#,
-            fts_join = if has_fts {
+            fts_join = if cjk_route {
+                "JOIN frames_cjk_fts ON frames.id = frames_cjk_fts.rowid"
+            } else if has_fts {
                 "JOIN frames_fts ON frames.id = frames_fts.rowid"
             } else {
                 ""
             },
-            fts_condition = if has_fts {
+            fts_condition = if cjk_route {
+                "AND frames_cjk_fts MATCH ?1"
+            } else if has_fts {
                 "AND frames_fts MATCH ?1"
             } else {
                 ""
@@ -865,7 +882,13 @@ impl DatabaseManager {
 
         let mut connection = self.acquire_search_read().await?;
         let raw_results: Vec<OCRResultRaw> = query_builder
-            .bind(if has_fts { Some(&fts_query) } else { None })
+            .bind(if cjk_route {
+                Some(&cjk_match)
+            } else if has_fts {
+                Some(&fts_query)
+            } else {
+                None
+            })
             .bind(start_time)
             .bind(end_time)
             .bind(min_length.map(|l| l as i64))
@@ -2071,6 +2094,18 @@ impl DatabaseManager {
 
         let fts_query = fts_parts.join(" ");
         let has_fts = !fts_query.trim().is_empty();
+
+        // CJK text queries route to the projected companion FTS once covered
+        // (mirrors the search path; SPEC S1).
+        let cjk_route = has_fts
+            && fts_parts.len() == 1
+            && crate::text_normalizer::contains_cjk(query)
+            && self.cjk_covered("frames").await.unwrap_or(false);
+        let cjk_match = if cjk_route {
+            crate::text_normalizer::chinese_query_match(query, false)
+        } else {
+            String::new()
+        };
         let frame_start_condition = if start_time.is_some() {
             "AND frames.timestamp >= ?2"
         } else {
@@ -2104,12 +2139,16 @@ impl DatabaseManager {
                            HAVING COUNT(DISTINCT t.name) = json_array_length(?8)
                        ))
                        {a11y_filter}"#,
-                fts_join = if has_fts {
+                fts_join = if cjk_route {
+                "JOIN frames_cjk_fts ON frames.id = frames_cjk_fts.rowid"
+            } else if has_fts {
                     "JOIN frames_fts ON frames.id = frames_fts.rowid"
                 } else {
                     ""
                 },
-                fts_condition = if has_fts {
+                fts_condition = if cjk_route {
+                "AND frames_cjk_fts MATCH ?1"
+            } else if has_fts {
                     "AND frames_fts MATCH ?1"
                 } else {
                     ""
@@ -2242,7 +2281,13 @@ impl DatabaseManager {
             ContentType::OCR | ContentType::Accessibility => {
                 let mut connection = self.acquire_search_read().await?;
                 let count = sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
-                    .bind(if has_fts { fts_query } else { "*".to_owned() })
+                    .bind(if cjk_route {
+                        cjk_match
+                    } else if has_fts {
+                        fts_query
+                    } else {
+                        "*".to_owned()
+                    })
                     .bind(start_time)
                     .bind(end_time)
                     .bind(min_length.map(|l| l as i64))

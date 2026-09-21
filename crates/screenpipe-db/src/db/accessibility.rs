@@ -67,6 +67,18 @@ impl DatabaseManager {
         let combined_query = fts_parts.join(" ");
         let has_fts = !combined_query.trim().is_empty();
 
+        // CJK text queries (no app/window column filters) route to the
+        // projected companion FTS once covered (SPEC S1).
+        let cjk_route = has_fts
+            && fts_parts.len() == 1
+            && crate::text_normalizer::contains_cjk(query)
+            && self.cjk_covered("frames").await.unwrap_or(false);
+        let cjk_match = if cjk_route {
+            crate::text_normalizer::chinese_query_match(query, false)
+        } else {
+            String::new()
+        };
+
         let sql = format!(
             r#"
             WITH candidates AS MATERIALIZED (
@@ -98,13 +110,19 @@ impl DatabaseManager {
             LEFT JOIN video_chunks vc ON f.video_chunk_id = vc.id
             ORDER BY c.timestamp {order_dir}, c.id {order_dir}
             "#,
-            fts_join = if has_fts {
+            fts_join = if cjk_route {
+                "JOIN frames_cjk_fts ON f.id = frames_cjk_fts.rowid"
+            } else if has_fts {
                 "JOIN frames_fts ON f.id = frames_fts.rowid"
             } else {
                 ""
             },
             fts_condition = if has_fts {
-                "AND frames_fts MATCH ?1"
+                if cjk_route {
+                    "AND frames_cjk_fts MATCH ?1"
+                } else {
+                    "AND frames_fts MATCH ?1"
+                }
             } else {
                 ""
             },
@@ -117,7 +135,11 @@ impl DatabaseManager {
         let mut connection = self.acquire_search_read().await?;
         sqlx::query_as(sqlx::AssertSqlSafe(sql))
             .bind(if has_fts {
-                combined_query
+                if cjk_route {
+                    cjk_match
+                } else {
+                    combined_query
+                }
             } else {
                 "*".to_owned()
             })
