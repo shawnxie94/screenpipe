@@ -150,7 +150,6 @@ describe("Local API search and stability", function () {
   const contentTypeEdgeCases = [
     "vision",
     "ui",
-    "memory",
     "image",
     "unknown",
     "OCR",

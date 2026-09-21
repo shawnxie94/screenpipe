@@ -325,7 +325,7 @@ export function buildActivityReviewAgentPrompt(
 
 查询前先读取 screenpipe-api skill。第一次请求前设置 api="\${SCREENPIPE_LOCAL_API_URL:-http://localhost:\${SCREENPIPE_PORT:-3030}}"，之后每次 Screenpipe 请求都使用这个完全相同的 base URL。按以下顺序查询：
 1. 对精确边界调用 /meetings。对每个返回的会议调用 /meetings/{id} 和 /meetings/{id}/transcript。有意义的现有会议笔记是最好的解读索引；使用转录核实会议目的、决定和行动项。
-2. 对精确边界调用 /activity-summary，并包含 key_texts、snippets、audio summary 和 memories。
+2. 对精确边界调用 /activity-summary，并包含 key_texts、snippets 和 audio summary。
 3. 对精确边界调用 depth=action 的 /activity-ledger。它只能作为覆盖范围和时间边界索引；绝不要把其中的标题或分类复制到答案里。
 4. 进行任何关键词搜索前，先执行确定性的覆盖扫描。将精确边界划分为连续的 30 分钟绝对时间段。对每个与已观测、非 unobserved 的 ledger 证据重叠的时间段，分别使用 content_type=accessibility 和 content_type=audio 调用 /search，不带 q 参数，limit=6，使用精确时间边界、时间戳/画面字段和有界内容长度。一次全天搜索不能替代这一步。保存紧凑结果，并在内部为每个时间段分配目标、具体对象、目的、观测到的结果，或“没有证据支持有意义的任务”。
 5. 只有完成扫描后，才能使用有界关键词搜索解析这些时间段结果中已经发现的具体姓名或产物。
@@ -338,7 +338,7 @@ ${meetingAnchors}
 对每项可能的活动，使用有界搜索串联最有力的证据：
 - 无障碍和 Parsed 内容揭示实际任务、产物、客户、消息、代码变更或决定；
 - 音频揭示屏幕事件遗漏的对话、推理、承诺和结果；
-- 只有真正相关时，记忆才用于提供持久的项目上下文；
+- 只有真正相关时，已捕获的上下文才用于补充项目背景；
 - 交互事件帮助确认顺序以及动作是否确实发生。
 
 写作前先解读：

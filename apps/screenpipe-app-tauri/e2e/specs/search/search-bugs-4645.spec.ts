@@ -153,7 +153,7 @@ async function readySearchThumbnail(
   query: string,
   index = 0,
 ): Promise<{ frameId: string; timestamp: string; selector: string }> {
-  const input = await $('input[placeholder*="search memory"]');
+  const input = await $('input[placeholder*="搜索内容"]');
   await input.waitForExist({ timeout: t(20_000) });
   await input.setValue(query);
   const selector = `[data-index='${index}']`;
@@ -551,7 +551,7 @@ describe("Search bugs over seeded data (reproduces #4645)", function () {
     // Embedded Timeline owns an inline SearchModal. `/` is its public shortcut
     // and avoids the standalone search window exercised above.
     await browser.keys(["/"]);
-    const input = await $('input[placeholder*="search memory"]');
+    const input = await $('input[placeholder*="搜索内容"]');
     await input.waitForExist({ timeout: t(10_000) });
     await input.setValue("retentionverify");
     await browser.waitUntil(

@@ -74,10 +74,10 @@ describe("SourceCitationFooter", () => {
             title: "Google Calendar events",
           },
           {
-            id: "screenpipe-memories-jill-benaglio",
+            id: "screenpipe-search-jill-benaglio",
             kind: "screenpipe",
-            title: "Screenpipe memories",
-            subtitle: "memory query: Jill Benaglio",
+            title: "Screenpipe search",
+            subtitle: "query: Jill Benaglio",
           },
         ]}
       />

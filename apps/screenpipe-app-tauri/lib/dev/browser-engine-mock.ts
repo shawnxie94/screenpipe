@@ -74,7 +74,7 @@ function mockDailyRecapPipe() {
   return {
     config: {
       name: "daily-recap",
-      description: "Summarize the day with relevant screenpipe memory.",
+      description: "Summarize the day's relevant screen history.",
       schedule: "0 17 * * *",
       enabled: true,
       agent: mockPipeAgent,
@@ -1114,7 +1114,7 @@ export function mockLocalApiResponse(
         ? [
             {
               id: "bc-00000000-0000-0000-0000-000000000001",
-              name: "daily memory agent",
+              name: "daily recap agent",
               status: "ACTIVE",
               url: "https://cursor.com/agents/bc-00000000-0000-0000-0000-000000000001",
             },

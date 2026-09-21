@@ -451,7 +451,7 @@ describeMacOS("macOS renderer-stall recovery", function () {
     await waitForWindowHandle("search", t(15_000));
     await browser.switchToWindow("search");
     await waitForWindowUrl("/search", undefined, t(15_000));
-    const search = await $('input[placeholder*="search memory"]');
+    const search = await $('input[placeholder*="搜索内容"]');
     await search.waitForExist({ timeout: t(15_000) });
     await search.setValue("renderer recovered");
     expect(await search.getValue()).toContain("renderer recovered");

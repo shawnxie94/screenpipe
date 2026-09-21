@@ -307,7 +307,6 @@ export function buildActivitySummaryPath(range: TimeRange): string {
     start_time: range.start.toISOString(),
     end_time: range.end.toISOString(),
     include_key_texts: "false",
-    include_memories: "false",
     include_snippets: "false",
     include_recording: "false",
     include_guidance: "false",

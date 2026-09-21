@@ -36,9 +36,9 @@ export interface BrowserIpcMockOptions {
 
 const BROWSER_DEV_TEMPLATE_KITS: KnowledgeViewTemplateKit[] = [
   {
-    id: "daily-memory",
-    title: "Daily memory",
-    description: "Remember what changed today and exactly where to resume.",
+    id: "daily-recap",
+    title: "Daily recap",
+    description: "Review what changed today and exactly where to resume.",
     version: 1,
     timeRange: "today",
     periodPolicy: { type: "fixed.v1", value: "today" },
@@ -770,7 +770,7 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
           "",
           "**Run:** 2026-08-26 (Pacific)  **Status:** 5 conversations stored",
           "",
-          "Fetched 5 new text messages since checkpoint `last_rowid` 14958. Grouped them into 5 conversations and stored all 5 as Screenpipe memories (0 errors). Memory IDs: 2998–3002.",
+          "Fetched 5 new text messages since checkpoint `last_rowid` 14958. Grouped them into 5 conversations and stored all 5 as Screenpipe records (0 errors). Record IDs: 2998–3002.",
           "",
           "Checkpoint now: `last_rowid` 14969, **565** conversations stored, last ingest `2026-08-26T18:01:54.359Z`.",
         ].join("\n");

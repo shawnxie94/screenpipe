@@ -28,7 +28,6 @@ export async function fetchRecentActivity(
     include_windows: options.withDetail ? "true" : "false",
     include_key_texts: "false",
     include_recording: "false",
-    include_memories: "false",
     // Content-free and cheap: lets screenshots-off devices resolve from one
     // sustained app once its parser has produced a useful projection.
     include_parsed_count: "true",

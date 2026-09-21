@@ -88,7 +88,7 @@ describe("Search request priority", function () {
     await waitForWindowHandle("search", t(20_000));
     await browser.switchToWindow("search");
 
-    const input = await $('input[placeholder*="search memory"]');
+    const input = await $('input[placeholder*="搜索内容"]');
     await input.waitForExist({ timeout: t(20_000) });
 
     await browser.pause(t(500));

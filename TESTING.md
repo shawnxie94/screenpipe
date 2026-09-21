@@ -444,8 +444,6 @@ commits: `f1255eac`, `25cbdc6b`, `2529367d`, `d9821624`, `e61501da`, `039d5fea`,
 - [ ] **Timeline "Calls" filter** — Verify the "Calls" filter on the timeline correctly filters for call-related events. (`0ff93b167`)
 - [ ] **Collapsible timeline filters** — Verify that timeline filters can be collapsed and expanded correctly. (`0ff93b167`)
 - [ ] **window-focused refresh** — opening app via shortcut/tray refreshes timeline data immediately (`0b057046`).
-- [ ] **code block colors in memories** — Verify that code block colors in the memories page match the current app theme. (`1c8d785fc`)
-- [ ] **memories page pagination** — Verify that memories page pagination works correctly and tags are loaded from the API. (`3e00b70b4`)
 - [ ] **frame deep link navigation** — `screenpipe://frame/N` or `screenpipe://frames/N` opens main window and jumps to frame N. works from cold start; invalid IDs show clear error.
 - [ ] **missing frames return 404** — Attempt to access a non-existent frame via the API. Verify that it returns a 404 error. (`2e63282b8`)
 - [ ] **Search result exact navigation** — Click a search result. Verify it navigates exactly to the associated `frame_id`. (`a98fa2991`)
@@ -480,7 +478,6 @@ commits: `f1255eac`, `25cbdc6b`, `2529367d`, `d9821624`, `e61501da`, `039d5fea`,
 - [ ] **Chat UI code blocks** — verify light text on dark bg in chat code blocks. (`c029f7779`)
 - [ ] **Chat image viewer** — verify images can be viewed in chat. (`2bcdf8d8b`)
 - [ ] **Chat preset dropdown** — verify AI preset switching within chat. (`2bcdf8d8b`)
-- [ ] **Memories Settings UI** — verify frame_id relationship and Memories settings work as expected. (`67f4c4304`)
 
 commits: `f1255eac`, `25cbdc6b`, `2529367d`, `d9821624`
 

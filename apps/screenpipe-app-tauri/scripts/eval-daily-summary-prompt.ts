@@ -144,7 +144,6 @@ for (let dayIndex = 0; dayIndex < requestedDays; dayIndex += 1) {
 	activityUrl.searchParams.set("include_key_texts", "false");
 	activityUrl.searchParams.set("max_snippets", "20");
 	activityUrl.searchParams.set("max_snippet_chars", "600");
-	activityUrl.searchParams.set("max_memories", "10");
 
 	const activityResponse = await fetch(activityUrl, {
 		headers: { Authorization: `Bearer ${localApiKey}` },

@@ -62,7 +62,6 @@ async fn fetch_activity_capsule(
             ("include_guidance", "true".into()),
             ("max_snippets", "12".into()),
             ("max_snippet_chars", "700".into()),
-            ("max_memories", "20".into()),
         ],
         "activity capsule",
     )

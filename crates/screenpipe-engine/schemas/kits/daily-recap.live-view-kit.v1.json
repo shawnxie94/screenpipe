@@ -1,7 +1,7 @@
 {
   "schema": "live-view-kit.v1",
-  "id": "daily-memory",
-  "title": "每日记忆",
+  "id": "daily-recap",
+  "title": "每日回顾",
   "description": "记住今天的变化，找回遗漏事项，并准确知道明天从哪里继续。",
   "version": 1,
   "pipes": [
@@ -16,8 +16,8 @@
   ],
   "template": {
     "schema": "live-view-template.v1",
-    "id": "daily-memory",
-    "title": "每日记忆",
+    "id": "daily-recap",
+    "title": "每日回顾",
     "revision": 1,
     "timeRange": "today",
     "periodPolicy": {

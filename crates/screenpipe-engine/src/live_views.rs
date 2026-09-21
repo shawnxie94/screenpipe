@@ -142,7 +142,7 @@ impl LiveViewTimeRange {
 
 /// Declares which periods make sense for a Live View independently from the
 /// currently selected period. Renderers can hide the selector for fixed views
-/// without knowing template names such as "Daily memory".
+/// without knowing template names such as "Daily recap".
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type")]
 pub enum LiveViewPeriodPolicy {
@@ -717,7 +717,7 @@ pub fn validate_live_view_kit(kit: &LiveViewKit) -> Result<(), LiveViewError> {
 
 pub fn list_bundled_live_view_kits() -> Result<Vec<LiveViewKit>, LiveViewError> {
     const BUNDLED_KITS: &[&str] = &[
-        include_str!("../schemas/kits/daily-memory.live-view-kit.v1.json"),
+        include_str!("../schemas/kits/daily-recap.live-view-kit.v1.json"),
         include_str!("../schemas/kits/meeting-follow-through.live-view-kit.v1.json"),
         include_str!("../schemas/kits/time-and-focus.live-view-kit.v1.json"),
         include_str!("../schemas/kits/automation-finder.live-view-kit.v1.json"),
@@ -1584,7 +1584,7 @@ mod tests {
             list_bundled_live_view_kits()
                 .unwrap()
                 .into_iter()
-                .find(|kit| kit.id == "daily-memory")
+                .find(|kit| kit.id == "daily-recap")
                 .unwrap()
                 .template,
         )
@@ -1633,15 +1633,15 @@ mod tests {
     }
 
     #[test]
-    fn daily_memory_is_not_a_second_time_dashboard() {
+    fn daily_recap_is_not_a_second_time_dashboard() {
         let kits = list_bundled_live_view_kits().unwrap();
-        let daily_memory = kits.iter().find(|kit| kit.id == "daily-memory").unwrap();
+        let daily_recap = kits.iter().find(|kit| kit.id == "daily-recap").unwrap();
 
-        assert!(daily_memory
+        assert!(daily_recap
             .pipes
             .iter()
             .all(|pipe| pipe.name != "time-breakdown"));
-        assert!(daily_memory
+        assert!(daily_recap
             .template
             .blocks
             .iter()

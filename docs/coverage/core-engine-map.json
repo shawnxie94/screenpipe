@@ -458,7 +458,6 @@
         "src/cloud_search.rs",
         "src/connections_api.rs",
         "src/drm_detector.rs",
-        "src/external_memory_sync.rs",
         "src/live_views.rs",
         "src/mcp_servers_api.rs",
         "src/meeting_export.rs",

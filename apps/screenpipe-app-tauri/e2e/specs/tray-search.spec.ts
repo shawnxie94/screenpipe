@@ -94,7 +94,7 @@ describe("Tray: Search window", function () {
     await waitForWindowHandle("search", t(20_000));
 
     await browser.switchToWindow("search");
-    const input = await $('input[placeholder*="search memory"]');
+    const input = await $('input[placeholder*="搜索内容"]');
     await input.waitForExist({ timeout: t(20_000) });
     await waitForSearchInputFocus(t(20_000));
 
@@ -129,7 +129,7 @@ describe("Tray: Search window", function () {
     // Switching in and waiting for the input guarantees the webview is ready.
     await browser.switchToWindow("search");
     await (
-      await $('input[placeholder*="search memory"]')
+      await $('input[placeholder*="搜索内容"]')
     ).waitForExist({ timeout: t(20_000) });
 
     await invokeOrThrow("open_search_window", { query: "?q=tray-e2e" });
@@ -139,13 +139,13 @@ describe("Tray: Search window", function () {
     expect(handles.filter((h) => h === "search")).toHaveLength(1);
 
     await browser.switchToWindow("search");
-    const input = await $('input[placeholder*="search memory"]');
+    const input = await $('input[placeholder*="搜索内容"]');
     await input.waitForExist({ timeout: t(20_000) });
     await waitForSearchInputFocus(t(20_000));
     await browser.waitUntil(
       async () => {
         try {
-          const currentInput = await $('input[placeholder*="search memory"]');
+          const currentInput = await $('input[placeholder*="搜索内容"]');
           return (await currentInput.getValue()).includes("tray-e2e");
         } catch {
           return false;

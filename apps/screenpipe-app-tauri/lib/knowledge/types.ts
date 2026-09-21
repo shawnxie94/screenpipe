@@ -10,7 +10,6 @@ export type SourceKind =
   | "frame"
   | "ui_event"
   | "audio"
-  | "memory"
   | "office_message"
   | "office_document"
   | "office_transcript"
@@ -105,7 +104,7 @@ export interface KnowledgeVersionRefDto {
 export type RouteStatus = "disabled" | "no_hits" | "timeout" | "failed" | "ok";
 
 export interface RetrievalRouteDto {
-  route: "sources" | "memories" | "knowledge";
+  route: "sources" | "knowledge";
   status: RouteStatus;
   hits: number;
   error_code?: string;

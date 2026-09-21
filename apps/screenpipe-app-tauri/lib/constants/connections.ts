@@ -112,7 +112,7 @@ export const CONNECTION_HARDCODED_DESCRIPTIONS: Record<string, string> = {
   "ollama": "在 screenpipe 中使用你的 Ollama 模型",
   "lmstudio": "在 screenpipe 中使用你的 LM Studio 模型",
   "msty": "在 screenpipe 中使用你的 Msty 模型",
-  "obsidian": "将屏幕记忆同步到你的 Obsidian 保险库",
+  "obsidian": "将屏幕历史同步到你的 Obsidian 保险库",
   "notion": "用屏幕上下文搜索 Notion 页面",
   "excalidraw": "搜索和编辑你的 Excalidraw+ 白板",
   "custom-mcp": "连接另一个工具或数据源",

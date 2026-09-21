@@ -82,28 +82,28 @@ pub enum AecMode {
 
 /// Which AI projection to build from the existing screen/accessibility stream.
 ///
-/// `Memory` preserves the original semantic-parser behavior. `ComputerUse` is
-/// shown to users as automation: it keeps capture action-oriented and skips the
-/// semantic parser worker. `Both` is shown as memory + automation and derives
-/// both views from the same captured tree; it never starts a second screen
-/// recorder or stores a duplicate raw accessibility tree.
+/// `Context` builds the compact semantic projection used for retrieval and
+/// summaries. `ComputerUse` is shown to users as automation: it keeps capture
+/// action-oriented and skips the semantic parser worker. `ContextAndComputerUse`
+/// derives both views from the same captured tree; it never starts a second
+/// screen recorder or stores a duplicate raw accessibility tree.
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "specta", derive(specta::Type))]
 #[serde(rename_all = "camelCase")]
 pub enum SemanticContextMode {
     #[default]
-    Memory,
+    Context,
     ComputerUse,
-    Both,
+    ContextAndComputerUse,
 }
 
 impl SemanticContextMode {
-    pub const fn includes_memory(self) -> bool {
-        matches!(self, Self::Memory | Self::Both)
+    pub const fn includes_context(self) -> bool {
+        matches!(self, Self::Context | Self::ContextAndComputerUse)
     }
 
     pub const fn includes_computer_use(self) -> bool {
-        matches!(self, Self::ComputerUse | Self::Both)
+        matches!(self, Self::ComputerUse | Self::ContextAndComputerUse)
     }
 }
 
@@ -812,7 +812,7 @@ impl Default for RecordingSettings {
             disable_vision: false,
             disable_screenshots: false,
             enable_semantic_context: false,
-            semantic_context_mode: SemanticContextMode::Memory,
+            semantic_context_mode: SemanticContextMode::Context,
             disable_timeline: false,
             monitor_ids: vec![],
             use_all_monitors: true,
@@ -1264,26 +1264,27 @@ mod tests {
     }
 
     #[test]
-    fn semantic_context_mode_defaults_legacy_users_to_memory_and_round_trips() {
-        let legacy: RecordingSettings =
+    fn semantic_context_mode_defaults_and_round_trips() {
+        let default_mode: RecordingSettings =
             serde_json::from_str(r#"{"enableSemanticContext":true}"#).unwrap();
-        assert_eq!(legacy.semantic_context_mode, SemanticContextMode::Memory);
-        assert!(legacy.semantic_context_mode.includes_memory());
-        assert!(!legacy.semantic_context_mode.includes_computer_use());
+        assert_eq!(default_mode.semantic_context_mode, SemanticContextMode::Context);
+        assert!(default_mode.semantic_context_mode.includes_context());
+        assert!(!default_mode.semantic_context_mode.includes_computer_use());
 
-        let both: RecordingSettings =
-            serde_json::from_str(r#"{"enableSemanticContext":true,"semanticContextMode":"both"}"#)
-                .unwrap();
-        assert!(both.semantic_context_mode.includes_memory());
+        let both: RecordingSettings = serde_json::from_str(
+            r#"{"enableSemanticContext":true,"semanticContextMode":"contextAndComputerUse"}"#,
+        )
+        .unwrap();
+        assert!(both.semantic_context_mode.includes_context());
         assert!(both.semantic_context_mode.includes_computer_use());
         let serialized = serde_json::to_value(&both).unwrap();
-        assert_eq!(serialized["semanticContextMode"], "both");
+        assert_eq!(serialized["semanticContextMode"], "contextAndComputerUse");
 
         let computer_use: RecordingSettings = serde_json::from_str(
             r#"{"enableSemanticContext":true,"semanticContextMode":"computerUse"}"#,
         )
         .unwrap();
-        assert!(!computer_use.semantic_context_mode.includes_memory());
+        assert!(!computer_use.semantic_context_mode.includes_context());
         assert!(computer_use.semantic_context_mode.includes_computer_use());
     }
 

@@ -50,7 +50,7 @@ struct ScrubberLayout {
 struct TimelineScrubberView: View {
     @ObservedObject var model: TimelineViewModel
 
-    /// Room above the bars for the audio rail, hour ticks and memory markers.
+    /// Room above the bars for the audio rail and hour ticks.
     private let topPadding: CGFloat = 60
     /// Room below for the time axis.
     private let bottomPadding: CGFloat = 24

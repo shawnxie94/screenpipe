@@ -63,7 +63,7 @@ pub struct VisionManagerConfig {
     pub disable_screenshots: bool,
     /// Enable the bounded semantic projection worker. Off by default.
     pub enable_semantic_context: bool,
-    /// Choose memory, computer-use, or both projections over one capture.
+    /// Choose context, computer-use, or both projections over one capture.
     pub semantic_context_mode: SemanticContextMode,
 
     /// Mitsukeru fork: overrides for `EventDrivenCaptureConfig`.
@@ -213,7 +213,7 @@ impl VisionManager {
         };
 
         let semantic_tx = (config.enable_semantic_context
-            && config.semantic_context_mode.includes_memory())
+            && config.semantic_context_mode.includes_context())
         .then(|| spawn_semantic_projection_worker(db.clone(), &vision_handle));
 
         Self {
@@ -263,7 +263,7 @@ impl VisionManager {
     }
 
     /// Whether element APIs should default to the action-ready projection.
-    /// `Both` stays read-oriented by default because callers can explicitly
+    /// `ContextAndComputerUse` stays read-oriented by default because callers can explicitly
     /// request either view; computer-use-only is the unambiguous preference.
     pub fn prefers_computer_use_context(&self) -> bool {
         self.config.enable_semantic_context
@@ -649,10 +649,10 @@ impl VisionManager {
             ignore_incognito_windows: self.config.ignore_incognito_windows,
             enhanced_incognito_detection: self.config.enhanced_incognito_detection,
             capture_app_identity: self.config.enable_semantic_context
-                && (self.config.semantic_context_mode.includes_memory()
+                && (self.config.semantic_context_mode.includes_context()
                     || self.config.semantic_context_mode.includes_computer_use()),
             capture_semantic_structure: self.config.enable_semantic_context
-                && self.config.semantic_context_mode.includes_memory(),
+                && self.config.semantic_context_mode.includes_context(),
             capture_automation_structure: self.config.enable_semantic_context
                 && self.config.semantic_context_mode.includes_computer_use(),
             ..TreeWalkerConfig::default()
@@ -1031,7 +1031,7 @@ mod tests {
             video_quality: "balanced".to_string(),
             disable_screenshots: false,
             enable_semantic_context,
-            semantic_context_mode: SemanticContextMode::Memory,
+            semantic_context_mode: SemanticContextMode::Context,
             idle_capture_interval_ms: None,
             visual_check_interval_ms: None,
             visual_change_threshold: None,

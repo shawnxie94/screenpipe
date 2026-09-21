@@ -140,11 +140,11 @@ pub enum CliAppContext {
     /// Disable structured app context
     Off,
     /// Build compact context for search, summaries, and pipes
-    Memory,
+    Context,
     /// Keep action controls, state, and bounds for computer-use agents
     Automation,
-    /// Build both the memory and automation projections from one capture
-    Both,
+    /// Build both the context and automation projections from one capture
+    ContextAndComputerUse,
 }
 
 impl CliAppContext {
@@ -152,10 +152,10 @@ impl CliAppContext {
         use screenpipe_config::SemanticContextMode;
 
         match self {
-            Self::Off => (false, SemanticContextMode::Memory),
-            Self::Memory => (true, SemanticContextMode::Memory),
+            Self::Off => (false, SemanticContextMode::Context),
+            Self::Context => (true, SemanticContextMode::Context),
             Self::Automation => (true, SemanticContextMode::ComputerUse),
-            Self::Both => (true, SemanticContextMode::Both),
+            Self::ContextAndComputerUse => (true, SemanticContextMode::ContextAndComputerUse),
         }
     }
 }
@@ -540,18 +540,15 @@ pub struct RecordArgs {
     #[arg(long, default_value_t = false)]
     pub disable_screenshots: bool,
 
-    /// Select structured app context: off, memory, automation, or both.
-    /// Memory builds compact context for retrieval and pipes; automation keeps
+    /// Select structured app context: off, context, automation, or context-and-computer-use.
+    /// Context builds compact projections for retrieval and pipes; automation keeps
     /// action controls, state, and bounds for computer-use agents. Off by default.
     #[arg(long, value_enum)]
     pub app_context: Option<CliAppContext>,
 
-    /// Enable experimental normalized semantic context parsing. Parsing runs
-    /// after durable frame capture in a bounded background worker. Off by
-    /// default, preserving the historical capture and retrieval behavior.
-    /// Kept for compatibility; equivalent to `--app-context memory` on a
-    /// fresh CLI configuration. `--app-context` takes precedence when
-    /// both are supplied.
+    /// Enable normalized semantic context parsing. Parsing runs after durable
+    /// frame capture in a bounded background worker. Off by default.
+    /// `--app-context` takes precedence when both are supplied.
     #[arg(
         long,
         env = "SCREENPIPE_ENABLE_SEMANTIC_CONTEXT",
@@ -1100,7 +1097,7 @@ impl RecordArgs {
         let (enable_semantic_context, semantic_context_mode) =
             self.app_context.map(CliAppContext::resolved).unwrap_or((
                 self.enable_semantic_context,
-                screenpipe_config::SemanticContextMode::Memory,
+                screenpipe_config::SemanticContextMode::Context,
             ));
 
         screenpipe_config::RecordingSettings {
@@ -1938,7 +1935,7 @@ pub struct SearchArgs {
     #[arg(value_name = "QUERY")]
     pub q: Option<String>,
 
-    /// Content kind: all | ocr | audio | accessibility | input | memory
+    /// Content kind: all | ocr | audio | accessibility | input
     #[arg(long, default_value = "all")]
     pub content_type: String,
 
@@ -2208,7 +2205,7 @@ mod tests {
                 assert!(!settings.enable_semantic_context);
                 assert_eq!(
                     settings.semantic_context_mode,
-                    screenpipe_config::SemanticContextMode::Memory
+                    screenpipe_config::SemanticContextMode::Context
                 );
             }
             _ => panic!("expected Record command"),
@@ -2226,7 +2223,7 @@ mod tests {
                 assert!(settings.enable_semantic_context);
                 assert_eq!(
                     settings.semantic_context_mode,
-                    screenpipe_config::SemanticContextMode::Memory
+                    screenpipe_config::SemanticContextMode::Context
                 );
             }
             _ => panic!("expected Record command"),
@@ -2238,10 +2235,10 @@ mod tests {
         use screenpipe_config::SemanticContextMode;
 
         let cases = [
-            ("off", false, SemanticContextMode::Memory),
-            ("memory", true, SemanticContextMode::Memory),
+            ("off", false, SemanticContextMode::Context),
+            ("context", true, SemanticContextMode::Context),
             ("automation", true, SemanticContextMode::ComputerUse),
-            ("both", true, SemanticContextMode::Both),
+            ("context-and-computer-use", true, SemanticContextMode::ContextAndComputerUse),
         ];
 
         for (value, enabled, mode) in cases {
@@ -2280,7 +2277,7 @@ mod tests {
                 assert!(!settings.enable_semantic_context);
                 assert_eq!(
                     settings.semantic_context_mode,
-                    screenpipe_config::SemanticContextMode::Memory
+                    screenpipe_config::SemanticContextMode::Context
                 );
             }
             _ => panic!("expected Record command"),
@@ -2608,7 +2605,7 @@ mod tests {
         let sources = record_sources(args);
         let mut settings = screenpipe_config::RecordingSettings {
             enable_semantic_context: true,
-            semantic_context_mode: screenpipe_config::SemanticContextMode::Both,
+            semantic_context_mode: screenpipe_config::SemanticContextMode::ContextAndComputerUse,
             ..Default::default()
         };
 
@@ -2620,7 +2617,7 @@ mod tests {
         assert!(!settings.enable_semantic_context);
         assert_eq!(
             settings.semantic_context_mode,
-            screenpipe_config::SemanticContextMode::Memory
+            screenpipe_config::SemanticContextMode::Context
         );
     }
 
@@ -2631,7 +2628,7 @@ mod tests {
         let sources = record_sources(args);
         let mut settings = screenpipe_config::RecordingSettings {
             enable_semantic_context: false,
-            semantic_context_mode: screenpipe_config::SemanticContextMode::Memory,
+            semantic_context_mode: screenpipe_config::SemanticContextMode::Context,
             ..Default::default()
         };
 
@@ -2654,7 +2651,7 @@ mod tests {
         let sources = record_sources(args);
         let mut settings = screenpipe_config::RecordingSettings {
             enable_semantic_context: true,
-            semantic_context_mode: screenpipe_config::SemanticContextMode::Both,
+            semantic_context_mode: screenpipe_config::SemanticContextMode::ContextAndComputerUse,
             ..Default::default()
         };
 
@@ -2666,7 +2663,7 @@ mod tests {
         assert!(settings.enable_semantic_context);
         assert_eq!(
             settings.semantic_context_mode,
-            screenpipe_config::SemanticContextMode::Both
+            screenpipe_config::SemanticContextMode::ContextAndComputerUse
         );
         assert!(!sources.app_context);
         assert!(!sources.enable_semantic_context);

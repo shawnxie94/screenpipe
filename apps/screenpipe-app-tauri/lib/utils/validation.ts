@@ -96,7 +96,9 @@ export const settingsStoreSchema = z.object({
   enableSemanticContext: z.boolean().optional(),
   remoteControlPreferences: remoteControlPreferencesSchema.optional(),
   remoteControlPolicy: remoteControlPolicySchema.optional(),
-  semanticContextMode: z.enum(["memory", "computerUse", "both"]).optional(),
+  semanticContextMode: z
+    .enum(["context", "computerUse", "contextAndComputerUse"])
+    .optional(),
   useAllMonitors: z.boolean(),
   fps: z.number().min(0.1, "FPS 至少为 0.1").max(60, "FPS 不能超过 60"),
 

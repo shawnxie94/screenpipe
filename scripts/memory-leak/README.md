@@ -5,7 +5,7 @@ This is a 24/7 pressure loop for the "screenpipe reached 20 GB after a week" cla
 It does two things at once:
 
 - samples the largest `screenpipe-app`, `screenpipe`, or `screenpipe-engine` process RSS/CPU/fd count every 30s
-- rotates through pressure scenarios against the local API: health polling, search fanout, timeline streaming, frame metadata/text/context reads, meetings, memories/artifacts, audio status, and websocket churn
+- rotates through pressure scenarios against the local API: health polling, search fanout, timeline streaming, frame metadata/text/context reads, meetings, artifacts, audio status, and websocket churn
 
 It writes diagnostics only under:
 

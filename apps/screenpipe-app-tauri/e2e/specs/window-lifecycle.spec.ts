@@ -83,7 +83,7 @@ describe("Window lifecycle", function () {
       await browser.switchToWindow("search");
       await expectSingleWindowHandle("search");
 
-      const input = await $('input[placeholder*="search memory"]');
+      const input = await $('input[placeholder*="搜索内容"]');
       await input.waitForExist({ timeout: t(10_000) });
 
       // Verify input is the typing target via click + element-scoped

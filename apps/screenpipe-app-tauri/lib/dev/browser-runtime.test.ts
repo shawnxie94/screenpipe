@@ -551,7 +551,7 @@ describe("browser development runtime", () => {
     expect(invoke("list_knowledge_views")).toEqual([]);
     expect(invoke("list_knowledge_view_template_kits")).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: "daily-memory" }),
+        expect.objectContaining({ id: "daily-recap" }),
         expect.objectContaining({ id: "meeting-follow-ups" }),
       ]),
     );

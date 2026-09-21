@@ -4027,7 +4027,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                 setHasMoreTranscriptions(true);
               }
             }}
-            placeholder="搜索记忆与聊天... (# 标签，@ 应用与人)"
+            placeholder="搜索内容与聊天... (# 标签，@ 应用与人)"
             className={cn(
               "min-w-[120px] flex-1 bg-transparent text-foreground placeholder:text-muted-foreground/60 outline-none",
               standalone ? "text-base" : "text-sm",
@@ -4128,7 +4128,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                 setHasMoreTranscriptions(true);
               }
             }}
-            placeholder="搜索记忆与聊天... (# 标签，@ 应用与人)"
+            placeholder="搜索内容与聊天... (# 标签，@ 应用与人)"
             className="min-w-[120px] flex-1 bg-transparent text-foreground placeholder:text-muted-foreground text-sm outline-none"
             {...searchInputBehaviorProps}
           />

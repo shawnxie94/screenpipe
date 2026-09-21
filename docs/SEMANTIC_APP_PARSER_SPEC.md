@@ -234,11 +234,11 @@ override from abstaining after capture omitted an attribute needed by its
 family fallback. Parser packs may request less data, but they cannot raise the
 engine's resource ceilings.
 
-Semantic memory is visible-first: a node explicitly marked off-screen keeps its
+Semantic context is visible-first: a node explicitly marked off-screen keeps its
 role, hierarchy, identifiers, classes, state, and bounds, but its text, value,
 and description are not copied into the compact tree. Unknown visibility stays
 fail-open. This preserves parser structure without turning scrollback or hidden
-overflow into durable memory. Raw accessibility storage and automation
+overflow into durable context. Raw accessibility storage and automation
 targeting remain separate compatibility surfaces.
 
 The macOS walker retains a bounded set of parser-relevant structural nodes while
@@ -265,16 +265,16 @@ enough structure.
 
 | Mode | Capture and processing behavior | Default agent view |
 |---|---|---|
-| `memory` | Keep parser-requested structure transient and run the semantic worker | compact readable outline |
+| `context` | Keep parser-requested structure transient and run the semantic worker | compact readable outline |
 | `computerUse` (shown as `automation`) | Persist only action controls and bounded landmarks in the existing raw tree; do not start the semantic parser worker | automation targeting view |
-| `both` (shown as `memory + automation`) | Persist the action subset and pass the union to the semantic worker without storing a second tree | compact readable outline, with explicit automation requests available |
+| `contextAndComputerUse` (shown as `memory + automation`) | Persist the action subset and pass the union to the semantic worker without storing a second tree | compact readable outline, with explicit automation requests available |
 
 The master `enableSemanticContext` switch remains off by default. Missing mode
-values deserialize as `memory`, preserving the behavior of earlier opt-in
+values default to `context` when semantic parsing is enabled.
 installs. The automation subset keeps interactive controls plus a small set
 of navigation and window landmarks, rather than every group, row, or cell.
 macOS, Windows, and Linux also retain unnamed actionable controls that the
-memory projection would omit. All three platforms reuse the existing bounded
+context projection would omit. All three platforms reuse the existing bounded
 accessibility walk. Windows makes no additional platform query; Linux only
 fetches state for an otherwise unnamed action control while the opt-in mode is
 active.
@@ -404,8 +404,8 @@ Callers must use `SemanticTree::structural_fingerprint()` as the input content
 hash. The existing capture hash covers flattened text only and is not safe for
 semantic run reuse when hierarchy changes.
 
-Do not overload `frames.full_text`, `memories`, or `outputs`. They represent raw
-search text, durable user facts, and generated files respectively.
+Do not overload `frames.full_text`, `parsed_records`, or `outputs`. They represent raw
+search text, structured parsed context, and generated files respectively.
 
 ### Raw and parsed retention
 
@@ -432,8 +432,8 @@ bytes, reused parse runs, reused item versions, and parse failures.
 Automation mode does not add a semantic table or a per-frame automation blob.
 Its bounded action structure is part of the existing
 `accessibility_tree_json`/`elements` capture, and the automation view is rendered
-on demand. `both` mode stores the same action subset once while normalized
-semantic tables deduplicate memory-oriented records independently. UI events
+on demand. `contextAndComputerUse` mode stores the same action subset once while normalized
+semantic tables deduplicate context-oriented records independently. UI events
 continue to store the user's actual actions and can be joined to either view by
 frame and time.
 
@@ -470,7 +470,7 @@ the original capture behavior.
 
 Element endpoints expose three explicit projections:
 
-- `format=outline` for reading and memory tasks
+- `format=outline` for reading and context tasks
 - `format=automation` (aliases `computer-use` and `computer_use`) for controls,
   allowed actions, state, normalized bounds, response-local refs, and
   best-effort keys

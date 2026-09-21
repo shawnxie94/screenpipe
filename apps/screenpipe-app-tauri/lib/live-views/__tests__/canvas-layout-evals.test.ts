@@ -108,7 +108,7 @@ describe("Live View Canvas layout evals", () => {
       "观察到的流程 → 交接 → 摩擦点 → 控制点 → 改进",
     );
     expect(
-      createTemplateCanvasDocument("daily-memory", processView),
+      createTemplateCanvasDocument("daily-recap", processView),
     ).toBeNull();
   });
 

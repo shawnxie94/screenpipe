@@ -513,7 +513,7 @@ $uniqueNames = @($names | Sort-Object -Unique)
     await showWindow({ Search: { query: null } });
     await waitForWindowHandle("search", t(10_000));
     await browser.switchToWindow("search");
-    const searchInput = await $('input[placeholder*="search memory"]');
+    const searchInput = await $('input[placeholder*="搜索内容"]');
     await searchInput.waitForExist({ timeout: t(15_000) });
 
     const handlesBeforeClose = await browser.getWindowHandles();

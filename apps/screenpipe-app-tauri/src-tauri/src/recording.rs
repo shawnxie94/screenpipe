@@ -345,7 +345,7 @@ pub async fn get_monitors() -> Result<Vec<MonitorDevice>, String> {
 // ---------------------------------------------------------------------------
 
 /// Stop recording without killing the server.
-/// Pipes, memories, search, and the HTTP API remain accessible.
+/// Pipes, search, and the HTTP API remain accessible.
 #[tauri::command]
 #[specta::specta]
 pub async fn stop_capture(

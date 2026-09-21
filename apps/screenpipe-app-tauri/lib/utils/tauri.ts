@@ -2146,7 +2146,7 @@ async startExportRecording(meetingId: number | null, start: string | null, end: 
 },
 /**
  * Stop recording without killing the server.
- * Pipes, memories, search, and the HTTP API remain accessible.
+ * Pipes, search, and the HTTP API remain accessible.
  */
 async stopCapture() : Promise<Result<null, string>> {
     try {
@@ -2779,13 +2779,16 @@ export type ScreenCaptureProtectionStatus = { requestedHidden: boolean; effectiv
 /**
  * Which AI projection to build from the existing screen/accessibility stream.
  *
- * `Memory` preserves the original semantic-parser behavior. `ComputerUse` is
- * shown to users as automation: it keeps capture action-oriented and skips the
- * semantic parser worker. `Both` is shown as memory + automation and derives
- * both views from the same captured tree; it never starts a second screen
- * recorder or stores a duplicate raw accessibility tree.
+ * `Context` builds the compact semantic projection used for retrieval and
+ * summaries. `ComputerUse` is shown to users as automation: it keeps capture
+ * action-oriented and skips the semantic parser worker.
+ * `ContextAndComputerUse` derives both views from the same captured tree; it
+ * never starts a second screen recorder or stores a duplicate raw tree.
  */
-export type SemanticContextMode = "memory" | "computerUse" | "both"
+export type SemanticContextMode =
+  | "context"
+  | "computerUse"
+  | "contextAndComputerUse"
 export type SettingsStore =
 /**
  * All recording/capture config lives here. Flattened so the JSON shape
@@ -2931,8 +2934,8 @@ disableScreenshots?: boolean;
 enableSemanticContext?: boolean;
 /**
  * Select the AI view derived from the single captured accessibility tree.
- * Missing values default to memory so existing opt-in users retain the
- * exact behavior they selected before this setting existed.
+ * Missing values default to context so semantic parsing uses the compact
+ * projection when enabled.
  */
 semanticContextMode?: SemanticContextMode;
 /**

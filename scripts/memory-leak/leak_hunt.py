@@ -623,7 +623,7 @@ def build_search_fanout_params(include_frame_images: bool) -> dict[str, Any]:
         "todo",
         "pricing",
     ]
-    content_types = ["all", "ocr", "audio", "input", "accessibility", "memory"]
+    content_types = ["all", "ocr", "audio", "input", "accessibility"]
 
     include_frames = include_frame_images and random.choice([False, True])
     limits = [5, 10, 20] if include_frames else [10, 25, 50, 100, 250]

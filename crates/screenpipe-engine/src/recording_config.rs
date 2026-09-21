@@ -568,19 +568,19 @@ mod tests {
             !c.enable_semantic_context,
             "semantic parsing must remain opt-in"
         );
-        assert_eq!(c.semantic_context_mode, SemanticContextMode::Memory);
+        assert_eq!(c.semantic_context_mode, SemanticContextMode::Context);
     }
 
     #[test]
     fn semantic_context_setting_is_preserved_when_enabled() {
         let settings = screenpipe_config::RecordingSettings {
             enable_semantic_context: true,
-            semantic_context_mode: SemanticContextMode::Both,
+            semantic_context_mode: SemanticContextMode::ContextAndComputerUse,
             ..Default::default()
         };
         let config = build(&settings);
         assert!(config.enable_semantic_context);
-        assert_eq!(config.semantic_context_mode, SemanticContextMode::Both);
+        assert_eq!(config.semantic_context_mode, SemanticContextMode::ContextAndComputerUse);
     }
 
     #[test]

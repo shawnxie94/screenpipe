@@ -59,7 +59,7 @@ describe("parseGeneratedLiveView", () => {
   it("fixes the period only when the proposal requires it", () => {
     const result = parseGeneratedLiveView(
       {
-        title: "Daily memory",
+        title: "Daily recap",
         timeRange: "today",
         timeRangeBehavior: "fixed",
         blocks: [

@@ -60,7 +60,7 @@ export const audioSearchIndex: SettingsField[] = [
 export const screenSearchIndex: SettingsField[] = [
   { label: "屏幕上下文采集", keywords: ["screen", "video", "accessibility"] },
   { label: "结构化应用上下文", keywords: ["semantic", "ai", "messages", "email", "tasks", "code"], conditional: true },
-  { label: "用途", keywords: ["memory", "computer use", "automation", "agent", "skills"], conditional: true },
+  { label: "用途", keywords: ["context", "computer use", "automation", "agent", "skills"], conditional: true },
   { label: "屏幕录制", keywords: ["screenshot", "pixels", "ocr", "jpeg", "capture"] },
   { label: "使用所有显示器", keywords: ["monitor", "display"], conditional: true },
   // conditional: monitor picker only renders when "使用所有显示器" is off — paired right under that toggle.
@@ -3114,13 +3114,13 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {
                             SEMANTIC_CONTEXT_MODE_COPY[
-                              (settings.semanticContextMode ?? "memory") as SemanticContextMode
+                              (settings.semanticContextMode ?? "context") as SemanticContextMode
                             ].description
                           }
                         </p>
                       </div>
                       <Select
-                        value={settings.semanticContextMode ?? "memory"}
+                        value={settings.semanticContextMode ?? "context"}
                         onValueChange={(value: SemanticContextMode) =>
                           handleSettingsChange({ semanticContextMode: value }, true)
                         }
@@ -3129,9 +3129,9 @@ screenpipe 遵循类似的哲学。它观察你数字世界中流动的每样东
                           <SelectValue className="min-w-0 flex-1 truncate text-left" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="memory">{SEMANTIC_CONTEXT_MODE_COPY.memory.label}</SelectItem>
+                          <SelectItem value="context">{SEMANTIC_CONTEXT_MODE_COPY.context.label}</SelectItem>
                           <SelectItem value="computerUse">{SEMANTIC_CONTEXT_MODE_COPY.computerUse.label}</SelectItem>
-                          <SelectItem value="both">{SEMANTIC_CONTEXT_MODE_COPY.both.label}</SelectItem>
+                          <SelectItem value="contextAndComputerUse">{SEMANTIC_CONTEXT_MODE_COPY.contextAndComputerUse.label}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

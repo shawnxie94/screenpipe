@@ -152,4 +152,4 @@ These were webview-only and are intentionally absent:
   layer; frame text is still available through the frame's `text`)
 - The search modal itself — fullscreen mode always opened a separate Tauri
   Search window, so the native timeline emits `open_search` and Rust owns it
-- Daily summary panel and memory markers
+- Daily summary panel
