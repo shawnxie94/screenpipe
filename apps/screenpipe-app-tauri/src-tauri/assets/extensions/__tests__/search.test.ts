@@ -66,7 +66,7 @@ describe("search tool", () => {
     const url = new URL(
       buildSearchUrl({ query: "type:ocr 采购合同", limit: 999 }),
     );
-    expect(url.pathname).toBe("/search");
+    expect(url.pathname).toBe("/search/records");
     expect(url.searchParams.get("q")).toBe("采购合同");
     expect(url.searchParams.get("mode")).toBe("relevance");
     expect(url.searchParams.get("limit")).toBe("50");
@@ -152,6 +152,7 @@ describe("search tool", () => {
     expect(out).toContain("hybrid unavailable");
     expect(out).toContain("采购合同要点");
     expect(fetchMock.mock.calls[1][0]).not.toContain("mode=relevance");
+    expect(fetchMock.mock.calls[1][0]).toContain("/search/records");
   });
 
   it("returns a friendly message for empty queries", async () => {

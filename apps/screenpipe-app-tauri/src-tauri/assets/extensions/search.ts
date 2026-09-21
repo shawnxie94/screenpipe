@@ -75,7 +75,9 @@ export function buildSearchUrl(params: {
   offset?: number;
 }): string {
   const parsed = parseOperators(params.query);
-  const url = new URL(`${API_BASE}/search`);
+  // /search is the keyword-only endpoint (`query=` param); the full
+  // SearchQuery surface — q, content_type, mode — lives at /search/records.
+  const url = new URL(`${API_BASE}/search/records`);
   if (parsed.content) url.searchParams.set("q", parsed.content);
   url.searchParams.set("mode", "relevance");
   url.searchParams.set(
@@ -226,7 +228,7 @@ export default function (pi: ExtensionAPI) {
       } catch (hybridError) {
         // Degrade to the legacy time-ordered search rather than failing.
         try {
-          const legacy = new URL(`${API_BASE}/search`);
+          const legacy = new URL(`${API_BASE}/search/records`);
           const parsed = parseOperators(query);
           if (parsed.content) legacy.searchParams.set("q", parsed.content);
           legacy.searchParams.set("limit", "8");

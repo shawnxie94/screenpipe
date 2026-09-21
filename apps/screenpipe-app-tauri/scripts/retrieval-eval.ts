@@ -55,8 +55,10 @@ async function run(base: string, auth?: string): Promise<void> {
   const rows: string[] = [];
 
   for (const g of GOLDEN) {
+    // /search/records is the full SearchQuery surface (q + mode); /search
+    // is the keyword-only endpoint and ignores mode.
     const url = (mode: string) => {
-      const u = new URL(`${base}/search`);
+      const u = new URL(`${base}/search/records`);
       u.searchParams.set("q", g.query);
       u.searchParams.set("limit", "10");
       if (mode) u.searchParams.set("mode", mode);
