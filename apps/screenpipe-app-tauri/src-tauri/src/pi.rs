@@ -254,12 +254,13 @@ static REQUIRED_PI_PACKAGE_INSTALL_LOCK: std::sync::OnceLock<Mutex<()>> =
 static PI_EXTENSION_SAFE_MODE_PROJECTS: std::sync::OnceLock<std::sync::Mutex<HashSet<String>>> =
     std::sync::OnceLock::new();
 
-const MANAGED_PI_EXTENSION_FILES: [&str; 5] = [
+const MANAGED_PI_EXTENSION_FILES: [&str; 6] = [
     "web-search.ts",
     "mcp-bridge.ts",
     "save-artifact.ts",
     "live-views.ts",
     "connection-gate.ts",
+    "search.ts",
 ];
 
 fn extension_safe_mode_projects() -> &'static std::sync::Mutex<HashSet<String>> {
@@ -1818,6 +1819,8 @@ fn ensure_shared_pi_extensions(project_dir: &str) -> Result<(), String> {
     // Connection gate: lets Pi block on inline app authorization before
     // continuing app-dependent tasks.
     ensure_connection_gate_extension(project_dir)?;
+    // Unified search: one query tool across all collected information types.
+    ensure_search_extension(project_dir)?;
     Ok(())
 }
 
@@ -1830,6 +1833,7 @@ const SHARED_PI_EXTENSION_FILES: &[&str] = &[
     "save-artifact.ts",
     "live-views.ts",
     "connection-gate.ts",
+    "search.ts",
 ];
 
 /// Install the MCP bridge extension. Registers proxy tools that route
@@ -1929,6 +1933,22 @@ fn ensure_connection_gate_extension(project_dir: &str) -> Result<(), String> {
     std::fs::write(&ext_path, ext_content)
         .map_err(|e| format!("Failed to write connection-gate extension: {}", e))?;
     debug!("connection-gate extension installed at {:?}", ext_path);
+    Ok(())
+}
+
+/// Install the unified hybrid search tool: ONE query surface for chat over
+/// every collected information type (SPEC unified-hybrid-retrieval S4). The
+/// tool name is fixed as `search`; renames must migrate persisted definition
+/// ids and every copy in the same change (see the tool-naming guard test).
+fn ensure_search_extension(project_dir: &str) -> Result<(), String> {
+    let ext_dir = Path::new(project_dir).join(".pi").join("extensions");
+    std::fs::create_dir_all(&ext_dir)
+        .map_err(|e| format!("Failed to create extensions dir: {}", e))?;
+    let ext_path = ext_dir.join("search.ts");
+    let ext_content = include_str!("../assets/extensions/search.ts");
+    std::fs::write(&ext_path, ext_content)
+        .map_err(|e| format!("Failed to write search extension: {}", e))?;
+    debug!("search extension installed at {:?}", ext_path);
     Ok(())
 }
 
