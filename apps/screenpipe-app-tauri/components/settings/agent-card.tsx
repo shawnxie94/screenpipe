@@ -21,7 +21,6 @@ import {
   Check,
   Download,
   ExternalLink,
-  Brain,
 } from "lucide-react";
 import { localFetch } from "@/lib/api";
 import { commands } from "@/lib/utils/tauri";
@@ -45,81 +44,6 @@ export {
   SCREENPIPE_API_SKILL_MD,
   SCREENPIPE_CLI_SKILL_MD,
 } from "@/lib/generated/screenpipe-skills";
-
-// ---------------------------------------------------------------------------
-// Second-knowledge prompt — paste-once automation that turns the agent into a
-// digital clone of the user's working context: it segments workflows,
-// summarizes processes, and maintains a durable memory in the background.
-// This prompt is the local starting point for building a personal knowledge
-// base from screenpipe context.
-// ---------------------------------------------------------------------------
-
-export const SECOND_KNOWLEDGE_PROMPT = `you have access to screenpipe, a local tool that records everything i see, say, and
-hear on my computer and makes it searchable. i want you to build and maintain a
-"second knowledge" about me — a living memory of who i am, what i'm working on, and how
-i work — by watching my activity through screenpipe in the background, so i never
-have to re-explain my context. think of it as a digital clone of my working context.
-
-## how to read my activity
-
-if you have the screenpipe MCP tools (search-content, activity-summary, list-meetings,
-update-memory), use them. otherwise query the local REST API at http://localhost:3030
-(or http://SCREENPIPE_IP:3030 if i run screenpipe on another machine):
-
-- recent activity:    curl "http://localhost:3030/search?content_type=all&start_time=START&end_time=END&limit=100"
-- light summary:      curl "http://localhost:3030/activity-summary?start_time=START&end_time=END"
-- meetings:           curl "http://localhost:3030/meetings?limit=20"
-
-START / END are ISO 8601 UTC timestamps. start with a small window (the last 1-2 hours)
-so you don't pull too much. if screenpipe skills are available, load them first.
-
-## what to do each run (about once an hour, or when i ask)
-
-1. SEGMENT — pull my activity since you last ran and split it into distinct work
-   sessions. a session is a coherent block of related activity (e.g. "45 min in cursor
-   refactoring auth", "30 min reviewing investor follow-ups", "1h call about X").
-   note the app(s), the time range, what i was actually trying to do, and the goal.
-
-2. SUMMARIZE — for each session write a short summary of the *process*: the steps i
-   took, the tools/inputs/outputs, the decisions i made, and whether it's repeatable.
-   if it looks repeatable, capture it as a numbered SOP i could hand off or automate.
-
-3. REMEMBER — update my second knowledge with anything durable and reusable:
-   - who i am: role, goals, preferences, recurring tools
-   - people i interact with and about what       (tag person:NAME)
-   - projects in flight, their status, open loops (tag project:NAME)
-   - workflows / SOPs i repeat                    (tag topic:NAME)
-   store only stable, reusable facts. never store secrets — passwords, API keys, tokens,
-   financial or health data, or anything clearly private. skip one-off noise.
-
-## where to store the second knowledge
-
-- if you have the screenpipe update-memory tool: write each durable fact as a memory
-  with namespaced tags (person:, project:, topic:) and importance 0-1. retrieve later
-  with search-content content_type='memory'. this is the same memory the screenpipe
-  digital-clone pipe builds, so it stays queryable from any agent.
-- also (or instead, if you lack that tool) keep markdown files i can read:
-    second-knowledge/profile.md          - who i am, goals, preferences
-    second-knowledge/people/NAME.md      - one file per person
-    second-knowledge/projects/NAME.md    - one file per project, with open loops
-    second-knowledge/workflows/NAME.md   - repeatable SOPs
-    second-knowledge/log/DATE.md         - the hourly session summaries (append-only)
-    second-knowledge/now.md              - what i'm doing right now and over the last
-                                       ~30/120 min, refreshed every run
-
-always APPEND and DEDUPE: update existing entries instead of duplicating them, and
-link related notes together.
-
-## run on a schedule
-
-set this to run automatically about once an hour using whatever scheduling you have
-(claude tasks, codex automations, openclaw/hermes automations, or a system cron job).
-between runs, when i ask you anything, read now.md and the relevant project/person
-files first so you already know what i was doing.
-
-start now: do one pass over my last 2 hours, then tell me what you learned about me
-and propose the schedule.
-`;
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -960,85 +884,6 @@ export function ConnectSection({ integrationId, fields }: { integrationId: strin
 }
 
 // ---------------------------------------------------------------------------
-// Second-knowledge callout — the headline action on every agent card: copy a
-// single prompt that makes the agent build a digital-clone-style memory of you.
-// ---------------------------------------------------------------------------
-
-function SecondKnowledgeCallout({ name }: { name: string }) {
-  const [copied, setCopied] = useState(false);
-  const [savedPath, setSavedPath] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const copyPrompt = useCallback(async () => {
-    try {
-      await commands.copyTextToClipboard(SECOND_KNOWLEDGE_PROMPT);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast({ title: "已复制个人知识库提示词", description: `粘贴到 ${name} 中` });
-    } catch (e) {
-      toast({ title: "复制失败", description: String(e), variant: "destructive" });
-    }
-  }, [name]);
-
-  const saveMd = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      await writeTextFile("screenpipe-second-knowledge.md", SECOND_KNOWLEDGE_PROMPT, {
-        baseDir: BaseDirectory.Download,
-      });
-      const dir = await downloadDir();
-      setSavedPath(await join(dir, "screenpipe-second-knowledge.md"));
-      toast({ title: "已保存到下载文件夹", description: "screenpipe-second-knowledge.md" });
-    } catch (e) {
-      toast({ title: "保存失败", description: String(e), variant: "destructive" });
-    } finally {
-      setIsSaving(false);
-    }
-  }, [name]);
-
-  return (
-    <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
-      <div className="flex items-center gap-1.5">
-        <Brain className="h-3.5 w-3.5 text-foreground/70" />
-        <p className="text-xs font-semibold text-foreground">构建第二大脑</p>
-      </div>
-      <p className="text-xs text-muted-foreground leading-relaxed">
-        把一段提示词粘贴进 {name}，它就会在后台持续工作——拆分你的工作流、总结你的
-        流程，并为你积累长期记忆。类似“数字分身”定时任务，但运行在 {name} 内部。
-      </p>
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button size="sm" onClick={copyPrompt} className="h-7 text-xs">
-          {copied ? <Check className="h-3 w-3 mr-1.5" /> : <Copy className="h-3 w-3 mr-1.5" />}
-          {copied ? "已复制" : "复制提示词"}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={saveMd}
-          disabled={isSaving}
-          className="h-7 text-xs"
-        >
-          {isSaving ? (
-            <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-          ) : savedPath ? (
-            <Check className="h-3 w-3 mr-1.5" />
-          ) : (
-            <Download className="h-3 w-3 mr-1.5" />
-          )}
-          {savedPath ? "已保存" : "保存 .md"}
-        </Button>
-        <a
-          href="#"
-          onClick={(e) => { e.preventDefault(); openUrl("https://docs.screenpi.pe/second-knowledge"); }}
-          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground ml-auto"
-        >
-          <ExternalLink className="h-3 w-3" /> learn more
-        </a>
-      </div>
-    </div>
-  );
-}
-
 // AgentCard — wraps the three sections behind a tab switcher
 // ---------------------------------------------------------------------------
 
@@ -1077,9 +922,6 @@ export function AgentCard({
           </div>
         </div>
 
-        <div className="px-4 pb-3">
-          <SecondKnowledgeCallout name={name} />
-        </div>
 
         <div className="px-4 pb-4">
           <Tabs defaultValue="mcp" className="w-full">

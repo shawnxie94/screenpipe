@@ -1102,7 +1102,7 @@ const HTTP_PARITY_TOOLS = [
       type: "object",
       properties: {
         frame_id: { type: "integer", description: "Frame ID" },
-        purpose: { type: "string", enum: ["read", "automation"], description: "read = memory outline; automation = targeting context" },
+        purpose: { type: "string", enum: ["read", "automation"], description: "read = concise context; automation = targeting context" },
       },
       required: ["frame_id"],
       additionalProperties: false,

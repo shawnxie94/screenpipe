@@ -59,7 +59,7 @@ struct RetentionRuntime {
 /// - `Lean`: also reclaims media AND strips the heavy text a frame carries —
 ///   the per-node accessibility/OCR `elements`, the raw accessibility tree
 ///   JSON, and the `ui_events` stream — while keeping `full_text`, transcripts,
-///   and memories searchable. Shrinks db.sqlite itself (the element tree is the
+///   searchable. Shrinks db.sqlite itself (the element tree is the
 ///   biggest contributor), unlike `Media` which only frees disk files.
 /// - `All`: the legacy behavior that wipes everything past the cutoff.
 #[derive(
@@ -598,7 +598,7 @@ async fn do_local_cleanup(
                 }
 
                 // 2. Strip the heavy text rows (elements tree, AX JSON,
-                //    ui_events). full_text/transcripts/memories stay searchable.
+                //    ui_events). full_text/transcripts stay searchable.
                 match db.strip_heavy_text_in_range(batch_start, batch_end).await {
                     Ok(result) => {
                         let stripped = result.elements_deleted

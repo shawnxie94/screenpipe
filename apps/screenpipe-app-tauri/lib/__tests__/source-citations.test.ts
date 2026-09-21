@@ -16,7 +16,7 @@ describe("source citations", () => {
       sourceCitations: [
         {
           id: "manual",
-          kind: "memory",
+          kind: "file",
           title: "MEMORY.md",
           subtitle: "lines 12-20",
         },
@@ -37,7 +37,7 @@ describe("source citations", () => {
     expect(citations).toEqual([
       {
         id: "manual",
-        kind: "memory",
+        kind: "file",
         title: "MEMORY.md",
         subtitle: "lines 12-20",
         href: undefined,
@@ -96,32 +96,6 @@ describe("source citations", () => {
     });
   });
 
-  it("labels screenpipe memory endpoint citations as memory", () => {
-    const citations = sourceCitationsFromMessage({
-      contentBlocks: [
-        {
-          type: "tool",
-          toolCall: {
-            toolName: "bash",
-            args: {
-              command:
-                'curl -s "http://localhost:3030/memories?q=Jill%20Benaglio&limit=5"',
-            },
-            result: '{"data":[]}',
-            isRunning: false,
-          },
-        },
-      ],
-    });
-
-    expect(citations).toHaveLength(1);
-    expect(citations[0]).toMatchObject({
-      kind: "memory",
-      title: "screenpipe 记忆",
-      subtitle: "记忆查询：Jill Benaglio",
-    });
-  });
-
   it("pulls structured result links out of bash tool output", () => {
     const citations = sourceCitationsFromMessage({
       contentBlocks: [
@@ -156,7 +130,7 @@ describe("source citations", () => {
     });
   });
 
-  it("derives file and memory citations from read calls", () => {
+  it("derives file citations from read calls", () => {
     const citations = sourceCitationsFromMessage({
       contentBlocks: [
         {
@@ -180,12 +154,12 @@ describe("source citations", () => {
       ],
     });
 
-    expect(citations.map((citation) => citation.kind)).toEqual(["memory", "file"]);
-    expect(citations[0].title).toBe("MEMORY.md");
+    expect(citations.map((citation) => citation.kind)).toEqual(["file", "file"]);
+    expect(citations[0].title).toBe("读取文件: MEMORY.md");
     expect(citations[1].title).toBe("读取文件: standalone-chat.tsx");
   });
 
-  it("carries the absolute path on file/memory citations so the footer can open a preview", () => {
+  it("carries the absolute path on file citations so the footer can open a preview", () => {
     const citations = sourceCitationsFromMessage({
       contentBlocks: [
         {
@@ -399,26 +373,6 @@ describe("source citations", () => {
     expect(citations[0].timestamp).toBe("2026-05-15T17:00:00Z");
   });
 
-  it("does not anchor non-capture citations (memory) to a timeline moment", () => {
-    const citations = sourceCitationsFromMessage({
-      contentBlocks: [
-        {
-          type: "tool",
-          toolCall: {
-            toolName: "bash",
-            args: { command: 'curl -s "http://localhost:3030/memories?q=pricing&limit=5"' },
-            result: '{"data":[]}',
-            isRunning: false,
-          },
-        },
-      ],
-    });
-
-    expect(citations).toHaveLength(1);
-    expect(citations[0].kind).toBe("memory");
-    expect(citations[0].timestamp).toBeUndefined();
-  });
-
   it("leaves screenpipe_search citations without a start_time unanchored", () => {
     const citations = sourceCitationsFromMessage({
       contentBlocks: [
@@ -557,7 +511,7 @@ describe("source citations", () => {
   });
 
   it("aggregates citations across pipe-run messages and dedupes repeats", () => {
-    // Real pipe-run pattern from chat-memory-sync_2341.json: the agent reads
+    // Real pipe-run pattern: the agent reads
     // the same state file across multiple debug steps. Per-message footers
     // would render N "Read: state.json" rows; the aggregator emits one.
     const readState = {

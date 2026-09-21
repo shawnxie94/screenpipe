@@ -40,7 +40,7 @@ async fn close_severs_leaked_pool_clones_and_allows_reinit() {
         .expect("initial init");
 
     // Model the incident: a background worker holds a pool clone that
-    // shutdown forgot to stop (oauth scheduler / memory sync / HTTP server).
+    // shutdown forgot to stop (oauth scheduler / HTTP server).
     let leaked = db.pool.clone();
     sqlx::query("SELECT 1")
         .fetch_one(&leaked)

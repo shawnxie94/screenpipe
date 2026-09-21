@@ -13,7 +13,7 @@
 //! this stays fast; if it falls back to a timestamp scan, it blows up. The
 //! EXPLAIN QUERY PLAN dumps confirm which.
 //!
-//! Measured (200k frames / 200k vision_tags / 60k audio / 50k memories,
+//! Measured (200k frames / 200k vision_tags / 60k audio / 50k connector rows,
 //! in-memory, M-series; tags rare + on the oldest rows = adversarial):
 //!   plan: screen/audio drives off the tag indexes (tags.name UNIQUE +
 //!         idx_vision_tags_tag_id) then PK-looks-up frames — it does NOT scan
@@ -33,8 +33,6 @@ const N_VISION_TAG_ROWS: i64 = N_FRAMES; // every frame gets a noise tag too
 const K_TAGGED_FRAMES: i64 = 500; // rare + oldest
 const N_AUDIO: i64 = 60_000;
 const K_TAGGED_AUDIO: i64 = 500;
-const N_MEM: i64 = 50_000;
-const K_TAGGED_MEM: i64 = 500;
 
 async fn migrated_db() -> DatabaseManager {
     let db = DatabaseManager::new("sqlite::memory:", Default::default())
@@ -169,35 +167,19 @@ async fn bench_tag_filter_scaling() {
     )
     .await;
 
-    // Memories: oldest K tagged person:ada + project:atlas, rest noise.
-    exec(
-        &db,
-        &format!(
-            "INSERT INTO memories (content, tags, importance) \
-             WITH RECURSIVE s(i) AS (SELECT 0 UNION ALL SELECT i+1 FROM s WHERE i<{n}-1) \
-             SELECT 'mem '||i, \
-               CASE WHEN i<{k} THEN '[\"person:ada\",\"project:atlas\"]' ELSE '[\"noise:'||(i%500)||'\"]' END, \
-               0.5 FROM s",
-            n = N_MEM,
-            k = K_TAGGED_MEM
-        ),
-    )
-    .await;
-
-    let counts: (i64, i64, i64, i64) = sqlx::query_as(
+    let counts: (i64, i64, i64) = sqlx::query_as(
         "SELECT (SELECT COUNT(*) FROM frames), (SELECT COUNT(*) FROM vision_tags), \
-         (SELECT COUNT(*) FROM audio_transcriptions), (SELECT COUNT(*) FROM memories)",
+         (SELECT COUNT(*) FROM audio_transcriptions)",
     )
     .fetch_one(&db.pool)
     .await
     .unwrap();
     println!(
-        "seeded in {:?}: frames={} vision_tags={} audio={} memories={}",
+        "seeded in {:?}: frames={} vision_tags={} audio={}",
         seed.elapsed(),
         counts.0,
         counts.1,
-        counts.2,
-        counts.3
+        counts.2
     );
 
     // ---- query plans (the decisive scaling signal) ----
@@ -424,7 +406,7 @@ async fn bench_related_tags_scaling() {
     );
 
     // ---- query plan: confirm the vision/audio legs ride the tag indexes and
-    // only the memories leg scans (the documented, accepted linear cost). ----
+    // the tag indexes. ----
     let related_sql = r#"
         WITH input(name) AS (SELECT DISTINCT value FROM json_each(?1)),
              n(c) AS (SELECT COUNT(*) FROM input),
@@ -438,22 +420,12 @@ async fn bench_related_tags_scaling() {
                  WHERE t.name IN (SELECT name FROM input)
                  GROUP BY aud.audio_chunk_id HAVING COUNT(DISTINCT t.name) = (SELECT c FROM n)
              ),
-             memory_matches(id) AS (
-                 SELECT m.id FROM memories m
-                 WHERE (SELECT COUNT(DISTINCT j.value)
-                        FROM json_each(CASE WHEN json_valid(m.tags) THEN m.tags ELSE '[]' END) j
-                        WHERE j.value IN (SELECT name FROM input)) = (SELECT c FROM n)
-             ),
              co(name) AS (
                  SELECT t.name FROM vision_tags vt JOIN tags t ON vt.tag_id = t.id
                  WHERE vt.vision_id IN (SELECT id FROM vision_matches)
                  UNION ALL
                  SELECT t.name FROM audio_tags aud JOIN tags t ON aud.tag_id = t.id
                  WHERE aud.audio_chunk_id IN (SELECT id FROM audio_matches)
-                 UNION ALL
-                 SELECT j.value FROM memories m,
-                        json_each(CASE WHEN json_valid(m.tags) THEN m.tags ELSE '[]' END) j
-                 WHERE m.id IN (SELECT id FROM memory_matches)
              )
         SELECT name, COUNT(*) AS count FROM co
         WHERE name IS NOT NULL AND name != '' AND name NOT IN (SELECT name FROM input)

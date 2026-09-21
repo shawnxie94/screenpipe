@@ -310,7 +310,7 @@ const TOOLS: Tool[] = [
         apps: { type: "array", items: { type: "string" }, description: "Optional app name filters." },
         source_kinds: {
           type: "array",
-          items: { type: "string", enum: ["frame", "ui_event", "audio", "memory", "office_message", "office_document", "office_transcript", "office_summary"] },
+          items: { type: "string", enum: ["frame", "ui_event", "audio", "office_message", "office_document", "office_transcript", "office_summary"] },
           description: "Optional evidence kind filters.",
         },
       },
@@ -334,11 +334,11 @@ const TOOLS: Tool[] = [
   {
     name: "search-content",
     description:
-      "Search screen text, audio transcriptions, input events, memories, and parsed app data. Returns timestamped results with app context. " +
+      "Search screen text, audio transcriptions, input events, and parsed app data. Returns timestamped results with app context. " +
       "USE WHEN: you need the actual text/content of a moment — quotes, screen text, transcript lines, or compact parsed messages, emails, tasks, documents, and code review — or want to filter by speaker/window. " +
       "DO NOT USE for: broad questions like 'what was I doing?' (use activity-summary, it pre-summarizes apps + windows + transcripts). " +
       "Also DO NOT USE for: targeted UI controls (use search-elements). " +
-      "Start with limit=5, increase only if needed. Per-result text is auto-truncated to 1000 chars; pass max_content_length=0 to opt out, or a custom integer to override.",
+      "Start with limit=5, increase only if needed. Use mode=keyword for literal keyword lookup and mode=relevance for paraphrases or related content. Per-result text is auto-truncated to 1000 chars; pass max_content_length=0 to opt out, or a custom integer to override.",
     annotations: { title: "Search Content", readOnlyHint: true, openWorldHint: false, idempotentHint: true },
     inputSchema: {
       type: "object",
@@ -349,11 +349,12 @@ const TOOLS: Tool[] = [
         },
         content_type: {
           type: "string",
-          enum: ["all", "ocr", "audio", "input", "accessibility", "memory", "parsed"],
+          enum: ["all", "ocr", "audio", "input", "accessibility", "parsed", "connection"],
           description:
-            "Filter by content type. Use 'parsed' for compact app-specific records such as messages, emails, tasks, documents, and code review; it is experimental and may be empty when parsing is disabled or unsupported. NOTE on screen text: 'ocr' is a legacy label — it returns ALL screen-text rows, which are accessibility-derived for most apps (the result tag [Screen·a11y] vs [Screen·ocr] tells you which). Use 'ocr' for screen text (covers both paths), 'audio' for transcriptions, 'input' for keyboard/mouse events, 'memory' for stored facts. Default: 'all'.",
+            "Filter by content type. Use 'parsed' for compact app-specific records such as messages, emails, tasks, documents, and code review; it is experimental and may be empty when parsing is disabled or unsupported. NOTE on screen text: 'ocr' is a legacy label — it returns ALL screen-text rows, which are accessibility-derived for most apps (the result tag [Screen·a11y] vs [Screen·ocr] tells you which). Use 'ocr' for screen text (covers both paths), 'audio' for transcriptions, or 'input' for keyboard/mouse events. Default: 'all'.",
           default: "all",
         },
+        mode: { type: "string", enum: ["keyword", "relevance"], description: "Search mode; keyword uses FTS with chronological ordering, relevance uses hybrid ranking.", default: "keyword" },
         limit: { type: "integer", description: "Max results (default 10, max 20). Start with 5 for exploration.", default: 10 },
         offset: { type: "integer", description: "Pagination offset. Use when results say 'use offset=N for more'.", default: 0 },
         start_time: {
@@ -380,7 +381,7 @@ const TOOLS: Tool[] = [
         tags: {
           type: "string",
           description:
-            "Comma-separated tags; returns only items carrying ALL of them (e.g. 'person:ada,project:atlas'). Works for screen + audio (content_type 'ocr'/'audio'/'all', tags written by add-tags) AND memories (content_type 'memory', tags written by update-memory). Same tag string links across all three, so two items sharing a tag are connected. Use namespaced tags (person:, project:, topic:) to link people/projects/topics. content_type 'input' and 'accessibility' have no tags and return nothing when this is set; 'parsed' does not support tags.",
+            "Comma-separated tags; returns only screen/audio items carrying ALL of them (e.g. 'person:ada,project:atlas'). Use namespaced tags (person:, project:, topic:) to link people, projects, and topics. content_type 'input' and 'accessibility' have no tags and return nothing when this is set; 'parsed' does not support tags.",
         },
         include_related: {
           type: "boolean",
@@ -423,7 +424,7 @@ const TOOLS: Tool[] = [
       "USE WHEN: any broad question about what the user did — 'what was I doing?', 'how long on X?', 'which apps?', 'recap my morning'. " +
       "This is almost always the right first call for time-range questions — usually sufficient without follow-up searches. " +
       "Use parsed/path evidence to identify tasks, but only active-minute fields for duration; frame and row counts are never time. " +
-      "DO NOT USE for: finding a specific keyword (use keyword-search) or a specific UI control (use search-elements).",
+      "DO NOT USE for: finding a specific keyword (use search-content with mode=keyword) or a specific UI control (use search-elements).",
     annotations: { title: "Activity Summary", readOnlyHint: true, openWorldHint: false, idempotentHint: true },
     inputSchema: {
       type: "object",
@@ -453,7 +454,7 @@ const TOOLS: Tool[] = [
     description:
       "Search UI elements (buttons, links, text fields) from the accessibility tree, filterable by role. " +
       "USE WHEN: you want a specific UI control or page-structure question — 'find every Submit button I saw', 'list the links in that page'. " +
-      "DO NOT USE for: general text/content (use search-content) or fast keyword lookup (use keyword-search).",
+      "DO NOT USE for: general text/content (use search-content) or UI structure.",
     annotations: { title: "Search Elements", readOnlyHint: true, openWorldHint: false, idempotentHint: true },
     inputSchema: {
       type: "object",
@@ -473,7 +474,7 @@ const TOOLS: Tool[] = [
           type: "string",
           enum: ["read", "automation"],
           description:
-            "read returns the compact memory outline; automation returns fresh refs, best-effort keys, state, bounds, and allowed actions. Omit to follow the desktop capture profile.",
+            "read returns the compact context outline; automation returns fresh refs, best-effort keys, state, bounds, and allowed actions. Omit to follow the desktop capture profile.",
         },
         limit: { type: "integer", description: "Max results (default 50). Start with 10-20.", default: 50 },
         offset: { type: "integer", description: "Pagination offset", default: 0 },
@@ -518,28 +519,9 @@ const TOOLS: Tool[] = [
     },
   },
   {
-    name: "update-memory",
-    description:
-      "Create, update, or delete a persistent memory (facts, preferences, decisions the user wants to remember). " +
-      "To retrieve memories, use search-content with content_type='memory'. " +
-      "To create: provide content + tags. To update: provide id + fields to change. To delete: provide id + delete=true.",
-    annotations: { title: "Update Memory", readOnlyHint: false, destructiveHint: false, openWorldHint: false, idempotentHint: true },
-    inputSchema: {
-      type: "object",
-      properties: {
-        id: { type: "integer", description: "Memory ID — omit to create new, provide to update/delete" },
-        content: { type: "string", description: "Memory text (required for creation)" },
-        tags: { type: "array", items: { type: "string" }, description: "Tags. Prefer namespaced (person:ada, project:atlas, topic:pricing) so this memory links to the same people/projects you tag on frames/audio. Retrieve with search-content content_type='memory' tags='person:ada'." },
-        importance: { type: "number", description: "0.0 (trivial) to 1.0 (critical). Default 0.5." },
-        source_context: { type: "object", description: "Optional metadata linking to source (app, timestamp, etc.)" },
-        delete: { type: "boolean", description: "Set true to delete the memory identified by id" },
-      },
-    },
-  },
-  {
     name: "get-feedback",
     description:
-      "Search local user ratings and written comments attached to AI-produced notifications, chats, memories, blocks, artifacts, and other targets. " +
+      "Search local user ratings and written comments attached to AI-produced notifications, chats, blocks, artifacts, and other targets. " +
       "Use before generating related work so you preserve what earned up ratings and correct what earned down ratings.",
     annotations: { title: "Get AI Feedback", readOnlyHint: true, openWorldHint: false, idempotentHint: true },
     inputSchema: {
@@ -547,7 +529,7 @@ const TOOLS: Tool[] = [
       properties: {
         kind: {
           type: "string",
-          description: "Optional target kind, such as notification, chat, memory, block, artifact, or structured_output.",
+          description: "Optional target kind, such as notification, chat, block, artifact, or structured_output.",
         },
         target_id: {
           type: "string",
@@ -645,9 +627,9 @@ const TOOLS: Tool[] = [
     description:
       "Tag a screen frame (vision) or audio chunk (audio) so it can be retrieved later. " +
       "Tags are a shared linking layer: use namespaced tags (person:ada, project:atlas, topic:pricing) to connect a capture to a person, project, or topic. " +
-      "The SAME tag string also works on memories (via update-memory), so tagging a frame and a memory with person:ada links them. " +
+      "Tags are shared across screen frames and audio chunks, so a namespaced tag such as person:ada links related captures. " +
       "Retrieve later with search-content tags='person:ada' (add content_type+start_time/end_time to scope to a timeframe). " +
-      "Note: frames are pruned by retention, so for durable links prefer tagging a memory; tag frames/audio for shorter-term recall.",
+      "Note: frames are pruned by retention, so use tags for shorter-term recall.",
     annotations: { title: "Add Tags", readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     inputSchema: {
       type: "object",
@@ -782,7 +764,7 @@ const TOOLS: Tool[] = [
   {
     name: "keyword-search",
     description:
-      "Fast FTS5 keyword search across OCR + audio combined. Returns matches with frame_id, app, timestamp, and text positions. " +
+      "Deprecated compatibility alias for fast keyword lookup. Prefer search-content with mode=keyword for the unified q/filters/response contract. Fast FTS5 search across OCR + audio returns matches with frame_id, app, timestamp, and text positions. "
       "USE WHEN: you have a specific keyword/phrase and want the fastest hit-list (e.g. 'find every screen where I typed \"stripe\"'). " +
       "DO NOT USE for: structured filters by content_type / speaker / window — this endpoint ignores those (use search-content instead). " +
       "DO NOT USE for: broad questions like 'what was I doing' (use activity-summary).",
@@ -814,7 +796,7 @@ const TOOLS: Tool[] = [
           type: "string",
           enum: ["read", "automation"],
           description:
-            "read returns the memory outline; automation returns targeting context for a downstream automation tool. Omit to follow the desktop capture profile. Refresh before each action.",
+            "read returns a readable outline; automation returns targeting context for a downstream automation tool. Omit to follow the desktop capture profile. Refresh before each action.",
         },
       },
       required: ["frame_id"],
@@ -1002,7 +984,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 | Step | Tool | When to use |
 |------|------|-------------|
 | 1 | activity-summary | Broad questions: "what was I doing?", "which apps?", "how long on X?" |
-| 2 | search-content | Need specific text, transcriptions, memories, or compact app data (use content_type=parsed) |
+| 2 | search-content | Need specific text, transcriptions, or compact app data (use content_type=parsed) |
 | 3 | search-elements | Need UI structure: buttons, links, form fields |
 | 4 | frame-context | Need full detail for a specific moment (use frame_id from step 2) |
 
@@ -1023,8 +1005,6 @@ For questions about content captured on this machine, use search-content.
 - "What did I discuss in my meeting?" → list-meetings to find it, then get-meeting with include_transcript=true
 - "When did I last talk to <person>?" → list-meetings with q=<name or email>, NO start_time (q searches all history)
 - "Find when I was on Twitter" → search-content with app_name='Arc' (or the browser name), q='twitter'
-- "Remember that I prefer X" → update-memory with content describing the preference
-- "What do you remember about X?" → search-content with content_type='memory', q='X'
 - "Automate X every day / on a schedule" → read the screenpipe://guide/pipes resource, then create-pipe (a scheduled AI automation)
 
 ## Deep Links
@@ -1072,8 +1052,8 @@ screenpipe **prepends a context header** before every run (current time range, t
 Make the prompt do three things, concretely:
 1. **Query** the relevant window of activity. Prefer the same endpoints these MCP tools wrap:
    - \`GET /activity-summary?start_time=...&end_time=now\` — apps/windows/durations. **Let this endpoint own all time math; never sum minutes in the prompt (the model drifts).**
-   - \`GET /search?q=...&content_type=all&start_time=...\` — specific screen text, audio transcripts, memories.
-   - \`GET /memories?...\`, \`GET /meetings?...\` for curated facts / meetings.
+   - \`GET /search/records?q=...&content_type=all&start_time=...\` — specific screen text and audio transcripts.
+   - \`GET /meetings?...\` for detected meetings and transcripts.
    Always pass \`start_time\` — never scan the whole history.
 2. **Process / summarize** the results.
 3. **Output** somewhere: write a note/file, send a desktop notification (\`POST\` the Tauri sidecar on port 11435 \`/notify\`), or push to a configured connection (Telegram/Slack/Discord/Email — see the CLI \`connection\` commands).
@@ -1437,6 +1417,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "search-content": {
         const includeFrames = args.include_frames === true;
         const normalized = normalizeTimeFields(args);
+        if (String(args.content_type || "").toLowerCase() === "memory") {
+          throw new Error("content_type=memory is no longer supported; use activity-summary or search captured content instead");
+        }
         // Default text cap if the caller didn't pass max_content_length.
         // Keeps single calls under Claude Code's per-tool output limit.
         const userCap = normalized.max_content_length;
@@ -1447,13 +1430,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             ? DEFAULT_SEARCH_CONTENT_TRUNCATE
             : Number(userCap);
         const params = new URLSearchParams();
+        if (normalized.mode === undefined) params.set("mode", "keyword");
         for (const [key, value] of Object.entries(normalized)) {
           if (value !== null && value !== undefined) {
             params.append(key, String(value));
           }
         }
 
-        const response = await callAPI(`/search?${params.toString()}`);
+        const response = await callAPI(`/search/records?${params.toString()}`);
         const data = await response.json();
         const results = data.data || [];
         const pagination = data.pagination || {};
@@ -1480,6 +1464,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const images: Array<{ data: string; context: string }> = [];
 
         for (const result of results) {
+          if (result.source_type) {
+            const when = result.ts || "";
+            const where = [result.app, result.window_name].filter(Boolean).join(" | ");
+            formattedResults.push(
+              `[${result.source_type}] ${where}\n${when}\n${truncateMiddle(result.text || "", effectiveCap)}`,
+            );
+            continue;
+          }
           const content = result.content;
           if (!content) continue;
 
@@ -1514,18 +1506,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               `[Accessibility] ${content.app_name || "?"} | ${content.window_name || "?"}\n` +
                 `${content.timestamp || ""}\n` +
                 `${truncateMiddle(content.text || "", effectiveCap)}`
-            );
-          } else if (result.type === "Memory") {
-            const tagsStr = content.tags?.length ? ` [${content.tags.join(", ")}]` : "";
-            const importance =
-              content.importance != null ? ` (importance: ${content.importance})` : "";
-            // frame_id links a memory back to the exact moment — jump there with
-            // frame-context / get-frame-elements (frame_id=N).
-            const frameRef = content.frame_id != null ? ` frame:${content.frame_id}` : "";
-            formattedResults.push(
-              `[Memory #${content.id}]${tagsStr}${importance}${frameRef}\n` +
-                `${content.created_at || ""}\n` +
-                `${truncateMiddle(content.content || "", effectiveCap)}`
             );
           } else if (result.type === "Parsed") {
             formattedResults.push(
@@ -1756,50 +1736,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             ],
           };
         }
-      }
-
-      case "update-memory": {
-        if (args.delete && args.id) {
-          const response = await callAPI(`/memories/${args.id}`, { method: "DELETE" });
-            return { content: [{ type: "text", text: `Memory ${args.id} deleted.` }] };
-        }
-        if (args.id) {
-          const body: Record<string, unknown> = {};
-          if (args.content !== undefined) body.content = args.content;
-          if (args.tags !== undefined) body.tags = args.tags;
-          if (args.importance !== undefined) body.importance = args.importance;
-          if (args.source_context !== undefined) body.source_context = args.source_context;
-          const response = await callAPI(`/memories/${args.id}`, {
-            method: "PUT",
-            body: JSON.stringify(body),
-          });
-            const memory = await response.json();
-          return {
-            content: [{ type: "text", text: `Memory ${memory.id} updated: "${memory.content}"` }],
-          };
-        }
-        if (!args.content) {
-          return {
-            content: [{ type: "text", text: "Error: 'content' is required to create a memory" }],
-          };
-        }
-        const memoryBody: Record<string, unknown> = {
-          content: args.content,
-          source: "mcp",
-          tags: args.tags || [],
-          importance: args.importance ?? 0.5,
-        };
-        if (args.source_context) memoryBody.source_context = args.source_context;
-        const memoryResponse = await callAPI("/memories", {
-          method: "POST",
-          body: JSON.stringify(memoryBody),
-        });
-        const newMemory = await memoryResponse.json();
-        return {
-          content: [
-            { type: "text", text: `Memory created (id: ${newMemory.id}): "${newMemory.content}"` },
-          ],
-        };
       }
 
       case "send-notification": {

@@ -249,7 +249,7 @@ interface ChatStoreState {
   diskHydrated: boolean;
   /** Currently FOCUSED session — i.e. the chat the user is actively
    *  looking at. Cleared when the user navigates away from the chat
-   *  view (Pipes/Memories/...) so the sidebar row stops being
+   *  view or another app section so the sidebar row stops being
    *  highlighted. Distinct from `panelSessionId` which never clears. */
   currentId: string | null;
   /** The chat the panel is rendering right now, regardless of whether

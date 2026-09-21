@@ -62,13 +62,13 @@ describe("search tool", () => {
     expect(parsed.startDate).toBe("2026-09-01");
   });
 
-  it("builds a relevance-mode URL with bounds", () => {
+  it("builds a keyword-mode URL with bounds", () => {
     const url = new URL(
       buildSearchUrl({ query: "type:ocr 采购合同", limit: 999 }),
     );
     expect(url.pathname).toBe("/search/records");
     expect(url.searchParams.get("q")).toBe("采购合同");
-    expect(url.searchParams.get("mode")).toBe("relevance");
+    expect(url.searchParams.get("mode")).toBe("keyword");
     expect(url.searchParams.get("limit")).toBe("50");
     expect(url.searchParams.get("content_type")).toBe("ocr");
   });
@@ -84,7 +84,7 @@ describe("search tool", () => {
     const formatted = formatHybridResults({
       degraded: false,
       legs_used: ["frames", "audio", "dense_transcripts"],
-      results: [
+      data: [
         {
           source_type: "audio",
           source_pk: "7",
@@ -103,7 +103,7 @@ describe("search tool", () => {
   });
 
   it("reports degraded hybrid responses", () => {
-    const formatted = formatHybridResults({ results: [], degraded: true });
+    const formatted = formatHybridResults({ data: [], degraded: true });
     expect(formatted).toContain("degraded");
   });
 
@@ -111,7 +111,7 @@ describe("search tool", () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        results: [
+        data: [
           {
             source_type: "document",
             source_pk: "doc-contract",
@@ -125,7 +125,7 @@ describe("search tool", () => {
       }),
     });
     const tool = getTool();
-    const out = await tool.execute("call-1", { query: "合同 付款" });
+    const out = await tool.execute("call-1", { q: "合同 付款", mode: "relevance" });
     expect(out).toContain("document:doc-contract");
     expect(fetchMock.mock.calls[0][0]).toContain("mode=relevance");
   });

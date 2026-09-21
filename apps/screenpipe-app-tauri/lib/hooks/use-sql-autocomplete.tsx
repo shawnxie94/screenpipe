@@ -11,7 +11,6 @@ export interface AutocompleteItem {
   app_name?: string;
   frame_count?: number;
   audio_count?: number;
-  memory_count?: number;
 }
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -129,10 +128,8 @@ export function useSqlAutocomplete(type: "app" | "window" | "url") {
 }
 
 /**
- * Tag mention autocomplete backed by the retired memory-tags autocomplete
- * endpoint. The tags namespace now only covers vision/audio, which has no
- * autocomplete API; the hook stays as an empty contract so callers keep
- * compiling and manual `#tag` filters still work in search.
+ * Tag mention autocomplete is intentionally empty because tags have no
+ * autocomplete API; manual `#tag` filters still work in search.
  */
 export function useTagAutocomplete() {
   const [items] = useState<AutocompleteItem[]>([]);

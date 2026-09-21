@@ -233,11 +233,6 @@ describe("browser development runtime", () => {
       undefined,
       "empty",
     );
-    const memories = mockLocalApiResponse(
-      new URL("http://localhost:3030/memories?limit=1"),
-      undefined,
-      "ready",
-    );
     const artifacts = mockLocalApiResponse(
       new URL("http://localhost:3030/artifacts?limit=1000"),
       undefined,
@@ -252,10 +247,6 @@ describe("browser development runtime", () => {
     expect(health.status).toBe(200);
     expect((await health.json()).status).toBe("healthy");
     expect(await search.json()).toMatchObject({
-      data: [],
-      pagination: { total: 0 },
-    });
-    expect(await memories.json()).toMatchObject({
       data: [],
       pagination: { total: 0 },
     });

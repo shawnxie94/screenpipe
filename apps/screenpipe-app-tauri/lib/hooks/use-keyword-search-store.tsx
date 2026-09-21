@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { localFetch } from "@/lib/api";
 
 export type SearchAnalyticsSurface = "standalone" | "embedded" | "modal";
-export type SearchMode = "time" | "relevance";
+export type SearchMode = "keyword" | "relevance";
 export type SearchContentType = "ocr" | "all" | "input";
 
 export interface HybridSearchHit {
@@ -302,9 +302,11 @@ export function hybridHitToSearchMatch(hit: HybridSearchHit): SearchMatch | null
 }
 
 export function mapHybridResponse(data: unknown): SearchMapping {
-	const hits = Array.isArray((data as any)?.results)
-		? ((data as any).results as HybridSearchHit[])
-		: [];
+	const hits = Array.isArray((data as any)?.data)
+		? ((data as any).data as HybridSearchHit[])
+		: Array.isArray((data as any)?.results)
+			? ((data as any).results as HybridSearchHit[])
+			: [];
 	const matches = hits.flatMap((hit) => {
 		const match = hybridHitToSearchMatch(hit);
 		return match ? [match] : [];
@@ -417,7 +419,7 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 			fuzzy_match: options.fuzzy_match ?? fuzzy_default,
 			order: options.order ?? "descending",
 			app_names: options.app_names ?? [],
-			mode: options.mode ?? "time",
+			mode: options.mode ?? "keyword",
 			content_type: options.content_type ?? "ocr",
 		});
 
@@ -493,7 +495,7 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 
 		const searchRequest: SearchRequest = {
 			query,
-			mode: options.mode ?? "time",
+			mode: options.mode ?? "keyword",
 			content_type: options.content_type ?? "ocr",
 			params: {
 				offset: options.offset || offset_default,
@@ -507,7 +509,7 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 		};
 
 		try {
-			const mode = options.mode ?? "time";
+			const mode = options.mode ?? "keyword";
 			const contentType = options.content_type ?? "ocr";
 			const params = new URLSearchParams({
 				q: query,

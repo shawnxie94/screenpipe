@@ -658,7 +658,7 @@ impl DatabaseManager {
     }
 
     /// Lean retention: strip the heavy *text* a frame carries while keeping the
-    /// frame row, its searchable `full_text`, transcripts, and memories alive.
+    /// frame row, its searchable `full_text` and transcripts alive.
     ///
     /// Drops the biggest db.sqlite text contributors for [start, end]:
     ///   - `elements` rows (the per-node OCR *and* accessibility tree)
@@ -667,9 +667,9 @@ impl DatabaseManager {
     ///     symmetrically with the AX blob so OCR detail isn't left behind
     ///   - `ui_events` (the keystroke/click/scroll stream)
     ///
-    /// What is KEPT so search/timeline/memories keep working: `frames.full_text`
+    /// What is KEPT so search/timeline keep working: `frames.full_text`
     /// (the single searchable OCR+a11y text, indexed by `frames_fts`),
-    /// `audio_transcriptions`, and `memories`. So OCR *text* survives — only the
+    /// `audio_transcriptions`, So OCR *text* survives — only the
     /// OCR/AX *geometry detail* (bounds, tree) is dropped. FTS stays in sync
     /// automatically: `elements_ad`/`ui_events_ad` delete triggers issue the
     /// FTS5 'delete' command, and nulling `text_json`/`accessibility_tree_json`

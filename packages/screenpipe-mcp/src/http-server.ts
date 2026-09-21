@@ -153,7 +153,7 @@ const TOOLS = [
     name: "search_content",
     description:
       "Search screenpipe's recorded content: screen text, audio transcriptions, input events, and parsed app data. " +
-      "Returns timestamped results with app context. " +
+      "Returns timestamped results with app context. Use q with mode=keyword for literal terms or mode=relevance for related/paraphrased content. " +
       "Call with no parameters to get recent activity.",
     inputSchema: {
       type: "object" as const,
@@ -164,11 +164,12 @@ const TOOLS = [
         },
         content_type: {
           type: "string",
-          enum: ["all", "ocr", "audio", "input", "accessibility", "parsed"],
+          enum: ["all", "ocr", "audio", "input", "accessibility", "parsed", "connection"],
           description:
             "Content type filter: 'ocr' (screen text), 'audio' (transcriptions), 'input' (clicks, keystrokes, clipboard, app switches), 'accessibility' (accessibility tree text), 'parsed' (compact messages, emails, tasks, documents, and code review), 'all'. Default: 'all'",
           default: "all",
         },
+        mode: { type: "string", enum: ["keyword", "relevance"], description: "Search mode. keyword uses FTS with chronological ordering. Default: keyword" },
         limit: { type: "integer", description: "Max results. Default: 10" },
         offset: { type: "integer", description: "Skip N results for pagination. Default: 0" },
         start_time: {
@@ -211,14 +212,18 @@ async function handleSearchContent(
   fetchAPI: ReturnType<typeof makeFetchAPI>,
   args: Record<string, unknown>
 ) {
+  if (String(args.content_type || "").toLowerCase() === "memory") {
+    throw new Error("content_type=memory is no longer supported; use captured content search instead");
+  }
   const params = new URLSearchParams();
+  params.set("mode", String(args.mode || "keyword"));
   for (const [key, value] of Object.entries(normalizeTimeFields(args))) {
     if (value !== null && value !== undefined) {
       params.append(key, String(value));
     }
   }
 
-  const response = await fetchAPI(`/search?${params.toString()}`);
+  const response = await fetchAPI(`/search/records?${params.toString()}`);
   if (!response.ok) {
     throw new Error(`HTTP error: ${response.status}`);
   }
@@ -240,6 +245,13 @@ async function handleSearchContent(
 
   const formattedResults: string[] = [];
   for (const result of results) {
+    if (result.source_type) {
+      formattedResults.push(
+        `[${result.source_type}] ${[result.app, result.window_name].filter(Boolean).join(" | ")}\n` +
+          `${result.ts || ""}\n${result.text || ""}`,
+      );
+      continue;
+    }
     const content = result.content;
     if (!content) continue;
 

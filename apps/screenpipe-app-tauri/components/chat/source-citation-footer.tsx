@@ -13,7 +13,6 @@ import {
   ExternalLink,
   FileText,
   Globe,
-  HardDrive,
   History,
   PanelRight,
   Plug,
@@ -28,7 +27,7 @@ interface SourceCitationFooterProps {
   citations: SourceCitation[];
   className?: string;
   // Open a local file source in the in-chat preview sidebar. When provided,
-  // file/memory/pipe citations that carry an absolute `path` become clickable.
+  // file/pipe citations that carry an absolute `path` become clickable.
   onOpenFile?: (path: string) => void;
 }
 
@@ -38,7 +37,6 @@ export const KIND_ICON: Record<SourceCitationKind, React.ComponentType<{ classNa
   connector: Plug,
   web: Globe,
   file: FileText,
-  memory: HardDrive,
   pipe: Activity,
   command: TerminalSquare,
 };
@@ -49,7 +47,6 @@ const KIND_LABEL: Record<SourceCitationKind, string> = {
   connector: "应用",
   web: "网页",
   file: "文件",
-  memory: "记忆",
   pipe: "定时任务",
   command: "命令",
 };

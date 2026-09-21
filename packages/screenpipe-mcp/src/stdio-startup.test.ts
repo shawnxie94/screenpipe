@@ -232,7 +232,7 @@ async function searchContentThroughMcp(): Promise<{
     });
 
     response.setHeader("content-type", "application/json");
-    if (request.url?.startsWith("/search?")) {
+    if (request.url?.startsWith("/search/records?")) {
       response.end(
         JSON.stringify({
           data: [
@@ -445,7 +445,7 @@ describe("stdio startup handshake", { timeout: INIT_DEADLINE_MS + 2_000 }, () =>
 
   it("routes recording reads through the authenticated API end to end", async () => {
     const { requests, toolResponse } = await searchContentThroughMcp();
-    const searchRequest = requests.find((request) => request.url.startsWith("/search?"));
+    const searchRequest = requests.find((request) => request.url.startsWith("/search/records?"));
 
     expect(toolResponse.error).toBeUndefined();
     expect(toolResponse.result?.isError).not.toBe(true);

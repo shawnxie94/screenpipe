@@ -371,7 +371,7 @@ export type Settings = SettingsStore & {
 	 *   reclaim mp4/wav/jpeg files on disk.
 	 * - "lean": also strip the heavy accessibility/OCR element tree, the raw AX
 	 *   tree JSON, and the ui_events stream — shrinks the database itself while
-	 *   keeping text, transcripts, and memories searchable.
+	 *   keeping text and transcripts searchable.
 	 * - "all": wipe everything past the cutoff. */
 	localRetentionMode?: "media" | "lean" | "all";
 	/** Apply macOS vibrancy effect to sidebar for a translucent glass look */

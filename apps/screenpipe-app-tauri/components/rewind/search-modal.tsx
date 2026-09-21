@@ -818,7 +818,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     | "connections"
     | "documents";
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
-  const [searchMode, setSearchMode] = useState<SearchMode>("time");
+  const [searchMode, setSearchMode] = useState<SearchMode>("keyword");
 
   // A selectable row, identified so selection survives lists being re-sorted
   type NavItem =
@@ -1439,7 +1439,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       setDomainFilter(null);
       setTimeFilter(null);
       setContentFilter("all");
-      setSearchMode("time");
+      setSearchMode("keyword");
       setSpeakerResults([]);
       setTagResults([]);
       setAllTags([]);
@@ -1513,7 +1513,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     searchKeywords(debouncedQuery, {
       limit: OCR_PAGE_SIZE,
       offset: 0,
-      mode: contentFilterRef.current === "all" ? searchMode : "time",
+      mode: contentFilterRef.current === "all" ? searchMode : "keyword",
       content_type: activeContentType,
       analytics_surface: analyticsSurface,
       analytics_search_id: searchId,
@@ -2697,19 +2697,19 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       <div className="flex items-center gap-0.5 shrink-0 rounded-lg bg-muted/60 p-0.5">
         {contentFilter === "all" && (
           <div className="mr-1 flex items-center gap-0.5 border-r border-border/60 pr-1">
-            {(["time", "relevance"] as SearchMode[]).map((mode) => (
+            {(["keyword", "relevance"] as SearchMode[]).map((mode) => (
               <button
                 key={mode}
                 type="button"
                 aria-pressed={searchMode === mode}
-                title={mode === "time" ? "按时间排序（全类型）" : "按相关度排序（全类型）"}
+                title={mode === "keyword" ? "按关键词/时间排序（全类型）" : "按相关度排序（全类型）"}
                 onClick={() => { setSearchMode(mode); setNavIndex(0); }}
                 className={cn(
                   "inline-flex h-7 items-center rounded-md px-2 text-[11px] transition-colors",
                   searchMode === mode ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {mode === "time" ? "时间排序" : "相关度排序"}
+                {mode === "keyword" ? "关键词/时间排序" : "相关度排序"}
               </button>
             ))}
           </div>

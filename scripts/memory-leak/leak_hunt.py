@@ -779,11 +779,8 @@ def scenario_meeting_walk(client: ApiClient, state: SharedState, duration_sec: f
     fanout(state, "meeting_walk", duration_sec, max(1, min(concurrency, 8)), work)
 
 
-def scenario_memory_artifact_lists(client: ApiClient, state: SharedState, duration_sec: float, concurrency: int) -> None:
+def scenario_artifact_lists(client: ApiClient, state: SharedState, duration_sec: float, concurrency: int) -> None:
     endpoints = [
-        ("/memories", {"limit": 100, "offset": 0}),
-        ("/memories", {"limit": 100, "offset": 100}),
-        ("/memories/tags", None),
         ("/artifacts", None),
         ("/tags/autocomplete", {"q": "project", "limit": 100}),
         ("/activity-summary", None),
@@ -794,7 +791,7 @@ def scenario_memory_artifact_lists(client: ApiClient, state: SharedState, durati
         ok, _, _, _ = client.request("GET", path, params=params)
         return ok
 
-    fanout(state, "memory_artifact_lists", duration_sec, concurrency, work)
+    fanout(state, "artifact_lists", duration_sec, concurrency, work)
 
 
 def scenario_audio_readonly(client: ApiClient, state: SharedState, duration_sec: float, concurrency: int) -> None:
@@ -978,7 +975,7 @@ def run_harness(args: argparse.Namespace) -> int:
         ("timeline_stream", lambda: scenario_timeline_stream(client, state, args.scenario_duration_sec, args.concurrency)),
         ("frame_walk", lambda: scenario_frame_walk(client, state, args.scenario_duration_sec, args.concurrency, args.include_frame_images)),
         ("meeting_walk", lambda: scenario_meeting_walk(client, state, args.scenario_duration_sec, args.concurrency)),
-        ("memory_artifact_lists", lambda: scenario_memory_artifact_lists(client, state, args.scenario_duration_sec, args.concurrency)),
+        ("artifact_lists", lambda: scenario_artifact_lists(client, state, args.scenario_duration_sec, args.concurrency)),
         ("audio_readonly", lambda: scenario_audio_readonly(client, state, args.scenario_duration_sec, args.concurrency)),
         ("websocket_churn", lambda: scenario_websocket_churn(args.base_url, args.api_key or os.environ.get("SCREENPIPE_API_KEY"), state, args.scenario_duration_sec, args.concurrency)),
     ]

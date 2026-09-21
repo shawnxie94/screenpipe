@@ -8,7 +8,6 @@ export type SourceCitationKind =
   | "connector"
   | "web"
   | "file"
-  | "memory"
   | "pipe"
   | "command";
 
@@ -339,7 +338,7 @@ function screenpipeApiCitation(call: string): SourceCitation {
   const query = extractQuery(call);
   const title = screenpipeTitle(path);
   const kind = screenpipeKind(path);
-  // Only local screen captures map to a moment on the timeline. Memory/db/
+  // Only local screen captures map to a moment on the timeline. Database and
   // connector endpoints aren't time-anchored screen data, so leave them inert.
   const params = queryParams(query);
   const timestamp = kind === "screenpipe" ? navTimestamp(params.start_time) : undefined;
@@ -357,7 +356,6 @@ function screenpipeApiCitation(call: string): SourceCitation {
 
 function screenpipeKind(path: string): SourceCitationKind {
   if (path === "/raw_sql") return "database";
-  if (path === "/memories") return "memory";
   if (path.startsWith("/connections/")) return "connector";
   return "screenpipe";
 }
@@ -366,7 +364,6 @@ function screenpipeTitle(path: string): string {
   if (path === "/search") return "screenpipe 搜索";
   if (path === "/activity-summary") return "活动摘要";
   if (path === "/raw_sql") return "本地数据库查询";
-  if (path === "/memories") return "screenpipe 记忆";
   if (path.startsWith("/connections/perplexity/")) return "Perplexity 搜索";
   if (path.startsWith("/connections/calendar/")) {
     return "Google Calendar 事件";
@@ -399,10 +396,6 @@ function screenpipeSubtitle(path: string, query: string): string | undefined {
 
   if (path === "/raw_sql") {
     return "本地 screenpipe 数据";
-  }
-
-  if (path === "/memories") {
-    return params.q ? `记忆查询：${truncate(params.q, 60)}` : limitSubtitle(params.limit);
   }
 
   if (path.startsWith("/connections/perplexity/")) {
@@ -442,7 +435,7 @@ function fileCitation(path: string, verb: string): SourceCitation {
   return {
     id: stableId(["file", path]),
     kind,
-    title: kind === "memory" ? baseName : `${verb}: ${baseName}`,
+    title: `${verb}: ${baseName}`,
     subtitle: shortenPath(path),
     // Keep the absolute path so the footer can open the file in the preview
     // sidebar. `subtitle` is only the shortened display form.
@@ -462,9 +455,6 @@ function isUsablePath(path: string): boolean {
 }
 
 function fileKind(path: string): SourceCitationKind {
-  if (path.includes("/.codex/memories/") || /(^|\/)MEMORY\.md$/.test(path)) {
-    return "memory";
-  }
   if (path.includes("/.screenpipe/pipes/")) return "pipe";
   if (path.includes("/.screenpipe/chats/")) return "screenpipe";
   return "file";
@@ -755,7 +745,7 @@ function stableId(parts: Array<string | undefined>): string {
 }
 
 function isSourceKind(kind: string): kind is SourceCitationKind {
-  return ["screenpipe", "database", "connector", "web", "file", "memory", "pipe", "command"].includes(kind);
+  return ["screenpipe", "database", "connector", "web", "file", "pipe", "command"].includes(kind);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

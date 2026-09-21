@@ -37,14 +37,6 @@ describe("syncFetchOrThrow", () => {
     ).rejects.toThrow("sync not initialized");
   });
 
-  it("rejects on 401 unauthorized", async () => {
-    localFetch.mockResolvedValue(jsonResponse(401, { error: "unauthorized" }));
-
-    await expect(
-      syncFetchOrThrow("/sync/memories/push", { method: "POST" })
-    ).rejects.toThrow("unauthorized");
-  });
-
   it("falls back to a status message when the error body is not JSON", async () => {
     localFetch.mockResolvedValue(
       new Response("Bad Request", { status: 400 })

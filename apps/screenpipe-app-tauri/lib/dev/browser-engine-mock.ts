@@ -1059,7 +1059,6 @@ export function mockLocalApiResponse(
   if (url.pathname === "/meetings") {
     return Response.json(scenario === "empty" ? [] : [mockMeeting()]);
   }
-  if (url.pathname === "/memories") return Response.json(emptyPage);
   if (url.pathname === "/artifacts") {
     const query = url.searchParams.get("q")?.toLowerCase() ?? "";
     const requestedId = Number(url.searchParams.get("id") ?? 0);
@@ -1145,7 +1144,7 @@ export function mockLocalApiResponse(
   if (url.pathname === "/search/records") {
     const query = url.searchParams.get("q") ?? "";
     const contentType = url.searchParams.get("content_type") ?? "all";
-    const mode = url.searchParams.get("mode") ?? "time";
+    const mode = url.searchParams.get("mode") ?? "keyword";
     const limit = Number(url.searchParams.get("limit") ?? 24);
     const offset = Number(url.searchParams.get("offset") ?? 0);
 

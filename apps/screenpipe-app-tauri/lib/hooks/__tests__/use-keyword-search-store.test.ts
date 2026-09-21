@@ -166,7 +166,7 @@ describe("useKeywordSearchStore search scheduling", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]).toContain("/search/records?");
     expect(calls[0]).toContain("content_type=ocr");
-    expect(calls[0]).toContain("mode=time");
+    expect(calls[0]).toContain("mode=keyword");
     expect(useKeywordSearchStore.getState().searchResults.map((item) => item.frame_id)).toEqual([1]);
   });
 

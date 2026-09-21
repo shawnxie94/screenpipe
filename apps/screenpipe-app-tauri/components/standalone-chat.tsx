@@ -394,35 +394,10 @@ export function StandaloneChat({
     () => buildTagMentionSuggestions(tagItems, tagItems.length),
     [tagItems]
   );
-  const tagMentionSections = React.useMemo(() => {
-    type TagCountKey = "memory_count" | "audio_count" | "frame_count";
-    const used = new Set<string>();
-
-    const sourceCount = (item: (typeof tagItems)[number], key: TagCountKey) =>
-      item[key] ?? 0;
-
-    const pick = (key: TagCountKey) => {
-      const picked = tagItems
-        .filter((item) => sourceCount(item, key) > 0 && !used.has(item.name))
-        .sort((a, b) => {
-          const sourceDelta = sourceCount(b, key) - sourceCount(a, key);
-          if (sourceDelta !== 0) return sourceDelta;
-          const totalDelta = b.count - a.count;
-          if (totalDelta !== 0) return totalDelta;
-          return a.name.localeCompare(b.name);
-        })
-        .slice(0, TAG_SUGGESTION_LIMIT);
-
-      for (const item of picked) used.add(item.name);
-      return buildTagMentionSuggestions(picked, TAG_SUGGESTION_LIMIT);
-    };
-
-    return [
-      { label: "记忆标签", suggestions: pick("memory_count") },
-      { label: "音频标签", suggestions: pick("audio_count") },
-      { label: "屏幕标签", suggestions: pick("frame_count") },
-    ].filter((section) => section.suggestions.length > 0);
-  }, [tagItems]);
+  const tagMentionSections = React.useMemo(
+    () => [{ label: "标签", suggestions: tagMentionSuggestions }],
+    [tagMentionSuggestions],
+  );
 
   const appTagMap = React.useMemo(() => {
     const map: Record<string, string> = {};

@@ -5564,7 +5564,7 @@ pub(crate) fn find_bun_executable() -> Option<String> {
 /// Sets `PI_INSTALL_DONE` when finished so `pi_start` can wait for it.
 /// Warm Bun's shared package cache with the latest published screenpipe-mcp so
 /// the first ACP session finds the core tools (activity-summary, search-content,
-/// update-memory) ready instead of cold-fetching them. A slow or failed
+/// search-content) ready instead of cold-fetching them. A slow or failed
 /// `bun x screenpipe-mcp` fetch is why those tools sometimes never registered
 /// and the agent fell back to raw SQL. Best-effort and idempotent: once cached,
 /// `bun x` reuses it. Runs with stdin closed so the stdio server sees EOF and

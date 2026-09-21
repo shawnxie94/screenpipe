@@ -50,13 +50,6 @@ export type ActivitySummaryPayload = {
     last_frame_at?: string;
     last_audio_at?: string;
   };
-  memories?: Array<{
-    content?: string;
-    source?: string;
-    tags?: string[];
-    importance?: number;
-    created_at?: string;
-  }>;
   snippets?: Array<{
     source?: string;
     text?: string;
@@ -173,10 +166,6 @@ export function formatActivitySummary(
     const window = text.window_name ? ` | ${text.window_name}` : "";
     return `  [${text.app_name || "?"}${window}, ${timeLabel(text.timestamp)}] ${truncate(text.text, 500)}`;
   });
-  const memoryLines = (data.memories ?? []).map((memory) => {
-    const tags = memory.tags?.length ? ` | ${memory.tags.join(", ")}` : "";
-    return `  [${memory.source || "?"}${tags}] ${truncate(memory.content, 500)}`;
-  });
   const snippetLines = (data.snippets ?? []).map((snippet) => {
     const context = [
       snippet.app_name,
@@ -235,9 +224,6 @@ export function formatActivitySummary(
     "",
     "Key content (sampled context, not duration):",
     ...(textLines.length ? textLines.slice(0, 20) : ["  (none)"]),
-    "",
-    "Memories in range (context only, not duration):",
-    ...(memoryLines.length ? memoryLines : ["  (none)"]),
     "",
     "Screen/audio snippets (context only, not duration):",
     ...(snippetLines.length ? snippetLines : ["  (none)"]),

@@ -53,7 +53,7 @@ pub enum PermissionRule {
     App { value: String },
     /// `Window(glob)` — data from matching window titles.
     Window { value: String },
-    /// `Content(type)` — content type: ocr, audio, input, accessibility, memory, parsed.
+    /// `Content(type)` — content type: ocr, audio, input, accessibility, parsed.
     Content { value: String },
 }
 
@@ -532,9 +532,6 @@ fn resolve_rules(
                         "POST /meetings/stop",
                         "PUT /meetings/*",
                         "POST /meetings/merge",
-                        "POST /memories",
-                        "PUT /memories/*",
-                        "DELETE /memories/*",
                     ] {
                         if let Some(rule) = parse_bare_api(pattern) {
                             allow.push(rule);

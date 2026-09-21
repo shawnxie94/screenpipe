@@ -5,7 +5,7 @@ description: Query the user's local and synced-device Screenpipe data via the RE
 
 # Screenpipe API
 
-Local REST API at `http://localhost:3030`. Runs the zh-local fork — where it diverges from upstream docs (docs.screenpi.pe), this file describes the local reality. Main divergence: **full search is `GET /search/records`** (same parameters as the upstream `/search`); `/search` here is a keyword-only handler (param `query`, flat results).
+Local REST API at `http://localhost:3030`. Runs the zh-local fork — where it diverges from upstream docs (docs.screenpi.pe), this file describes the local reality. Main divergence: **full search is `GET /search/records`**; use `q` plus structured filters. The public modes are `keyword` (FTS with chronological ordering, default) and `relevance` (hybrid ranking). Legacy `time` remains accepted as an alias of `keyword`; `/search` and its `query` parameter are compatibility-only.
 
 Always use `${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}` as the base in shell calls so a fallback-port or development app cannot reach another running Screenpipe instance.
 
@@ -61,14 +61,15 @@ Use `jq` only after confirming it exists (`command -v jq`).
 ```bash
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
   -H "X-Screenpipe-Client: api" \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/search/records?q=QUERY&content_type=all&limit=10&start_time=1h%20ago"
+  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/search/records?q=QUERY&mode=keyword&content_type=all&limit=10&start_time=1h%20ago"
 ```
 
 ### Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `q` | string | No | Keywords. Do NOT use for audio searches — transcriptions are noisy, q filters too aggressively. |
+| `q` | string | No | Keyword or phrase query. Use structured filters instead of inline operators where possible. Do NOT use for audio searches — transcriptions are noisy, q filters too aggressively. |
+| `mode` | `keyword` or `relevance` | No | `keyword` (default) uses FTS and chronological ordering; `relevance` uses hybrid FTS + dense retrieval with RRF. Legacy `time` is accepted as an alias of `keyword`. |
 | `content_type` | string | No | `all` (default), `accessibility`, `audio`, `input`, `ocr`, `parsed`, `connection`. Use `parsed` for compact app-specific messages, emails, tasks, documents, and code review. Parsed capture is experimental, may be empty when disabled/unsupported, and is not included in `all`. `connection` searches imported connector content (Feishu messages/docs/calendar events, Tencent Meeting transcripts, RSS entries) and is also not part of `all`. Screen text is primarily captured via the OS accessibility tree (`accessibility`); OCR is a fallback for apps without accessibility support. |
 | `limit` | integer | No | Max 1-20. Default: 10 |
 | `offset` | integer | No | Pagination. Default: 0 |

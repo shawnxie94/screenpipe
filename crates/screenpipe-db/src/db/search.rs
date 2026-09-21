@@ -1928,8 +1928,7 @@ impl DatabaseManager {
         }
 
         // Mirror `search_with_tags`: input and accessibility have no tag
-        // table, so their tag-filtered count is zero. Memory is counted with
-        // its own tag filter below.
+        // table, so their tag-filtered count is zero.
         if !tags.is_empty()
             && matches!(
                 content_type,
@@ -1998,7 +1997,7 @@ impl DatabaseManager {
                         return ax_fut.await;
                     }
                 }
-                // OCR / Audio / Input / Memory: on_screen doesn't apply,
+                // OCR / Audio / Input: on_screen doesn't apply,
                 // fall through to the legacy count.
                 _ => {}
             }
@@ -2140,15 +2139,15 @@ impl DatabaseManager {
                        ))
                        {a11y_filter}"#,
                 fts_join = if cjk_route {
-                "JOIN frames_cjk_fts ON frames.id = frames_cjk_fts.rowid"
-            } else if has_fts {
+                    "JOIN frames_cjk_fts ON frames.id = frames_cjk_fts.rowid"
+                } else if has_fts {
                     "JOIN frames_fts ON frames.id = frames_fts.rowid"
                 } else {
                     ""
                 },
                 fts_condition = if cjk_route {
-                "AND frames_cjk_fts MATCH ?1"
-            } else if has_fts {
+                    "AND frames_cjk_fts MATCH ?1"
+                } else if has_fts {
                     "AND frames_fts MATCH ?1"
                 } else {
                     ""

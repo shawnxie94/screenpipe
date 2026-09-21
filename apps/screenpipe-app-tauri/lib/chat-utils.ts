@@ -985,7 +985,6 @@ type AppAutocompleteItem = {
   count: number;
   frame_count?: number;
   audio_count?: number;
-  memory_count?: number;
 };
 
 type ChatMentionItem = {
@@ -1112,7 +1111,6 @@ function formatTagAutocompleteDescription(item: AppAutocompleteItem) {
   const parts = [
     item.frame_count ? `${item.frame_count} 个画面` : null,
     item.audio_count ? `${item.audio_count} 段音频` : null,
-    item.memory_count ? `${item.memory_count} 条记忆` : null,
   ].filter((part): part is string => Boolean(part));
 
   if (parts.length > 0) return parts.join("，");

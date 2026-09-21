@@ -149,8 +149,9 @@ pub(crate) struct SearchQuery {
     pagination: PaginationQuery,
     #[serde(default)]
     content_type: SearchContentType,
-    /// `time` (legacy, default) or `relevance` (hybrid RRF fusion over the
-    /// sparse FTS legs + the dense embedding leg; SPEC S3).
+    /// `keyword` (default FTS path), `relevance` (hybrid RRF fusion), or
+    /// legacy `time` (alias of `keyword`). Relevance combines sparse FTS
+    /// legs with the dense embedding leg; SPEC S3.
     #[serde(default)]
     mode: Option<String>,
     /// Result ordering. Defaults to newest-first for existing callers; sync
@@ -220,7 +221,7 @@ pub(crate) struct SearchQuery {
     #[serde(default)]
     machine_id: Option<String>,
     /// Redact PII from text-bearing fields (ocr `text`, audio `transcription`,
-    /// ui `text`, input `text_content`, memory `content`, parsed text/items/actors)
+    /// ui `text`, input `text_content`, parsed text/items/actors)
     /// before returning.
     /// Routed through the attested Tinfoil enclave; adds latency so leave it
     /// off unless the caller will forward these results to an LLM.
@@ -228,9 +229,8 @@ pub(crate) struct SearchQuery {
     filter_pii: bool,
     /// Restrict results to items carrying ALL of these tags. Comma-separated,
     /// e.g. `tags=person:ada,project:atlas`. Tags span one string namespace
-    /// across three stores: screen + audio (junction tags written via
-    /// `POST /tags/:type/:id`) and memories (their JSON `tags`, filtered when
-    /// `content_type=memory`). Input and accessibility have no tags and return
+    /// across screen + audio junction tables (written via
+    /// `POST /tags/:type/:id`). Input and accessibility have no tags and return
     /// nothing when this is set. Omit for no tag filtering.
     #[serde(default, deserialize_with = "from_comma_separated_string_array")]
     tags: Option<Vec<String>>,
@@ -439,11 +439,11 @@ pub struct SearchResponse {
 /// a few namespaces this is plenty of context while staying token-cheap.
 const RELATED_TAGS_LIMIT: u32 = 30;
 
-/// Upper bound on the (auxiliary, opt-in) related-tags query. The memories leg
+/// Upper bound on the (auxiliary, opt-in) related-tags query. The related-tags leg
 /// full-scans (no tag index) and a hot tag fans out to items×tags rows, so on a
 /// pathological store this could run long; past this we drop the `related`
 /// block rather than dragging out the whole search response. Measured cost on a
-/// 200k-frame / 50k-memory DB is ~20ms (cold tag) to ~150ms (hot tag), so 5s is
+/// 200k-frame / 50k-row DB is ~20ms (cold tag) to ~150ms (hot tag), so 5s is
 /// a generous safety net, not a normal-path limit.
 const RELATED_TAGS_TIMEOUT_SECS: u64 = 5;
 /// Standards-compliant delay advertised when the route-wide search admission
@@ -1288,6 +1288,19 @@ pub(crate) async fn search(
     // typed copy of every response.
     let format = parse_format(&query.format)?;
     let fields = parse_fields(&query.fields);
+    if let Some(mode) = query.mode.as_deref() {
+        if !mode.eq_ignore_ascii_case("keyword")
+            && !mode.eq_ignore_ascii_case("time")
+            && !mode.eq_ignore_ascii_case("relevance")
+        {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                JsonResponse(json!({
+                    "error": "mode must be keyword, relevance, or legacy time",
+                })),
+            ));
+        }
+    }
     let cacheable_render = is_passthrough(format, &fields);
 
     let pipe_data_restricted = pipe_perms
@@ -2959,10 +2972,13 @@ mod tests {
 }
 
 use crate::retrieval::embedder::{embed_texts, EmbedderConfig};
-use crate::retrieval::fusion::{rrf_fuse, rank_with_decay, HybridHit, HybridSearchResponse, RankedLeg, DEFAULT_LAMBDA, DEFAULT_TAU_DAYS, RRF_K};
+use crate::retrieval::fusion::{
+    rrf_fuse, rank_with_decay, HybridHit, HybridPagination, HybridSearchResponse, RankedLeg,
+    DEFAULT_LAMBDA, DEFAULT_TAU_DAYS, RRF_K,
+};
 use std::collections::HashMap;
 
-/// Search-mode handler for `/search?mode=relevance`. Gathers ranked
+/// Search-mode handler for `/search/records?mode=relevance`. Gathers ranked
 /// candidates from the sparse FTS legs and the dense KNN leg, fuses them
 /// with RRF + time decay, and returns the top slice. Failure of the dense
 /// leg degrades the response (sparse-only) instead of failing the request.
@@ -3026,12 +3042,12 @@ pub async fn search_relevance(
                 query.frame_name.as_deref(),
                 query.browser_url.as_deref(),
                 query.focused,
-                None,
-                None,
-                None,
-                None,
-                false,
-                &[],
+                query.speaker_name.as_deref(),
+                query.device_name.as_deref(),
+                query.machine_id.as_deref(),
+                query.on_screen,
+                query.input_context_only,
+                &query.tags.clone().unwrap_or_default(),
                 Order::Descending,
             )
             .await
@@ -3101,10 +3117,10 @@ pub async fn search_relevance(
                 query.min_length,
                 query.max_length,
                 query.speaker_ids.clone(),
-                None,
-                None,
-                None,
-                &[],
+                query.speaker_name.as_deref(),
+                query.device_name.as_deref(),
+                query.machine_id.as_deref(),
+                &query.tags.clone().unwrap_or_default(),
                 Order::Descending,
             )
             .await
@@ -3261,8 +3277,8 @@ pub async fn search_relevance(
                     "connection:{}:{}:{}:{}",
                     row.connector, row.namespace, row.object_kind, row.object_id
                 );
-                let object_id = row.object_id.clone();
                 ranked.push(key.clone());
+                let source_pk = key.strip_prefix("connection:").unwrap_or(&key).to_string();
                 let event_at = row
                     .event_at
                     .as_deref()
@@ -3282,11 +3298,11 @@ pub async fn search_relevance(
                     &mut timestamps,
                     key,
                     "connection",
-                    &object_id,
+                    &source_pk.clone(),
                     Some(timestamp.timestamp_millis() as f64 / 1000.0),
                     HybridHit {
                         source_type: "connection".into(),
-                        source_pk: object_id.clone(),
+                        source_pk,
                         score: 0.0,
                         legs: Vec::new(),
                         ts: Some(timestamp.to_rfc3339()),
@@ -3320,6 +3336,9 @@ pub async fn search_relevance(
                         let mut transcript_ranked: Vec<String> = Vec::new();
                         let mut document_ranked: Vec<String> = Vec::new();
                         for hit in hits {
+                            if !dense_hit_matches_query(&hit, query) {
+                                continue;
+                            }
                             let key = format!("{}:{}", hit.source_type, hit.source_pk);
                             match hit.source_type.as_str() {
                                 "transcript" if query.content_type.relevance_audio() => {
@@ -3395,6 +3414,7 @@ pub async fn search_relevance(
         DEFAULT_TAU_DAYS,
     );
 
+    let total = ranked.len() as i64;
     let offset = query.pagination.offset as usize;
     let results: Vec<HybridHit> = ranked
         .into_iter()
@@ -3418,7 +3438,12 @@ pub async fn search_relevance(
         .collect();
 
     let response = HybridSearchResponse {
-        results,
+        data: results,
+        pagination: HybridPagination {
+            limit,
+            offset: query.pagination.offset,
+            total,
+        },
         degraded,
         legs_used,
     };
@@ -3427,6 +3452,60 @@ pub async fn search_relevance(
         axum::Json(serde_json::to_value(response).unwrap_or_default()),
     )
         .into_response())
+}
+
+fn dense_hit_matches_query(
+    hit: &screenpipe_db::DenseHit,
+    query: &crate::routes::search::SearchQuery,
+) -> bool {
+    // Dense chunks do not carry the sparse-only speaker, tag, AX, URL, or
+    // length metadata. Skip them when one of those filters is active rather
+    // than leaking an unfiltered dense hit into a filtered response.
+    if query.speaker_ids.is_some()
+        || query.speaker_name.is_some()
+        || query.tags.as_ref().is_some_and(|tags| !tags.is_empty())
+        || query.frame_name.is_some()
+        || query.browser_url.is_some()
+        || query.focused.is_some()
+        || query.on_screen.is_some()
+        || query.input_context_only
+        || query.min_length.is_some()
+        || query.max_length.is_some()
+    {
+        return false;
+    }
+    if let Some(app_name) = query.app_name.as_deref() {
+        if !hit.app.eq_ignore_ascii_case(app_name) {
+            return false;
+        }
+    }
+    if let Some(window_name) = query.window_name.as_deref() {
+        if !hit.window_name.to_lowercase().contains(&window_name.to_lowercase()) {
+            return false;
+        }
+    }
+    if query.start_time.is_none() && query.end_time.is_none() {
+        return true;
+    }
+    let Some(ts) = hit
+        .ts
+        .as_deref()
+        .and_then(|value| DateTime::parse_from_rfc3339(value).ok())
+        .map(|value| value.with_timezone(&Utc))
+    else {
+        return false;
+    };
+    if let Some(start_time) = query.start_time {
+        if ts < start_time {
+            return false;
+        }
+    }
+    if let Some(end_time) = query.end_time {
+        if ts > end_time {
+            return false;
+        }
+    }
+    true
 }
 
 fn snippet(text: &str) -> String {

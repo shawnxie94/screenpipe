@@ -1008,13 +1008,6 @@ function ClaudePanel({
           <strong>已连接。</strong> 重启 Claude 并询问：“我过去 5 分钟做了什么？”
         </p>
       )}
-      {targets.includes("claude-code") && (
-        <MemorySyncSubsection
-          integrationId="claude-code"
-          defaultPath="~/.claude"
-          targetFilename="CLAUDE.md"
-        />
-      )}
     </div>
   );
 }
@@ -1186,11 +1179,6 @@ function CodexPanel({ onConnected, onDisconnected }: { onConnected?: () => void;
         <summary className="cursor-pointer">手动配置</summary>
         <pre className="mt-2 bg-muted border border-border rounded-lg p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">{manualConfig}</pre>
       </details>
-      <MemorySyncSubsection
-        integrationId="codex"
-        defaultPath="~/.codex"
-        targetFilename="AGENTS.md"
-      />
     </div>
   );
 }
@@ -1252,381 +1240,6 @@ function GrokPanel({ onConnected, onDisconnected }: { onConnected?: () => void; 
         <summary className="cursor-pointer">手动配置</summary>
         <pre className="mt-2 bg-muted border border-border rounded-lg p-3 text-xs font-mono text-foreground overflow-x-auto whitespace-pre-wrap">{manualConfig}</pre>
       </details>
-    </div>
-  );
-}
-
-// Render one `/memories/sync-external` per-destination outcome to a short
-// human string. Shared by every memory-sync subsection (claude code, codex,
-// obsidian) so the snake_case SyncOutcome parsing stays in exactly one place.
-// Rust serializes the SyncOutcome enum with `rename_all = "snake_case"`, so
-// the variant keys are lowercase (`wrote` / `unchanged` / `skipped`).
-function describeSyncOutcome(result: any): string {
-  if (result?.wrote) {
-    const n = result.wrote.entries;
-    return `已写入 ${n} 条记忆`;
-  }
-  if (result?.unchanged) {
-    const n = result.unchanged.entries;
-    return `已是最新 · ${n} 条记忆`;
-  }
-  if (result?.skipped) {
-    return `已跳过 · ${result.skipped.reason}`;
-  }
-  return "已同步";
-}
-
-// Shared subsection used by the merged Claude panel + CodexPanel. Surfaces the
-// memory-sync feature backed by the screenpipe-connect Integrations of
-// the same id ("claude-code", "codex"). Lives next to the MCP install
-// flow so the user finds both surfaces in one card per product.
-//
-// State machine: idle → connecting → connected ⇆ syncing ⇆ idle. The
-// "connected" signal is whether GET /connections/:id returns a non-empty
-// credentials map — connect() always writes the resolved home_path so
-// the backend `Integration::list()`'s `enabled && !credentials.is_empty()`
-// rule sees us as on.
-// Shared connect/test/sync/disconnect lifecycle for a memory-sync destination
-// (claude code, codex, obsidian). Every destination drives the same
-// `/connections/:id` + `/memories/sync-external` flow and the same state
-// machine — only the stored credential shape and presentation differ — so this
-// hook owns the logic and a fix lands in exactly one place. Each consumer keeps
-// its own input state and supplies the credential payload at connect time.
-function useMemorySyncDestination(integrationId: string) {
-  const { toast } = useToast();
-  const [connected, setConnected] = useState<boolean | null>(null);
-  const [status, setStatus] = useState<"idle" | "connecting" | "syncing">("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [lastResult, setLastResult] = useState<string | null>(null);
-  const [lastResultAt, setLastResultAt] = useState<number | null>(null);
-
-  const triggerSyncNow = useCallback(async () => {
-    setStatus("syncing");
-    setError(null);
-    try {
-      const res = await localFetch("/memories/sync-external", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "sync failed");
-
-      // The endpoint returns a list of per-destination outcomes — pick the one
-      // for this integration and render it. Other tiles refresh independently.
-      const me = (data?.results || []).find((r: any) => r.destination_id === integrationId);
-      if (me?.outcome?.ok) {
-        const resultText = describeSyncOutcome(me.outcome.result);
-        setLastResult(resultText);
-        setLastResultAt(Date.now());
-        toast({ title: "记忆同步", description: resultText });
-      } else if (me) {
-        throw new Error(me?.outcome?.error || "sync failed");
-      }
-    } catch (e: any) {
-      const msg = e?.message || "sync failed";
-      setError(msg);
-      toast({ title: "记忆同步失败", description: msg, variant: "destructive" });
-    } finally {
-      setStatus("idle");
-    }
-  }, [integrationId, toast]);
-
-  // Validate the credentials, persist them, then sync immediately so the file
-  // populates before the next scheduler tick. `test` round-trips through the
-  // backend Integration::test() (creates the dir, probes write access), so
-  // permission errors surface here instead of silently in the background.
-  const connect = useCallback(async (credentials: Record<string, string>) => {
-    setStatus("connecting");
-    setError(null);
-    try {
-      const testRes = await localFetch(`/connections/${integrationId}/test`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credentials }),
-      });
-      const testData = await testRes.json();
-      if (!testRes.ok || testData.error) throw new Error(testData.error || "测试失败");
-
-      const saveRes = await localFetch(`/connections/${integrationId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credentials }),
-      });
-      const saveData = await saveRes.json();
-      if (!saveRes.ok || saveData.error) throw new Error(saveData.error || "保存失败");
-
-      setConnected(true);
-      notifyConnectionsUpdated();
-      await triggerSyncNow();
-    } catch (e: any) {
-      setError(e?.message || "连接失败");
-    } finally {
-      setStatus("idle");
-    }
-  }, [integrationId, triggerSyncNow]);
-
-  const disconnect = useCallback(async () => {
-    setError(null);
-    try {
-      const res = await localFetch(`/connections/${integrationId}`, { method: "DELETE" });
-      if (!res.ok && res.status !== 404) throw new Error("断开连接失败");
-      setConnected(false);
-      setLastResult(null);
-      setLastResultAt(null);
-      notifyConnectionsUpdated();
-    } catch (e: any) {
-      setError(e?.message || "断开连接失败");
-    }
-  }, [integrationId]);
-
-  return { connected, setConnected, status, error, setError, lastResult, lastResultAt, triggerSyncNow, connect, disconnect };
-}
-
-function MemorySyncSubsection({
-  integrationId,
-  defaultPath,
-  targetFilename,
-}: {
-  integrationId: "claude-code" | "codex";
-  defaultPath: string;
-  targetFilename: string;
-}) {
-  const [homePath, setHomePath] = useState(defaultPath);
-  const {
-    connected, setConnected, status, error,
-    lastResult, lastResultAt, triggerSyncNow, connect, disconnect,
-  } = useMemorySyncDestination(integrationId);
-
-  useEffect(() => {
-    localFetch(`/connections/${integrationId}`)
-      .then(r => r.json())
-      .then(data => {
-        const saved = data?.credentials?.home_path;
-        if (typeof saved === "string" && saved.length > 0) {
-          setHomePath(saved);
-          setConnected(true);
-        } else {
-          setConnected(false);
-        }
-      })
-      .catch(() => setConnected(false));
-  }, [integrationId, setConnected]);
-
-  const persistedPath = homePath.trim() || defaultPath;
-
-  if (connected === null) {
-    return null; // initial fetch in flight — avoid flicker
-  }
-
-  const assistantName = integrationId === "codex" ? "codex" : "claude code";
-
-  return (
-    <div className="border-t border-border pt-3 mt-3 space-y-2">
-      <div className="space-y-0.5">
-        <p className="text-xs font-medium text-foreground">记忆同步（测试版）</p>
-        <p className="text-xs text-muted-foreground">
-          会将安全的记忆召回指令写入 {targetFilename}，让 {assistantName} 可以通过 screenpipe MCP
-          获取相关记忆。每 5 分钟自动更新。
-        </p>
-      </div>
-
-      {connected ? (
-        <>
-          <div className="p-2 bg-muted border border-border rounded-lg space-y-1">
-            <div className="space-y-0.5">
-              <p className="text-xs text-muted-foreground">文件</p>
-              <p className="text-xs text-foreground font-mono break-all">{persistedPath}/{targetFilename}</p>
-            </div>
-            {lastResult && (
-              <div className="pt-1 border-t border-border space-y-0.5">
-                <p className="text-xs text-muted-foreground">上次同步{lastResultAt && ` · ${formatRelativeTime(lastResultAt)}`}</p>
-                <p className="text-xs text-foreground break-all">{lastResult}</p>
-              </div>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={triggerSyncNow} disabled={status === "syncing"} size="sm" variant="outline" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-              {status === "syncing" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在同步…</>) : (<><Send className="h-3 w-3" />立即同步</>)}
-            </Button>
-            <Button onClick={disconnect} size="sm" variant="ghost" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-              <LogOut className="h-3 w-3" />停止同步
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">主目录（可选）</Label>
-            <Input
-              value={homePath}
-              onChange={(e) => setHomePath(e.target.value)}
-              placeholder={defaultPath}
-              className="h-7 text-xs font-mono"
-              spellCheck={false}
-            />
-          </div>
-          <Button onClick={() => connect({ home_path: persistedPath })} disabled={status === "connecting"} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在启用…</>) : (<><Download className="h-3 w-3" />启用记忆同步</>)}
-          </Button>
-        </>
-      )}
-
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
-}
-
-// Memory-sync subsection shown inside the Obsidian card. Mirrors
-// MemorySyncSubsection (claude code / codex) but targets the dedicated
-// `obsidian-memories` connection — kept separate from the vault-writing
-// `obsidian` connection so toggling memory sync never clobbers the vault a
-// user's pipes write to, and vice-versa. Writes a single screenpipe-owned
-// note `<vault>/<folder>/screenpipe-memories.md`, rewritten end-to-end on
-// each 5-minute scheduler tick.
-const OBSIDIAN_MEMORIES_ID = "obsidian-memories";
-const OBSIDIAN_DEFAULT_FOLDER = "screenpipe";
-
-// Mirror of the backend `sanitize_relative_folder` (obsidian_memories.rs) so the
-// previewed note path matches exactly where the digest will actually be written.
-// Drops empty / "." / ".." components and a leading separator (an absolute or
-// traversing folder is forced vault-relative); falls back to the default when
-// nothing usable remains. Splits on both separators for Windows-style input.
-function sanitizeVaultFolder(folder: string): string {
-  const parts = folder
-    .split(/[\\/]/)
-    .map((p) => p.trim())
-    .filter((p) => p !== "" && p !== "." && p !== "..");
-  return parts.length > 0 ? parts.join("/") : OBSIDIAN_DEFAULT_FOLDER;
-}
-
-function ObsidianMemorySyncSubsection() {
-  const [vaultPath, setVaultPath] = useState("");
-  const [folder, setFolder] = useState(OBSIDIAN_DEFAULT_FOLDER);
-  const {
-    connected, setConnected, status, error, setError,
-    lastResult, lastResultAt, triggerSyncNow, connect, disconnect,
-  } = useMemorySyncDestination(OBSIDIAN_MEMORIES_ID);
-
-  // Load any saved memory-sync config. If none, prefill the vault path from
-  // the user's default vault-writing `obsidian` connection so enabling sync
-  // is one click for the common single-vault case — they stay fully
-  // independent stores (we only read it as a suggestion).
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const r = await localFetch(`/connections/${OBSIDIAN_MEMORIES_ID}`);
-        const data = await r.json();
-        const savedVault = data?.credentials?.vault_path;
-        if (typeof savedVault === "string" && savedVault.length > 0) {
-          if (cancelled) return;
-          setVaultPath(savedVault);
-          const savedFolder = data?.credentials?.memories_folder;
-          if (typeof savedFolder === "string" && savedFolder.trim().length > 0) {
-            setFolder(savedFolder);
-          }
-          setConnected(true);
-          return;
-        }
-      } catch { /* fall through to suggestion */ }
-      try {
-        const r = await localFetch("/connections/obsidian");
-        const data = await r.json();
-        const suggested = data?.credentials?.vault_path;
-        if (!cancelled && typeof suggested === "string" && suggested.length > 0) {
-          setVaultPath(suggested);
-        }
-      } catch { /* no default vault — user types one in */ }
-      if (!cancelled) setConnected(false);
-    })();
-    return () => { cancelled = true; };
-  }, [setConnected]);
-
-  const folderClean = sanitizeVaultFolder(folder.trim() || OBSIDIAN_DEFAULT_FOLDER);
-  const notePath = `${vaultPath.replace(/[\\/]+$/, "")}/${folderClean}/screenpipe-memories.md`;
-
-  const handleEnable = useCallback(() => {
-    const vault = vaultPath.trim();
-    if (!vault) { setError("请先选择知识库文件夹"); return; }
-    // Backend re-sanitizes the folder authoritatively; send the raw value.
-    return connect({ vault_path: vault, memories_folder: folder.trim() || OBSIDIAN_DEFAULT_FOLDER });
-  }, [vaultPath, folder, connect, setError]);
-
-  if (connected === null) {
-    return null; // initial fetch in flight — avoid flicker
-  }
-
-  return (
-    <div className="border-t border-border pt-3 mt-1 space-y-2">
-      <div className="space-y-0.5">
-        <p className="text-xs font-medium text-foreground">记忆同步（测试版）</p>
-        <p className="text-xs text-muted-foreground">
-          将你的 screenpipe 记忆写入此知识库中的笔记，以便在图谱和搜索中查看。每 5 分钟自动更新。
-        </p>
-      </div>
-
-      {connected ? (
-        <>
-          <div className="p-2 bg-muted border border-border rounded-lg space-y-1">
-            <div className="space-y-0.5">
-              <p className="text-xs text-muted-foreground">笔记</p>
-              <p className="text-xs text-foreground font-mono break-all">{notePath}</p>
-            </div>
-            {lastResult && (
-              <div className="pt-1 border-t border-border space-y-0.5">
-                <p className="text-xs text-muted-foreground">上次同步{lastResultAt && ` · ${formatRelativeTime(lastResultAt)}`}</p>
-                <p className="text-xs text-foreground break-all">{lastResult}</p>
-              </div>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={triggerSyncNow} disabled={status === "syncing"} size="sm" variant="outline" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-              {status === "syncing" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在同步…</>) : (<><Send className="h-3 w-3" />立即同步</>)}
-            </Button>
-            <Button onClick={disconnect} size="sm" variant="ghost" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-              <LogOut className="h-3 w-3" />停止同步
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">知识库文件夹</Label>
-            <div className="relative">
-              <Input
-                value={vaultPath}
-                onChange={(e) => setVaultPath(e.target.value)}
-                placeholder={platform() === "windows" ? "C:\\Users\\你\\Documents\\我的知识库" : "/Users/你/Documents/我的知识库"}
-                className="h-7 text-xs font-mono pr-8"
-                spellCheck={false}
-              />
-              <button
-                type="button"
-                title="浏览知识库文件夹"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                onClick={async () => {
-                  const selected = await openDialog({ directory: true, multiple: false, title: "选择 Obsidian 知识库文件夹" });
-                  if (typeof selected === "string") setVaultPath(selected);
-                }}
-              >
-                <FolderOpen className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">知识库内的文件夹（可选）</Label>
-            <Input
-              value={folder}
-              onChange={(e) => setFolder(e.target.value)}
-              placeholder={OBSIDIAN_DEFAULT_FOLDER}
-              className="h-7 text-xs font-mono"
-              spellCheck={false}
-            />
-          </div>
-          <Button onClick={handleEnable} disabled={status === "connecting" || !vaultPath.trim()} size="sm" className="gap-1.5 h-7 text-xs normal-case font-sans tracking-normal">
-            {status === "connecting" ? (<><Loader2 className="h-3 w-3 animate-spin" />正在启用…</>) : (<><Download className="h-3 w-3" />启用记忆同步</>)}
-          </Button>
-        </>
-      )}
-
-      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
@@ -2472,7 +2085,6 @@ function ObsidianPanel({ onConnected, onDisconnected }: { onConnected?: () => vo
 
       {error && <p className="text-xs text-destructive">{error}</p>}
 
-      <ObsidianMemorySyncSubsection />
     </div>
   );
 }
@@ -3380,8 +2992,6 @@ export function ConnectionsSection({
     ];
     // Merge API tiles, skipping duplicates already in hardcoded.
     // owned-default is hidden from settings — the agent drives it via the
-    // embedded sidebar, no user-facing controls. obsidian-memories is hidden
-    // too: it's a memory-sync destination surfaced as a subsection inside the
     // Obsidian card, not a standalone connection tile.
     // openclaw + hermes are hidden as standalone tiles too: both are surfaced
     // inside the unified "远程代理" card (RemoteAgentCard), which owns their
@@ -3390,11 +3000,10 @@ export function ConnectionsSection({
     // confused users. The backend integrations stay registered so pipes calling
     // /connections/{openclaw,hermes} keep working.
     const REMOTE_AGENT_TILE_IDS = new Set(["openclaw", "hermes"]);
-    // Claude Code's backend integration powers memory sync inside the merged
     // Claude panel; it is not a second user-facing connection tile.
     const hardcodedIds = new Set([...hardcoded.map(h => h.id), "claude-code"]);
     const apiTiles: ConnectionTile[] = integrations
-      .filter(i => !hardcodedIds.has(i.id) && i.id !== "owned-default" && i.id !== "obsidian-memories" && !REMOTE_AGENT_TILE_IDS.has(i.id))
+      .filter(i => !hardcodedIds.has(i.id) && i.id !== "owned-default" && !REMOTE_AGENT_TILE_IDS.has(i.id))
       .map(i => ({
         id: i.id,
         name: i.name,
@@ -3409,7 +3018,6 @@ export function ConnectionsSection({
     // Merge backend API state for hardcoded tiles using OR so the file-based
     // state (e.g. codexInstalled from ~/.codex/config.toml) is never
     // overwritten to false by a backend entry that tracks a separate concern
-    // (e.g. the codex memory-sync integration returning connected: false).
     for (const h of hardcoded) {
       const api = integrations.find(i => i.id === h.id);
       const apiConnected = api

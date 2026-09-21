@@ -177,7 +177,7 @@ describe("tool allowlist", () => {
   });
 
   it("a screenpipe tool outside the allowlist still kills the run", () => {
-    expect(isAllowedMeetingChatTool("mcp__screenpipe__update-memory")).toBe(false);
+    expect(isAllowedMeetingChatTool("mcp__screenpipe__unknown")).toBe(false);
     expect(isAllowedMeetingChatTool("mcp__screenpipe-tools__save_artifact")).toBe(
       false,
     );

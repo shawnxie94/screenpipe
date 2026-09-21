@@ -319,7 +319,6 @@
         "src/routes/live_views.rs",
         "src/routes/meeting_summary_status.rs",
         "src/routes/meetings.rs",
-        "src/routes/memories.rs",
         "src/routes/pipe_store.rs",
         "src/routes/request_origin.rs",
         "src/routes/response_format.rs",

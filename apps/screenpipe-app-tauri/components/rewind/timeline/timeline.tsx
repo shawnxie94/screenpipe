@@ -4,11 +4,11 @@
 import { StreamTimeSeriesResponse, TimeRange } from "@/components/rewind/timeline";
 import { useTimelineSelection } from "@/lib/hooks/use-timeline-selection";
 import { getStore, type ChatConversation } from "@/lib/hooks/use-settings";
-import { isAfter, subDays, addDays, startOfDay, format, formatDistanceToNow } from "date-fns";
+import { isAfter, subDays, addDays, startOfDay, format } from "date-fns";
 import { motion } from "framer-motion";
 import { ZoomIn, ZoomOut, Mic, Monitor, AppWindow, Globe, Hash, RotateCcw, Phone, PanelBottomClose, PanelBottomOpen, Clock } from "lucide-react";
 import type { Meeting } from "@/lib/hooks/use-meetings";
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { commands } from "@/lib/utils/tauri";
@@ -406,11 +406,6 @@ export const TimelineSlider = ({
 	isWheelNavigating = false,
 }: TimelineSliderProps) => {
 	const containerRef = useRef<HTMLDivElement>(null);
-	// The inner flex content (motion.div) that lays out frame bars and is the
-	// positioning context for the memory-marker layer. Memory diamonds are placed
-	// by measuring real frame DOM positions relative to this node (the frame row
-	// flows right-to-left under dir="rtl", so offsets can't be recomputed by index).
-	const timelineContentRef = useRef<HTMLDivElement>(null);
 	const observerTargetRef = useRef<HTMLDivElement>(null);
 	const forwardObserverTargetRef = useRef<HTMLDivElement>(null);
 	const lastFetchRef = useRef<Date | null>(null);
@@ -457,15 +452,6 @@ export const TimelineSlider = ({
 			});
 	}, []);
 
-	// Memory markers — diamonds above frame bars
-	const [memories, setMemories] = useState<{ id: number; content: string; tags: string[]; created_at: string }[]>([]);
-	const [hoveredMemoryId, setHoveredMemoryId] = useState<number | null>(null);
-	const [hoveredMemoryRect, setHoveredMemoryRect] = useState<{ x: number; y: number } | null>(null);
-	const memoriesFetchedRangeRef = useRef<string>("");
-	// Measured left-px (relative to the timeline content box) for each memory's
-	// diamond marker, keyed by memory id. Computed in a layout effect from real
-	// frame positions so markers land on the correct frame regardless of RTL flow.
-	const [memoryPositions, setMemoryPositions] = useState<Record<number, number>>({});
 
 	// Chat history overlay — show PipeAI icon on timeline where chats occurred
 	const [chatConversations, setChatConversations] = useState<ChatConversation[]>([]);
@@ -642,28 +628,6 @@ export const TimelineSlider = ({
 		}
 		if (newIds.length) loadTagsForFrames(newIds);
 	}, [visibleFrames, loadTagsForFrames]);
-
-	// Fetch memories for the visible time range
-	useEffect(() => {
-		if (!visibleFrames || visibleFrames.length === 0) return;
-		const firstTs = visibleFrames[visibleFrames.length - 1]?.timestamp;
-		const lastTs = visibleFrames[0]?.timestamp;
-		if (!firstTs || !lastTs) return;
-
-		const rangeKey = `${firstTs.slice(0, 13)}|${lastTs.slice(0, 13)}`;
-		if (memoriesFetchedRangeRef.current === rangeKey) return;
-		memoriesFetchedRangeRef.current = rangeKey;
-
-		const params = new URLSearchParams({
-			start_time: firstTs,
-			end_time: lastTs,
-			limit: "50",
-		});
-		localFetch(`/memories?${params}`)
-			.then((r) => (r.ok ? r.json() : { data: [] }))
-			.then((res) => setMemories(res.data || []))
-			.catch(() => {});
-	}, [visibleFrames]);
 
 	// Dynamically compute app names from the current viewport, sorted by frequency
 	const viewportAppNames = useMemo(() => {
@@ -1111,70 +1075,6 @@ export const TimelineSlider = ({
 		return group.frames.length * (frameWidth + frameMargin * 2);
 	}, [frameWidth, frameMargin]);
 
-	// Position memory diamonds by measuring the real frame DOM nodes.
-	// The frame row flows right-to-left (dir="rtl") and is virtualized, so a
-	// frame's pixel offset can't be derived from its index — we read each
-	// rendered frame's center relative to the content box and snap every memory
-	// to its nearest-in-time frame. Runs in a layout effect (pre-paint) so the
-	// markers never flash at a stale spot. Re-measures whenever the laid-out
-	// frames (appGroups), sizing, or the memory set changes.
-	useLayoutEffect(() => {
-		const container = timelineContentRef.current;
-		const clearIfNeeded = () =>
-			setMemoryPositions((prev) => (Object.keys(prev).length ? {} : prev));
-		if (!container || memories.length === 0) {
-			clearIfNeeded();
-			return;
-		}
-		const frameEls = container.querySelectorAll<HTMLElement>("[data-timestamp]");
-		if (frameEls.length === 0) {
-			clearIfNeeded();
-			return;
-		}
-		const containerLeft = container.getBoundingClientRect().left;
-		const frameCenters: { time: number; left: number }[] = [];
-		frameEls.forEach((el) => {
-			const ts = el.getAttribute("data-timestamp");
-			if (!ts) return;
-			const time = new Date(ts).getTime();
-			if (Number.isNaN(time)) return;
-			const r = el.getBoundingClientRect();
-			frameCenters.push({ time, left: r.left + r.width / 2 - containerLeft });
-		});
-		if (frameCenters.length === 0) {
-			clearIfNeeded();
-			return;
-		}
-		const next: Record<number, number> = {};
-		for (const mem of memories) {
-			const memTime = new Date(mem.created_at).getTime();
-			if (Number.isNaN(memTime)) continue;
-			let bestLeft = frameCenters[0].left;
-			let bestDist = Infinity;
-			for (const fc of frameCenters) {
-				const dist = Math.abs(fc.time - memTime);
-				if (dist < bestDist) {
-					bestDist = dist;
-					bestLeft = fc.left;
-				}
-			}
-			next[mem.id] = bestLeft;
-		}
-		// Skip the state update (and the extra render it triggers each scroll
-		// tick) when nothing moved meaningfully.
-		setMemoryPositions((prev) => {
-			const prevKeys = Object.keys(prev);
-			const nextKeys = Object.keys(next);
-			if (
-				prevKeys.length === nextKeys.length &&
-				nextKeys.every((k) => Math.abs((prev[+k] ?? Number.NaN) - next[+k]) < 0.5)
-			) {
-				return prev;
-			}
-			return next;
-		});
-	}, [appGroups, frameWidth, frameMargin, memories]);
-
 	return (
 		<div className="relative w-full" dir="rtl">
 			{/* Filter icon column + inline expand (design E) */}
@@ -1558,75 +1458,10 @@ export const TimelineSlider = ({
 				}}
 			>
 				<motion.div
-					ref={timelineContentRef}
 					className="whitespace-nowrap flex flex-nowrap w-max justify-center px-[50vw] h-24 sticky right-0 scrollbar-hide relative"
 					onMouseUp={handleDragEnd}
 					onMouseLeave={handleDragEnd}
 				>
-					{/* Memory markers — diamonds above frame bars. Positions are measured
-					    from real frame DOM nodes in a layout effect (memoryPositions),
-					    so each diamond sits on its nearest-in-time frame even though the
-					    frame row flows right-to-left. */}
-					{memories.length > 0 && (
-						<div className="absolute top-0 left-0 right-0 h-5 pointer-events-auto" style={{ direction: "ltr", zIndex: 40 }}>
-							{memories.map((mem) => {
-								const left = memoryPositions[mem.id];
-								if (left === undefined) return null;
-								return (
-									<div
-										key={mem.id}
-										className="absolute pointer-events-auto cursor-default"
-										style={{ left: `${left}px`, top: "2px", transform: "translateX(-50%)" }}
-										onMouseEnter={(e) => {
-											const rect = e.currentTarget.getBoundingClientRect();
-											setHoveredMemoryId(mem.id);
-											setHoveredMemoryRect({ x: rect.left + rect.width / 2, y: rect.top - 8 });
-										}}
-										onMouseLeave={() => {
-											setHoveredMemoryId(null);
-											setHoveredMemoryRect(null);
-										}}
-									>
-										<div
-											className="w-2 h-2 bg-foreground/50 rotate-45 hover:bg-foreground hover:scale-150 transition-all duration-150"
-											title={mem.content.slice(0, 60)}
-										/>
-									</div>
-								);
-							})}
-						</div>
-					)}
-
-					{/* Memory tooltip portal */}
-					{hoveredMemoryId !== null && hoveredMemoryRect && createPortal(
-						<div
-							className="fixed z-[9999] max-w-[240px] bg-popover border border-border rounded-lg px-3 py-2 text-xs shadow-2xl pointer-events-none"
-							style={{
-								left: `${hoveredMemoryRect.x}px`,
-								top: `${hoveredMemoryRect.y}px`,
-								transform: "translate(-50%, -100%)",
-							}}
-						>
-							{(() => {
-								const mem = memories.find((m) => m.id === hoveredMemoryId);
-								if (!mem) return null;
-								const truncated = mem.content.length > 120 ? mem.content.slice(0, 120) + "…" : mem.content;
-								const usefulTags = mem.tags.filter((t) => !/^\d{4}-\d{2}-\d{2}/.test(t));
-								return (
-									<>
-										<p className="text-foreground mb-1 line-clamp-3">{truncated}</p>
-										<div className="flex items-center gap-1.5 text-muted-foreground flex-wrap">
-											<span>{formatDistanceToNow(new Date(mem.created_at), { addSuffix: true })}</span>
-											{usefulTags.slice(0, 3).map((t) => (
-												<span key={t} className="px-1 py-0.5 bg-foreground/10 rounded text-[9px]">{t}</span>
-											))}
-										</div>
-									</>
-								);
-							})()}
-						</div>,
-						document.body
-					)}
 
 					<div ref={forwardObserverTargetRef} className="h-full w-1" />
 					{appGroups.map((group, groupIndex) => {

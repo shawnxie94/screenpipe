@@ -1424,7 +1424,7 @@ export function ChatSidebar({
   const handleSelect = async (id: string) => {
     setOpenConversationMenuId(null);
     // No early return for id === currentId. Two reasons:
-    //   1. The user may be on a non-home section (Pipes/Memories/...);
+    //   1. The user may be on a non-home app section;
     //      currentId is cleared in that case, but even if it weren't,
     //      we want the click to navigate back to home.
     //   2. The click is the user's "show me this chat" intent — let

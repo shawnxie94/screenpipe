@@ -158,7 +158,7 @@ function hasContentTypeRestrictions(): boolean {
 
 function getAllowedContentTypes(): string[] {
   if (!PERMS) return [];
-  const all = ["ocr", "audio", "input", "accessibility", "memory", "parsed"];
+  const all = ["ocr", "audio", "input", "accessibility", "parsed"];
   return all.filter((ct) => isContentTypeAllowed(ct));
 }
 

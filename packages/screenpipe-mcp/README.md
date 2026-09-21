@@ -1,6 +1,6 @@
 # screenpipe MCP 服务
 
-这个包把本机运行的 screenpipe 暴露为 MCP 服务，让兼容 MCP 的 AI 工具可以查询个人屏幕历史、音频转写、活动记录和记忆。它是本地知识库的访问适配层，不负责托管数据，也不直接打开 SQLite 文件。
+这个包把本机运行的 screenpipe 暴露为 MCP 服务，让兼容 MCP 的 AI 工具可以查询个人屏幕历史、音频转写和活动记录。它是本地知识库的访问适配层，不负责托管数据，也不直接打开 SQLite 文件。
 
 ## 前置条件
 
@@ -42,12 +42,11 @@ HTTP 服务默认绑定回环地址，不应为了远程访问而把个人知识
 
 ## 可用工具
 
-- `search-content`：查询屏幕文本、Accessibility、OCR、音频转写和输入事件。
+- `search-content`：统一搜索入口。使用 `q` 和结构化过滤参数；`mode=keyword`（默认，FTS + 时间排序）或 `mode=relevance`（混合相关度检索）。历史 `time` 值仍兼容。
 - `activity-summary`：获取一段时间内的活动概览、应用分布和辅助上下文。
 - `list-meetings` / `get-meeting`：查看会议记录和转写。
 - `search-elements` / `get-frame-elements` / `frame-context`：查询结构化界面元素和指定帧上下文。
-- `keyword-search`：对 OCR 与音频内容执行快速全文检索。
-- `update-memory`：创建、修改和删除个人事实、偏好与决策记忆。
+- `keyword-search`：旧版快速全文检索兼容工具；新调用优先使用 `search-content(mode=keyword)`，以获得统一返回结构和过滤能力。
 - `add-tags`：为帧或音频记录添加标签。
 - `health-check`：检查本地采集服务和数据新鲜度。
 - `list-audio-devices` / `list-monitors`：查看可用采集设备。
@@ -55,7 +54,7 @@ HTTP 服务默认绑定回环地址，不应为了远程访问而把个人知识
 - `list-pipes` / `create-pipe` / `run-pipe` / `pipe-logs`：管理个人 Pipes。
 - `export-video`：按时间范围导出本地屏幕记录。
 
-工具的实际参数和返回结构以 `src/index.ts` 与本地引擎 API 为准。
+工具的实际参数和返回结构以 `src/index.ts` 与本地引擎 API 为准。搜索 HTTP API 的规范入口是 `GET /search/records?q=...&mode=keyword|relevance`；`query` 与 `/search` 仅为兼容旧调用保留。
 
 ## 示例问题
 
@@ -63,7 +62,6 @@ HTTP 服务默认绑定回环地址，不应为了远程访问而把个人知识
 - “总结过去一小时的会议转写。”
 - “我上周对这个项目做过哪些决定？”
 - “检查最近的本地采集是否正常。”
-- “把这条信息保存为我的个人记忆。”
 
 ## 数据边界
 

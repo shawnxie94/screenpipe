@@ -4,7 +4,7 @@
 
 // Live retrieval eval (SPEC unified-hybrid-retrieval S0): drives a running
 // engine's /search endpoint with a golden query set and prints recall/MRR
-// for mode=time (baseline) vs mode=relevance (hybrid). Reads expectations as
+// for mode=keyword (baseline) vs mode=relevance (hybrid). Reads expectations as
 // keyword-contains selectors over the returned text, so it works against
 // real data without labeled ids.
 //

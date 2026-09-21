@@ -74,28 +74,26 @@ describe("global chat mentions", () => {
     const suggestions = buildTagMentionSuggestions(
       [
         { name: "firefox", count: 833, frame_count: 833 },
-        { name: "coding", count: 140, frame_count: 138, memory_count: 2 },
+        { name: "coding", count: 140, frame_count: 138 },
       ],
       10,
     );
 
     expect(suggestions).toEqual([
       { tag: "#firefox", description: "833 个画面", category: "tag" },
-      { tag: "#coding", description: "138 个画面，2 条记忆", category: "tag" },
+      { tag: "#coding", description: "138 个画面", category: "tag" },
     ]);
   });
 
-  it("builds tag suggestions from memory and audio counts", () => {
+  it("builds tag suggestions from audio counts", () => {
     const suggestions = buildTagMentionSuggestions(
       [
-        { name: "person:louis", count: 3, memory_count: 3 },
         { name: "call", count: 2, audio_count: 2 },
       ],
       10,
     );
 
     expect(suggestions).toEqual([
-      { tag: "#person:louis", description: "3 条记忆", category: "tag" },
       { tag: "#call", description: "2 段音频", category: "tag" },
     ]);
   });
@@ -107,8 +105,8 @@ describe("global chat mentions", () => {
     ];
     const tagMentionSuggestions = buildTagMentionSuggestions(
       [
-        { name: "2026-06-01", count: 5, memory_count: 5 },
-        { name: "messages", count: 4, memory_count: 4 },
+        { name: "2026-06-01", count: 5 },
+        { name: "messages", count: 4 }
       ],
       10,
     );

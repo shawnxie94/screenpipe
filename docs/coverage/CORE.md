@@ -417,7 +417,6 @@ bun run coverage:core -- --llvm-cov-summary ../../docs/coverage/core-llvm-cov-su
 | engine-api-routes | screenpipe-engine | src/routes/live_views.rs | source | 1 | 0 | 1 |
 | engine-api-routes | screenpipe-engine | src/routes/meeting_summary_status.rs | source | 10 | 0 | 10 |
 | engine-api-routes | screenpipe-engine | src/routes/meetings.rs | source | 7 | 0 | 7 |
-| engine-api-routes | screenpipe-engine | src/routes/memories.rs | source | 5 | 0 | 5 |
 | engine-api-routes | screenpipe-engine | src/routes/pipe_store.rs | source | 1 | 0 | 1 |
 | engine-api-routes | screenpipe-engine | src/routes/request_origin.rs | source | 1 | 0 | 1 |
 | engine-api-routes | screenpipe-engine | src/routes/response_format.rs | source | 6 | 0 | 6 |

@@ -665,7 +665,7 @@ mod tests {
             .is_empty());
 
         // Store isolation: an anchor present ONLY in audio still finds its
-        // audio-side co-tags and nothing from unrelated frames/memories.
+        // audio-side co-tags and nothing from unrelated frames.
         let ac = db.insert_audio_chunk("a.mp4", None).await.unwrap();
         db.add_tags(
             ac,

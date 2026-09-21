@@ -33,7 +33,6 @@ function summaryPayload() {
     ],
     audio_summary: { segment_count: 0, speakers: [], top_transcriptions: [] },
     key_texts: [],
-    memories: [],
     snippets: [],
   };
 }

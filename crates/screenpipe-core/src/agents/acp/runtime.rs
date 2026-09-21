@@ -48,7 +48,7 @@ const PROCESS_GUARD_ARG: &str = "--screenpipe-acp-process-guard";
 pub const CLOUD_API_KEY_ENV: &str = "SCREENPIPE_API_KEY";
 
 /// The latest published core screenpipe MCP server (activity-summary,
-/// search-content, update-memory). `pi::prewarm_screenpipe_mcp` seeds Bun's
+/// search-content). `pi::prewarm_screenpipe_mcp` seeds Bun's
 /// shared cache so normal launches do not pay the cold-install cost.
 pub const SCREENPIPE_MCP_PKG: &str = "screenpipe-mcp@latest";
 
@@ -5302,10 +5302,6 @@ mod tests {
 
         // A screenpipe tool outside the list, another MCP server, a native step,
         // and a title-less call are all refused.
-        assert!(!scoped_tool_allowed(
-            &allowlist,
-            Some("mcp__screenpipe__update-memory")
-        ));
         assert!(!scoped_tool_allowed(
             &allowlist,
             Some("mcp__notion__search")

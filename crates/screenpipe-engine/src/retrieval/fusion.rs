@@ -8,11 +8,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::retrieval::embedder::{embed_texts, EmbedderConfig};
-use crate::AppState;
-use chrono::Utc;
-use screenpipe_db::{ContentType, Order, SearchResult};
-
 /// RRF smoothing constant. Rank-only fusion needs no score calibration
 /// between BM25 and cosine (SPEC decision: RRF over linear weighting).
 pub const RRF_K: f32 = 60.0;
@@ -91,13 +86,14 @@ pub fn rank_with_decay(
     ranked
 }
 
-/// Sorting mode for /search. `Time` is the legacy behavior and the default;
-/// `Relevance` opts into hybrid fusion.
+/// Public sorting mode for `/search/records`. `Keyword` is the default FTS
+/// path; `time` remains accepted as a wire-compatible legacy alias.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchMode {
     #[default]
-    Time,
+    #[serde(alias = "time")]
+    Keyword,
     Relevance,
 }
 
@@ -122,11 +118,20 @@ pub struct HybridHit {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HybridSearchResponse {
-    pub results: Vec<HybridHit>,
+    /// Canonical `/search/records` response field shared by APP and agent tools.
+    pub data: Vec<HybridHit>,
+    pub pagination: HybridPagination,
     /// True when the dense leg could not run (provider unconfigured or
     /// failed) — the response then reflects sparse legs only.
     pub degraded: bool,
     pub legs_used: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HybridPagination {
+    pub limit: u32,
+    pub offset: u32,
+    pub total: i64,
 }
 
 #[cfg(test)]
@@ -144,6 +149,22 @@ mod tests {
         assert_eq!(top.0, "ocr:7");
         assert_eq!(top.2, vec!["ocr", "transcript"]);
         assert!(top.1 > fused[1].1);
+    }
+
+    #[test]
+    fn keyword_mode_accepts_legacy_time_alias() {
+        assert_eq!(
+            serde_json::from_str::<SearchMode>("\"keyword\"").unwrap(),
+            SearchMode::Keyword
+        );
+        assert_eq!(
+            serde_json::from_str::<SearchMode>("\"time\"").unwrap(),
+            SearchMode::Keyword
+        );
+        assert_eq!(
+            serde_json::from_str::<SearchMode>("\"relevance\"").unwrap(),
+            SearchMode::Relevance
+        );
     }
 
     #[test]

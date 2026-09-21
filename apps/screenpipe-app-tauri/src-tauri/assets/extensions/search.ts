@@ -6,9 +6,10 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 // The single unified query tool for chat (SPEC
 // sqlite://artifact/spec/unified-hybrid-retrieval, S4): one tool, one query
-// surface, every collected information type. Internally it hits /search with
-// mode=relevance (sparse FTS + dense KNN fused by RRF) and degrades to the
-// legacy time-ordered search when the hybrid path is unavailable.
+// surface, every collected information type. Internally it hits /search/records
+// with mode=keyword by default (FTS + chronological ordering). Callers can opt
+// into mode=relevance (sparse FTS + dense KNN fused by RRF), which degrades to
+// keyword/chronological search when the hybrid path is unavailable.
 
 const API_BASE =
   process.env.SCREENPIPE_LOCAL_API_URL ||
@@ -71,35 +72,41 @@ export function parseOperators(
 
 export function buildSearchUrl(params: {
   query: string;
+  content_type?: string;
+  mode?: "keyword" | "relevance";
   limit?: number;
   offset?: number;
+  start_time?: string;
+  end_time?: string;
+  app_name?: string;
+  window_name?: string;
 }): string {
   const parsed = parseOperators(params.query);
-  // /search is the keyword-only endpoint (`query=` param); the full
-  // SearchQuery surface — q, content_type, mode — lives at /search/records.
+  // `/search/records` is the canonical surface: q, content_type, mode,
+  // structured filters, and the shared {data, pagination} response.
   const url = new URL(`${API_BASE}/search/records`);
   if (parsed.content) url.searchParams.set("q", parsed.content);
-  url.searchParams.set("mode", "relevance");
+  url.searchParams.set("mode", params.mode ?? "keyword");
   url.searchParams.set(
     "limit",
     String(Math.min(Math.max(params.limit ?? 8, 1), 50)),
   );
   url.searchParams.set("offset", String(Math.max(params.offset ?? 0, 0)));
-  if (parsed.contentType) {
-    const type = parsed.contentType.toLowerCase();
-    if (
-      ["ocr", "audio", "all", "accessibility", "document", "output"].includes(type)
-    ) {
-      url.searchParams.set("content_type", type === "document" ? "all" : type);
-    }
+  const type = (params.content_type ?? parsed.contentType)?.toLowerCase();
+  if (type && ["ocr", "audio", "all", "input", "accessibility", "parsed", "connection"].includes(type)) {
+    url.searchParams.set("content_type", type);
   }
-  if (parsed.app) url.searchParams.set("app_name", parsed.app);
-  if (parsed.startDate) {
-    const asDate = /^\d{4}-\d{2}-\d{2}$/.test(parsed.startDate)
-      ? `${parsed.startDate}T00:00:00Z`
-      : parsed.startDate;
+  const app = params.app_name ?? parsed.app;
+  if (app) url.searchParams.set("app_name", app);
+  if (params.window_name) url.searchParams.set("window_name", params.window_name);
+  const start = params.start_time ?? parsed.startDate;
+  if (start) {
+    const asDate = /^\d{4}-\d{2}-\d{2}$/.test(start)
+      ? `${start}T00:00:00Z`
+      : start;
     url.searchParams.set("start_time", asDate);
   }
+  if (params.end_time) url.searchParams.set("end_time", params.end_time);
   return url.toString();
 }
 
@@ -121,9 +128,11 @@ export function truncate(text: string, max = MAX_RESULT_TEXT_CHARS): string {
 }
 
 export function formatHybridResults(payload: any): string {
-  const results: HybridHit[] = Array.isArray(payload?.results)
-    ? payload.results
-    : [];
+  const results: HybridHit[] = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload?.results)
+      ? payload.results
+      : [];
   if (results.length === 0) {
     return payload?.degraded
       ? "No results (hybrid search degraded; dense leg unavailable)."
@@ -188,51 +197,74 @@ export default function (pi: ExtensionAPI) {
       "Search everything screenpipe collected: screen text (OCR/accessibility), " +
       "meeting and audio transcripts, imported documents, AI outputs. Hybrid " +
       "retrieval: keyword FTS + semantic vector recall fused by relevance, so " +
-      "paraphrases and Chinese queries work. Inline operators: type:<ocr|audio|all>, " +
+      "paraphrases and Chinese queries work. Prefer structured filters; legacy inline operators remain supported: type:<ocr|audio|all>, " +
       "app:<name>, date:<YYYY-MM-DD>. Returns ranked hits with source references.",
     parameters: {
       type: "object",
       properties: {
-        query: {
+        q: {
           type: "string",
           description:
             "The search query. Natural language or keywords, Chinese or English. " +
             "Optional operators: type:audio, app:Chrome, date:2026-09-01.",
         },
+        content_type: {
+          type: "string",
+          enum: ["all", "ocr", "audio", "input", "accessibility", "parsed", "connection"],
+          description: "Optional content scope.",
+        },
+        mode: {
+          type: "string",
+          enum: ["keyword", "relevance"],
+          description: "Search mode (default keyword). keyword uses FTS with chronological ordering.",
+        },
+        offset: { type: "number", description: "Result offset (default 0)." },
+        start_time: { type: "string", description: "Inclusive RFC3339 start time." },
+        end_time: { type: "string", description: "Inclusive RFC3339 end time." },
+        app_name: { type: "string", description: "Filter by application/device." },
+        window_name: { type: "string", description: "Filter by window title." },
         limit: {
           type: "number",
           description: "Max results (1-50, default 8).",
         },
       },
-      required: ["query"],
+      required: ["q"],
     } as any,
     execute: async (
       _toolCallId: string,
       params: Record<string, unknown>,
     ): Promise<string> => {
-      const query = String(params.query ?? "").trim();
+      const query = String(params.q ?? params.query ?? "").trim();
       if (!query) return "Provide a non-empty query.";
       const limit = Number(params.limit ?? 8);
-      const url = buildSearchUrl({ query, limit });
+      const searchParams = {
+        query,
+        content_type: typeof params.content_type === "string" ? params.content_type : undefined,
+        mode: params.mode === "relevance" ? "relevance" : "keyword",
+        limit,
+        offset: Number(params.offset ?? 0),
+        start_time: typeof params.start_time === "string" ? params.start_time : undefined,
+        end_time: typeof params.end_time === "string" ? params.end_time : undefined,
+        app_name: typeof params.app_name === "string" ? params.app_name : undefined,
+        window_name: typeof params.window_name === "string" ? params.window_name : undefined,
+      } as const;
+      const url = buildSearchUrl(searchParams);
       let payload: any;
       try {
         payload = await fetchJson(url);
         if (!payload || typeof payload !== "object") {
           throw new Error("unexpected payload");
         }
-        // Hybrid response carries `results`; anything else is legacy.
-        if (!Array.isArray(payload.results)) {
-          return formatLegacyResults(payload);
-        }
-        return formatHybridResults(payload);
+        // Canonical `/search/records` responses carry `data` for both modes.
+        if (searchParams.mode === "keyword") return formatLegacyResults(payload);
+        if (Array.isArray(payload.data)) return formatHybridResults(payload);
+        return formatLegacyResults(payload);
       } catch (hybridError) {
-        // Degrade to the legacy time-ordered search rather than failing.
+        // Degrade to the keyword/chronological search rather than failing.
         try {
-          const legacy = new URL(`${API_BASE}/search/records`);
-          const parsed = parseOperators(query);
-          if (parsed.content) legacy.searchParams.set("q", parsed.content);
-          legacy.searchParams.set("limit", "8");
-          const fallback = await fetchJson(legacy.toString());
+          const fallback = await fetchJson(
+            buildSearchUrl({ ...searchParams, mode: "keyword" }),
+          );
           return `${formatLegacyResults(fallback)}\n(hybrid unavailable: ${hybridError})`;
         } catch (fallbackError) {
           return `Search failed: ${fallbackError}`;

@@ -115,7 +115,7 @@ pub struct EvictMediaResult {
 }
 
 /// Outcome of `strip_heavy_text_in_range`. Keeps the frame rows and their
-/// searchable `full_text`/transcripts/memories intact, but drops the bulky
+/// searchable `full_text`/transcripts intact, but drops the bulky
 /// per-element accessibility/OCR tree (`elements`), the raw accessibility
 /// tree JSON blob (`frames.accessibility_tree_json`), and the keystroke/click
 /// stream (`ui_events`) — the three biggest text contributors to db.sqlite.
