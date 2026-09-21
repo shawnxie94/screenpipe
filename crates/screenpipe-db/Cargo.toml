@@ -32,6 +32,7 @@ screenpipe-core = { path = "../screenpipe-core" }
 screenpipe-semantic = { path = "../screenpipe-semantic" }
 screenpipe-resource = { path = "../screenpipe-resource" }
 screenpipe-sqlite-coordinator = { path = "../screenpipe-sqlite-coordinator" }
+screenpipe-secrets = { path = "../screenpipe-secrets" }
 zerocopy = { version = "0.7.32" }
 
 tokio = { workspace = true }
@@ -57,6 +58,7 @@ windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Storage
 
 [dev-dependencies]
 screenpipe-secrets = { path = "../screenpipe-secrets" }
+screenpipe-core = { path = "../screenpipe-core" }
 
 [[bench]]
 name = "db_benchmarks"

@@ -6925,6 +6925,7 @@ dependencies = [
  "regex",
  "screenpipe-config",
  "screenpipe-resource",
+ "screenpipe-secrets",
  "screenpipe-semantic",
  "screenpipe-sqlite-coordinator",
  "serde",
