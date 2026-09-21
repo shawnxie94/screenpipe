@@ -636,16 +636,19 @@ impl DatabaseManager {
                      AND o.object_kind = f.object_kind \
                      AND o.object_id = f.object_id \
                  WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} \
-                 ORDER BY bm25(connector_objects_fts, 10.0) \
+                 GROUP BY o.connector, o.namespace, o.object_kind, o.object_id \
+                 ORDER BY strftime('%s', COALESCE(o.event_at, o.fetched_at)) DESC \
                  LIMIT {limit} OFFSET {offset}"
             );
             let count_sql = format!(
-                "SELECT COUNT(*) FROM connector_objects_fts f \
+                "SELECT COUNT(*) FROM (SELECT o.connector, o.namespace, o.object_kind, o.object_id \
+                 FROM connector_objects_fts f \
                  JOIN connector_objects o ON o.connector = f.connector \
                      AND o.namespace = f.namespace \
                      AND o.object_kind = f.object_kind \
                      AND o.object_id = f.object_id \
-                 WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred}"
+                 WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} \
+                 GROUP BY o.connector, o.namespace, o.object_kind, o.object_id)"
             );
             let rows =
                 sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(page_sql.as_str()))
@@ -664,6 +667,72 @@ impl DatabaseManager {
         };
 
         Ok((rows, total))
+    }
+
+    /// Cross-channel full-text search ordered by event/fetch time for the
+    /// unified `content_type=all&mode=time` surface.
+    pub async fn connector_search_time_page(
+        &self,
+        query: &str,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        limit: u32,
+    ) -> Result<Vec<ConnectorObjectRow>, SqlxError> {
+        let limit = limit.clamp(1, 200) as i64;
+        let time_pred = "AND (?1 IS NULL OR strftime('%s', COALESCE(o.event_at, o.fetched_at)) >= strftime('%s', ?1)) AND (?2 IS NULL OR strftime('%s', COALESCE(o.event_at, o.fetched_at)) <= strftime('%s', ?2))";
+        let trimmed = query.trim();
+        if trimmed.is_empty() {
+            let sql = format!(
+                "SELECT o.connector, o.namespace, o.object_kind, o.object_id, o.revision, o.title, o.body_text, o.event_at, o.fetched_at, o.source_url, o.state FROM connector_objects o WHERE o.state = 'active' {time_pred} ORDER BY strftime('%s', COALESCE(o.event_at, o.fetched_at)) DESC LIMIT ?3",
+            );
+            return sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(sql.as_str()))
+                .bind(start_time)
+                .bind(end_time)
+                .bind(limit)
+                .fetch_all(&self.pool)
+                .await;
+        }
+        let projected = crate::text_normalizer::chinese_project(trimmed);
+        let sql = format!(
+            "SELECT o.connector, o.namespace, o.object_kind, o.object_id, o.revision, o.title, o.body_text, o.event_at, o.fetched_at, o.source_url, o.state FROM connector_objects_fts f JOIN connector_objects o ON o.connector = f.connector AND o.namespace = f.namespace AND o.object_kind = f.object_kind AND o.object_id = f.object_id WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} GROUP BY o.connector, o.namespace, o.object_kind, o.object_id ORDER BY strftime('%s', COALESCE(o.event_at, o.fetched_at)) DESC LIMIT ?4",
+        );
+        sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(start_time)
+            .bind(end_time)
+            .bind(projected)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+    }
+
+    pub async fn connector_search_time_count(
+        &self,
+        query: &str,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+    ) -> Result<i64, SqlxError> {
+        let time_pred = "AND (?1 IS NULL OR strftime('%s', COALESCE(o.event_at, o.fetched_at)) >= strftime('%s', ?1)) AND (?2 IS NULL OR strftime('%s', COALESCE(o.event_at, o.fetched_at)) <= strftime('%s', ?2))";
+        let trimmed = query.trim();
+        if trimmed.is_empty() {
+            let sql = format!(
+                "SELECT COUNT(*) FROM connector_objects o WHERE o.state = 'active' {time_pred}",
+            );
+            return sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(sql.as_str()))
+                .bind(start_time)
+                .bind(end_time)
+                .fetch_one(&self.pool)
+                .await;
+        }
+        let projected = crate::text_normalizer::chinese_project(trimmed);
+        let sql = format!(
+            "SELECT COUNT(*) FROM (SELECT o.connector, o.namespace, o.object_kind, o.object_id FROM connector_objects_fts f JOIN connector_objects o ON o.connector = f.connector AND o.namespace = f.namespace AND o.object_kind = f.object_kind AND o.object_id = f.object_id WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} GROUP BY o.connector, o.namespace, o.object_kind, o.object_id)",
+        );
+        sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(start_time)
+            .bind(end_time)
+            .bind(projected)
+            .fetch_one(&self.pool)
+            .await
     }
 
     pub async fn connector_get_cursor(

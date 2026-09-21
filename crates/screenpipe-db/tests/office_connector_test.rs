@@ -5,7 +5,9 @@
 //! disable/erase lifecycle, cursor bookkeeping.
 
 use chrono::{Duration, Utc};
-use screenpipe_db::{DatabaseManager, OfficeObjectDraft};
+use screenpipe_db::{
+    ConnectorObjectDraft, DatabaseManager, OfficeObjectDraft, ConnectorUpsertOutcome,
+};
 
 async fn test_db() -> DatabaseManager {
     DatabaseManager::new("sqlite::memory:", Default::default())
@@ -86,6 +88,62 @@ async fn disable_and_erase_lifecycle() {
     assert!(
         hits.is_empty(),
         "re-import after erase must stay suppressed"
+    );
+}
+
+#[tokio::test]
+async fn connector_search_deduplicates_repeated_fts_rows_by_primary_key() {
+    let db = test_db().await;
+    let fetched_at = Utc::now() - Duration::hours(1);
+    let draft = ConnectorObjectDraft {
+        connector: "rss".into(),
+        namespace: "feed-a".into(),
+        object_kind: "item".into(),
+        object_id: "item-1".into(),
+        title: Some("stable search object".into()),
+        body_text: "stable-token body".into(),
+        content_hash: Some("content-1".into()),
+        fetched_at,
+        ..Default::default()
+    };
+    assert_eq!(
+        db.connector_upsert_object(&draft).await.unwrap(),
+        ConnectorUpsertOutcome::Created
+    );
+    // Simulate an already-corrupted/rebuilt FTS index with duplicate rows for
+    // the same connector primary key. Page and count must still agree.
+    sqlx::query(
+        "INSERT INTO connector_objects_fts (body, title, connector, namespace, object_kind, object_id) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+    )
+    .bind("stable-token body")
+    .bind("stable search object")
+    .bind("rss")
+    .bind("feed-a")
+    .bind("item")
+    .bind("item-1")
+    .execute(&db.pool)
+    .await
+    .unwrap();
+
+    let (page, total) = db
+        .connector_search_page("stable-token", None, None, 10, 0)
+        .await
+        .unwrap();
+    assert_eq!(total, 1);
+    assert_eq!(page.len(), 1);
+    assert_eq!(page[0].object_id, "item-1");
+
+    let time_page = db
+        .connector_search_time_page("stable-token", None, None, 10)
+        .await
+        .unwrap();
+    assert_eq!(time_page.len(), 1);
+    assert_eq!(
+        db.connector_search_time_count("stable-token", None, None)
+            .await
+            .unwrap(),
+        1
     );
 }
 

@@ -382,6 +382,65 @@ impl DatabaseManager {
         .await
     }
 
+    /// Search ready documents in an optional imported-at time range.
+    pub async fn document_search_in_range(
+        &self,
+        query: &str,
+        limit: u32,
+        start_time: Option<chrono::DateTime<chrono::Utc>>,
+        end_time: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<Vec<LocalDocumentHit>, sqlx::Error> {
+        let limit = limit.clamp(1, 200) as i64;
+        let trimmed = query.trim();
+        let time_pred = "AND (?1 IS NULL OR strftime('%s', d.imported_at) >= strftime('%s', ?1)) AND (?2 IS NULL OR strftime('%s', d.imported_at) <= strftime('%s', ?2))";
+        if trimmed.is_empty() {
+            let sql = format!("SELECT d.sha256, d.file_name, d.ext, d.original_path, d.managed_path, d.imported_at, 0 AS ordinal, '' AS snippet FROM source_documents d WHERE d.state = 'ready' {time_pred} ORDER BY strftime('%s', d.imported_at) DESC LIMIT ?3");
+            return sqlx::query_as::<_, LocalDocumentHit>(sqlx::AssertSqlSafe(sql.as_str()))
+                .bind(start_time)
+                .bind(end_time)
+                .bind(limit)
+                .fetch_all(&self.pool)
+                .await;
+        }
+        let match_expr = fts_match_expression(&crate::text_normalizer::chinese_project(trimmed));
+        let sql = format!("SELECT d.sha256, d.file_name, d.ext, d.original_path, d.managed_path, d.imported_at, f.ordinal, snippet(source_documents_fts, 0, '[', ']', ' … ', 16) AS snippet FROM source_documents_fts f JOIN source_documents d ON d.sha256 = f.sha256 WHERE d.state = 'ready' AND source_documents_fts MATCH ?3 {time_pred} ORDER BY bm25(source_documents_fts) LIMIT ?4");
+        sqlx::query_as::<_, LocalDocumentHit>(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(start_time)
+            .bind(end_time)
+            .bind(match_expr)
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await
+    }
+
+    /// Count top-level ready documents matching the same query and imported-at range.
+    /// FTS is chunked, but the unified search surface exposes one result per sha256.
+    pub async fn document_search_count_in_range(
+        &self,
+        query: &str,
+        start_time: Option<chrono::DateTime<chrono::Utc>>,
+        end_time: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<i64, sqlx::Error> {
+        let trimmed = query.trim();
+        let time_pred = "AND (?1 IS NULL OR strftime('%s', d.imported_at) >= strftime('%s', ?1)) AND (?2 IS NULL OR strftime('%s', d.imported_at) <= strftime('%s', ?2))";
+        if trimmed.is_empty() {
+            let sql = format!("SELECT COUNT(*) FROM source_documents d WHERE d.state = 'ready' {time_pred}");
+            return sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(sql.as_str()))
+                .bind(start_time)
+                .bind(end_time)
+                .fetch_one(&self.pool)
+                .await;
+        }
+        let match_expr = fts_match_expression(&crate::text_normalizer::chinese_project(trimmed));
+        let sql = format!("SELECT COUNT(DISTINCT d.sha256) FROM source_documents_fts f JOIN source_documents d ON d.sha256 = f.sha256 WHERE d.state = 'ready' AND source_documents_fts MATCH ?3 {time_pred}");
+        sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(start_time)
+            .bind(end_time)
+            .bind(match_expr)
+            .fetch_one(&self.pool)
+            .await
+    }
+
     pub async fn document_get(
         &self,
         sha256: &str,

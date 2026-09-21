@@ -11,6 +11,8 @@ import {
   UiEventResult,
   queryHighlightTokens,
   type SearchAnalyticsSurface,
+  type SearchMode,
+  type UnifiedSearchResult,
 } from "@/lib/hooks/use-keyword-search-store";
 import { buildResultTimeRanges } from "@/lib/search/result-facets";
 import {
@@ -123,6 +125,7 @@ interface SearchModalProps {
 
 type SearchResultType =
   | "screen"
+  | "unified"
   | "input"
   | "chat"
   | "person"
@@ -560,6 +563,50 @@ const MIN_QUERY_CHARS = 3;
  */
 const APP_BROWSE_PAGE_SIZE = 36;
 
+function UnifiedResultItem({ result, selected = false, navIndex, onClick, onHover }: {
+  result: UnifiedSearchResult;
+  selected?: boolean;
+  navIndex?: number;
+  onClick: () => void;
+  onHover?: () => void;
+}) {
+  const label = result.source_type === "audio"
+    ? "听到"
+    : result.source_type === "document"
+      ? "文档"
+      : result.source_type === "connection"
+        ? "接入"
+        : result.source_type === "input"
+          ? "输入"
+          : result.source_type;
+  return (
+    <button
+      type="button"
+      data-nav-index={navIndex}
+      onClick={onClick}
+      onMouseEnter={onHover}
+      title={result.text}
+      className={cn(
+        "w-full flex items-start gap-2.5 px-2 py-2 rounded-md text-left transition-colors",
+        selected ? "bg-muted" : "hover:bg-muted/50",
+      )}
+    >
+      <span className="mt-0.5 shrink-0 rounded-sm border border-border px-1.5 py-px text-[10px] text-muted-foreground">
+        {label}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm">{result.text || result.window_name || "未命名内容"}</span>
+        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+          {[result.app, result.window_name].filter(Boolean).join(" — ")}
+        </span>
+      </span>
+      <span className="shrink-0 text-[11px] font-mono text-muted-foreground">
+        {result.timestamp ? formatRelativeTime(result.timestamp) : ""}
+      </span>
+    </button>
+  );
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     // One treatment for every group label. No icon — the rows carry their own,
@@ -771,10 +818,12 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     | "connections"
     | "documents";
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
+  const [searchMode, setSearchMode] = useState<SearchMode>("time");
 
   // A selectable row, identified so selection survives lists being re-sorted
   type NavItem =
     | { kind: "chat"; id: string }
+    | { kind: "unified"; id: string }
     | { kind: "uievent"; id: string }
     | { kind: "connection"; id: string }
     | { kind: "document"; id: string }
@@ -974,6 +1023,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   const {
     searchResults,
     searchGroups,
+    unifiedResults,
     uiEventResults,
     isSearchingUiEvents,
     isSearching,
@@ -1221,6 +1271,11 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     if (contentFilter === "all" && q.length >= MIN_QUERY_CHARS && chatsFresh) {
       for (const chat of filteredChats.slice(0, 5)) items.push({ kind: "chat", id: chat.id });
     }
+    if (contentFilter === "all" && unifiedResults.length > 0) {
+      for (const result of unifiedResults.slice(0, 5)) {
+        items.push({ kind: "unified", id: `${result.source_type}:${result.source_pk}` });
+      }
+    }
     if (uiEventResults.length > 0 && contentFilter !== "screen") {
       const shown = contentFilter === "all" ? uiEventResults.slice(0, 5) : uiEventResults;
       for (const evt of shown) items.push({ kind: "uievent", id: String(evt.id) });
@@ -1243,6 +1298,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     documentResults,
     filteredChats,
     filteredResults,
+    unifiedResults,
     isLoadingChats,
     isLoadingConnections,
     isLoadingDocuments,
@@ -1287,6 +1343,8 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   uiEventResultsRef.current = uiEventResults;
   const connectionResultsRef = useRef(connectionResults);
   connectionResultsRef.current = connectionResults;
+  const unifiedResultsRef = useRef(unifiedResults);
+  unifiedResultsRef.current = unifiedResults;
 
   // Keep the selection in range as results stream in and sections appear.
   useEffect(() => {
@@ -1381,6 +1439,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       setDomainFilter(null);
       setTimeFilter(null);
       setContentFilter("all");
+      setSearchMode("time");
       setSpeakerResults([]);
       setTagResults([]);
       setAllTags([]);
@@ -1440,21 +1499,27 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       buildSearchAnalyticsKey(
         searchEpoch,
         q,
-        contentFilterRef.current === "chats" ? "chats" : "all",
+        contentFilterRef.current === "chats" ? "chats" : contentFilterRef.current,
         null,
         null,
         null,
       ),
     );
+    const activeContentType = contentFilterRef.current === "all"
+      ? "all"
+      : contentFilterRef.current === "input"
+        ? "input"
+        : "ocr";
     searchKeywords(debouncedQuery, {
       limit: OCR_PAGE_SIZE,
       offset: 0,
+      mode: contentFilterRef.current === "all" ? searchMode : "time",
+      content_type: activeContentType,
       analytics_surface: analyticsSurface,
       analytics_search_id: searchId,
       analytics_session_id: searchSessionIdRef.current,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analyticsSurface, debouncedQuery, getSearchAnalyticsId, query, searchKeywords, resetSearch, searchEpoch]);
+  }, [analyticsSurface, contentFilter, debouncedQuery, getSearchAnalyticsId, query, searchKeywords, resetSearch, searchEpoch, searchMode]);
 
   // Search tags when query starts with #
   useEffect(() => {
@@ -2329,6 +2394,14 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
               trackSearchResultSelected("document", "keyboard", "drilldown");
               void revealDocumentHit(hit);
             }
+          } else if (item.kind === "unified") {
+            const result = unifiedResultsRef.current.find(
+              (candidate) => `${candidate.source_type}:${candidate.source_pk}` === item.id,
+            );
+            if (result?.timestamp) {
+              trackSearchResultSelected("unified", "keyboard", "timeline");
+              void navigateToResult(result.timestamp);
+            }
           } else if (item.kind === "connection") {
             const hit = connectionResultsRef.current.find(
               (c) => connectionHitKey(c) === item.id,
@@ -2622,6 +2695,25 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       // The outer surface and its controls follow the shared 8px / 6px tiers.
       // At roughly 25% of the control height they stay softened, not pill-shaped.
       <div className="flex items-center gap-0.5 shrink-0 rounded-lg bg-muted/60 p-0.5">
+        {contentFilter === "all" && (
+          <div className="mr-1 flex items-center gap-0.5 border-r border-border/60 pr-1">
+            {(["time", "relevance"] as SearchMode[]).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={searchMode === mode}
+                title={mode === "time" ? "按时间排序（全类型）" : "按相关度排序（全类型）"}
+                onClick={() => { setSearchMode(mode); setNavIndex(0); }}
+                className={cn(
+                  "inline-flex h-7 items-center rounded-md px-2 text-[11px] transition-colors",
+                  searchMode === mode ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {mode === "time" ? "时间排序" : "相关度排序"}
+              </button>
+            ))}
+          </div>
+        )}
         {([
           { key: "all" as ContentFilter, label: "全部", icon: null },
           { key: "screen" as ContentFilter, label: "屏幕", icon: Monitor },
@@ -3443,6 +3535,39 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Unified non-screen hits appear only in All. Scope-specific tabs keep their
+              richer renderers, while All exposes one consistent result envelope. */}
+          {contentFilter === "all" && unifiedResults.length > 0 && (
+            <div className="mb-4">
+              <SectionLabel>{searchMode === "relevance" ? "相关内容" : "其他内容"}</SectionLabel>
+              <div className="flex flex-col">
+                {unifiedResults.slice(0, 5).map((result) => {
+                  const key = `${result.source_type}:${result.source_pk}`;
+                  const pos = navPositions.get(`unified:${key}`);
+                  return (
+                    <UnifiedResultItem
+                      key={key}
+                      result={result}
+                      navIndex={pos}
+                      selected={isNavActive(`unified:${key}`)}
+                      onHover={() => pos !== undefined && setNavIndex(pos)}
+                      onClick={() => {
+                        trackSearchResultSelected("unified", "click", "timeline");
+                        if (result.timestamp) void navigateToResult(result.timestamp);
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              {unifiedResults.length > 5 && (
+                <SeeAllRow
+                  label={`查看全部 ${unifiedResults.length} 条相关内容`}
+                  onClick={() => setSearchMode("relevance")}
+                />
+              )}
             </div>
           )}
 

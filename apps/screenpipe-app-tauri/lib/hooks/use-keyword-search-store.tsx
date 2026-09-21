@@ -5,6 +5,30 @@ import { create } from "zustand";
 import { localFetch } from "@/lib/api";
 
 export type SearchAnalyticsSurface = "standalone" | "embedded" | "modal";
+export type SearchMode = "time" | "relevance";
+export type SearchContentType = "ocr" | "all" | "input";
+
+export interface HybridSearchHit {
+	source_type: string;
+	source_pk: string;
+	score: number;
+	legs: string[];
+	ts?: string;
+	app?: string;
+	window_name?: string;
+	text?: string;
+}
+
+export interface UnifiedSearchResult {
+	source_type: string;
+	source_pk: string;
+	timestamp: string;
+	app: string;
+	window_name: string;
+	text: string;
+	score?: number;
+	legs?: string[];
+}
 
 export interface SearchMatch {
 	frame_id: number;
@@ -49,6 +73,8 @@ export interface UiEventResult {
 
 export interface SearchRequest {
 	query: string;
+	mode: SearchMode;
+	content_type: SearchContentType;
 	params: {
 		offset?: number;
 		limit?: number;
@@ -61,9 +87,11 @@ export interface SearchRequest {
 }
 
 export interface KeywordSearchState {
-	searchResults: SearchMatch[];
-	searchGroups: SearchMatchGroup[];
-	uiEventResults: UiEventResult[];
+		searchResults: SearchMatch[];
+		searchGroups: SearchMatchGroup[];
+		hybridResults: HybridSearchHit[];
+		unifiedResults: UnifiedSearchResult[];
+		uiEventResults: UiEventResult[];
 	isSearchingUiEvents: boolean;
 	currentResultIndex: number;
 	isSearching: boolean;
@@ -85,8 +113,10 @@ export interface KeywordSearchState {
 			end_time?: Date;
 			fuzzy_match?: boolean;
 			order?: "ascending" | "descending";
-			app_names?: string[];
-			analytics_surface?: SearchAnalyticsSurface;
+				app_names?: string[];
+				mode?: SearchMode;
+				content_type?: SearchContentType;
+				analytics_surface?: SearchAnalyticsSurface;
 			analytics_search_id?: string;
 			analytics_session_id?: string;
 		},
@@ -144,6 +174,172 @@ function metadataMatchesQuery(result: SearchMatch, query: string): boolean {
 	);
 }
 
+function asSearchMatch(content: Record<string, any>): SearchMatch | null {
+	const frameId = Number(content.frame_id);
+	if (!Number.isFinite(frameId) || frameId <= 0) return null;
+	return {
+		frame_id: frameId,
+		timestamp: content.timestamp || "",
+		text_positions: Array.isArray(content.text_positions) ? content.text_positions : [],
+		app_name: content.app_name || "",
+		window_name: content.window_name || "",
+		confidence: Number(content.confidence) || 1,
+		text: content.text || "",
+		url: content.browser_url || "",
+		text_source: content.text_source ?? null,
+	};
+}
+
+interface SearchMapping {
+	hits: HybridSearchHit[];
+	matches: SearchMatch[];
+	unifiedResults: UnifiedSearchResult[];
+	uiEvents: UiEventResult[];
+	groups: SearchMatchGroup[];
+	pageSize: number;
+	degraded: boolean;
+	legsUsed: string[];
+}
+
+export function mapRecordsResponse(data: unknown): SearchMapping {
+	const rows = Array.isArray((data as any)?.data) ? (data as any).data : [];
+	const matches: SearchMatch[] = [];
+	const unifiedResults: UnifiedSearchResult[] = [];
+	const uiEvents: UiEventResult[] = [];
+	for (const row of rows) {
+		const sourceType = String(row?.type || "").toLowerCase();
+		const content = row?.content && typeof row.content === "object" ? row.content : {};
+		if (sourceType === "ocr") {
+			const match = asSearchMatch(content);
+			if (match) {
+				matches.push(match);
+			}
+		} else if (sourceType === "input") {
+			uiEvents.push({
+				id: Number(content.id) || 0,
+				timestamp: content.timestamp || "",
+				event_type: content.event_type || "",
+				text_content: content.text_content ?? null,
+				app_name: content.app_name ?? null,
+				window_title: content.window_title ?? null,
+			});
+		} else {
+			const text =
+				content.text ||
+				content.transcription ||
+				content.body_text ||
+				content.snippet ||
+				content.title ||
+				content.file_name ||
+				"";
+			const timestamp =
+				content.timestamp ||
+				content.imported_at ||
+				content.event_at ||
+				content.fetched_at ||
+				"";
+			if (text || timestamp) {
+				unifiedResults.push({
+					source_type: sourceType || "unknown",
+					source_pk: String(
+						content.chunk_id ??
+						content.sha256 ??
+						content.id ??
+						content.object_id ??
+						"",
+					),
+					timestamp,
+					app:
+						content.app_name ||
+						content.device_name ||
+						content.provider ||
+						content.connector ||
+						"",
+					window_name:
+						content.window_name ||
+						content.title ||
+						content.file_name ||
+						content.object_kind ||
+						"",
+					text,
+				});
+			}
+		}
+	}
+	return {
+		hits: [],
+		matches,
+		unifiedResults,
+		uiEvents: uiEvents.filter((event) => Boolean(event.text_content?.trim())),
+		groups: matches.map((representative) => ({
+			representative,
+			group_size: 1,
+			start_time: representative.timestamp,
+			end_time: representative.timestamp,
+			frame_ids: [representative.frame_id],
+		})),
+		pageSize: rows.length,
+		degraded: false,
+		legsUsed: ["frames", "audio", "input", "documents", "connections"],
+	};
+}
+
+export function hybridHitToSearchMatch(hit: HybridSearchHit): SearchMatch | null {
+	if (hit.source_type !== "ocr") return null;
+	const frameId = Number(hit.source_pk);
+	if (!Number.isFinite(frameId) || frameId <= 0) return null;
+	return {
+		frame_id: frameId,
+		timestamp: hit.ts || "",
+		text_positions: [],
+		app_name: hit.app || "",
+		window_name: hit.window_name || "",
+		confidence: hit.score,
+		text: hit.text || "",
+		url: "",
+		text_source: null,
+	};
+}
+
+export function mapHybridResponse(data: unknown): SearchMapping {
+	const hits = Array.isArray((data as any)?.results)
+		? ((data as any).results as HybridSearchHit[])
+		: [];
+	const matches = hits.flatMap((hit) => {
+		const match = hybridHitToSearchMatch(hit);
+		return match ? [match] : [];
+	});
+	return {
+		hits,
+		matches,
+		unifiedResults: hits
+			.filter((hit) => hit.source_type !== "ocr")
+			.map((hit) => ({
+				source_type: hit.source_type,
+				source_pk: hit.source_pk,
+				timestamp: hit.ts || "",
+				app: hit.app || "",
+				window_name: hit.window_name || "",
+				text: hit.text || "",
+				score: hit.score,
+				legs: hit.legs,
+			})),
+		uiEvents: [],
+		groups: matches.map((representative) => ({
+			representative,
+			group_size: 1,
+			start_time: representative.timestamp,
+			end_time: representative.timestamp,
+			frame_ids: [representative.frame_id],
+		})),
+		pageSize: hits.length,
+		degraded: Boolean((data as any)?.degraded),
+		legsUsed: Array.isArray((data as any)?.legs_used)
+			? ((data as any).legs_used as string[])
+			: [],
+	};
+}
+
 export function visibleMatchingPositions(
 	positions: SearchMatch["text_positions"],
 	query: string,
@@ -195,6 +391,8 @@ export function narrowSearchMatchHighlights(
 export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 	searchResults: [],
 	searchGroups: [],
+	hybridResults: [],
+	unifiedResults: [],
 	uiEventResults: [],
 	isSearchingUiEvents: false,
 	currentResultIndex: -1,
@@ -219,6 +417,8 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 			fuzzy_match: options.fuzzy_match ?? fuzzy_default,
 			order: options.order ?? "descending",
 			app_names: options.app_names ?? [],
+			mode: options.mode ?? "time",
+			content_type: options.content_type ?? "ocr",
 		});
 
 		const { lastRequest } = get();
@@ -227,6 +427,8 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 			JSON.stringify({
 				query: lastRequest.query,
 				...lastRequest.params,
+				mode: lastRequest.mode,
+				content_type: lastRequest.content_type,
 			}) === searchSignature
 		) {
 			return;
@@ -263,9 +465,12 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 
 		if (isInitialSearch) {
 			set({
-				searchResults: [],
-				searchGroups: [],
-				uiEventResults: [],
+					searchResults: [],
+					searchGroups: [],
+					hybridResults: [],
+					unifiedResults: [],
+					uiEventResults: [],
+
 				isSearchingUiEvents: false,
 				currentResultIndex: -1,
 				activeRequestId: requestId,
@@ -288,6 +493,8 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 
 		const searchRequest: SearchRequest = {
 			query,
+			mode: options.mode ?? "time",
+			content_type: options.content_type ?? "ocr",
 			params: {
 				offset: options.offset || offset_default,
 				limit: options.limit,
@@ -300,12 +507,15 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 		};
 
 		try {
+			const mode = options.mode ?? "time";
+			const contentType = options.content_type ?? "ocr";
 			const params = new URLSearchParams({
-				query,
+				q: query,
+				content_type: contentType,
+				mode,
 				offset: (options.offset ?? 0).toString(),
-				include_context: (options.include_context ?? false).toString(),
-				fuzzy_match: (options.fuzzy_match ?? fuzzy_default).toString(),
-				group: "true",
+				limit: (options.limit ?? 24).toString(),
+				order: options.order ?? "descending",
 			});
 
 			if (options.app_names) {
@@ -348,53 +558,8 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 				params.append("limit", options.limit.toString());
 			}
 
-			const loadUiEventsAfterKeyword = () => {
-				if (!isInitialSearch || get().activeRequestId !== requestId) return;
-
-				set({ isSearchingUiEvents: true });
-				const uiParams = new URLSearchParams({
-					content_type: "input",
-					q: query,
-					limit: "20",
-					offset: "0",
-				});
-				if (options.start_time) {
-					uiParams.append("start_time", options.start_time.toISOString());
-				}
-				if (options.end_time) {
-					uiParams.append("end_time", options.end_time.toISOString());
-				}
-
-				localFetch(`/search/records?${uiParams}`, {
-					signal: combinedSignal,
-				})
-					.then((resp) => (resp.ok ? resp.json() : null))
-					.then((data) => {
-						if (!data || get().activeRequestId !== requestId) return;
-						const items: UiEventResult[] = (data.data || [])
-							.map((item: any) => ({
-								id: item.content?.id ?? 0,
-								timestamp: item.content?.timestamp || "",
-								event_type: item.content?.event_type || "",
-								text_content: item.content?.text_content ?? null,
-								app_name: item.content?.app_name ?? null,
-								window_title: item.content?.window_title ?? null,
-							}))
-							.filter(
-								(e: UiEventResult) =>
-									e.text_content && e.text_content.trim().length > 0,
-							);
-						set({ uiEventResults: items, isSearchingUiEvents: false });
-					})
-					.catch(() => {
-						if (get().activeRequestId === requestId) {
-							set({ isSearchingUiEvents: false });
-						}
-					});
-			};
-
 			const response = await localFetch(
-				`/search/keyword?${params}`,
+				`/search/records?${params}`,
 				{ signal: combinedSignal },
 			);
 
@@ -402,8 +567,13 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 				throw new Error("搜索请求失败");
 			}
 
-			const rawGroups: SearchMatchGroup[] = await response.json();
-			loadUiEventsAfterKeyword();
+			const payload = await response.json();
+			const isRelevance = mode === "relevance";
+			const mapped = isRelevance
+				? mapHybridResponse(payload)
+				: mapRecordsResponse(payload);
+			const rawGroups = mapped.groups;
+			const mappedMatches = mapped.matches;
 			const pageGroups: SearchMatchGroup[] = rawGroups.flatMap((group) => {
 				const [representative] = narrowSearchMatchHighlights(
 					[group.representative],
@@ -411,14 +581,30 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 				);
 				return representative ? [{ ...group, representative }] : [];
 			});
+			if (isRelevance) {
+					set({
+						hybridResults: mapped.hits,
+						unifiedResults: mapped.unifiedResults,
+
+					uiEventResults: [],
+					isSearchingUiEvents: false,
+				});
+			} else {
+				set({
+					hybridResults: [],
+					unifiedResults: mapped.unifiedResults,
+					uiEventResults: mapped.uiEvents,
+					isSearchingUiEvents: false,
+				});
+			}
 
 			if (get().activeRequestId === requestId) {
 				const { unavailableFrameIds } = get();
 				const baseResults = isInitialSearch
-					? []
-					: searchResultsBeforeRequest.filter(
-							(result) => !unavailableFrameIds.has(result.frame_id),
-						);
+						? []
+						: searchResultsBeforeRequest.filter(
+								(result) => !unavailableFrameIds.has(result.frame_id),
+							);
 				const existingFrameIds = new Set(
 					baseResults.map((result) => result.frame_id),
 				);
@@ -430,16 +616,18 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 				const finalPageResults = finalPageGroups.map(
 					(group) => group.representative,
 				);
-				const finalResults = [...baseResults, ...finalPageResults];
+				const finalResults = isInitialSearch
+					? mappedMatches.filter((result) => !unavailableFrameIds.has(result.frame_id))
+					: [...baseResults, ...finalPageResults];
 				const baseGroups = isInitialSearch
 					? []
 					: searchGroupsBeforeRequest.filter(
 							(group) =>
 								!unavailableFrameIds.has(group.representative.frame_id),
 						);
-				const finalGroups = [...baseGroups, ...finalPageGroups];
-				if (isInitialSearch) {
-				}
+				const finalGroups = isInitialSearch
+					? finalPageGroups
+					: [...baseGroups, ...finalPageGroups];
 				set({
 					searchResults: finalResults,
 					searchGroups: finalGroups,
@@ -454,7 +642,9 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 									),
 					searchQuery: query,
 					isSearching: false,
-					lastCandidatePageSize: rawGroups.length,
+					lastCandidatePageSize: mapped.pageSize,
+					hybridResults: isRelevance ? mapped.hits : [],
+					unifiedResults: mapped.unifiedResults,
 					lastRequest: searchRequest,
 					currentAbortController: null,
 				});
@@ -539,6 +729,8 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 		set({
 			searchResults: [],
 			searchGroups: [],
+			hybridResults: [],
+			unifiedResults: [],
 			uiEventResults: [],
 			isSearchingUiEvents: false,
 			currentResultIndex: -1,
@@ -562,6 +754,8 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 		set({
 			searchResults: [],
 			searchGroups: [],
+			hybridResults: [],
+			unifiedResults: [],
 			uiEventResults: [],
 			isSearchingUiEvents: false,
 			currentResultIndex: -1,

@@ -59,6 +59,36 @@ async fn text_becomes_searchable_with_snippets() {
 }
 
 #[tokio::test]
+async fn unified_document_count_deduplicates_multiple_matching_chunks() {
+    let db = test_db().await;
+    db.document_import_stored("sha-dedup", "long.md", "md", 2_000, None, None)
+        .await
+        .unwrap();
+    let text = format!(
+        "dedup-token {}\n\nThe second chunk also contains dedup-token and is the display candidate.",
+        "filler ".repeat(220)
+    );
+    db.document_mark_ready("sha-dedup", &text, false)
+        .await
+        .unwrap();
+
+    let chunks = db.document_search_in_range("dedup-token", 20, None, None).await.unwrap();
+    assert!(chunks.len() >= 2, "FTS must retain chunk-level recall");
+    assert!(chunks.iter().all(|hit| hit.sha256 == "sha-dedup"));
+    assert_eq!(
+        db.document_search_count_in_range("dedup-token", None, None)
+            .await
+            .unwrap(),
+        1,
+        "pagination total counts top-level documents, not matching chunks"
+    );
+
+    let page = db.document_search_in_range("dedup-token", 1, None, None).await.unwrap();
+    assert_eq!(page.len(), 1);
+    assert_eq!(page[0].sha256, "sha-dedup");
+}
+
+#[tokio::test]
 async fn empty_text_is_a_visible_failure() {
     let db = test_db().await;
     db.document_import_stored("ccc", "scanned.pdf", "pdf", 10, None, Some("/managed/ccc.pdf"))

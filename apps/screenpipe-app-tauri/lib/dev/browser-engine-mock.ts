@@ -827,6 +827,141 @@ function mockAppFrames(appName: string, limit: number, offset: number) {
   );
 }
 
+function mockUnifiedSearchRows(query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  const now = Date.now();
+  const rows = [
+    {
+      type: "OCR",
+      content: {
+        frame_id: 91_001,
+        timestamp: new Date(now - 60_000).toISOString(),
+        app_name: "Cursor",
+        window_name: "Screenpipe search",
+        text: "screenpipe unified search in the editor",
+        browser_url: "",
+        text_source: "ocr",
+        text_positions: [
+          {
+            text: "screenpipe unified search",
+            confidence: 1,
+            bounds: { left: 0.1, top: 0.1, width: 0.4, height: 0.06 },
+          },
+        ],
+      },
+    },
+    {
+      type: "Input",
+      content: {
+        id: 91_002,
+        timestamp: new Date(now - 120_000).toISOString(),
+        event_type: "keyboard",
+        text_content: "screenpipe search",
+        app_name: "Cursor",
+        window_title: "Screenpipe search",
+      },
+    },
+    {
+      type: "Audio",
+      content: {
+        chunk_id: 91_003,
+        timestamp: new Date(now - 180_000).toISOString(),
+        transcription: "We reviewed the screenpipe unified search results in the meeting.",
+        device_name: "MacBook microphone",
+        object_kind: "meeting transcript",
+      },
+    },
+    {
+      type: "Document",
+      content: {
+        sha256: "doc-91004",
+        file_name: "Screenpipe search design notes.md",
+        imported_at: new Date(now - 240_000).toISOString(),
+        snippet: "The screenpipe search contract returns OCR, audio, input, document, and connection records.",
+        text: "The screenpipe search contract returns OCR, audio, input, document, and connection records.",
+        ext: "md",
+        ordinal: 0,
+      },
+    },
+    {
+      type: "Connection",
+      content: {
+        connector: "office:feishu",
+        namespace: "browser-fixture",
+        provider: "feishu",
+        object_kind: "document",
+        object_id: "connection-91005",
+        title: "Search review notes",
+        body_text: "The connection search contract includes synced meeting and document records.",
+        event_at: new Date(now - 300_000).toISOString(),
+        fetched_at: new Date(now - 240_000).toISOString(),
+        source_url: "https://example.invalid/search-review",
+      },
+    },
+  ];
+  if (!normalizedQuery) return rows;
+  return rows.filter((row) => JSON.stringify(row).toLowerCase().includes(normalizedQuery));
+}
+
+function mockUnifiedSearchHits(query: string) {
+  const now = Date.now();
+  const normalizedQuery = query.trim().toLowerCase();
+  const hits = [
+    {
+      source_type: "ocr",
+      source_pk: "91001",
+      score: 1,
+      legs: ["frames", "dense"],
+      ts: new Date(now - 60_000).toISOString(),
+      app: "Cursor",
+      window_name: "Screenpipe search",
+      text: "screenpipe unified search in the editor",
+    },
+    {
+      source_type: "audio",
+      source_pk: "91003",
+      score: 0.82,
+      legs: ["audio", "dense"],
+      ts: new Date(now - 180_000).toISOString(),
+      app: "MacBook microphone",
+      window_name: "meeting transcript",
+      text: "We reviewed the screenpipe unified search results in the meeting.",
+    },
+    {
+      source_type: "document",
+      source_pk: "doc-91004",
+      score: 0.71,
+      legs: ["documents", "dense"],
+      ts: new Date(now - 240_000).toISOString(),
+      app: "document",
+      window_name: "Screenpipe search design notes.md",
+      text: "The screenpipe search contract returns OCR, audio, input, document, and connection records.",
+    },
+    {
+      source_type: "input",
+      source_pk: "91002",
+      score: 0.68,
+      legs: ["input"],
+      ts: new Date(now - 120_000).toISOString(),
+      app: "Cursor",
+      window_name: "Screenpipe search",
+      text: "screenpipe search",
+    },
+    {
+      source_type: "connection",
+      source_pk: "connection-91005",
+      score: 0.64,
+      legs: ["connections"],
+      ts: new Date(now - 300_000).toISOString(),
+      app: "office:feishu",
+      window_name: "Search review notes",
+      text: "The connection search contract includes synced meeting and document records.",
+    },
+  ];
+  if (!normalizedQuery) return hits;
+  return hits.filter((hit) => JSON.stringify(hit).toLowerCase().includes(normalizedQuery));
+}
+
 export function mockLocalApiResponse(
   url: URL,
   init: RequestInit | undefined,
@@ -887,6 +1022,15 @@ export function mockLocalApiResponse(
   }
   if (url.pathname === "/activity-ledger") {
     return Response.json(mockActivityLedger(url, scenario));
+  }
+  // Search cards intentionally exercise the real exact-thumbnail error path.
+  // Return a deterministic 404 here instead of falling through to localhost:
+  // browser smoke tests should verify UI fallback handling, not a live engine.
+  if (/^\/frames\/[^/]+\/thumbnail$/.test(url.pathname)) {
+    return new Response(null, {
+      status: 404,
+      headers: { "content-type": "image/jpeg", "x-screenpipe-mock": "missing-thumbnail" },
+    });
   }
   if (url.pathname === "/frames/preview-samples") {
     const start = new Date(url.searchParams.get("start_time") ?? "");
@@ -996,6 +1140,56 @@ export function mockLocalApiResponse(
         value,
         label: value.replace("https://github.com/", ""),
       })),
+    });
+  }
+  if (url.pathname === "/search/records") {
+    const query = url.searchParams.get("q") ?? "";
+    const contentType = url.searchParams.get("content_type") ?? "all";
+    const mode = url.searchParams.get("mode") ?? "time";
+    const limit = Number(url.searchParams.get("limit") ?? 24);
+    const offset = Number(url.searchParams.get("offset") ?? 0);
+
+    if (scenario === "empty") {
+      return mode === "relevance"
+        ? Response.json({
+            results: [],
+            degraded: false,
+            legs_used: ["frames", "audio", "input", "documents", "connections"],
+          })
+        : Response.json({
+            data: [],
+            pagination: { limit, offset, total: 0 },
+          });
+    }
+
+    if (mode === "relevance") {
+      const results = mockUnifiedSearchHits(query).filter((hit) => {
+        if (contentType === "ocr") return hit.source_type === "ocr";
+        if (contentType === "audio") return hit.source_type === "audio";
+        if (contentType === "input") return hit.source_type === "input";
+        if (contentType === "document") return hit.source_type === "document";
+        if (contentType === "connection") return hit.source_type === "connection";
+        return contentType === "all";
+      });
+      return Response.json({
+        results: results.slice(offset, offset + limit),
+        degraded: false,
+        legs_used: ["frames", "audio", "input", "documents", "connections", "dense"],
+      });
+    }
+
+    const rows = mockUnifiedSearchRows(query).filter((row) => {
+      const type = row.type.toLowerCase();
+      if (contentType === "ocr") return type === "ocr";
+      if (contentType === "input") return type === "input";
+      if (contentType === "audio") return type === "audio";
+      if (contentType === "document") return type === "document";
+      if (contentType === "connection") return type === "connection";
+      return contentType === "all";
+    });
+    return Response.json({
+      data: rows.slice(offset, offset + limit),
+      pagination: { limit, offset, total: rows.length },
     });
   }
   if (url.pathname === "/search") {

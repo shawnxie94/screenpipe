@@ -458,6 +458,63 @@ impl DatabaseManager {
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
 
+    /// Count UI events matching the same filters as `search_ui_events_ordered`.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn count_ui_events(
+        &self,
+        query: Option<&str>,
+        event_type: Option<&str>,
+        app_name: Option<&str>,
+        window_name: Option<&str>,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        context_only: bool,
+    ) -> Result<i64, sqlx::Error> {
+        let mut conditions = vec!["1=1".to_string()];
+        let mut bind_values: Vec<String> = Vec::new();
+        if context_only {
+            conditions.push(
+                "(COALESCE(element_name, '') != '' OR COALESCE(text_content, '') != '')"
+                    .to_string(),
+            );
+        }
+        if let Some(q) = query.filter(|q| !q.is_empty()) {
+            conditions.push(
+                "(text_content LIKE '%' || ? || '%' OR app_name LIKE '%' || ? || '%' OR window_title LIKE '%' || ? || '%')"
+                    .to_string(),
+            );
+            bind_values.extend([q.to_owned(), q.to_owned(), q.to_owned()]);
+        }
+        if let Some(et) = event_type.filter(|value| !value.is_empty()) {
+            conditions.push("event_type = ?".to_string());
+            bind_values.push(et.to_owned());
+        }
+        if let Some(app) = app_name.filter(|value| !value.is_empty()) {
+            conditions.push("app_name LIKE '%' || ? || '%'".to_string());
+            bind_values.push(app.to_owned());
+        }
+        if let Some(window) = window_name.filter(|value| !value.is_empty()) {
+            conditions.push("window_title LIKE '%' || ? || '%'".to_string());
+            bind_values.push(window.to_owned());
+        }
+        let sql = format!(
+            "SELECT COUNT(*) FROM ui_events WHERE {} AND (? IS NULL OR timestamp >= ?) AND (? IS NULL OR timestamp <= ?)",
+            conditions.join(" AND ")
+        );
+        let mut query_builder = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(sql));
+        for value in &bind_values {
+            query_builder = query_builder.bind(value);
+        }
+        let mut connection = self.acquire_search_read().await?;
+        query_builder
+            .bind(start_time)
+            .bind(start_time)
+            .bind(end_time)
+            .bind(end_time)
+            .fetch_one(&mut *connection)
+            .await
+    }
+
     /// Get UI event statistics grouped by app and event type
     pub async fn get_ui_event_stats(
         &self,

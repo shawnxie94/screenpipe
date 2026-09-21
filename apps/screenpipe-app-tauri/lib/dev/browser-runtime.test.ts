@@ -63,6 +63,40 @@ describe("browser development runtime", () => {
     });
   });
 
+  it("fixtures unified search records and exact thumbnail misses", async () => {
+    const search = await mockLocalApiResponse(
+      new URL("http://localhost:3030/search/records?q=search&content_type=all&limit=20"),
+      undefined,
+      "ready",
+    );
+    const searchBody = await search.json();
+    expect(searchBody.data).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "OCR" }),
+        expect.objectContaining({ type: "Audio" }),
+        expect.objectContaining({ type: "Input" }),
+        expect.objectContaining({ type: "Document" }),
+        expect.objectContaining({ type: "Connection" }),
+      ]),
+    );
+    expect(searchBody.pagination.total).toBe(5);
+
+    const documentSearch = await mockLocalApiResponse(
+      new URL("http://localhost:3030/search/records?q=search&content_type=document"),
+      undefined,
+      "ready",
+    );
+    expect((await documentSearch.json()).data).toHaveLength(1);
+
+    const thumbnail = await mockLocalApiResponse(
+      new URL("http://localhost:3030/frames/91001/thumbnail?width=384&quality=75"),
+      undefined,
+      "ready",
+    );
+    expect(thumbnail.status).toBe(404);
+    expect(thumbnail.headers.get("x-screenpipe-mock")).toBe("missing-thumbnail");
+  });
+
   it("provides imported skills for composer design review", () => {
     const invoke = createBrowserIpcMock({ mode: "mock", apiPort: 3030 });
 

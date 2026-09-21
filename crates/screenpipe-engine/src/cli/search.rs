@@ -141,6 +141,14 @@ fn print_text(items: &[ContentItem]) {
                     one_line(&c.text)
                 );
             }
+            ContentItem::Document(c) => {
+                println!(
+                    "[{}] document · {}\n  {}",
+                    c.imported_at,
+                    c.file_name,
+                    one_line(&c.text)
+                );
+            }
             ContentItem::Audio(c) => {
                 let who = c
                     .speaker

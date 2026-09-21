@@ -73,6 +73,14 @@ beforeEach(() => {
 });
 
 describe("native first-run summary projection", () => {
+  it("ignores a successful onboarding response with null data", async () => {
+    mocks.getOnboardingStatus.mockResolvedValue({ status: "ok", data: null });
+    const { result } = renderHook(() => useLearningWindow());
+
+    await waitFor(() => expect(mocks.getOnboardingStatus).toHaveBeenCalled());
+    expect(result.current.phase).toBe("idle");
+  });
+
   it("shows the native writing phase without starting an agent in React", async () => {
     mocks.getOnboardingStatus.mockResolvedValue(nativeStatus("writing"));
     const { result } = renderHook(() => useLearningWindow());

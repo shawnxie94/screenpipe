@@ -31,11 +31,32 @@ function frameThumbnailUrl(
   );
 }
 
+function getMockFrameThumbnailUrl(frameId: number | string): string | null {
+  if (
+    typeof document === "undefined" ||
+    document.documentElement.dataset.screenpipeWebDev !== "mock"
+  ) {
+    return null;
+  }
+
+  const hue = (Number(frameId) * 47) % 360;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="384" height="216" viewBox="0 0 384 216"><rect width="384" height="216" fill="hsl(${hue} 38% 18%)"/><circle cx="${88 + (Number(frameId) % 6) * 38}" cy="100" r="58" fill="hsl(${hue} 68% 52%)" opacity=".68"/><path d="M0 180L132 84l90 66 62-46 100 76v36H0z" fill="hsl(${(hue + 55) % 360} 46% 32%)"/><text x="18" y="30" fill="white" font-family="system-ui" font-size="14" opacity=".8">synthetic screen preview</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 export function getFrameThumbnailSources(
   frameId: number | string,
   retry?: number,
   options: FrameThumbnailOptions = {},
 ) {
+  const mockUrl = getMockFrameThumbnailUrl(frameId);
+  if (mockUrl) {
+    return {
+      src: mockUrl,
+      srcSet: `${mockUrl} 384w, ${mockUrl} 768w`,
+    };
+  }
+
   const [fallbackWidth] = FRAME_THUMBNAIL_WIDTHS;
   return {
     src: frameThumbnailUrl(frameId, fallbackWidth, retry, options),

@@ -65,7 +65,7 @@ export function useLearningWindow(
     let cancelled = false;
     const sync = async () => {
       const result = await commands.getOnboardingStatus();
-      if (cancelled || result.status !== "ok" || !result.data.isCompleted) return;
+      if (cancelled || result.status !== "ok" || !result.data?.isCompleted) return;
       const native = result.data;
       const startedAt = native.firstRunSummaryStartedAt ?? native.completedAt;
       const phase = native.firstRunSummaryPhase ?? "idle";

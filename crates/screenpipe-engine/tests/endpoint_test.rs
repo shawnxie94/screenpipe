@@ -33,23 +33,35 @@ mod tests {
     struct TestErrorResponse {
         error: String,
     }
+
+    #[derive(Deserialize)]
+    struct LegacyKeywordMatch {
+        frame_id: i64,
+        app_name: String,
+        window_name: String,
+        text: String,
+        url: String,
+    }
     // Add this function to initialize the logger
     fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
     }
 
     async fn setup_test_app() -> (Router, Arc<DatabaseManager>) {
-        let unique_suffix = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|duration| duration.as_nanos())
-            .unwrap_or_default();
-        let screenpipe_dir = std::env::temp_dir().join(format!(
-            "screenpipe-endpoint-test-{}-{unique_suffix}",
-            std::process::id()
-        ));
+        // Keep the database file, its WAL, and the router-owned app state alive
+        // together for the whole test. An in-memory SQLite database is shared
+        // across pooled connections and is especially prone to table-lock races
+        // when SCServer starts its background actors while the test seeds rows.
+        let db_dir = tempfile::tempdir().expect("endpoint test database directory");
+        let screenpipe_dir = db_dir.path().join("screenpipe");
+        let db_path = db_dir.path().join("endpoint.sqlite");
+        // The router only owns paths, not the TempDir guard. Leak the guard for
+        // this test process so dropping the local tuple cannot remove a live
+        // database/WAL underneath an app request or actor.
+        let _db_dir = Box::leak(Box::new(db_dir));
 
         let db = Arc::new(
-            DatabaseManager::new("sqlite::memory:", Default::default())
+            DatabaseManager::new(db_path.to_string_lossy().as_ref(), Default::default())
                 .await
                 .unwrap(),
         );
@@ -104,12 +116,14 @@ mod tests {
             )
             .await
             .unwrap();
+        let mut write_tx = db.begin_immediate_with_retry().await.unwrap();
         sqlx::query("UPDATE frames SET snapshot_path = ?1 WHERE id = ?2")
             .bind(snapshot_path.to_string_lossy().to_string())
             .bind(frame_id)
-            .execute(&db.pool)
+            .execute(&mut **write_tx.conn())
             .await
             .unwrap();
+        write_tx.commit().await.unwrap();
 
         let uri = format!("/frames/{frame_id}/thumbnail?width=384&quality=75");
         let first = app
@@ -176,15 +190,17 @@ mod tests {
             )
             .await
             .unwrap();
+        let mut write_tx = db.begin_immediate_with_retry().await.unwrap();
         sqlx::query(
             "INSERT INTO frames \
              (timestamp, app_name, browser_url, video_chunk_id, offset_index, focused) \
              VALUES ('2026-08-20T10:00:10Z', 'Arc', 'https://example.com/work', ?1, 4, 1)",
         )
         .bind(chunk_id)
-        .execute(&db.pool)
+        .execute(&mut **write_tx.conn())
         .await
         .unwrap();
+        write_tx.commit().await.unwrap();
 
         let samples = app
             .clone()
@@ -240,13 +256,14 @@ mod tests {
             )
             .await
             .unwrap();
+        let mut write_tx = db.begin_immediate_with_retry().await.unwrap();
         let frame_id = sqlx::query(
             "INSERT INTO frames \
              (timestamp, app_name, video_chunk_id, offset_index, focused) \
              VALUES ('2026-08-20T10:00:10Z', '', ?1, 4, 0)",
         )
         .bind(chunk_id)
-        .execute(&db.pool)
+        .execute(&mut **write_tx.conn())
         .await
         .unwrap()
         .last_insert_rowid();
@@ -257,9 +274,32 @@ mod tests {
                      'https://example.com/work', ?1)",
         )
         .bind(frame_id)
-        .execute(&db.pool)
+        .execute(&mut **write_tx.conn())
         .await
         .unwrap();
+        write_tx.commit().await.unwrap();
+
+        // The direct SQL seed is committed, but wait on a read through the
+        // same pool before routing the request. This is an explicit observation
+        // point for the actor-backed router and prevents a transient empty read
+        // from being mistaken for an attribution regression.
+        tokio::time::timeout(StdDuration::from_secs(5), async {
+            loop {
+                let count: i64 = sqlx::query_scalar(
+                    "SELECT COUNT(*) FROM ui_events WHERE frame_id = ?1 AND app_name = 'Arc'",
+                )
+                .bind(frame_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+                if count == 1 {
+                    break;
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .expect("linked UI event write must become observable before routing");
 
         let samples = app
             .oneshot(
@@ -318,18 +358,20 @@ mod tests {
             .await
             .unwrap();
 
+        let mut write_tx = db.begin_immediate_with_retry().await.unwrap();
         sqlx::query("UPDATE frames SET snapshot_path = ?1 WHERE id = ?2")
             .bind(missing_path.to_string_lossy().to_string())
             .bind(missing_frame_id)
-            .execute(&db.pool)
+            .execute(&mut **write_tx.conn())
             .await
             .unwrap();
         sqlx::query("UPDATE frames SET snapshot_path = ?1 WHERE id = ?2")
             .bind(nearby_path.to_string_lossy().to_string())
             .bind(nearby_frame_id)
-            .execute(&db.pool)
+            .execute(&mut **write_tx.conn())
             .await
             .unwrap();
+        write_tx.commit().await.unwrap();
 
         let fallback_uri = format!("/frames/{missing_frame_id}/thumbnail?width=384&quality=75");
         let fallback = app
@@ -456,9 +498,10 @@ mod tests {
         .unwrap();
 
         let response = app
+            .clone()
             .oneshot(
                 Request::builder()
-                    .uri("/search?q=local%20api%20sentinel%20exactmatch&content_type=ocr&limit=5")
+                    .uri("/search?query=local%20api%20sentinel%20exactmatch&limit=5")
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -467,26 +510,30 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let search_response: SearchResponse = serde_json::from_slice(&body).unwrap();
+        let keyword_matches: Vec<LegacyKeywordMatch> = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(search_response.pagination.total, 1);
-        assert_eq!(search_response.data.len(), 1);
+        // `/search` is the legacy OCR keyword handler: it takes `query` and
+        // returns flat keyword matches, not the paginated all-records shape.
+        assert_eq!(keyword_matches.len(), 1);
+        assert_eq!(keyword_matches[0].frame_id, frame_id);
+        assert!(keyword_matches[0].text.contains("local api sentinel exactmatch"));
+        assert_eq!(keyword_matches[0].app_name, "SearchFixtureApp");
+        assert_eq!(keyword_matches[0].window_name, "Search Fixture Window");
+        assert_eq!(keyword_matches[0].url, "https://docs.example/search");
 
-        match &search_response.data[0] {
-            ContentItem::OCR(ocr) => {
-                assert_eq!(ocr.frame_id, frame_id);
-                assert!(ocr.text.contains("local api sentinel exactmatch"));
-                assert_eq!(ocr.app_name, "SearchFixtureApp");
-                assert_eq!(ocr.window_name, "Search Fixture Window");
-                assert_eq!(
-                    ocr.browser_url.as_deref(),
-                    Some("https://docs.example/search")
-                );
-                assert_eq!(ocr.device_name, device_name);
-                assert_eq!(ocr.focused, Some(true));
-            }
-            other => panic!("expected OCR search result, got {other:?}"),
-        }
+        // `q` belongs to `/search/records`; passing it to the legacy handler
+        // must not silently turn into a keyword search.
+        let wrong_legacy_query = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/search?q=local%20api%20sentinel%20exactmatch")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(wrong_legacy_query.status(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]
@@ -569,7 +616,7 @@ mod tests {
             .clone()
             .oneshot(
                 Request::builder()
-                    .uri("/search?q=parsed%20endpoint%20sentinel&content_type=parsed&limit=5")
+                    .uri("/search/records?q=parsed%20endpoint%20sentinel&content_type=parsed&limit=5")
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -596,7 +643,7 @@ mod tests {
             .clone()
             .oneshot(
                 Request::builder()
-                    .uri(format!("/search?content_type=semantic&frame_id={frame_id}"))
+                    .uri(format!("/search/records?content_type=semantic&frame_id={frame_id}"))
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -999,12 +1046,14 @@ mod tests {
         let two_hours_ago = now - Duration::hours(2);
 
         // update timestamps for ocr and audio
+        let mut write_tx = db.begin_immediate_with_retry().await.unwrap();
         sqlx::query("UPDATE frames SET timestamp = ? WHERE id = ?")
             .bind(two_hours_ago)
             .bind(frame_id1)
-            .execute(&db.pool)
+            .execute(&mut **write_tx.conn())
             .await
             .unwrap();
+        write_tx.commit().await.unwrap();
 
         // insert ocr and audio data
         db.insert_ocr_text(
@@ -1034,12 +1083,14 @@ mod tests {
             .await
             .unwrap();
 
+        let mut write_tx = db.begin_immediate_with_retry().await.unwrap();
         sqlx::query("UPDATE audio_transcriptions SET timestamp = ? WHERE id = ?")
             .bind(two_hours_ago)
             .bind(audio_transcription_id1)
-            .execute(&db.pool)
+            .execute(&mut **write_tx.conn())
             .await
             .unwrap();
+        write_tx.commit().await.unwrap();
         // test search with start_time constraint
         let ocr_results = db
             .search(
@@ -1227,19 +1278,21 @@ mod tests {
             .unwrap();
 
         // Insert OCR data with different timestamps
+        let mut write_tx = db.begin_immediate_with_retry().await.unwrap();
         sqlx::query("UPDATE frames SET timestamp = ? WHERE id = ?")
             .bind(old_timestamp)
             .bind(old_frame_id)
-            .execute(&db.pool)
+            .execute(&mut **write_tx.conn())
             .await
             .unwrap();
 
         sqlx::query("UPDATE frames SET timestamp = ? WHERE id = ?")
             .bind(recent_timestamp)
             .bind(recent_frame_id)
-            .execute(&db.pool)
+            .execute(&mut **write_tx.conn())
             .await
             .unwrap();
+        write_tx.commit().await.unwrap();
 
         db.insert_ocr_text(
             old_frame_id,
@@ -1453,6 +1506,7 @@ mod tests {
             )
             .await
             .unwrap();
+        let mut write_tx = db.begin_immediate_with_retry().await.unwrap();
         sqlx::query(
             "UPDATE frames SET snapshot_path = ?1, full_text = ?2, text_source = 'accessibility' \
              WHERE id = ?3",
@@ -1460,9 +1514,10 @@ mod tests {
         .bind(snapshot_path.to_string_lossy().to_string())
         .bind(canonical_text)
         .bind(frame_id)
-        .execute(&db.pool)
+        .execute(&mut **write_tx.conn())
         .await
         .unwrap();
+        write_tx.commit().await.unwrap();
 
         let permit = screenpipe_capture::ocr_semaphore().acquire().await.unwrap();
 

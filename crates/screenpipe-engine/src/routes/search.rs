@@ -71,8 +71,8 @@ use crate::server::AppState;
 use crate::video_utils::extract_frame;
 
 use super::content::{
-    AudioContent, ConnectionContent, ContentItem, InputContent, OCRContent, PaginationInfo,
-    ParsedActorReference, ParsedContent, ParsedItem, UiContent,
+    AudioContent, ConnectionContent, ContentItem, DocumentContent, InputContent, OCRContent,
+    PaginationInfo, ParsedActorReference, ParsedContent, ParsedItem, UiContent,
 };
 
 #[derive(OaSchema, Debug, Deserialize, PartialEq, Default, Clone)]
@@ -119,6 +119,26 @@ impl SearchContentType {
             // instead of silently exposing channel data.
             Self::Connection => None,
         }
+    }
+
+    fn relevance_frames(&self) -> bool {
+        matches!(self, Self::All | Self::OCR | Self::Accessibility)
+    }
+
+    fn relevance_audio(&self) -> bool {
+        matches!(self, Self::All | Self::Audio)
+    }
+
+    fn relevance_documents(&self) -> bool {
+        matches!(self, Self::All)
+    }
+
+    fn relevance_input(&self) -> bool {
+        matches!(self, Self::All | Self::Input)
+    }
+
+    fn relevance_connections(&self) -> bool {
+        matches!(self, Self::All | Self::Connection)
     }
 }
 
@@ -304,6 +324,14 @@ fn pipe_can_access_content_item(permissions: &PipePermissions, item: &ContentIte
             Some(content.timestamp),
         ),
         ContentItem::Audio(content) => (None, None, "audio", Some(content.timestamp)),
+        ContentItem::Document(content) => (
+            None,
+            None,
+            "document",
+            DateTime::parse_from_rfc3339(&content.imported_at)
+                .ok()
+                .map(|timestamp| timestamp.with_timezone(&Utc)),
+        ),
         ContentItem::UI(content) => (
             Some(content.app_name.as_str()),
             Some(content.window_name.as_str()),
@@ -970,6 +998,283 @@ fn empty_search_response(
     )
 }
 
+#[derive(Debug)]
+struct UnifiedTimedItem {
+    timestamp: DateTime<Utc>,
+    item: ContentItem,
+}
+
+fn content_item_time(item: &ContentItem) -> DateTime<Utc> {
+    match item {
+        ContentItem::OCR(content) => content.timestamp,
+        ContentItem::Audio(content) => content.timestamp,
+        ContentItem::UI(content) => content.timestamp,
+        ContentItem::Input(content) => content.timestamp,
+        ContentItem::Document(content) => DateTime::parse_from_rfc3339(&content.imported_at)
+            .map(|ts| ts.with_timezone(&Utc))
+            .unwrap_or_else(|_| Utc::now()),
+        ContentItem::Parsed(content) => content.timestamp,
+        ContentItem::Connection(content) => content.event_at.unwrap_or(content.fetched_at),
+    }
+}
+
+/// Stable top-level identity for the unified `/search/records` result set.
+/// Type prefixes are intentional: an OCR frame and an accessibility traversal
+/// may refer to the same capture but remain distinct evidence types.
+fn unified_source_identity(item: &ContentItem) -> String {
+    match item {
+        ContentItem::OCR(content) => format!("ocr:{}", content.frame_id),
+        ContentItem::Audio(content) => format!("audio:{}", content.chunk_id),
+        ContentItem::Input(content) => format!("input:{}", content.id),
+        ContentItem::UI(content) => format!("accessibility:{}", content.id),
+        ContentItem::Document(content) => format!("document:{}", content.sha256),
+        ContentItem::Parsed(content) => format!("parsed:{}", content.frame_id),
+        ContentItem::Connection(content) => format!(
+            "connection:{}:{}:{}:{}",
+            content.connector, content.namespace, content.object_kind, content.object_id
+        ),
+    }
+}
+
+fn dedupe_unified_items(items: Vec<UnifiedTimedItem>) -> Vec<UnifiedTimedItem> {
+    let mut by_identity = std::collections::HashMap::with_capacity(items.len());
+    for entry in items {
+        // DB document results are ordered by FTS relevance (or import time for
+        // browse queries), so the first chunk is the best display candidate.
+        by_identity
+            .entry(unified_source_identity(&entry.item))
+            .or_insert(entry);
+    }
+    by_identity.into_values().collect()
+}
+
+async fn unified_time_search(
+    state: &AppState,
+    query: &SearchQuery,
+) -> Result<SearchResponse, sqlx::Error> {
+    let text = query.q.as_deref().unwrap_or("");
+    let fetch_limit = query
+        .pagination
+        .limit
+        .saturating_add(query.pagination.offset)
+        .clamp(1, 200);
+    let capture_query = state.db.search_with_tags_ordered_lightweight(
+        text,
+        ContentType::All,
+        fetch_limit,
+        0,
+        query.start_time,
+        query.end_time,
+        query.app_name.as_deref(),
+        query.window_name.as_deref(),
+        query.min_length,
+        query.max_length,
+        query.speaker_ids.clone(),
+        query.frame_name.as_deref(),
+        query.browser_url.as_deref(),
+        query.focused,
+        query.speaker_name.as_deref(),
+        query.device_name.as_deref(),
+        query.machine_id.as_deref(),
+        query.on_screen,
+        query.input_context_only,
+        query.tags.as_deref().unwrap_or(&[]),
+        query.order,
+    );
+    let input_query = state.db.search_ui_events_ordered(
+        Some(text),
+        None,
+        query.app_name.as_deref(),
+        query.window_name.as_deref(),
+        query.start_time,
+        query.end_time,
+        fetch_limit,
+        0,
+        query.order,
+        query.input_context_only,
+    );
+    let document_query = state.db.document_search_in_range(
+        text,
+        fetch_limit,
+        query.start_time,
+        query.end_time,
+    );
+    let connector_query = state.db.connector_search_time_page(
+        text,
+        query.start_time,
+        query.end_time,
+        fetch_limit,
+    );
+    let (capture, inputs, documents, connections) = tokio::try_join!(
+        capture_query,
+        input_query,
+        document_query,
+        connector_query,
+    )?;
+
+    let mut items: Vec<UnifiedTimedItem> = capture
+        .iter()
+        .filter(|result| match result {
+            SearchResult::OCR(row) => !is_screenpipe_app(&row.app_name),
+            SearchResult::Audio(_) => true,
+            SearchResult::UI(row) => !is_screenpipe_app(&row.app_name),
+            SearchResult::Input(row) => row
+                .app_name
+                .as_deref()
+                .is_none_or(|app| !is_screenpipe_app(app)),
+        })
+        .map(|result| {
+            let item = search_result_to_content_item(result, query.max_content_length);
+            UnifiedTimedItem {
+                timestamp: content_item_time(&item),
+                item,
+            }
+        })
+        .collect();
+
+    items.extend(inputs.into_iter().filter_map(|input| {
+        let item = search_result_to_content_item(&SearchResult::Input(input), query.max_content_length);
+        (!matches!(&item, ContentItem::Input(content) if content.app_name.as_deref().is_some_and(is_screenpipe_app)))
+            .then(|| UnifiedTimedItem { timestamp: content_item_time(&item), item })
+    }));
+    items.extend(documents.into_iter().map(|document| {
+        let text = if document.snippet.is_empty() {
+            document.file_name.clone()
+        } else {
+            document.snippet.clone()
+        };
+        let item = ContentItem::Document(DocumentContent {
+            sha256: document.sha256,
+            file_name: document.file_name,
+            ext: document.ext,
+            original_path: document.original_path,
+            managed_path: document.managed_path,
+            imported_at: document.imported_at,
+            ordinal: document.ordinal,
+            snippet: document.snippet,
+            text,
+        });
+        UnifiedTimedItem { timestamp: content_item_time(&item), item }
+    }));
+    items.extend(connections.into_iter().map(|row| {
+        let connector = row.connector.clone();
+        let provider = connector
+            .strip_prefix("office:")
+            .unwrap_or(&connector)
+            .to_string();
+        let event_at = row
+            .event_at
+            .as_deref()
+            .and_then(|value| DateTime::parse_from_rfc3339(value).ok())
+            .map(|value| value.with_timezone(&Utc));
+        let fetched_at = DateTime::parse_from_rfc3339(&row.fetched_at)
+            .map(|value| value.with_timezone(&Utc))
+            .unwrap_or_else(|_| Utc::now());
+        let item = ContentItem::Connection(ConnectionContent {
+            connector,
+            namespace: row.namespace,
+            provider,
+            object_kind: row.object_kind,
+            object_id: row.object_id,
+            title: row.title,
+            body_text: row.body_text,
+            event_at,
+            fetched_at,
+            source_url: row.source_url,
+        });
+        UnifiedTimedItem { timestamp: content_item_time(&item), item }
+    }));
+
+    let mut items = dedupe_unified_items(items);
+    items.sort_by(|a, b| {
+        let time_order = match query.order {
+            Order::Ascending => a.timestamp.cmp(&b.timestamp),
+            Order::Descending => b.timestamp.cmp(&a.timestamp),
+        };
+        time_order.then_with(|| {
+            unified_source_identity(&a.item).cmp(&unified_source_identity(&b.item))
+        })
+    });
+    let total = state
+        .db
+        .count_search_results_with_tags_filtered(
+            text,
+            ContentType::All,
+            query.start_time,
+            query.end_time,
+            query.app_name.as_deref(),
+            query.window_name.as_deref(),
+            query.min_length,
+            query.max_length,
+            query.speaker_ids.clone(),
+            query.frame_name.as_deref(),
+            query.browser_url.as_deref(),
+            query.focused,
+            query.speaker_name.as_deref(),
+            query.on_screen,
+            query.input_context_only,
+            query.tags.as_deref().unwrap_or(&[]),
+        )
+        .await? as i64
+        + state
+            .db
+            .count_ui_events(
+                Some(text),
+                None,
+                query.app_name.as_deref(),
+                query.window_name.as_deref(),
+                query.start_time,
+                query.end_time,
+                query.input_context_only,
+            )
+            .await?
+        + state
+            .db
+            .count_search_results_with_tags_filtered(
+                text,
+                ContentType::Accessibility,
+                query.start_time,
+                query.end_time,
+                query.app_name.as_deref(),
+                query.window_name.as_deref(),
+                None,
+                None,
+                None,
+                query.frame_name.as_deref(),
+                query.browser_url.as_deref(),
+                query.focused,
+                None,
+                query.on_screen,
+                query.input_context_only,
+                query.tags.as_deref().unwrap_or(&[]),
+            )
+            .await? as i64
+        + state
+            .db
+            .document_search_count_in_range(text, query.start_time, query.end_time)
+            .await?
+        + state
+            .db
+            .connector_search_time_count(text, query.start_time, query.end_time)
+            .await?;
+    let offset = query.pagination.offset as usize;
+    let data = items
+        .into_iter()
+        .skip(offset)
+        .take(query.pagination.limit as usize)
+        .map(|entry| entry.item)
+        .collect();
+    Ok(SearchResponse {
+        data,
+        pagination: PaginationInfo {
+            limit: query.pagination.limit,
+            offset: query.pagination.offset,
+            total,
+        },
+        related: None,
+    })
+}
+
 // Update the search function
 #[oasgen]
 pub(crate) async fn search(
@@ -1049,6 +1354,21 @@ pub(crate) async fn search(
 
     if wholly_before_history_cutoff {
         return Ok(empty_search_response(&query, format, &fields));
+    }
+
+    if query.content_type == SearchContentType::All
+        && !query
+            .mode
+            .as_deref()
+            .is_some_and(|mode| mode.eq_ignore_ascii_case("relevance"))
+    {
+        let response = unified_time_search(&state, &query).await.map_err(|error| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                JsonResponse(json!({ "error": format!("failed to perform unified search: {error}") })),
+            )
+        })?;
+        return Ok(render_search(format, &fields, &response));
     }
 
     debug!(
@@ -1287,6 +1607,7 @@ pub(crate) async fn search(
                     .to_string();
                 ContentItem::Connection(ConnectionContent {
                     connector,
+                    namespace: row.namespace,
                     provider,
                     object_kind: row.object_kind,
                     object_id: row.object_id,
@@ -1330,6 +1651,7 @@ pub(crate) async fn search(
             Audio,
             Ui,
             Input,
+            DocumentText,
             ParsedText,
             ParsedItemTitle(usize),
             ParsedItemBody(usize),
@@ -1359,6 +1681,10 @@ pub(crate) async fn search(
                         targets.push((i, Field::Input));
                         texts.push(t.clone());
                     }
+                }
+                ContentItem::Document(c) => {
+                    targets.push((i, Field::DocumentText));
+                    texts.push(c.text.clone());
                 }
                 ContentItem::Parsed(c) => {
                     targets.push((i, Field::ParsedText));
@@ -1417,6 +1743,7 @@ pub(crate) async fn search(
                 (Field::Audio, ContentItem::Audio(c)) => c.transcription = new_text,
                 (Field::Ui, ContentItem::UI(c)) => c.text = new_text,
                 (Field::Input, ContentItem::Input(c)) => c.text_content = Some(new_text),
+                (Field::DocumentText, ContentItem::Document(c)) => c.text = new_text,
                 (Field::ParsedText, ContentItem::Parsed(c)) => c.text = new_text,
                 (Field::ParsedItemTitle(item), ContentItem::Parsed(c)) => {
                     c.items[item].title = Some(new_text)
@@ -2582,6 +2909,53 @@ mod tests {
         assert!(result.chars().count() > 10); // marker adds chars, but original content is truncated
         assert!(result.contains("...(truncated"));
     }
+    #[test]
+    fn unified_identity_deduplicates_documents_without_merging_types() {
+        let timestamp = "2026-08-24T20:00:00Z".parse().unwrap();
+        let document = |ordinal: i64, snippet: &str| UnifiedTimedItem {
+            timestamp,
+            item: ContentItem::Document(DocumentContent {
+                sha256: "sha-one".into(),
+                file_name: "one.md".into(),
+                ext: "md".into(),
+                original_path: None,
+                managed_path: None,
+                imported_at: timestamp.to_rfc3339(),
+                ordinal,
+                snippet: snippet.into(),
+                text: snippet.into(),
+            }),
+        };
+        let ocr = UnifiedTimedItem {
+            timestamp,
+            item: ContentItem::OCR(OCRContent {
+                frame_id: 1,
+                text: "same words".into(),
+                timestamp,
+                file_path: "frame.jpg".into(),
+                offset_index: 0,
+                app_name: "Editor".into(),
+                window_name: "one".into(),
+                tags: vec![],
+                frame: None,
+                frame_name: None,
+                browser_url: None,
+                focused: None,
+                device_name: "test".into(),
+                text_source: None,
+                event_source: None,
+            }),
+        };
+        let items = dedupe_unified_items(vec![document(0, "best"), document(1, "other"), ocr]);
+        assert_eq!(items.len(), 2);
+        assert!(items.iter().any(|entry| unified_source_identity(&entry.item) == "document:sha-one"));
+        assert!(items.iter().any(|entry| unified_source_identity(&entry.item) == "ocr:1"));
+        let selected = items.iter().find_map(|entry| match &entry.item {
+            ContentItem::Document(content) => Some(content.snippet.as_str()),
+            _ => None,
+        });
+        assert_eq!(selected, Some("best"));
+    }
 }
 
 use crate::retrieval::embedder::{embed_texts, EmbedderConfig};
@@ -2634,7 +3008,7 @@ pub async fn search_relevance(
 
     // --- Sparse legs -------------------------------------------------------
     // Frames leg (OCR + a11y consolidated in frames_fts / frames_cjk_fts).
-    if !text.trim().is_empty() {
+    if !text.trim().is_empty() && query.content_type.relevance_frames() {
         match state
             .db
             .search_with_tags_ordered_lightweight(
@@ -2715,9 +3089,10 @@ pub async fn search_relevance(
         }
 
         // Audio transcripts leg.
-        match state
-            .db
-            .search_audio_ordered(
+        if query.content_type.relevance_audio() {
+            match state
+                .db
+                .search_audio_ordered(
                 &text,
                 leg_limit,
                 0,
@@ -2766,15 +3141,20 @@ pub async fn search_relevance(
             Err(error) => {
                 tracing::warn!(%error, "audio sparse leg failed");
             }
+            }
         }
 
         // Imported documents leg.
-        match state.db.document_search(&text, leg_limit).await {
+        if query.content_type.relevance_documents() {
+            match state.db.document_search(&text, leg_limit).await {
             Ok(docs) => {
                 legs_used.push("documents".into());
                 let mut ranked: Vec<String> = Vec::new();
                 for d in docs {
                     let key = format!("document:{}", d.sha256);
+                    if ranked.contains(&key) {
+                        continue;
+                    }
                     ranked.push(key.clone());
                     let ts_epoch = parse_epoch_secs(&d.imported_at);
                     push_hit(
@@ -2806,6 +3186,119 @@ pub async fn search_relevance(
             Err(error) => {
                 tracing::warn!(%error, "documents sparse leg failed");
             }
+            }
+        }
+    }
+
+    // Input-event sparse leg.
+    if query.content_type.relevance_input() {
+        match state
+            .db
+            .search_ui_events_ordered(
+            Some(&text),
+            None,
+            query.app_name.as_deref(),
+            query.window_name.as_deref(),
+            query.start_time,
+            query.end_time,
+            leg_limit,
+            0,
+            Order::Descending,
+            query.input_context_only,
+        )
+        .await
+    {
+        Ok(results) => {
+            legs_used.push("input".into());
+            let mut ranked = Vec::new();
+            for input in results {
+                let key = format!("input:{}", input.id);
+                ranked.push(key.clone());
+                let text = input
+                    .text_content
+                    .clone()
+                    .or_else(|| input.window_title.clone())
+                    .or_else(|| input.app_name.clone())
+                    .unwrap_or_else(|| input.event_type.to_string());
+                let ts = input.timestamp;
+                push_hit(
+                    &mut display,
+                    &mut timestamps,
+                    key,
+                    "input",
+                    &input.id.to_string(),
+                    Some(ts.timestamp_millis() as f64 / 1000.0),
+                    HybridHit {
+                        source_type: "input".into(),
+                        source_pk: input.id.to_string(),
+                        score: 0.0,
+                        legs: Vec::new(),
+                        ts: Some(ts.to_rfc3339()),
+                        app: input.app_name.clone(),
+                        window_name: input.window_title.clone(),
+                        text: Some(snippet(&text)),
+                    },
+                );
+            }
+            legs.push(("input", ranked));
+        }
+        Err(error) => tracing::warn!(%error, "input sparse leg failed"),
+        }
+    }
+
+    // Connector sparse leg.
+    if query.content_type.relevance_connections() {
+        match state
+            .db
+            .connector_search_page(&text, query.start_time, query.end_time, leg_limit, 0)
+        .await
+    {
+        Ok((results, _)) => {
+            legs_used.push("connections".into());
+            let mut ranked = Vec::new();
+            for row in results {
+                let key = format!(
+                    "connection:{}:{}:{}:{}",
+                    row.connector, row.namespace, row.object_kind, row.object_id
+                );
+                let object_id = row.object_id.clone();
+                ranked.push(key.clone());
+                let event_at = row
+                    .event_at
+                    .as_deref()
+                    .and_then(|value| DateTime::parse_from_rfc3339(value).ok())
+                    .map(|value| value.with_timezone(&Utc));
+                let fetched_at = DateTime::parse_from_rfc3339(&row.fetched_at)
+                    .map(|value| value.with_timezone(&Utc))
+                    .unwrap_or_else(|_| Utc::now());
+                let timestamp = event_at.unwrap_or(fetched_at);
+                let text = row
+                    .title
+                    .clone()
+                    .map(|title| format!("{} {}", title, row.body_text))
+                    .unwrap_or_else(|| row.body_text.clone());
+                push_hit(
+                    &mut display,
+                    &mut timestamps,
+                    key,
+                    "connection",
+                    &object_id,
+                    Some(timestamp.timestamp_millis() as f64 / 1000.0),
+                    HybridHit {
+                        source_type: "connection".into(),
+                        source_pk: object_id.clone(),
+                        score: 0.0,
+                        legs: Vec::new(),
+                        ts: Some(timestamp.to_rfc3339()),
+                        app: Some(row.connector),
+                        window_name: row.title,
+                        text: Some(snippet(&text)),
+                    },
+                );
+            }
+            legs.push(("connections", ranked));
+        }
+        Err(error) => tracing::warn!(%error, "connector sparse leg failed"),
         }
     }
 
@@ -2829,7 +3322,7 @@ pub async fn search_relevance(
                         for hit in hits {
                             let key = format!("{}:{}", hit.source_type, hit.source_pk);
                             match hit.source_type.as_str() {
-                                "transcript" => {
+                                "transcript" if query.content_type.relevance_audio() => {
                                     // Map to the audio-leg key space so both
                                     // legs fuse on one candidate.
                                     let chunk_id: Option<(i64, String, String)> = state
@@ -2857,8 +3350,10 @@ pub async fn search_relevance(
                                     }
                                     transcript_ranked.push(key.clone());
                                 }
-                                "document" => {
-                                    document_ranked.push(key.clone());
+                                "document" if query.content_type.relevance_documents() => {
+                                    if !document_ranked.contains(&key) {
+                                        document_ranked.push(key.clone());
+                                    }
                                 }
                                 other => {
                                     tracing::debug!(source_type = other, "unknown dense source");

@@ -40,16 +40,32 @@ pub enum ContentItem {
     Input(InputContent),
     /// App-specific records parsed from a captured accessibility frame.
     Parsed(ParsedContent),
+    /// An object imported from a local document source.
+    Document(DocumentContent),
     /// An object imported by a connector channel (Feishu messages/docs/
-    /// calendar events, Tencent Meeting transcripts, RSS entries). Served by
-    /// `content_type=connection`; never mixed into the capture-timeline types.
+    /// calendar events, Tencent Meeting transcripts, RSS entries).
     Connection(ConnectionContent),
+}
+
+#[derive(OaSchema, Serialize, Deserialize, Debug, Clone)]
+pub struct DocumentContent {
+    pub sha256: String,
+    pub file_name: String,
+    pub ext: String,
+    pub original_path: Option<String>,
+    pub managed_path: Option<String>,
+    pub imported_at: String,
+    pub ordinal: i64,
+    pub snippet: String,
+    pub text: String,
 }
 
 #[derive(OaSchema, Serialize, Deserialize, Debug, Clone)]
 pub struct ConnectionContent {
     /// Channel identity as stored (`office:feishu`, `rss`, ...).
     pub connector: String,
+    /// Namespace/account/feed scope from the connector primary key.
+    pub namespace: String,
     /// Short provider name for badges (`feishu`, `rss`, `tencent-meeting`).
     pub provider: String,
     /// `message` / `document` / `calendar_event` / `transcript` / ...
