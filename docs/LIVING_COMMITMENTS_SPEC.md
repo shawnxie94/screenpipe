@@ -5,8 +5,8 @@
 # Living commitments: reusable interactive lists
 
 <!-- doc-covers: crates/screenpipe-core/src/pipes -->
-<!-- doc-verified: 6961bfb55 -->
-> **Current.** Last verified against 6961bfb55 (2026-07-29).
+<!-- doc-verified: 6290260a3 -->
+> **Current.** Last verified against 6290260a3 (2026-09-21).
 
 ## Decision
 

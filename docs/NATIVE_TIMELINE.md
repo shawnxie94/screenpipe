@@ -1,7 +1,7 @@
 # Native Timeline (Swift)
 
 <!-- doc-covers: apps/screenpipe-app-tauri/src-tauri/swift/timeline -->
-<!-- doc-verified: 7fb306e4f -->
+<!-- doc-verified: 6290260a3 -->
 
 A pure-Swift reimplementation of the Rewind timeline that previously lived in
 the webview (`apps/screenpipe-app-tauri/components/rewind/`). Same feature set,
@@ -28,7 +28,8 @@ src-tauri/swift/timeline/
   TimelineTheme.swift        DESIGN.md tokens
   TimelineScrubberView.swift the bottom strip
   TimelineViews.swift        frame canvas, states, chrome
-  TimelinePanels.swift       hover preview, transcript, app context
+  TimelinePanels.swift         hover preview, transcript, app context
+  TimelineLiveText.swift       frame text and accessibility overlays
   TimelineIcons.swift        app icons and site favicons
   TimelineWindow.swift       NSWindow, input handling, C FFI
 
