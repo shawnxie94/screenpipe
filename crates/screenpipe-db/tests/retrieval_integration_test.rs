@@ -193,8 +193,20 @@ async fn cjk_backfill_frames_is_resumable_then_routable() {
     .unwrap();
     assert_eq!(ids, vec![3]);
 
-    // Re-running after done is a no-op.
+    // Tail catch-up: frames captured after the done flag still get
+    // projected by the periodic step (new-frame coverage without touching
+    // the insert hot path).
+    seed_frame(&db, 9, "新采集的季度评审记录").await;
     assert!(db.cjk_backfill_frames_step(10).await.unwrap());
+    let match_expr = screenpipe_db::text_normalizer::chinese_query_match("季度评审", false);
+    let ids: Vec<i64> = sqlx::query_scalar(
+        "SELECT rowid FROM frames_cjk_fts WHERE frames_cjk_fts MATCH ?1",
+    )
+    .bind(&match_expr)
+    .fetch_all(&db.pool)
+    .await
+    .unwrap();
+    assert_eq!(ids, vec![9], "post-done frames must reach the projection");
 }
 
 #[tokio::test]

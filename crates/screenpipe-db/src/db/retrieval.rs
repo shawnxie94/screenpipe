@@ -561,11 +561,11 @@ impl DatabaseManager {
 
     /// Backfill one batch of projected frame bodies into `frames_cjk_fts`.
     /// Resumable via the `cjk.frames.last_id` watermark; marks the table done
-    /// when a batch comes back short.
+    /// when a batch comes back short. Called every worker cycle even after
+    /// done — newly captured frames land beyond the watermark and this tail
+    /// catch-up keeps the projection current without touching the frame
+    /// insert hot path.
     pub async fn cjk_backfill_frames_step(&self, batch: i64) -> Result<bool, sqlx::Error> {
-        if self.cjk_covered("frames").await? {
-            return Ok(true);
-        }
         let last: i64 = self
             .retrieval_meta_get("cjk.frames.last_id")
             .await?
@@ -608,9 +608,6 @@ impl DatabaseManager {
     /// standalone `output_search_fts` (not the outputs table), so reproject
     /// from there; rowid = output id.
     pub async fn cjk_backfill_outputs_step(&self, batch: i64) -> Result<bool, sqlx::Error> {
-        if self.cjk_covered("outputs").await? {
-            return Ok(true);
-        }
         let last: i64 = self
             .retrieval_meta_get("cjk.outputs.last_id")
             .await?
