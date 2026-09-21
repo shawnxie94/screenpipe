@@ -130,7 +130,7 @@ describe("unified search response mapping", () => {
     const mapped = mapHybridResponse({
       degraded: false,
       legs_used: ["frames", "audio", "input", "documents", "connections", "dense"],
-      results: [
+      data: [
         { source_type: "ocr", source_pk: "12", score: 1, legs: ["frames", "dense"], ts: "2026-07-30T03:30:00.000Z", app: "Cursor", text: "relevance" },
         { source_type: "input", source_pk: "13", score: 0.9, legs: ["input"], ts: "2026-07-30T03:30:30.000Z", app: "Cursor", window_name: "Search", text: "screenpipe copied" },
         { source_type: "connection", source_pk: "meeting-1", score: 0.8, legs: ["connections"], ts: "2026-07-30T03:31:00.000Z", app: "feishu", text: "search review" },
@@ -177,7 +177,7 @@ describe("useKeywordSearchStore search scheduling", () => {
       return Promise.resolve(jsonResponse({
         degraded: false,
         legs_used: ["frames", "dense"],
-        results: [{ source_type: "audio", source_pk: "4", score: 1, legs: ["dense"], ts: "2026-07-30T03:30:00.000Z", text: "meeting" }],
+        data: [{ source_type: "audio", source_pk: "4", score: 1, legs: ["dense"], ts: "2026-07-30T03:30:00.000Z", text: "meeting" }],
       }));
     });
 

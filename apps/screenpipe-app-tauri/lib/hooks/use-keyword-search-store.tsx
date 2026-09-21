@@ -304,9 +304,7 @@ export function hybridHitToSearchMatch(hit: HybridSearchHit): SearchMatch | null
 export function mapHybridResponse(data: unknown): SearchMapping {
 	const hits = Array.isArray((data as any)?.data)
 		? ((data as any).data as HybridSearchHit[])
-		: Array.isArray((data as any)?.results)
-			? ((data as any).results as HybridSearchHit[])
-			: [];
+		: [];
 	const matches = hits.flatMap((hit) => {
 		const match = hybridHitToSearchMatch(hit);
 		return match ? [match] : [];

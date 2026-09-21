@@ -14,7 +14,7 @@ const {
   parseOperators,
   buildSearchUrl,
   formatHybridResults,
-  formatLegacyResults,
+  formatKeywordResults,
   truncate,
   default: registerSearch,
 } = await import("../search");
@@ -64,7 +64,7 @@ describe("search tool", () => {
 
   it("builds a keyword-mode URL with bounds", () => {
     const url = new URL(
-      buildSearchUrl({ query: "type:ocr 采购合同", limit: 999 }),
+      buildSearchUrl({ q: "type:ocr 采购合同", limit: 999 }),
     );
     expect(url.pathname).toBe("/search/records");
     expect(url.searchParams.get("q")).toBe("采购合同");
@@ -162,8 +162,8 @@ describe("search tool", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("formats legacy-shaped fallback payloads", () => {
-    const formatted = formatLegacyResults({
+  it("formats keyword records payloads", () => {
+    const formatted = formatKeywordResults({
       data: [
         { type: "OCR", content: { ocr_text: "hello", timestamp: "2026-09-20T08:00:00Z" } },
       ],

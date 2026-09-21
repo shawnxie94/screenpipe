@@ -71,7 +71,7 @@ export function parseOperators(
 }
 
 export function buildSearchUrl(params: {
-  query: string;
+  q: string;
   content_type?: string;
   mode?: "keyword" | "relevance";
   limit?: number;
@@ -81,7 +81,7 @@ export function buildSearchUrl(params: {
   app_name?: string;
   window_name?: string;
 }): string {
-  const parsed = parseOperators(params.query);
+  const parsed = parseOperators(params.q);
   // `/search/records` is the canonical surface: q, content_type, mode,
   // structured filters, and the shared {data, pagination} response.
   const url = new URL(`${API_BASE}/search/records`);
@@ -128,11 +128,7 @@ export function truncate(text: string, max = MAX_RESULT_TEXT_CHARS): string {
 }
 
 export function formatHybridResults(payload: any): string {
-  const results: HybridHit[] = Array.isArray(payload?.data)
-    ? payload.data
-    : Array.isArray(payload?.results)
-      ? payload.results
-      : [];
+  const results: HybridHit[] = Array.isArray(payload?.data) ? payload.data : [];
   if (results.length === 0) {
     return payload?.degraded
       ? "No results (hybrid search degraded; dense leg unavailable)."
@@ -159,7 +155,7 @@ export function formatHybridResults(payload: any): string {
   return lines.join("\n");
 }
 
-export function formatLegacyResults(payload: any): string {
+export function formatKeywordResults(payload: any): string {
   const data: any[] = Array.isArray(payload?.data) ? payload.data : [];
   if (data.length === 0) return "No results.";
   const lines: string[] = [];
@@ -234,11 +230,11 @@ export default function (pi: ExtensionAPI) {
       _toolCallId: string,
       params: Record<string, unknown>,
     ): Promise<string> => {
-      const query = String(params.q ?? params.query ?? "").trim();
-      if (!query) return "Provide a non-empty query.";
+      const q = String(params.q ?? params.query ?? "").trim();
+      if (!q) return "Provide a non-empty query.";
       const limit = Number(params.limit ?? 8);
       const searchParams = {
-        query,
+        q,
         content_type: typeof params.content_type === "string" ? params.content_type : undefined,
         mode: params.mode === "relevance" ? "relevance" : "keyword",
         limit,
@@ -256,16 +252,15 @@ export default function (pi: ExtensionAPI) {
           throw new Error("unexpected payload");
         }
         // Canonical `/search/records` responses carry `data` for both modes.
-        if (searchParams.mode === "keyword") return formatLegacyResults(payload);
-        if (Array.isArray(payload.data)) return formatHybridResults(payload);
-        return formatLegacyResults(payload);
+        if (searchParams.mode === "keyword") return formatKeywordResults(payload);
+        return formatHybridResults(payload);
       } catch (hybridError) {
         // Degrade to the keyword/chronological search rather than failing.
         try {
           const fallback = await fetchJson(
             buildSearchUrl({ ...searchParams, mode: "keyword" }),
           );
-          return `${formatLegacyResults(fallback)}\n(hybrid unavailable: ${hybridError})`;
+          return `${formatKeywordResults(fallback)}\n(hybrid unavailable: ${hybridError})`;
         } catch (fallbackError) {
           return `Search failed: ${fallbackError}`;
         }
