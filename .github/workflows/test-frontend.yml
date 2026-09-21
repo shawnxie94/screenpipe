@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - 'crates/screenpipe-core/assets/pi-context-compaction*'
+      - 'crates/screenpipe-core/src/agents/pi.rs' (fix(pi): load extensions through host SDK aliases (#7176))
       - 'apps/screenpipe-app-tauri/**/*.ts'
       - 'apps/screenpipe-app-tauri/**/*.tsx'
       - 'apps/screenpipe-app-tauri/**/*.js'
@@ -19,6 +20,7 @@ on:
   pull_request:
     paths:
       - 'crates/screenpipe-core/assets/pi-context-compaction*'
+      - 'crates/screenpipe-core/src/agents/pi.rs' (fix(pi): load extensions through host SDK aliases (#7176))
       - 'apps/screenpipe-app-tauri/**/*.ts'
       - 'apps/screenpipe-app-tauri/**/*.tsx'
       - 'apps/screenpipe-app-tauri/**/*.js'
@@ -74,6 +76,9 @@ jobs:
 
       - name: Pi context compaction runtime eval
         run: bun scripts/eval-pi-compaction.ts
+
+      - name: Pi extension startup runtime eval
+        run: bun scripts/eval-pi-extensions.ts
 
       - name: Biome lint (root config)
         # Biome auto-discovers ../../biome.json from the repo root. Running
