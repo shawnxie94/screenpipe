@@ -954,8 +954,9 @@ replace `<EXISTING_NOTE>` with the meeting's current `note` field (empty string 
 
         let fixed = migrate_builtin_pipe_text("meeting-summary", &stale)
             .expect("official before-saving ending should migrate");
-        assert!(fixed.contains("step 3 — write the summary"));
-        assert!(fixed.contains("the meeting UI streams this section live"));
+        // zh-local: 内置 prompt 已本地化，断言对齐本地第 3 步文本。
+        assert!(fixed.contains("第 3 步——在保存之前"));
+        assert!(fixed.contains("会议 UI 会实时流式显示这一节"));
         assert!(fixed.contains("/meetings/<MEETING_ID>/summary"));
         assert!(!fixed.contains("step 3 — before saving"));
         assert!(!fixed.contains("<EXISTING_NOTE>"));

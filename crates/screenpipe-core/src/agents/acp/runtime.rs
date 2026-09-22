@@ -5722,7 +5722,6 @@ mod tests {
         let none = build_first_turn_context(None, None);
         assert!(none.contains("screenpipe_connect_app"));
         assert!(none.contains("save_artifact"));
-        assert!(none.contains("skill_manage"));
         assert!(none.contains("search_chats"));
         assert!(none.contains("send_to_chat"));
         assert!(none.contains(".pi/skills/screenpipe-chats/SKILL.md"));

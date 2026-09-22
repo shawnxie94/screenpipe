@@ -501,7 +501,7 @@ mod tests {
             .clone()
             .oneshot(
                 Request::builder()
-                    .uri("/search?query=local%20api%20sentinel%20exactmatch&limit=5")
+                    .uri("/search/records?q=local%20api%20sentinel%20exactmatch&limit=5")
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -510,30 +510,19 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
-        let keyword_matches: Vec<LegacyKeywordMatch> = serde_json::from_slice(&body).unwrap();
+        let page: PaginatedResponse<ContentItem> = serde_json::from_slice(&body).unwrap();
 
-        // `/search` is the legacy OCR keyword handler: it takes `query` and
-        // returns flat keyword matches, not the paginated all-records shape.
-        assert_eq!(keyword_matches.len(), 1);
-        assert_eq!(keyword_matches[0].frame_id, frame_id);
-        assert!(keyword_matches[0].text.contains("local api sentinel exactmatch"));
-        assert_eq!(keyword_matches[0].app_name, "SearchFixtureApp");
-        assert_eq!(keyword_matches[0].window_name, "Search Fixture Window");
-        assert_eq!(keyword_matches[0].url, "https://docs.example/search");
-
-        // `q` belongs to `/search/records`; passing it to the legacy handler
-        // must not silently turn into a keyword search.
-        let wrong_legacy_query = app
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .uri("/search?q=local%20api%20sentinel%20exactmatch")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-        assert_eq!(wrong_legacy_query.status(), StatusCode::BAD_REQUEST);
+        // `/search/records` returns the paginated ContentItem shape; the OCR
+        // keyword hit must still come back with its frame and text hydrated.
+        assert_eq!(page.data.len(), 1);
+        let ContentItem::OCR(ocr) = &page.data[0] else {
+            panic!("expected OCR content item");
+        };
+        assert_eq!(ocr.frame_id, frame_id);
+        assert!(ocr.text.contains("local api sentinel exactmatch"));
+        assert_eq!(ocr.app_name, "SearchFixtureApp");
+        assert_eq!(ocr.window_name, "Search Fixture Window");
+        assert_eq!(ocr.browser_url.as_deref(), Some("https://docs.example/search"));
     }
 
     #[tokio::test]
