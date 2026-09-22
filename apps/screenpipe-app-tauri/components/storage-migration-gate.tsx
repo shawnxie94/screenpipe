@@ -8,7 +8,6 @@ import { Loader2 } from "lucide-react";
 import { commands, type StorageMigrationActivity } from "@/lib/utils/tauri";
 import { migrationBytes, migrationElapsed, StorageMigrationPrompt } from "./storage-migration-prompt";
 import { useTauriEvent } from "@/lib/hooks/use-tauri-event";
-import { UpdateBanner } from "./update-banner";
 
 /** Explicit conversion blocks history; startup recovery leaves the shell usable. */
 export function StorageMigrationGate({ offerMigration = false, utilityWindow = false }: { offerMigration?: boolean; utilityWindow?: boolean }) {
@@ -109,7 +108,6 @@ export function StorageMigrationGate({ offerMigration = false, utilityWindow = f
         </div>
         <p className="text-xs text-muted-foreground">Recording and history are unavailable while recovery runs. You can use settings and install updates.</p>
         <p role="status" className="text-xs">{unavailable ? "Waiting for recovery status…" : activity.message} · {migrationElapsed(elapsed)}</p>
-        <UpdateBanner compact />
       </aside>
     );
   }
@@ -157,7 +155,6 @@ export function StorageMigrationGate({ offerMigration = false, utilityWindow = f
         <p className="border-t border-border pt-4 text-xs text-muted-foreground">
           Keep Screenpipe open until storage is ready. If interrupted, Screenpipe restores recording from the saved progress before migration can be retried.
         </p>
-        <UpdateBanner compact />
       </div>
     </dialog>
   );

@@ -14,7 +14,6 @@ vi.mock("@/lib/utils/tauri", () => ({ commands: { getStorageMigrationActivity: m
 vi.mock("@/lib/hooks/use-tauri-event", () => ({
   useTauriEvent: (_: string, handler: typeof mock.onActivity) => { mock.onActivity = handler; },
 }));
-vi.mock("./update-banner", () => ({ UpdateBanner: () => <button>restart to update</button> }));
 import { StorageMigrationGate } from "./storage-migration-gate";
 
 const idle: StorageMigrationActivity = { root: "/fixture", busy: false, recovering: false, message: "", error: null, elapsed_seconds: 0, completed_records: null, total_records: null, bytes_saved: null, available_bytes: null, completed: false };
@@ -104,7 +103,6 @@ describe("app-wide migration modal", () => {
     const recovery = await screen.findByRole("complementary", { name: "storage recovery" });
     expect(recovery).toHaveTextContent("restoring saved screen records");
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByRole("button", { name: "restart to update" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
     expect(openSettings).toHaveBeenCalledOnce();
     expect(screen.queryByRole("button", { name: /try again|do later/i })).toBeNull();
@@ -193,7 +191,6 @@ describe("app-wide migration modal", () => {
     window.addEventListener("keydown", shortcut, true);
     try {
       notify(running);
-      expect(fireEvent.keyDown(screen.getByRole("button", { name: "restart to update" }), { key: "Tab" })).toBe(true);
       expect(fireEvent.keyDown(window, { key: "Tab", ctrlKey: true })).toBe(false);
       fireEvent.keyDown(window, { key: "Escape" });
       expect(shortcut).not.toHaveBeenCalled();

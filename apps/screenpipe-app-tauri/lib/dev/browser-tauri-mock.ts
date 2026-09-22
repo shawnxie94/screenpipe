@@ -4,16 +4,15 @@
 
 import type { InvokeArgs } from "@tauri-apps/api/core";
 import type {
-  StorageMigrationStatus,
-  BrainViewCanvasDocument,
-  BrainViewDefinition,
-  BrainViewTemplateKit,
+  KnowledgeViewCanvasDocument,
+  KnowledgeViewDefinition,
+  KnowledgeViewTemplateKit,
   ImportedSkill,
   PiExtensionPackage,
   ProviderAutomation,
   RegistrySkill,
-  SaveBrainViewCanvasRequest,
-  SaveBrainViewRequest,
+  SaveKnowledgeViewCanvasRequest,
+  SaveKnowledgeViewRequest,
 } from "@/lib/utils/tauri";
 import type { BrowserDevScenario } from "./browser-engine-mock";
 
@@ -32,15 +31,14 @@ export interface BrowserIpcMockOptions {
   apiPort: number;
   apiKey?: string;
   onStoreChange?: (change: StoreChange) => void;
-  onEvent?: (event: string, payload: unknown) => void;
   warn?: (message: string) => void;
 }
 
-const BROWSER_DEV_TEMPLATE_KITS: BrainViewTemplateKit[] = [
+const BROWSER_DEV_TEMPLATE_KITS: KnowledgeViewTemplateKit[] = [
   {
-    id: "daily-memory",
-    title: "Daily memory",
-    description: "Remember what changed today and exactly where to resume.",
+    id: "daily-recap",
+    title: "Daily recap",
+    description: "Review what changed today and exactly where to resume.",
     version: 1,
     timeRange: "today",
     periodPolicy: { type: "fixed.v1", value: "today" },
@@ -51,7 +49,7 @@ const BROWSER_DEV_TEMPLATE_KITS: BrainViewTemplateKit[] = [
     slots: [
       {
         id: "today-in-brief",
-        title: "Today in brief",
+        title: "今日简报",
         component: "markdown.v1",
         width: 12,
         order: 0,
@@ -161,16 +159,18 @@ const NOOP_COMMANDS = new Set([
   "confirm_browser_cookie_access_for_session",
   "ensure_webview_focus",
   "open_login_window",
+  "open_search_window",
   "open_viewer_window",
   "open_permission_settings",
-  "owned_browser_hide",
   "reencrypt_store",
+  "resize_search_window",
   "refresh_tray_menu",
   "request_permission",
   "resume_global_shortcuts",
   "set_browser_cookie_access_state",
   "set_cloud_token",
   "set_native_theme",
+  "native_timeline_navigate",
   "show_window",
   "show_window_activated",
   "spawn_screenpipe",
@@ -178,6 +178,12 @@ const NOOP_COMMANDS = new Set([
   "suspend_global_shortcuts",
   "write_browser_log",
   "write_browser_logs",
+  "copy_text_to_clipboard",
+  "copy_frame_to_clipboard",
+  "copy_deeplink_to_clipboard",
+  "webview_renderer_heartbeat",
+  "set_history_swipe_navigation_enabled",
+  "list_chat_entries_by_mtime",
 ]);
 
 const BROWSER_DEV_IMPORTED_SKILLS: ImportedSkill[] = [
@@ -248,13 +254,13 @@ const GRANTED_PERMISSION_COMMANDS = new Set([
   "check_screen_recording_permission",
 ]);
 
-function createBrowserDevLiveView(now: string): BrainViewDefinition {
+function createBrowserDevLiveView(now: string): KnowledgeViewDefinition {
   const dataTimestamp = new Date(
     Date.parse(now) - 6 * 24 * 60 * 60 * 1_000,
   ).toISOString();
   return {
     id: "browser-dev-live-view",
-    title: "How I spend my time today",
+    title: "今天的时间花在了哪里",
     revision: 1,
     timeRange: "today",
     periodPolicy: {
@@ -264,7 +270,7 @@ function createBrowserDevLiveView(now: string): BrainViewDefinition {
     slots: [
       {
         id: "activity-timeline",
-        title: "Today's activity timeline",
+        title: "今日活动时间线",
         component: "timeline.v1",
         width: 12,
         order: 0,
@@ -275,9 +281,9 @@ function createBrowserDevLiveView(now: string): BrainViewDefinition {
             items: [
               {
                 timestamp: dataTimestamp,
-                title: "Recorded activity begins",
+                title: "录制活动开始",
                 description:
-                  "The newest available activity is older than today.",
+                  "最新的可用活动早于今天。",
               },
             ],
           },
@@ -307,7 +313,7 @@ function createBrowserDevLiveView(now: string): BrainViewDefinition {
 function createBrowserDevLiveViewCanvas(
   viewId: string,
   now: string,
-): BrainViewCanvasDocument {
+): KnowledgeViewCanvasDocument {
   return {
     schema: "live-view-canvas.v1",
     viewId,
@@ -473,24 +479,9 @@ function handleWindowCommand(command: string): unknown {
 }
 
 export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
-  let storageMigration: StorageMigrationStatus = {
-    app_session_id: crypto.randomUUID(),
-    root: "/Users/screenpipe/.screenpipe", busy: false, message: "", error: null,
-    pending: false, in_place: true, bytes_saved: null, available_bytes: 3_000_000_000, completed: false, using_new_storage: false, generation: null,
-    source_bytes: 13_000_000_000, migrated_bytes: null, can_migrate: true,
-    can_cancel: false, can_delete_source: false, blocked_reason: null,
-  };
-  let migrationStartedAt = 0;
-  let migrationActivity = {
-    root: null as string | null, busy: false, message: "", error: null as string | null,
-    elapsed_seconds: 0, completed_records: null as number | null,
-    total_records: null as number | null, bytes_saved: null as number | null, available_bytes: 3_000_000_000 as number | null, completed: false,
-  };
-  const emitMigrationActivity = () => options.onEvent?.("storage-migration-activity", { ...migrationActivity });
   const stores = new Map<number, Map<string, unknown>>();
   const storePaths = new Map<string, number>();
   const warned = new Set<string>();
-  let grokBotConnected = true;
   let nextResourceId = 1;
   let piExtensionPackages: PiExtensionPackage[] = [];
   let importedSkills = BROWSER_DEV_IMPORTED_SKILLS.map((skill) => ({ ...skill }));
@@ -653,57 +644,6 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
     }
 
     switch (command) {
-      case "get_storage_migration_status":
-        return { ...storageMigration };
-      case "get_storage_migration_activity":
-        return { ...migrationActivity, elapsed_seconds: migrationActivity.busy ? Math.floor((Date.now() - migrationStartedAt) / 1000) : migrationActivity.elapsed_seconds };
-      case "start_storage_migration": {
-        if (input.root !== storageMigration.root || storageMigration.busy) throw new Error("Storage changed or migration is already running.");
-        migrationStartedAt = Date.now();
-        storageMigration = { ...storageMigration, busy: true, can_migrate: false, pending: true, error: null };
-        migrationActivity = { ...migrationActivity, root: storageMigration.root, busy: true, completed: false, error: null, message: "converting and compressing recordings", elapsed_seconds: 0, completed_records: 0, total_records: 1000 };
-        emitMigrationActivity();
-        let tick = 0;
-        const timer = setInterval(() => {
-          tick += 1;
-          migrationActivity.elapsed_seconds = Math.floor((Date.now() - migrationStartedAt) / 1000);
-          if (tick <= 10) {
-            migrationActivity.completed_records = tick * 100;
-            migrationActivity.bytes_saved = tick * 1_087_000_000;
-            migrationActivity.available_bytes = 3_000_000_000 + migrationActivity.bytes_saved;
-          } else {
-            migrationActivity.completed_records = null;
-            migrationActivity.total_records = null;
-            migrationActivity.message = tick === 11 ? "checking storage and search" : "resuming recording on the new storage";
-          }
-          if (tick === 13) {
-            clearInterval(timer);
-            migrationActivity.busy = false;
-            if (options.scenario === "backend-error") {
-              migrationActivity.error = "Migration paused because verification could not finish. Saved progress has been kept.";
-              storageMigration = { ...storageMigration, busy: false, can_migrate: true, can_cancel: false, error: migrationActivity.error };
-            } else {
-              migrationActivity.completed = true;
-              migrationActivity.message = "Your history has been migrated and recording has resumed.";
-              storageMigration = { ...storageMigration, busy: false, pending: false, completed: true, using_new_storage: true, generation: "browser-migration", migrated_bytes: 2_130_000_000, source_bytes: 0, bytes_saved: 10_870_000_000, can_delete_source: false };
-            }
-          }
-          storageMigration.message = migrationActivity.message;
-          emitMigrationActivity();
-        }, 1000);
-        return null;
-      }
-      case "cancel_storage_migration":
-        migrationActivity = { ...migrationActivity, busy: false, completed: false, error: null, message: "" };
-        emitMigrationActivity();
-        storageMigration = { ...storageMigration, pending: false, error: null, can_cancel: false, can_migrate: true };
-        return null;
-      case "delete_original_storage_database": {
-        if (!input.confirmPermanentDeletion || !storageMigration.can_delete_source || input.generation !== storageMigration.generation) throw new Error("Complete migration and confirm permanent deletion first.");
-        const removed = storageMigration.source_bytes;
-        storageMigration = { ...storageMigration, source_bytes: 0, can_delete_source: false };
-        return removed;
-      }
       case "plugin:store|load": {
         const path = String(input.path ?? "browser-dev-store");
         const existing = storePaths.get(path);
@@ -797,9 +737,7 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
             }))
           : [];
       case "plugin:fs|exists":
-        return String(input.path) === chatsDir || chatFixtures.has(String(input.path)) || String(input.path).endsWith("/.grokbot/settings.json");
-      case "resolve_ai_tool_config_path":
-        return String(input.path);
+        return String(input.path) === chatsDir || chatFixtures.has(String(input.path));
       case "plugin:fs|stat":
       case "plugin:fs|lstat":
         return {
@@ -812,14 +750,6 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
           birthtime: null,
           readonly: false,
         };
-      case "grokbot_connection":
-        if (input.action === "connect") grokBotConnected = true;
-        if (input.action === "disconnect") grokBotConnected = false;
-        return { detected: true, connected: grokBotConnected, optedOut: !grokBotConnected };
-      case "bun_check":
-        return { available: true, path: "/mock/screenpipe/bun", version: "browser-mock" };
-      case "get_active_data_dir":
-        return "/mock/screenpipe/data";
       case "get_local_api_config":
         return {
           key: options.mode === "live" ? options.apiKey || null : null,
@@ -840,7 +770,7 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
           "",
           "**Run:** 2026-08-26 (Pacific)  **Status:** 5 conversations stored",
           "",
-          "Fetched 5 new text messages since checkpoint `last_rowid` 14958. Grouped them into 5 conversations and stored all 5 as Screenpipe memories (0 errors). Memory IDs: 2998–3002.",
+          "Fetched 5 new text messages since checkpoint `last_rowid` 14958. Grouped them into 5 conversations and stored all 5 as Screenpipe records (0 errors). Record IDs: 2998–3002.",
           "",
           "Checkpoint now: `last_rowid` 14969, **565** conversations stored, last ingest `2026-08-26T18:01:54.359Z`.",
         ].join("\n");
@@ -887,9 +817,9 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
         piExtensionPackages = piExtensionPackages.filter((pkg) => pkg.source !== source);
         return piExtensionPackages.map((pkg) => ({ ...pkg }));
       }
-      case "list_brain_views":
+      case "list_knowledge_views":
         return liveViews;
-      case "list_brain_view_template_kits":
+      case "list_knowledge_view_template_kits":
         return BROWSER_DEV_TEMPLATE_KITS;
       case "list_provider_automations":
         return browserDevProviderAutomations.map((task) => ({
@@ -948,10 +878,10 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
         }
         return null;
       }
-      case "save_brain_view": {
-        const request = input.request as SaveBrainViewRequest;
+      case "save_knowledge_view": {
+        const request = input.request as SaveKnowledgeViewRequest;
         const existing = liveViews.find((view) => view.id === request.id);
-        const savedView: BrainViewDefinition = {
+        const savedView: KnowledgeViewDefinition = {
           id: request.id,
           title: request.title,
           revision: (request.expectedRevision ?? existing?.revision ?? 0) + 1,
@@ -982,14 +912,14 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
           : [...liveViews, savedView];
         return savedView;
       }
-      case "delete_brain_view":
+      case "delete_knowledge_view":
         liveViews = liveViews.filter((view) => view.id !== String(input.id));
         return null;
-      case "load_brain_view_canvas":
+      case "load_knowledge_view_canvas":
         return input.viewId === liveViewCanvas.viewId ? liveViewCanvas : null;
-      case "save_brain_view_canvas": {
+      case "save_knowledge_view_canvas": {
         const { expectedRevision, ...document } =
-          input.request as SaveBrainViewCanvasRequest;
+          input.request as SaveKnowledgeViewCanvasRequest;
         liveViewCanvas = {
           ...document,
           schema: "live-view-canvas.v1",
@@ -1007,8 +937,6 @@ export function createBrowserIpcMock(options: BrowserIpcMockOptions) {
           managed: false,
           detected_by: [],
         };
-      case "get_screenpipe_ai_gateway_url":
-        return "https://api.screenpipe.com/v1";
       case "generate_activity_history":
       case "get_activity_history":
         return mockActivityHistory(input.start, input.end);
