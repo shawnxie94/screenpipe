@@ -128,7 +128,7 @@ async fn test_add_tags_and_search() {
         .oneshot(
             Request::builder()
                 .method("GET")
-                .uri("/search?q=test&content_type=all")
+                .uri("/search/records?q=test&content_type=All")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -240,7 +240,7 @@ async fn test_add_multiple_tags_to_single_item() {
         .oneshot(
             Request::builder()
                 .method("GET")
-                .uri("/search?content_type=ocr")
+                .uri("/search/records?content_type=ocr")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -311,7 +311,7 @@ async fn test_remove_tags() {
         .oneshot(
             Request::builder()
                 .method("GET")
-                .uri("/search?content_type=audio")
+                .uri("/search/records?content_type=audio")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -377,7 +377,7 @@ async fn test_search_by_multiple_tags() {
         .oneshot(
             Request::builder()
                 .method("GET")
-                .uri("/search?content_type=all")
+                .uri("/search/records?content_type=All")
                 .body(Body::empty())
                 .unwrap(),
         )
