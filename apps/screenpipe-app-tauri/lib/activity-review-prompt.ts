@@ -482,7 +482,7 @@ export function buildActivityReviewAgentPrompt(
 1. 对精确边界调用 /meetings。对每个返回的会议调用 /meetings/{id} 和 /meetings/{id}/transcript。有意义的现有会议笔记是最好的解读索引；使用转录核实会议目的、决定和行动项。
 2. 对精确边界调用 /activity-summary，并包含 key_texts、snippets 和 audio summary。
 3. 对精确边界调用 depth=action 的 /activity-ledger。它只能作为覆盖范围和时间边界索引；绝不要把其中的标题或分类复制到答案里。
-4. 进行任何关键词搜索前，先执行确定性的覆盖扫描。将精确边界划分为连续的 30 分钟绝对时间段。对每个与已观测、非 unobserved 的 ledger 证据重叠的时间段，分别使用 content_type=accessibility 和 content_type=audio 调用 /search，不带 q 参数，limit=6，使用精确时间边界、时间戳/画面字段和有界内容长度。一次全天搜索不能替代这一步。保存紧凑结果，并在内部为每个时间段分配目标、具体对象、目的、观测到的结果，或“没有证据支持有意义的任务”。
+4. 进行任何关键词搜索前，先执行确定性的覆盖扫描。将精确边界划分为连续的 30 分钟绝对时间段。对每个与已观测、非 unobserved 的 ledger 证据重叠的时间段，分别使用 content_type=accessibility 和 content_type=audio 调用 /search/records，不带 q 参数，limit=6，使用精确时间边界、时间戳/画面字段和有界内容长度。一次全天搜索不能替代这一步。保存紧凑结果，并在内部为每个时间段分配目标、具体对象、目的、观测到的结果，或“没有证据支持有意义的任务”。
 5. 只有完成扫描后，才能使用有界关键词搜索解析这些时间段结果中已经发现的具体姓名或产物。
 
 应用已经发现的必需会议锚点：
@@ -531,7 +531,7 @@ ${meetingAnchors}
 每条记录都必须有来源产物：
 - 包含 1–3 条直接证据，不要使用暂定的 ledger 标签；
 - 会议记录的第一个产物必须是 kind="meeting"，使用精确 meeting_start 作为 at，把真实 meeting_id 和会议应用写入 app_name，并概括其笔记或转录证明的内容；
-- 非会议产物必须来自有界的 /search 调用；
+- 非会议产物必须来自有界的 /search/records 调用；
 - 屏幕证据必须使用无障碍、Parsed 或 OCR 结果中的精确时间戳和 app_name；结果提供真实 frame_id 时就包含它，否则使用 null，让时间戳仍可在时间线中打开；
 - 音频证据必须使用音频结果中的精确时间戳，frame_id 和 app_name 为 null；
 - label 是对来源所证明内容的简短内部概括，不是引用，也不是通用应用名；它只为后续 agent 提供上下文，不显示在历史活动界面；

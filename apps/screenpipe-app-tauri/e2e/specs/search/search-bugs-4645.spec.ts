@@ -66,21 +66,28 @@ interface FlatKeywordSearchMatch {
 async function flatKeywordSearch(query: string): Promise<FlatKeywordSearchMatch[]> {
   const api = await getLocalApiConfig();
   const params = new URLSearchParams({
-    query,
-    group: "false",
+    q: query,
+    content_type: "ocr",
+    mode: "keyword",
     limit: "20",
     order: "descending",
   });
   const response = await fetchJson(
-    `http://127.0.0.1:${api.port}/search/keyword?${params}`,
+    `http://127.0.0.1:${api.port}/search/records?${params}`,
     authHeaders(api.key),
   );
-  if (!response.ok || !Array.isArray(response.body)) {
+  const body = response.body as {
+    data?: Array<{ type?: string; content?: FlatKeywordSearchMatch }>;
+  };
+  if (!response.ok || !Array.isArray(body?.data)) {
     throw new Error(
       `flat keyword search failed: status=${response.status} body=${response.text}`,
     );
   }
-  return response.body as FlatKeywordSearchMatch[];
+  return body.data
+    .filter((row) => String(row?.type ?? "").toLowerCase() === "ocr")
+    .map((row) => row.content)
+    .filter((content): content is FlatKeywordSearchMatch => Boolean(content));
 }
 
 async function controlNativeTimelineSearch(

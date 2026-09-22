@@ -796,37 +796,6 @@ function mockAppRoster() {
 }
 
 /** Frames for a keyword-free `app_name=` browse. */
-function mockAppFrames(appName: string, limit: number, offset: number) {
-  const roster = MOCK_APP_ROSTER.find((app) => app.name === appName);
-  if (!roster) return [];
-  const total = Math.min(roster.count, 72);
-  return Array.from(
-    { length: Math.max(0, Math.min(limit, total - offset)) },
-    (_, i) => {
-      const index = offset + i;
-      return {
-        type: "OCR",
-        content: {
-          frame_id: 90_000 + index,
-          text: `${appName} window capture ${index + 1}`,
-          timestamp: new Date(Date.now() - index * 1_800_000).toISOString(),
-          file_path: "",
-          offset_index: index,
-          app_name: appName,
-          window_name: `${appName} — mock window`,
-          tags: [],
-          frame: null,
-          frame_name: null,
-          browser_url: null,
-          focused: true,
-          device_name: "browser dev",
-          text_source: "accessibility",
-        },
-      };
-    },
-  );
-}
-
 function mockUnifiedSearchRows(query: string) {
   const normalizedQuery = query.trim().toLowerCase();
   const now = Date.now();
@@ -1191,32 +1160,6 @@ export function mockLocalApiResponse(
       pagination: { limit, offset, total: rows.length },
     });
   }
-  if (url.pathname === "/search") {
-    const appName = url.searchParams.get("app_name");
-    // The meeting scrubber pages this endpoint for the meeting's transcript;
-    // page two onward must come back empty or it loops to its cap.
-    if (
-      scenario !== "empty" &&
-      url.searchParams.get("content_type") === "audio"
-    ) {
-      const offset = Number(url.searchParams.get("offset")) || 0;
-      const data = offset > 0 ? [] : mockMeetingAudioRows();
-      return Response.json({
-        data,
-        pagination: { limit: data.length, offset, total: data.length },
-      });
-    }
-    if (scenario !== "empty" && appName) {
-      const limit = Number(url.searchParams.get("limit")) || 36;
-      const offset = Number(url.searchParams.get("offset")) || 0;
-      const data = mockAppFrames(appName, limit, offset);
-      return Response.json({
-        data,
-        pagination: { limit, offset, total: data.length },
-      });
-    }
-    return Response.json(emptyPage);
-  }
   if (url.pathname === "/pipes") {
     return Response.json(
       scenario === "empty"
@@ -1310,25 +1253,6 @@ const MOCK_MEETING_TURNS: ReadonlyArray<{
     text: "Then we can send the summary out without a second pass.",
   },
 ];
-
-function mockMeetingAudioRows() {
-  const { start, end } = mockMeetingWindow();
-  const span = end.getTime() - start.getTime();
-  return MOCK_MEETING_TURNS.map((turn, index) => ({
-    type: "Audio",
-    content: {
-      chunk_id: 5_000 + index,
-      transcription: turn.text,
-      timestamp: new Date(start.getTime() + span * turn.at).toISOString(),
-      file_path: `/sample/audio/chunk-${5_000 + index}.mp4`,
-      device_type: turn.device,
-      speaker:
-        turn.device === "input"
-          ? null
-          : { id: 700 + index, name: turn.speaker },
-    },
-  }));
-}
 
 /** Full-shape activity summary for the sample meeting: the scrubber needs
  *  `audio_summary` + `time_range`, and the related list needs `windows` and

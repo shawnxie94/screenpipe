@@ -4,49 +4,6 @@
 
 use super::*;
 
-pub fn find_matching_positions(blocks: &[OcrTextBlock], query: &str) -> Vec<TextPosition> {
-    let query_lower = query.to_lowercase();
-    let query_words: Vec<&str> = query_lower.split_whitespace().collect();
-
-    blocks
-        .iter()
-        .filter_map(|block| {
-            let text_lower = block.text.to_lowercase();
-
-            // Pick the needle that's actually in the text (full query or first matching word)
-            // so legacy paragraph-level OCR rows can be narrowed to where the term appears.
-            let needle = if text_lower.contains(&query_lower) {
-                Some(query_lower.as_str())
-            } else {
-                query_words
-                    .iter()
-                    .copied()
-                    .find(|w| text_lower.contains(*w))
-            }?;
-
-            // Stored coords are already screen space (top-left origin); use as-is.
-            let left = block.left.parse::<f32>().unwrap_or(0.0);
-            let top = block.top.parse::<f32>().unwrap_or(0.0);
-            let width = block.width.parse::<f32>().unwrap_or(0.0);
-            let height = block.height.parse::<f32>().unwrap_or(0.0);
-
-            let (n_left, n_width) =
-                narrow_bbox_to_needle(&block.text, &text_lower, needle, left, width, height);
-
-            Some(TextPosition {
-                text: block.text.clone(),
-                confidence: block.conf.parse::<f32>().unwrap_or(0.0),
-                bounds: TextBounds {
-                    left: n_left,
-                    top,
-                    width: n_width,
-                    height,
-                },
-            })
-        })
-        .collect()
-}
-
 /// Narrow a single-line-ish bbox to the sub-rect where `needle` appears within `text`.
 /// Returns (new_left, new_width). Falls back to the original bbox when the element
 /// looks multi-line (text doesn't fit within a single line at the bbox's aspect ratio),
@@ -94,46 +51,6 @@ pub(crate) fn narrow_bbox_to_needle(
 /// Used as fallback when OCR text_json has no bounding boxes for a frame.
 pub fn find_matching_a11y_positions(tree_json: &str, query: &str) -> Vec<TextPosition> {
     find_matching_a11y_positions_where(tree_json, query, |_| true)
-}
-
-pub(crate) struct OnScreenA11yMatch {
-    pub matched: bool,
-    pub positions: Vec<TextPosition>,
-}
-
-/// Parse the current AX tree once, requiring explicit visibility and deriving
-/// highlight positions from those same matching nodes.
-pub(crate) fn match_on_screen_a11y(
-    tree_json: &str,
-    query: &str,
-    fuzzy_match: bool,
-) -> OnScreenA11yMatch {
-    let nodes: Vec<serde_json::Value> = match serde_json::from_str(tree_json) {
-        Ok(nodes) => nodes,
-        Err(_) => {
-            return OnScreenA11yMatch {
-                matched: false,
-                positions: Vec::new(),
-            }
-        }
-    };
-    let matched = nodes.iter().any(|node| {
-        node.get("on_screen").and_then(serde_json::Value::as_bool) == Some(true)
-            && node
-                .get("text")
-                .and_then(serde_json::Value::as_str)
-                .is_some_and(|text| {
-                    crate::text_normalizer::text_matches_search_query(text, query, fuzzy_match)
-                })
-    });
-    let positions = if matched {
-        find_matching_a11y_positions_in_nodes(&nodes, query, |node| {
-            node.get("on_screen").and_then(serde_json::Value::as_bool) == Some(true)
-        })
-    } else {
-        Vec::new()
-    };
-    OnScreenA11yMatch { matched, positions }
 }
 
 fn find_matching_a11y_positions_where(
@@ -306,16 +223,8 @@ fn match_against_line_spans(
     None
 }
 
-pub(crate) fn calculate_confidence(positions: &[TextPosition]) -> f32 {
-    if positions.is_empty() {
-        return 0.0;
-    }
-
-    positions.iter().map(|pos| pos.confidence).sum::<f32>() / positions.len() as f32
-}
-
 /// Parse all OCR text blocks into TextPosition objects with bounding boxes.
-/// Unlike `find_matching_positions`, this returns ALL text positions without filtering.
+/// Returns ALL text positions without filtering by a query.
 ///
 /// Stored text_json comes from the vision pipeline after `transform_ocr_coordinates_to_screen`:
 /// coordinates are already screen-relative normalized (0–1) with top-left origin (Y down).

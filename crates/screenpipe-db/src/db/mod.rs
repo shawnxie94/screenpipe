@@ -30,9 +30,9 @@ use crate::{
     text_similarity::{is_similar_to_normalized, normalize_transcription},
     AudioChunkProcessingSnapshot, AudioChunksResponse, AudioDevice, AudioEntry, AudioResult,
     AudioResultRaw, ChunkOutcome, ContentType, DeviceType, Element, ElementRow, ElementSource,
-    FrameData, FrameRow, FrameRowLight, FrameWindowData, InsertUiEvent, MeetingRecord,
+    FrameData, FrameWindowData, InsertUiEvent, MeetingRecord,
     MeetingTranscriptSegment, NewDiarizationSegment, OCREntry, OCRResult, OCRResultRaw, OcrEngine,
-    OcrTextBlock, Order, ReplacementAudioTranscription, SearchMatch, SearchMatchGroup,
+    OcrTextBlock, Order, ReplacementAudioTranscription,
     SearchResult, Speaker, TagContentType, TextBounds, TextPosition, TimeSeriesChunk, UiContent,
     UiEventRecord, UiEventRow, VideoMetadata, MAX_TRANSCRIPTION_ATTEMPTS,
 };
@@ -493,9 +493,8 @@ pub use self::semantic::{
     SemanticCleanupResult, SemanticContextQuery, SemanticFrameContext,
     SemanticProjectionWriteResult,
 };
-pub(crate) use self::text_positions::{calculate_confidence, match_on_screen_a11y};
 pub use self::text_positions::{
-    find_matching_a11y_positions, find_matching_positions, parse_all_text_positions,
+    find_matching_a11y_positions, parse_all_text_positions,
 };
 // Only the unit tests in `tests.rs` exercise this helper directly.
 #[cfg(test)]

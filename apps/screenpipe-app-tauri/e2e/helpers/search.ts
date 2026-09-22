@@ -7,7 +7,7 @@
  *
  * Pairs with the `search-fixture` seed (src-tauri/src/e2e/seeds.rs): when the
  * app is launched with `SCREENPIPE_E2E_SEED=...,search-fixture`, known
- * searchable frames are inserted so `/search/keyword` returns real results.
+ * searchable frames are inserted so `/search/records` returns real results.
  */
 
 import { openHomeWindow, t } from "./test-utils.js";

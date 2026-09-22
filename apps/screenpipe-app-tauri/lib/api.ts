@@ -13,9 +13,9 @@
  *
  * Usage:
  *   import { localFetch, getApiBaseUrl } from "@/lib/api";
- *   const res = await localFetch("/search?q=hello");
+ *   const res = await localFetch("/search/records?q=hello");
  *   // or for building URLs:
- *   const url = `${getApiBaseUrl()}/search?q=hello`;
+ *   const url = `${getApiBaseUrl()}/search/records?q=hello`;
  */
 
 // ---------------------------------------------------------------------------

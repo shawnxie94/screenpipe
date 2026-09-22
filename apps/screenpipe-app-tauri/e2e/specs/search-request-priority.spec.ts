@@ -35,8 +35,7 @@ async function installFetchRecorder(): Promise<void> {
       try {
         const parsed = new URL(rawUrl, window.location.origin);
         if (
-          parsed.pathname === "/search" ||
-          parsed.pathname === "/search/keyword" ||
+          parsed.pathname === "/search/records" ||
           parsed.pathname === "/raw_sql" ||
           parsed.pathname === "/speakers/search"
         ) {
@@ -99,26 +98,26 @@ describe("Search request priority", function () {
     await browser.waitUntil(
       async () => {
         const log = await getFetchLog();
-        return log.some((entry) => entry.pathname === "/search/keyword");
+        return log.some((entry) => entry.pathname === "/search/records");
       },
       {
         timeout: t(10_000),
         interval: 100,
-        timeoutMsg: "Search window did not issue /search/keyword for typed query",
+        timeoutMsg: "Search window did not issue /search/records for typed query",
       },
     );
 
     const log = await getFetchLog();
     const firstSearchRequest = log.find((entry) =>
-      ["/search", "/search/keyword", "/raw_sql", "/speakers/search"].includes(
+      ["/search/records", "/raw_sql", "/speakers/search"].includes(
         entry.pathname,
       ),
     );
 
-    expect(firstSearchRequest?.pathname).toBe("/search/keyword");
+    expect(firstSearchRequest?.pathname).toBe("/search/records");
 
     const keywordIndex = log.findIndex(
-      (entry) => entry.pathname === "/search/keyword",
+      (entry) => entry.pathname === "/search/records",
     );
     expect(keywordIndex).toBeGreaterThanOrEqual(0);
 
@@ -126,7 +125,7 @@ describe("Search request priority", function () {
     // be ahead of it, because that recreates the large-DB first-result stall.
     const secondaryBeforeKeyword = log
       .slice(0, keywordIndex)
-      .filter((entry) => entry.pathname !== "/search/keyword");
+      .filter((entry) => entry.pathname !== "/search/records");
 
     expect(secondaryBeforeKeyword).toHaveLength(0);
   });

@@ -76,7 +76,7 @@ use crate::{
             update_meeting_handler,
         },
         retranscribe::retranscribe_meeting_handler,
-        search::{keyword_search_handler, search, SearchCacheEntry},
+        search::{search, SearchCacheEntry},
         semantic::{
             create_semantic_actor, merge_semantic_actors, reassign_semantic_actor,
             reassign_semantic_actor_alias, search_semantic_actors, update_semantic_actor,
@@ -251,10 +251,6 @@ impl crate::server::SCServer {
             .allow_headers(Any)
             .expose_headers(CORS_EXPOSED_HEADERS);
         let server = Server::axum()
-            // Traced /search: same handler, wrapped at the mount point for the
-            // opt-in X-Screenpipe-Trace recording + 200-per-key cap. The
-            // route table itself is untouched.
-            .get("/search", keyword_search_handler)
             .get("/semantic/actors/search", search_semantic_actors)
             .post("/semantic/actors/create", create_semantic_actor)
             .post("/semantic/actors/update", update_semantic_actor)
@@ -321,10 +317,9 @@ impl crate::server::SCServer {
             .get("/experimental/validate/media", validate_media_handler)
             .post("/audio/start", start_audio)
             .post("/audio/stop", stop_audio)
-            .get("/search/keyword", keyword_search_handler)
             // Full content-recall search (empty q allowed, content_type +
-            // time range filtering). Kept off "/search" (keyword handler)
-            // and "/search/keyword"; used by desktop activity narrative.
+            // time range filtering) — the canonical search surface. Used by
+            // the desktop search palette, chat tools, and activity narrative.
             .get("/search/records", search)
             .post("/audio/device/start", start_audio_device)
             .post("/audio/device/stop", stop_audio_device)

@@ -5,7 +5,7 @@ description: Query the user's local and synced-device Screenpipe data via the RE
 
 # Screenpipe API
 
-Local REST API at `http://localhost:3030`. Runs the zh-local fork — where it diverges from upstream docs (docs.screenpi.pe), this file describes the local reality. Main divergence: **full search is `GET /search/records`** (same parameters as the upstream `/search`); `/search` here is a keyword-only handler (param `query`, flat results).
+Local REST API at `http://localhost:3030`. Runs the zh-local fork — where it diverges from upstream docs (docs.screenpi.pe), this file describes the local reality. Main divergence: **full search is `GET /search/records`**; use `q` plus structured filters. The public modes are `keyword` (FTS with chronological ordering, default) and `relevance` (hybrid ranking). Legacy `time` remains accepted as an alias of `keyword`. The legacy `GET /search` and `GET /search/keyword` endpoints have been removed — use `/search/records` for every search.
 
 Always use `${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}` as the base in shell calls so a fallback-port or development app cannot reach another running Screenpipe instance.
 
@@ -61,14 +61,15 @@ Use `jq` only after confirming it exists (`command -v jq`).
 ```bash
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
   -H "X-Screenpipe-Client: api" \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/search/records?q=QUERY&content_type=all&limit=10&start_time=1h%20ago"
+  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/search/records?q=QUERY&mode=keyword&content_type=all&limit=10&start_time=1h%20ago"
 ```
 
 ### Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `q` | string | No | Keywords. Do NOT use for audio searches — transcriptions are noisy, q filters too aggressively. |
+| `q` | string | No | Keyword or phrase query. Use structured filters instead of inline operators where possible. Do NOT use for audio searches — transcriptions are noisy, q filters too aggressively. |
+| `mode` | `keyword` or `relevance` | No | `keyword` (default) uses FTS and chronological ordering; `relevance` uses hybrid FTS + dense retrieval with RRF. Legacy `time` is accepted as an alias of `keyword`. |
 | `content_type` | string | No | `all` (default), `accessibility`, `audio`, `input`, `ocr`, `parsed`, `connection`. Use `parsed` for compact app-specific messages, emails, tasks, documents, and code review. Parsed capture is experimental, may be empty when disabled/unsupported, and is not included in `all`. `connection` searches imported connector content (Feishu messages/docs/calendar events, Tencent Meeting transcripts, RSS entries) and is also not part of `all`. Screen text is primarily captured via the OS accessibility tree (`accessibility`); OCR is a fallback for apps without accessibility support. |
 | `limit` | integer | No | Max 1-20. Default: 10 |
 | `offset` | integer | No | Pagination. Default: 0 |
@@ -378,14 +379,11 @@ Common patterns: `GROUP BY date(timestamp)` (daily), `GROUP BY strftime('%H:00',
 ```bash
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
   "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections"          # list local integrations
-curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/ntfy"     # status + non-secret settings
 ```
 
-Each entry's `description` is self-describing — for control surfaces (browsers, agents, import channels) it includes the exact endpoint + body shape. Read it before guessing. If not connected, tell the user to set it up from the Connections page in the desktop app.
+Each entry's `description` is self-describing. Read it before guessing. If not connected, tell the user to set it up from the Connections page in the desktop app.
 
-Connection reads return status and declared non-secret settings only. Stored secrets never appear in API responses. Current integrations are local-first — there is no hosted push service:
-- **ntfy (push notifications)**: `POST /connections/<id>/proxy` with the notification body (plain text or JSON); the server resolves the secret topic URL so it never enters the model context.
+Connection reads return status and declared non-secret settings only. Stored secrets never appear in API responses. Current integrations are local-first:
 - **Obsidian / Logseq (local vaults)**: no HTTP API — write `.md` files straight to the configured directory with bash, as each `description` instructs.
 - **Agents (claude_code, codex, openclaw, hermes)**: drive a local coding agent; endpoints live in each `description`.
 - **IMAP (read)**: dedicated routes — `GET /connections/imap/messages`, `GET /connections/imap/mailboxes`.
@@ -397,23 +395,6 @@ Connection reads return status and declared non-secret settings only. Stored sec
 curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
   "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/calendar/events?hours_back=0&hours_ahead=72"
 # also: /connections/ics-calendar/events
-```
-
-**Browser control (`owned-default`)** — an embedded browser, shown in the chat. Cookies persist (isolated profile); password fields are stripped from snapshots. Try snapshot first; reach for eval only when needed.
-```bash
-# Navigate → {"ok":true,"url":"<final>"}
-curl -X POST -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" -H "Content-Type: application/json" \
-  -d '{"url":"https://en.wikipedia.org/wiki/Giraffe"}' \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/browsers/owned-default/navigate"
-
-# Snapshot (no JS) → {title, url, tree:"[h1] ...\n  [a] ... → /href", truncated}. Best for "what's on the page?".
-curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/browsers/owned-default/snapshot"
-
-# Eval (escape hatch) — arbitrary JS return value, for clicks / values the snapshot tree omits.
-curl -X POST -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" -H "Content-Type: application/json" \
-  -d '{"code":"return [...document.querySelectorAll(\".title>a\")].slice(0,5).map(a=>a.innerText)"}' \
-  "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/connections/browsers/owned-default/eval"
 ```
 
 **Connector channels — office & RSS (separate surface)**

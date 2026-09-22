@@ -51,7 +51,7 @@ use screenpipe_semantic::{IdentityQuality, SemanticKind};
 
 use futures::stream::{self, StreamExt};
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::{json, Value};
+use serde_json::json;
 use std::{
     collections::hash_map::DefaultHasher,
     future::Future,
@@ -1827,115 +1827,6 @@ pub(crate) async fn search(
     Ok(render_search(format, &fields, &response))
 }
 
-#[oasgen]
-pub(crate) async fn keyword_search_handler(
-    Query(mut query): Query<KeywordSearchRequest>,
-    State(state): State<Arc<AppState>>,
-) -> Result<JsonResponse<Value>, (StatusCode, JsonResponse<Value>)> {
-    if apply_search_history_access(
-        &state.history_access,
-        &mut query.start_time,
-        query.end_time,
-        Utc::now(),
-    ) {
-        return Ok(JsonResponse(json!([])));
-    }
-
-    if query.group {
-        let groups = state
-            .db
-            .search_grouped_matches(
-                &query.query,
-                query.limit,
-                query.offset,
-                query.start_time,
-                query.end_time,
-                query.fuzzy_match,
-                query.order,
-                query.app_names,
-            )
-            .await
-            .map_err(|e| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    JsonResponse(json!({"error": e.to_string()})),
-                )
-            })?;
-
-        let filtered: Vec<_> = groups
-            .into_iter()
-            .filter(|group| !is_screenpipe_app(&group.representative.app_name))
-            .collect();
-        Ok(JsonResponse(json!(filtered)))
-    } else {
-        let matches = state
-            .db
-            .search_with_text_positions(
-                &query.query,
-                query.limit,
-                query.offset,
-                query.start_time,
-                query.end_time,
-                query.fuzzy_match,
-                query.order,
-                query.app_names,
-                None, // no per-app limit for flat results
-            )
-            .await
-            .map_err(|e| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    JsonResponse(json!({"error": e.to_string()})),
-                )
-            })?;
-
-        let filtered: Vec<_> = matches
-            .into_iter()
-            .filter(|m| !is_screenpipe_app(&m.app_name))
-            .collect();
-
-        Ok(JsonResponse(json!(filtered)))
-    }
-}
-
-pub(crate) fn from_comma_separated_string<'de, D>(
-    deserializer: D,
-) -> Result<Option<Vec<String>>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: Option<String> = Option::deserialize(deserializer)?;
-    Ok(s.map(|s| s.split(',').map(String::from).collect()))
-}
-
-#[derive(OaSchema, Deserialize)]
-pub struct KeywordSearchRequest {
-    query: String,
-    #[serde(default = "default_limit")]
-    limit: u32,
-    #[serde(default)]
-    offset: u32,
-    #[serde(
-        default,
-        deserialize_with = "super::time::deserialize_flexible_datetime_option"
-    )]
-    start_time: Option<DateTime<Utc>>,
-    #[serde(
-        default,
-        deserialize_with = "super::time::deserialize_flexible_datetime_option"
-    )]
-    end_time: Option<DateTime<Utc>>,
-    #[serde(default)]
-    fuzzy_match: bool,
-    #[serde(default)]
-    order: Order,
-    #[serde(default)]
-    #[serde(deserialize_with = "from_comma_separated_string")]
-    app_names: Option<Vec<String>>,
-    #[serde(default)]
-    group: bool,
-}
-
 // Helper functions
 pub(crate) fn default_limit() -> u32 {
     20
@@ -1989,6 +1880,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::Value;
     use screenpipe_core::pipes::permissions::PermissionRule;
 
     fn restricted_pipe_permissions(
@@ -2982,7 +2874,7 @@ use std::collections::HashMap;
 /// candidates from the sparse FTS legs and the dense KNN leg, fuses them
 /// with RRF + time decay, and returns the top slice. Failure of the dense
 /// leg degrades the response (sparse-only) instead of failing the request.
-pub async fn search_relevance(
+pub(crate) async fn search_relevance(
     state: &AppState,
     query: &crate::routes::search::SearchQuery,
 ) -> Result<Response, (StatusCode, axum::Json<serde_json::Value>)> {

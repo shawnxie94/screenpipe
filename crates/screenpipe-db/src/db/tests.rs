@@ -129,59 +129,13 @@ fn test_parse_all_text_positions_filters_negative_confidence() {
     assert_eq!(positions[0].text, "Valid");
 }
 
-#[test]
-fn test_find_matching_positions_basic() {
-    let blocks = vec![
-        create_test_block("Hello", "95.5", "100", "50", "80", "20"),
-        create_test_block("World", "90.0", "200", "50", "100", "20"),
-        create_test_block("Hello", "85.0", "300", "100", "80", "20"),
-    ];
 
-    let positions = find_matching_positions(&blocks, "Hello");
 
-    assert_eq!(positions.len(), 2);
-    assert!(positions.iter().all(|p| p.text == "Hello"));
-}
 
-#[test]
-fn test_find_matching_positions_case_insensitive() {
-    let blocks = vec![
-        create_test_block("HELLO", "95.5", "100", "50", "80", "20"),
-        create_test_block("hello", "90.0", "200", "50", "100", "20"),
-        create_test_block("HeLLo", "85.0", "300", "100", "80", "20"),
-    ];
 
-    let positions = find_matching_positions(&blocks, "hello");
 
-    assert_eq!(positions.len(), 3);
-}
 
-#[test]
-fn test_find_matching_positions_partial_match() {
-    let blocks = vec![
-        create_test_block("HelloWorld", "95.5", "100", "50", "80", "20"),
-        create_test_block("World", "90.0", "200", "50", "100", "20"),
-    ];
 
-    let positions = find_matching_positions(&blocks, "Hello");
-
-    assert_eq!(positions.len(), 1);
-    assert_eq!(positions[0].text, "HelloWorld");
-}
-
-#[test]
-fn test_find_matching_positions_multi_word_query() {
-    let blocks = vec![
-        create_test_block("Hello", "95.5", "100", "50", "80", "20"),
-        create_test_block("World", "90.0", "200", "50", "100", "20"),
-        create_test_block("Other", "85.0", "300", "100", "80", "20"),
-    ];
-
-    let positions = find_matching_positions(&blocks, "Hello World");
-
-    // Should match both "Hello" and "World" due to word-by-word matching
-    assert_eq!(positions.len(), 2);
-}
 
 #[test]
 fn test_narrow_bbox_full_match_keeps_bbox() {
@@ -249,31 +203,7 @@ fn test_narrow_bbox_short_query_floors_width() {
     );
 }
 
-#[test]
-fn test_find_matching_positions_narrows_partial_match_bbox() {
-    let blocks = vec![create_test_block(
-        "the rotor mech",
-        "95.5",
-        "100",
-        "50",
-        "140",
-        "20",
-    )];
-    let positions = find_matching_positions(&blocks, "rotor");
-    assert_eq!(positions.len(), 1);
-    // bbox should have narrowed off the leading "the " (4 of 14 chars)
-    let pos = &positions[0];
-    assert!(
-        pos.bounds.left > 100.0 + 30.0,
-        "left should shift right: {}",
-        pos.bounds.left
-    );
-    assert!(
-        pos.bounds.width < 140.0,
-        "width should narrow: {}",
-        pos.bounds.width
-    );
-}
+
 
 // -----------------------------------------------------------------
 // find_matching_a11y_positions — line-span aware search
@@ -451,17 +381,6 @@ fn a11y_match_uses_line_for_line_3_when_multiline_capture_complete() {
     assert!((p.bounds.top - 0.30).abs() < 0.001);
     // Line height (not paragraph height).
     assert!((p.bounds.height - 0.06).abs() < 0.001);
-}
-
-#[test]
-fn on_screen_a11y_match_requires_explicit_true_without_requiring_bounds() {
-    let visible = r#"[{"text":"needle","on_screen":true}]"#;
-    let hidden = r#"[{"text":"needle","on_screen":false}]"#;
-    let unknown = r#"[{"text":"needle"}]"#;
-
-    assert!(match_on_screen_a11y(visible, "needle", true).matched);
-    assert!(!match_on_screen_a11y(hidden, "needle", true).matched);
-    assert!(!match_on_screen_a11y(unknown, "needle", true).matched);
 }
 
 /// Synthetic accessibility-tree JSON with `n` nodes in depth-first

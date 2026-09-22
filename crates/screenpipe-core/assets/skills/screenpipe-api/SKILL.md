@@ -5,7 +5,7 @@ description: Query the user's local and synced-device Screenpipe data via the RE
 
 # Screenpipe API
 
-Local REST API at `http://localhost:3030`. Runs the zh-local fork — where it diverges from upstream docs (docs.screenpi.pe), this file describes the local reality. Main divergence: **full search is `GET /search/records`**; use `q` plus structured filters. The public modes are `keyword` (FTS with chronological ordering, default) and `relevance` (hybrid ranking). Legacy `time` remains accepted as an alias of `keyword`; `/search` and its `query` parameter are compatibility-only.
+Local REST API at `http://localhost:3030`. Runs the zh-local fork — where it diverges from upstream docs (docs.screenpi.pe), this file describes the local reality. Main divergence: **full search is `GET /search/records`**; use `q` plus structured filters. The public modes are `keyword` (FTS with chronological ordering, default) and `relevance` (hybrid ranking). Legacy `time` remains accepted as an alias of `keyword`. The legacy `GET /search` and `GET /search/keyword` endpoints have been removed — use `/search/records` for every search.
 
 Always use `${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}` as the base in shell calls so a fallback-port or development app cannot reach another running Screenpipe instance.
 

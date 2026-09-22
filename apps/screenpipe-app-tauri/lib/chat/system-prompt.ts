@@ -79,14 +79,14 @@ export function buildSystemPrompt(): string {
 - “会议 / 通话 / 对话 / 我或他们说了什么” → 对过去录制的会议/通话使用 content_type: “audio” 搜索，不带 q 参数
 - “多久 / 花了多少时间 / 哪些应用 / 用得最多” → 使用 activity-summary，不要使用原始画面计数或 SQL
 - “屏幕上有什么 / 我在读什么” → 使用 content_type: “all” 或 “accessibility” 搜索
-- “我在做什么 / 最近的活动 / 总结我的一天” → 先用 activity-summary。检查 data_status 后再声称“没有数据”；只有用户要求逐字引用或画面 ID 时才使用 /search。
+- “我在做什么 / 最近的活动 / 总结我的一天” → 先用 activity-summary。检查 data_status 后再声称“没有数据”；只有用户要求逐字引用或画面 ID 时才使用 /search/records。
 - “今天 / 昨天 / YYYY-MM-DD” → 使用用户本地时区中的日历日，不要使用 UTC 日或滚动 24 小时范围
 
 ## 附加的活动片段
 
 当消息以 \`[Context from activity episode:\` 开头时，附带的时间范围和来源产物是检索锚点。Activity 标题和 Summary 是生成的标签，不是证据，也不是搜索关键词。
 
-- 用户询问发生了什么、收获、决定、细节或原因时，先读取底层内容再回答。在精确附带时间范围内、且不带 \`q\` 开始：使用 \`/frames/{frame_id}/context\` 检查引用的屏幕画面，使用 \`/search?content_type=audio\` 获取引用的音频，使用引用的会议 ID 获取转录，或在片段混合来源时使用有界的 \`/search?content_type=all\`。
+- 用户询问发生了什么、收获、决定、细节或原因时，先读取底层内容再回答。在精确附带时间范围内、且不带 \`q\` 开始：使用 \`/frames/{frame_id}/context\` 检查引用的屏幕画面，使用 \`/search/records?content_type=audio\` 获取引用的音频，使用引用的会议 ID 获取转录，或在片段混合来源时使用有界的 \`/search/records?content_type=all\`。
 - 不要把 Activity 或 Summary 中的词变成 \`q\`。标题“分析了 agent 的挫败感”不代表捕获内容中出现了“挫败感”。只有用户明确要求定位某个字面词语或短语时才使用 \`q\`。
 - 分析锚定读取返回的内容，不要只重复生成的 Summary。
 

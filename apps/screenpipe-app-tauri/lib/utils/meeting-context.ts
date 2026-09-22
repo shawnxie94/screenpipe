@@ -30,7 +30,7 @@ export interface AudioSegment {
   timestamp: string;
 }
 
-/** Raw audio chunk pulled from /search?content_type=audio — full transcript
+/** Raw audio chunk pulled from /search/records?content_type=audio — full transcript
  * for a meeting time range, with the metadata SpeakerAssignPopover needs. */
 export interface MeetingAudioChunk {
   audioChunkId: number;
@@ -253,7 +253,7 @@ export async function fetchClipboardCount(
   const { start, end } = rangeFor(meeting);
   try {
     const res = await localFetch(
-      `/search?content_type=input&start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}&limit=200`,
+      `/search/records?content_type=input&start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}&limit=200`,
     );
     if (!res.ok) return 0;
     const body = (await res.json()) as { data?: InputSearchItem[] };
@@ -589,8 +589,8 @@ export function buildMeetingSummarizeInstructions(
     ``,
     `meeting id: ${meetingId}`,
     `primary transcript source: GET "http://localhost:3030/meetings/${meetingId}/transcript" and use each row's "transcript", "speakerName", "capturedAt", and "source" fields. sort rows by capturedAt before summarizing.`,
-    `fallback transcript source: /search?content_type=audio for the meeting time window. audio rows use content.transcription (not content.text); content.text may be missing for audio and should not be treated as an empty transcript.`,
-    `also read the screenpipe-api skill and query the screen for what was *shown* during the meeting: GET /search?content_type=ocr for the meeting window (this returns the frame's on-screen text — accessibility tree + OCR merged, not just OCR) — shared slides, docs, code, demos, and the on-screen name tags video-call apps render for participants. fold anything useful into the summary, and use on-screen names to fill in attendees who never spoke.`,
+    `fallback transcript source: /search/records?content_type=audio for the meeting time window. audio rows use content.transcription (not content.text); content.text may be missing for audio and should not be treated as an empty transcript.`,
+    `also read the screenpipe-api skill and query the screen for what was *shown* during the meeting: GET /search/records?content_type=ocr for the meeting window (this returns the frame's on-screen text — accessibility tree + OCR merged, not just OCR) — shared slides, docs, code, demos, and the on-screen name tags video-call apps render for participants. fold anything useful into the summary, and use on-screen names to fill in attendees who never spoke.`,
     `then name the speakers from the screen (do this every run, don't ask first): for every speaker still unnamed or generic ("speaker 1", "unknown", "") in the transcript above, line up when they were talking with the on-screen name tag showing at that moment, then GET /speakers/unnamed?limit=20 and POST /speakers/update {"id": <SPEAKER_ID>, "name": "<NAME_FROM_SCREEN>"} for each confident match. only rename when the on-screen evidence is unambiguous — never guess from voice alone. note which speakers you renamed (and which you left as-is) in your reply.`,
     `*if available*, use the cloud media (video/audio) model only for a concrete visual question that transcript and OCR cannot answer — diagrams, charts, whiteboards, slide figures, UI demos, or screen-shared video. choose up to 4 representative frame_id values already returned by the bounded OCR search, fetch those still images with GET /frames/<frame_id>, and send them as image_url[] to POST /v1/chat/completions with "model": "gemma4-e4b". NEVER call POST /export or run ffmpeg for a routine meeting summary; a full media export requires an explicit user request. if the cloud-media block is absent or returns 503 cloud_token_missing, skip visual analysis and summarize from transcript + OCR.`,
     `before the PUT, write the proposed summary in your response starting on a line with exactly "## Summary". put only summary content after that heading and use that same markdown in <YOUR_SUMMARY>. the meeting UI streams this section while you write it, so do not put planning, tool narration, or save confirmations after the heading.`,
@@ -821,7 +821,7 @@ export async function findNearestFrameId(
   const after = new Date(t.getTime() + 60_000).toISOString();
   try {
     const res = await localFetch(
-      `/search?content_type=all&start_time=${encodeURIComponent(before)}&end_time=${encodeURIComponent(after)}&limit=20`,
+      `/search/records?content_type=all&start_time=${encodeURIComponent(before)}&end_time=${encodeURIComponent(after)}&limit=20`,
     );
     if (!res.ok) return null;
     const body = (await res.json()) as { data?: SearchOcrItem[] };
@@ -849,7 +849,7 @@ export interface FrameSample {
 interface SearchAudioItem {
   type?: string;
   content?: {
-    /** /search?content_type=audio returns this as `chunk_id`, NOT
+    /** /search/records?content_type=audio returns this as `chunk_id`, NOT
      * `audio_chunk_id`. SpeakerAssignPopover wants the audio-chunks PK,
      * which `chunk_id` already is. */
     chunk_id?: number;
@@ -866,7 +866,7 @@ interface SearchAudioItem {
  * Fetch every audio chunk between [start, end] — used by the meeting-notes
  * scrubber to render the full transcript and to back inline speaker
  * reassignment via SpeakerAssignPopover (needs audio_chunk_id + file_path).
- * Pages until exhausted (or until `cap` is reached) since /search?limit is
+ * Pages until exhausted (or until `cap` is reached) since /search/records?limit is
  * per-request and a long meeting can easily exceed the default 50.
  */
 export async function fetchMeetingAudio(
@@ -884,7 +884,7 @@ export async function fetchMeetingAudio(
   for (let page = 0; page < 10 && out.length < cap; page++) {
     try {
       const res = await localFetch(
-        `/search?content_type=audio&start_time=${encodeURIComponent(startIso)}&end_time=${encodeURIComponent(endIso)}&limit=${pageSize}&offset=${offset}`,
+        `/search/records?content_type=audio&start_time=${encodeURIComponent(startIso)}&end_time=${encodeURIComponent(endIso)}&limit=${pageSize}&offset=${offset}`,
       );
       if (!res.ok) break;
       const body = (await res.json()) as { data?: SearchAudioItem[] };
@@ -1025,7 +1025,7 @@ export async function fetchFrameSamples(
   const fetchOne = async (contentType: "ocr" | "accessibility") => {
     try {
       const res = await localFetch(
-        `/search?content_type=${contentType}&start_time=${encodeURIComponent(startIso)}&end_time=${encodeURIComponent(endIso)}&limit=${limit}`,
+        `/search/records?content_type=${contentType}&start_time=${encodeURIComponent(startIso)}&end_time=${encodeURIComponent(endIso)}&limit=${limit}`,
       );
       if (!res.ok) return [] as SearchOcrItem[];
       const body = (await res.json()) as { data?: SearchOcrItem[] };

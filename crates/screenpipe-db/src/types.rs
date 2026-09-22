@@ -607,30 +607,6 @@ pub struct TextBounds {
     pub height: f32,
 }
 
-#[derive(OaSchema, Serialize, Clone)]
-pub struct SearchMatch {
-    pub frame_id: i64,
-    pub timestamp: DateTime<Utc>,
-    pub text_positions: Vec<TextPosition>,
-    pub app_name: String,
-    pub window_name: String,
-    pub confidence: f32,
-    // pub context: Option<String>,
-    pub text: String,
-    pub url: String,
-    /// Origin of `text`: `"accessibility"` or `"ocr"`. `None` for legacy rows.
-    pub text_source: Option<String>,
-}
-
-#[derive(OaSchema, Serialize)]
-pub struct SearchMatchGroup {
-    pub representative: SearchMatch,
-    pub group_size: usize,
-    pub start_time: String,
-    pub end_time: String,
-    pub frame_ids: Vec<i64>,
-}
-
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct FrameRow {
     pub id: i64,
@@ -644,17 +620,6 @@ pub struct FrameRow {
     pub accessibility_tree_json: Option<String>,
     /// Origin of `ocr_text`: `"accessibility"` or `"ocr"`. `None` for legacy rows.
     pub text_source: Option<String>,
-}
-
-/// Lightweight frame row for grouped search — skips text/text_json columns.
-#[derive(Debug, FromRow)]
-pub struct FrameRowLight {
-    pub id: i64,
-    pub timestamp: DateTime<Utc>,
-    pub device_name: String,
-    pub url: String,
-    pub app_name: String,
-    pub window_name: String,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, OaSchema, PartialEq, Default)]
