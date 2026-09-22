@@ -2781,14 +2781,11 @@ export type ScreenCaptureProtectionStatus = { requestedHidden: boolean; effectiv
  *
  * `Context` builds the compact semantic projection used for retrieval and
  * summaries. `ComputerUse` is shown to users as automation: it keeps capture
- * action-oriented and skips the semantic parser worker.
- * `ContextAndComputerUse` derives both views from the same captured tree; it
- * never starts a second screen recorder or stores a duplicate raw tree.
+ * action-oriented and skips the semantic parser worker. `ContextAndComputerUse`
+ * derives both views from the same captured tree; it never starts a second
+ * screen recorder or stores a duplicate raw accessibility tree.
  */
-export type SemanticContextMode =
-  | "context"
-  | "computerUse"
-  | "contextAndComputerUse"
+export type SemanticContextMode = "context" | "computerUse" | "contextAndComputerUse"
 export type SettingsStore =
 /**
  * All recording/capture config lives here. Flattened so the JSON shape
@@ -2813,7 +2810,7 @@ audioTranscriptionEngine: string;
  */
 transcriptionMode: string;
 /**
- * When to capture audio: "always" (default), "meetings_only", or "disabled".
+ * When to capture audio: "always", "meetings_only" (default), or "disabled".
  */
 audioCaptureMode?: string;
 /**
@@ -2934,8 +2931,8 @@ disableScreenshots?: boolean;
 enableSemanticContext?: boolean;
 /**
  * Select the AI view derived from the single captured accessibility tree.
- * Missing values default to context so semantic parsing uses the compact
- * projection when enabled.
+ * Missing values default to memory so existing opt-in users retain the
+ * exact behavior they selected before this setting existed.
  */
 semanticContextMode?: SemanticContextMode;
 /**
