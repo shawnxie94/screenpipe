@@ -37,7 +37,7 @@ vi.mock("@/lib/chat-storage", () => ({
   saveConversationFile: vi.fn(async () => undefined),
 }));
 
-import { saveConversationFile } from "@/lib/chat-storage";
+import { loadConversationFile, saveConversationFile } from "@/lib/chat-storage";
 import {
   flushPendingSaves,
   handlePiEvent,
@@ -1384,5 +1384,114 @@ describe("pi-event-router: lazy-created rows stay hidden until they are real", (
     const session = useChatStore.getState().sessions.orphan;
     expect(session.draft).toBe(false);
     expect(session.messages?.length).toBeGreaterThan(0);
+  });
+});
+
+describe("pi-event-router: internal run persistence (activity timeline)", () => {
+  beforeEach(reset);
+
+  const ACTIVITY_SID = "__title:activity-history-test-0001";
+  // The router mints "活动生成 · HH:MM" from the session's createdAt; mirror
+  // that formatting here so the assertion stays timezone-independent.
+  function expectedLabel(createdAt: number): string {
+    const d = new Date(createdAt);
+    return `活动生成 · ${String(d.getHours()).padStart(2, "0")}:${String(
+      d.getMinutes(),
+    ).padStart(2, "0")}`;
+  }
+
+  async function runGenerationTurn(sid: string, prompt: string) {
+    await handlePiEvent(
+      piEvt(sid, {
+        type: "message_start",
+        message: { role: "user", content: prompt },
+      } as AgentInnerEvent),
+    );
+    await handlePiEvent(
+      piEvt(sid, { type: "message_start", message: { role: "assistant" } }),
+    );
+    await handlePiEvent(
+      piEvt(sid, {
+        type: "message_update",
+        assistantMessageEvent: { type: "text_delta", delta: '{"entries":[]}' },
+      }),
+    );
+    await handlePiEvent(piEvt(sid, { type: "agent_end" }));
+    await flushPendingSaves();
+  }
+
+  it("keeps the minted time label instead of the shared prompt title", async () => {
+    // Every generation shares one prompt; titling rows from the first user
+    // message made every 活动时间线 row read "为下面的精确边界构建…" and
+    // indistinguishable. The label from createdAt must survive the save.
+    const createdAt = new Date(2026, 8, 22, 23, 4).getTime();
+    seed(ACTIVITY_SID, {
+      internalCategory: "activity-history",
+      title: "活动生成 · 23:04",
+      createdAt,
+    });
+
+    await runGenerationTurn(ACTIVITY_SID, "为下面的精确边界构建简洁的活动时间线。");
+
+    const saved = vi.mocked(saveConversationFile).mock.calls.at(-1)![0];
+    expect(saved.title).toBe(expectedLabel(createdAt));
+    expect(saved.title).not.toContain("为下面的精确边界构建");
+    // The repaired title also reaches the sidebar row.
+    expect(useChatStore.getState().sessions[ACTIVITY_SID].title).toBe(
+      expectedLabel(createdAt),
+    );
+  });
+
+  it("does not bump updatedAt when a flush re-persists an unchanged transcript", async () => {
+    // The quit-flush saves every hydrated session. Stamping now on an
+    // unchanged transcript floated hours-old 活动时间线 rows to the top of
+    // the group all showing "刚刚" after each app restart.
+    const diskUpdatedAt = 5_000;
+    const prompt = "为下面的精确边界构建简洁的活动时间线。";
+    const persisted = [
+      { id: "u1", role: "user", content: prompt, timestamp: 10 },
+      { id: "a1", role: "assistant", content: '{"entries":[]}', timestamp: 20 },
+    ];
+    // Two saves read the disk transcript before new content arrives: the
+    // agent_end save, then the explicit quit-flush re-persist of every
+    // hydrated session (the exact path that reset ages to "刚刚").
+    const diskConv = {
+      id: ACTIVITY_SID,
+      title: "活动生成 · 23:04",
+      createdAt: 1_000,
+      updatedAt: diskUpdatedAt,
+      pinned: false,
+      hidden: false,
+      messages: persisted,
+    };
+    vi
+      .mocked(loadConversationFile)
+      .mockResolvedValueOnce(diskConv as any)
+      .mockResolvedValueOnce(diskConv as any)
+      .mockResolvedValueOnce(null);
+    seed(ACTIVITY_SID, {
+      internalCategory: "activity-history",
+      createdAt: 1_000,
+      messages: persisted.map((m) => ({ ...m })) as any,
+      messageCount: persisted.length,
+    });
+
+    await handlePiEvent(piEvt(ACTIVITY_SID, { type: "agent_end" }));
+    await flushPendingSaves();
+
+    const calls = vi.mocked(saveConversationFile).mock.calls;
+    expect(calls.length).toBe(2);
+    for (const [saved] of calls) {
+      expect(saved.messages).toHaveLength(2);
+      expect(saved.updatedAt).toBe(diskUpdatedAt);
+    }
+
+    // New content must still move the row: append a turn, updatedAt bumps.
+    await runGenerationTurn(ACTIVITY_SID, "第二轮");
+    const savedAfterGrowth = vi
+      .mocked(saveConversationFile)
+      .mock.calls.at(-1)![0];
+    expect(savedAfterGrowth.messages!.length).toBeGreaterThan(2);
+    expect(savedAfterGrowth.updatedAt).toBeGreaterThan(diskUpdatedAt);
   });
 });

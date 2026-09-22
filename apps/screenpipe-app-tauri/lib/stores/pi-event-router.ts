@@ -1120,10 +1120,19 @@ async function persistBackgroundSession(
       ) as any;
       const derivedTitle: string = deriveFallbackConversationTitle(firstUserMsg);
 
-      // Background saves use fallback titles; AI titles generated in foreground
-      const title = existing?.title || derivedTitle;
-
       const storeSession = useChatStore.getState().sessions[sid];
+      // Internal-but-visible runs keep the router-minted time label. Every
+      // generation shares one prompt, so the first-message fallback would
+      // give every row in the 系统活动 group the identical title; minting
+      // from createdAt keeps the label stable across saves and repairs rows
+      // whose title an older build already overwrote with the prompt text.
+      const internalCategory = getInternalSessionCategory(sid);
+      const title = internalCategory
+        ? internalSessionTitle(
+            internalCategory,
+            storeSession?.createdAt ?? existing?.createdAt ?? Date.now(),
+          )
+        : existing?.title || derivedTitle;
       let computedLastUserMessageAt: number | undefined;
       for (const message of messages as any[]) {
         if (message?.role !== "user" || typeof message.timestamp !== "number") continue;
@@ -1148,23 +1157,9 @@ async function persistBackgroundSession(
             ? 0
             : undefined);
 
-      const conv: ChatConversation = {
-        id: sid,
-        title,
-        ...(existing?.titleSource ? { titleSource: existing.titleSource } : {}),
-        ...(lastUserMessageAt ? { lastUserMessageAt } : {}),
-        ...(lastContentAt ? { lastContentAt } : {}),
-        ...(typeof lastViewedAt === "number" ? { lastViewedAt } : {}),
-        // Full transcript — see comment in use-chat-conversations.ts
-        // saveConversation. The slice(-100) here was silently truncating
-        // long backgrounded chats on every agent_end save.
-        // Drop pending permission/sign-in cards: they are ephemeral UI tied to
-        // a live runtime waiter. Persisting one (e.g. on app-quit before it is
-        // answered) rehydrates a dead card whose buttons do nothing and which
-        // falsely marks the next turn "waiting for approval".
-        messages: (messages as any[])
-          .filter((m) => !isPendingAgentActionMessage(m as Message))
-          .map((m: any) => {
+      const persistedMessages = (messages as any[])
+        .filter((m) => !isPendingAgentActionMessage(m as Message))
+        .map((m: any) => {
           let content: string = m.content || "";
           if (!content && m.contentBlocks?.length) {
             // Tool-only messages have no text; leave content empty (the tool
@@ -1222,9 +1217,40 @@ async function persistBackgroundSession(
             ...(m.stoppedByUser ? { stoppedByUser: true } : {}),
             ...(interruptedByQuit ? { interruptedByQuit: true } : {}),
           };
-        }),
+        });
+
+      // The quit-flush re-persists every hydrated session, not just dirty
+      // ones. Stamping now on an unchanged transcript reset every sidebar
+      // age to "刚刚" at once after each restart. Streaming only appends or
+      // finalizes the tail message, so tail equality is a sound
+      // nothing-changed test; when in doubt, fall through to the bump.
+      const prevMessages = existing?.messages ?? [];
+      const transcriptUnchanged =
+        !!existing &&
+        prevMessages.length > 0 &&
+        prevMessages.length === persistedMessages.length &&
+        JSON.stringify(prevMessages[prevMessages.length - 1]) ===
+          JSON.stringify(persistedMessages[persistedMessages.length - 1]);
+
+      const conv: ChatConversation = {
+        id: sid,
+        title,
+        ...(existing?.titleSource ? { titleSource: existing.titleSource } : {}),
+        ...(lastUserMessageAt ? { lastUserMessageAt } : {}),
+        ...(lastContentAt ? { lastContentAt } : {}),
+        ...(typeof lastViewedAt === "number" ? { lastViewedAt } : {}),
+        // Full transcript — see comment in use-chat-conversations.ts
+        // saveConversation. The slice(-100) here was silently truncating
+        // long backgrounded chats on every agent_end save.
+        // Drop pending permission/sign-in cards: they are ephemeral UI tied to
+        // a live runtime waiter. Persisting one (e.g. on app-quit before it is
+        // answered) rehydrates a dead card whose buttons do nothing and which
+        // falsely marks the next turn "waiting for approval".
+        messages: persistedMessages,
         createdAt: existing?.createdAt ?? Date.now(),
-        updatedAt: Date.now(),
+        updatedAt: transcriptUnchanged
+          ? (existing?.updatedAt ?? Date.now())
+          : Date.now(),
         pinned: existing?.pinned ?? session.pinned,
         hidden: existing?.hidden ?? false,
         // Preserve kind / pipe metadata so a pipe-run conversation
