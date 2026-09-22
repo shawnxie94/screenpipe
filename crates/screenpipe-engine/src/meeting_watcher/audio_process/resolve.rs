@@ -864,6 +864,7 @@ fn call_signal_scan_pid(
 #[cfg(test)]
 mod call_signal_target_tests {
     use super::*;
+    use crate::meeting_watcher::shared::profiles::load_detection_profiles;
 
     #[test]
     fn browser_controls_are_scanned_in_the_ui_process_and_keep_the_audio_session() {

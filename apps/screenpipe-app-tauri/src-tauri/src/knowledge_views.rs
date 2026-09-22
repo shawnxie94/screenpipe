@@ -600,7 +600,6 @@ fn active_screenpipe_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
         .map_err(|error| format!("读取 Screenpipe 设置失败：{error}"))?
         .unwrap_or_default();
     crate::config::resolve_data_dir(&settings.data_dir)
-        .map(|(path, _)| path)
         .map_err(|error| format!("准备 Screenpipe 数据目录失败：{error}"))
 }
 

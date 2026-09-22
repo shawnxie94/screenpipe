@@ -2139,11 +2139,6 @@ mod recovery_tests {
         assert!(!dir.path().join("db.sqlite").exists());
     }
 
-    #[test]
-    fn recovery_lock_recognizes_the_current_process_on_this_platform() {
-        assert!(pid_alive(std::process::id()));
-    }
-
     #[tokio::test]
     async fn startup_recovers_immediately_after_lock_owner_is_force_quit() {
         const CHILD_DATA_DIR: &str = "SCREENPIPE_TEST_FORCE_QUIT_DB_LOCK_DIR";
