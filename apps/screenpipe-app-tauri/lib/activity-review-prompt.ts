@@ -33,6 +33,8 @@ const OUTCOME_TYPES = new Set([
 export type ActivityHistoryEvidence = {
   kind: "screen" | "audio" | "meeting";
   at: string;
+  /** v3 引用式证据：模型只提供 ref，后端按确定性 manifest 回填其余字段。 */
+  ref?: string;
   source_type?: "frame" | "audio" | "ui_event" | "meeting" | null;
   source_id?: number | null;
   occurred_at?: string | null;

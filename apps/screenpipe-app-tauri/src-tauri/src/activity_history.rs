@@ -910,8 +910,8 @@ end_time: {end}
 
 覆盖要求：至少返回 {minimum_entries} 条有来源支持的活动；审计每个已记录且非 unobserved 的 30 分钟窗口；将空闲和未观测时间保留为空档，不要编造活动。
 
-只返回一个 JSON 对象，不要使用 Markdown。输出必须符合 activity-history-pi-v10：
-{{"schema_version":2,"entries":[{{"id":"stable-short-slug","kind":"work","activity_type":"research","project_refs":[],"confidence":0.82,"semantic_status":"inferred","meeting_id":null,"start_at":"2026-09-22T10:00:00Z","end_at":"2026-09-22T10:30:00Z","title":"研究本地知识图谱方案","summary":"研究了本地知识图谱方案并比较了候选实现。","outcomes":[{{"type":"decision","status":"inferred","confidence":0.72,"provenance":"model-from-evidence"}}],"evidence":[{{"kind":"screen","source_type":"frame","source_id":123,"occurred_at":"2026-09-22T10:15:00Z","at":"2026-09-22T10:15:00Z","frame_id":123,"meeting_id":null,"app_name":"精确应用名","label":"画面显示了知识图谱方案比较"}}]}}]}}
+只返回一个 JSON 对象，不要使用 Markdown。输出必须符合 activity-history-pi-v10 schema_version=3：
+{{"schema_version":3,"entries":[{{"id":"stable-short-slug","kind":"work","activity_type":"research","project_refs":[],"confidence":0.82,"semantic_status":"inferred","meeting_id":null,"start_at":"2026-09-22T10:00:00Z","end_at":"2026-09-22T10:30:00Z","title":"研究本地知识图谱方案","summary":"研究了本地知识图谱方案并比较了候选实现。","outcomes":[{{"type":"decision","status":"inferred","confidence":0.72,"provenance":"model-from-evidence"}}],"evidence":[{{"ref":"evidence-1","label":"画面显示了知识图谱方案比较"}}]}}]}}
 
 字段含义：
 - `kind` 是活动形态，只能是 `work` 或 `meeting`；`activity_type` 是活动目的，使用 `meeting`、`research`、`implementation`、`planning`、`communication`、`learning`、`administrative` 或 `unknown`，两者不要混用。
@@ -919,12 +919,11 @@ end_time: {end}
 - `confidence` 是 0 到 1 的整体判断置信度，不是完成度；没有足够直接证据时降低置信度或省略活动。
 - `semantic_status` 只能是 `observed`、`summarized`、`inferred`、`confirmed` 或 `rejected`。模型推断的语义必须使用 `inferred`，不能把模型输出伪称 `confirmed`；`confirmed` 只用于直接证据或明确用户确认。
 - `outcomes` 只记录有证据支持的结果；`outcomes[].type` 使用 `decision`、`deliverable`、`commitment`、`blocker`、`next_step` 或 `unknown`；`status` 使用同一组语义状态；`provenance` 说明来自证据、用户确认或模型推断。
-- `evidence` 必须是直接来源引用。`source_type` 使用 `frame`、`audio`、`ui_event` 或 `meeting`；`source_id` 是对应来源 ID；`occurred_at` 是来源发生时间；`at` 是为旧客户端保留的同一 UTC 时间副本。不得只填写无法追溯的描述。
-- 屏幕 `frame` 证据只能引用“确定性账本”下方列出的 `source_id`/`frame_id`，不得猜测或生成其他 ID；`app_name` 必须逐字复制同一证据行的 `app`，不能根据标题推断。
+- `evidence` 每条只写两个字段：`ref` 逐字取自“可引用证据清单”中的一行；`label` 用一句简体中文概括该来源证明了什么。屏幕画面选 `source_type=frame` 的 ref，音频选 `source_type=audio`，会议选 `source_type=meeting`。
 
 语言要求：title、summary 和 evidence.label 使用简体中文。JSON 字段名和枚举值保持英文。适当保留官方产品名、项目名、文件名和技术标识符。
 
-规则：所有 start_at、end_at、occurred_at 和 evidence.at 都以 Z 结尾并使用 UTC；来源时间戳带偏移量时，先将时刻转换为 UTC，不要只更换后缀而不调整时钟时间；保留有意义的短时工作，并将恢复后的工作作为独立区间；超过 15 分钟的空档会结束一个区间；不要跨越无关工作；每个持续至少两分钟的已记录会议都必须恰好作为一条带真实 meeting_id 的 kind=meeting 记录出现，并包含第一条 kind=meeting 证据；每条记录使用 1–3 条直接证据；无法直接引用的内容不要包含；不要暴露引用原文、原始捕获数据或 API 机制。"#,
+规则：所有 start_at 和 end_at 都以 Z 结尾并使用 UTC；来源时间戳带偏移量时，先转换为 UTC 再写入；保留有意义的短时工作，恢复后的工作作为独立区间；超过 15 分钟的空档会结束一个区间；不要跨越无关工作；每个持续至少两分钟的已记录会议必须恰好作为一条 kind=meeting 记录出现，其第一条证据引用该会议的 ref；每条记录用 1–3 条直接证据，无法引用的内容不要包含。"#,
         start = start.to_rfc3339(),
         end = end.to_rfc3339(),
         minimum_entries = minimum_entries,
@@ -1181,6 +1180,7 @@ async fn activity_evidence_snapshot(
     preflight: &ActivityPreflight,
     ledger: &[ActivityLedgerInterval],
     meetings: &[MeetingAnchor],
+    evidence_manifest: &HashMap<String, ActivityLedgerEvidence>,
 ) -> Result<String, String> {
     let query = |content_type: &str| {
         vec![
@@ -1203,6 +1203,7 @@ async fn activity_evidence_snapshot(
         preflight,
         ledger,
         meetings,
+        evidence_manifest,
         &accessibility,
         &audio,
     );
@@ -1230,6 +1231,7 @@ fn render_snapshot_lines(
     preflight: &ActivityPreflight,
     ledger: &[ActivityLedgerInterval],
     meetings: &[MeetingAnchor],
+    evidence_manifest: &HashMap<String, ActivityLedgerEvidence>,
     accessibility: &[SearchEvidenceRow],
     audio: &[SearchEvidenceRow],
 ) -> Vec<String> {
@@ -1311,7 +1313,30 @@ fn render_snapshot_lines(
         }
     }
 
-    // 4. Meeting anchors.
+    // 4. Deterministic evidence manifest. The model may cite these refs,
+    // but never invent source/frame/app metadata itself.
+    if !evidence_manifest.is_empty() {
+        lines.push("可引用证据清单（只能引用下面的 ref）:".to_string());
+        let mut manifest_entries = evidence_manifest.iter().collect::<Vec<_>>();
+        manifest_entries.sort_by(|left, right| left.0.cmp(right.0));
+        for (reference, evidence) in manifest_entries {
+            let frame = evidence
+                .frame_id
+                .map(|id| format!(" frame_id={id}"))
+                .unwrap_or_default();
+            let app = evidence
+                .app_name
+                .as_deref()
+                .map(|name| format!(" app={name}"))
+                .unwrap_or_default();
+            lines.push(format!(
+                "  ref={reference} source_type={} source_id={} occurred_at={}{}{}",
+                evidence.source_type, evidence.source_id, evidence.occurred_at, frame, app
+            ));
+        }
+    }
+
+    // 5. Meeting anchors.
     if !meetings.is_empty() {
         lines.push("已知会议锚点:".to_string());
         for meeting in meetings {
@@ -1439,7 +1464,7 @@ const SEARCH_EVIDENCE_BUDGET: usize = 100;
 /// Sampled screen text rows fed to the model.
 const SAMPLED_TEXT_BUDGET: usize = 100;
 
-fn has_v2_semantic_fields(value: &Value) -> bool {
+fn has_semantic_fields(value: &Value, require_evidence_refs: bool) -> bool {
     let Some(object) = value.as_object() else {
         return false;
     };
@@ -1458,9 +1483,13 @@ fn has_v2_semantic_fields(value: &Value) -> bool {
         .and_then(Value::as_array)
         .is_some_and(|evidence| {
             evidence.iter().all(|item| {
-                item.get("source_type").is_some()
-                    && item.get("source_id").is_some()
-                    && item.get("occurred_at").is_some()
+                if require_evidence_refs {
+                    item.get("ref").is_some()
+                } else {
+                    item.get("source_type").is_some()
+                        && item.get("source_id").is_some()
+                        && item.get("occurred_at").is_some()
+                }
             })
         })
 }
@@ -1583,7 +1612,7 @@ fn parse_document_with_manifest(
     raw: &str,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
-    frame_manifest: Option<&HashMap<i64, ActivityLedgerEvidence>>,
+    evidence_manifest: Option<&HashMap<String, ActivityLedgerEvidence>>,
 ) -> Result<ParsedDocument, String> {
     let unfenced = raw
         .trim()
@@ -1593,18 +1622,29 @@ fn parse_document_with_manifest(
         .trim();
     let object_start = unfenced.find('{').ok_or("活动历史生成未返回 JSON")?;
     let mut deserializer = serde_json::Deserializer::from_str(&unfenced[object_start..]);
-    let value = Value::deserialize(&mut deserializer)
+    let mut value = Value::deserialize(&mut deserializer)
         .map_err(|error| format!("活动历史生成了无效的 JSON：{error}"))?;
     let schema_version = value
         .get("schema_version")
         .and_then(Value::as_u64)
         .unwrap_or(1);
-    if schema_version != 1 && schema_version != ACTIVITY_HISTORY_JSON_SCHEMA_VERSION {
+    if schema_version != 1
+        && schema_version != 2
+        && schema_version != ACTIVITY_HISTORY_JSON_SCHEMA_VERSION
+    {
         return Err(format!(
             "活动历史生成使用了不支持的 schema_version: {schema_version}"
         ));
     }
-    let require_v2_semantics = schema_version == ACTIVITY_HISTORY_JSON_SCHEMA_VERSION;
+    let require_v2_semantics = schema_version >= 2;
+    if schema_version == ACTIVITY_HISTORY_JSON_SCHEMA_VERSION {
+        let Some(evidence_manifest) = evidence_manifest else {
+            return Err("活动历史生成缺少证据 manifest".to_string());
+        };
+        if !expand_v3_evidence(&mut value, evidence_manifest) {
+            return Err("活动历史生成引用了未知证据 ref".to_string());
+        }
+    }
     let entries = value
         .get("entries")
         .and_then(Value::as_array)
@@ -1614,7 +1654,9 @@ fn parse_document_with_manifest(
     let mut rejected_evidence = 0;
     let mut rejection_reasons = BTreeMap::new();
     for value in entries {
-        if require_v2_semantics && !has_v2_semantic_fields(value) {
+        if require_v2_semantics
+            && !has_semantic_fields(value, schema_version == ACTIVITY_HISTORY_JSON_SCHEMA_VERSION)
+        {
             rejected_entries += 1;
             *rejection_reasons
                 .entry("missing_semantic_fields")
@@ -1635,10 +1677,10 @@ fn parse_document_with_manifest(
                 .evidence
                 .iter_mut()
                 .for_each(|evidence| repair_evidence_timezone(evidence, entry_start, entry_end));
-            if let Some(frame_manifest) = frame_manifest {
+            if let Some(evidence_manifest) = evidence_manifest {
                 entry
                     .evidence
-                    .retain_mut(|evidence| reconcile_frame_evidence(evidence, frame_manifest));
+                    .retain_mut(|evidence| reconcile_frame_evidence(evidence, evidence_manifest));
             }
             entry
                 .evidence
@@ -1672,9 +1714,9 @@ fn parse_or_rejected_with_manifest(
     raw: &str,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
-    frame_manifest: Option<&HashMap<i64, ActivityLedgerEvidence>>,
+    evidence_manifest: Option<&HashMap<String, ActivityLedgerEvidence>>,
 ) -> ParsedDocument {
-    match parse_document_with_manifest(raw, start, end, frame_manifest) {
+    match parse_document_with_manifest(raw, start, end, evidence_manifest) {
         Ok(document) => document,
         Err(error) => {
             warn!(%error, "activity history: model output could not be parsed; scheduling repair");
@@ -2187,13 +2229,20 @@ async fn generate_inner(
         return Err(format!("activity_no_data:{}", preflight.data_status));
     }
     let ledger_intervals = activity_ledger_intervals(app, start, end).await?;
-    let frame_manifest = frame_evidence_manifest(&ledger_intervals);
     let meetings = meeting_anchors(app, start, end).await?;
+    let evidence_manifest = build_evidence_manifest(&ledger_intervals, &meetings);
     let observed_windows = required_observed_windows(&ledger_intervals, start, end);
     let minimum_entries = minimum_history_entry_count(preflight.total_active_minutes, start, end);
-    let evidence_snapshot =
-        activity_evidence_snapshot(app, start, end, &preflight, &ledger_intervals, &meetings)
-            .await?;
+    let evidence_snapshot = activity_evidence_snapshot(
+        app,
+        start,
+        end,
+        &preflight,
+        &ledger_intervals,
+        &meetings,
+        &evidence_manifest,
+    )
+    .await?;
     let first_raw = run_pi(
         app,
         "activity-history",
@@ -2204,7 +2253,7 @@ async fn generate_inner(
         &first_raw,
         start,
         end,
-        Some(&frame_manifest),
+        Some(&evidence_manifest),
     );
     let first_audit = audit_document(
         &first,
@@ -2244,7 +2293,7 @@ async fn generate_inner(
                     &repaired_raw,
                     start,
                     end,
-                    Some(&frame_manifest),
+                    Some(&evidence_manifest),
                 );
                 let repaired_audit = audit_document(
                     &repaired,
@@ -2662,6 +2711,7 @@ mod tests {
             &preflight,
             &ledger,
             &meetings,
+            &HashMap::new(),
             &accessibility,
             &audio,
         );
@@ -2997,7 +3047,7 @@ mod tests {
         })
         .to_string();
         let manifest = HashMap::from([(
-            42,
+            "evidence-1".to_string(),
             ActivityLedgerEvidence {
                 source_type: "frame".to_string(),
                 source_id: 42,
@@ -3089,7 +3139,7 @@ mod tests {
 
         let generation = generation_prompt(start, end, 1);
         assert!(generation.contains("不要调用工具、使用终端、运行 Shell 命令或再次查询 API"));
-        assert!(generation.contains("\"schema_version\":2"));
+        assert!(generation.contains("\"schema_version\":3"));
         assert!(generation.contains("activity_type"));
         assert!(generation.contains("project_refs"));
         assert!(generation.contains("semantic_status"));
