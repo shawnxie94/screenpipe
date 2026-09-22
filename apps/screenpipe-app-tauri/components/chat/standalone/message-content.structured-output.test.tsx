@@ -91,6 +91,14 @@ describe("MessageContent — structured assistant output", () => {
     expect(parseStructuredAssistantOutput('{"ok":true}')).toBeNull();
   });
 
+  it("unwraps a fenced JSON-only reply before collapsing", () => {
+    const fenced = "```json\n" + rawActivityTimeline + "\n```";
+    const output = parseStructuredAssistantOutput(fenced);
+
+    expect(output?.label).toBe("结构化输出 · 1 条目");
+    expect(output?.json).toContain('\n  "entries": [');
+  });
+
   it("pretty-prints the payload kept behind progressive disclosure", () => {
     const output = parseStructuredAssistantOutput(rawActivityTimeline);
 

@@ -26,7 +26,11 @@ function countLabel(count: number, unit: string): string {
 export function parseStructuredAssistantOutput(
   text: string,
 ): StructuredAssistantOutput | null {
-  const trimmed = text.trim();
+  let trimmed = text.trim();
+  // Models sometimes wrap JSON in a code fence despite instructions; unwrap it
+  // so the collapsible renderer still applies.
+  const fenced = trimmed.match(/^```(?:json)?\s*\n([\s\S]*?)\n\s*```$/);
+  if (fenced) trimmed = fenced[1].trim();
   if (trimmed.length < MIN_COLLAPSIBLE_JSON_CHARS) return null;
   if (
     !(trimmed.startsWith("{") && trimmed.endsWith("}"))
