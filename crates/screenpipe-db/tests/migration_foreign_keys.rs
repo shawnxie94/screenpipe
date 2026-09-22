@@ -90,7 +90,9 @@ async fn assert_migration(root: &std::path::Path, history: &[serde_json::Value])
             payloads[&2].full_text.as_deref(),
             Some("legacyneedle missing video")
         );
-        for (table, rows) in [("frames", 2), ("elements", 2), ("audio_transcriptions", 1)] {
+        // zh-local: FTS 已收敛到 frames_fts（audio_transcriptions_fts 不再由
+        // 触发器维护），audio 腿改为断言行保留且文本可查。
+        for (table, rows) in [("frames", 2), ("elements", 2)] {
             let found: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
                 "SELECT count(*) FROM {table}_fts WHERE {table}_fts MATCH 'legacyneedle'"
             )))
@@ -99,6 +101,13 @@ async fn assert_migration(root: &std::path::Path, history: &[serde_json::Value])
             .unwrap();
             assert_eq!(found, rows, "{table} history must remain searchable");
         }
+        let audio_found: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM audio_transcriptions WHERE transcription LIKE '%legacyneedle%'",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+        assert_eq!(audio_found, 1, "audio history must remain searchable");
         // Preserving old dangling references must not disable enforcement for
         // new writes or prevent continued durable recording.
         assert_eq!(
