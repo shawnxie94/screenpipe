@@ -342,6 +342,8 @@ curl -X POST "${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}/raw_sql" \
 
 Current screen and accessibility text lives in `frames.full_text`; legacy `ocr_text` and `accessibility` tables are not current capture sources — do not query them.
 
+After the optional hybrid-storage migration (settings → storage), frame payloads may be sealed into Parquet. Reads stay API-first: `/search/records` and the frame endpoints return hydrated rows either way. `/raw_sql` serves resident metadata, indexes, and retained tables — discover with `PRAGMA table_info(frames)`; don't expect payload columns to be resident once migrated.
+
 ### Example Queries
 
 ```sql
