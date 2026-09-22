@@ -50,6 +50,7 @@ mod coding_workspace;
 mod commands;
 mod db_recovery_notifications;
 mod db_relaunch;
+mod update_restart;
 mod db_self_heal;
 mod deep_link;
 mod dev_isolation;
@@ -1490,6 +1491,7 @@ async fn main() {
                 );
 
                 let is_starting_after_spawn_error = is_starting_clone.clone();
+                                                                                let app_for_migration = app_handle.clone();
                 let server_thread = std::thread::Builder::new()
                     .name("screenpipe-server".to_string())
                     .spawn(move || {
@@ -1604,8 +1606,8 @@ async fn main() {
 
 
                             let resumed_migration = match crate::storage_migration::resume_before_startup(
-                                &app_for_owned,
-                                &app_for_owned.state::<recording::RecordingState>(),
+                                &app_for_migration,
+                                &app_for_migration.state::<recording::RecordingState>(),
                             ).await {
                                 Ok(resumed) => resumed,
                                 Err(error) => {
@@ -1627,7 +1629,7 @@ async fn main() {
                                     error!("Failed to start server core: {}", e);
                                     if let Some(resumed) = resumed_migration {
                                         let _ = crate::storage_migration::finish_startup(
-                                            &app_for_owned, resumed, Err(e.to_string()),
+                                            &app_for_migration, resumed, Err(e.to_string()),
                                         ).await;
                                     }
                                     crate::db_relaunch::note_respawn_failure(&app_for_db_wedge, &e).await;
@@ -1695,12 +1697,12 @@ async fn main() {
                             drop(capture_guard);
                             if let Some(resumed) = resumed_migration {
                                 if let Err(error) = crate::storage_migration::finish_startup(
-                                    &app_for_owned, resumed, Ok(()),
+                                    &app_for_migration, resumed, Ok(()),
                                 ).await {
                                     error!("Could not finish migration startup: {error}");
                                 }
                             } else if let Err(error) = crate::storage_migration::finish_recording_recovery(
-                                &app_for_owned,
+                                &app_for_migration,
                             ).await {
                                 error!("Could not finish recording recovery: {error}");
                             }

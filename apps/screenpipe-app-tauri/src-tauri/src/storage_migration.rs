@@ -167,8 +167,8 @@ fn should_start_hidden_ui_migration(
 /// Called by the native policy watcher, including when no webview exists.
 /// Completion, failure and cleanup are recorded in logs without opening UI.
 pub(crate) async fn maybe_start_hidden_ui_migration(app: tauri::AppHandle) {
-    if !crate::enterprise_policy::is_app_ui_hidden()
-        || !crate::enterprise_policy::recording_authorized()
+    if !false
+        || !true
     {
         return;
     }
@@ -502,42 +502,8 @@ fn finish_recovery_operation(app: &tauri::AppHandle, root: &Path, result: &Resul
     });
 }
 
-fn track_completed_migration(app: &tauri::AppHandle, root: &Path) {
-    let Some(analytics) = app.try_state::<std::sync::Arc<crate::analytics::AnalyticsManager>>()
-    else {
-        return;
-    };
-    // Use sizes captured in the verified conversion receipt, so resumed recording
-    // cannot change the comparison. Exclude the recovery copy and external media.
-    let report = match migration_report(root) {
-        Ok(Some(report)) => report,
-        result => {
-            tracing::warn!(?result, "migration telemetry receipt unavailable");
-            return;
-        }
-    };
-    let migrated_db_bytes = report
-        .allocated_after_bytes
-        .unwrap_or_else(|| report.index_bytes.saturating_add(report.payload_bytes));
-    let original_db_bytes = report.allocated_before_bytes.unwrap_or(report.source_bytes);
-    if migrated_db_bytes == 0 {
-        return;
-    }
-    let event = "storage_migration_completed";
-    let properties = serde_json::json!({
-        "$insert_id": format!("{event}:{}", report.generation),
-        "original_db_bytes": original_db_bytes,
-        "migrated_db_bytes": migrated_db_bytes,
-        "compression_multiplier": original_db_bytes as f64 / migrated_db_bytes as f64,
-    });
-    let analytics = std::sync::Arc::clone(&analytics);
-    // AnalyticsManager honors the existing telemetry preference. Delivery never
-    // holds up the migration UI, recording, or release of the wake lock.
-    tauri::async_runtime::spawn(async move {
-        if let Err(error) = analytics.send_event(event, Some(properties)).await {
-            tracing::warn!(%error, event, "migration telemetry delivery failed");
-        }
-    });
+fn track_completed_migration(_app: &tauri::AppHandle, _root: &Path) {
+    // zh-local: analytics 域已移除，迁移完成遥测为空操作。
 }
 
 fn needs_storage_activation(using_new_storage: Option<bool>, error: Option<&str>) -> bool {
@@ -740,8 +706,8 @@ async fn start_storage_migration_inner(
                 .is_ok_and(|capture| capture.is_some());
         if !should_start_hidden_ui_migration(
             &status,
-            crate::enterprise_policy::is_app_ui_hidden(),
-            crate::enterprise_policy::recording_authorized(),
+            false,
+            true,
             server_ready && capture_ready,
         ) {
             return Ok(());
@@ -838,8 +804,8 @@ async fn start_storage_migration_inner(
                 .map_err(|e| e.to_string())?
                 .ok_or("The migrated storage is not active. Saved progress has been kept.")?;
             if background
-                && crate::enterprise_policy::is_app_ui_hidden()
-                && crate::enterprise_policy::recording_authorized()
+                && false
+                && true
             {
                 let server = recording.server.lock().await;
                 let server = server.as_ref().ok_or(
@@ -894,28 +860,11 @@ async fn start_storage_migration_inner(
 }
 
 fn track_migration_diagnostic(
-    app: &tauri::AppHandle,
-    event: &str,
-    snapshot: &screenpipe_db::storage::diagnostics::Snapshot,
+    _app: &tauri::AppHandle,
+    _event: &str,
+    _snapshot: &screenpipe_db::storage::diagnostics::Snapshot,
 ) {
-    let event = match event {
-        "started" => "storage_migration_started",
-        "stalled" => "storage_migration_stalled",
-        "failed" | "interrupted" => "storage_migration_failed",
-        // Completion continues to require the existing verified receipt event.
-        _ => return,
-    };
-    let Some(analytics) = app.try_state::<Arc<crate::analytics::AnalyticsManager>>() else {
-        return;
-    };
-    let mut properties = serde_json::to_value(snapshot).unwrap_or_default();
-    let analytics = Arc::clone(&analytics);
-    tauri::async_runtime::spawn(async move {
-        redact_migration_diagnostic_error(&mut properties);
-        if let Err(error) = analytics.send_event(event, Some(properties)).await {
-            tracing::warn!(%error, event, "migration diagnostic telemetry failed");
-        }
-    });
+    // zh-local: analytics 域已移除，迁移诊断遥测为空操作。
 }
 
 fn redact_migration_diagnostic_error(properties: &mut serde_json::Value) {

@@ -283,6 +283,29 @@ pub fn best_engine_for_platform_for_cpu(tier: DeviceTier, has_avx2: bool) -> &'s
 /// An engine is unsafe if:
 /// - It's whisper*/qwen3* on an x86-64 CPU without AVX2 (their native kernels
 ///   are AVX2-compiled — STATUS_ILLEGAL_INSTRUCTION at first use)
+/// Cached for process lifetime — the value cannot change at runtime, and the
+/// underlying detection forks `sw_vers`, which showed up as a hot leaf frame
+/// in CPU profiling (~33 hits/15s sample) when called from the engine-pick
+/// and is-engine-unsafe paths.
+#[cfg(target_os = "macos")]
+pub fn macos_major_version() -> Option<u32> {
+    use std::sync::OnceLock;
+    static CACHED: OnceLock<Option<u32>> = OnceLock::new();
+    *CACHED.get_or_init(|| {
+        let output = std::process::Command::new("sw_vers")
+            .arg("-productVersion")
+            .output()
+            .ok()?;
+        let version_str = String::from_utf8_lossy(&output.stdout);
+        version_str.trim().split('.').next()?.parse().ok()
+    })
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn macos_major_version() -> Option<u32> {
+    None
+}
+
 pub fn is_engine_unsafe(engine: &str, tier: DeviceTier) -> bool {
     is_engine_unsafe_for_cpu(engine, tier, screenpipe_cpu_features::has_avx2())
 }

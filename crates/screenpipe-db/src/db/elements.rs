@@ -203,7 +203,7 @@ impl DatabaseManager {
         Ok(rows.into_iter().map(Element::from).collect())
         }).await
     }
-
+}
 
 #[cfg(test)]
 mod tests {

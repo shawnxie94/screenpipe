@@ -665,7 +665,7 @@ pub async fn stop_screenpipe(
     stop_screenpipe_inner(&state).await
 }
 
-async fn stop_screenpipe_inner(state: &RecordingState) -> Result<(), String> {
+pub(crate) async fn stop_screenpipe_inner(state: &RecordingState) -> Result<(), String> {
     info!("stop_screenpipe: stopping capture and server");
 
     // Stop capture first
