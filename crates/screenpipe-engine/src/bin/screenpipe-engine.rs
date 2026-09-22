@@ -1934,9 +1934,6 @@ async fn main() -> anyhow::Result<()> {
         if let Err(error) = audio_manager.shutdown().await {
             warn!("audio shutdown during database recovery: {error}");
         }
-        if let Some(ref handle) = sync_service_handle {
-            let _ = handle.stop().await;
-        }
         db.close().await;
         screenpipe_secrets::close_all_secret_pools().await;
     };
