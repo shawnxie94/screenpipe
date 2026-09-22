@@ -124,6 +124,8 @@ type ActivityArtifactPreview = {
   end_at: string;
   app_name: string;
   browser_domain?: string;
+  /** Prefer the exact evidence frame over interval re-sampling when present. */
+  frame_id?: number | null;
 };
 
 type FramePreviewSample = {
@@ -514,7 +516,9 @@ export function artifactsForHistoryEntry(
       const common = {
         kind: "screen" as const,
         at: new Date(previewStart).toISOString(),
-        frame_id: null,
+        // Keep the evidence binding instead of re-sampling an arbitrary frame
+        // from the whole app interval.
+        frame_id: evidence.frame_id ?? null,
         meeting_id: null,
         label:
           evidence.window_title?.trim() || app || domain || "屏幕录制",
@@ -528,6 +532,7 @@ export function artifactsForHistoryEntry(
             start_at: new Date(previewStart).toISOString(),
             end_at: new Date(previewEnd).toISOString(),
             app_name: app,
+            frame_id: common.frame_id,
           },
         };
         intervalArtifacts.set(artifactKey(artifact), artifact);
@@ -543,6 +548,7 @@ export function artifactsForHistoryEntry(
             end_at: new Date(previewEnd).toISOString(),
             app_name: previewApp,
             browser_domain: domain,
+            frame_id: common.frame_id,
           },
         };
         intervalArtifacts.set(artifactKey(artifact), artifact);
@@ -627,6 +633,7 @@ export function artifactsForHistoryEntry(
               start_at: entry.start_at,
               end_at: entry.end_at,
               app_name: appName,
+              frame_id: item.frame_id,
             }
           : undefined,
       };
@@ -794,6 +801,20 @@ async function fetchFramePreviewSamples(
 ): Promise<FramePreviewSample[]> {
   await refreshApiConfig();
   if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+
+  // A cited frame is stronger evidence than an app/time interval. Do not
+  // silently replace it with a nearby frame that may show another window or
+  // the desktop. The thumbnail endpoint can serve both snapshots and frames
+  // inside compacted video, so the UI can render this as one exact image.
+  if (preview.frame_id && Number.isSafeInteger(preview.frame_id)) {
+    return [
+      {
+        frame_id: preview.frame_id,
+        timestamp: preview.start_at,
+      },
+    ];
+  }
+
   const response = await localFetch(buildFramePreviewSamplesPath(preview), {
     signal,
   });
@@ -925,6 +946,7 @@ function ArtifactPreviewTooltip({
     requestedPreview?.app_name,
     requestedPreview?.browser_domain,
     requestedPreview?.end_at,
+    requestedPreview?.frame_id,
     requestedPreview?.start_at,
     requestGeneration,
     requestWasProvisional,
@@ -1139,20 +1161,30 @@ function ActivityEntryArtifacts({
   const warmAbortRef = useRef<AbortController | null>(null);
   const [warmAfterPreview, setWarmAfterPreview] = useState<string | null>(null);
 
+  const previewCacheKey = useCallback(
+    (preview: ActivityArtifactPreview) =>
+      preview.frame_id
+        ? `frame:${preview.frame_id}`
+        : buildFramePreviewSamplesPath(preview),
+    [],
+  );
   const loadPreviewFrames = useCallback(
     async (preview: ActivityArtifactPreview, signal: AbortSignal) => {
-      const key = buildFramePreviewSamplesPath(preview);
+      const key = previewCacheKey(preview);
       const cached = previewCacheRef.current.get(key);
       if (cached) return cached;
       const frames = await fetchFramePreviewSamples(preview, signal);
       if (!signal.aborted) previewCacheRef.current.set(key, frames);
       return frames;
     },
-    [],
+    [previewCacheKey],
   );
-  const onPreviewLoaded = useCallback((preview: ActivityArtifactPreview) => {
-    setWarmAfterPreview(buildFramePreviewSamplesPath(preview));
-  }, []);
+  const onPreviewLoaded = useCallback(
+    (preview: ActivityArtifactPreview) => {
+      setWarmAfterPreview(previewCacheKey(preview));
+    },
+    [previewCacheKey],
+  );
 
   useEffect(() => {
     if (!warmAfterPreview) return;
@@ -1162,7 +1194,7 @@ function ActivityEntryArtifacts({
     void (async () => {
       for (const artifact of artifacts) {
         if (!artifact.preview || controller.signal.aborted) continue;
-        const key = buildFramePreviewSamplesPath(artifact.preview);
+        const key = previewCacheKey(artifact.preview);
         if (key === warmAfterPreview || previewCacheRef.current.has(key)) {
           continue;
         }
@@ -1174,7 +1206,7 @@ function ActivityEntryArtifacts({
       }
     })();
     return () => controller.abort();
-  }, [artifacts, loadPreviewFrames, warmAfterPreview]);
+  }, [artifacts, loadPreviewFrames, previewCacheKey, warmAfterPreview]);
 
   useEffect(
     () => () => {
@@ -1254,7 +1286,11 @@ function formatDay(value: string): string {
 
 function groupByDay(entries: ActivityHistoryEntry[]) {
   const groups = new Map<string, ActivityHistoryEntry[]>();
-  for (const entry of entries) {
+  const newestFirst = [...entries].sort(
+    (left, right) =>
+      new Date(right.start_at).getTime() - new Date(left.start_at).getTime(),
+  );
+  for (const entry of newestFirst) {
     const key = localDayKey(entry.start_at);
     groups.set(key, [...(groups.get(key) ?? []), entry]);
   }

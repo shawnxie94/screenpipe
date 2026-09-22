@@ -708,11 +708,12 @@ describe("activity history helpers", () => {
     const site = artifacts.find((artifact) => artifact.browser_url);
     expect(app).toMatchObject({
       at: "2026-08-20T10:20:00.000Z",
-      frame_id: null,
+      frame_id: 2,
       preview: {
         start_at: "2026-08-20T10:20:00.000Z",
         end_at: "2026-08-20T10:38:00.000Z",
         app_name: "Arc",
+        frame_id: 2,
       },
     });
     expect(site?.preview?.browser_domain).toBe("github.com");
@@ -780,20 +781,14 @@ describe("activity history helpers", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(200);
     });
-    await waitFor(() =>
-      expect(previewCalls().length).toBeGreaterThanOrEqual(1),
-    );
-    expect(
-      new URL(
-        String(previewCalls()[0][0]),
-        "http://localhost",
-      ).searchParams.get("app_name"),
-    ).toBe("Cursor");
+    // The native evidence already identifies the exact frame, so hovering
+    // must not re-sample the whole Cursor interval.
+    expect(previewCalls()).toHaveLength(0);
     const preview = await screen.findByTestId("activity-artifact-preview");
     expect(within(preview).getAllByText("20 分钟")[0]).toBeVisible();
     expect(preview.querySelector("img")).toHaveAttribute(
       "src",
-      expect.stringContaining("/frames/801/thumbnail"),
+      expect.stringContaining("/frames/54321/thumbnail"),
     );
     fireEvent.load(preview.querySelector("img")!);
 
@@ -802,27 +797,26 @@ describe("activity history helpers", () => {
     });
     expect(preview.querySelector("img")).toHaveAttribute(
       "src",
-      expect.stringContaining("/frames/802/thumbnail"),
+      expect.stringContaining("/frames/54321/thumbnail"),
     );
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1_200);
     });
     expect(preview.querySelector("img")).toHaveAttribute(
       "src",
-      expect.stringContaining("/frames/802/thumbnail"),
+      expect.stringContaining("/frames/54321/thumbnail"),
     );
-    await waitFor(() => expect(previewCalls()).toHaveLength(3));
+    expect(previewCalls()).toHaveLength(0);
 
     fireEvent.keyDown(document, { key: "Escape" });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1);
     });
     expect(screen.queryByTestId("activity-artifact-preview")).toBeNull();
-    const signal = previewCalls()[0][1]?.signal as AbortSignal;
-    expect(signal.aborted).toBe(true);
+    expect(previewCalls()).toHaveLength(0);
   });
 
-  it("seeks existing compacted media without requesting extracted thumbnails", async () => {
+  it("uses the exact evidence frame without re-sampling compacted media", async () => {
     const persisted = parseActivityHistoryResponse(HISTORY_RESPONSE, {
       start: new Date("2026-08-17T16:00:00Z"),
       end: new Date("2026-08-17T20:00:00Z"),
@@ -880,30 +874,16 @@ describe("activity history helpers", () => {
     });
 
     const preview = await screen.findByTestId("activity-artifact-preview");
-    const video = preview.querySelector("video")!;
-    expect(video).toHaveAttribute(
+    expect(preview.querySelector("video")).toBeNull();
+    expect(preview.querySelector("img")).toHaveAttribute(
       "src",
-      expect.stringContaining("/frames/preview-media/77"),
+      expect.stringContaining("/frames/54321/thumbnail"),
     );
-    expect(preview.querySelector("img")).toBeNull();
-    Object.defineProperty(video, "readyState", {
-      configurable: true,
-      value: HTMLMediaElement.HAVE_METADATA,
-    });
-    await waitFor(() => {
-      fireEvent.loadedMetadata(video);
-      expect(video.currentTime).toBe(1.5);
-    });
-    fireEvent.seeked(video);
-    await waitFor(() => expect(video).toHaveClass("opacity-100"));
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(601);
-    });
-    fireEvent.loadedMetadata(video);
-    await waitFor(() => expect(video.currentTime).toBe(4));
-    expect(preview.querySelectorAll("video")).toHaveLength(1);
-    expect(preview.querySelector("img")).toBeNull();
+    expect(
+      mocks.localFetch.mock.calls.some(([path]) =>
+        String(path).startsWith("/frames/preview-samples?"),
+      ),
+    ).toBe(false);
   });
 
   it("hands an open preview directly to the next artifact icon", async () => {
@@ -1116,7 +1096,7 @@ describe("activity history helpers", () => {
     await waitFor(() =>
       expect(preview.querySelector("img")).toHaveAttribute(
         "src",
-        expect.stringContaining("/frames/811/thumbnail"),
+        expect.stringContaining("/frames/54321/thumbnail"),
       ),
     );
 
@@ -1125,7 +1105,7 @@ describe("activity history helpers", () => {
     });
     expect(preview.querySelector("img")).toHaveAttribute(
       "src",
-      expect.stringContaining("/frames/811/thumbnail"),
+      expect.stringContaining("/frames/54321/thumbnail"),
     );
   });
 
@@ -1905,6 +1885,19 @@ describe("ActivityLedger", () => {
     expect(
       await screen.findByRole("heading", { name: "Recovered task 1" }),
     ).toBeVisible();
+    expect(
+      screen
+        .getAllByRole("heading", { name: /Recovered task \d+/ })
+        .map((heading) => heading.textContent),
+    ).toEqual([
+      "Recovered task 7",
+      "Recovered task 6",
+      "Recovered task 5",
+      "Recovered task 4",
+      "Recovered task 3",
+      "Recovered task 2",
+      "Recovered task 1",
+    ]);
     expect(mocks.generateActivityHistory).not.toHaveBeenCalled();
   });
 
@@ -1948,7 +1941,7 @@ describe("ActivityLedger", () => {
     });
     expect(appArtifact).toHaveAttribute(
       "href",
-      "screenpipe://timeline?timestamp=2026-08-17T16%3A20%3A00.000Z",
+      "screenpipe://frame/12345",
     );
     await waitFor(() =>
       expect(appArtifact.querySelector("img")).toHaveAttribute(
@@ -1962,7 +1955,7 @@ describe("ActivityLedger", () => {
     );
     expect(siteArtifact).toHaveAttribute(
       "href",
-      "screenpipe://timeline?timestamp=2026-08-17T16%3A20%3A00.000Z",
+      "screenpipe://frame/12345",
     );
     expect(siteArtifact.querySelector("img")).toHaveAttribute(
       "src",
@@ -1975,14 +1968,11 @@ describe("ActivityLedger", () => {
     fireEvent.click(appArtifact);
     expect(mocks.setPendingNavigation).toHaveBeenCalledWith({
       timestamp: "2026-08-17T16:20:00.000Z",
-      frameId: undefined,
+      frameId: "12345",
     });
     expect(mocks.routerPush).toHaveBeenCalledWith("/home?section=timeline");
     await waitFor(() =>
-      expect(mocks.emit).toHaveBeenCalledWith(
-        "navigate-to-timestamp",
-        "2026-08-17T16:20:00.000Z",
-      ),
+      expect(mocks.emit).toHaveBeenCalledWith("navigate-to-frame", "12345"),
     );
 
     fireEvent.click(transcriptArtifact);
