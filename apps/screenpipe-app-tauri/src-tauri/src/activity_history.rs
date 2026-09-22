@@ -18,14 +18,17 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use specta::Type;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 
-const STORE_KEY: &str = "activityHistory:activity-history-pi-v9";
+const ACTIVITY_HISTORY_SCHEMA: &str = "activity-history-pi-v10";
+const ACTIVITY_HISTORY_JSON_SCHEMA_VERSION: u64 = 3;
+const STORE_KEY: &str = "activityHistory:activity-history-pi-v10";
+const LEGACY_STORE_KEY: &str = "activityHistory:activity-history-pi-v9";
 
 const DEFAULT_INTERVAL_MINUTES: u64 = 15;
 const COVERAGE_SLOP_MS: i64 = 1_000;
@@ -52,10 +55,25 @@ pub struct ActivityHistoryCoverage {
 pub struct ActivityHistoryEvidence {
     pub kind: String,
     pub at: String,
+    #[serde(default)]
+    pub source_type: Option<String>,
+    #[serde(default)]
+    pub source_id: Option<i64>,
+    #[serde(default)]
+    pub occurred_at: Option<String>,
     pub frame_id: Option<i64>,
     pub meeting_id: Option<i64>,
     pub app_name: Option<String>,
     pub label: String,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Type)]
+pub struct ActivityHistoryOutcome {
+    #[serde(rename = "type", alias = "outcome_type")]
+    pub outcome_type: String,
+    pub status: String,
+    pub confidence: f64,
+    pub provenance: String,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Type)]
@@ -67,6 +85,16 @@ pub struct ActivityHistoryEntry {
     pub end_at: String,
     pub title: String,
     pub summary: String,
+    #[serde(default)]
+    pub confidence: f64,
+    #[serde(default)]
+    pub activity_type: Option<String>,
+    #[serde(default)]
+    pub project_refs: Vec<String>,
+    #[serde(default)]
+    pub outcomes: Vec<ActivityHistoryOutcome>,
+    #[serde(default)]
+    pub semantic_status: Option<String>,
     pub evidence: Vec<ActivityHistoryEvidence>,
 }
 
@@ -159,6 +187,21 @@ struct ActivityLedgerSnapshot {
     intervals: Vec<ActivityLedgerInterval>,
 }
 
+#[derive(Serialize, Deserialize, Clone, Default)]
+struct ActivityLedgerEvidence {
+    source_type: String,
+    source_id: i64,
+    occurred_at: String,
+    #[serde(default)]
+    frame_id: Option<i64>,
+    #[serde(default)]
+    app_name: Option<String>,
+    #[serde(default)]
+    window_title: Option<String>,
+    #[serde(default)]
+    browser_url: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Default)]
 struct ActivityLedgerInterval {
     kind: String,
@@ -174,6 +217,17 @@ struct ActivityLedgerInterval {
     app_name: Option<String>,
     #[serde(default)]
     confidence: f64,
+    #[serde(default)]
+    activity_type: Option<String>,
+    #[serde(default)]
+    project_refs: Vec<String>,
+    #[serde(default)]
+    outcomes: Vec<ActivityHistoryOutcome>,
+    #[serde(default)]
+    semantic_status: Option<String>,
+    /// Exact frame-backed evidence used to validate model citations.
+    #[serde(default)]
+    evidence: Vec<ActivityLedgerEvidence>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -301,10 +355,86 @@ fn parse_time(value: &str) -> Option<DateTime<Utc>> {
         .map(|value| value.with_timezone(&Utc))
 }
 
+fn is_semantic_status(value: &str) -> bool {
+    matches!(
+        value,
+        "observed" | "summarized" | "inferred" | "confirmed" | "rejected"
+    )
+}
+
+fn is_activity_type(value: &str) -> bool {
+    matches!(
+        value,
+        "meeting"
+            | "research"
+            | "implementation"
+            | "planning"
+            | "communication"
+            | "learning"
+            | "administrative"
+            | "unknown"
+    )
+}
+
+fn is_outcome_type(value: &str) -> bool {
+    matches!(
+        value,
+        "decision" | "deliverable" | "commitment" | "blocker" | "next_step" | "unknown"
+    )
+}
+
+fn has_duplicates(values: &[String]) -> bool {
+    let mut seen = HashSet::new();
+    values.iter().any(|value| !seen.insert(value))
+}
+
+fn normalize_semantics(entry: &mut ActivityHistoryEntry) {
+    entry.activity_type = entry
+        .activity_type
+        .take()
+        .map(|value| value.trim().to_ascii_lowercase());
+    entry.project_refs = entry
+        .project_refs
+        .drain(..)
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .collect();
+    entry.project_refs.sort();
+    entry.project_refs.dedup();
+    entry.semantic_status = entry
+        .semantic_status
+        .take()
+        .map(|value| value.trim().to_ascii_lowercase());
+    for outcome in &mut entry.outcomes {
+        outcome.outcome_type = outcome.outcome_type.trim().to_ascii_lowercase();
+        outcome.status = outcome.status.trim().to_ascii_lowercase();
+        outcome.provenance = outcome.provenance.trim().to_string();
+    }
+    for evidence in &mut entry.evidence {
+        evidence.source_type = evidence.source_type.take().or_else(|| {
+            Some(match evidence.kind.as_str() {
+                "screen" => "frame".to_string(),
+                "audio" => "audio".to_string(),
+                "meeting" => "meeting".to_string(),
+                _ => String::new(),
+            })
+        });
+        evidence.source_id = evidence
+            .source_id
+            .or(evidence.frame_id)
+            .or(evidence.meeting_id);
+        evidence.occurred_at = evidence
+            .occurred_at
+            .take()
+            .or_else(|| Some(evidence.at.clone()));
+    }
+}
+
 fn entry_rejection_reason(
     entry: &ActivityHistoryEntry,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
+    require_v2_semantics: bool,
 ) -> Option<&'static str> {
     let Some(entry_start) = parse_time(&entry.start_at) else {
         return Some("invalid_timestamp");
@@ -329,6 +459,52 @@ fn entry_rejection_reason(
     }
     if entry.evidence.is_empty() {
         return Some("no_valid_evidence");
+    }
+    if !entry.confidence.is_finite() || !(0.0..=1.0).contains(&entry.confidence) {
+        return Some("invalid_confidence");
+    }
+    if require_v2_semantics {
+        if entry.activity_type.is_none() {
+            return Some("missing_activity_type");
+        }
+        if entry.semantic_status.is_none() {
+            return Some("missing_semantic_status");
+        }
+        if entry.evidence.iter().any(|evidence| {
+            evidence.source_type.is_none()
+                || evidence.source_id.is_none()
+                || evidence.occurred_at.is_none()
+        }) {
+            return Some("missing_evidence_provenance");
+        }
+    }
+    if let Some(activity_type) = entry.activity_type.as_deref() {
+        if !is_activity_type(activity_type) {
+            return Some("invalid_activity_type");
+        }
+    }
+    if let Some(status) = entry.semantic_status.as_deref() {
+        if !is_semantic_status(status) {
+            return Some("invalid_semantic_status");
+        }
+    }
+    if entry
+        .project_refs
+        .iter()
+        .any(|project| project.trim().is_empty())
+        || has_duplicates(&entry.project_refs)
+    {
+        return Some("invalid_project_refs");
+    }
+    if entry.outcomes.iter().any(|outcome| {
+        outcome.outcome_type.trim().is_empty()
+            || !is_outcome_type(&outcome.outcome_type)
+            || !is_semantic_status(&outcome.status)
+            || !outcome.confidence.is_finite()
+            || !(0.0..=1.0).contains(&outcome.confidence)
+            || outcome.provenance.trim().is_empty()
+    }) {
+        return Some("invalid_outcome");
     }
     if entry.kind == "meeting"
         && (entry.meeting_id.is_none()
@@ -427,6 +603,7 @@ pub(crate) fn read_all(app: &AppHandle) -> Result<PersistedActivityHistory, Stri
     let store = store::get_store(app, None).map_err(|error| error.to_string())?;
     let stored = store
         .get(STORE_KEY)
+        .or_else(|| store.get(LEGACY_STORE_KEY))
         .and_then(|value| serde_json::from_value::<StoredActivityHistory>(value).ok());
     Ok(stored
         .map(|stored| PersistedActivityHistory {
@@ -441,7 +618,7 @@ fn write_all(app: &AppHandle, history: &PersistedActivityHistory) -> Result<(), 
     store.set(
         STORE_KEY,
         json!(StoredActivityHistory {
-            schema: 1,
+            schema: 2,
             updated_at: Utc::now().to_rfc3339(),
             entries: history.entries.clone(),
             coverage: merge_coverage(history.coverage.clone()),
@@ -733,12 +910,21 @@ end_time: {end}
 
 覆盖要求：至少返回 {minimum_entries} 条有来源支持的活动；审计每个已记录且非 unobserved 的 30 分钟窗口；将空闲和未观测时间保留为空档，不要编造活动。
 
-只返回一个 JSON 对象，不要使用 Markdown：
-{{"entries":[{{"id":"stable-short-slug","kind":"work","meeting_id":null,"start_at":"ISO 时间戳","end_at":"ISO 时间戳","title":"3-8 个过去时普通词","summary":"一句具体的自然语言句子","evidence":[{{"kind":"screen","at":"来源中的精确时间戳","frame_id":123,"meeting_id":null,"app_name":"精确应用名","label":"简短概括这个画面证明的内容"}}]}}]}}
+只返回一个 JSON 对象，不要使用 Markdown。输出必须符合 activity-history-pi-v10：
+{{"schema_version":2,"entries":[{{"id":"stable-short-slug","kind":"work","activity_type":"research","project_refs":[],"confidence":0.82,"semantic_status":"inferred","meeting_id":null,"start_at":"2026-09-22T10:00:00Z","end_at":"2026-09-22T10:30:00Z","title":"研究本地知识图谱方案","summary":"研究了本地知识图谱方案并比较了候选实现。","outcomes":[{{"type":"decision","status":"inferred","confidence":0.72,"provenance":"model-from-evidence"}}],"evidence":[{{"kind":"screen","source_type":"frame","source_id":123,"occurred_at":"2026-09-22T10:15:00Z","at":"2026-09-22T10:15:00Z","frame_id":123,"meeting_id":null,"app_name":"精确应用名","label":"画面显示了知识图谱方案比较"}}]}}]}}
 
-语言要求：title、summary 和 evidence.label 使用简体中文。JSON 字段名以及 kind=work、kind=meeting 和 evidence 类型等枚举值保持英文。适当保留官方产品名、项目名、文件名和技术标识符。
+字段含义：
+- `kind` 是活动形态，只能是 `work` 或 `meeting`；`activity_type` 是活动目的，使用 `meeting`、`research`、`implementation`、`planning`、`communication`、`learning`、`administrative` 或 `unknown`，两者不要混用。
+- `project_refs` 只填写证据、用户映射或预加载项目上下文中已有的稳定项目 ID；不确定时返回空数组，禁止根据猜测创建项目身份。
+- `confidence` 是 0 到 1 的整体判断置信度，不是完成度；没有足够直接证据时降低置信度或省略活动。
+- `semantic_status` 只能是 `observed`、`summarized`、`inferred`、`confirmed` 或 `rejected`。模型推断的语义必须使用 `inferred`，不能把模型输出伪称 `confirmed`；`confirmed` 只用于直接证据或明确用户确认。
+- `outcomes` 只记录有证据支持的结果；`outcomes[].type` 使用 `decision`、`deliverable`、`commitment`、`blocker`、`next_step` 或 `unknown`；`status` 使用同一组语义状态；`provenance` 说明来自证据、用户确认或模型推断。
+- `evidence` 必须是直接来源引用。`source_type` 使用 `frame`、`audio`、`ui_event` 或 `meeting`；`source_id` 是对应来源 ID；`occurred_at` 是来源发生时间；`at` 是为旧客户端保留的同一 UTC 时间副本。不得只填写无法追溯的描述。
+- 屏幕 `frame` 证据只能引用“确定性账本”下方列出的 `source_id`/`frame_id`，不得猜测或生成其他 ID；`app_name` 必须逐字复制同一证据行的 `app`，不能根据标题推断。
 
-规则：所有 start_at、end_at 和 evidence.at 都以 Z 结尾并使用 UTC；来源时间戳带偏移量时，先将时刻转换为 UTC，不要只更换后缀而不调整时钟时间；保留有意义的短时工作，并将恢复后的工作作为独立区间；超过 15 分钟的空档会结束一个区间；不要跨越无关工作；每个持续至少两分钟的已记录会议都必须恰好作为一条带真实 meeting_id 的 kind=meeting 记录出现，并包含第一条 kind=meeting 证据；每条记录使用 1–3 条直接证据；无法直接引用的内容不要包含；不要暴露引用原文、原始捕获数据或 API 机制。"#,
+语言要求：title、summary 和 evidence.label 使用简体中文。JSON 字段名和枚举值保持英文。适当保留官方产品名、项目名、文件名和技术标识符。
+
+规则：所有 start_at、end_at、occurred_at 和 evidence.at 都以 Z 结尾并使用 UTC；来源时间戳带偏移量时，先将时刻转换为 UTC，不要只更换后缀而不调整时钟时间；保留有意义的短时工作，并将恢复后的工作作为独立区间；超过 15 分钟的空档会结束一个区间；不要跨越无关工作；每个持续至少两分钟的已记录会议都必须恰好作为一条带真实 meeting_id 的 kind=meeting 记录出现，并包含第一条 kind=meeting 证据；每条记录使用 1–3 条直接证据；无法直接引用的内容不要包含；不要暴露引用原文、原始捕获数据或 API 机制。"#,
         start = start.to_rfc3339(),
         end = end.to_rfc3339(),
         minimum_entries = minimum_entries,
@@ -960,6 +1146,8 @@ async fn activity_ledger_intervals(
             ("start_time", start.to_rfc3339()),
             ("end_time", end.to_rfc3339()),
             ("depth", "task".to_string()),
+            ("include_artifacts", "true".to_string()),
+            ("refresh", "true".to_string()),
         ],
     )
     .await?
@@ -1105,6 +1293,21 @@ fn render_snapshot_lines(
                 interval.kind,
                 title
             ));
+            for evidence in &interval.evidence {
+                let frame = evidence
+                    .frame_id
+                    .map(|id| format!(" frame_id={id}"))
+                    .unwrap_or_default();
+                let app = evidence
+                    .app_name
+                    .as_deref()
+                    .map(|name| format!(" app={name}"))
+                    .unwrap_or_default();
+                lines.push(format!(
+                    "    证据 source_type={} source_id={} occurred_at={}{}{}",
+                    evidence.source_type, evidence.source_id, evidence.occurred_at, frame, app
+                ));
+            }
         }
     }
 
@@ -1236,10 +1439,151 @@ const SEARCH_EVIDENCE_BUDGET: usize = 100;
 /// Sampled screen text rows fed to the model.
 const SAMPLED_TEXT_BUDGET: usize = 100;
 
+fn has_v2_semantic_fields(value: &Value) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    let required = [
+        "activity_type",
+        "project_refs",
+        "confidence",
+        "semantic_status",
+        "outcomes",
+    ];
+    if required.iter().any(|key| !object.contains_key(*key)) {
+        return false;
+    }
+    object
+        .get("evidence")
+        .and_then(Value::as_array)
+        .is_some_and(|evidence| {
+            evidence.iter().all(|item| {
+                item.get("source_type").is_some()
+                    && item.get("source_id").is_some()
+                    && item.get("occurred_at").is_some()
+            })
+        })
+}
+
+fn build_evidence_manifest(
+    ledger: &[ActivityLedgerInterval],
+    meetings: &[MeetingAnchor],
+) -> HashMap<String, ActivityLedgerEvidence> {
+    let mut manifest = HashMap::new();
+    let mut next_ref = 1usize;
+    for interval in ledger {
+        for evidence in &interval.evidence {
+            manifest.insert(format!("evidence-{next_ref}"), evidence.clone());
+            next_ref += 1;
+        }
+    }
+    for meeting in meetings {
+        manifest.insert(
+            format!("evidence-{next_ref}"),
+            ActivityLedgerEvidence {
+                source_type: "meeting".to_string(),
+                source_id: meeting.id,
+                occurred_at: meeting.meeting_start.clone(),
+                ..Default::default()
+            },
+        );
+        next_ref += 1;
+    }
+    manifest
+}
+
+fn reconcile_frame_evidence(
+    evidence: &mut ActivityHistoryEvidence,
+    manifest: &HashMap<String, ActivityLedgerEvidence>,
+) -> bool {
+    if evidence.source_type.as_deref() != Some("frame") {
+        return true;
+    }
+    let source_id = evidence.source_id.or(evidence.frame_id);
+    let Some(source_id) = source_id else {
+        return false;
+    };
+    let Some(authoritative) = manifest.values().find(|candidate| {
+        candidate.frame_id == Some(source_id)
+            || (candidate.source_type == "frame" && candidate.source_id == source_id)
+    }) else {
+        return false;
+    };
+    evidence.source_id = Some(source_id);
+    evidence.frame_id = authoritative.frame_id.or(Some(source_id));
+    evidence.app_name = authoritative.app_name.clone();
+    true
+}
+
+fn expand_v3_evidence(
+    value: &mut Value,
+    manifest: &HashMap<String, ActivityLedgerEvidence>,
+) -> bool {
+    let Some(entries) = value.get_mut("entries").and_then(Value::as_array_mut) else {
+        return false;
+    };
+    for entry in entries {
+        let Some(evidence_items) = entry.get_mut("evidence").and_then(Value::as_array_mut)
+        else {
+            continue;
+        };
+        for item in evidence_items {
+            let Some(object) = item.as_object_mut() else {
+                return false;
+            };
+            let Some(reference) = object.get("ref").and_then(Value::as_str) else {
+                return false;
+            };
+            let Some(authoritative) = manifest.get(reference) else {
+                return false;
+            };
+            object.insert("source_type".to_string(), json!(authoritative.source_type));
+            object.insert("source_id".to_string(), json!(authoritative.source_id));
+            object.insert("occurred_at".to_string(), json!(authoritative.occurred_at));
+            object.insert("at".to_string(), json!(authoritative.occurred_at));
+            object.insert(
+                "frame_id".to_string(),
+                authoritative.frame_id.map_or(Value::Null, |id| json!(id)),
+            );
+            object.insert(
+                "meeting_id".to_string(),
+                (authoritative.source_type == "meeting")
+                    .then_some(json!(authoritative.source_id))
+                    .unwrap_or(Value::Null),
+            );
+            object.insert(
+                "app_name".to_string(),
+                authoritative
+                    .app_name
+                    .clone()
+                    .map_or(Value::Null, |name| json!(name)),
+            );
+            object.insert(
+                "kind".to_string(),
+                json!(match authoritative.source_type.as_str() {
+                    "meeting" => "meeting",
+                    "audio" => "audio",
+                    _ => "screen",
+                }),
+            );
+        }
+    }
+    true
+}
+
 fn parse_document(
     raw: &str,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
+) -> Result<ParsedDocument, String> {
+    parse_document_with_manifest(raw, start, end, None)
+}
+
+fn parse_document_with_manifest(
+    raw: &str,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    frame_manifest: Option<&HashMap<i64, ActivityLedgerEvidence>>,
 ) -> Result<ParsedDocument, String> {
     let unfenced = raw
         .trim()
@@ -1251,6 +1595,16 @@ fn parse_document(
     let mut deserializer = serde_json::Deserializer::from_str(&unfenced[object_start..]);
     let value = Value::deserialize(&mut deserializer)
         .map_err(|error| format!("活动历史生成了无效的 JSON：{error}"))?;
+    let schema_version = value
+        .get("schema_version")
+        .and_then(Value::as_u64)
+        .unwrap_or(1);
+    if schema_version != 1 && schema_version != ACTIVITY_HISTORY_JSON_SCHEMA_VERSION {
+        return Err(format!(
+            "活动历史生成使用了不支持的 schema_version: {schema_version}"
+        ));
+    }
+    let require_v2_semantics = schema_version == ACTIVITY_HISTORY_JSON_SCHEMA_VERSION;
     let entries = value
         .get("entries")
         .and_then(Value::as_array)
@@ -1260,11 +1614,19 @@ fn parse_document(
     let mut rejected_evidence = 0;
     let mut rejection_reasons = BTreeMap::new();
     for value in entries {
+        if require_v2_semantics && !has_v2_semantic_fields(value) {
+            rejected_entries += 1;
+            *rejection_reasons
+                .entry("missing_semantic_fields")
+                .or_insert(0) += 1;
+            continue;
+        }
         let Ok(mut entry) = serde_json::from_value::<ActivityHistoryEntry>(value.clone()) else {
             rejected_entries += 1;
             *rejection_reasons.entry("malformed_entry").or_insert(0) += 1;
             continue;
         };
+        normalize_semantics(&mut entry);
         let original_evidence_count = entry.evidence.len();
         if let (Some(entry_start), Some(entry_end)) =
             (parse_time(&entry.start_at), parse_time(&entry.end_at))
@@ -1273,6 +1635,11 @@ fn parse_document(
                 .evidence
                 .iter_mut()
                 .for_each(|evidence| repair_evidence_timezone(evidence, entry_start, entry_end));
+            if let Some(frame_manifest) = frame_manifest {
+                entry
+                    .evidence
+                    .retain_mut(|evidence| reconcile_frame_evidence(evidence, frame_manifest));
+            }
             entry
                 .evidence
                 .retain(|evidence| valid_evidence(evidence, entry_start, entry_end));
@@ -1281,7 +1648,7 @@ fn parse_document(
             entry.evidence.clear();
         }
         rejected_evidence += original_evidence_count.saturating_sub(entry.evidence.len());
-        if let Some(reason) = entry_rejection_reason(&entry, start, end) {
+        if let Some(reason) = entry_rejection_reason(&entry, start, end, require_v2_semantics) {
             rejected_entries += 1;
             *rejection_reasons.entry(reason).or_insert(0) += 1;
         } else {
@@ -1298,7 +1665,16 @@ fn parse_document(
 }
 
 fn parse_or_rejected(raw: &str, start: DateTime<Utc>, end: DateTime<Utc>) -> ParsedDocument {
-    match parse_document(raw, start, end) {
+    parse_or_rejected_with_manifest(raw, start, end, None)
+}
+
+fn parse_or_rejected_with_manifest(
+    raw: &str,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    frame_manifest: Option<&HashMap<i64, ActivityLedgerEvidence>>,
+) -> ParsedDocument {
+    match parse_document_with_manifest(raw, start, end, frame_manifest) {
         Ok(document) => document,
         Err(error) => {
             warn!(%error, "activity history: model output could not be parsed; scheduling repair");
@@ -1629,7 +2005,7 @@ async fn begin_activity_task(
                 "end_time": end_text,
                 "source": source,
             }),
-            config_snapshot: json!({"history_schema": "activity-history-pi-v9"}),
+            config_snapshot: json!({"history_schema": ACTIVITY_HISTORY_SCHEMA}),
             priority: 40,
             not_before: None,
             deadline: None,
@@ -1811,6 +2187,7 @@ async fn generate_inner(
         return Err(format!("activity_no_data:{}", preflight.data_status));
     }
     let ledger_intervals = activity_ledger_intervals(app, start, end).await?;
+    let frame_manifest = frame_evidence_manifest(&ledger_intervals);
     let meetings = meeting_anchors(app, start, end).await?;
     let observed_windows = required_observed_windows(&ledger_intervals, start, end);
     let minimum_entries = minimum_history_entry_count(preflight.total_active_minutes, start, end);
@@ -1823,7 +2200,12 @@ async fn generate_inner(
         generation_prompt_with_context(start, end, minimum_entries, Some(&evidence_snapshot)),
     )
     .await?;
-    let first = parse_or_rejected(&first_raw, start, end);
+    let first = parse_or_rejected_with_manifest(
+        &first_raw,
+        start,
+        end,
+        Some(&frame_manifest),
+    );
     let first_audit = audit_document(
         &first,
         minimum_entries,
@@ -1858,7 +2240,12 @@ async fn generate_inner(
         .await;
         match repaired_raw {
             Ok(repaired_raw) => {
-                let repaired = parse_or_rejected(&repaired_raw, start, end);
+                let repaired = parse_or_rejected_with_manifest(
+                    &repaired_raw,
+                    start,
+                    end,
+                    Some(&frame_manifest),
+                );
                 let repaired_audit = audit_document(
                     &repaired,
                     minimum_entries,
@@ -2524,13 +2911,141 @@ mod tests {
     }
 
     #[test]
+    fn parser_accepts_v2_semantics_and_normalizes_evidence_provenance() {
+        let start = parse_time("2026-08-19T10:00:00Z").unwrap();
+        let end = parse_time("2026-08-19T11:00:00Z").unwrap();
+        let raw = json!({
+            "schema_version": 2,
+            "entries": [{
+                "id": "v2-entry",
+                "kind": "work",
+                "meeting_id": null,
+                "start_at": "2026-08-19T10:05:00Z",
+                "end_at": "2026-08-19T10:20:00Z",
+                "title": "研究方案",
+                "summary": "比较了候选方案。",
+                "activity_type": "RESEARCH",
+                "project_refs": ["project-a", "project-a"],
+                "confidence": 0.82,
+                "semantic_status": "INFERRED",
+                "outcomes": [{
+                    "type": "decision",
+                    "status": "inferred",
+                    "confidence": 0.7,
+                    "provenance": "model-from-evidence"
+                }],
+                "evidence": [{
+                    "kind": "screen",
+                    "source_type": "frame",
+                    "source_id": 42,
+                    "occurred_at": "2026-08-19T10:10:00Z",
+                    "at": "2026-08-19T10:10:00Z",
+                    "frame_id": 42,
+                    "meeting_id": null,
+                    "app_name": "Codex",
+                    "label": "画面显示了方案比较"
+                }]
+            }]
+        })
+        .to_string();
+
+        let document = parse_document(&raw, start, end).unwrap();
+        let entry = &document.entries[0];
+        assert_eq!(entry.activity_type.as_deref(), Some("research"));
+        assert_eq!(entry.project_refs, vec!["project-a"]);
+        assert_eq!(entry.semantic_status.as_deref(), Some("inferred"));
+        assert_eq!(entry.outcomes[0].outcome_type, "decision");
+        assert_eq!(entry.evidence[0].source_type.as_deref(), Some("frame"));
+        assert_eq!(entry.evidence[0].source_id, Some(42));
+        assert_eq!(
+            entry.evidence[0].occurred_at.as_deref(),
+            Some("2026-08-19T10:10:00Z")
+        );
+    }
+
+    #[test]
+    fn parser_replaces_model_app_name_with_frame_manifest_metadata() {
+        let start = parse_time("2026-08-19T10:00:00Z").unwrap();
+        let end = parse_time("2026-08-19T11:00:00Z").unwrap();
+        let raw = json!({
+            "schema_version": 2,
+            "entries": [{
+                "id": "frame-binding",
+                "kind": "work",
+                "activity_type": "implementation",
+                "project_refs": [],
+                "confidence": 0.8,
+                "semantic_status": "inferred",
+                "meeting_id": null,
+                "start_at": "2026-08-19T10:05:00Z",
+                "end_at": "2026-08-19T10:20:00Z",
+                "title": "修复活动历史",
+                "summary": "修复了证据绑定。",
+                "outcomes": [],
+                "evidence": [{
+                    "kind": "screen",
+                    "source_type": "frame",
+                    "source_id": 42,
+                    "occurred_at": "2026-08-19T10:10:00Z",
+                    "at": "2026-08-19T10:10:00Z",
+                    "frame_id": 42,
+                    "meeting_id": null,
+                    "app_name": "Chrome",
+                    "label": "模型猜测"
+                }]
+            }]
+        })
+        .to_string();
+        let manifest = HashMap::from([(
+            42,
+            ActivityLedgerEvidence {
+                source_type: "frame".to_string(),
+                source_id: 42,
+                occurred_at: "2026-08-19T10:10:00Z".to_string(),
+                frame_id: Some(42),
+                app_name: Some("Cursor".to_string()),
+                window_title: Some("activity-history.rs".to_string()),
+                browser_url: None,
+            },
+        )]);
+
+        let document = parse_document_with_manifest(&raw, start, end, Some(&manifest)).unwrap();
+        assert_eq!(document.entries[0].evidence[0].app_name.as_deref(), Some("Cursor"));
+    }
+
+    #[test]
+    fn parser_rejects_v2_entries_without_semantic_fields() {
+        let start = parse_time("2026-08-19T10:00:00Z").unwrap();
+        let end = parse_time("2026-08-19T11:00:00Z").unwrap();
+        let raw = json!({
+            "schema_version": 2,
+            "entries": [{
+                "id": "legacy-entry",
+                "kind": "work",
+                "meeting_id": null,
+                "start_at": "2026-08-19T10:05:00Z",
+                "end_at": "2026-08-19T10:20:00Z",
+                "title": "旧结构",
+                "summary": "缺少语义字段。",
+                "evidence": []
+            }]
+        })
+        .to_string();
+
+        let document = parse_document(&raw, start, end).unwrap();
+        assert!(document.entries.is_empty());
+        assert_eq!(document.rejected_entries, 1);
+        assert_eq!(document.rejection_reasons["missing_semantic_fields"], 1);
+    }
+
+    #[test]
     fn parser_still_rejects_incomplete_json() {
         let start = parse_time("2026-08-19T10:00:00Z").unwrap();
         let end = parse_time("2026-08-19T11:00:00Z").unwrap();
 
         let error = parse_document(r#"{"entries":[{"id":"cut-off"}"#, start, end).unwrap_err();
 
-        assert!(error.contains("invalid JSON"));
+        assert!(error.contains("JSON"));
     }
 
     #[test]
@@ -2574,6 +3089,11 @@ mod tests {
 
         let generation = generation_prompt(start, end, 1);
         assert!(generation.contains("不要调用工具、使用终端、运行 Shell 命令或再次查询 API"));
+        assert!(generation.contains("\"schema_version\":2"));
+        assert!(generation.contains("activity_type"));
+        assert!(generation.contains("project_refs"));
+        assert!(generation.contains("semantic_status"));
+        assert!(generation.contains("source_type"));
         assert!(generation.contains("title、summary 和 evidence.label 使用简体中文"));
 
         let audit = QualityAudit {
@@ -2706,9 +3226,17 @@ mod tests {
             end_at: end_at.to_string(),
             title: "Source-backed work".to_string(),
             summary: "Completed source-backed work during this interval.".to_string(),
+            confidence: 0.8,
+            activity_type: Some("implementation".to_string()),
+            project_refs: Vec::new(),
+            outcomes: Vec::new(),
+            semantic_status: Some("summarized".to_string()),
             evidence: vec![ActivityHistoryEvidence {
                 kind: "screen".to_string(),
                 at: start_at.to_string(),
+                source_type: Some("frame".to_string()),
+                source_id: Some(42),
+                occurred_at: Some(start_at.to_string()),
                 frame_id: Some(42),
                 meeting_id: None,
                 app_name: Some("Codex".to_string()),

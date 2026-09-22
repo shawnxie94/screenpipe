@@ -123,7 +123,7 @@ type ActivityArtifactPreview = {
   start_at: string;
   end_at: string;
   app_name: string;
-  browser_domain?: string;
+  browser_domain?: string | null;
   /** Prefer the exact evidence frame over interval re-sampling when present. */
   frame_id?: number | null;
 };
@@ -394,6 +394,39 @@ export function canAddRecentActivity(
   );
 }
 
+const ACTIVITY_TYPE_LABELS: Record<string, string> = {
+  meeting: "会议",
+  research: "研究",
+  implementation: "实现",
+  planning: "规划",
+  communication: "沟通",
+  learning: "学习",
+  administrative: "行政",
+};
+
+const SEMANTIC_STATUS_LABELS: Record<string, string> = {
+  observed: "直接观察",
+  summarized: "已总结",
+  inferred: "AI 推断",
+  confirmed: "已确认",
+};
+
+function activityTypeLabel(entry: ActivityHistoryEntry): string | null {
+  const value = entry.activity_type?.trim().toLowerCase();
+  return value && value !== "unknown"
+    ? (ACTIVITY_TYPE_LABELS[value] ?? value)
+    : null;
+}
+
+function semanticStatusLabel(entry: ActivityHistoryEntry): string | null {
+  const value = entry.semantic_status?.trim().toLowerCase();
+  // "summarized" is the normal storage state and adds no useful signal to
+  // every row. Surface only states that communicate evidence or inference.
+  return value && value !== "summarized"
+    ? (SEMANTIC_STATUS_LABELS[value] ?? null)
+    : null;
+}
+
 function formatEntryTime(entry: ActivityHistoryEntry): string {
   return new Intl.DateTimeFormat(undefined, {
     hour: "numeric",
@@ -484,6 +517,17 @@ export function artifactsForHistoryEntry(
 ): ActivityArtifact[] {
   const entryStart = new Date(entry.start_at).getTime();
   const entryEnd = new Date(entry.end_at).getTime();
+  const authoritativeEvidenceByFrame = new Map<
+    number,
+    ActivityLedgerArtifactEvidence
+  >();
+  for (const interval of intervals) {
+    for (const evidence of interval.evidence ?? []) {
+      if (evidence.frame_id && Number.isSafeInteger(evidence.frame_id)) {
+        authoritativeEvidenceByFrame.set(evidence.frame_id, evidence);
+      }
+    }
+  }
   const ranked = new Map<
     string,
     { artifact: ActivityArtifact; activeMs: number; longestRunMs: number }
@@ -618,32 +662,63 @@ export function artifactsForHistoryEntry(
   }
 
   const normalizedOriginals = entry.evidence
-    .filter(
-      (item) =>
-        item.kind === "screen" &&
-        (!item.app_name || Boolean(usefulAppName(item.app_name))),
-    )
+    .filter((item) => item.kind === "screen")
     .map((item) => {
-      const appName = usefulAppName(item.app_name);
+      // A frame-backed ledger record is authoritative. The model-generated
+      // app_name is only a fallback for legacy entries or unavailable ledger
+      // artifacts; it must not override the app resolved from that frame.
+      const authoritative = item.frame_id
+        ? authoritativeEvidenceByFrame.get(item.frame_id)
+        : undefined;
+      const appName = usefulAppName(
+        authoritative?.app_name ?? item.app_name,
+      );
+      const browserUrl = authoritative?.browser_url ?? item.browser_url;
+      const windowTitle =
+        authoritative?.window_title ?? item.window_title ?? null;
       return {
         ...item,
         app_name: appName,
+        browser_url: browserUrl,
+        window_title: windowTitle,
+        label: windowTitle || appName || item.label,
         preview: appName
           ? {
               start_at: entry.start_at,
               end_at: entry.end_at,
               app_name: appName,
-              frame_id: item.frame_id,
+              browser_domain: siteDomain(browserUrl),
+              frame_id: authoritative?.frame_id ?? item.frame_id,
             }
           : undefined,
       };
-    });
-  return artifactEvidence([
-    ...meetings,
-    ...selected.map(({ artifact }) => artifact),
-    ...audio,
+    })
+    .filter(
+      (item) =>
+        Boolean(usefulAppName(item.app_name)) ||
+        Boolean(siteDomain(item.browser_url)),
+    );
+  const mandatory = artifactEvidence([...meetings, ...audio]);
+  const mandatoryKeys = new Set(mandatory.map(artifactKey));
+  const optional = artifactEvidence([
+    // Direct frame citations come first so a verified frame/app pair cannot
+    // be displaced by a broader interval-level artifact with the same key.
     ...normalizedOriginals,
-  ]).slice(0, MAX_VISIBLE_ARTIFACTS);
+    ...selected.map(({ artifact }) => artifact),
+  ]).filter((artifact) => !mandatoryKeys.has(artifactKey(artifact)));
+  const visible = [...mandatory, ...optional].slice(0, MAX_VISIBLE_ARTIFACTS);
+  if (
+    bestSite &&
+    !visible.some(({ browser_url }) => Boolean(siteDomain(browser_url)))
+  ) {
+    const replaceIndex = [...visible]
+      .map((artifact, index) => ({ artifact, index }))
+      .reverse()
+      .find(({ artifact }) => !mandatoryKeys.has(artifactKey(artifact)))
+      ?.index;
+    if (replaceIndex !== undefined) visible[replaceIndex] = bestSite.artifact;
+  }
+  return visible;
 }
 
 function EvidenceArtifactIcon({ evidence }: { evidence: ActivityArtifact }) {
@@ -1349,9 +1424,28 @@ function ActivityLedgerSkeleton({ label }: { label: string }) {
 }
 
 function compactEntryContext(entry: ActivityHistoryEntry): string {
+  const type = activityTypeLabel(entry);
+  const status = semanticStatusLabel(entry);
+  const semanticLines = [
+    type ? `活动类型：${type}` : null,
+    status ? `语义状态：${status}` : null,
+    entry.project_refs?.length
+      ? `项目引用：${entry.project_refs.join(", ")}`
+      : null,
+    entry.outcomes?.length
+      ? `结构化结果：\n${entry.outcomes
+          .map(
+            (outcome) =>
+              `- ${outcome.type}（${outcome.status}）：${outcome.provenance}`,
+          )
+          .join("\n")}`
+      : null,
+  ].filter((line): line is string => Boolean(line));
+
   return [
     `时间：${entry.start_at} 至 ${entry.end_at}`,
     `类型：${entry.kind}${entry.meeting_id ? `（会议 ${entry.meeting_id}）` : ""}`,
+    ...semanticLines,
     `活动：${entry.title}`,
     `摘要：${entry.summary}`,
     `来源工件：\n${entry.evidence
@@ -1949,6 +2043,14 @@ export function ActivityLedger({
                         </p>
 
                         <div className="mt-4 flex items-center gap-3">
+                          {activityTypeLabel(entry) ? (
+                            <span
+                              className="border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground"
+                              data-testid="activity-type-label"
+                            >
+                              {activityTypeLabel(entry)}
+                            </span>
+                          ) : null}
                           <ActivityEntryArtifacts
                             entry={entry}
                             intervals={ledgerIntervals}

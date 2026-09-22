@@ -25,10 +25,17 @@ use screenpipe_core::paths;
 use screenpipe_db::DatabaseManager;
 use screenpipe_engine::{
     cli::{
-        audio::handle_audio_command, mcp::handle_mcp_command, pipe::handle_pipe_command,
-        profile::handle_profile_command, search::handle_search_command,
-        status::handle_status_command, sync::handle_sync_command, view::handle_view_command,
-        vision::handle_vision_command, Cli, Command, RecordArgSources,
+        activity::{handle_activity_command, handle_project_command},
+        audio::handle_audio_command,
+        mcp::handle_mcp_command,
+        pipe::handle_pipe_command,
+        profile::handle_profile_command,
+        search::handle_search_command,
+        status::handle_status_command,
+        sync::handle_sync_command,
+        view::handle_view_command,
+        vision::handle_vision_command,
+        Cli, Command, RecordArgSources,
     },
     crash_log,
     high_fps_controller::HighFpsController,
@@ -261,6 +268,14 @@ async fn main() -> anyhow::Result<()> {
 
     // Dispatch subcommands — non-recording commands return early
     let record_args = match cli.command {
+        Command::Activity { ref subcommand } => {
+            handle_activity_command(subcommand).await?;
+            return Ok(());
+        }
+        Command::Project { ref subcommand } => {
+            handle_project_command(subcommand).await?;
+            return Ok(());
+        }
         Command::Status {
             json,
             ref data_dir,

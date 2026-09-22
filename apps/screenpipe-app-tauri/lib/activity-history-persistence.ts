@@ -24,6 +24,17 @@ export type ActivityIntervalSummaryEvidence = {
   source_type: string;
   source_id: number;
   occurred_at: string;
+  frame_id?: number | null;
+  app_name?: string | null;
+  window_title?: string | null;
+  browser_url?: string | null;
+};
+
+export type ActivityIntervalSummaryOutcome = {
+  outcome_type: string;
+  status: string;
+  confidence: number;
+  provenance: string;
 };
 
 /** One interval summary row served from the activity database (B02a). */
@@ -35,6 +46,10 @@ export type ActivityIntervalSummaryEntry = {
   title: string;
   summary: string;
   keywords: string[];
+  activity_type?: string;
+  project_refs?: string[];
+  outcomes?: ActivityIntervalSummaryOutcome[];
+  semantic_status?: string;
   evidence: ActivityIntervalSummaryEvidence[];
 };
 
@@ -261,17 +276,36 @@ export function mapActivitySummaryEntry(
     end_at: entry.end_at,
     title: entry.title,
     summary: entry.summary,
+    confidence: 0,
+    activity_type: entry.activity_type ?? "unknown",
+    project_refs: entry.project_refs ?? [],
+    outcomes: (entry.outcomes ?? []).map((outcome) => ({
+      type: outcome.outcome_type,
+      status: outcome.status,
+      confidence: outcome.confidence,
+      provenance: outcome.provenance,
+    })),
+    semantic_status: entry.semantic_status ?? "summarized",
     evidence: entry.evidence.map((item) => ({
       kind: summaryEvidenceKind(item.source_type),
       at: item.occurred_at,
-      // Frame evidence keeps its source id so the artifact opens the frame;
-      // audio/ui_event citations fall back to the timestamp link.
-      frame_id: item.source_type === "frame" ? item.source_id : null,
+      source_type: item.source_type,
+      source_id: item.source_id,
+      occurred_at: item.occurred_at,
+      // Prefer the server-resolved frame id. Legacy summaries only carry the
+      // source id, which is a frame id for `frame` evidence.
+      frame_id:
+        item.frame_id ?? (item.source_type === "frame" ? item.source_id : null),
       meeting_id: null,
-      app_name: null,
-      label: item.source_type === "audio" ? "音频记录" : "屏幕记录",
+      app_name: item.app_name ?? null,
+      ...(item.window_title ? { window_title: item.window_title } : {}),
+      ...(item.browser_url ? { browser_url: item.browser_url } : {}),
+      label:
+        item.window_title ??
+        item.app_name ??
+        (item.source_type === "audio" ? "音频记录" : "屏幕记录"),
     })),
-  };
+  } as ActivityHistoryEntry;
   // Keywords ride along for future renderers; the current UI ignores them and
   // they are never written back into the KV store.
   return { ...historyEntry, keywords: entry.keywords } as ActivityHistoryEntry;

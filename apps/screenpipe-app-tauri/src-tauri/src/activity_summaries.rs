@@ -34,6 +34,22 @@ pub struct ActivityIntervalSummaryEvidence {
     pub source_type: String,
     pub source_id: i64,
     pub occurred_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub frame_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub app_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub window_title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Type)]
+pub struct ActivityIntervalSummaryOutcome {
+    pub outcome_type: String,
+    pub status: String,
+    pub confidence: f64,
+    pub provenance: String,
 }
 
 #[derive(Debug, Clone, Serialize, Type)]
@@ -45,6 +61,10 @@ pub struct ActivityIntervalSummaryEntry {
     pub title: String,
     pub summary: String,
     pub keywords: Vec<String>,
+    pub activity_type: String,
+    pub project_refs: Vec<String>,
+    pub outcomes: Vec<ActivityIntervalSummaryOutcome>,
+    pub semantic_status: String,
     pub evidence: Vec<ActivityIntervalSummaryEvidence>,
 }
 
@@ -104,6 +124,32 @@ fn interval_starts_in_range(
 
 /// Meeting criterion fixed on the B01 spans read: the recorded meeting
 /// coverage of an interval decides `meeting` only at over-half overlap.
+fn summary_activity_type(kind: &str, title: &str, summary: Option<&str>) -> String {
+    let text = format!("{title} {}", summary.unwrap_or_default()).to_lowercase();
+    if kind.eq_ignore_ascii_case("meeting") || text.contains("meeting") || text.contains("会议") {
+        "meeting".to_string()
+    } else if ["research", "研究", "调研", "阅读", "read"]
+        .iter()
+        .any(|word| text.contains(word))
+    {
+        "research".to_string()
+    } else if ["plan", "planning", "计划", "规划"]
+        .iter()
+        .any(|word| text.contains(word))
+    {
+        "planning".to_string()
+    } else if ["code", "coding", "开发", "修复", "实现", "编程"]
+        .iter()
+        .any(|word| text.contains(word))
+    {
+        "implementation".to_string()
+    } else {
+        "unknown".to_string()
+    }
+}
+
+/// Meeting criterion fixed on the B01 spans read: the recorded meeting
+/// coverage of an interval decides `meeting` only at over-half overlap.
 fn interval_kind(
     record: &ActivityIntervalRecord,
     meeting_spans: &[(DateTime<Utc>, DateTime<Utc>)],
@@ -148,6 +194,10 @@ async fn interval_summary_evidence(
             source_type: row.source_type,
             source_id: row.source_id,
             occurred_at: row.occurred_at,
+            frame_id: row.frame_id,
+            app_name: row.app_name,
+            window_title: row.window_title,
+            browser_url: row.browser_url,
         })
         .collect())
 }
@@ -191,6 +241,10 @@ async fn load_interval_summaries(
             title: record.title.clone(),
             summary: summary.to_string(),
             keywords: record.keywords.clone().unwrap_or_default(),
+            activity_type: summary_activity_type(kind, &record.title, Some(summary)),
+            project_refs: Vec::new(),
+            outcomes: Vec::new(),
+            semantic_status: "summarized".to_string(),
             evidence: interval_summary_evidence(db, record).await?,
         });
     }

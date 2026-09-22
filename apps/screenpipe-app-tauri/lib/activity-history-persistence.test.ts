@@ -237,6 +237,9 @@ describe("loadActivitySummariesFromDb", () => {
     expect(work.evidence[0]).toEqual({
       kind: "screen",
       at: "2026-09-11T10:05:00Z",
+      source_type: "frame",
+      source_id: 1000,
+      occurred_at: "2026-09-11T10:05:00Z",
       frame_id: 1000,
       meeting_id: null,
       app_name: null,
@@ -245,6 +248,9 @@ describe("loadActivitySummariesFromDb", () => {
     expect(work.evidence[1]).toEqual({
       kind: "audio",
       at: "2026-09-11T10:20:00Z",
+      source_type: "audio",
+      source_id: 55,
+      occurred_at: "2026-09-11T10:20:00Z",
       frame_id: null,
       meeting_id: null,
       app_name: null,
@@ -253,6 +259,9 @@ describe("loadActivitySummariesFromDb", () => {
     expect(work.evidence[2]).toEqual({
       kind: "screen",
       at: "2026-09-11T10:25:00Z",
+      source_type: "ui_event",
+      source_id: 77,
+      occurred_at: "2026-09-11T10:25:00Z",
       frame_id: null,
       meeting_id: null,
       app_name: null,

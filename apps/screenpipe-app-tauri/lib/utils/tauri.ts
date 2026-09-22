@@ -2337,12 +2337,14 @@ modeId?: string | null;
  */
 approvalMode?: string | null }
 export type ActivityHistoryCoverage = { start: string; end: string }
-export type ActivityHistoryEntry = { id: string; kind: string; meeting_id: number | null; start_at: string; end_at: string; title: string; summary: string; evidence: ActivityHistoryEvidence[] }
-export type ActivityHistoryEvidence = { kind: string; at: string; frame_id: number | null; meeting_id: number | null; app_name: string | null; label: string }
+export type ActivityHistoryEntry = { id: string; kind: string; meeting_id: number | null; start_at: string; end_at: string; title: string; summary: string; confidence?: number; activity_type?: string | null; project_refs?: string[]; outcomes?: ActivityHistoryOutcome[]; semantic_status?: string | null; evidence: ActivityHistoryEvidence[] }
+export type ActivityHistoryEvidence = { kind: string; at: string; source_type?: string | null; source_id?: number | null; occurred_at?: string | null; frame_id: number | null; meeting_id: number | null; app_name: string | null; label: string }
+export type ActivityHistoryOutcome = { type: string; status: string; confidence: number; provenance: string }
 export type ActivityIntervalSummariesCoverage = { start: string; end: string; truncated: boolean }
 export type ActivityIntervalSummariesResponse = { entries: ActivityIntervalSummaryEntry[]; coverage: ActivityIntervalSummariesCoverage }
-export type ActivityIntervalSummaryEntry = { id: string; kind: string; start_at: string; end_at: string; title: string; summary: string; keywords: string[]; evidence: ActivityIntervalSummaryEvidence[] }
-export type ActivityIntervalSummaryEvidence = { source_type: string; source_id: number; occurred_at: string }
+export type ActivityIntervalSummaryEntry = { id: string; kind: string; start_at: string; end_at: string; title: string; summary: string; keywords: string[]; activity_type: string; project_refs: string[]; outcomes: ActivityIntervalSummaryOutcome[]; semantic_status: string; evidence: ActivityIntervalSummaryEvidence[] }
+export type ActivityIntervalSummaryEvidence = { source_type: string; source_id: number; occurred_at: string; frame_id?: number | null; app_name?: string | null; window_title?: string | null; browser_url?: string | null }
+export type ActivityIntervalSummaryOutcome = { outcome_type: string; status: string; confidence: number; provenance: string }
 export type AecMode = "off" | "screenpipe" | "macos" | "windows"
 export type AudioDeviceInfo = { name: string; isDefault: boolean;
 /**

@@ -241,6 +241,26 @@ Pipes can produce user-facing output files that appear in the Artifacts library.
 
 ---
 
+## Activity History export and project sync
+
+Export the engine-owned Activity Ledger as stable Graphiti episode JSONL. The command does not require Graphiti or an external model and does not write to the capture database:
+
+```bash
+cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} activity export --start "2h ago" --end now --format graphiti-episode-v1
+cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} activity export --start "2026-09-22T09:00:00Z" --end "2026-09-22T17:00:00Z" --format graphiti-episode-v1 --out "/absolute/path/activity.jsonl"
+cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} activity export --start "1d ago" --end now --format graphiti-episode-v1 --cursor 123
+```
+
+Each line uses `screenpipe:activity:<interval_id>` as `episode_id` and includes a deterministic `payload_hash`, bounded source references, optional semantic fields, and privacy metadata. Re-exporting unchanged intervals yields the same IDs and hashes; a downstream Graphiti adapter should apply latest-wins upsert and no-op unchanged hashes.
+
+Project metadata is source-agnostic. Provide an absolute executable and repeated argument values; screenpipe invokes it directly without shell interpolation. The script must print a valid `project-sync-v1` JSON manifest to stdout:
+
+```bash
+cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} project sync --program "/absolute/path/project-sync-wrapper" --arg "--format" --arg "project-sync-v1"
+```
+
+The manifest is stored locally at `~/.screenpipe/project-sync-v1.json` by default. Invalid JSON, duplicate IDs, relative roots, non-zero exits, and timeouts are rejected without replacing the last valid manifest. Screenpipe never assumes that `kb` exists; a user-owned `kb` wrapper is only one possible producer.
+
 ## Connection Management
 
 Manage integrations (Telegram, Slack, Discord, Email, Todoist, Teams) from the CLI.

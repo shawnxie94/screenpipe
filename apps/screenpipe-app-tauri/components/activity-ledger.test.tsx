@@ -727,6 +727,65 @@ describe("activity history helpers", () => {
     expect(previewUrl.searchParams.get("browser_domain")).toBe("github.com");
   });
 
+  it("binds a cited frame to the ledger app instead of trusting the narrative app name", () => {
+    const entry = {
+      id: "frame-app-binding",
+      kind: "work" as const,
+      meeting_id: null,
+      start_at: "2026-08-20T10:00:00Z",
+      end_at: "2026-08-20T10:30:00Z",
+      title: "修复活动历史",
+      summary: "修复了活动历史证据绑定。",
+      evidence: [
+        {
+          kind: "screen" as const,
+          at: "2026-08-20T10:06:00Z",
+          source_type: "frame" as const,
+          source_id: 42,
+          occurred_at: "2026-08-20T10:06:00Z",
+          frame_id: 42,
+          meeting_id: null,
+          app_name: "Chrome",
+          label: "模型猜测的应用",
+        },
+      ],
+    };
+    const artifacts = artifactsForHistoryEntry(entry, [
+      {
+        start_at: "2026-08-20T10:00:00Z",
+        end_at: "2026-08-20T10:20:00Z",
+        app_name: "Cursor",
+        evidence: [
+          {
+            source_type: "frame",
+            source_id: 42,
+            occurred_at: "2026-08-20T10:06:00Z",
+            frame_id: 42,
+            app_name: "Cursor",
+            window_title: "activity-ledger.tsx",
+            browser_url: null,
+          },
+        ],
+      },
+    ]);
+
+    expect(artifacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          app_name: "Cursor",
+          frame_id: 42,
+          preview: expect.objectContaining({
+            app_name: "Cursor",
+            frame_id: 42,
+          }),
+        }),
+      ]),
+    );
+    expect(artifacts.some((artifact) => artifact.app_name === "Chrome")).toBe(
+      false,
+    );
+  });
+
   it("does no preview work before hover intent and stops after one pass", async () => {
     const persisted = parseActivityHistoryResponse(HISTORY_RESPONSE, {
       start: new Date("2026-08-17T16:00:00Z"),
@@ -1309,6 +1368,10 @@ describe("ActivityLedger", () => {
       end_at: "2026-08-17T17:05:00Z",
       title: "数据库摘要里的修复工作",
       summary: "数据库路径直接服务时间线，不再必经 KV 叙事。",
+      activity_type: "implementation",
+      semantic_status: "summarized",
+      project_refs: ["screenpipe"],
+      outcomes: [],
       evidence: [
         {
           kind: "screen",
@@ -1342,6 +1405,10 @@ describe("ActivityLedger", () => {
     render(<ActivityLedger />);
 
     expect(await screen.findByText("数据库摘要里的修复工作")).toBeVisible();
+    expect(screen.getByTestId("activity-type-label")).toHaveTextContent(
+      "实现",
+    );
+    expect(screen.queryByText("AI 推断")).toBeNull();
     expect(
       screen.queryByText("Fixed a capture reliability regression"),
     ).toBeNull();

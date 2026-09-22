@@ -80,6 +80,14 @@ pub struct ActivityLedgerEvidence {
 }
 
 #[derive(Debug, Clone, Serialize, OaSchema)]
+pub struct ActivityLedgerOutcome {
+    pub outcome_type: String,
+    pub status: String,
+    pub confidence: f64,
+    pub provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, OaSchema)]
 pub struct ActivityLedgerInterval {
     pub id: i64,
     pub task_id: i64,
@@ -94,6 +102,10 @@ pub struct ActivityLedgerInterval {
     pub confidence: f64,
     pub producer: String,
     pub evidence_count: i64,
+    pub activity_type: String,
+    pub project_refs: Vec<String>,
+    pub outcomes: Vec<ActivityLedgerOutcome>,
+    pub semantic_status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub actions: Option<Vec<ActivityLedgerAction>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -207,6 +219,10 @@ pub struct ActivityIntervalDetail {
     pub confidence: f64,
     pub producer: String,
     pub evidence_count: i64,
+    pub activity_type: String,
+    pub project_refs: Vec<String>,
+    pub outcomes: Vec<ActivityLedgerOutcome>,
+    pub semantic_status: String,
     pub summary: Option<String>,
     pub keywords: Option<Vec<String>>,
     pub summary_band: Option<String>,
@@ -215,6 +231,9 @@ pub struct ActivityIntervalDetail {
 
 impl ActivityIntervalDetail {
     fn from_record(record: ActivityIntervalRecord) -> Self {
+        let activity_type =
+            semantic_activity_type(&record.kind, &record.title, record.summary.as_deref());
+        let semantic_status = semantic_status(record.summary.as_deref());
         Self {
             id: record.id,
             task_id: record.task_id,
@@ -229,6 +248,10 @@ impl ActivityIntervalDetail {
             confidence: record.confidence,
             producer: record.producer,
             evidence_count: record.evidence_count,
+            activity_type,
+            project_refs: Vec::new(),
+            outcomes: Vec::new(),
+            semantic_status,
             summary: record.summary,
             keywords: record.keywords,
             summary_band: record.summary_band,
@@ -505,6 +528,9 @@ fn project_intervals(
             continue;
         }
         let category = record.parent_title.clone();
+        let semantic_type =
+            semantic_activity_type(&record.kind, &record.title, record.summary.as_deref());
+        let semantic_status = semantic_status(record.summary.as_deref());
         let (task_id, parent_task_id, kind, title) = match depth {
             ActivityLedgerDepth::Category => (
                 record.parent_task_id.unwrap_or(record.task_id),
@@ -564,6 +590,10 @@ fn project_intervals(
             confidence: record.confidence,
             producer: record.producer,
             evidence_count,
+            activity_type: semantic_type,
+            project_refs: Vec::new(),
+            outcomes: Vec::new(),
+            semantic_status,
             actions,
             evidence,
         });
@@ -621,6 +651,43 @@ fn merge_adjacent(intervals: Vec<ActivityLedgerInterval>) -> Vec<ActivityLedgerI
         }
     }
     merged
+}
+
+fn semantic_status(summary: Option<&str>) -> String {
+    if summary.is_some_and(|value| !value.trim().is_empty()) {
+        "summarized".to_string()
+    } else {
+        "observed".to_string()
+    }
+}
+
+fn semantic_activity_type(kind: &str, title: &str, summary: Option<&str>) -> String {
+    let text = format!("{title} {}", summary.unwrap_or_default()).to_lowercase();
+    if kind.eq_ignore_ascii_case("meeting") || text.contains("meeting") || text.contains("会议") {
+        "meeting".to_string()
+    } else if ["research", "研究", "调研", "阅读", "read"]
+        .iter()
+        .any(|word| text.contains(word))
+    {
+        "research".to_string()
+    } else if ["plan", "planning", "计划", "规划"]
+        .iter()
+        .any(|word| text.contains(word))
+    {
+        "planning".to_string()
+    } else if ["code", "coding", "开发", "修复", "实现", "编程"]
+        .iter()
+        .any(|word| text.contains(word))
+    {
+        "implementation".to_string()
+    } else if ["沟通", "邮件", "email", "chat", "消息"]
+        .iter()
+        .any(|word| text.contains(word))
+    {
+        "communication".to_string()
+    } else {
+        "unknown".to_string()
+    }
 }
 
 fn map_action(action: ActivityActionRecord) -> ActivityLedgerAction {
