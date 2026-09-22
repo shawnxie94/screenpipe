@@ -300,7 +300,7 @@ describe("ChatMessageList turn status ownership", () => {
       activeSourceFooterMessageId: completedToolMessage.id,
     })} />);
 
-    expect(screen.getByRole("button", { name: "Allow once" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "允许一次" })).toBeInTheDocument();
     expect(screen.getByTestId("tool-activity-widget"))
       .toHaveAttribute("data-activity-state", "waiting");
     expect(screen.queryByTestId("chat-turn-status")).not.toBeInTheDocument();

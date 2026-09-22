@@ -64,7 +64,7 @@ describe("failed-message retry", () => {
     const props = listProps();
     props.sendMessage = vi.fn(() => pendingSend);
     const { rerender } = render(<ChatMessageList {...props} />);
-    const buttons = screen.getAllByRole("button", { name: "Try again" });
+    const buttons = screen.getAllByRole("button", { name: "再试一次" });
 
     // Keep the parent loading state idle, as it is during async send preflight.
     act(() => {
@@ -95,7 +95,7 @@ describe("failed-message retry", () => {
   ])("disables historical retries while chat is busy: %j", (busy) => {
     const props = listProps();
     render(<ChatMessageList {...props} {...busy} />);
-    for (const button of screen.getAllByRole("button", { name: "Try again" })) {
+    for (const button of screen.getAllByRole("button", { name: "再试一次" })) {
       expect(button).toBeDisabled();
       fireEvent.click(button);
     }
