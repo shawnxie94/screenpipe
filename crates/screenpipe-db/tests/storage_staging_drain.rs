@@ -1,7 +1,7 @@
 // screenpipe — AI that knows everything you've seen, said, or heard
 // https://screenpipe.com
 
-use screenpipe_db::storage::{MigrationOptions, PrivacyPolicy, Projection};
+use screenpipe_db::storage::{PrivacyPolicy, Projection, StorageInitOptions};
 use screenpipe_db::DatabaseManager;
 
 async fn number(db: &DatabaseManager, sql: &str) -> i64 {
@@ -11,8 +11,8 @@ async fn number(db: &DatabaseManager, sql: &str) -> i64 {
         .unwrap()
 }
 
-fn private_options() -> MigrationOptions {
-    let mut options = MigrationOptions::default();
+fn private_options() -> StorageInitOptions {
+    let mut options = StorageInitOptions::default();
     options.budget.record_bytes = 1024;
     options.budget.staging_bytes = 1024;
     options.privacy = PrivacyPolicy {
@@ -165,7 +165,7 @@ async fn failed_frame_archival_does_not_starve_other_tables() {
 #[tokio::test]
 async fn blocked_old_element_range_does_not_starve_later_private_work() {
     let root = tempfile::tempdir().unwrap();
-    let options = MigrationOptions {
+    let options = StorageInitOptions {
         privacy: PrivacyPolicy {
             identity: "private".into(),
             required_surfaces: 1,

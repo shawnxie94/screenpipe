@@ -14,9 +14,8 @@ pub async fn handle_connection_command(command: &ConnectionCommand) -> anyhow::R
     // Standalone CLI readers use the same existing OS-vault key as the desktop
     // and engine, so encrypted connection credentials remain available across
     // process boundaries. This read path never creates a key.
-    let legacy_or_dedicated_exists = screenpipe_dir.join("db.sqlite").exists()
-        || screenpipe_secrets::secrets_database_path(&screenpipe_dir).exists();
-    let secret_store = if legacy_or_dedicated_exists {
+    let secret_store_exists = screenpipe_secrets::secrets_database_path(&screenpipe_dir).exists();
+    let secret_store = if secret_store_exists {
         match screenpipe_secrets::SecretStore::open_for_data_dir_with_vault_key(&screenpipe_dir)
             .await
         {

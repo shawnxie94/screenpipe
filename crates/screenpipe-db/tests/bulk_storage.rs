@@ -4,7 +4,7 @@
 use screenpipe_db::DatabaseManager;
 
 #[tokio::test]
-async fn element_parent_order_and_export_preserve_complete_transactions() {
+async fn element_parent_order_survives_current_format_compaction() {
     let root = tempfile::tempdir().unwrap();
     let db = DatabaseManager::new_hybrid(root.path(), Default::default(), Default::default())
         .await
@@ -31,14 +31,15 @@ async fn element_parent_order_and_export_preserve_complete_transactions() {
     );
     db.verify_storage().await.unwrap();
     db.close().await;
-    let output = tempfile::tempdir().unwrap();
-    let path = output.path().join("export.sqlite");
-    screenpipe_db::storage::export_sqlite(root.path(), &path, Default::default())
+    screenpipe_db::storage::compact(root.path(), Default::default())
         .await
         .unwrap();
-    let db = DatabaseManager::new(path.to_str().unwrap(), Default::default())
-        .await
-        .unwrap();
+    let db = DatabaseManager::new(
+        root.path().join("db.sqlite").to_str().unwrap(),
+        Default::default(),
+    )
+    .await
+    .unwrap();
     assert_eq!(
         db.query_raw_sql("SELECT * FROM elements ORDER BY id")
             .await
@@ -53,10 +54,11 @@ async fn element_parent_order_and_export_preserve_complete_transactions() {
 async fn complete_element_ranges_preserve_mutations_relationships_and_browsing() {
     let root = tempfile::tempdir().unwrap();
     let path = root.path().join("db.sqlite");
-    let db = DatabaseManager::new(path.to_str().unwrap(), Default::default())
+    let db = DatabaseManager::new_hybrid(root.path(), Default::default(), Default::default())
         .await
         .unwrap();
     db.execute_raw_sql_write("INSERT INTO frames(id,timestamp,full_text) VALUES(1,'2026-09-11T12:00:00Z','one'),(2,'2026-09-11T12:01:00Z','two'); WITH RECURSIVE seq(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM seq WHERE x<33000) INSERT INTO elements(id,frame_id,source,role,text,parent_id,sort_order,on_screen) SELECT x*2,1+(x%2),'accessibility',CASE WHEN x%3=0 THEN 'AXButton' ELSE 'AXText' END,'range token '||x,CASE WHEN x=2 THEN 2 ELSE NULL END,x,CASE WHEN x%3=0 THEN NULL ELSE x%2 END FROM seq; INSERT INTO elements(id,frame_id,source,role,text) VALUES(-9223372036854775808,1,'ocr','word','minimum token');").await.unwrap();
+    while db.seal_payloads().await.unwrap() != 0 {}
     let expected = db
         .search_elements(
             "",
@@ -74,19 +76,6 @@ async fn complete_element_ranges_preserve_mutations_relationships_and_browsing()
         .unwrap();
     let ranking = db.query_raw_sql("SELECT rowid,bm25(elements_fts) AS score FROM elements_fts WHERE elements_fts MATCH 'token' ORDER BY rowid LIMIT 128").await.unwrap();
     db.close().await;
-    let report =
-        screenpipe_db::storage::migrate(root.path(), Default::default(), Default::default())
-            .await
-            .unwrap();
-    assert_eq!(
-        report
-            .tables
-            .iter()
-            .find(|t| t.table == "elements")
-            .unwrap()
-            .rows,
-        33001
-    );
     let db = DatabaseManager::new(path.to_str().unwrap(), Default::default())
         .await
         .unwrap();
@@ -354,81 +343,12 @@ async fn bulk_backup_export_and_snapshot_leases_preserve_records() {
     assert_eq!(logical(&restored_db).await, expected);
     restored_db.close().await;
     db.close().await;
-    let export = root.path().join("export.sqlite");
-    screenpipe_db::storage::export_sqlite(root.path(), &export, Default::default())
-        .await
-        .unwrap();
-    let exported = DatabaseManager::new(export.to_str().unwrap(), Default::default())
-        .await
-        .unwrap();
-    assert_eq!(logical(&exported).await, expected);
-    exported.close().await;
-
-    let remigrated_root = tempfile::tempdir().unwrap();
-    let remigrated_path = remigrated_root.path().join("db.sqlite");
-    std::fs::copy(&export, &remigrated_path).unwrap();
-    screenpipe_db::storage::migrate(
-        remigrated_root.path(),
-        Default::default(),
-        Default::default(),
-    )
-    .await
-    .unwrap();
-    let remigrated = DatabaseManager::new(remigrated_path.to_str().unwrap(), Default::default())
-        .await
-        .unwrap();
-    assert_eq!(logical(&remigrated).await, expected);
-    remigrated.verify_storage().await.unwrap();
-    remigrated.close().await;
-}
-
-#[cfg(feature = "storage-fault-injection")]
-#[tokio::test]
-async fn bulk_publication_interruptions_resume_with_full_parity() {
-    for point in [
-        "bulk_reserved",
-        "bulk_files_synced",
-        "bulk_before_commit",
-        "bulk_committed",
-    ] {
-        let root = tempfile::tempdir().unwrap();
-        let path = root.path().join("db.sqlite");
-        let source = DatabaseManager::new(path.to_str().unwrap(), Default::default())
-            .await
-            .unwrap();
-        seed(&source).await;
-        let expected = logical(&source).await;
-        source.close().await;
-        let crashed = std::process::Command::new(env!("CARGO_BIN_EXE_screenpipe-storage"))
-            .arg("migrate")
-            .arg(root.path())
-            .env("SCREENPIPE_STORAGE_CRASH_AT", point)
-            .output()
-            .unwrap();
-        assert_eq!(
-            crashed.status.code(),
-            Some(86),
-            "{point}: {}",
-            String::from_utf8_lossy(&crashed.stderr)
-        );
-        assert!(!path.exists());
-        assert!(screenpipe_db::storage::migration_requires_resume(root.path()).unwrap());
-        screenpipe_db::storage::migrate(root.path(), Default::default(), Default::default())
-            .await
-            .unwrap();
-        let db = DatabaseManager::new(path.to_str().unwrap(), Default::default())
-            .await
-            .unwrap();
-        assert_eq!(logical(&db).await, expected);
-        db.verify_storage().await.unwrap();
-        db.close().await;
-    }
 }
 
 #[tokio::test]
 async fn deferred_elements_complete_under_staging_pressure() {
     let root = tempfile::tempdir().unwrap();
-    let mut options = screenpipe_db::storage::MigrationOptions::default();
+    let mut options = screenpipe_db::storage::StorageInitOptions::default();
     options.budget.record_bytes = 1024;
     options.budget.staging_bytes = 1024;
     let db = DatabaseManager::new_hybrid(root.path(), Default::default(), options)

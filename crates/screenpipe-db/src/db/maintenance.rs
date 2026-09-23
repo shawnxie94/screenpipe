@@ -1362,9 +1362,7 @@ impl DatabaseManager {
     }
 
     pub async fn repair_database(&self) -> Result<(), anyhow::Error> {
-        anyhow::bail!(
-            "online SQLite repair is disabled; stop every screenpipe process and run `screenpipe db recover` so recovery operates on a preserved offline generation"
-        )
+        anyhow::bail!("online SQLite repair is unavailable")
     }
 
     /// Spawn the background task that owns ALL WAL checkpointing.
@@ -1479,9 +1477,8 @@ impl DatabaseManager {
     /// otherwise only surfaces later, via worker query errors. We run it in
     /// the background (not inline in `new()`) because `quick_check` still
     /// scans every page, which would add seconds of boot latency on a
-    /// multi-GB database. On failure we log loudly with the exact recovery
-    /// command so the user can self-heal via the existing `screenpipe db
-    /// recover` path (which backs up the original before rebuilding).
+    /// multi-GB database. On failure we log loudly and stop writes to protect
+    /// database integrity.
     fn startup_integrity_pool(&self) -> sqlx::SqlitePool {
         // SQLite's FTS5 xIntegrity callback can retain a structure from a prior
         // search on a pooled connection. Verification owns a fresh read-only
@@ -1542,9 +1539,7 @@ impl DatabaseManager {
                         db = %database_path,
                         detail = %detail,
                         "DATABASE CORRUPTION DETECTED at startup. Recording is stopping to \
-                         protect the database. Quit screenpipe and run \
-                         `screenpipe db recover` to rebuild the database (it backs up the \
-                         original first)."
+                         protect database integrity."
                     );
                     if first_for_manager {
                         if let Some(hook) = persistent_failure_hook.take_hard_fault_hook() {
@@ -1567,8 +1562,8 @@ impl DatabaseManager {
                     error!(
                         db = %database_path,
                         error = %e,
-                        "startup integrity check could not run (database may be corrupt). \
-                         If problems persist, quit screenpipe and run `screenpipe db recover`."
+                        "startup integrity check could not run (database may be corrupt); \
+                         writes are stopped to protect database integrity."
                     );
                 }
             }
@@ -1662,9 +1657,12 @@ mod wal_maintenance_tests {
         let mut config = DbConfig::for_tier(DeviceTier::Low);
         config.read_pool_max = 1;
         config.read_pool_min = 1;
-        let db = DatabaseManager::new(dir.path().join("db.sqlite").to_str().unwrap(), config)
-            .await
-            .unwrap();
+        let db = DatabaseManager::new(
+            dir.path().join("standalone.sqlite").to_str().unwrap(),
+            config,
+        )
+        .await
+        .unwrap();
         db.execute_raw_sql_write(
             "CREATE VIRTUAL TABLE integrity_fts USING fts5(t,content='',contentless_delete=1)",
         )
@@ -1703,7 +1701,7 @@ mod wal_maintenance_tests {
     #[tokio::test]
     async fn raw_sql_writes_wait_for_coordinator_and_reads_return_rows() {
         let dir = tempfile::tempdir().expect("temp dir");
-        let db_path = dir.path().join("db.sqlite");
+        let db_path = dir.path().join("standalone.sqlite");
         let db_path_string = db_path.to_string_lossy().into_owned();
         let db = DatabaseManager::new(&db_path_string, DbConfig::for_tier(DeviceTier::Low))
             .await
@@ -1866,8 +1864,8 @@ mod wal_maintenance_tests {
     #[tokio::test]
     async fn routine_checkpoint_never_truncates_the_live_wal() {
         let dir = tempfile::tempdir().expect("temp dir");
-        let db_path = dir.path().join("db.sqlite");
-        let wal_path = dir.path().join("db.sqlite-wal");
+        let db_path = dir.path().join("standalone.sqlite");
+        let wal_path = dir.path().join("standalone.sqlite-wal");
         let options = SqliteConnectOptions::new()
             .filename(&db_path)
             .create_if_missing(true)
@@ -1929,8 +1927,8 @@ mod wal_maintenance_tests {
     #[tokio::test]
     async fn hard_fault_latch_blocks_checkpoint_without_touching_wal() {
         let dir = tempfile::tempdir().expect("temp dir");
-        let db_path = dir.path().join("db.sqlite");
-        let wal_path = dir.path().join("db.sqlite-wal");
+        let db_path = dir.path().join("standalone.sqlite");
+        let wal_path = dir.path().join("standalone.sqlite-wal");
         let options = SqliteConnectOptions::new()
             .filename(&db_path)
             .create_if_missing(true)
@@ -1981,8 +1979,8 @@ mod wal_maintenance_tests {
     #[tokio::test]
     async fn reader_pinned_backlog_requests_one_lifecycle_restart_without_resetting_wal() {
         let dir = tempfile::tempdir().expect("temp dir");
-        let db_path = dir.path().join("db.sqlite");
-        let wal_path = dir.path().join("db.sqlite-wal");
+        let db_path = dir.path().join("standalone.sqlite");
+        let wal_path = dir.path().join("standalone.sqlite-wal");
         let options = SqliteConnectOptions::new()
             .filename(&db_path)
             .create_if_missing(true)
@@ -2090,8 +2088,8 @@ mod wal_maintenance_tests {
     #[ignore = "manual 60-second production scheduler chaos test with a ~170 MB WAL"]
     async fn production_scheduler_requests_lifecycle_for_oversized_reader_pinned_wal() {
         let dir = tempfile::tempdir().expect("temp dir");
-        let db_path = dir.path().join("db.sqlite");
-        let wal_path = dir.path().join("db.sqlite-wal");
+        let db_path = dir.path().join("standalone.sqlite");
+        let wal_path = dir.path().join("standalone.sqlite-wal");
         let db_path_string = db_path.to_string_lossy().into_owned();
         let db = DatabaseManager::new(&db_path_string, DbConfig::for_tier(DeviceTier::Low))
             .await

@@ -2,16 +2,13 @@
 // https://screenpipe.com
 
 use super::{names, TABLE};
-use crate::{
-    storage::{
-        bulk::{codec, Kind, Record, Value, FILE_ROWS},
-        storage_error, sync_directory, HybridStorage,
-    },
-    DatabaseManager,
+use crate::storage::{
+    bulk::{codec, Kind, Record, Value, FILE_ROWS},
+    storage_error, sync_directory, HybridStorage,
 };
 use futures::TryStreamExt;
 use screenpipe_sqlite_coordinator::SqliteWritePool;
-use sqlx::{Connection, Row, SqlitePool, ValueRef};
+use sqlx::{Row, SqlitePool, ValueRef};
 use std::{collections::BTreeSet, path::Path, sync::Arc};
 
 struct Encoded {
@@ -50,8 +47,6 @@ pub(crate) async fn seal(
     pool: &SqlitePool,
     writer: &SqliteWritePool,
 ) -> Result<usize, sqlx::Error> {
-    crate::storage::diagnostics::batch("elements", None, None, None, None);
-    crate::storage::diagnostics::stage("selecting_staged_elements");
     // A dirty archive must be rewritten as a whole. If privacy processing
     // blocks that range, continue after it instead of starving newer work.
     let mut after = None;
@@ -107,14 +102,6 @@ async fn encode(
         .join(format!("{}.parquet", uuid::Uuid::new_v4()));
     let path = storage.payload_path(&relative)?;
     std::fs::create_dir_all(path.parent().unwrap())?;
-    crate::storage::diagnostics::batch(
-        "elements",
-        rows.first().map(|r| r.id),
-        rows.last().map(|r| r.id),
-        Some(rows.len() as u64),
-        Some(rows.iter().map(|r| r.bytes() as u64).sum()),
-    );
-    crate::storage::diagnostics::stage("reserving_element_archive");
     let id = {
         let permit = writer.lock().await?;
         sqlx::query(
@@ -143,12 +130,10 @@ async fn encode(
     };
     let budget = storage.descriptor.budget.clone();
     let file = path.clone();
-    crate::storage::diagnostics::stage("waiting_for_element_encoder");
     let decoder = Arc::clone(&storage.decoder)
         .acquire_owned()
         .await
         .map_err(|_| sqlx::Error::PoolClosed)?;
-    crate::storage::diagnostics::stage("encoding_and_verifying_elements");
     let hash = tokio::task::spawn_blocking(move || {
         let _decoder = decoder;
         let hash = codec::write(&file, &TABLE, &rows)?;
@@ -159,7 +144,6 @@ async fn encode(
     })
     .await
     .map_err(storage_error)??;
-    crate::storage::diagnostics::stage("syncing_element_archive");
     let mut directory = path.parent().unwrap();
     loop {
         sync_directory(directory)?;
@@ -226,14 +210,6 @@ async fn rewrite(
         let lower = after.map_or_else(|| "1".to_owned(), |id| format!("id>{id}"));
         // Report the query bounds before awaiting it; actual batch sizes and
         // row IDs are only available once selection returns.
-        crate::storage::diagnostics::batch(
-            "elements",
-            Some(after.map_or(first, |id: i64| id.saturating_add(1))),
-            Some(last),
-            None,
-            None,
-        );
-        crate::storage::diagnostics::stage("selecting_element_batch");
         let candidates: Vec<(i64, i64)> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
             "SELECT id,{} FROM elements WHERE id BETWEEN ? AND ? AND {lower} AND ({}) ORDER BY id LIMIT {FILE_ROWS}",
             TABLE.all_bytes(""), TABLE.eligible
@@ -254,14 +230,6 @@ async fn rewrite(
             ids.push(id);
             bytes += size;
         }
-        crate::storage::diagnostics::batch(
-            "elements",
-            ids.first().copied(),
-            ids.last().copied(),
-            Some(ids.len() as u64),
-            Some(bytes as u64),
-        );
-        crate::storage::diagnostics::stage("reading_elements_to_seal");
         let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
             "SELECT id,_archive_generation,{} FROM elements WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id", names()
         )))
@@ -282,7 +250,6 @@ async fn rewrite(
     } else {
         return Ok(0);
     };
-    crate::storage::diagnostics::stage("publishing_element_archive");
     #[cfg(test)]
     {
         let hook = storage.bulk.element_publish_hook.lock().unwrap().clone();
@@ -362,7 +329,6 @@ async fn rewrite(
         .execute(&mut *tx)
         .await?;
     crate::storage::faults::checkpoint("bulk_before_commit");
-    crate::storage::diagnostics::stage("committing_element_archive");
     tx.commit().await?;
     crate::storage::faults::checkpoint("bulk_committed");
     let count = files.iter().map(|f| f.rows).sum();
@@ -495,87 +461,4 @@ pub(crate) async fn verify(
     // intentionally excluded by lifecycle::verify_integrity. New element
     // writes still validate their affected relationships in Elements::sync.
     Ok(())
-}
-
-pub(crate) async fn export(
-    source: &DatabaseManager,
-    output: &mut sqlx::SqliteConnection,
-) -> Result<(), sqlx::Error> {
-    super::register(output, source.storage.as_ref().unwrap().clone()).await?;
-    let sql: String = sqlx::query_scalar("SELECT sql FROM _bulk_legacy_sql WHERE name='elements'")
-        .fetch_one(&mut *output)
-        .await?;
-    sqlx::raw_sql(
-        "DROP VIEW _bulk_logical_elements; DROP VIEW _bulk_element_search_content; DROP TABLE elements; DROP TABLE elements_fts;",
-    )
-    .execute(&mut *output)
-    .await?;
-    sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
-        .execute(&mut *output)
-        .await?;
-    // Only the unpublished export copy suspends FK checks while rows are
-    // restored in ID order. Full verification precedes its publication.
-    sqlx::query("PRAGMA foreign_keys=OFF")
-        .execute(&mut *output)
-        .await?;
-    let mut stream = sqlx::query(sqlx::AssertSqlSafe(format!(
-        "SELECT id,_archive_generation,{} FROM elements ORDER BY id",
-        names()
-    )))
-    .fetch(&source.pool);
-    let mut batch = Vec::new();
-    let mut bytes = 0;
-    while let Some(row) = stream.try_next().await? {
-        let row = record(&row)?;
-        if !batch.is_empty()
-            && (batch.len() == 128
-                || bytes + row.bytes()
-                    > source
-                        .storage
-                        .as_ref()
-                        .unwrap()
-                        .descriptor
-                        .budget
-                        .file_bytes)
-        {
-            export_batch(output, std::mem::take(&mut batch)).await?;
-            bytes = 0;
-        }
-        bytes += row.bytes();
-        batch.push(row);
-    }
-    drop(stream);
-    if !batch.is_empty() {
-        export_batch(output, batch).await?;
-    }
-    sqlx::query("PRAGMA foreign_keys=ON")
-        .execute(&mut *output)
-        .await?;
-    sqlx::raw_sql("DROP TABLE _bulk_element_rows; DROP TABLE _bulk_element_ranges; DROP TABLE _bulk_element_frames; DROP VIEW _bulk_element_counts; DROP TABLE _bulk_element_groups; DROP TABLE _bulk_element_parent_refs; DROP TABLE _bulk_element_checks; DROP TABLE _bulk_element_state; DROP TABLE _bulk_element_kinds;").execute(&mut *output).await?;
-    Ok(())
-}
-
-async fn export_batch(
-    output: &mut sqlx::SqliteConnection,
-    rows: Vec<Record>,
-) -> Result<(), sqlx::Error> {
-    let mut tx = output.begin().await?;
-    for row in rows {
-        let mut query = sqlx::query(sqlx::AssertSqlSafe(format!(
-            "INSERT INTO elements(id,{}) VALUES({})",
-            names(),
-            vec!["?"; TABLE.columns.len() + 1].join(",")
-        )))
-        .bind(row.id);
-        for value in row.values {
-            query = match value {
-                Value::Null => query.bind(Option::<String>::None),
-                Value::Integer(v) => query.bind(v),
-                Value::Real(v) => query.bind(v),
-                Value::Text(v) => query.bind(v),
-            };
-        }
-        query.execute(&mut *tx).await?;
-    }
-    tx.commit().await
 }

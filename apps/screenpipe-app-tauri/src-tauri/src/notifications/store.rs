@@ -118,7 +118,7 @@ impl NotificationHistoryEntry {
         let notification_type = self.notification_type.to_ascii_lowercase();
         if matches!(
             notification_type.as_str(),
-            "capture_stall" | "capturestalls" | "disk_pressure" | "db_recovery"
+            "capture_stall" | "capturestalls" | "disk_pressure"
         ) {
             return true;
         }
@@ -128,7 +128,6 @@ impl NotificationHistoryEntry {
             "recording stopped",
             "capture paused",
             "not capturing",
-            "database needs recovery",
             "live transcript not flowing",
             "实时转录停滞",
             "audio paused",
@@ -427,7 +426,7 @@ mod tests {
 
         let mut recording = entry("legacy-recording", false);
         recording.priority = None;
-        recording.title = "recording stopped — database needs recovery".to_string();
+        recording.title = "recording stopped".to_string();
         assert!(recording.is_high_priority());
 
         let mut display = entry("legacy-display", false);

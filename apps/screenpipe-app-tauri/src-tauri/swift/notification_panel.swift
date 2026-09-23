@@ -1420,7 +1420,7 @@ fileprivate func inboxIsHighPriority(_ entry: InboxEntry) -> Bool {
     }
     if !inboxRowActions(entry).isEmpty { return true }
     let type = (entry.type ?? "").lowercased()
-    if ["capture_stall", "capturestalls", "disk_pressure", "db_recovery"].contains(type) {
+    if ["capture_stall", "capturestalls", "disk_pressure"].contains(type) {
         return true
     }
     let title = entry.title.lowercased()
@@ -1428,7 +1428,6 @@ fileprivate func inboxIsHighPriority(_ entry: InboxEntry) -> Bool {
         "recording stopped", "录制已停止",
         "capture paused", "采集已暂停",
         "not capturing", "未在采集",
-        "database needs recovery", "数据库需要恢复",
         "live transcript not flowing", "实时转录停滞",
         "audio paused", "音频已暂停",
     ].contains { title.contains($0) }

@@ -8,7 +8,6 @@ pub mod audio;
 pub mod auth;
 pub mod backup;
 pub mod connection;
-pub mod db;
 pub mod export;
 pub mod install;
 pub mod mcp;
@@ -322,15 +321,9 @@ pub enum Command {
         subcommand: AuthCommand,
     },
 
-    /// Database recovery + storage cleanup (corruption repair, free disk)
-    Db {
-        #[command(subcommand)]
-        subcommand: DbCommand,
-    },
-
     /// Offline, opt-in frame storage lifecycle
     Storage {
-        #[arg(value_parser = ["init", "migrate", "verify", "seal", "reclaim", "compact", "backup", "restore", "export-sqlite", "compare", "cancel", "status"])]
+        #[arg(value_parser = ["init", "verify", "seal", "reclaim", "compact", "backup", "restore", "status"])]
         operation: String,
         #[arg(value_hint = ValueHint::DirPath)]
         root: std::path::PathBuf,
@@ -1888,47 +1881,6 @@ pub enum VaultCommand {
 // =============================================================================
 // Backup subcommands
 // =============================================================================
-
-#[derive(Subcommand)]
-pub enum DbCommand {
-    /// Run PRAGMA quick_check on the live db.sqlite
-    Check,
-    /// Recover a quarantined db.sqlite onto a verified fresh physical file.
-    /// Preserves the exact DB/WAL/SHM generation, repairs only a working copy,
-    /// verifies integrity, foreign keys, and a durable write canary, then swaps.
-    /// Refuses to run while screenpipe is open.
-    Recover {
-        /// Revalidate and install the newest previously verified candidate.
-        /// Never starts another full recovery if the candidate cannot be reused.
-        #[arg(long)]
-        resume: bool,
-        /// Deprecated compatibility flag. Recovery still refuses to race a
-        /// reachable screenpipe server because that cannot preserve one exact
-        /// DB/WAL/SHM generation.
-        #[arg(long)]
-        force: bool,
-    },
-    /// List stale recovery/backup artifacts (db.sqlite.corrupt-*, db_corrupted.sqlite,
-    /// db.sqlite.backup, db-recovery-* dirs, db-hotfix-* dirs, db.sqlite.pre-recover-*).
-    /// Defaults to dry-run; pass `--apply` to actually delete. Never touches live
-    /// db.sqlite, recordings under data/, pipes/, or settings.
-    Cleanup {
-        /// Actually delete (default is dry-run for safety).
-        #[arg(long)]
-        apply: bool,
-        /// Run even if the screenpipe HTTP server is reachable.
-        #[arg(long)]
-        force: bool,
-    },
-    /// Force-clear the .db_recovery.lock file (escape hatch if a previous
-    /// `screenpipe db ...` run was killed without releasing the lock).
-    Unlock {
-        /// Remove the lock even if it appears alive — only do this if you're
-        /// certain no real op is in progress.
-        #[arg(long)]
-        force: bool,
-    },
-}
 
 #[derive(Subcommand)]
 pub enum BackupCommand {

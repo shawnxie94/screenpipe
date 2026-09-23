@@ -9,39 +9,28 @@ mod bindings;
 pub(crate) mod bulk;
 mod codec;
 mod command;
-pub mod diagnostics;
 mod faults;
-mod import;
-mod in_place;
 mod inventory;
 mod lifecycle;
 mod maintenance;
 mod parity;
 pub(crate) mod read_schema;
 mod reader;
-mod reclaim;
 pub(crate) mod schema;
 mod sealing;
 pub(crate) mod snapshot;
 pub(crate) mod sql;
-mod validation;
 
 pub use backup::restore;
 pub use command::run_command;
 pub use inventory::{artifact_bytes, inventory};
-pub use lifecycle::{
-    cancel_migration, migrate, migrate_with_progress, migration_report, migration_requires_resume,
-    pause_interrupted_migration, recover_interrupted_migration,
-    recover_interrupted_migration_with_progress, MigrationOptions, MigrationProgress,
-    MigrationReport,
-};
-pub use maintenance::{compact, export_sqlite};
+pub use lifecycle::{StorageInitOptions, TableParity};
+pub use maintenance::compact;
 pub use reader::StorageReadToken;
 use serde::{Deserialize, Serialize};
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock, Semaphore};
-pub use validation::compare;
 
 pub(crate) fn storage_error(error: impl std::fmt::Display) -> sqlx::Error {
     sqlx::Error::Protocol(format!("frame storage: {error}"))
@@ -50,7 +39,6 @@ pub(crate) fn storage_error(error: impl std::fmt::Display) -> sqlx::Error {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum StorageMode {
-    Sqlite,
     HybridParquetV1,
 }
 
@@ -81,7 +69,7 @@ pub struct StorageBudget {
     pub decode_bytes: usize,
     pub response_bytes: usize,
     pub concurrent_decodes: usize,
-    /// Background reclamation headroom and legacy staging allowance. It must
+    /// Background reclamation headroom and archive staging allowance. It must
     /// never limit durable recording; memory is bounded by processing batches.
     pub staging_bytes: u64,
     pub disk_reserve_bytes: u64,
@@ -276,41 +264,30 @@ impl StorageDescriptor {
     }
 }
 
-/// Resolve persisted mode before a caller starts mode-specific recovery.
+/// Resolve the active index for a current-format database root.
 pub fn resolve_database_path(database: &Path) -> Result<PathBuf, sqlx::Error> {
-    let root = database
-        .parent()
-        .filter(|path| !path.as_os_str().is_empty())
-        .unwrap_or_else(|| Path::new("."));
     if database.file_name().is_some_and(|name| name == "db.sqlite") {
-        if lifecycle::migration_requires_resume(root)?
-            && !lifecycle::migration_recording_ready(root)?
-        {
-            return Err(storage_error(
-                "in-place migration pending; resume migration before opening history or recording",
-            ));
-        }
+        let root = database
+            .parent()
+            .filter(|path| !path.as_os_str().is_empty())
+            .unwrap_or_else(|| Path::new("."));
         if root.join("storage-maintenance.json").exists() {
             return Err(storage_error(
                 "offline index maintenance pending; resume compact before opening",
             ));
         }
-        if !root.join("storage.json").exists()
-            && (root.join("storage-init.json").exists()
-                || (root.join("storage-migration.json").exists()
-                    && !lifecycle::migration_is_paused(root)?))
-        {
+        if !root.join("storage.json").exists() && root.join("storage-init.json").exists() {
             return Err(storage_error(
-                "offline migration pending; resume or cancel it before opening",
+                "storage initialization is pending; finish initialization before opening",
             ));
         }
-        if let Some(descriptor) = StorageDescriptor::read(root)? {
-            let path = checked_path(root, &descriptor.index)?;
-            if !path.is_file() {
-                return Err(storage_error("active index is missing"));
-            }
-            return Ok(path);
+        let descriptor = StorageDescriptor::read(root)?
+            .ok_or_else(|| storage_error("unsupported storage format: current storage.json is required"))?;
+        let path = checked_path(root, &descriptor.index)?;
+        if !path.is_file() {
+            return Err(storage_error("active index is missing"));
         }
+        return Ok(path);
     }
     Ok(database.to_path_buf())
 }
@@ -450,13 +427,6 @@ impl HybridStorage {
         let Some(root) = path.parent().and_then(Path::parent).and_then(Path::parent) else {
             return Ok(None);
         };
-        if lifecycle::migration_requires_resume(root)?
-            && !lifecycle::migration_recording_ready(root)?
-        {
-            return Err(storage_error(
-                "interrupted migration must restore recording before opening its index",
-            ));
-        }
         let Some(descriptor) = StorageDescriptor::read(root)? else {
             return Err(storage_error(
                 "hybrid index requires an active storage descriptor",

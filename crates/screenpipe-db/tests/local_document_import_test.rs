@@ -362,7 +362,7 @@ async fn missing_mark_writes_timestamp_not_path() {
 #[tokio::test]
 async fn file_backed_document_source_writes_use_write_pool() {
     let temp_dir = tempfile::tempdir().expect("tempdir");
-    let db_path = temp_dir.path().join("db.sqlite");
+    let db_path = temp_dir.path().join("standalone.sqlite");
     let db = DatabaseManager::new(db_path.to_str().unwrap(), Default::default())
         .await
         .expect("file-backed db init");

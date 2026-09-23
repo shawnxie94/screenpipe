@@ -308,7 +308,7 @@ async fn database_auto_vacuum_is_none_so_file_does_not_self_shrink() {
 #[tokio::test]
 async fn compact_returns_free_pages_to_the_os_after_deletion() {
     let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("db.sqlite");
+    let path = dir.path().join("standalone.sqlite");
     let db = DatabaseManager::new(path.to_str().unwrap(), Default::default())
         .await
         .unwrap();

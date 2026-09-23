@@ -2,7 +2,7 @@
 // https://screenpipe.com
 
 use screenpipe_db::{
-    storage::{MigrationOptions, PrivacyPolicy, Projection},
+    storage::{PrivacyPolicy, Projection, StorageInitOptions},
     DatabaseManager,
 };
 use screenpipe_redact::{
@@ -15,9 +15,13 @@ use std::sync::Arc;
 async fn archived_history_and_malformed_json_use_generation_completion() {
     let root = tempfile::tempdir().unwrap();
     let db = Arc::new(
-        DatabaseManager::new_hybrid(root.path(), Default::default(), MigrationOptions::default())
-            .await
-            .unwrap(),
+        DatabaseManager::new_hybrid(
+            root.path(),
+            Default::default(),
+            StorageInitOptions::default(),
+        )
+        .await
+        .unwrap(),
     );
     let mut tx = db.begin_immediate_with_retry().await.unwrap();
     sqlx::query("INSERT INTO frames(id,timestamp,full_text,accessibility_text,accessibility_tree_json,text_json,window_name) VALUES(1,'2026-09-11','alice@example.com','alice@example.com','{\"text\":\"alice@example.com\"}','[{\"text\":\"alice@example.com\",\"left\":\"0.25\"}]','alice@example.com'),(2,'2026-09-11','bob@example.com',NULL,'{broken',NULL,NULL)").execute(&mut **tx.conn()).await.unwrap();

@@ -16,7 +16,7 @@ use screenpipe_db::{
 /// rows and FK checks fail. A temp file is the shared source of truth.
 async fn db() -> DatabaseManager {
     let temp_dir = tempfile::tempdir().expect("tempdir");
-    let db_path = temp_dir.path().join("db.sqlite");
+    let db_path = temp_dir.path().join("standalone.sqlite");
     DatabaseManager::new(db_path.to_str().unwrap(), Default::default())
         .await
         .expect("test db")

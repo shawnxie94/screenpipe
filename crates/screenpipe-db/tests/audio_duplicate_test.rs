@@ -692,7 +692,7 @@ mod dedup_check_is_not_load_bearing {
     #[tokio::test]
     async fn a_starved_read_pool_does_not_lose_the_transcription() {
         let dir = tempfile::tempdir().unwrap();
-        let db_path = dir.path().join("db.sqlite");
+        let db_path = dir.path().join("standalone.sqlite");
         let db = DatabaseManager::new(
             db_path.to_str().unwrap(),
             DbConfig {

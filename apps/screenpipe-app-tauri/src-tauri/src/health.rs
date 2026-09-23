@@ -60,7 +60,7 @@ const SERVER_RESPAWN_WINDOW: Duration = Duration::from_secs(600);
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct BootPhaseSnapshot {
-    /// One of: idle | starting | migrating_database | building_audio |
+    /// One of: idle | starting | initializing_database | building_audio |
     /// starting_pipes | ready | error
     pub phase: String,
     /// Human-readable detail to show the user (may be long-running hint)
@@ -68,7 +68,7 @@ pub struct BootPhaseSnapshot {
     /// Present only when phase == "error"
     pub error: Option<String>,
     /// Unix epoch seconds when the current phase was entered. Lets the UI
-    /// show "X minutes" on slow migrations.
+    /// show "X minutes" during slow initialization.
     pub since_epoch_secs: u64,
     /// True when this CPU lacks AVX2 (pre-2013 x86-64 / Atom-line): local
     /// whisper/qwen3 STT is disabled at runtime (their kernels are
@@ -145,7 +145,7 @@ pub fn get_boot_phase_snapshot() -> BootPhaseSnapshot {
 /// auto-updater restart while `AudioManager::new` is mid-`create_session`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BootReadiness {
-    /// Phase is still pre-ready (`starting`, `migrating_database`,
+    /// Phase is still pre-ready (`starting`, `initializing_database`,
     /// `building_audio`, `starting_pipes`). Process teardown is unsafe.
     Pending,
     /// Phase is `ready`. Safe to restart.
@@ -986,9 +986,6 @@ fn respawn_engine_if_crashed(
     // retryable, including failures before the first successful engine start.
     let manual_recovery_required = crate::db_relaunch::manual_recovery_required();
     if manual_recovery_required {
-        crate::db_recovery_notifications::notify_quarantined_database(
-            crate::db_relaunch::active_data_dir(),
-        );
         return;
     }
     let database_retry = crate::db_relaunch::should_retry_database(
@@ -4014,7 +4011,7 @@ mod tests {
     fn boot_readiness_pending_during_intermediate_phases() {
         for phase in [
             "starting",
-            "migrating_database",
+            "initializing_database",
             "building_audio",
             "starting_pipes",
         ] {

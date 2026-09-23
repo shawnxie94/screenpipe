@@ -103,14 +103,6 @@ async calendarStatus() : Promise<Result<CalendarStatus, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async cancelStorageMigration(root: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("cancel_storage_migration", { root }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async chatgptOauthCheckToken() : Promise<Result<boolean, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("chatgpt_oauth_check_token") };
@@ -349,14 +341,6 @@ async deleteCacheFiles(paths: string[]) : Promise<Result<number, string>> {
 async deleteKnowledgeView(id: string) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("delete_knowledge_view", { id }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async deleteOriginalStorageDatabase(root: string, generation: string, confirmPermanentDeletion: boolean) : Promise<Result<number, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("delete_original_storage_database", { root, generation, confirmPermanentDeletion }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -648,17 +632,6 @@ async getRecordingHealthState() : Promise<string> {
 async getScreenpipeBaseDir() : Promise<Result<string, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_screenpipe_base_dir") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async getStorageMigrationActivity() : Promise<StorageMigrationActivity> {
-    return await TAURI_INVOKE("get_storage_migration_activity");
-},
-async getStorageMigrationStatus() : Promise<Result<StorageMigrationStatus, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_storage_migration_status") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -1819,18 +1792,6 @@ async resizeSearchWindow(width: number, height: number) : Promise<Result<null, s
 async restartAfterScreenRecordingPermission() : Promise<void> {
     await TAURI_INVOKE("restart_after_screen_recording_permission");
 },
-/**
- * Restart the app after an explicit user action so an exact short-read
- * quarantine can be verified in a fresh process before recording resumes.
- */
-async restartDatabaseVerification() : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("restart_database_verification") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async resumeGlobalShortcuts() : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("resume_global_shortcuts") };
@@ -2148,35 +2109,11 @@ async startCapture() : Promise<Result<null, string>> {
 }
 },
 /**
- * Start the protected database repair selected from the persistent `/notify`
- * recovery card. The command returns immediately while recovery continues in
- * the background and reports progress back through `/notify`.
- */
-async startDatabaseRecovery() : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("start_database_recovery") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
  * Start an MP4 export in the background and return its job id immediately.
  */
 async startExportRecording(meetingId: number | null, start: string | null, end: string | null, outputPath: string) : Promise<Result<StartExportRecordingResponse, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("start_export_recording", { meetingId, start, end, outputPath }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-/**
- * Own the stop/convert/restart sequence in the native app even if settings closes.
- */
-async startStorageMigration(root: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("start_storage_migration", { root }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -2400,7 +2337,7 @@ export type AudioDeviceInfo = { name: string; isDefault: boolean;
 isComboBluetoothMic: boolean }
 export type BootPhaseSnapshot = {
 /**
- * One of: idle | starting | migrating_database | building_audio |
+ * One of: idle | starting | initializing_database | building_audio |
  * starting_pipes | ready | error
  */
 phase: string;
@@ -2414,7 +2351,7 @@ message: string | null;
 error: string | null;
 /**
  * Unix epoch seconds when the current phase was entered. Lets the UI
- * show "X minutes" on slow migrations.
+ * show "X minutes" during slow initialization.
  */
 sinceEpochSecs: number;
 /**
@@ -3451,8 +3388,6 @@ headless?: boolean;
 headlessRecordOnly?: boolean }
 export type ShowRewindWindow = "Main" | { Home: { page: string | null } } | { Search: { query: string | null } } | "Onboarding" | "Chat" | "PermissionRecovery"
 export type StartExportRecordingResponse = { jobId: string }
-export type StorageMigrationActivity = { root: string | null; busy: boolean; recovering: boolean; message: string; error: string | null; elapsed_seconds: number; completed_records: number | null; total_records: number | null; bytes_saved: number | null; available_bytes: number | null; completed: boolean }
-export type StorageMigrationStatus = { root: string; app_session_id: string; busy: boolean; message: string; error: string | null; pending: boolean; in_place: boolean; completed: boolean; using_new_storage: boolean; generation: string | null; source_bytes: number; migrated_bytes: number | null; bytes_saved: number | null; available_bytes: number | null; can_migrate: boolean; can_cancel: boolean; can_delete_source: boolean; blocked_reason: string | null }
 /**
  * A browser URL block rule.
  *

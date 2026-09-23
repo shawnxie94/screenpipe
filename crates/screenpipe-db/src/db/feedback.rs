@@ -200,7 +200,7 @@ mod tests {
 
     async fn test_db(dir: &tempfile::TempDir) -> DatabaseManager {
         DatabaseManager::new(
-            dir.path().join("db.sqlite").to_str().unwrap(),
+            dir.path().join("standalone.sqlite").to_str().unwrap(),
             DbConfig::default(),
         )
         .await

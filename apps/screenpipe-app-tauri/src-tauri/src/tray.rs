@@ -232,47 +232,6 @@ enum TrayRecordingAction {
     Stop,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum TrayStartRoute {
-    StartCapture,
-    OfferDatabaseRecovery,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum TrayRecordingActionOutcome {
-    CaptureStateChanged,
-    RecoveryOffered,
-}
-
-fn success_notification_for_outcome(
-    outcome: TrayRecordingActionOutcome,
-    success_notification: Option<(&'static str, &'static str)>,
-) -> Option<(&'static str, &'static str)> {
-    match outcome {
-        TrayRecordingActionOutcome::CaptureStateChanged => success_notification,
-        TrayRecordingActionOutcome::RecoveryOffered => None,
-    }
-}
-
-fn tray_start_route_with<F>(quarantine_lookup: F) -> Result<TrayStartRoute, String>
-where
-    F: FnOnce() -> Result<bool, String>,
-{
-    if quarantine_lookup()? {
-        Ok(TrayStartRoute::OfferDatabaseRecovery)
-    } else {
-        Ok(TrayStartRoute::StartCapture)
-    }
-}
-
-fn database_has_confirmed_damage(database_path: &std::path::Path) -> Result<bool, String> {
-    // Legacy or unreadable markers require normal startup diagnosis; they do
-    // not prove that repair is necessary or prohibit the user's Resume action.
-    Ok(screenpipe_db::sqlite_confirmed_corruption_exists(
-        database_path,
-    ))
-}
-
 impl TrayRecordingAction {
     fn optimistic_status(self) -> RecordingStatus {
         match self {
@@ -306,38 +265,18 @@ fn clear_optimistic_status() {
 async fn run_tray_recording_action(
     app: &AppHandle,
     action: TrayRecordingAction,
-) -> Result<TrayRecordingActionOutcome, String> {
+) -> Result<(), String> {
     info!(?action, "handling recording action from native tray");
     let state = app.state::<RecordingState>();
     match action {
-        TrayRecordingAction::Start => {
-            let data_dir = crate::db_recovery_notifications::effective_recovery_data_dir(app)?;
-            let database_path = data_dir.join("db.sqlite");
-            match tray_start_route_with(|| database_has_confirmed_damage(&database_path))? {
-                TrayStartRoute::StartCapture => {
-                    crate::recording::start_capture(state, app.clone()).await?
-                }
-                TrayStartRoute::OfferDatabaseRecovery => {
-                    info!("native tray start routed to protected database recovery offer");
-                    if !crate::db_recovery_notifications::offer_quarantined_database_recovery(
-                        data_dir,
-                    ) {
-                        return Err(
-                            "the database recovery marker disappeared during recording start"
-                                .to_string(),
-                        );
-                    }
-                    return Ok(TrayRecordingActionOutcome::RecoveryOffered);
-                }
-            }
-        }
+        TrayRecordingAction::Start => crate::recording::start_capture(state, app.clone()).await?,
         TrayRecordingAction::Stop => crate::recording::stop_capture(state, app.clone()).await?,
     }
 
     // This event is UI-only. The native action above is authoritative so tray
     // controls continue working when every webview is closed or still loading.
     let _ = app.emit("tray-recording-state-changed", action.event_payload());
-    Ok(TrayRecordingActionOutcome::CaptureStateChanged)
+    Ok(())
 }
 
 fn rebuild_tray_after_recording_action(app: &AppHandle) {
@@ -362,10 +301,8 @@ fn dispatch_tray_recording_action(
         clear_optimistic_status();
 
         match result {
-            Ok(outcome) => {
-                if let Some((title, body)) =
-                    success_notification_for_outcome(outcome, success_notification)
-                {
+            Ok(()) => {
+                if let Some((title, body)) = success_notification {
                     send_notify(title, body);
                 }
             }
@@ -2012,83 +1949,6 @@ mod tests {
             next_tray_recording_action(true),
             TrayRecordingAction::Stop
         ));
-    }
-
-    #[test]
-    fn tray_start_offers_quarantined_database_recovery_without_starting_repair() {
-        let data_dir = tempfile::tempdir().expect("tray quarantine tempdir");
-        let database_path = data_dir.path().join("db.sqlite");
-        std::fs::write(&database_path, b"quarantined generation").expect("write database");
-        screenpipe_db::persist_verified_sqlite_quarantine(
-            &database_path,
-            Some(11),
-            "verified database damage",
-        )
-        .expect("persist quarantine");
-
-        assert_eq!(
-            tray_start_route_with(|| database_has_confirmed_damage(&database_path)),
-            Ok(TrayStartRoute::OfferDatabaseRecovery)
-        );
-    }
-
-    #[test]
-    fn tray_start_allows_healthy_database_and_fails_closed_on_unknown_state() {
-        let data_dir = tempfile::tempdir().expect("healthy tray tempdir");
-        let database_path = data_dir.path().join("db.sqlite");
-        assert_eq!(
-            tray_start_route_with(|| database_has_confirmed_damage(&database_path)),
-            Ok(TrayStartRoute::StartCapture)
-        );
-        assert_eq!(
-            tray_start_route_with(|| Err("lookup failed".to_string())),
-            Err("lookup failed".to_string())
-        );
-    }
-
-    #[test]
-    fn tray_resume_sends_unverified_markers_to_startup_diagnosis() {
-        let dir = tempfile::tempdir().unwrap();
-        let database_path = dir.path().join("db.sqlite");
-        std::fs::write(&database_path, b"existing generation").unwrap();
-        screenpipe_db::persist_sqlite_quarantine(&database_path, Some(11), "legacy observation")
-            .unwrap();
-        assert_eq!(
-            tray_start_route_with(|| database_has_confirmed_damage(&database_path)),
-            Ok(TrayStartRoute::StartCapture)
-        );
-        let marker = screenpipe_db::sqlite_quarantine_marker_path(&database_path).unwrap();
-        std::fs::write(marker, b"unreadable legacy marker").unwrap();
-        assert_eq!(
-            tray_start_route_with(|| database_has_confirmed_damage(&database_path)),
-            Ok(TrayStartRoute::StartCapture)
-        );
-    }
-
-    #[test]
-    fn quarantined_auto_resume_does_not_emit_recording_resumed_success() {
-        let notification = Some(("Recording resumed", "screenpipe is recording again."));
-
-        assert_eq!(
-            success_notification_for_outcome(
-                TrayRecordingActionOutcome::RecoveryOffered,
-                notification,
-            ),
-            None
-        );
-    }
-
-    #[test]
-    fn healthy_auto_resume_emits_recording_resumed_success() {
-        let notification = Some(("Recording resumed", "screenpipe is recording again."));
-
-        assert_eq!(
-            success_notification_for_outcome(
-                TrayRecordingActionOutcome::CaptureStateChanged,
-                notification,
-            ),
-            notification
-        );
     }
 
     #[test]

@@ -578,15 +578,11 @@ impl DatabaseManager {
 
         if background && !bootstrap_storage {
             if let Some(storage) = &db_manager.storage {
-                // A recovered migration keeps resident recording data in SQLite.
-                // Starting the sealer here would silently retry its conversion.
-                if !storage.root.join("storage-migration.json").exists() {
-                    storage.spawn_maintenance(
-                        db_manager.pool.clone(),
-                        db_manager.coordinated_writer(),
-                        db_manager.close_token.clone(),
-                    );
-                }
+                storage.spawn_maintenance(
+                    db_manager.pool.clone(),
+                    db_manager.coordinated_writer(),
+                    db_manager.close_token.clone(),
+                );
             }
         }
 
@@ -1468,7 +1464,7 @@ mod shutdown_tests {
     #[tokio::test]
     async fn close_marks_read_pool_closed_while_writer_is_still_checked_out() {
         let dir = tempfile::tempdir().expect("temp dir");
-        let db_path = dir.path().join("db.sqlite");
+        let db_path = dir.path().join("standalone.sqlite");
         let db = Arc::new(
             DatabaseManager::new(
                 db_path.to_str().expect("utf-8 temp path"),

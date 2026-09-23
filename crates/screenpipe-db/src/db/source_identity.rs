@@ -105,7 +105,7 @@ mod tests {
     #[tokio::test]
     async fn adoption_retries_preserve_old_namespace_and_reset_during_upgrade_does_not_reuse_it() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("db.sqlite");
+        let path = dir.path().join("standalone.sqlite");
         let journal = dir.path().join("migration.json");
         let legacy = "11111111-1111-4111-8111-111111111111";
         let db = DatabaseManager::new(path.to_str().unwrap(), DbConfig::default())
@@ -168,7 +168,7 @@ mod tests {
     #[tokio::test]
     async fn interrupted_before_adoption_and_corrupt_journal_fail_safely() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("db.sqlite");
+        let path = dir.path().join("standalone.sqlite");
         let journal = dir.path().join("migration.json");
         let legacy = "11111111-1111-4111-8111-111111111111";
         let db = DatabaseManager::new(path.to_str().unwrap(), DbConfig::default())
@@ -210,7 +210,7 @@ mod tests {
     #[tokio::test]
     async fn concurrent_calls_and_reopen_keep_identity_but_fresh_database_does_not() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("db.sqlite");
+        let path = dir.path().join("standalone.sqlite");
         let db = DatabaseManager::new(path.to_str().unwrap(), DbConfig::default())
             .await
             .unwrap();

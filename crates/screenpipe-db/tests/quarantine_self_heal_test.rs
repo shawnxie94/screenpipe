@@ -79,7 +79,7 @@ fn sqlite_sidecar(database_path: &Path, suffix: &str) -> PathBuf {
 #[tokio::test]
 async fn healthy_generation_under_a_legacy_ioerr_marker_self_resolves() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let db = dir.path().join("db.sqlite");
+    let db = dir.path().join("standalone.sqlite");
     seed_wal_database(&db).await;
 
     persist_sqlite_quarantine(&db, Some(10), "legacy disk I/O error")
@@ -99,7 +99,7 @@ async fn healthy_generation_under_a_legacy_ioerr_marker_self_resolves() {
         "health verification returns a single ok"
     );
 
-    let archive = dir.path().join("db.sqlite.quarantine.self-healed.json");
+    let archive = dir.path().join("standalone.sqlite.quarantine.self-healed.json");
     resolve_verified_sqlite_quarantine(&db, &archive).expect("resolve after a passing probe");
     assert!(
         !sqlite_quarantine_exists(&db),
@@ -121,7 +121,7 @@ async fn healthy_generation_under_a_legacy_ioerr_marker_self_resolves() {
 #[tokio::test]
 async fn fresh_process_resolves_short_read_without_replacing_the_database() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let db = dir.path().join("db.sqlite");
+    let db = dir.path().join("standalone.sqlite");
     seed_wal_database(&db).await;
     let identity_before = sqlite_file_identity(&db).expect("identity before child fault");
 
@@ -149,7 +149,7 @@ async fn fresh_process_resolves_short_read_without_replacing_the_database() {
     assert_eq!(probe.file_identity, identity_before);
     let archive = dir
         .path()
-        .join("db.sqlite.quarantine.self-healed-process.json");
+        .join("standalone.sqlite.quarantine.self-healed-process.json");
     resolve_verified_sqlite_quarantine(&db, &archive)
         .expect("fresh process resolves verified quarantine");
 
@@ -173,7 +173,7 @@ async fn fresh_process_resolves_short_read_without_replacing_the_database() {
 #[tokio::test]
 async fn corrupt_generation_fails_the_probe_and_stays_quarantined() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let db = dir.path().join("db.sqlite");
+    let db = dir.path().join("standalone.sqlite");
     seed_wal_database(&db).await;
 
     // Destroy an interior page while leaving the header intact, which is the
@@ -207,7 +207,7 @@ async fn corrupt_generation_fails_the_probe_and_stays_quarantined() {
 #[tokio::test]
 async fn probing_does_not_perturb_the_generation_it_judges() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let db = dir.path().join("db.sqlite");
+    let db = dir.path().join("standalone.sqlite");
     let seed_connection = seed_open_wal_database(&db).await;
     persist_sqlite_quarantine(&db, Some(522), "disk I/O error").expect("quarantine");
 
@@ -272,7 +272,7 @@ async fn startup_verifies_legacy_and_malformed_markers_before_resuming_recording
     .enumerate()
     {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("db.sqlite");
+        let path = dir.path().join("standalone.sqlite");
         let path_str = path.to_str().unwrap();
         let database = DatabaseManager::new(path_str, recording_config())
             .await
@@ -326,7 +326,7 @@ async fn startup_verifies_legacy_and_malformed_markers_before_resuming_recording
 #[tokio::test]
 async fn unavailable_storage_keeps_retrying_without_creating_an_empty_database() {
     let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("db.sqlite");
+    let path = dir.path().join("standalone.sqlite");
     let parked = dir.path().join("temporarily-unavailable.sqlite");
     let path_str = path.to_str().unwrap();
     let database = DatabaseManager::new(path_str, recording_config())
@@ -391,7 +391,7 @@ async fn unavailable_storage_keeps_retrying_without_creating_an_empty_database()
 #[tokio::test]
 async fn startup_quarantines_only_after_probe_finds_damaged_pages() {
     let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("db.sqlite");
+    let path = dir.path().join("standalone.sqlite");
     let path_str = path.to_str().unwrap();
     let database = DatabaseManager::new(path_str, recording_config())
         .await

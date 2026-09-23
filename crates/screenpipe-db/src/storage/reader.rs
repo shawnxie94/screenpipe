@@ -116,12 +116,8 @@ impl DatabaseManager {
         .await
     }
 
-    pub fn storage_mode(&self) -> super::StorageMode {
-        if self.storage.is_some() {
-            super::StorageMode::HybridParquetV1
-        } else {
-            super::StorageMode::Sqlite
-        }
+    pub fn storage_descriptor(&self) -> Option<&super::StorageDescriptor> {
+        self.storage.as_ref().map(|storage| &storage.descriptor)
     }
 
     pub async fn storage_read_token(&self) -> Result<StorageReadToken, sqlx::Error> {
@@ -200,26 +196,6 @@ impl DatabaseManager {
             if detail {
                 row.text_json = payload.text_json.unwrap_or_default();
             }
-        }
-        Ok(())
-    }
-
-    pub(crate) async fn hydrate_frame_rows(
-        &self,
-        rows: &mut [crate::FrameRow],
-    ) -> Result<(), sqlx::Error> {
-        if self.storage.is_none() {
-            return Ok(());
-        }
-        let ids: Vec<_> = rows.iter().map(|r| r.id).collect();
-        let mut payloads = self.frame_payloads(&ids, Projection::All).await?;
-        for row in rows {
-            let payload = payloads
-                .remove(&row.id)
-                .ok_or_else(|| storage_error("selected frame disappeared"))?;
-            row.ocr_text = payload.text().to_owned();
-            row.text_json = payload.text_json.unwrap_or_default();
-            row.accessibility_tree_json = payload.accessibility_tree_json;
         }
         Ok(())
     }

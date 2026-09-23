@@ -176,7 +176,7 @@ async fn snapshot_preserves_rows_across_writes_and_rejects_revocation() {
         DatabaseManager::new_hybrid(
             root.path(),
             Default::default(),
-            screenpipe_db::storage::MigrationOptions {
+            screenpipe_db::storage::StorageInitOptions {
                 budget: screenpipe_db::storage::StorageBudget {
                     row_group_rows: 2,
                     ..Default::default()

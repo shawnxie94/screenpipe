@@ -11,7 +11,7 @@ use super::{integer, real, text, Column, Kind, Table};
 use sqlx::{Row, SqliteConnection};
 
 pub(crate) use lifecycle::seal;
-pub(super) use lifecycle::{export, reclaim, verify};
+pub(super) use lifecycle::{reclaim, verify};
 pub(crate) use vtab::register;
 
 pub(super) const TABLE: Table = Table {
@@ -58,56 +58,13 @@ pub(super) fn declaration() -> String {
         .join(",")
 }
 
-/// Register an offline batch whose complete records are already staged. Parent
-/// references may point into a later batch; their original identities remain
-/// intact across those batch boundaries.
-pub(crate) async fn import_batch(
-    conn: &mut SqliteConnection,
-    first: i64,
-    last: i64,
-) -> Result<(), sqlx::Error> {
-    let range = "id BETWEEN ?1 AND ?2";
-    for (stage, statement) in [
-        ("indexing_element_kinds", format!("INSERT OR IGNORE INTO _bulk_element_kinds(source,role) SELECT DISTINCT source,role FROM _bulk_element_rows WHERE {range}")),
-        ("indexing_element_lookups", format!("INSERT OR REPLACE INTO _bulk_element_lookup SELECT e.id,e.frame_id,e.sort_order,k.id,e.on_screen FROM _bulk_element_rows e JOIN _bulk_element_kinds k ON k.source=e.source AND k.role=e.role WHERE e.{range} AND e._archive_deleted=0")),
-        ("indexing_element_groups", format!("INSERT INTO _bulk_element_groups SELECT e.frame_id,k.id,COALESCE(e.on_screen,0),e.on_screen IS NULL,count(*) FROM _bulk_element_rows e JOIN _bulk_element_kinds k ON k.source=e.source AND k.role=e.role WHERE e.{range} GROUP BY e.frame_id,k.id,COALESCE(e.on_screen,0),e.on_screen IS NULL ON CONFLICT(frame_id,kind_id,visibility,is_null) DO UPDATE SET rows=rows+excluded.rows")),
-        ("indexing_element_parents", format!("INSERT INTO _bulk_element_parent_refs SELECT parent_id,count(*) FROM _bulk_element_rows WHERE {range} AND parent_id IS NOT NULL GROUP BY parent_id ON CONFLICT(parent_id) DO UPDATE SET rows=rows+excluded.rows")),
-        ("indexing_element_search", format!("INSERT INTO elements_fts(rowid,text,role,frame_id) SELECT id,text,role,frame_id FROM _bulk_element_rows WHERE {range} AND text IS NOT NULL AND text!=''")),
-        ("accounting_element_staging", format!("UPDATE storage_metadata SET staging_bytes=staging_bytes+COALESCE((SELECT SUM({}) FROM _bulk_element_rows WHERE {range}),0),revision=revision+1", TABLE.all_bytes(""))),
-    ] {
-        crate::storage::diagnostics::stage(stage);
-        sqlx::query(sqlx::AssertSqlSafe(statement)).bind(first).bind(last)
-            .execute(&mut *conn).await?;
-    }
-    sqlx::query("UPDATE _bulk_element_state SET version=version+1")
-        .execute(&mut *conn)
-        .await?;
-    Ok(())
-}
-
-pub(super) async fn bootstrap_mode(
-    conn: &mut SqliteConnection,
-    in_place: bool,
-) -> Result<(), sqlx::Error> {
+pub(super) async fn bootstrap_mode(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     sqlx::raw_sql("CREATE TABLE _bulk_element_kinds(id INTEGER PRIMARY KEY,source TEXT NOT NULL,role TEXT NOT NULL,UNIQUE(source,role));").execute(&mut *conn).await?;
     let seq: Option<(i64, i64)> =
         sqlx::query_as("SELECT rowid,seq FROM sqlite_sequence WHERE name='elements'")
             .fetch_optional(&mut *conn)
             .await?;
     let legacy = sqlx::query("SELECT type,name,sql FROM sqlite_master WHERE (tbl_name='elements' AND type IN ('table','index','trigger') AND sql IS NOT NULL) OR name='elements_fts'").fetch_all(&mut *conn).await?;
-    for row in &legacy {
-        let name: &str = row.try_get("name")?;
-        if name.starts_with("hybrid_revision_") {
-            continue;
-        }
-        sqlx::query("INSERT INTO _bulk_legacy_sql VALUES(?,?,?)")
-            .bind(row.try_get::<&str, _>("type")?)
-            .bind(name)
-            .bind(row.try_get::<&str, _>("sql")?)
-            .execute(&mut *conn)
-            .await?;
-        crate::storage::schema::construction_checkpoint(conn).await?;
-    }
     // Triggers and indexes are rebuilt over the staged/archived row source.
     for row in &legacy {
         let kind: &str = row.try_get("type")?;
@@ -122,28 +79,18 @@ pub(super) async fn bootstrap_mode(
             crate::storage::schema::construction_checkpoint(conn).await?;
         }
     }
-    if in_place {
-        sqlx::query("PRAGMA legacy_alter_table=ON")
-            .execute(&mut *conn)
-            .await?;
-    }
     crate::storage::schema::construction_sql(
         conn,
         "DROP TABLE elements_fts; ALTER TABLE elements RENAME TO _bulk_elements_source;",
     )
     .await?;
-    if in_place {
-        sqlx::query("PRAGMA legacy_alter_table=OFF")
-            .execute(&mut *conn)
-            .await?;
-    }
     let columns = names();
     crate::storage::schema::construction_sql(conn, &format!(
         "CREATE TABLE _bulk_element_rows(id INTEGER PRIMARY KEY,{},_archive_generation INTEGER NOT NULL,_archive_deleted INTEGER NOT NULL DEFAULT 0,_archive_file INTEGER REFERENCES _bulk_files(id));",declaration())).await?;
-    if !in_place {
+    {
         crate::storage::schema::construction_rows(conn, &format!(
         "INSERT INTO _bulk_element_rows(id,{columns},_archive_generation) SELECT id,{columns},1 FROM _bulk_elements_source"), "_bulk_elements_source", super::FILE_ROWS).await?;
-        crate::storage::faults::checkpoint("migration_elements_copied");
+        crate::storage::faults::checkpoint("initialization_elements_copied");
         // The unpublished staged copy owns every record. Removing its temporary
         // predecessor bypasses per-row self-FK deletion scans; logical receipts
         // verify that the candidate preserves the original relationships.
@@ -175,13 +122,7 @@ pub(super) async fn bootstrap_mode(
          INSERT INTO elements_fts(rowid,text,role,frame_id) SELECT id,text,role,frame_id FROM _bulk_element_rows WHERE text IS NOT NULL AND text!='';
          UPDATE storage_metadata SET staging_bytes=staging_bytes+COALESCE((SELECT SUM({bytes}) FROM _bulk_element_rows),0);",
         bytes=TABLE.all_bytes(""))).await?;
-    if in_place {
-        sqlx::query(
-            "UPDATE sqlite_sequence SET name='elements' WHERE name='_bulk_elements_source'",
-        )
-        .execute(&mut *conn)
-        .await?;
-    } else if let Some((rowid, seq)) = seq {
+    if let Some((rowid, seq)) = seq {
         sqlx::query("INSERT INTO sqlite_sequence(rowid,name,seq) VALUES(?,'elements',?)")
             .bind(rowid)
             .bind(seq)

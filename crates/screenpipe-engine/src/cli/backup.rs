@@ -42,20 +42,14 @@ pub async fn handle_backup_command(
                 checkpointed, log_pages
             );
             db.close().await;
-            if base_dir.join("storage.json").exists() {
-                eprintln!("hybrid checkpoint complete; use backup export to include payload files");
-            } else {
-                eprintln!("database file is now safe to copy: {}", db_path.display());
-            }
+            eprintln!(
+                "current-format checkpoint complete; use backup export to include payload files"
+            );
         }
         BackupCommand::Export { output } => {
             let dest = output.clone().unwrap_or_else(|| {
                 base_dir
-                    .join(if base_dir.join("storage.json").exists() {
-                        "backup.screenpipe"
-                    } else {
-                        "backup.sqlite"
-                    })
+                    .join("backup.screenpipe")
                     .to_string_lossy()
                     .into_owned()
             });

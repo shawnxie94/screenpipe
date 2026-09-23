@@ -101,9 +101,7 @@ impl VaultManager {
     /// First-time setup: generate master key, encrypt it with password, save metadata.
     /// Does NOT encrypt existing data — call `lock()` after to do that.
     pub async fn setup(&self, password: &str) -> VaultResult<()> {
-        if self.screenpipe_dir.join("storage.json").exists()
-            || self.screenpipe_dir.join("storage-migration.json").exists()
-        {
+        if self.screenpipe_dir.join("storage.json").exists() {
             return Err(VaultError::Other(
                 "vault protection is unavailable for hybrid storage".into(),
             ));

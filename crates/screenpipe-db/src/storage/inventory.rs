@@ -30,8 +30,6 @@ pub fn inventory(root: &Path) -> Result<Vec<PathBuf>, sqlx::Error> {
     for name in [
         "storage.json",
         "storage-init.json",
-        "storage-migration.json",
-        "storage-migration-complete.json",
         "storage-maintenance.json",
         "storage-maintenance-complete.json",
     ] {

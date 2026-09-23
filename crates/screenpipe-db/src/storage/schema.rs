@@ -18,7 +18,7 @@ pub(super) async fn construction_sql(
             .execute(&mut *conn)
             .await?;
         construction_checkpoint(conn).await?;
-        super::faults::checkpoint("migration_schema_step");
+        super::faults::checkpoint("initialization_schema_step");
     }
     Ok(())
 }
@@ -37,7 +37,6 @@ pub(super) async fn construction_checkpoint(
     }
     // Let finishing cursors drain within the connection's busy timeout. FULL
     // copies committed frames without requesting a WAL restart under the pools.
-    super::diagnostics::stage("checkpointing_wal");
     let row = sqlx::query("PRAGMA wal_checkpoint(FULL)")
         .fetch_one(&mut *conn)
         .await?;
@@ -52,76 +51,7 @@ pub(super) async fn construction_checkpoint(
     Ok(())
 }
 
-pub(super) async fn converted_step(
-    conn: &mut SqliteConnection,
-    step: &str,
-) -> Result<bool, sqlx::Error> {
-    sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM _storage_conversion_steps WHERE step=?)")
-        .bind(step)
-        .fetch_one(conn)
-        .await
-}
-
-pub(super) async fn finish_step(
-    conn: &mut SqliteConnection,
-    step: &str,
-) -> Result<(), sqlx::Error> {
-    sqlx::query("INSERT INTO _storage_conversion_steps(step) VALUES(?)")
-        .bind(step)
-        .execute(conn)
-        .await?;
-    Ok(())
-}
-
-/// Install only the catalog/trigger definitions. Historical payloads are
-/// registered and sealed one batch at a time by the offline conversion loop.
-pub(super) async fn bootstrap_in_place(
-    conn: &mut SqliteConnection,
-    descriptor: &StorageDescriptor,
-) -> Result<(), sqlx::Error> {
-    if !converted_step(conn, "frames-schema").await? {
-        let mut tx = conn.begin().await?;
-        for statement in CATALOG.split(';').map(str::trim).filter(|s| !s.is_empty()) {
-            if statement.starts_with("INSERT INTO frames_fts")
-                || statement.starts_with("UPDATE frames SET")
-            {
-                continue;
-            }
-            sqlx::raw_sql(sqlx::AssertSqlSafe(statement))
-                .execute(&mut *tx)
-                .await?;
-        }
-        sqlx::query("INSERT INTO storage_metadata(singleton,descriptor,staging_limit,record_limit,policy,required_surfaces,writer_version) VALUES(1,?,?,?,?,?,?)")
-            .bind(serde_json::to_string(descriptor).map_err(storage_error)?)
-            .bind(descriptor.budget.staging_bytes as i64).bind(descriptor.budget.record_bytes as i64)
-            .bind(&descriptor.privacy.identity).bind(descriptor.privacy.required_surfaces as i64)
-            .bind(env!("CARGO_PKG_VERSION")).execute(&mut *tx).await?;
-        sqlx::raw_sql(sqlx::AssertSqlSafe(triggers()))
-            .execute(&mut *tx)
-            .await?;
-        let tables: Vec<String> = sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '%_fts%' AND substr(name,1,1)!='_' AND name NOT IN ('frames','frame_payloads','payload_files','storage_metadata','upload_bindings') AND sql NOT LIKE 'CREATE VIRTUAL TABLE%'").fetch_all(&mut *tx).await?;
-        for table in tables {
-            for event in ["INSERT", "UPDATE", "DELETE"] {
-                let name = table.replace('"', "\"\"");
-                sqlx::raw_sql(sqlx::AssertSqlSafe(format!("CREATE TRIGGER \"hybrid_revision_{name}_{event}\" AFTER {event} ON \"{name}\" BEGIN UPDATE storage_metadata SET revision=revision+1; END;"))).execute(&mut *tx).await?;
-            }
-        }
-        sqlx::query("INSERT INTO _hybrid_migrations VALUES(1,?)")
-            .bind(format!(
-                "{:x}",
-                Sha256::digest(format!("{CATALOG}{}", triggers()))
-            ))
-            .execute(&mut *tx)
-            .await?;
-        finish_step(&mut tx, "frames-schema").await?;
-        tx.commit().await?;
-        construction_checkpoint(conn).await?;
-        super::faults::checkpoint("migration_schema_step");
-    }
-    super::bulk::bootstrap_in_place(conn).await?;
-    upgrade_resident_frames(conn).await
-}
-
+#[cfg(test)]
 pub(super) async fn stage_frames(
     conn: &mut SqliteConnection,
     first: i64,
@@ -174,9 +104,6 @@ pub(super) async fn construction_rows(
     }
     Ok(())
 }
-
-pub(super) const LEGACY_FTS: &str =
-    include_str!("../migrations/20260415000000_frames_fts_external_content.sql");
 
 pub(super) fn hybrid_fts_schema() -> &'static str {
     let start = CATALOG.find("CREATE VIRTUAL TABLE frames_fts").unwrap();
@@ -522,12 +449,12 @@ mod checkpoint_tests {
 
     #[tokio::test]
     async fn recording_upgrade_replaces_existing_guards_once() {
-        use crate::storage::{MigrationOptions, PrivacyPolicy};
+        use crate::storage::{PrivacyPolicy, StorageInitOptions};
         use crate::DatabaseManager;
 
         for had_v5 in [false, true] {
             let root = tempfile::tempdir().unwrap();
-            let options = MigrationOptions {
+            let options = StorageInitOptions {
                 privacy: PrivacyPolicy {
                     identity: "private".into(),
                     required_surfaces: 1,
@@ -719,7 +646,7 @@ mod checkpoint_tests {
 
     #[tokio::test]
     async fn upgrades_existing_oversized_frame_accounting_once_without_changing_v1_identity() {
-        use crate::storage::{MigrationOptions, Projection, StorageBudget};
+        use crate::storage::{Projection, StorageBudget, StorageInitOptions};
         use crate::DatabaseManager;
 
         // Check against the shipped schema, not a checksum generated by this test.
@@ -728,7 +655,7 @@ mod checkpoint_tests {
             "f6e17a76ded55aeb312b6c7a15fb6498289f38881f3f860629931790802ed81d"
         );
         let root = tempfile::tempdir().unwrap();
-        let options = MigrationOptions {
+        let options = StorageInitOptions {
             budget: StorageBudget {
                 record_bytes: 1024 * 1024,
                 staging_bytes: 1024 * 1024,

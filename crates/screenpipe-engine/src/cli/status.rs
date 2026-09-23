@@ -40,13 +40,30 @@ pub async fn handle_status_command(
     port: u16,
 ) -> anyhow::Result<()> {
     let base_dir = get_base_dir(data_dir)?;
-    let db_path = base_dir.join("db.sqlite");
+    let db_root = base_dir.join("db.sqlite");
+    let resolved_db_path = screenpipe_db::storage::resolve_database_path(&db_root);
     let (health, health_probe_error) = probe_health(port).await;
     let daemon_may_be_running = health.is_some() || health_probe_error.is_some();
-    let database =
-        database_stats_for_status(&db_path, health.as_ref(), daemon_may_be_running).await;
+    let database = match &resolved_db_path {
+        Ok(db_path) => {
+            database_stats_for_status(db_path, health.as_ref(), daemon_may_be_running).await
+        }
+        Err(_error) if !base_dir.join("storage.json").exists() && !db_root.exists() => {
+            DatabaseStats {
+                counts_available: true,
+                ..Default::default()
+            }
+        }
+        Err(error) => DatabaseStats {
+            error: Some(format!("could not resolve current storage: {error}")),
+            ..Default::default()
+        },
+    };
     let media_size_bytes = dir_size(&base_dir.join("data")).unwrap_or(0);
-    let database_size_bytes = database_files_size(&base_dir);
+    let database_size_bytes = resolved_db_path
+        .as_ref()
+        .map(|path| database_files_size(path))
+        .unwrap_or_default();
 
     let snapshot = StatusSnapshot {
         port,
@@ -486,12 +503,16 @@ fn get_base_dir(custom_path: &Option<String>) -> anyhow::Result<PathBuf> {
         .unwrap_or(default_path))
 }
 
-fn database_files_size(base_dir: &Path) -> u64 {
-    ["db.sqlite", "db.sqlite-wal", "db.sqlite-shm"]
-        .iter()
-        .filter_map(|file| std::fs::metadata(base_dir.join(file)).ok())
-        .map(|metadata| metadata.len())
-        .sum()
+fn database_files_size(database_path: &Path) -> u64 {
+    [
+        database_path.to_path_buf(),
+        PathBuf::from(format!("{}-wal", database_path.display())),
+        PathBuf::from(format!("{}-shm", database_path.display())),
+    ]
+    .iter()
+    .filter_map(|path| std::fs::metadata(path).ok())
+    .map(|metadata| metadata.len())
+    .sum()
 }
 
 fn dir_size(path: &Path) -> std::io::Result<u64> {

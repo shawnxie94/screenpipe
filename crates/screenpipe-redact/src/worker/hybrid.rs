@@ -3,7 +3,7 @@
 
 use super::Worker;
 use crate::{RedactError, RedactionOutput, Redactor};
-use screenpipe_db::storage::{PrivacyPolicy, Projection, StorageMode};
+use screenpipe_db::storage::{PrivacyPolicy, Projection};
 use sqlx::Row;
 use std::sync::Arc;
 
@@ -28,7 +28,7 @@ impl Redactor for CompleteRedactor<'_> {
 
 impl Worker {
     pub fn with_frame_storage(mut self, db: Arc<screenpipe_db::DatabaseManager>) -> Self {
-        if db.storage_mode() == StorageMode::HybridParquetV1 {
+        if db.storage_descriptor().is_some() {
             self.frame_storage = Some(db);
         }
         self

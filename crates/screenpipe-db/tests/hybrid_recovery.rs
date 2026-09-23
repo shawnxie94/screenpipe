@@ -1,23 +1,33 @@
 // screenpipe — AI that knows everything you've seen, said, or heard
 // https://screenpipe.com
 
-use screenpipe_db::{
-    storage::{migrate, resolve_database_path},
-    DatabaseManager,
-};
+use screenpipe_db::{storage::resolve_database_path, DatabaseManager};
 use screenpipe_sqlite_coordinator as coordinator;
 use std::{path::Path, process::Command};
+
+#[test]
+fn legacy_database_root_without_descriptor_is_rejected() {
+    let root = tempfile::tempdir().unwrap();
+    let legacy = root.path().join("db.sqlite");
+    std::fs::write(&legacy, b"legacy database").unwrap();
+
+    let error = resolve_database_path(&legacy).unwrap_err();
+
+    assert!(error.to_string().contains("storage.json is required"));
+    assert_eq!(std::fs::read(legacy).unwrap(), b"legacy database");
+}
 
 const CHILD_ROOT: &str = "SCREENPIPE_HYBRID_RECOVERY_ROOT";
 const CHILD_PHASE: &str = "SCREENPIPE_HYBRID_RECOVERY_PHASE";
 
 async fn open(root: &Path) -> DatabaseManager {
-    DatabaseManager::new(
-        root.join("db.sqlite").to_str().unwrap(),
-        screenpipe_config::DbConfig::for_tier(screenpipe_config::DeviceTier::Low),
-    )
-    .await
-    .expect("healthy hybrid storage must reopen after a transient fault")
+    let config = screenpipe_config::DbConfig::for_tier(screenpipe_config::DeviceTier::Low);
+    DatabaseManager::ensure_hybrid_storage(root, config.clone())
+        .await
+        .expect("empty roots must initialize in the current hybrid format");
+    DatabaseManager::new(root.join("db.sqlite").to_str().unwrap(), config)
+        .await
+        .expect("healthy hybrid storage must reopen after a transient fault")
 }
 
 async fn insert_transcript(db: &DatabaseManager, id: i64, text: &str) {
@@ -41,13 +51,7 @@ async fn pending_hybrid_fault_recovers_across_process_restarts() {
                 .unwrap();
                 insert_transcript(&db, 1, "archived transcript").await;
                 db.close().await;
-                migrate(root, Default::default(), Default::default())
-                    .await
-                    .unwrap();
                 let db = open(root).await;
-                let archived: i64 = sqlx::query_scalar("SELECT count(*) FROM main.audio_transcriptions WHERE _archive_file IS NOT NULL")
-                    .fetch_one(&db.pool).await.unwrap();
-                assert_eq!(archived, 1);
                 insert_transcript(&db, 2, "resident transcript 東京").await;
                 db.close().await;
                 let index = resolve_database_path(&root.join("db.sqlite")).unwrap();

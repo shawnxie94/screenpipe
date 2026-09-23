@@ -48,13 +48,10 @@ mod chatgpt_oauth;
 mod coding_workspace;
 #[allow(deprecated)]
 mod commands;
-mod db_recovery_notifications;
 mod db_relaunch;
-mod update_restart;
 mod db_self_heal;
 mod deep_link;
 mod dev_isolation;
-mod storage_migration;
 mod disk_pressure_notifications;
 mod disk_usage;
 mod document_sources;
@@ -81,6 +78,7 @@ mod meeting_live_notes;
 mod meeting_stall_notifications;
 mod office_runtime;
 mod overlay_health;
+mod update_restart;
 // Cross-platform shape: macOS reads Arc/Chrome/Brave/Edge cookies and
 // injects via WKHTTPCookieStore; other platforms compile to a stub
 // `cookies_for_host` that returns empty until Windows (DPAPI + AES-256-
@@ -833,7 +831,6 @@ async fn main() {
     let sync_scheduler = screenpipe_connect::sync_scheduler::SyncScheduler::new();
 
     let app = app.manage(recording_state)
-        .manage(storage_migration::StorageMigrationState::default())
         .manage(activity_history::ActivityHistoryState::default())
         .manage(first_run_summary::FirstRunSummaryState::default())
         .manage(disk_pressure_notifications::DiskPressureNotificationState::default())
@@ -1491,7 +1488,6 @@ async fn main() {
                 );
 
                 let is_starting_after_spawn_error = is_starting_clone.clone();
-                                                                                let app_for_migration = app_handle.clone();
                 let server_thread = std::thread::Builder::new()
                     .name("screenpipe-server".to_string())
                     .spawn(move || {
@@ -1605,19 +1601,6 @@ async fn main() {
                             }
 
 
-                            let resumed_migration = match crate::storage_migration::resume_before_startup(
-                                &app_for_migration,
-                                &app_for_migration.state::<recording::RecordingState>(),
-                            ).await {
-                                Ok(resumed) => resumed,
-                                Err(error) => {
-                                    crate::health::set_boot_error(&error);
-                                    crate::health::set_recording_status(crate::health::RecordingStatus::Error);
-                                    is_starting_clone.store(false, std::sync::atomic::Ordering::SeqCst);
-                                    return;
-                                }
-                            };
-
                             info!("Starting server core + capture on dedicated runtime...");
 
                             // Phase 1: Start server core
@@ -1627,11 +1610,6 @@ async fn main() {
                                 Ok(s) => s,
                                 Err(e) => {
                                     error!("Failed to start server core: {}", e);
-                                    if let Some(resumed) = resumed_migration {
-                                        let _ = crate::storage_migration::finish_startup(
-                                            &app_for_migration, resumed, Err(e.to_string()),
-                                        ).await;
-                                    }
                                     crate::db_relaunch::note_respawn_failure(&app_for_db_wedge, &e).await;
                                     if crate::port_conflict::is_error(&e, config.port) {
                                         crate::port_conflict::show_reclaim_failed(
@@ -1695,17 +1673,6 @@ async fn main() {
                                 info!("Server started without capture");
                             }
                             drop(capture_guard);
-                            if let Some(resumed) = resumed_migration {
-                                if let Err(error) = crate::storage_migration::finish_startup(
-                                    &app_for_migration, resumed, Ok(()),
-                                ).await {
-                                    error!("Could not finish migration startup: {error}");
-                                }
-                            } else if let Err(error) = crate::storage_migration::finish_recording_recovery(
-                                &app_for_migration,
-                            ).await {
-                                error!("Could not finish recording recovery: {error}");
-                            }
                             is_starting_clone
                                 .store(false, std::sync::atomic::Ordering::SeqCst);
                             drop(lifecycle_guard);
@@ -1809,8 +1776,7 @@ async fn main() {
             crate::monitor_events::start(app_handle.clone());
             crate::meeting_live_notes::start(app_handle.clone());
             crate::meeting_stall_notifications::start(app_handle.clone());
-            crate::db_recovery_notifications::start(app_handle.clone());
-            crate::disk_pressure_notifications::start(app_handle.clone());
+                    crate::disk_pressure_notifications::start(app_handle.clone());
             activity_history::start(app_handle.clone());
             first_run_summary::start(app_handle.clone());
 

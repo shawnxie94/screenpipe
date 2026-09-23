@@ -46,7 +46,7 @@ async fn element_publication_ignores_new_captures_but_rejects_changed_range_memb
         ] {
             let root = tempfile::tempdir().unwrap();
             let db = Arc::new(DatabaseManager::new_hybrid(root.path(), Default::default(),
-                crate::storage::MigrationOptions {
+                crate::storage::StorageInitOptions {
                     privacy: crate::storage::PrivacyPolicy { identity: "private".into(), required_surfaces: 1 },
                     ..Default::default()
                 }).await.unwrap());
@@ -90,7 +90,7 @@ async fn fixture_mode(hybrid: bool) -> (tempfile::TempDir, Arc<DatabaseManager>)
             DatabaseManager::new_hybrid(root.path(), Default::default(), Default::default()).await
         } else {
             DatabaseManager::new(
-                root.path().join("db.sqlite").to_str().unwrap(),
+                root.path().join("standalone.sqlite").to_str().unwrap(),
                 Default::default(),
             )
             .await

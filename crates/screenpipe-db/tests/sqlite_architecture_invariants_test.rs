@@ -90,7 +90,7 @@ fn sqlite_lifecycle_has_one_owner_per_physical_database() {
         !maintenance.contains("wal_checkpoint(RESTART)"),
         "live maintenance must hand off to a full pool teardown before resetting WAL state"
     );
-    assert!(maintenance.contains("online SQLite repair is disabled"));
+    assert!(maintenance.contains("online SQLite repair is unavailable"));
 
     let setup = production_source(&crate_dir.join("src/db/setup.rs"));
     assert!(setup.contains("acquire_sqlite_manager_lease"));

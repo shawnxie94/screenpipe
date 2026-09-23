@@ -286,6 +286,9 @@ mod tests {
 
     async fn test_db() -> (DatabaseManager, tempfile::TempDir) {
         let dir = tempfile::tempdir().unwrap();
+        DatabaseManager::ensure_hybrid_storage(dir.path(), DbConfig::default())
+            .await
+            .unwrap();
         let db = DatabaseManager::new(
             dir.path().join("db.sqlite").to_str().unwrap(),
             DbConfig::default(),

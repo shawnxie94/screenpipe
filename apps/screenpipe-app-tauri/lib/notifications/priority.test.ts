@@ -36,7 +36,7 @@ describe("notification priority", () => {
   it("retains old recording failures without promoting routine status", () => {
     expect(
       isHighPriorityNotification({
-        title: "recording stopped — database needs recovery",
+        title: "recording stopped",
         type: "system",
       }),
     ).toBe(true);

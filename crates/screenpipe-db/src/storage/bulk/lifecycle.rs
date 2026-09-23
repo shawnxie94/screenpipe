@@ -33,8 +33,6 @@ impl HybridStorage {
         table: &Table,
         file: Option<i64>,
     ) -> Result<Vec<Record>, sqlx::Error> {
-        crate::storage::diagnostics::batch(table.name, None, None, None, None);
-        crate::storage::diagnostics::stage("selecting_bulk_records");
         let _token = self.read_token(pool).await?;
         let condition = if let Some(file) = file {
             format!("pending._archive_file={file}")
@@ -63,14 +61,6 @@ impl HybridStorage {
             .map(|c| format!("v.{}", c.name))
             .collect::<Vec<_>>()
             .join(",");
-        crate::storage::diagnostics::batch(
-            table.name,
-            ids.first().copied(),
-            ids.last().copied(),
-            Some(ids.len() as u64),
-            Some(bytes as u64),
-        );
-        crate::storage::diagnostics::stage("reading_bulk_records");
         let rows=sqlx::query(sqlx::AssertSqlSafe(format!("SELECT v.id,e._archive_generation,{columns} FROM {view} v JOIN main.{t} e ON e.id=v.id WHERE v.id IN (SELECT value FROM json_each(?)) ORDER BY v.id",view=table.view(),t=table.name)))
             .bind(serde_json::to_string(&ids).map_err(storage_error)?).fetch_all(pool).await?;
         rows.iter()
@@ -130,7 +120,6 @@ impl HybridStorage {
             .join(format!("{}.parquet", uuid::Uuid::new_v4()));
         let file = self.payload_path(&relative)?;
         std::fs::create_dir_all(file.parent().unwrap())?;
-        crate::storage::diagnostics::stage("reserving_bulk_archive");
         let file_id = {
             let permit = writer.lock().await?;
             sqlx::query(
@@ -147,13 +136,11 @@ impl HybridStorage {
         let copy = rows.clone();
         let budget = self.descriptor.budget.clone();
         let file_for_job = file.clone();
-        crate::storage::diagnostics::stage("waiting_for_bulk_encoder");
         let decoder = Arc::clone(&self.decoder)
             .acquire_owned()
             .await
             .map_err(|_| sqlx::Error::PoolClosed)?;
         let lease = Arc::clone(&self.leases).read_owned().await;
-        crate::storage::diagnostics::stage("encoding_and_verifying_bulk");
         let hash = tokio::task::spawn_blocking(move || {
             let (_decoder, _lease) = (decoder, lease);
             let hash = codec::write(&file_for_job, table, &copy)?;
@@ -164,7 +151,6 @@ impl HybridStorage {
         })
         .await
         .map_err(storage_error)??;
-        crate::storage::diagnostics::stage("syncing_bulk_archive");
         let mut directory = file.parent().unwrap();
         loop {
             sync_directory(directory)?;
@@ -176,7 +162,6 @@ impl HybridStorage {
                 .ok_or_else(|| storage_error("bulk parent missing"))?;
         }
         crate::storage::faults::checkpoint("bulk_files_synced");
-        crate::storage::diagnostics::stage("publishing_bulk_archive");
         let permit = writer.lock().await?;
         let mut tx = permit.pool().begin().await?;
         let current: (String, i64) =
@@ -250,7 +235,6 @@ impl HybridStorage {
             .execute(&mut *tx)
             .await?;
         crate::storage::faults::checkpoint("bulk_before_commit");
-        crate::storage::diagnostics::stage("committing_bulk_archive");
         tx.commit().await?;
         crate::storage::faults::checkpoint("bulk_committed");
         Ok(rows.len())
@@ -378,161 +362,4 @@ impl DatabaseManager {
     pub async fn seal_payloads(&self) -> Result<usize, sqlx::Error> {
         self.seal_frame_payloads().await
     }
-}
-
-pub(crate) async fn export(
-    source: &DatabaseManager,
-    output: &mut sqlx::SqliteConnection,
-) -> Result<(), sqlx::Error> {
-    if !source.storage.as_ref().is_some_and(|s| s.has_bulk()) {
-        return Ok(());
-    }
-    let legacy: Vec<(String, String, String)> =
-        sqlx::query_as("SELECT kind,name,sql FROM _bulk_legacy_sql ORDER BY kind,name")
-            .fetch_all(&mut *output)
-            .await?;
-    let indexes: Vec<String> = sqlx::query_scalar(
-        "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE '_bulk_%'",
-    )
-    .fetch_all(&mut *output)
-    .await?;
-    for name in indexes {
-        sqlx::raw_sql(sqlx::AssertSqlSafe(format!("DROP INDEX {name}")))
-            .execute(&mut *output)
-            .await?;
-    }
-    super::elements::export(source, output).await?;
-    for table in TABLES.iter().filter(|t| t.name != "elements") {
-        let columns = table
-            .columns
-            .iter()
-            .map(|c| (c.name, c.kind))
-            .collect::<Vec<_>>();
-        let selected = columns
-            .iter()
-            .map(|(name, _)| *name)
-            .collect::<Vec<_>>()
-            .join(",");
-        let mut after = None;
-        loop {
-            let candidates = sqlx::query(sqlx::AssertSqlSafe(format!(
-                "SELECT id,({}) AS bytes FROM {} WHERE id{}? ORDER BY id LIMIT 512",
-                table.all_bytes(""),
-                table.name,
-                if after.is_some() { ">" } else { ">=" }
-            )))
-            .bind(after.unwrap_or(i64::MIN))
-            .fetch_all(&source.pool)
-            .await?;
-            if candidates.is_empty() {
-                break;
-            }
-            let mut ids = Vec::new();
-            let mut bytes = 0;
-            for row in candidates {
-                let size = row.try_get::<i64, _>("bytes")? as usize;
-                if !ids.is_empty()
-                    && bytes + size
-                        > source
-                            .storage
-                            .as_ref()
-                            .unwrap()
-                            .descriptor
-                            .budget
-                            .file_bytes
-                {
-                    break;
-                }
-                bytes += size;
-                ids.push(row.try_get::<i64, _>("id")?);
-            }
-            after = ids.last().copied();
-            let rows=sqlx::query(sqlx::AssertSqlSafe(format!("SELECT id,{selected} FROM {} WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id",table.name)))
-                .bind(serde_json::to_string(&ids).map_err(storage_error)?).fetch_all(&source.pool).await?;
-            let values = rows
-                .iter()
-                .map(|row| {
-                    let mut values = vec![serde_json::Value::from(row.try_get::<i64, _>("id")?)];
-                    for (i, (_, kind)) in columns.iter().enumerate() {
-                        values.push(if row.try_get_raw(i + 1)?.is_null() {
-                            serde_json::Value::Null
-                        } else {
-                            match kind {
-                                Kind::Text => {
-                                    serde_json::Value::from(row.try_get::<String, _>(i + 1)?)
-                                }
-                                Kind::Integer => {
-                                    serde_json::Value::from(row.try_get::<i64, _>(i + 1)?)
-                                }
-                                Kind::Real => {
-                                    serde_json::Value::from(row.try_get::<f64, _>(i + 1)?)
-                                }
-                            }
-                        });
-                    }
-                    Ok(values)
-                })
-                .collect::<Result<Vec<_>, sqlx::Error>>()?;
-            let projection = (0..columns.len() + 1)
-                .map(|i| format!("json_extract(value,'$[{i}]') AS c{i}"))
-                .collect::<Vec<_>>()
-                .join(",");
-            let assignments = columns
-                .iter()
-                .enumerate()
-                .map(|(i, (name, _))| format!("{name}=patch.c{}", i + 1))
-                .collect::<Vec<_>>()
-                .join(",");
-            sqlx::query(sqlx::AssertSqlSafe(format!("WITH patch AS (SELECT {projection} FROM json_each(?)) UPDATE {t} SET {assignments} FROM patch WHERE {t}.id=patch.c0",t=table.name)))
-                .bind(serde_json::to_string(&values).map_err(storage_error)?).execute(&mut *output).await?;
-        }
-        sqlx::raw_sql(sqlx::AssertSqlSafe(format!("DROP VIEW {};", table.view())))
-            .execute(&mut *output)
-            .await?;
-        if !table.fts.is_empty() {
-            sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
-                "DROP TABLE {}_fts",
-                table.name
-            )))
-            .execute(&mut *output)
-            .await?;
-        }
-        let internals: Vec<String> = sqlx::query_scalar(
-            "SELECT name FROM pragma_table_info(?) WHERE name LIKE '_archive_%'",
-        )
-        .bind(table.name)
-        .fetch_all(&mut *output)
-        .await?;
-        for column in internals {
-            sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
-                "ALTER TABLE {} DROP COLUMN {column}",
-                table.name
-            )))
-            .execute(&mut *output)
-            .await?;
-        }
-    }
-    sqlx::raw_sql("DROP TABLE _bulk_files; DROP TABLE _bulk_legacy_sql;")
-        .execute(&mut *output)
-        .await?;
-    for (kind, name, sql) in &legacy {
-        if kind == "table" && name != "elements" {
-            sqlx::raw_sql(sqlx::AssertSqlSafe(sql.as_str()))
-                .execute(&mut *output)
-                .await?;
-            sqlx::query(sqlx::AssertSqlSafe(format!(
-                "INSERT INTO {name}({name}) VALUES('rebuild')"
-            )))
-            .execute(&mut *output)
-            .await?;
-        }
-    }
-    for (kind, _, sql) in &legacy {
-        if kind != "table" {
-            sqlx::raw_sql(sqlx::AssertSqlSafe(sql.as_str()))
-                .execute(&mut *output)
-                .await?;
-        }
-    }
-    Ok(())
 }

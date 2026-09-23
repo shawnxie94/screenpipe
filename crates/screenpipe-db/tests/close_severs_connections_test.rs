@@ -27,7 +27,7 @@ fn temp_db_path(tag: &str) -> String {
     let dir = std::env::temp_dir().join(format!("sp_close_test_{}_{}", tag, std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
-    dir.join("db.sqlite").to_string_lossy().into_owned()
+    dir.join("standalone.sqlite").to_string_lossy().into_owned()
 }
 
 #[tokio::test]
@@ -111,7 +111,7 @@ async fn repeated_restart_cycles_reopen_cleanly() {
 #[tokio::test]
 async fn verified_reopen_waits_for_checked_out_connections_before_new_writes() {
     let dir = tempfile::tempdir().unwrap();
-    let db_path = dir.path().join("db.sqlite").to_string_lossy().into_owned();
+    let db_path = dir.path().join("standalone.sqlite").to_string_lossy().into_owned();
     let db = DatabaseManager::new(&db_path, DbConfig::for_tier(DeviceTier::Low))
         .await
         .unwrap();

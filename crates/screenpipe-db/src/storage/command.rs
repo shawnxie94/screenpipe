@@ -18,15 +18,6 @@ pub async fn run_command(
             db.close().await;
             serde_json::to_value(StorageDescriptor::read(root)?).map_err(storage_error)
         }
-        "migrate" => {
-            serde_json::to_value(migrate(root, Default::default(), Default::default()).await?)
-                .map_err(storage_error)
-        }
-        "compare" => serde_json::to_value(compare(output()?, root).await?).map_err(storage_error),
-        "cancel" => {
-            cancel_migration(root, Default::default()).await?;
-            Ok(serde_json::json!({"cancelled":true}))
-        }
         "compact" => {
             compact(root, Default::default()).await?;
             Ok(serde_json::json!({"complete":true}))
@@ -35,12 +26,11 @@ pub async fn run_command(
             restore(root, output()?, Default::default()).await?;
             Ok(serde_json::json!({"complete":true}))
         }
-        "export-sqlite" => {
-            export_sqlite(root, output()?, Default::default()).await?;
-            Ok(serde_json::json!({"complete":true}))
-        }
         "status" => serde_json::to_value(StorageDescriptor::read(root)?).map_err(storage_error),
         "verify" | "seal" | "reclaim" | "backup" => {
+            if StorageDescriptor::read(root)?.is_none() {
+                return Err(storage_error("current hybrid storage is not initialized"));
+            }
             let db = DatabaseManager::new(
                 root.join("db.sqlite")
                     .to_str()

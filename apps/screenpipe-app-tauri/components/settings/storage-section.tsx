@@ -11,9 +11,7 @@ export const searchIndex: SettingsField[] = [
   { label: "磁盘用量", keywords: ["disk", "space", "gb"] },
   { label: "数据保留", keywords: ["cleanup", "delete old"] },
   { label: "清理缓存" },
-  { label: "数据库存储", keywords: ["migrate", "migration", "compression", "original database"] },
 ];
-import { StorageMigrationCard } from "./storage-migration-card";
 import { DiskUsageSection } from "./disk-usage-section";
 import { ApplyRestartBar } from "./apply-restart-bar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -125,8 +123,6 @@ export function StorageSection() {
       <p className="text-muted-foreground text-sm mb-4">
         本地磁盘用量与存储控制
       </p>
-
-      <StorageMigrationCard dataDirectory={settings.dataDir} onBusyChange={setStorageOperationBusy} />
 
       {/* 数据目录 */}
       <Card className="border-border bg-card">

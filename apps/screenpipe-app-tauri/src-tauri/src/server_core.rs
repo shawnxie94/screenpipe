@@ -240,45 +240,43 @@ impl ServerCore {
             message
         })?;
 
-        screenpipe_db::storage::recover_interrupted_migration(
-            &local_data_dir,
-            config.db_config.clone(),
-        )
-        .await
-        .map_err(|error| format!("Failed to resume storage after interruption: {error}"))?;
         crate::db_relaunch::set_active_database(&local_data_dir);
 
         // A crash during repair may leave the committed WAL archived separately
         // from the main file. Reconcile the swap before ordinary DB diagnosis.
-        let startup_guard = screenpipe_engine::cli::db::prepare_database_startup(&local_data_dir)
-            .await
-            .map_err(|error| {
-                let message = format!("Failed to initialize database: {error:#}");
-                crate::health::set_boot_error(&message);
-                message
-            })?;
+        screenpipe_db::DatabaseManager::ensure_hybrid_storage(
+            &local_data_dir,
+            config.db_config.clone(),
+        )
+        .await
+        .map_err(|error| {
+            let message = format!("Failed to initialize current storage: {error:#}");
+            crate::health::set_boot_error(&message);
+            message
+        })?;
+        crate::db_relaunch::set_active_database(&local_data_dir);
         let db_path =
             screenpipe_db::storage::resolve_database_path(&local_data_dir.join("db.sqlite"))
                 .map_err(|e| e.to_string())?
                 .to_string_lossy()
                 .into_owned();
         crate::health::set_boot_phase(
-            "migrating_database",
-            Some("updating database — this may take several minutes on large installs"),
+            "initializing_database",
+            Some("initializing the local database"),
         );
 
         // DB init with bounded retry on lock contention.
         //
         // Context: user `pmp` on v2.4.37 hit "database is locked" the same
-        // second the server started, before any migration could run. Most
+        // second the server started, before database initialization completed. Most
         // plausible causes are another process briefly touching the file
         // (Spotlight indexing, Time Machine, antivirus, iCloud/OneDrive
         // sync, or a stale advisory lock from a crashed prior screenpipe
         // process). All of those clear within a few seconds.
         //
         // A short backoff retry absorbs these without looping through the
-        // outer watchdog, which would otherwise re-run migrations and
-        // other setup. The outer watchdog in recording.rs still covers
+        // outer watchdog, which would otherwise repeat database setup.
+        // The outer watchdog in recording.rs still covers
         // the catastrophic case where every inner retry fails.
         //
         // Non-lock errors (permissions, corruption, bad path) bail out
@@ -792,7 +790,6 @@ impl ServerCore {
 
         // Startup reconciliation excludes offline maintenance until the
         // existing offline check can observe the validated, bound listener.
-        drop(startup_guard);
 
         let vision_manager_handle = server.vision_manager.clone();
 

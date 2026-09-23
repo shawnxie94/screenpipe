@@ -2,12 +2,12 @@
 // https://screenpipe.com
 
 use super::{Table, TABLES};
-use sqlx::{Connection, Row, SqliteConnection};
+use sqlx::{Row, SqliteConnection};
 
 pub(crate) async fn bootstrap(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
-    sqlx::raw_sql("CREATE TABLE _bulk_files(id INTEGER PRIMARY KEY,table_name TEXT NOT NULL,path TEXT NOT NULL UNIQUE,checksum TEXT,state TEXT NOT NULL CHECK(state IN ('encoding','published','dirty','retired')),rows INTEGER NOT NULL); CREATE TABLE _bulk_legacy_sql(kind TEXT NOT NULL,name TEXT PRIMARY KEY,sql TEXT NOT NULL);").execute(&mut *conn).await?;
+    sqlx::raw_sql("CREATE TABLE _bulk_files(id INTEGER PRIMARY KEY,table_name TEXT NOT NULL,path TEXT NOT NULL UNIQUE,checksum TEXT,state TEXT NOT NULL CHECK(state IN ('encoding','published','dirty','retired')),rows INTEGER NOT NULL);").execute(&mut *conn).await?;
     for (table_index, table) in TABLES.iter().enumerate() {
-        bootstrap_table(conn, table_index, table, false).await?;
+        bootstrap_table(conn, table_index, table).await?;
     }
     sqlx::query("INSERT INTO _hybrid_migrations VALUES(2,?)")
         .bind(super::manifest_checksum())
@@ -20,11 +20,10 @@ async fn bootstrap_table(
     conn: &mut SqliteConnection,
     table_index: usize,
     table: &Table,
-    in_place: bool,
 ) -> Result<(), sqlx::Error> {
     tracing::info!(table = table.name, "building bulk storage schema");
     if table.name == "elements" {
-        super::elements::bootstrap_mode(conn, in_place).await?;
+        super::elements::bootstrap_mode(conn).await?;
         return Ok(());
     }
     // Column-aware triggers below own logical changes. Physical sealing
@@ -47,12 +46,6 @@ async fn bootstrap_table(
     for row in legacy {
         let kind: &str = row.try_get("type")?;
         let name: &str = row.try_get("name")?;
-        sqlx::query("INSERT INTO _bulk_legacy_sql VALUES(?,?,?)")
-            .bind(kind)
-            .bind(name)
-            .bind(row.try_get::<&str, _>("sql")?)
-            .execute(&mut *conn)
-            .await?;
         sqlx::raw_sql(sqlx::AssertSqlSafe(format!(
             "DROP {} \"{}\"",
             kind,
@@ -61,9 +54,9 @@ async fn bootstrap_table(
         .execute(&mut *conn)
         .await?;
     }
-    sqlx::raw_sql(sqlx::AssertSqlSafe(format!("ALTER TABLE {t} ADD COLUMN _archive_file INTEGER REFERENCES _bulk_files(id); ALTER TABLE {t} ADD COLUMN _archive_mask INTEGER NOT NULL DEFAULT {mask}; ALTER TABLE {t} ADD COLUMN _archive_generation INTEGER NOT NULL DEFAULT 1; {indexes}",t=table.name,mask=table.mask(),indexes=if in_place {String::new()} else {indexes(table, false)}))).execute(&mut *conn).await?;
+    sqlx::raw_sql(sqlx::AssertSqlSafe(format!("ALTER TABLE {t} ADD COLUMN _archive_file INTEGER REFERENCES _bulk_files(id); ALTER TABLE {t} ADD COLUMN _archive_mask INTEGER NOT NULL DEFAULT {mask}; ALTER TABLE {t} ADD COLUMN _archive_generation INTEGER NOT NULL DEFAULT 1; {indexes}",t=table.name,mask=table.mask(),indexes=indexes(table, false)))).execute(&mut *conn).await?;
     if table.name == "audio_transcriptions" {
-        sqlx::raw_sql(if in_place {"ALTER TABLE audio_transcriptions ADD COLUMN _archive_digest BLOB;"} else {"ALTER TABLE audio_transcriptions ADD COLUMN _archive_digest BLOB; CREATE UNIQUE INDEX _bulk_audio_identity ON audio_transcriptions(audio_chunk_id,CASE WHEN (_archive_mask&1)!=0 THEN screenpipe_payload_sha256(transcription) ELSE _archive_digest END);"}).execute(&mut *conn).await?;
+        sqlx::raw_sql("ALTER TABLE audio_transcriptions ADD COLUMN _archive_digest BLOB; CREATE UNIQUE INDEX _bulk_audio_identity ON audio_transcriptions(audio_chunk_id,CASE WHEN (_archive_mask&1)!=0 THEN screenpipe_payload_sha256(transcription) ELSE _archive_digest END);").execute(&mut *conn).await?;
     }
     let columns=original_columns.iter().map(|name|{
             if let Some(index)=table.columns.iter().position(|c|c.name==name){
@@ -72,7 +65,7 @@ async fn bootstrap_table(
         }).collect::<Vec<_>>().join(",");
     sqlx::raw_sql(sqlx::AssertSqlSafe(format!("CREATE VIEW {} AS SELECT {columns} FROM {} e LEFT JOIN _bulk_files p ON p.id=e._archive_file",table.view(),table.name))).execute(&mut *conn).await?;
     if !table.fts.is_empty() {
-        sqlx::raw_sql(sqlx::AssertSqlSafe(format!("CREATE VIRTUAL TABLE {t}_fts USING fts5({schema},content='',contentless_delete=1,tokenize='unicode61'); {backfill}",t=table.name,schema=table.fts.join(","),backfill=if in_place {String::new()} else {format!("INSERT INTO {t}_fts(rowid,{columns}) SELECT id,{columns} FROM {t} WHERE {condition};",t=table.name,columns=table.fts_columns(),condition=table.fts_condition)}))).execute(&mut *conn).await?;
+        sqlx::raw_sql(sqlx::AssertSqlSafe(format!("CREATE VIRTUAL TABLE {t}_fts USING fts5({schema},content='',contentless_delete=1,tokenize='unicode61'); {backfill}",t=table.name,schema=table.fts.join(","),backfill=format!("INSERT INTO {t}_fts(rowid,{columns}) SELECT id,{columns} FROM {t} WHERE {condition};",t=table.name,columns=table.fts_columns(),condition=table.fts_condition)))).execute(&mut *conn).await?;
     }
     sqlx::query(sqlx::AssertSqlSafe(format!("UPDATE storage_metadata SET staging_bytes=staging_bytes+COALESCE((SELECT SUM({}) FROM {}),0)",table.local_bytes(""),table.name))).execute(&mut *conn).await?;
     sqlx::raw_sql(sqlx::AssertSqlSafe(triggers(table, &original_columns)))
@@ -86,34 +79,6 @@ fn indexes(table: &Table, idempotent: bool) -> String {
     let t = table.name;
     let guard = if idempotent { "IF NOT EXISTS " } else { "" };
     format!("CREATE INDEX {guard}_bulk_{t}_files ON {t}(_archive_file) WHERE _archive_file IS NOT NULL; CREATE INDEX {guard}_bulk_{t}_pending ON {t}(id) WHERE _archive_mask!=0;")
-}
-
-pub(crate) async fn bootstrap_in_place(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
-    sqlx::raw_sql("CREATE TABLE IF NOT EXISTS _bulk_files(id INTEGER PRIMARY KEY,table_name TEXT NOT NULL,path TEXT NOT NULL UNIQUE,checksum TEXT,state TEXT NOT NULL CHECK(state IN ('encoding','published','dirty','retired')),rows INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS _bulk_legacy_sql(kind TEXT NOT NULL,name TEXT PRIMARY KEY,sql TEXT NOT NULL);").execute(&mut *conn).await?;
-    for (index, table) in TABLES.iter().enumerate() {
-        let step = format!("bulk-schema-{}", table.name);
-        if crate::storage::schema::converted_step(conn, &step).await? {
-            continue;
-        }
-        let mut tx = conn.begin().await?;
-        bootstrap_table(&mut tx, index, table, true).await?;
-        crate::storage::schema::finish_step(&mut tx, &step).await?;
-        tx.commit().await?;
-        crate::storage::schema::construction_checkpoint(conn).await?;
-        crate::storage::faults::checkpoint("migration_schema_step");
-    }
-    sqlx::query("INSERT OR IGNORE INTO _hybrid_migrations VALUES(2,?)")
-        .bind(super::manifest_checksum())
-        .execute(conn)
-        .await?;
-    Ok(())
-}
-
-pub(crate) async fn finish_indexes(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
-    for table in TABLES.iter().filter(|t| t.name != "elements") {
-        crate::storage::schema::construction_sql(conn, &indexes(table, true)).await?;
-    }
-    crate::storage::schema::construction_sql(conn, "CREATE UNIQUE INDEX IF NOT EXISTS _bulk_audio_identity ON audio_transcriptions(audio_chunk_id,CASE WHEN (_archive_mask&1)!=0 THEN screenpipe_payload_sha256(transcription) ELSE _archive_digest END);").await
 }
 
 fn reindex(table: &Table) -> String {

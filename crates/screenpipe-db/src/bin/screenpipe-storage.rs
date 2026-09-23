@@ -11,7 +11,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
     let mut args = std::env::args().skip(1);
     let command = args.next().unwrap_or_default();
-    let root=std::path::PathBuf::from(args.next().ok_or_else(||anyhow::anyhow!("usage: screenpipe-storage <init|migrate|verify|seal|reclaim|compact|backup|restore|export-sqlite|compare|cancel|status> <root> [destination]"))?);
+    let root=std::path::PathBuf::from(args.next().ok_or_else(||anyhow::anyhow!("usage: screenpipe-storage <init|verify|seal|reclaim|compact|backup|restore|status> <root> [destination]"))?);
     let destination = args.next().map(std::path::PathBuf::from);
     if args.next().is_some() {
         anyhow::bail!("unexpected storage command argument");

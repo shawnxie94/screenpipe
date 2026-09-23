@@ -2,7 +2,7 @@
 // https://screenpipe.com
 
 use rusqlite::{params_from_iter, types::Value, Connection};
-use screenpipe_db::{storage::MigrationOptions, DatabaseManager};
+use screenpipe_db::{storage::StorageInitOptions, DatabaseManager};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 struct Work {
@@ -43,7 +43,7 @@ fn ids(db: &Connection, sql: &str, args: &[Value]) -> rusqlite::Result<Vec<i64>>
 #[tokio::test]
 async fn sparse_element_selection_has_linear_work_in_both_directions() {
     let root = tempfile::tempdir().unwrap();
-    let mut options = MigrationOptions::default();
+    let mut options = StorageInitOptions::default();
     options.privacy.identity = "pagination-regression".into();
     options.privacy.required_surfaces = 1;
     let db = DatabaseManager::new_hybrid(root.path(), Default::default(), options)

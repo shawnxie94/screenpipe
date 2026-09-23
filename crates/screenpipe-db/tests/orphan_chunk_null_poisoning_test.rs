@@ -120,7 +120,7 @@ async fn estimate_evictable_bytes_counts_files_despite_out_of_range_null_chunk_f
         .await
         .unwrap();
 
-    let db_path = dir.path().join("db.sqlite");
+    let db_path = dir.path().join("standalone.sqlite");
     let db = DatabaseManager::new(db_path.to_str().unwrap(), Default::default())
         .await
         .unwrap();

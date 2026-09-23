@@ -679,7 +679,6 @@ async fn sync_to_remote_inner(
 ) -> Result<SyncResult> {
     if [
         "storage.json",
-        "storage-migration.json",
         "storage-init.json",
         "storage-maintenance.json",
     ]

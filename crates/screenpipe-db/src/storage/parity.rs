@@ -5,14 +5,11 @@
 //! through SQLx. The existing read connection, statement snapshot and typed
 //! SHA-256 format are retained; memory does not grow with the history length.
 
-use super::{diagnostics, lifecycle::TableParity, storage_error};
+use super::{lifecycle::TableParity, storage_error};
 use rusqlite::types::ValueRef;
 use sha2::{Digest, Sha256};
 use sqlx::{sqlite::LockedSqliteHandle, SqlitePool};
 use tokio_util::sync::CancellationToken;
-
-// Bounds diagnostic overhead, not which records are verified.
-const PROGRESS_ROWS: u64 = 4096;
 
 struct ScanHandle<'a>(LockedSqliteHandle<'a>);
 
@@ -31,7 +28,7 @@ pub(super) async fn scan(
 ) -> Result<TableParity, sqlx::Error> {
     let cancelled = CancellationToken::new();
     let _cancel_on_drop = cancelled.clone().drop_guard();
-    tokio::task::spawn_blocking(diagnostics::blocking_scope(move || {
+    tokio::task::spawn_blocking(move || {
         tokio::runtime::Handle::current().block_on(async move {
             let mut conn = tokio::select! {
                 connection = pool.acquire() => connection?,
@@ -42,7 +39,7 @@ pub(super) async fn scan(
                 crate::cancellable_query::SQLITE_PROGRESS_CHECK_OPS,
                 move || !cancelled.is_cancelled(),
             );
-            diagnostics::stage("scanning_parity_rows");
+
             // SAFETY: SQLx's handle lock excludes its worker for the entire
             // scan. from_handle borrows the database and never closes it. The
             // statement/values are dropped before the lock and pool connection.
@@ -54,26 +51,20 @@ pub(super) async fn scan(
             let mut rows = statement.query([]).map_err(sqlite_error)?;
             let mut hash = Sha256::new();
             let mut count = 0;
-            let mut last = None;
             while let Some(row) = rows.next().map_err(sqlite_error)? {
-                last = Some(row.get::<_, i64>(0).map_err(sqlite_error)?);
                 for column in 1..columns {
                     hash_cell(&mut hash, row.get_ref(column).map_err(sqlite_error)?);
                 }
                 hash.update(b"E");
                 count += 1;
-                if count % PROGRESS_ROWS == 0 {
-                    diagnostics::batch(&table, last, None, Some(count), None);
-                }
             }
-            diagnostics::batch(&table, last, None, Some(count), None);
             Ok(TableParity {
                 table,
                 rows: count,
                 sha256: format!("{:x}", hash.finalize()),
             })
         })
-    }))
+    })
     .await
     .map_err(storage_error)?
 }
@@ -87,8 +78,8 @@ fn sqlite_error(error: rusqlite::Error) -> sqlx::Error {
     }
 }
 
-/// This encoding is persisted in existing migration journals. Keep NULL,
-/// storage class, byte length, floating-point bits and row order identical.
+/// Keep NULL, storage class, byte length, floating-point bits and row order
+/// identical for stable current-format integrity receipts.
 pub(super) fn hash_cell(hash: &mut Sha256, value: ValueRef<'_>) {
     match value {
         ValueRef::Null => hash.update(b"N"),

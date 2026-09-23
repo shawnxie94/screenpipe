@@ -60,14 +60,14 @@ export const MAX_ENGINE_WAIT_MS = 180000;
 export const HEALTH_UNREACHABLE_REPORT_AFTER_MS = 12000;
 
 // Boot phases emitted by the Rust backend — see src-tauri/src/health.rs.
-// We use these to show actionable copy during long migrations (Mike Cloke
-// 2026-04-22 had a 31.5GB db, migration took 13.2s, old UI flipped to
+// We use these to show actionable copy during long startup work (Mike Cloke
+// 2026-04-22 had a 31.5GB db; database startup took 13.2s, old UI flipped to
 // "stuck" after 15s and told user to send logs instead of waiting).
 type BootPhaseSnapshot = {
   phase:
     | "idle"
     | "starting"
-    | "migrating_database"
+    | "initializing_database"
     | "building_audio"
     | "starting_pipes"
     | "ready"
@@ -83,7 +83,7 @@ type BootPhaseSnapshot = {
 const BOOT_PHASE_COPY: Record<BootPhaseSnapshot["phase"], string> = {
   idle: "准备启动本地引擎...",
   starting: "正在启动本地引擎...",
-  migrating_database: "正在更新本地数据库，大型数据可能需要几分钟...",
+  initializing_database: "正在初始化本地数据库，大型数据可能需要几分钟...",
   building_audio: "正在初始化音频...",
   starting_pipes: "正在启动自动化...",
   ready: "本地引擎已就绪",
@@ -492,7 +492,7 @@ export default function EngineStartup({ handleNextSlide }: EngineStartupProps) {
     if (bootPhase?.phase === "error") return;
     const stuckTimer = setTimeout(() => {
       const activePhases: BootPhaseSnapshot["phase"][] = [
-        "migrating_database",
+        "initializing_database",
         "building_audio",
         "starting_pipes",
       ];

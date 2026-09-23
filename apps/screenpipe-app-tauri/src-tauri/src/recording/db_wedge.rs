@@ -201,15 +201,9 @@ async fn recover_from_db_wedge(
                     DB_WEDGE_MAX_RESTARTS,
                 )
             };
-            if let WedgeAction::Wait { notify } = action {
+            if let WedgeAction::Wait { .. } = action {
                 drop(server_guard);
                 drop(capture_guard);
-                if notify {
-                    crate::db_relaunch::surface_manual_recovery(
-                        "database remains unavailable; waiting before the next recovery attempt",
-                    )
-                    .await;
-                }
                 // Release every lifecycle/state lock before waiting. The next
                 // iteration revalidates the original generation and recovery epoch.
                 drop(_lifecycle_guard);
@@ -294,9 +288,6 @@ async fn recover_from_db_wedge(
                 "database damage verified; recording paused for protected repair",
             );
             crate::health::set_recording_status(crate::health::RecordingStatus::Error);
-            crate::db_recovery_notifications::notify_quarantined_database(
-                crate::db_relaunch::active_data_dir(),
-            );
             return;
         }
         // The failed transaction is not replayed: COMMIT may have succeeded before
@@ -310,11 +301,9 @@ async fn recover_from_db_wedge(
             // The restart failed to bring the engine back up (e.g. the port never
             // rebound). Nothing else will retry until the DB layer fires the hook
             // again — and if the server is fully down it never will — so recording
-            // would otherwise sit silently stopped. Publish on the event bus so the
-            // in-process `db_recovery_notifications` subscriber surfaces it.
+            // would otherwise sit silently stopped. Publish on the event bus for
+            // any active diagnostic listeners.
             error!("db wedge auto-recovery: spawn_screenpipe failed: {}", e);
-            let evt = screenpipe_events::DbRecoveryEvent::restart_failed();
-            let _ = screenpipe_events::send_event(evt.event_name(), evt);
             // Keep retrying via the watchdog, including before its first healthy
             // connection. Neither the number nor age of failures proves damage.
             crate::db_relaunch::note_respawn_failure(&app, &e).await;

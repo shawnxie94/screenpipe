@@ -137,7 +137,7 @@ async fn count(db: &DatabaseManager, table: &str) -> i64 {
 async fn assert_semantic_timeout_releases_connection(stage: &str) {
     let dir = tempfile::tempdir().unwrap();
     let db = DatabaseManager::new(
-        dir.path().join("db.sqlite").to_str().unwrap(),
+        dir.path().join("standalone.sqlite").to_str().unwrap(),
         screenpipe_config::DbConfig {
             read_pool_max: 1,
             read_pool_min: 1,

@@ -819,22 +819,6 @@ pub(crate) async fn spawn_screenpipe_inner(
     state: &RecordingState,
     app: tauri::AppHandle,
 ) -> Result<(), String> {
-    let resumed = crate::storage_migration::resume_before_startup(&app, state).await?;
-    let result = spawn_screenpipe_after_migration(state, app.clone()).await;
-    if let Some(resumed) = resumed {
-        crate::storage_migration::finish_startup(&app, resumed, result).await
-    } else {
-        if result.is_ok() {
-            crate::storage_migration::finish_recording_recovery(&app).await?;
-        }
-        result
-    }
-}
-
-async fn spawn_screenpipe_after_migration(
-    state: &RecordingState,
-    app: tauri::AppHandle,
-) -> Result<(), String> {
     info!(
         "spawn_screenpipe: starting server (capture intended: {})",
         state.capture_intended()
@@ -908,7 +892,7 @@ async fn spawn_screenpipe_after_migration(
     // Now we use boot-phase state as the source of truth:
     //   - "ready" → server is up, we're done
     //   - "error" → initial start failed, safe to take over and retry
-    //   - "migrating_database" / "building_audio" / "starting_pipes" / "starting"
+    //   - "initializing_database" / "building_audio" / "starting_pipes" / "starting"
     //     → another thread is making progress, keep waiting no matter how long
     //
     // A 30-minute safety ceiling prevents a wedged start from hanging the app
@@ -987,7 +971,7 @@ async fn spawn_screenpipe_after_migration(
                     }
                 }
                 _ => {
-                    // starting | migrating_database | building_audio | starting_pipes
+                    // starting | initializing_database | building_audio | starting_pipes
                     // — keep waiting, progress is being made.
                 }
             }
@@ -1170,7 +1154,9 @@ async fn spawn_screenpipe_after_migration(
     let data_dir = match config::resolve_data_dir(&store.data_dir) {
         Ok(resolved) => resolved,
         Err(error) => {
-            let message = format!("Failed to initialize database: cannot access recording data directory: {error}");
+            let message = format!(
+                "Failed to initialize database: cannot access recording data directory: {error}"
+            );
             crate::health::set_boot_error(&message);
             state.is_starting.store(false, Ordering::SeqCst);
             state.is_starting_capture.store(false, Ordering::SeqCst);
@@ -1351,7 +1337,6 @@ async fn spawn_screenpipe_after_migration(
     match result_rx.await {
         Ok(Ok(())) => {
             info!("Screenpipe started successfully");
-            crate::db_relaunch::reset_db_boot_failures();
             state.is_starting.store(false, Ordering::SeqCst);
             state.is_starting_capture.store(false, Ordering::SeqCst);
             // A meeting that was in progress when this restart began is still

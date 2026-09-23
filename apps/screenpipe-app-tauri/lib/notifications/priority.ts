@@ -18,7 +18,6 @@ const LEGACY_HIGH_SIGNAL_TITLES = [
   "recording stopped",
   "capture paused",
   "not capturing",
-  "database needs recovery",
   "live transcript not flowing",
   "audio paused",
 ];
@@ -41,8 +40,7 @@ function legacyNeedsAttention(
   if (
     type === "capture_stall" ||
     type === "capturestalls" ||
-    type === "disk_pressure" ||
-    type === "db_recovery"
+    type === "disk_pressure"
   ) {
     return true;
   }

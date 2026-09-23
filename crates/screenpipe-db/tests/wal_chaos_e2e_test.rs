@@ -403,7 +403,7 @@ async fn verify_after_crash(db_path: &Path, cycle: usize, phase: &str) -> i64 {
 
 async fn run_wal_process_crash_restart_chaos(cycles: usize) {
     let dir = tempfile::tempdir().expect("chaos temp directory");
-    let db_path = dir.path().join("db.sqlite");
+    let db_path = dir.path().join("capture.sqlite");
     let executable = std::env::current_exe().expect("current test executable");
     let phases = [
         "active-write",

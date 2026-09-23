@@ -398,10 +398,6 @@ async fn main() -> anyhow::Result<()> {
             screenpipe_engine::cli::auth::handle_auth_command(subcommand).await?;
             return Ok(());
         }
-        Command::Db { ref subcommand } => {
-            screenpipe_engine::cli::db::handle_db_command(subcommand).await?;
-            return Ok(());
-        }
         Command::Storage {
             ref operation,
             ref root,
@@ -740,19 +736,20 @@ async fn main() -> anyhow::Result<()> {
 
     let audio_devices_clone = audio_devices.clone();
 
-
-
     // This helps track users who may have screen capture issues due to old macOS
 
+    screenpipe_db::DatabaseManager::ensure_hybrid_storage(
+        &local_data_dir,
+        config.db_config.clone(),
+    )
+    .await?;
     let database_path =
         screenpipe_db::storage::resolve_database_path(&local_data_dir.join("db.sqlite"))?;
-    let (db, startup_guard) = loop {
+    let db = loop {
         let open = async {
-            let startup_guard =
-                screenpipe_engine::cli::db::prepare_database_startup(&local_data_dir).await?;
             DatabaseManager::new(&database_path.to_string_lossy(), config.db_config.clone())
                 .await
-                .map(|database| (Arc::new(database), startup_guard))
+                .map(Arc::new)
                 .map_err(anyhow::Error::from)
         };
         let result = tokio::select! {
@@ -763,7 +760,8 @@ async fn main() -> anyhow::Result<()> {
         match result {
             Ok(database) => break database,
             Err(error) if screenpipe_db::sqlite_confirmed_corruption_exists(&database_path) => {
-                return Err(error).context("database damage verified; recording stopped for protected repair (`screenpipe db recover`)");
+                return Err(error)
+                    .context("database damage verified; recording stopped to protect data");
             }
             Err(error) => {
                 warn!(
@@ -1588,7 +1586,6 @@ async fn main() -> anyhow::Result<()> {
     let router = server.try_create_router().await?;
     let server_address = SocketAddr::new(IpAddr::V4(config.listen_address), config.port);
     let listener = screenpipe_engine::server::bind_listener(server_address).await?;
-    drop(startup_guard);
     info!("Server listening on {}", server_address);
     if server.advertise_mdns {
         if let Err(error) = screenpipe_connect::mdns::advertise(config.port) {

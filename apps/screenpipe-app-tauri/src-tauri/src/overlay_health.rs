@@ -554,7 +554,7 @@ fn push_state(app: &tauri::AppHandle, state: OverlayHealthState, detail: Option<
 fn boot_phase_detail() -> &'static str {
     match crate::health::get_boot_phase_snapshot().phase.as_str() {
         "starting" => "正在启动引擎",
-        "migrating_database" => "正在更新数据库",
+        "initializing_database" => "正在初始化数据库",
         "building_audio" => "正在启动音频",
         "starting_pipes" => "正在加载定时任务",
         _ => "",
