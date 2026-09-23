@@ -554,10 +554,6 @@ export const useKeywordSearchStore = create<KeywordSearchState>((set, get) => ({
 				params.append("order", options.order);
 			}
 
-			if (options.limit) {
-				params.append("limit", options.limit.toString());
-			}
-
 			const response = await localFetch(
 				`/search/records?${params}`,
 				{ signal: combinedSignal },

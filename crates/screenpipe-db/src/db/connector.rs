@@ -536,7 +536,10 @@ impl DatabaseManager {
         query: &str,
         limit: u32,
     ) -> Result<Vec<ConnectorObjectRow>, SqlxError> {
-        let projected = crate::text_normalizer::chinese_project(query);
+        let projected =
+            crate::text_normalizer::sanitize_fts5_query(&crate::text_normalizer::chinese_project(
+                query,
+            ));
         let limit = limit.max(1) as i64;
         let rows: Vec<(String, String, String, String, f64)> = sqlx::query_as(
             "SELECT f.connector, f.namespace, f.object_kind, f.object_id, \
@@ -626,7 +629,9 @@ impl DatabaseManager {
                 .await?;
             (rows, total)
         } else {
-            let projected = crate::text_normalizer::chinese_project(trimmed);
+            let projected = crate::text_normalizer::sanitize_fts5_query(
+                &crate::text_normalizer::chinese_project(trimmed),
+            );
             let page_sql = format!(
                 "SELECT o.connector, o.namespace, o.object_kind, o.object_id, o.revision, \
                  o.title, o.body_text, o.event_at, o.fetched_at, o.source_url, o.state \
@@ -692,7 +697,9 @@ impl DatabaseManager {
                 .fetch_all(&self.pool)
                 .await;
         }
-        let projected = crate::text_normalizer::chinese_project(trimmed);
+        let projected = crate::text_normalizer::sanitize_fts5_query(
+            &crate::text_normalizer::chinese_project(trimmed),
+        );
         let sql = format!(
             "SELECT o.connector, o.namespace, o.object_kind, o.object_id, o.revision, o.title, o.body_text, o.event_at, o.fetched_at, o.source_url, o.state FROM connector_objects_fts f JOIN connector_objects o ON o.connector = f.connector AND o.namespace = f.namespace AND o.object_kind = f.object_kind AND o.object_id = f.object_id WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} GROUP BY o.connector, o.namespace, o.object_kind, o.object_id ORDER BY strftime('%s', COALESCE(o.event_at, o.fetched_at)) DESC LIMIT ?4",
         );
@@ -723,7 +730,9 @@ impl DatabaseManager {
                 .fetch_one(&self.pool)
                 .await;
         }
-        let projected = crate::text_normalizer::chinese_project(trimmed);
+        let projected = crate::text_normalizer::sanitize_fts5_query(
+            &crate::text_normalizer::chinese_project(trimmed),
+        );
         let sql = format!(
             "SELECT COUNT(*) FROM (SELECT o.connector, o.namespace, o.object_kind, o.object_id FROM connector_objects_fts f JOIN connector_objects o ON o.connector = f.connector AND o.namespace = f.namespace AND o.object_kind = f.object_kind AND o.object_id = f.object_id WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} GROUP BY o.connector, o.namespace, o.object_kind, o.object_id)",
         );

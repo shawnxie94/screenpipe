@@ -255,3 +255,77 @@ async fn connector_search_page_matches_browses_and_counts() {
         .unwrap();
     assert_eq!(total, 0);
 }
+
+#[tokio::test]
+async fn connector_fts_survives_query_syntax_characters() {
+    // Raw user text reaches connector FTS from the ⌘K 全部/接入 scopes and the
+    // office provider search. FTS5 operators in that text (quotes, parens,
+    // AND/OR/NOT, bare minus) used to raise `fts5: syntax error` and take the
+    // whole unified search down with a 500 even though the other legs were
+    // fine. Sanitizing must turn such input into a literal-token query.
+    let db = test_db().await;
+    let draft = ConnectorObjectDraft {
+        connector: "office:feishu".into(),
+        namespace: "acct-1".into(),
+        object_kind: "message".into(),
+        object_id: "m-1".into(),
+        title: Some("pi agent".into()),
+        body_text: "pi agent 发布会".into(),
+        content_hash: Some("hash-1".into()),
+        fetched_at: Utc::now(),
+        ..Default::default()
+    };
+    db.connector_upsert_object(&draft).await.unwrap();
+
+    let poison = [
+        "pi \"agent\" OR (",
+        "agent NOT",
+        "(unbalanced",
+        "a-b \"c",
+        "C++",
+    ];
+    for q in poison {
+        let (page, total) = db
+            .connector_search_page(q, None, None, 10, 0)
+            .await
+            .unwrap_or_else(|e| panic!("connector_search_page poisoned by {q:?}: {e}"));
+        assert_eq!(
+            total as usize,
+            page.len(),
+            "page/count disagree for {q:?}"
+        );
+        db.connector_search_time_page(q, None, None, 10)
+            .await
+            .unwrap_or_else(|e| panic!("connector_search_time_page poisoned by {q:?}: {e}"));
+        db.connector_search_time_count(q, None, None)
+            .await
+            .unwrap_or_else(|e| panic!("connector_search_time_count poisoned by {q:?}: {e}"));
+    }
+
+    // A clean query still matches after sanitization.
+    let (page, total) = db
+        .connector_search_page("pi agent", None, None, 10, 0)
+        .await
+        .unwrap();
+    assert_eq!(total, 1);
+    assert_eq!(page[0].object_id, "m-1");
+}
+
+#[tokio::test]
+async fn office_search_survives_query_syntax_characters() {
+    let db = test_db().await;
+    db.office_upsert_object(&draft("message", "m-1", "pi agent 发布会"))
+        .await
+        .unwrap();
+    for q in ["pi \"agent\" OR (", "agent NOT", "(unbalanced"] {
+        db.office_search(Some("feishu"), q, 10)
+            .await
+            .unwrap_or_else(|e| panic!("office_search poisoned by {q:?}: {e}"));
+    }
+    let hits = db
+        .office_search(Some("feishu"), "pi agent", 10)
+        .await
+        .unwrap();
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].0.object_id, "m-1");
+}

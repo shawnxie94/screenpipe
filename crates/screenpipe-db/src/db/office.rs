@@ -789,7 +789,9 @@ impl DatabaseManager {
         query: &str,
         limit: u32,
     ) -> Result<Vec<(OfficeObjectRow, f64)>, SqlxError> {
-        let projected = crate::text_normalizer::chinese_project(query);
+        let projected = crate::text_normalizer::sanitize_fts5_query(
+            &crate::text_normalizer::chinese_project(query),
+        );
         let limit = limit.max(1) as i64;
         let rows: Vec<(String, String, String, String, f64)> = sqlx::query_as(
             "SELECT f.connector, f.namespace, f.object_kind, f.object_id, \
