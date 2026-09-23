@@ -31,6 +31,7 @@ export interface BrowserIpcMockOptions {
   apiPort: number;
   apiKey?: string;
   onStoreChange?: (change: StoreChange) => void;
+  onEvent?: (event: string, payload: unknown) => void;
   warn?: (message: string) => void;
 }
 
