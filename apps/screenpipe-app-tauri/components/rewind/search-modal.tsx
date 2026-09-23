@@ -100,7 +100,8 @@ const PROVIDER_LABELS: Record<string, string> = {
 };
 
 // Locally imported document (手动导入的本地文档) — /documents/search results.
-// Rows reveal the original file (or managed copy) instead of navigating.
+// Rows open an in-modal preview over the derived text; reveal stays available
+// from the preview header.
 interface DocumentHit {
   sha256: string;
   file_name: string;
@@ -113,6 +114,15 @@ interface DocumentHit {
 }
 
 const documentHitKey = (hit: DocumentHit) => `${hit.sha256}/${hit.ordinal}`;
+
+// Drill-down preview of one imported document: the derived text chunks
+// returned by GET /documents/content, in import order.
+interface DocumentPreview {
+  hit: DocumentHit;
+  loading: boolean;
+  chunks: Array<{ ordinal: number; body: string }> | null;
+  error: string | null;
+}
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -841,6 +851,9 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   const [documentResults, setDocumentResults] = useState<DocumentHit[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isImportingDocuments, setIsImportingDocuments] = useState(false);
+  const [documentPreview, setDocumentPreview] = useState<DocumentPreview | null>(null);
+  const documentPreviewRef = useRef<DocumentPreview | null>(null);
+  documentPreviewRef.current = documentPreview;
   const documentRequestRef = useRef(0);
   const documentResultsRef = useRef<DocumentHit[]>([]);
   documentResultsRef.current = documentResults;
@@ -1254,7 +1267,9 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     }
 
     if (contentFilter === "documents") {
-      if (isLoadingDocuments) return items;
+      // While the preview drill-down is open the list is hidden, so it owns no
+      // nav targets — Escape and the back button leave the preview instead.
+      if (isLoadingDocuments || documentPreview) return items;
       for (const hit of documentResults) {
         items.push({ kind: "document", id: documentHitKey(hit) });
       }
@@ -1295,6 +1310,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     contentFilter,
     debouncedQuery,
     documentHitKey,
+    documentPreview,
     documentResults,
     filteredChats,
     filteredResults,
@@ -1445,6 +1461,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       setAllTags([]);
       setSelectedSpeaker(null);
       setSelectedApp(null);
+      setDocumentPreview(null);
       setAppEntities([]);
       appRosterInFlightRef.current = false;
       setSpeakerTranscriptions([]);
@@ -1821,6 +1838,38 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
         title: "无法打开来源文件",
         description: err instanceof Error ? err.message : String(err),
         variant: "destructive",
+      });
+    }
+  }, []);
+
+  // Drill into a document's derived text without leaving the modal. Content
+  // comes from the imported chunks, so previewing never requires the original
+  // file to still exist on disk.
+  const openDocumentPreview = useCallback(async (hit: DocumentHit) => {
+    setDocumentPreview({ hit, loading: true, chunks: null, error: null });
+    try {
+      const resp = await localFetch(
+        `/documents/content?sha256=${encodeURIComponent(hit.sha256)}`,
+        { signal: AbortSignal.timeout(8000) },
+      );
+      const data = resp.ok ? await resp.json().catch(() => null) : null;
+      const chunks = (data?.data?.chunks ?? null) as DocumentPreview["chunks"];
+      if (!resp.ok || !chunks) {
+        setDocumentPreview({
+          hit,
+          loading: false,
+          chunks: null,
+          error: `无法读取文档内容（HTTP ${resp.status}）`,
+        });
+        return;
+      }
+      setDocumentPreview({ hit, loading: false, chunks, error: null });
+    } catch (err) {
+      setDocumentPreview({
+        hit,
+        loading: false,
+        chunks: null,
+        error: err instanceof Error ? err.message : String(err),
       });
     }
   }, []);
@@ -2344,10 +2393,14 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       switch (e.key) {
         case "Escape":
           // An app browse is a drill-down like the speaker one: back out of it
-          // first so Esc does not throw away the window on the way past.
+          // first so Esc does not throw away the window on the way past. Same
+          // for the document preview inside the 文档 scope.
           if (selectedApp) {
             e.preventDefault();
             handleBackFromApp();
+          } else if (documentPreviewRef.current) {
+            e.preventDefault();
+            setDocumentPreview(null);
           } else {
             onClose();
           }
@@ -2392,7 +2445,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
             );
             if (hit) {
               trackSearchResultSelected("document", "keyboard", "drilldown");
-              void revealDocumentHit(hit);
+              void openDocumentPreview(hit);
             }
           } else if (item.kind === "unified") {
             const result = unifiedResultsRef.current.find(
@@ -2439,7 +2492,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     // window was already gone by the time the bubble handler went back.
     const captureEscape = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (selectedApp || selectedSpeaker) return;
+      if (selectedApp || selectedSpeaker || documentPreviewRef.current) return;
       onClose();
     };
     document.addEventListener("keydown", captureEscape, true);
@@ -2702,14 +2755,14 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                 key={mode}
                 type="button"
                 aria-pressed={searchMode === mode}
-                title={mode === "keyword" ? "按关键词/时间排序（全类型）" : "按相关度排序（全类型）"}
+                title={mode === "keyword" ? "按关键词匹配（全类型）" : "按相关度排序（全类型）"}
                 onClick={() => { setSearchMode(mode); setNavIndex(0); }}
                 className={cn(
                   "inline-flex h-7 items-center rounded-md px-2 text-[11px] transition-colors",
                   searchMode === mode ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {mode === "keyword" ? "关键词/时间排序" : "相关度排序"}
+                {mode === "keyword" ? "关键词" : "相关度排序"}
               </button>
             ))}
           </div>
@@ -2728,7 +2781,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
               key={key}
               title={key === "input" ? "键盘和剪贴板" : label}
               aria-pressed={isActive}
-              onClick={() => { setContentFilter(key); setNavIndex(0); }}
+              onClick={() => { setContentFilter(key); setDocumentPreview(null); setNavIndex(0); }}
               className={cn(
                 "inline-flex h-7 min-w-[58px] items-center justify-center gap-1.5 rounded-md px-2.5 text-xs capitalize transition-colors",
                 isActive
@@ -2771,7 +2824,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
         <span>{activeNavItem.kind === "frame" ? "←→↑↓ 切换" : "↑↓ 切换"}</span>
         {/* Every non-chat row resolves to a moment — a frame, or the instant a
             line was typed or copied — and Enter opens the main timeline there. */}
-        <span>{activeNavItem.kind === "chat" ? "⏎ 打开聊天" : activeNavItem.kind === "connection" ? "⏎ 打开原文" : activeNavItem.kind === "document" ? "⏎ 显示原文件" : "⏎ 跳到时间线"}</span>
+        <span>{activeNavItem.kind === "chat" ? "⏎ 打开聊天" : activeNavItem.kind === "connection" ? "⏎ 打开原文" : activeNavItem.kind === "document" ? "⏎ 预览文档" : "⏎ 跳到时间线"}</span>
         {activeNavItem.kind === "frame" && (
           <span className="flex items-center gap-1" suppressHydrationWarning>
             <MessageSquare className="w-2.5 h-2.5" />
@@ -3430,9 +3483,66 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           )}
 
           {/* Locally imported documents (文档): FTS hits over manually imported
-              files. Rows reveal the original file in the file manager — there
-              is no frame to jump to, so Enter never navigates the timeline. */}
-          {contentFilter === "documents" && (
+              files. Clicking a row drills into an in-modal preview of the
+              derived text; the original file never has to exist for that. */}
+          {contentFilter === "documents" && documentPreview && (
+            <div className="flex flex-col gap-2 pt-1">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDocumentPreview(null)}
+                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <ArrowLeft className="h-3 w-3" />
+                  返回结果
+                </button>
+                <span className="text-sm font-medium truncate min-w-0">
+                  {documentPreview.hit.file_name}
+                </span>
+                <span className="shrink-0 px-1.5 py-px text-[10px] rounded-md border border-border text-muted-foreground">
+                  {documentPreview.hit.ext || "file"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void revealDocumentHit(documentPreview.hit)}
+                  className="ml-auto inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <FolderOpen className="h-3 w-3" />
+                  在文件夹中显示
+                </button>
+              </div>
+              {documentPreview.loading && (
+                <div className="flex items-center justify-center py-10 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              )}
+              {!documentPreview.loading && documentPreview.error && (
+                <div className="flex flex-col items-center gap-2 py-10 text-sm text-muted-foreground">
+                  <span>{documentPreview.error}</span>
+                  <button
+                    type="button"
+                    onClick={() => void openDocumentPreview(documentPreview.hit)}
+                    className="text-xs underline underline-offset-2 hover:text-foreground"
+                  >
+                    重试
+                  </button>
+                </div>
+              )}
+              {!documentPreview.loading && !documentPreview.error && documentPreview.chunks && (
+                <div className="rounded-md border border-border bg-background px-3 py-2">
+                  {documentPreview.chunks.map((chunk) => (
+                    <pre
+                      key={chunk.ordinal}
+                      className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90 font-sans py-1"
+                    >
+                      {chunk.body}
+                    </pre>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {contentFilter === "documents" && !documentPreview && (
             <>
               <div className="flex items-center justify-between px-2 pb-1">
                 <span className="text-xs text-muted-foreground">
@@ -3474,7 +3584,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                         data-nav-index={pos}
                         onClick={() => {
                           trackSearchResultSelected("document", "click", "drilldown");
-                          void revealDocumentHit(hit);
+                          void openDocumentPreview(hit);
                         }}
                         onMouseEnter={() => pos !== undefined && setNavIndex(pos)}
                         className={cn(

@@ -40,6 +40,7 @@ pub(crate) fn documents_routes() -> Router<std::sync::Arc<AppState>> {
         .route("/import-failed", post(import_document_failed))
         .route("/search", get(search_documents))
         .route("/list", get(list_documents))
+        .route("/content", get(document_content))
         .route("/reveal", post(reveal_document))
         // Directory auto-ingest: watch-source CRUD plus the scan/location
         // reconciliation the native watcher drives.
@@ -313,6 +314,60 @@ async fn list_documents(
             format!("读取文档列表失败：{e}"),
         ),
     }
+}
+
+#[derive(Deserialize)]
+struct ContentQuery {
+    sha256: String,
+}
+
+/// GET /documents/content?sha256= — derived text chunks of one imported
+/// document, in order, plus its metadata. Backs the renderer's in-app
+/// document preview; the original file never has to exist for this to work.
+async fn document_content(
+    State(state): State<std::sync::Arc<AppState>>,
+    Query(q): Query<ContentQuery>,
+) -> Response {
+    let doc = match state.db.document_get(&q.sha256).await {
+        Ok(Some(doc)) => doc,
+        Ok(None) => {
+            return err_json(StatusCode::NOT_FOUND, "not_found", "文档不存在".to_string());
+        }
+        Err(e) => {
+            return err_json(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "db_failed",
+                format!("读取文档记录失败：{e}"),
+            );
+        }
+    };
+    let chunks = match state.db.document_chunks(&q.sha256).await {
+        Ok(chunks) => chunks,
+        Err(e) => {
+            return err_json(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "db_failed",
+                format!("读取文档内容失败：{e}"),
+            );
+        }
+    };
+    (
+        StatusCode::OK,
+        Json(json!({
+            "data": {
+                "sha256": doc.sha256,
+                "file_name": doc.file_name,
+                "ext": doc.ext,
+                "original_path": doc.original_path,
+                "managed_path": doc.managed_path,
+                "imported_at": doc.imported_at,
+                "chunks": chunks.into_iter()
+                    .map(|(ordinal, body)| json!({ "ordinal": ordinal, "body": body }))
+                    .collect::<Vec<_>>(),
+            }
+        })),
+    )
+        .into_response()
 }
 
 #[derive(Deserialize)]

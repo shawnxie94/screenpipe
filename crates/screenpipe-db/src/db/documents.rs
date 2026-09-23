@@ -455,6 +455,18 @@ impl DatabaseManager {
         .await
     }
 
+    /// Derived text chunks of one imported document, in import order. Backs
+    /// the renderer's in-app document preview.
+    pub async fn document_chunks(&self, sha256: &str) -> Result<Vec<(i64, String)>, sqlx::Error> {
+        sqlx::query_as(
+            "SELECT ordinal, body FROM source_document_chunks \
+             WHERE sha256 = ?1 ORDER BY ordinal",
+        )
+        .bind(sha256)
+        .fetch_all(&self.pool)
+        .await
+    }
+
     /// Import status listing (all states) for observability surfaces.
     pub async fn document_list(&self, limit: u32) -> Result<Vec<LocalDocumentRow>, sqlx::Error> {
         sqlx::query_as::<_, LocalDocumentRow>(
