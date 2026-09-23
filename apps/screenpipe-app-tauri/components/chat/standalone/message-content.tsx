@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Calendar, ChevronDown, ChevronRight, ChevronUp, KeyRound, Loader2, Plug, RefreshCw, ShieldCheck } from "lucide-react";
 import { SourceCitationFooter } from "@/components/chat/source-citation-footer";
+import { getApiBaseUrl } from "@/lib/api";
 import {
   MarkdownBlock,
   type MarkdownBlockOptions,
@@ -95,7 +96,11 @@ function effectiveCommand(toolCall: ToolCall): string | null {
   if (toolCall.toolName === "bash") {
     return String(toolCall.args?.command ?? "") || null;
   }
-  return mcpScreenpipeCommand(toolCall.toolName, (toolCall.args ?? {}) as Record<string, unknown>);
+  return mcpScreenpipeCommand(
+    toolCall.toolName,
+    (toolCall.args ?? {}) as Record<string, unknown>,
+    getApiBaseUrl(),
+  );
 }
 
 function extractAppFromToolCall(toolCall: ToolCall): string | undefined {

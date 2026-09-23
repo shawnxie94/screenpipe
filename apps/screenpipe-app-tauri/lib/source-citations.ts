@@ -504,8 +504,10 @@ function normalizeToolName(toolName: string): string {
 }
 
 function extractScreenpipeApiCalls(command: string): string[] {
+  // Any localhost port: production runs on 3030, dev builds on an isolated
+  // port (3130), and localhost in a chat command is always the local API.
   const matches = command.match(
-    /(?:https?:\/\/)?(?:localhost|127\.0\.0\.1):3030\/[^\s"'`)<]+/g
+    /(?:https?:\/\/)?(?:localhost|127\.0\.0\.1)(?::\d+)?\/[^\s"'`)<]+/g
   );
   return matches ?? [];
 }
@@ -670,7 +672,7 @@ function extractPath(call: string): string {
   try {
     return new URL(normalized).pathname || "/";
   } catch {
-    const match = normalized.match(/:3030(\/[^?\s"'`)]*)/);
+    const match = normalized.match(/:\d+(\/[^?\s"'`)]*)/);
     return match?.[1] ?? "/";
   }
 }
@@ -786,7 +788,8 @@ function cleanUrl(url: string): string | undefined {
 function isLocalScreenpipeUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    return (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") && parsed.port === "3030";
+    // Any localhost port: 3030 in production, isolated port in dev builds.
+    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
   } catch {
     return false;
   }

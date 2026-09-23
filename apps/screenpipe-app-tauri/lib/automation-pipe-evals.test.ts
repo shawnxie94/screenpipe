@@ -50,7 +50,7 @@ describe("Automate My Work evaluations", () => {
     expect(prompt).toContain("不要请求审批");
     expect(prompt).toContain("schedule: manual");
     expect(prompt).toContain("artifacts:");
-    expect(prompt).toContain("POST http://localhost:3030/pipes/<slug>/run");
+    expect(prompt).toContain("POST `$SCREENPIPE_LOCAL_API_URL`/pipes/<slug>/run");
     expect(prompt).toContain("只有在 CREATE 测试成功后");
     expect(prompt).toContain("如果管道没有声明产物");
     expect(prompt).toContain("Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY");
@@ -62,7 +62,8 @@ describe("Automate My Work evaluations", () => {
     expect(prompt).toContain("这只能证明被跟踪的运行已开始");
     expect(prompt).toContain("不要推断缺少提供商或 API 密钥");
     expect(prompt).toContain("不要用 screenpipe CLI");
-    expect(prompt).not.toContain("GET http://localhost:3030/raw_sql");
+    expect(prompt).not.toContain("GET localhost:3030/raw_sql");
+    expect(prompt).not.toContain("3030");
     expect(prompt).not.toContain("0–3 pipes");
     expect(prompt).not.toContain("schedule: every 1h\nenabled: true");
   });
@@ -129,7 +130,7 @@ describe("Automate My Work evaluations", () => {
     expect(bundledTemplate).toContain("把完整的后续提示词打印在一个可复制的围栏代码块里");
     expect(bundledTemplate).toContain("schedule: manual");
     expect(bundledTemplate).toContain("artifacts:");
-    expect(bundledTemplate).toContain("POST `http://localhost:3030/pipes/<slug>/run`");
+    expect(bundledTemplate).toContain("POST `$SCREENPIPE_LOCAL_API_URL`/pipes/<slug>/run");
     expect(bundledTemplate).toContain("只有在 CREATE 测试成功后");
     expect(bundledTemplate).toContain("Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY");
     expect(bundledTemplate).toContain("在其一次允许的 `Retry-After` 重试后");
@@ -139,7 +140,8 @@ describe("Automate My Work evaluations", () => {
     expect(bundledTemplate).toContain("这只能证明被跟踪的运行已开始");
     expect(bundledTemplate).toContain("不要推断缺少提供商或 API 密钥");
     expect(bundledTemplate).toContain("不要用 screenpipe CLI");
-    expect(bundledTemplate).not.toContain("GET http://localhost:3030/raw_sql");
+    expect(bundledTemplate).not.toContain("GET localhost:3030/raw_sql");
+    expect(bundledTemplate).not.toContain("3030");
     expect(bundledTemplate).not.toContain("0–3 pipes");
     expect(bundledTemplate).not.toContain("schedule: every 1h\nenabled: true");
   });

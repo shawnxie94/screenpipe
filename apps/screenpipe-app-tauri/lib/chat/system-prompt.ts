@@ -182,7 +182,7 @@ export function buildConnectionsContext(
   const entries = withDesc
     .map((c) => `## ${c.name} (${c.id})\n${c.description}`)
     .join("\n\n");
-  return `\n\n# 已连接集成\n\n用户已连接以下外部服务。相关问题应使用各服务列出的端点获取实时数据。所有端点都位于 http://localhost:3030，并要求使用 \`-H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY"\`。\n\n${entries}`;
+  return `\n\n# 已连接集成\n\n用户已连接以下外部服务。相关问题应使用各服务列出的端点获取实时数据。所有端点都位于 \`$SCREENPIPE_LOCAL_API_URL\`（环境变量已设好，直接使用，不要假设端口），并要求使用 \`-H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY"\`。\n\n${entries}`;
 }
 
 function normalizedTokens(value: string): string[] {

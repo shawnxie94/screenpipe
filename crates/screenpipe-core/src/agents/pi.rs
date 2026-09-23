@@ -618,7 +618,10 @@ impl PiExecutor {
             ),
         ];
 
-        // Clean up deprecated skills from the 8→2 consolidation.
+        // Clean up deprecated skills from the 8→2 consolidation, plus the
+        // removed knowledge-domain and pre-consolidation baseline skills that
+        // older installs still carry in `.pi/skills`. Stale copies here are
+        // what make chat agents introduce capabilities that no longer exist.
         // Only removes known old names so user-created skills are preserved.
         let deprecated = [
             "screenpipe-analytics",
@@ -630,6 +633,10 @@ impl PiExecutor {
             "screenpipe-retranscribe",
             "screenpipe-search",
             "screenpipe-qa",
+            "knowledge-fetch",
+            "knowledge-distill",
+            "activity-summary",
+            "work-unit",
         ];
         let skills_root = project_dir.join(".pi").join("skills");
         for old in &deprecated {
@@ -3679,8 +3686,10 @@ mod tests {
         let api_skill = include_str!("../../assets/skills/screenpipe-api/SKILL.md");
         let cli_skill = include_str!("../../assets/skills/screenpipe-cli/SKILL.md");
 
+        // Wording after the hybrid-storage rewrite: the guard names the live
+        // storage index (and its SQLite sidecars) instead of one db.sqlite file.
         for skill in [api_skill, cli_skill] {
-            assert!(skill.contains("Never access live `db.sqlite`"));
+            assert!(skill.contains("Never access the live storage index"));
             assert!(!skill.contains("sqlite3 \"file:"));
         }
         assert!(api_skill.contains("MCP `query_recordings`"));

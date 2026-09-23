@@ -116,7 +116,10 @@ export function urlsInCommand(cmd: string): URL[] {
 }
 
 export function isLocalScreenpipeUrl(url: URL): boolean {
-  return (url.hostname === "localhost" || url.hostname === "127.0.0.1") && url.port === "3030";
+  // Any localhost port counts: production runs on 3030, dev builds on an
+  // isolated port (3130), and a chat command's only localhost target is the
+  // local Screenpipe API. External web links always use real hostnames.
+  return url.hostname === "localhost" || url.hostname === "127.0.0.1";
 }
 
 export function domainForUrl(url: URL): string {
@@ -836,6 +839,7 @@ export function presentMcpStartup(
 export function mcpScreenpipeCommand(
   toolName: string,
   args: Record<string, unknown> = {},
+  base = "http://localhost:3030",
 ): string | null {
   let name: string;
   if (/^mcp__screenpipe__/i.test(toolName)) {
@@ -847,7 +851,6 @@ export function mcpScreenpipeCommand(
     return null;
   }
 
-  const base = "http://localhost:3030";
   const endpoint = MCP_SCREENPIPE_ENDPOINTS[name];
   if (!endpoint) {
     // A screenpipe MCP tool we haven't mapped: a bare local URL still reads as

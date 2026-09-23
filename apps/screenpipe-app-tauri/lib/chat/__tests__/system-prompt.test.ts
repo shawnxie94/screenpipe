@@ -137,7 +137,10 @@ describe("buildConnectionsContext", () => {
     const out = buildConnectionsContext([
       { id: "gcal", name: "Google Calendar", description: "Read events" },
     ]);
-    expect(out).toContain("http://localhost:3030");
+    // The env var is the contract — never a hardcoded port, so a dev build on
+    // its isolated port cannot be pointed at production's 3030.
+    expect(out).toContain("$SCREENPIPE_LOCAL_API_URL");
+    expect(out).not.toContain("http://localhost:3030");
     expect(out).toContain("SCREENPIPE_LOCAL_API_KEY");
   });
 
