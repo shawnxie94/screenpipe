@@ -49,6 +49,12 @@ async fn text_becomes_searchable_with_snippets() {
     assert_eq!(hit.file_name, "规格说明.md");
     assert!(hit.managed_path.as_deref().unwrap().contains("bbb"));
     assert!(!hit.snippet.is_empty(), "fts hit should carry a snippet");
+    // The snippet must quote the ORIGINAL text: the FTS column stores the CJK
+    // projection (`cu核 cb核心`), and leaking those tokens into the UI is what
+    // made Chinese document hits unreadable.
+    assert!(hit.snippet.contains("核心技术"), "snippet: {}", hit.snippet);
+    assert!(!hit.snippet.contains("cu核"), "snippet: {}", hit.snippet);
+    assert!(!hit.snippet.contains("cb核"), "snippet: {}", hit.snippet);
 
     // Empty query browses ready documents.
     let browse = db.document_search("", 10).await.unwrap();

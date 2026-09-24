@@ -181,6 +181,78 @@ fn fts_match_expression(query: &str) -> String {
         .join(" ")
 }
 
+/// Intermediate row for FTS hits: the join carries the ORIGINAL chunk body so
+/// snippets can be cut from real text. `source_documents_fts.body` stores the
+/// CJK projection (`cu临 cb临时`), and FTS5 `snippet()` only reads indexed
+/// columns — using it directly would surface internal tokens to the UI.
+#[derive(sqlx::FromRow)]
+struct DocumentHitRow {
+    sha256: String,
+    file_name: String,
+    ext: String,
+    original_path: Option<String>,
+    managed_path: Option<String>,
+    imported_at: String,
+    ordinal: i64,
+    chunk_body: String,
+}
+
+/// Cut a readable excerpt from the original chunk text around the first
+/// query term that appears; falls back to the head of the body when no term
+/// matches verbatim (prefix and wildcard hits).
+fn snippet_from_body(body: &str, query: &str) -> String {
+    const WINDOW: usize = 160;
+    const CONTEXT_BEFORE: usize = 24;
+    let body_chars: Vec<char> = body.chars().collect();
+    if body_chars.is_empty() {
+        return String::new();
+    }
+    let fold = |chars: &[char]| -> Vec<char> {
+        chars
+            .iter()
+            .map(|c| c.to_lowercase().next().unwrap_or(*c))
+            .collect()
+    };
+    let lower = fold(&body_chars);
+    let find = |term: &[char]| -> Option<usize> {
+        if term.is_empty() || term.len() > lower.len() {
+            return None;
+        }
+        lower.windows(term.len()).position(|w| w == term)
+    };
+
+    let mut hit = find(&fold(&query.chars().collect::<Vec<_>>()));
+    if hit.is_none() {
+        let mut tokens: Vec<&str> = query.split_whitespace().collect();
+        tokens.sort_by_key(|t| std::cmp::Reverse(t.chars().count()));
+        for token in tokens {
+            let folded = fold(&token.chars().collect::<Vec<_>>());
+            if let Some(i) = find(&folded) {
+                hit = Some(i);
+                break;
+            }
+        }
+    }
+
+    let (start, end) = match hit {
+        Some(i) => {
+            let s = i.saturating_sub(CONTEXT_BEFORE);
+            let e = (i + WINDOW - CONTEXT_BEFORE).min(body_chars.len());
+            (s, e)
+        }
+        None => (0, WINDOW.min(body_chars.len())),
+    };
+    let mut out = String::new();
+    if start > 0 {
+        out.push('…');
+    }
+    out.extend(&body_chars[start..end]);
+    if end < body_chars.len() {
+        out.push('…');
+    }
+    out
+}
+
 impl DatabaseManager {
     /// Record that a document's bytes are stored. Content-addressed: the
     /// second import of identical bytes returns `false` (duplicate) and
@@ -367,19 +439,32 @@ impl DatabaseManager {
             .await;
         }
         let match_expr = fts_match_expression(&crate::text_normalizer::chinese_project(trimmed));
-        sqlx::query_as::<_, LocalDocumentHit>(
+        let rows = sqlx::query_as::<_, DocumentHitRow>(
             "SELECT d.sha256, d.file_name, d.ext, d.original_path, d.managed_path, \
-             d.imported_at, f.ordinal, \
-             snippet(source_documents_fts, 0, '[', ']', ' … ', 16) AS snippet \
+             d.imported_at, f.ordinal, c.body AS chunk_body \
              FROM source_documents_fts f \
              JOIN source_documents d ON d.sha256 = f.sha256 \
+             JOIN source_document_chunks c ON c.sha256 = f.sha256 AND c.ordinal = f.ordinal \
              WHERE d.state = 'ready' AND source_documents_fts MATCH ?1 \
              ORDER BY bm25(source_documents_fts) LIMIT ?2",
         )
         .bind(&match_expr)
         .bind(limit)
         .fetch_all(&self.pool)
-        .await
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| LocalDocumentHit {
+                sha256: r.sha256,
+                file_name: r.file_name,
+                ext: r.ext,
+                original_path: r.original_path,
+                managed_path: r.managed_path,
+                imported_at: r.imported_at,
+                ordinal: r.ordinal,
+                snippet: snippet_from_body(&r.chunk_body, trimmed),
+            })
+            .collect())
     }
 
     /// Search ready documents in an optional imported-at time range.
@@ -403,14 +488,27 @@ impl DatabaseManager {
                 .await;
         }
         let match_expr = fts_match_expression(&crate::text_normalizer::chinese_project(trimmed));
-        let sql = format!("SELECT d.sha256, d.file_name, d.ext, d.original_path, d.managed_path, d.imported_at, f.ordinal, snippet(source_documents_fts, 0, '[', ']', ' … ', 16) AS snippet FROM source_documents_fts f JOIN source_documents d ON d.sha256 = f.sha256 WHERE d.state = 'ready' AND source_documents_fts MATCH ?3 {time_pred} ORDER BY bm25(source_documents_fts) LIMIT ?4");
-        sqlx::query_as::<_, LocalDocumentHit>(sqlx::AssertSqlSafe(sql.as_str()))
+        let sql = format!("SELECT d.sha256, d.file_name, d.ext, d.original_path, d.managed_path, d.imported_at, f.ordinal, c.body AS chunk_body FROM source_documents_fts f JOIN source_documents d ON d.sha256 = f.sha256 JOIN source_document_chunks c ON c.sha256 = f.sha256 AND c.ordinal = f.ordinal WHERE d.state = 'ready' AND source_documents_fts MATCH ?3 {time_pred} ORDER BY bm25(source_documents_fts) LIMIT ?4");
+        let rows = sqlx::query_as::<_, DocumentHitRow>(sqlx::AssertSqlSafe(sql.as_str()))
             .bind(start_time)
             .bind(end_time)
             .bind(match_expr)
             .bind(limit)
             .fetch_all(&self.pool)
-            .await
+            .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| LocalDocumentHit {
+                sha256: r.sha256,
+                file_name: r.file_name,
+                ext: r.ext,
+                original_path: r.original_path,
+                managed_path: r.managed_path,
+                imported_at: r.imported_at,
+                ordinal: r.ordinal,
+                snippet: snippet_from_body(&r.chunk_body, trimmed),
+            })
+            .collect())
     }
 
     /// Count top-level ready documents matching the same query and imported-at range.
