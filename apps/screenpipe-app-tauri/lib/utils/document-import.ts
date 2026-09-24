@@ -199,6 +199,21 @@ async function uploadErrorMessage(resp: Response): Promise<string> {
 export async function importAudioDocument(
   input: LocalDocumentImportInput,
 ): Promise<LocalDocumentImportResult> {
+  return importMediaDocument("import-audio", input);
+}
+
+/** Video import (mp4/mov/mkv): engine extracts the audio track for
+ *  transcription and OCRs sparse keyframes — one round trip, same shape. */
+export async function importVideoDocument(
+  input: LocalDocumentImportInput,
+): Promise<LocalDocumentImportResult> {
+  return importMediaDocument("import-video", input);
+}
+
+async function importMediaDocument(
+  endpoint: "import-audio" | "import-video",
+  input: LocalDocumentImportInput,
+): Promise<LocalDocumentImportResult> {
   let bytes: Uint8Array;
   try {
     bytes = await input.loadBytes();
@@ -215,13 +230,13 @@ export async function importAudioDocument(
   try {
     const params = new URLSearchParams({ filename: input.name });
     if (input.originalPath) params.set("original_path", input.originalPath);
-    const resp = await localFetch(`/documents/import-audio?${params}`, {
+    const resp = await localFetch(`/documents/${endpoint}?${params}`, {
       method: "POST",
       headers: { "Content-Type": "application/octet-stream" },
       body: bytes as unknown as BodyInit,
-      // Transcription is engine-side and synchronous; 15 min covers a
-      // 200 MB upload on a slow disk without hanging forever.
-      signal: AbortSignal.timeout(15 * 60_000),
+      // Transcription is engine-side and synchronous; 20 min covers a
+      // 500 MB video upload plus its transcription without hanging forever.
+      signal: AbortSignal.timeout(20 * 60_000),
     });
     const data = (await resp.json().catch(() => null)) as {
       sha256?: string;

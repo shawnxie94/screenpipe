@@ -38,6 +38,14 @@ const AUDIO_EXTS: &[&str] = &["mp3", "wav", "m4a", "webm"];
 /// synchronous — the cap keeps one upload from monopolizing the ASR model.
 const MAX_AUDIO_BYTES: i64 = 200 * 1024 * 1024;
 
+/// Video import (第 4 步): audio-track transcription + sparse keyframe OCR.
+/// The plan explicitly forbids per-frame vision model calls — OCR only.
+const VIDEO_EXTS: &[&str] = &["mp4", "mov", "mkv"];
+const MAX_VIDEO_BYTES: i64 = 500 * 1024 * 1024;
+/// One keyframe every N seconds: sparse by design.
+const KEYFRAME_INTERVAL_SECS: u64 = 20;
+const MAX_KEYFRAMES: usize = 60;
+
 /// Same guard as the chat attachment path: refuse to slurp huge files.
 const MAX_DOC_BYTES: i64 = 25 * 1024 * 1024;
 
@@ -45,12 +53,14 @@ pub(crate) fn documents_routes() -> Router<std::sync::Arc<AppState>> {
     Router::new()
         .route("/import", post(import_document))
         .route("/import-audio", post(import_document_audio))
+        .route("/import-video", post(import_document_video))
         .route("/import-text", post(import_document_text))
         .route("/import-failed", post(import_document_failed))
         .route("/search", get(search_documents))
         .route("/list", get(list_documents))
         .route("/content", get(document_content))
         .route("/audio", get(document_audio))
+        .route("/media", get(document_audio))
         .route("/reveal", post(reveal_document))
         // Directory auto-ingest: watch-source CRUD plus the scan/location
         // reconciliation the native watcher drives.
@@ -387,12 +397,270 @@ async fn import_document_audio(
     }
 }
 
+/// Extract sparse keyframes as JPEGs via a single ffmpeg pass. Timestamp of
+/// frame i is i * interval_secs (the fps filter spaces frames evenly).
+fn extract_keyframes_sync(
+    path: &std::path::Path,
+    out_dir: &std::path::Path,
+    interval_secs: u64,
+    max_frames: usize,
+) -> std::io::Result<Vec<PathBuf>> {
+    use screenpipe_core::ffmpeg::find_ffmpeg_path;
+
+    let Some(ffmpeg_path) = find_ffmpeg_path() else {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "ffmpeg not found",
+        ));
+    };
+    std::fs::create_dir_all(out_dir)?;
+    let pattern = out_dir.join("frame%05d.jpg");
+    let mut command = screenpipe_core::ffmpeg_cmd(ffmpeg_path);
+    command
+        .args([
+            "-i",
+            path.to_str().ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidInput, "non-UTF-8 path")
+            })?,
+            "-vf",
+            &format!("fps=1/{}", interval_secs),
+            "-frames:v",
+            &max_frames.to_string(),
+            "-q:v",
+            "2",
+            "-y",
+            pattern.to_str().ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidInput, "non-UTF-8 pattern")
+            })?,
+        ])
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    let status = command.status()?;
+    if !status.success() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("ffmpeg keyframe extraction failed: {status}"),
+        ));
+    }
+    let mut frames: Vec<PathBuf> = std::fs::read_dir(out_dir)?
+        .filter_map(|entry| entry.ok().map(|e| e.path()))
+        .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("jpg"))
+        .collect();
+    frames.sort();
+    Ok(frames)
+}
+
+/// OCR one keyframe (Apple Vision on macOS). Returns trimmed text.
+#[cfg(target_os = "macos")]
+fn ocr_keyframe(path: &std::path::Path) -> Option<String> {
+    use screenpipe_screen::perform_ocr_apple;
+
+    let bytes = std::fs::read(path).ok()?;
+    let image = image::load_from_memory(&bytes).ok()?;
+    // 与采集侧一致的强制语言集：中文（简体）+ 英文
+    let (text, _, _) = perform_ocr_apple(
+        &image,
+        &[screenpipe_core::Language::Chinese, screenpipe_core::Language::English],
+    );
+    let squeezed: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    (squeezed.chars().count() >= 2).then_some(squeezed)
+}
+
+/// Keyframe OCR is Apple-Vision-backed; other platforms degrade to
+/// audio-track-only transcription rather than failing the import.
+#[cfg(not(target_os = "macos"))]
+fn ocr_keyframe(_path: &std::path::Path) -> Option<String> {
+    None
+}
+
+/// Import a video: managed copy + audio-track transcription (windowed,
+/// timestamped) + sparse keyframe OCR. Either leg may come back empty
+/// (silent video, no OCR on this platform); only an entirely empty result
+/// is a failure.
+async fn import_document_video(
+    State(state): State<std::sync::Arc<AppState>>,
+    Query(q): Query<ImportQuery>,
+    body: axum::body::Bytes,
+) -> Response {
+    let filename = q.filename.trim().to_string();
+    if filename.is_empty() {
+        return err_json(StatusCode::BAD_REQUEST, "missing_filename", "缺少文件名".to_string());
+    }
+    let ext = ext_of(&filename);
+    if !VIDEO_EXTS.contains(&ext.as_str()) {
+        return err_json(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "unsupported_type",
+            format!("不支持的视频类型 .{ext}"),
+        );
+    }
+    let size = body.len() as i64;
+    if size == 0 {
+        return err_json(StatusCode::BAD_REQUEST, "empty_file", format!("{filename} 是空文件"));
+    }
+    if size > MAX_VIDEO_BYTES {
+        let mb = format!("{:.1}", size as f64 / (1024.0 * 1024.0));
+        return err_json(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "too_large",
+            format!("{filename} 过大（{mb} MB），最大支持 500 MB"),
+        );
+    }
+
+    let mut hasher = sha2::Sha256::new();
+    Digest::update(&mut hasher, &body[..]);
+    let sha256 = hex::encode(Digest::finalize(hasher));
+
+    let managed_path =
+        match store_managed_copy(&state.screenpipe_dir, &sha256, &ext, &body) {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::warn!("video managed copy failed for {filename}: {e}");
+                return err_json(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "store_failed",
+                    format!("保存视频副本失败：{e}"),
+                );
+            }
+        };
+
+    let created = match state
+        .db
+        .document_import_stored(
+            &sha256,
+            &filename,
+            &ext,
+            size,
+            q.original_path.as_deref(),
+            Some(managed_path.display().to_string()).as_deref(),
+        )
+        .await
+    {
+        Ok(created) => created,
+        Err(e) => {
+            tracing::warn!("video document metadata write failed: {e}");
+            return err_json(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "db_failed",
+                format!("写入视频记录失败：{e}"),
+            );
+        }
+    };
+    if !created {
+        return (StatusCode::OK, Json(json!({ "sha256": sha256, "status": "duplicate" })))
+            .into_response();
+    }
+
+    // --- Leg 1: audio track (silent videos degrade gracefully) ------------
+    let (segments, duration_secs) = match transcribe_audio_file(&state, &managed_path).await {
+        Ok(result) => result,
+        Err(error) => {
+            tracing::info!("video {filename}: no usable audio track ({error}); continuing with keyframes");
+            (Vec::new(), 0.0)
+        }
+    };
+
+    // --- Leg 2: sparse keyframe OCR ---------------------------------------
+    let mut timed: Vec<(f64, String)> = segments
+        .into_iter()
+        .map(|s| (s.start_secs, s.text))
+        .collect();
+    {
+        let video_path = managed_path.clone();
+        let interval = KEYFRAME_INTERVAL_SECS;
+        let extracted = tokio::task::spawn_blocking(move || {
+            let temp_dir = tempfile::tempdir()?;
+            let frames =
+                extract_keyframes_sync(&video_path, temp_dir.path(), interval, MAX_KEYFRAMES)?;
+            let mut ocred: Vec<(f64, String)> = Vec::with_capacity(frames.len());
+            for (index, frame) in frames.iter().enumerate() {
+                if let Some(text) = ocr_keyframe(frame) {
+                    ocred.push(((index as u64 * interval) as f64, text));
+                }
+            }
+            Ok::<_, std::io::Error>(ocred)
+        })
+        .await
+        .map_err(|e| format!("关键帧任务失败：{e}"));
+        match extracted {
+            // 闭包自身返回 io::Result，spawn_blocking 再包一层 JoinResult
+            Ok(Ok(frames)) => timed.extend(frames),
+            Ok(Err(error)) => {
+                tracing::info!("video {filename}: keyframe extraction skipped ({error})");
+            }
+            Err(error) => {
+                tracing::info!("video {filename}: keyframe extraction skipped ({error})");
+            }
+        }
+    }
+    let duration_secs = if duration_secs > 0.0 {
+        duration_secs
+    } else {
+        ((MAX_KEYFRAMES as u64) * KEYFRAME_INTERVAL_SECS) as f64
+    };
+
+    if timed.is_empty() {
+        let _ = state
+            .db
+            .document_mark_failed(
+                Some(&sha256),
+                &filename,
+                &ext,
+                size,
+                q.original_path.as_deref(),
+                "未从视频中提取到语音或画面文字",
+            )
+            .await;
+        return err_json(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "empty_transcription",
+            "未从视频中提取到语音或画面文字".to_string(),
+        );
+    }
+
+    timed.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+    let truncated = timed.len() > MAX_AUDIO_CHUNKS;
+    let chunks: Vec<String> = timed
+        .into_iter()
+        .take(MAX_AUDIO_CHUNKS)
+        .map(|(secs, text)| segment_body(secs, &text))
+        .collect();
+    if let Err(e) = state
+        .db
+        .document_mark_ready_chunks(&sha256, &chunks, truncated)
+        .await
+    {
+        tracing::warn!("video transcription persist failed: {e}");
+        return err_json(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "db_failed",
+            format!("写入视频转写内容失败：{e}"),
+        );
+    }
+    (
+        StatusCode::OK,
+        Json(json!({
+            "sha256": sha256,
+            "status": "imported",
+            "managed_path": managed_path.display().to_string(),
+            "segments": chunks.len(),
+            "duration_secs": duration_secs,
+            "truncated": truncated,
+        })),
+    )
+        .into_response()
+}
+
 fn audio_content_type(ext: &str) -> &'static str {
     match ext {
         "mp3" => "audio/mpeg",
         "wav" => "audio/wav",
         "m4a" => "audio/mp4",
         "webm" => "audio/webm",
+        // 视频经 /documents/media 复用同一回源处理器
+        "mp4" | "mov" => "video/mp4",
+        "mkv" => "video/x-matroska",
         _ => "application/octet-stream",
     }
 }
@@ -942,6 +1210,16 @@ mod audio_import_tests {
         assert_eq!(segment_body(3600.0, "一小时后"), "[60:00] 一小时后");
         // 负值钳到零；文本两端空白修剪
         assert_eq!(segment_body(-1.0, "  hi  "), "[00:00] hi");
+    }
+
+    #[test]
+    fn media_ext_lists_are_disjoint_and_typed() {
+        for ext in AUDIO_EXTS {
+            assert!(!VIDEO_EXTS.contains(ext), "audio 扩展不得同时进视频列表");
+        }
+        for ext in AUDIO_EXTS.iter().chain(VIDEO_EXTS.iter()) {
+            assert!(audio_content_type(ext) != "application/octet-stream");
+        }
     }
 
     #[tokio::test]

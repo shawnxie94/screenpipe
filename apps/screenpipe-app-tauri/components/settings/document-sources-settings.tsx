@@ -38,13 +38,16 @@ import { useToast } from "@/components/ui/use-toast";
 import {
   importAudioDocument,
   importLocalDocument,
+  importVideoDocument,
   summarizeImportResults,
 } from "@/lib/utils/document-import";
 import {
   AUDIO_EXTS,
   DOC_PICKER_EXTENSIONS,
+  VIDEO_EXTS,
   extFromName,
   isSupportedAudioExt,
+  isSupportedVideoExt,
 } from "@/lib/pi/extract-document";
 import { localFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -151,6 +154,7 @@ export function DocumentSourcesSettings() {
         filters: [
           { name: "Documents", extensions: [...DOC_PICKER_EXTENSIONS] },
           { name: "Audio", extensions: [...AUDIO_EXTS] },
+          { name: "Video", extensions: [...VIDEO_EXTS] },
         ],
       });
     } catch (err) {
@@ -164,9 +168,12 @@ export function DocumentSourcesSettings() {
       const results = [];
       for (const path of paths) {
         const name = path.split(/[\\/]/).pop() || path;
-        const importFn = isSupportedAudioExt(extFromName(name))
+        const ext = extFromName(name);
+        const importFn = isSupportedAudioExt(ext)
           ? importAudioDocument
-          : importLocalDocument;
+          : isSupportedVideoExt(ext)
+            ? importVideoDocument
+            : importLocalDocument;
         results.push(
           await importFn({
             name,
@@ -185,9 +192,10 @@ export function DocumentSourcesSettings() {
       }
       if (succeeded > 0) {
         const hasAudio = results.some((r) => r.status === "imported" && isSupportedAudioExt(extFromName(r.name)));
+        const hasVideo = results.some((r) => r.status === "imported" && isSupportedVideoExt(extFromName(r.name)));
         toast({
-          title: hasAudio
-            ? `已导入 ${succeeded} 个文件，音频转写完成，可在搜索中全文检索`
+          title: hasAudio || hasVideo
+            ? `已导入 ${succeeded} 个文件，媒体转写完成，可在搜索中全文检索`
             : `已导入 ${succeeded} 个文档，可在搜索中全文检索`,
         });
         if (recordsOpen) void loadRecords();

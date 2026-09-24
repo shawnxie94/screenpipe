@@ -46,10 +46,19 @@ import { NearViewport } from "./near-viewport";
 import { localFetch, getApiBaseUrl, appendAuthToken } from "@/lib/api";
 import { searchInputBehaviorProps } from "@/lib/search-input-behavior";
 import { usePlatform } from "@/lib/hooks/use-platform";
-import { importAudioDocument, importLocalDocument, summarizeImportResults } from "@/lib/utils/document-import";
+import {
+  importAudioDocument,
+  importLocalDocument,
+  importVideoDocument,
+  summarizeImportResults,
+} from "@/lib/utils/document-import";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { readFile } from "@tauri-apps/plugin-fs";
-import { extFromName, isSupportedAudioExt } from "@/lib/pi/extract-document";
+import {
+  extFromName,
+  isSupportedAudioExt,
+  isSupportedVideoExt,
+} from "@/lib/pi/extract-document";
 import { toast } from "@/components/ui/use-toast";
 
 interface SpeakerResult {
@@ -857,7 +866,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [documentPreview, setDocumentPreview] = useState<DocumentPreview | null>(null);
   const documentPreviewRef = useRef<DocumentPreview | null>(null);
-  const documentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const documentMediaRef = useRef<HTMLMediaElement | null>(null);
   documentPreviewRef.current = documentPreview;
   const documentRequestRef = useRef(0);
   const documentResultsRef = useRef<DocumentHit[]>([]);
@@ -877,9 +886,12 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       const results = [];
       for (const path of paths) {
         const name = path.split(/[\\/]/).pop() || path;
-        const importFn = isSupportedAudioExt(extFromName(name))
+        const ext = extFromName(name);
+        const importFn = isSupportedAudioExt(ext)
           ? importAudioDocument
-          : importLocalDocument;
+          : isSupportedVideoExt(ext)
+            ? importVideoDocument
+            : importLocalDocument;
         results.push(
           await importFn({
             name,
@@ -1871,7 +1883,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     }
     // Imported audio files stream their managed copy for in-app playback —
     // a blob URL keeps auth handling identical to every other localFetch.
-    if (isSupportedAudioExt(hit.ext)) {
+    if (isSupportedAudioExt(hit.ext) || isSupportedVideoExt(hit.ext)) {
       try {
         const resp = await localFetch(
           `/documents/audio?sha256=${encodeURIComponent(hit.sha256)}`,
@@ -3600,18 +3612,28 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                 </div>
               )}
               {!documentPreview.loading && !documentPreview.error && documentPreview.audioUrl && (
-                <audio
-                  ref={documentAudioRef}
-                  controls
-                  src={documentPreview.audioUrl}
-                  className="w-full"
-                  data-testid="document-audio-player"
-                />
+                isSupportedVideoExt(documentPreview.hit.ext) ? (
+                  <video
+                    ref={documentMediaRef as React.RefObject<HTMLVideoElement>}
+                    controls
+                    src={documentPreview.audioUrl}
+                    className="w-full rounded-md"
+                    data-testid="document-video-player"
+                  />
+                ) : (
+                  <audio
+                    ref={documentMediaRef as React.RefObject<HTMLAudioElement>}
+                    controls
+                    src={documentPreview.audioUrl}
+                    className="w-full"
+                    data-testid="document-audio-player"
+                  />
+                )
               )}
               {!documentPreview.loading && !documentPreview.error && documentPreview.chunks && (
                 <div className="rounded-md border border-border bg-background px-3 py-2">
                   {documentPreview.chunks.map((chunk) => {
-                    const marker = documentAudioRef.current || documentPreview.audioUrl
+                    const marker = documentMediaRef.current || documentPreview.audioUrl
                       ? chunk.body.match(/^\[(\d{2,}):(\d{2})\]/)
                       : null;
                     if (!marker) {
@@ -3630,9 +3652,9 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                         key={chunk.ordinal}
                         type="button"
                         onClick={() => {
-                          if (documentAudioRef.current) {
-                            documentAudioRef.current.currentTime = secs;
-                            void documentAudioRef.current.play();
+                          if (documentMediaRef.current) {
+                            documentMediaRef.current.currentTime = secs;
+                            void documentMediaRef.current.play();
                           }
                         }}
                         className="flex w-full items-start gap-2 py-1 text-left transition-colors hover:bg-muted/50 rounded"

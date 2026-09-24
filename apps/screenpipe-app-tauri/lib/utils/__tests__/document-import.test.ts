@@ -5,10 +5,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   importAudioDocument,
   importLocalDocument,
+  importVideoDocument,
   sha256Hex,
   summarizeImportResults,
 } from "@/lib/utils/document-import";
-import { isSupportedAudioExt } from "@/lib/pi/extract-document";
+import { isSupportedAudioExt, isSupportedVideoExt } from "@/lib/pi/extract-document";
 
 // jsdom lacks crypto.subtle — node's webcrypto covers it.
 vi.stubGlobal("crypto", globalThis.crypto);
@@ -202,6 +203,38 @@ describe("isSupportedAudioExt", () => {
     }
     for (const ext of ["mp4", "mov", "pdf", "md", ""]) {
       expect(isSupportedAudioExt(ext)).toBe(false);
+    }
+  });
+});
+
+describe("importVideoDocument", () => {
+  const videoInput = (over: Partial<Parameters<typeof importVideoDocument>[0]> = {}) => ({
+    name: "demo.mp4",
+    originalPath: "/tmp/demo.mp4",
+    loadBytes: async () => bytes,
+    ...over,
+  });
+
+  it("uploads to import-video and reports imported", async () => {
+    fetchMock.mockResolvedValueOnce(
+      okJson({ sha256: "vid1", status: "imported", segments: 5, duration_secs: 120.5 }),
+    );
+
+    const result = await importVideoDocument(videoInput());
+    expect(result).toEqual({ name: "demo.mp4", status: "imported", sha256: "vid1" });
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toContain("/documents/import-video?filename=demo.mp4");
+    expect(init.method).toBe("POST");
+  });
+});
+
+describe("isSupportedVideoExt", () => {
+  it("accepts video formats and rejects audio/document extensions", () => {
+    for (const ext of ["mp4", "mov", "mkv"]) {
+      expect(isSupportedVideoExt(ext)).toBe(true);
+    }
+    for (const ext of ["webm", "mp3", "m4a", "pdf", ""]) {
+      expect(isSupportedVideoExt(ext)).toBe(false);
     }
   });
 });

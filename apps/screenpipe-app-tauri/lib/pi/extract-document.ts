@@ -48,12 +48,21 @@ const BINARY_DOC_EXTS_SET = new Set<string>(BINARY_DOC_EXTS);
 export const AUDIO_EXTS = ["mp3", "wav", "m4a", "webm"] as const;
 const AUDIO_EXTS_SET = new Set<string>(AUDIO_EXTS);
 
+// Video files take the engine-side import pipeline too (audio track
+// transcription + sparse keyframe OCR), not the renderer text parsers.
+export const VIDEO_EXTS = ["mp4", "mov", "mkv"] as const;
+const VIDEO_EXTS_SET = new Set<string>(VIDEO_EXTS);
+
 export function extFromName(name: string): string {
   return (name.split(".").pop() || "").toLowerCase();
 }
 
 export function isSupportedAudioExt(ext: string): boolean {
   return AUDIO_EXTS_SET.has(ext.toLowerCase());
+}
+
+export function isSupportedVideoExt(ext: string): boolean {
+  return VIDEO_EXTS_SET.has(ext.toLowerCase());
 }
 
 // True for any non-image file we know how to turn into text.
