@@ -26,6 +26,14 @@ pub struct SnapshotWriter {
     max_width: AtomicU32,
 }
 
+/// Deterministic on-disk path for one snapshot. Shared by [`SnapshotWriter::write`]
+/// and the engine's orphan-snapshot recovery so the two can never drift apart.
+pub fn snapshot_path_for(base_dir: &Path, captured_at: DateTime<Utc>, monitor_id: u32) -> PathBuf {
+    base_dir
+        .join(captured_at.format("%Y-%m-%d").to_string())
+        .join(format!("{}_m{}.jpg", captured_at.timestamp_millis(), monitor_id))
+}
+
 impl SnapshotWriter {
     /// Create a new SnapshotWriter.
     ///
@@ -64,9 +72,7 @@ impl SnapshotWriter {
             .join(captured_at.format("%Y-%m-%d").to_string());
         fs::create_dir_all(&date_dir)?;
 
-        let timestamp_ms = captured_at.timestamp_millis();
-        let filename = format!("{}_m{}.jpg", timestamp_ms, monitor_id);
-        let path = date_dir.join(&filename);
+        let path = snapshot_path_for(&self.base_dir, captured_at, monitor_id);
 
         let quality = self.quality.load(Ordering::Relaxed);
         let max_w = self.max_width.load(Ordering::Relaxed);

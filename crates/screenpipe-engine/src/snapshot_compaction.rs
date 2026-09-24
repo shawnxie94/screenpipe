@@ -52,6 +52,10 @@ const MIN_FRAMES_PER_CHUNK: usize = 25;
 /// sit uncompacted on a quiet machine (e.g. overnight idle at 2 frames/min).
 const MAX_DEFER_AGE_SECS: i64 = 3600;
 
+/// How far back the startup orphan sweep looks for frames whose snapshot
+/// pointer was lost while their JPEG is still on disk.
+const RECOVERY_LOOKBACK_DAYS: i64 = 7;
+
 /// How quickly an in-flight ffmpeg operation reacts to a new power pause.
 const PAUSE_CHECK_INTERVAL_MS: u64 = 100;
 
@@ -318,12 +322,26 @@ pub fn start_snapshot_compaction(
     mut shutdown_rx: broadcast::Receiver<()>,
     power_manager: Arc<PowerManagerHandle>,
     hot_frame_cache: Option<Arc<HotFrameCache>>,
+    snapshot_base: PathBuf,
 ) {
     tokio::spawn(async move {
         info!(
             "snapshot compaction worker started (min_age={}s, poll={}s)",
             MIN_AGE_SECS, POLL_INTERVAL_SECS
         );
+
+        // Frames whose snapshot pointer was lost to a crash or kill but whose
+        // JPEG is still on disk are invisible to the timeline (404 on
+        // /frames/:id). Re-point them before the first compaction cycle so
+        // the regular loop folds them back in.
+        match recover_orphan_snapshot_frames(&db, &snapshot_base).await {
+            Ok(n) if n > 0 => warn!(
+                "snapshot recovery: re-linked {} orphaned frame(s) to their JPEGs",
+                n
+            ),
+            Ok(_) => {}
+            Err(e) => warn!("snapshot recovery sweep failed: {}", e),
+        }
 
         // Initial delay to let the app finish starting up, while remaining
         // responsive to Stop Recording / app shutdown.
@@ -403,6 +421,51 @@ pub fn start_snapshot_compaction(
             }
         }
     });
+}
+
+/// One compaction cycle: find eligible snapshots, group by monitor, encode to MP4.
+/// Returns the number of frames compacted.
+///
+/// Frames whose `snapshot_path` is NULL and which were never compacted are
+/// invisible to the timeline (`/frames/:id` has neither a snapshot nor a video
+/// chunk to serve). The JPEG is written BEFORE the frame row, so a pointer
+/// that is gone while the file still exists means the pointer was lost after
+/// the fact (crash windows, kill during compaction bookkeeping). Re-derive
+/// the path from the frame's own timestamp + monitor and restore it when the
+/// file is really there; the regular cycle then compacts them normally.
+async fn recover_orphan_snapshot_frames(
+    db: &DatabaseManager,
+    snapshot_base: &Path,
+) -> Result<usize> {
+    let cutoff = Utc::now() - Duration::days(RECOVERY_LOOKBACK_DAYS);
+    let candidates = db.orphan_snapshot_frame_candidates(cutoff).await?;
+    if candidates.is_empty() {
+        return Ok(0);
+    }
+
+    let mut restored: Vec<(i64, String)> = Vec::new();
+    for (frame_id, captured_at, device_name) in candidates {
+        let Some(monitor_id) = device_name
+            .strip_prefix("monitor_")
+            .and_then(|m| m.parse::<u32>().ok())
+        else {
+            continue;
+        };
+        let path = screenpipe_screen::snapshot_writer::snapshot_path_for(
+            snapshot_base,
+            captured_at,
+            monitor_id,
+        );
+        if path.exists() {
+            restored.push((frame_id, path.to_string_lossy().to_string()));
+        }
+    }
+    if restored.is_empty() {
+        return Ok(0);
+    }
+    let count = restored.len();
+    db.restore_snapshot_paths(&restored).await?;
+    Ok(count)
 }
 
 /// One compaction cycle: find eligible snapshots, group by monitor, encode to MP4.
@@ -883,6 +946,59 @@ fn calculate_fps(frames: &[(i64, String, String)]) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn orphan_snapshot_frames_are_recovered_when_jpeg_still_exists() {
+        let db = DatabaseManager::new("sqlite::memory:", Default::default())
+            .await
+            .expect("db");
+        let dir = tempfile::tempdir().expect("tempdir");
+        let captured = Utc::now() - Duration::seconds(3600);
+
+        // Orphan shape: snapshot_path NULL, never compacted — what a kill
+        // between the JPEG write and the pointer bookkeeping leaves behind.
+        sqlx::query("INSERT INTO frames (timestamp, device_name) VALUES (?1, 'monitor_1')")
+            .bind(captured)
+            .execute(&db.pool)
+            .await
+            .expect("insert orphan");
+
+        // JPEG still on disk at the deterministic layout → must be restored.
+        let jpeg = screenpipe_screen::snapshot_writer::snapshot_path_for(dir.path(), captured, 1);
+        std::fs::create_dir_all(jpeg.parent().unwrap()).expect("create date dir");
+        std::fs::write(&jpeg, b"jpeg").expect("write jpeg");
+
+        // A second orphan whose JPEG really is gone stays untouched.
+        let gone_at = Utc::now() - Duration::seconds(7200);
+        sqlx::query("INSERT INTO frames (timestamp, device_name) VALUES (?1, 'monitor_2')")
+            .bind(gone_at)
+            .execute(&db.pool)
+            .await
+            .expect("insert missing-jpeg orphan");
+
+        let recovered = recover_orphan_snapshot_frames(&db, dir.path())
+            .await
+            .expect("recover");
+        assert_eq!(recovered, 1, "only the frame with a live JPEG recovers");
+
+        let restored: String =
+            sqlx::query_scalar("SELECT snapshot_path FROM frames WHERE snapshot_path IS NOT NULL LIMIT 1")
+                .fetch_one(&db.pool)
+                .await
+                .expect("pointer restored");
+        assert_eq!(
+            std::path::Path::new(restored.as_str()),
+            screenpipe_screen::snapshot_writer::snapshot_path_for(dir.path(), captured, 1).as_path()
+        );
+
+        let still_orphan: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM frames WHERE snapshot_path IS NULL AND video_chunk_id IS NULL",
+        )
+        .fetch_one(&db.pool)
+        .await
+        .expect("query");
+        assert_eq!(still_orphan, 1, "missing-JPEG frame stays untouched");
+    }
 
     fn make_frame(id: i64, path: &str, ts: &str) -> (i64, String, String) {
         (id, path.to_string(), ts.to_string())

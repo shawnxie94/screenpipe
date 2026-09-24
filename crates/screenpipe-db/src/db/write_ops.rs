@@ -236,6 +236,47 @@ impl DatabaseManager {
         Ok(())
     }
 
+    /// Frames whose snapshot pointer is gone and which were never compacted
+    /// into a video chunk — the candidates for the engine's startup recovery
+    /// sweep. `cutoff` bounds the scan (recovery targets recent activity).
+    pub async fn orphan_snapshot_frame_candidates(
+        &self,
+        cutoff: chrono::DateTime<chrono::Utc>,
+    ) -> Result<Vec<(i64, chrono::DateTime<chrono::Utc>, String)>, sqlx::Error> {
+        sqlx::query_as(
+            "SELECT id, timestamp, device_name FROM frames \
+             WHERE snapshot_path IS NULL AND video_chunk_id IS NULL \
+             AND timestamp >= ?1 ORDER BY id",
+        )
+        .bind(cutoff)
+        .fetch_all(&self.pool)
+        .await
+    }
+
+    /// Restore snapshot_path for orphaned frames whose JPEG was found on
+    /// disk. The NULL guard makes a concurrent compaction win the race.
+    /// Direct write-pool updates: a startup one-shot, not queue traffic.
+    pub async fn restore_snapshot_paths(
+        &self,
+        updates: &[(i64, String)],
+    ) -> Result<u64, sqlx::Error> {
+        let mut restored = 0u64;
+        let mut tx = self.begin_immediate_with_retry().await?;
+        for (frame_id, path) in updates {
+            restored += sqlx::query(
+                "UPDATE frames SET snapshot_path = ?1 \
+                 WHERE id = ?2 AND snapshot_path IS NULL AND video_chunk_id IS NULL",
+            )
+            .bind(path)
+            .bind(frame_id)
+            .execute(&mut **tx.conn())
+            .await?
+            .rows_affected() as u64;
+        }
+        tx.commit().await?;
+        Ok(restored)
+    }
+
     /// Create a pipe execution via the write queue. Returns the new row ID.
     ///
     /// `trigger_event` / `trigger_key` record which event instance started the

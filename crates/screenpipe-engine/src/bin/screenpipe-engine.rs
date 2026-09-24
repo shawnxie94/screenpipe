@@ -925,6 +925,7 @@ async fn main() -> anyhow::Result<()> {
             shutdown_tx.subscribe(),
             power_manager.clone(),
             Some(hot_frame_cache.clone()),
+            local_data_dir.join("data"),
         );
     } else {
         info!("snapshot compaction disabled via --disable-snapshot-compaction");

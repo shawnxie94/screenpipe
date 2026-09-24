@@ -309,6 +309,7 @@ impl CaptureSession {
                 shutdown_tx.subscribe(),
                 server.power_manager.clone(),
                 Some(server.hot_frame_cache.clone()),
+                server.data_path.join("data"),
             );
         }
 
