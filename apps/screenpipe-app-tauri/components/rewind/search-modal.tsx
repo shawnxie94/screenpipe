@@ -48,8 +48,6 @@ import { searchInputBehaviorProps } from "@/lib/search-input-behavior";
 import { usePlatform } from "@/lib/hooks/use-platform";
 import { importLocalDocument, summarizeImportResults } from "@/lib/utils/document-import";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { DOC_PICKER_EXTENSIONS } from "@/lib/pi/extract-document";
-import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { readFile } from "@tauri-apps/plugin-fs";
 import { toast } from "@/components/ui/use-toast";
 
@@ -853,7 +851,6 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   // connections: one wholesale-replaced page per scope activation/query.
   const [documentResults, setDocumentResults] = useState<DocumentHit[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
-  const [isImportingDocuments, setIsImportingDocuments] = useState(false);
   const [documentPreview, setDocumentPreview] = useState<DocumentPreview | null>(null);
   const documentPreviewRef = useRef<DocumentPreview | null>(null);
   documentPreviewRef.current = documentPreview;
@@ -861,16 +858,16 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   const documentResultsRef = useRef<DocumentHit[]>([]);
   documentResultsRef.current = documentResults;
 
-  // Run picked/dropped document file paths through the import pipeline. The
-  // chat composer's attachment path is deliberately untouched — importing adds
-  // a persistent evidence source, it does not attach to the next message.
-  // The busy flag lives in a ref so this callback stays stable and the
-  // drag-drop listener below doesn't resubscribe on every import toggle.
+  // Run dropped document file paths through the import pipeline (the picker
+  // entry lives in 设置 → 文档). The chat composer's attachment path is
+  // deliberately untouched — importing adds a persistent evidence source,
+  // it does not attach to the next message. The busy flag lives in a ref so
+  // this callback stays stable and the drag-drop listener below doesn't
+  // resubscribe.
   const isImportingDocumentsRef = useRef(false);
   const importDocumentPaths = useCallback(async (paths: string[]) => {
     if (isImportingDocumentsRef.current) return;
     isImportingDocumentsRef.current = true;
-    setIsImportingDocuments(true);
     try {
       const results = [];
       for (const path of paths) {
@@ -897,27 +894,8 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       }
     } finally {
       isImportingDocumentsRef.current = false;
-      setIsImportingDocuments(false);
     }
   }, []);
-
-  // Pick document files and run each through the import pipeline.
-  const handleImportDocuments = useCallback(async () => {
-    if (isImportingDocuments) return;
-    let selected: string[] | null = null;
-    try {
-      const picked = await openFileDialog({
-        multiple: true,
-        filters: [{ name: "Documents", extensions: [...DOC_PICKER_EXTENSIONS] }],
-      });
-      if (!picked) return;
-      selected = Array.isArray(picked) ? picked : [picked];
-    } catch (err) {
-      console.error("document file picker error:", err);
-      return;
-    }
-    await importDocumentPaths(selected);
-  }, [isImportingDocuments, importDocumentPaths]);
 
   // Drag-and-drop entry for the documents scope. Same webview-level drag
   // events the chat composer uses: while the search window is open, any file
@@ -3600,28 +3578,16 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
             <>
               <div className="flex items-center justify-between px-2 pb-1">
                 <span className="text-xs text-muted-foreground">
-                  手动导入的本地文档，可全文搜索并回到原始文件
+                  手动导入的本地文档，可全文搜索并回到原始文件；在 设置 → 文档 中导入
                 </span>
-                <button
-                  onClick={() => void handleImportDocuments()}
-                  disabled={isImportingDocuments}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs transition-colors hover:bg-muted disabled:opacity-50"
-                >
-                  {isImportingDocuments ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <FolderOpen className="h-3 w-3" />
-                  )}
-                  导入文档
-                </button>
               </div>
               {!isLoadingDocuments && documentResults.length === 0 && !queryBelowMinimum && (
                 <EmptyMessage
                   title={trimmedQuery ? "没有匹配的文档" : "还没有导入文档"}
                   hint={
                     trimmedQuery
-                      ? "换个词试试，或导入更多文档"
-                      : "点击右上角“导入文档”选择文件，或直接把文件拖进搜索窗口，即可全文搜索"
+                      ? "换个词试试，或在 设置 → 文档 中导入更多文档"
+                      : "在 设置 → 文档 中选择文件导入，或直接把文件拖进搜索窗口，即可全文搜索"
                   }
                 />
               )}

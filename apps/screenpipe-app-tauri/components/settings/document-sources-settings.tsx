@@ -4,13 +4,16 @@
 "use client";
 
 /**
- * Settings card for local document directory auto-ingest: add/remove watch
- * directories, enable/disable each one, and trigger an immediate reconcile.
- * Chat attachments and manual pick/drop import are untouched by this.
+ * Settings card for local document ingest: directory auto-collection
+ * (add/remove watch directories, enable/disable each one, immediate
+ * reconcile) and manual file import — the single home for both entry
+ * points. Chat attachments and search-window drag-drop import are
+ * untouched by this.
  */
 
 import React, { useCallback, useEffect, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { readFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Card,
@@ -22,9 +25,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { FolderOpen, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { FileUp, FolderOpen, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  importLocalDocument,
+  summarizeImportResults,
+} from "@/lib/utils/document-import";
+import { DOC_PICKER_EXTENSIONS } from "@/lib/pi/extract-document";
 
 interface DocumentSource {
   id: string;
@@ -44,6 +52,53 @@ export function DocumentSourcesSettings() {
   const [loading, setLoading] = useState(true);
   const [reconciling, setReconciling] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  // Manual file import — the same pipeline the search window's drag-drop
+  // uses (pick paths → read bytes → /documents/import), relocated here from
+  // the search modal so ingest entry points live in settings, not search.
+  const handleImportFiles = async () => {
+    if (importing) return;
+    let picked: string[] | string | null = null;
+    try {
+      picked = await openDialog({
+        multiple: true,
+        filters: [{ name: "Documents", extensions: [...DOC_PICKER_EXTENSIONS] }],
+      });
+    } catch (err) {
+      console.error("document file picker error:", err);
+      return;
+    }
+    if (!picked) return;
+    const paths = Array.isArray(picked) ? picked : [picked];
+    setImporting(true);
+    try {
+      const results = [];
+      for (const path of paths) {
+        const name = path.split(/[\\/]/).pop() || path;
+        results.push(
+          await importLocalDocument({
+            name,
+            originalPath: path,
+            loadBytes: () => readFile(path),
+          }),
+        );
+      }
+      const { failed, succeeded } = summarizeImportResults(results);
+      if (failed.length > 0) {
+        toast({
+          title: `导入失败 ${failed.length} 个文件`,
+          description: failed.map((f) => `${f.name}：${f.reason}`).join("\n"),
+          variant: "destructive",
+        });
+      }
+      if (succeeded > 0) {
+        toast({ title: `已导入 ${succeeded} 个文档，可在搜索中全文检索` });
+      }
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const refresh = useCallback(async () => {
     try {
@@ -139,26 +194,41 @@ export function DocumentSourcesSettings() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>文档目录采集</CardTitle>
+        <CardTitle>文档采集</CardTitle>
         <CardDescription>
-          选择本地文件夹，其中的文档（PDF、Word、Excel、文本等）会自动导入为可搜索的本地资料。已导入内容不受移除目录影响。
+          添加本地文件夹持续采集其中的文档（PDF、Word、Excel、文本等），或点击「导入文档」手动导入文件；导入内容可全文搜索并回到原始文件。已导入内容不受移除目录影响。
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
-          <Button
-            onClick={handleAdd}
-            variant="outline"
-            size="sm"
-            disabled={adding}
-          >
-            {adding ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <FolderOpen className="h-4 w-4 mr-2" />
-            )}
-            添加目录
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleAdd}
+              variant="outline"
+              size="sm"
+              disabled={adding}
+            >
+              {adding ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FolderOpen className="h-4 w-4 mr-2" />
+              )}
+              添加目录
+            </Button>
+            <Button
+              onClick={handleImportFiles}
+              variant="outline"
+              size="sm"
+              disabled={importing}
+            >
+              {importing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileUp className="h-4 w-4 mr-2" />
+              )}
+              导入文档
+            </Button>
+          </div>
           <Button
             onClick={handleReconcile}
             variant="ghost"
@@ -176,7 +246,7 @@ export function DocumentSourcesSettings() {
           <p className="text-muted-foreground text-sm">加载中…</p>
         ) : sources.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            还没有添加任何目录。聊天附件与手动拖拽导入不受影响。
+            还没有添加任何目录。也可点击上方「导入文档」手动导入文件；搜索窗口拖入文件同样可导入。
           </p>
         ) : (
           <ul className="space-y-2">
