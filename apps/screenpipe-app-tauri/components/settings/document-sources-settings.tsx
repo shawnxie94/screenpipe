@@ -25,7 +25,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { FileUp, FolderOpen, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  FileUp,
+  FolderOpen,
+  Loader2,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -33,6 +40,8 @@ import {
   summarizeImportResults,
 } from "@/lib/utils/document-import";
 import { DOC_PICKER_EXTENSIONS } from "@/lib/pi/extract-document";
+import { localFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 interface DocumentSource {
   id: string;
@@ -46,6 +55,49 @@ interface DocumentLocation {
   state: string;
 }
 
+/** One row of GET /documents/list — the full import ledger, failures
+ *  included (unlike the per-directory stats, which only count). */
+interface DocumentRecord {
+  sha256: string;
+  file_name: string;
+  ext: string;
+  size_bytes: number;
+  original_path: string | null;
+  state: string;
+  chunk_count: number;
+  error_message: string | null;
+  imported_at: string;
+}
+
+const RECORD_STATES: Record<
+  string,
+  { label: string; variant: "secondary" | "outline" | "destructive" }
+> = {
+  imported: { label: "已导入", variant: "secondary" },
+  pending: { label: "待导入", variant: "outline" },
+  failed: { label: "失败", variant: "destructive" },
+  missing: { label: "已移动/删除", variant: "outline" },
+};
+
+function formatRelativeTime(isoString: string): string {
+  const date = new Date(isoString);
+  const diffMins = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (diffMins < 1) return "刚刚";
+  if (diffMins < 60) return `${diffMins} 分钟前`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} 小时前`;
+  return `${Math.floor(diffHours / 24)} 天前`;
+}
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
 export function DocumentSourcesSettings() {
   const { toast } = useToast();
   const [sources, setSources] = useState<DocumentSource[]>([]);
@@ -53,6 +105,33 @@ export function DocumentSourcesSettings() {
   const [reconciling, setReconciling] = useState(false);
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [recordsOpen, setRecordsOpen] = useState(false);
+  const [records, setRecords] = useState<DocumentRecord[] | null>(null);
+  const [recordsLoading, setRecordsLoading] = useState(false);
+
+  const loadRecords = useCallback(async () => {
+    setRecordsLoading(true);
+    try {
+      const resp = await localFetch("/documents/list?limit=200", {
+        signal: AbortSignal.timeout(8000),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        setRecords((data?.data ?? []) as DocumentRecord[]);
+      }
+    } catch {
+      // Transient failures keep the previous list visible.
+    } finally {
+      setRecordsLoading(false);
+    }
+  }, []);
+
+  const toggleRecords = useCallback(() => {
+    setRecordsOpen((open) => {
+      if (!open && records === null) void loadRecords();
+      return !open;
+    });
+  }, [records, loadRecords]);
 
   // Manual file import — the same pipeline the search window's drag-drop
   // uses (pick paths → read bytes → /documents/import), relocated here from
@@ -94,6 +173,7 @@ export function DocumentSourcesSettings() {
       }
       if (succeeded > 0) {
         toast({ title: `已导入 ${succeeded} 个文档，可在搜索中全文检索` });
+        if (recordsOpen) void loadRecords();
       }
     } finally {
       setImporting(false);
@@ -260,6 +340,128 @@ export function DocumentSourcesSettings() {
             ))}
           </ul>
         )}
+
+        <div className="rounded-md border">
+          <button
+            type="button"
+            aria-expanded={recordsOpen}
+            onClick={toggleRecords}
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-muted/50"
+          >
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform",
+                recordsOpen && "rotate-180",
+              )}
+            />
+            导入记录
+            {records !== null && (
+              <span className="text-xs text-muted-foreground">
+                共 {records.length} 条
+              </span>
+            )}
+            {recordsOpen && (
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label="刷新导入记录"
+                className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void loadRecords();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.stopPropagation();
+                    void loadRecords();
+                  }
+                }}
+              >
+                <RefreshCw
+                  className={cn(
+                    "h-3 w-3",
+                    recordsLoading && "animate-spin",
+                  )}
+                />
+                刷新
+              </span>
+            )}
+          </button>
+          {recordsOpen && (
+            <div className="border-t">
+              {recordsLoading && records === null ? (
+                <p className="flex items-center gap-2 px-3 py-3 text-sm text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  加载中…
+                </p>
+              ) : !records || records.length === 0 ? (
+                <p className="px-3 py-3 text-sm text-muted-foreground">
+                  还没有导入记录。点击「导入文档」选择文件，或在搜索窗口拖入文件。
+                </p>
+              ) : (
+                <ul className="max-h-72 divide-y overflow-y-auto">
+                  {records.map((record) => {
+                    const stateMeta =
+                      RECORD_STATES[record.state] ?? {
+                        label: record.state,
+                        variant: "outline" as const,
+                      };
+                    return (
+                      <li
+                        key={record.sha256}
+                        className="flex items-start gap-2.5 px-3 py-2"
+                      >
+                        <Badge
+                          variant={stateMeta.variant}
+                          className="mt-0.5 shrink-0 text-[10px]"
+                        >
+                          {stateMeta.label}
+                        </Badge>
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-1.5 text-sm">
+                            <span className="truncate">{record.file_name}</span>
+                            {record.ext && (
+                              <span className="shrink-0 rounded border border-border px-1 py-px text-[10px] text-muted-foreground">
+                                {record.ext}
+                              </span>
+                            )}
+                            {record.chunk_count > 0 && (
+                              <span className="shrink-0 text-[10px] text-muted-foreground">
+                                {record.chunk_count} 段
+                              </span>
+                            )}
+                          </p>
+                          {record.original_path && (
+                            <p
+                              className="mt-0.5 truncate text-[10px] text-muted-foreground/70"
+                              title={record.original_path}
+                            >
+                              {record.original_path}
+                            </p>
+                          )}
+                          {record.state === "failed" && record.error_message && (
+                            <p className="mt-0.5 truncate text-xs text-destructive">
+                              {record.error_message}
+                            </p>
+                          )}
+                        </div>
+                        <div className="shrink-0 text-right text-[11px] text-muted-foreground">
+                          <p>{formatRelativeTime(record.imported_at)}</p>
+                          <p>{formatBytes(record.size_bytes)}</p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {records && records.length >= 200 && (
+                <p className="border-t px-3 py-1.5 text-[10px] text-muted-foreground">
+                  仅显示最近 200 条，更早的请在搜索（⌘K → 文档）中检索
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
