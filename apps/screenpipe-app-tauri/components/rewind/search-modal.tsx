@@ -844,6 +844,9 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   // keyword+connector result space the palette is used at).
   const [connectionResults, setConnectionResults] = useState<ConnectionHit[]>([]);
   const [isLoadingConnections, setIsLoadingConnections] = useState(false);
+  const [connectionPreview, setConnectionPreview] = useState<ConnectionHit | null>(null);
+  const connectionPreviewRef = useRef<ConnectionHit | null>(null);
+  connectionPreviewRef.current = connectionPreview;
   const connectionRequestRef = useRef(0);
 
   // Local document import state (手动导入的本地文档). Same fetch contract as
@@ -1259,7 +1262,8 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     if (contentFilter === "connections") {
       // Same contract as the chats scope: rows off the screen (loading or
       // below-minimum query) stay out of the selection list.
-      if (belowMinimum || isLoadingConnections) return items;
+      // The preview drill-down hides the list, so it holds no nav targets.
+      if (belowMinimum || isLoadingConnections || connectionPreview) return items;
       for (const hit of connectionResults) {
         items.push({ kind: "connection", id: connectionHitKey(hit) });
       }
@@ -1306,6 +1310,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   }, [
     chatsQuery,
     connectionHitKey,
+    connectionPreview,
     connectionResults,
     contentFilter,
     debouncedQuery,
@@ -1462,6 +1467,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       setSelectedSpeaker(null);
       setSelectedApp(null);
       setDocumentPreview(null);
+      setConnectionPreview(null);
       setAppEntities([]);
       appRosterInFlightRef.current = false;
       setSpeakerTranscriptions([]);
@@ -2401,6 +2407,9 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           } else if (documentPreviewRef.current) {
             e.preventDefault();
             setDocumentPreview(null);
+          } else if (connectionPreviewRef.current) {
+            e.preventDefault();
+            setConnectionPreview(null);
           } else {
             onClose();
           }
@@ -2459,9 +2468,9 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
             const hit = connectionResultsRef.current.find(
               (c) => connectionHitKey(c) === item.id,
             );
-            if (hit?.source_url) {
+            if (hit) {
               trackSearchResultSelected("connection", "keyboard", "drilldown");
-              window.open(hit.source_url, "_blank");
+              setConnectionPreview(hit);
             }
           } else if (item.kind === "uievent") {
             const evt = uiEventResultsRef.current.find((u) => String(u.id) === item.id);
@@ -2492,7 +2501,13 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
     // window was already gone by the time the bubble handler went back.
     const captureEscape = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (selectedApp || selectedSpeaker || documentPreviewRef.current) return;
+      if (
+        selectedApp ||
+        selectedSpeaker ||
+        documentPreviewRef.current ||
+        connectionPreviewRef.current
+      )
+        return;
       onClose();
     };
     document.addEventListener("keydown", captureEscape, true);
@@ -2781,7 +2796,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
               key={key}
               title={key === "input" ? "键盘和剪贴板" : label}
               aria-pressed={isActive}
-              onClick={() => { setContentFilter(key); setDocumentPreview(null); setNavIndex(0); }}
+              onClick={() => { setContentFilter(key); setDocumentPreview(null); setConnectionPreview(null); setNavIndex(0); }}
               className={cn(
                 "inline-flex h-7 min-w-[58px] items-center justify-center gap-1.5 rounded-md px-2.5 text-xs capitalize transition-colors",
                 isActive
@@ -2824,7 +2839,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
         <span>{activeNavItem.kind === "frame" ? "←→↑↓ 切换" : "↑↓ 切换"}</span>
         {/* Every non-chat row resolves to a moment — a frame, or the instant a
             line was typed or copied — and Enter opens the main timeline there. */}
-        <span>{activeNavItem.kind === "chat" ? "⏎ 打开聊天" : activeNavItem.kind === "connection" ? "⏎ 打开原文" : activeNavItem.kind === "document" ? "⏎ 预览文档" : "⏎ 跳到时间线"}</span>
+        <span>{activeNavItem.kind === "chat" ? "⏎ 打开聊天" : activeNavItem.kind === "connection" ? "⏎ 预览内容" : activeNavItem.kind === "document" ? "⏎ 预览文档" : "⏎ 跳到时间线"}</span>
         {activeNavItem.kind === "frame" && (
           <span className="flex items-center gap-1" suppressHydrationWarning>
             <MessageSquare className="w-2.5 h-2.5" />
@@ -3420,9 +3435,50 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           )}
 
           {/* Connector content (接入): imported Feishu / Tencent Meeting / RSS
-              objects. Rows open the source in the browser — there is no frame
-              to jump to, so unlike timeline rows Enter never navigates. */}
-          {contentFilter === "connections" && (
+              objects. Rows drill into an in-modal preview of the full imported
+              body; the source URL stays available from the preview header. */}
+          {contentFilter === "connections" && connectionPreview && (
+            <div className="flex flex-col gap-2 pt-1">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setConnectionPreview(null)}
+                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <ArrowLeft className="h-3 w-3" />
+                  返回结果
+                </button>
+                <span className="text-sm font-medium truncate min-w-0">
+                  {connectionPreview.title ||
+                    connectionPreview.body_text.split("\n")[0] ||
+                    "未命名内容"}
+                </span>
+                <span className="shrink-0 px-1.5 py-px text-[10px] rounded-md border border-border text-muted-foreground">
+                  {PROVIDER_LABELS[connectionPreview.provider] ??
+                    connectionPreview.provider}
+                </span>
+                <span className="shrink-0 px-1.5 py-px text-[10px] rounded-md border border-border text-muted-foreground">
+                  {connectionPreview.object_kind}
+                </span>
+                {connectionPreview.source_url ? (
+                  <button
+                    type="button"
+                    onClick={() => window.open(connectionPreview.source_url, "_blank")}
+                    className="ml-auto inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <Plug className="h-3 w-3" />
+                    打开原文
+                  </button>
+                ) : null}
+              </div>
+              <div className="rounded-md border border-border bg-background px-3 py-2">
+                <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90 font-sans">
+                  {connectionPreview.body_text || "（无正文）"}
+                </pre>
+              </div>
+            </div>
+          )}
+          {contentFilter === "connections" && !connectionPreview && (
             <>
               {!isLoadingConnections && connectionResults.length === 0 && !queryBelowMinimum && (
                 <EmptyMessage
@@ -3446,10 +3502,8 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                         key={navKey}
                         data-nav-index={pos}
                         onClick={() => {
-                          if (hit.source_url) {
-                            trackSearchResultSelected("connection", "click", "drilldown");
-                            window.open(hit.source_url, "_blank");
-                          }
+                          trackSearchResultSelected("connection", "click", "drilldown");
+                          setConnectionPreview(hit);
                         }}
                         onMouseEnter={() => pos !== undefined && setNavIndex(pos)}
                         className={cn(
