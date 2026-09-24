@@ -551,7 +551,7 @@ const TOOLS = [
   {
     name: "list_connections",
     description:
-      "List the user's Screenpipe app connections (Gmail, Notion, Slack, Linear, calendars, and other integrations), whether each is connected, and how to use it (native proxy vs MCP OAuth). Use this before an action that depends on a connected app.",
+      "List the user's Screenpipe app connections (Obsidian vault, Logseq vault, IMAP mailbox, and other local integrations), whether each is connected, and how to use it. Imported channel content (Feishu messages, Tencent Meeting transcripts, RSS) is not listed here \u2014 search it with keyword_search instead. Use this before an action that depends on a connected app.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     async run() {
       const connections = await fetchConnections();
@@ -634,7 +634,7 @@ const TOOLS = [
   {
     name: "screenpipe_connect_app",
     description:
-      "Connect one of the user's apps (Gmail, Notion, Slack, Linear, GitHub, calendars, and other integrations) when a task needs it. Call this before an action that depends on a connected app. If the app is already connected it returns immediately; otherwise it asks the user to connect and waits for them.",
+      "Connect one of the user's local integrations (Obsidian vault, Logseq vault, IMAP mailbox, and others) when a task needs it. Call this before an action that depends on a connected app. If the app is already connected it returns immediately; otherwise it asks the user to connect and waits for them.",
     inputSchema: {
       type: "object",
       properties: {
@@ -795,12 +795,11 @@ const TOOLS = [
   {
     // Parity with the Pi-only mcp-bridge extension (sp_mcp_list_tools). Without
     // this, ACP agents are told by list_connections / screenpipe_connect_app to
-    // "use sp_mcp_list_tools" for MCP-OAuth and Composio-backed connections
-    // (Linear, Notion, Stripe, Sentry, Jira, Gmail, Zoom, Drive) but have no
+    // "use sp_mcp_list_tools" for user-registered MCP connections but have no
     // such tool — so those connections are advertised yet unreachable.
     name: "sp_mcp_list_tools",
     description:
-      "List the tools exposed by the user's registered MCP (Model Context Protocol) servers, including MCP-OAuth connections (Linear, Notion, Stripe, Sentry, Jira) and Composio-managed apps (Gmail, Zoom, Google Drive/Docs/Sheets). Call this BEFORE sp_mcp_call so you know which server_id to target and what arguments each tool expects. Cheap to call. Returns one entry per server with its tools.",
+      "List the tools exposed by the user's registered MCP (Model Context Protocol) servers. Call this BEFORE sp_mcp_call so you know which server_id to target and what arguments each tool expects. Cheap to call. Returns one entry per server with its tools.",
     inputSchema: {
       type: "object",
       properties: {
@@ -856,7 +855,7 @@ const TOOLS = [
     // Parity with the Pi-only mcp-bridge extension (sp_mcp_call).
     name: "sp_mcp_call",
     description:
-      "Invoke a tool on one of the user's registered MCP servers (including MCP-OAuth and Composio-managed connections). Always call sp_mcp_list_tools FIRST to find the server_id and tool name; the arguments object must match that tool's schema. Returns the MCP result content.",
+      "Invoke a tool on one of the user's registered MCP servers. Always call sp_mcp_list_tools FIRST to find the server_id and tool name; the arguments object must match that tool's schema. Returns the MCP result content.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1015,41 +1014,38 @@ const HTTP_PARITY_TOOLS = [
   {
     name: "keyword_search",
     description:
-      "Fast FTS5 keyword search across screen text and audio combined. Returns matches with frame_id, app, timestamp, and text. Use when you have a specific keyword or phrase and want the fastest hit-list. For broad 'what was I doing' questions use activity_summary instead. Proxies the local engine /search/keyword.",
+      "Fast keyword search across screen text and audio combined. Returns matches with frame_id, app, timestamp, and text. Use when you have a specific keyword or phrase and want the fastest hit-list; query terms match literally (no search operators). For broad 'what was I doing' questions use activity_summary instead. Proxies the local engine /search/records.",
     inputSchema: {
       type: "object",
       properties: {
-        q: { type: "string", description: "Keyword query (FTS5 syntax: quoted phrases, AND/OR, prefix*)" },
+        q: { type: "string", description: "Keyword query; terms are matched literally" },
         start_time: { type: "string", description: "ISO 8601, relative, or local calendar ('today', 'yesterday', 'tomorrow', 'YYYY-MM-DD')" },
         end_time: { type: "string", description: "ISO 8601, relative, or local calendar ('today', 'yesterday', 'tomorrow', 'YYYY-MM-DD')" },
         app_name: { type: "string", description: "Filter by exact app name (case-sensitive)" },
         limit: { type: "integer", description: "Max results (default 20)" },
         offset: { type: "integer", description: "Pagination offset" },
-        fuzzy_match: { type: "boolean", description: "Enable typo-tolerant matching" },
       },
       required: ["q"],
       additionalProperties: false,
     },
     async run(args) {
-      // The engine's /search/keyword (KeywordSearchRequest) names the field
-      // `query`, not `q`, and takes `app_names`, not `app_name`. Passing the
-      // model-facing names verbatim 400s, so translate like the core server.
+      // The legacy /search/keyword endpoint was removed; the replacement is
+      // /search/records (q + structured filters, chronological ordering).
       const q = String(args?.q ?? args?.query ?? "").trim();
       if (!q) return JSON.stringify({ error: "q is required" });
       const params = new URLSearchParams();
-      params.append("query", q);
+      params.append("q", q);
+      params.append("content_type", "all");
+      params.append("mode", "keyword");
       const now = new Date();
       const start = normalizeTime(args?.start_time, now);
       const end = normalizeTime(args?.end_time, now);
       if (start) params.append("start_time", String(start));
       if (end) params.append("end_time", String(end));
-      if (args?.app_name) params.append("app_names", String(args.app_name));
+      if (args?.app_name) params.append("app_name", String(args.app_name));
       if (args?.limit !== undefined && args?.limit !== null) params.append("limit", String(args.limit));
       if (args?.offset !== undefined && args?.offset !== null) params.append("offset", String(args.offset));
-      if (args?.fuzzy_match !== undefined && args?.fuzzy_match !== null) {
-        params.append("fuzzy_match", String(args.fuzzy_match));
-      }
-      return engineGet(`/search/keyword?${params.toString()}`);
+      return engineGet(`/search/records?${params.toString()}`);
     },
   },
   {

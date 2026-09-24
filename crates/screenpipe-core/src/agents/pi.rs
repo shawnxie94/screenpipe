@@ -1001,17 +1001,27 @@ impl PiExecutor {
         Ok(())
     }
 
-    /// Remove the retired hosted web-search extension from old Pi workspaces.
-    pub fn ensure_web_search_extension(project_dir: &Path) -> Result<()> {
-        let ext_dir = project_dir.join(".pi").join("extensions");
-        let ext_path = ext_dir.join("web-search.ts");
+    /// Extensions retired from the seeded set that older installs still carry
+    /// in their project `.pi/extensions`. Stale files keep registering their
+    /// tools in every new session — the brain/knowledge pair resurrected the
+    /// removed knowledge domain (tools that only ever answered 404) and made
+    /// the model advertise capabilities that no longer exist.
+    const RETIRED_PI_EXTENSION_FILES: [&str; 4] = [
+        "web-search.ts",
+        "brain-tools.ts",
+        "knowledge-tools.ts",
+        "self-improvement.ts",
+    ];
 
-        if ext_path.exists() {
-            std::fs::remove_file(&ext_path)?;
-            info!(
-                "retired hosted web-search extension removed from {:?}",
-                ext_path
-            );
+    /// Remove retired extensions from old Pi workspaces.
+    pub fn ensure_retired_extensions_removed(project_dir: &Path) -> Result<()> {
+        let ext_dir = project_dir.join(".pi").join("extensions");
+        for name in Self::RETIRED_PI_EXTENSION_FILES {
+            let ext_path = ext_dir.join(name);
+            if ext_path.exists() {
+                std::fs::remove_file(&ext_path)?;
+                info!("retired {name} extension removed from {:?}", ext_path);
+            }
         }
 
         Ok(())
@@ -1634,7 +1644,7 @@ impl AgentExecutor for PiExecutor {
         // Use filtered skills if permissions are configured, unfiltered otherwise
         Self::ensure_screenpipe_skill_auto(working_dir)?;
 
-        Self::ensure_web_search_extension(working_dir)?;
+        Self::ensure_retired_extensions_removed(working_dir)?;
         Self::ensure_context_pruning_extension(working_dir)?;
         Self::ensure_orphan_guard_extension(working_dir)?;
         Self::ensure_mcp_bridge_extension(working_dir)?;
@@ -1731,7 +1741,7 @@ impl AgentExecutor for PiExecutor {
         Self::ensure_pi_config(provider, Some(&resolved_model), provider_url).await?;
         // Use filtered skills if permissions are configured, unfiltered otherwise
         Self::ensure_screenpipe_skill_auto(working_dir)?;
-        Self::ensure_web_search_extension(working_dir)?;
+        Self::ensure_retired_extensions_removed(working_dir)?;
         Self::ensure_context_pruning_extension(working_dir)?;
         Self::ensure_orphan_guard_extension(working_dir)?;
         Self::ensure_mcp_bridge_extension(working_dir)?;
@@ -3760,16 +3770,29 @@ mod tests {
     }
 
     #[test]
-    fn retired_web_search_extension_is_removed() {
+    fn retired_extensions_are_removed() {
         let dir = tempfile::tempdir().expect("tempdir");
         let ext_dir = dir.path().join(".pi").join("extensions");
         std::fs::create_dir_all(&ext_dir).expect("create extension dir");
-        let ext_path = ext_dir.join("web-search.ts");
-        std::fs::write(&ext_path, "retired").expect("seed retired extension");
+        for name in [
+            "web-search.ts",
+            "brain-tools.ts",
+            "knowledge-tools.ts",
+            "self-improvement.ts",
+        ] {
+            let ext_path = ext_dir.join(name);
+            std::fs::write(&ext_path, "retired").expect("seed retired extension");
+        }
+        // Current seeded extensions must never be swept by the retired list.
+        let live = ext_dir.join("search.ts");
+        std::fs::write(&live, "live").expect("seed live extension");
 
-        PiExecutor::ensure_web_search_extension(dir.path())
-            .expect("remove retired web-search extension");
-        assert!(!ext_path.exists());
+        PiExecutor::ensure_retired_extensions_removed(dir.path())
+            .expect("remove retired extensions");
+        for name in PiExecutor::RETIRED_PI_EXTENSION_FILES {
+            assert!(!ext_dir.join(name).exists(), "{name} should be removed");
+        }
+        assert!(live.exists(), "seeded extensions must survive the sweep");
     }
 
     #[test]

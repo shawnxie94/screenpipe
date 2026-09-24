@@ -1823,6 +1823,13 @@ fn ensure_shared_pi_extensions(project_dir: &str) -> Result<(), String> {
     ensure_connection_gate_extension(project_dir)?;
     // Unified search: one query tool across all collected information types.
     ensure_search_extension(project_dir)?;
+    // Sweep extensions retired from the seeded set (removed brain/knowledge
+    // tools, hosted web-search) so old project dirs stop registering them.
+    {
+        use screenpipe_core::agents::pi::PiExecutor;
+        PiExecutor::ensure_retired_extensions_removed(std::path::Path::new(project_dir))
+            .map_err(|e| format!("Failed to remove retired extensions: {}", e))?;
+    }
     Ok(())
 }
 

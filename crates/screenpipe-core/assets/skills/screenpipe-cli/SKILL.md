@@ -168,7 +168,7 @@ enabled: true
 preset: auto
 ---
 
-Check Gmail for a reply from Mark about the HIPAA evidence pack.
+Check the project log at ~/notes/deploy-log.md for a new entry today.
 If found, summarize and send a notification. If not, note it.
 ```
 
@@ -189,7 +189,7 @@ cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} pipe run my-pipe
 
 ### Testing from in-app chat
 
-The cloud JWT is intentionally absent from Bash. Do not expose or recover it, and do not use standalone `pipe run`. Test through the authenticated desktop runtime:
+Chat provider credentials are intentionally absent from Bash. Do not expose or recover them, and do not use standalone `pipe run`. Test through the authenticated desktop runtime:
 
 ```bash
 api="${SCREENPIPE_LOCAL_API_URL:-http://localhost:3030}"
@@ -263,7 +263,7 @@ The manifest is stored locally at `~/.screenpipe/project-sync-v1.json` by defaul
 
 ## Connection Management
 
-Manage integrations (Telegram, Slack, Discord, Email, Todoist, Teams) from the CLI.
+Manage local integrations (Obsidian vault, Logseq vault, IMAP mailbox) from the CLI. Imported channel content (Feishu messages, Tencent Meeting transcripts, RSS) is served by the engine's `/connections/office/*` and `/connections/rss` API instead — see the screenpipe-api skill.
 
 ### Commands
 
@@ -280,20 +280,17 @@ cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} connection remov
 ### Examples
 
 ```bash
-# Set up Telegram
-cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} connection set telegram bot_token=123456:ABC-DEF chat_id=5776185278
-
-# Set up Slack webhook
-cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} connection set slack webhook_url=https://hooks.slack.com/services/...
+# Point at an Obsidian vault
+cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} connection set obsidian vault_path=/Users/me/Documents/Notes
 
 # Verify it works
-cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} connection test telegram
+cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} connection test obsidian
 
 # Check what's connected
 cd "$(mktemp -d)" && ${SCREENPIPE_CLI:-bun x screenpipe@latest} connection list
 ```
 
-Connection IDs: `telegram`, `slack`, `discord`, `email`, `todoist`, `teams`, `google-calendar`, `openclaw`
+Connection IDs: `obsidian`, `logseq`, `imap`
 
 Credentials are stored locally and are not printed by `connection get`.
 
