@@ -348,9 +348,46 @@ impl TranscriptionSession {
     }
 
     /// Transcribe audio and return per-segment results with timestamps when
-    /// the engine provides them (Qwen3-ASR), or a single whole-audio segment
-    /// otherwise. Used by on-demand file transcription (audio document import).
+    /// the engine provides them, or a single whole-audio segment otherwise.
+    /// Used by on-demand file transcription (audio document import).
+    ///
+    /// The audio is transcribed in fixed windows: audiopipe's Qwen3-ASR
+    /// always emits exactly one whole-input segment, so without windowing a
+    /// long recording would collapse into a single `[00:00]` chunk and the
+    /// timestamp navigation this method exists for would be meaningless.
     pub async fn transcribe_segments(
+        &mut self,
+        audio: &[f32],
+        sample_rate: u32,
+        device: &str,
+    ) -> Result<Vec<AudioSegment>> {
+        const WINDOW_SECS: usize = 30;
+        let samples_per_window = (WINDOW_SECS as u32).saturating_mul(sample_rate.max(1)) as usize;
+        if samples_per_window == 0 {
+            return Ok(Vec::new());
+        }
+        if audio.len() <= samples_per_window {
+            return self.transcribe_segments_single(audio, sample_rate, device).await;
+        }
+        let mut all = Vec::new();
+        for (index, window) in audio.chunks(samples_per_window).enumerate() {
+            let window_offset = (index * samples_per_window) as f64 / sample_rate.max(1) as f64;
+            for mut segment in
+                self.transcribe_segments_single(window, sample_rate, device).await?
+            {
+                segment.start_secs += window_offset;
+                segment.end_secs += window_offset;
+                if !segment.text.is_empty() {
+                    all.push(segment);
+                }
+            }
+        }
+        Ok(all)
+    }
+
+    /// One pass over the given audio, mapping engine segments 1:1 (Qwen3
+    /// yields a single whole-input segment; the fallback arm degrades to it).
+    async fn transcribe_segments_single(
         &mut self,
         audio: &[f32],
         sample_rate: u32,
