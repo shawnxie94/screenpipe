@@ -98,3 +98,64 @@ export function getInternalSessionCategory(
   }
   return null;
 }
+
+/**
+ * Build the sidebar label for an internal-but-visible session. Internal
+ * sessions never receive a user-set title, so the label is a stable,
+ * time-based one minted from the row's creation time. Every generation
+ * shares one prompt, so a first-message fallback would give every row in
+ * the 系统活动 group the identical prompt-derived title.
+ */
+export function internalSessionTitle(
+  category: InternalSessionCategory,
+  createdAt: number,
+): string {
+  const date = new Date(createdAt);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  switch (category) {
+    case "activity-history":
+      return `活动生成 · ${hh}:${mm}`;
+    case "live-view":
+      return `仪表盘生成 · ${hh}:${mm}`;
+    case "brain-task":
+      return `Knowledge 沉淀 · ${hh}:${mm}`;
+  }
+}
+
+/** Input shape for {@link internalSessionRecordTitle} — mirrors the title
+ *  fields that exist on both persisted conversation files and live
+ *  SessionRecords. */
+export interface InternalSessionTitleFields {
+  createdAt: number;
+  title?: string | null;
+  titleSource?: "user" | "ai" | "fallback" | null;
+}
+
+/**
+ * Resolve the title a conversation row should carry for an internal
+ * session id; `null` when the id is not an internal-but-visible session.
+ *
+ * One resolver for every writer (background persist, foreground save,
+ * disk hydration): all save paths used to derive titles from the first
+ * user message, and any of them seeing an internal session rewrote its
+ * label into a raw prompt slice ("为下面的精确边界构建简…"). Only an
+ * explicit user rename survives; `ai` / `fallback` / missing sources
+ * re-mint deterministically from createdAt, which also repairs rows an
+ * older build already overwrote.
+ */
+export function internalSessionRecordTitle(
+  sessionId: string,
+  fields: InternalSessionTitleFields,
+): string | null {
+  const category = getInternalSessionCategory(sessionId);
+  if (!category) return null;
+  if (
+    fields.titleSource === "user" &&
+    fields.title &&
+    fields.title.trim()
+  ) {
+    return fields.title.trim();
+  }
+  return internalSessionTitle(category, fields.createdAt);
+}

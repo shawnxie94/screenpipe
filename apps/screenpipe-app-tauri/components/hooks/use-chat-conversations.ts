@@ -24,6 +24,7 @@ import {
   stripPromptPlumbing,
 } from "@/lib/utils/chat-title";
 import { isInjectedTitleSourcePrompt } from "@/lib/chat-utils";
+import { internalSessionRecordTitle } from "@/lib/utils/internal-session";
 import {
   getCachedBrowserStateEntry,
   resolveNewestBrowserState,
@@ -711,18 +712,36 @@ export function useChatConversations(opts: UseChatConversationsOpts) {
       fallbackTitle,
       firstUserMsg?.content,
     );
-    // Title priority: user > ai > fallback.
-    // Also preserve legacy non-fallback titles that predate titleSource.
+    // Internal-but-visible sessions (活动生成 / 仪表盘生成 / Knowledge 沉淀)
+    // keep their minted time label no matter what the first message looks
+    // like — every generation shares one prompt, so a first-message fallback
+    // would stamp the raw prompt text onto the row, and isFallbackLikeTitle
+    // then treats that leak as canonical on every later save. This was the
+    // foreground path that leaked "为下面的精确边界构建简…" into the
+    // sidebar the moment a user opened a generation row to inspect it.
+    const internalTitle = internalSessionRecordTitle(convId, {
+      createdAt:
+        chatState.sessions[convId]?.createdAt ??
+        existing?.createdAt ??
+        Date.now(),
+      title: existingTitle,
+      titleSource: existingSource,
+    });
+    // Title priority: internal label > user > ai > fallback.
     const preservedTitleSource: "user" | "ai" | null =
-      existingSource === "user" || existingSource === "ai"
-        ? existingSource
-        : existingTitle && !existingLooksFallback
-          ? "user"
-          : null;
+      internalTitle
+        ? null
+        : existingSource === "user" || existingSource === "ai"
+          ? existingSource
+          : existingTitle && !existingLooksFallback
+            ? "user"
+            : null;
     const title =
-      preservedTitleSource && existingTitle ? existingTitle : fallbackTitle;
-    const titleSource: "user" | "ai" | "fallback" =
-      preservedTitleSource ?? "fallback";
+      internalTitle ??
+      (preservedTitleSource && existingTitle ? existingTitle : fallbackTitle);
+    const titleSource: "user" | "ai" | "fallback" = internalTitle
+      ? "fallback"
+      : (preservedTitleSource ?? "fallback");
 
     // Start AI title generation in background (once per conversation)
     // Only generate if current title is fallback priority.
@@ -748,6 +767,10 @@ export function useChatConversations(opts: UseChatConversationsOpts) {
     if (
       autoTitleEnabled &&
       !isPipeChat &&
+      // Internal runs have one shared prompt and a deterministic label —
+      // titling them with a second LLM call would only burn a hosted
+      // request and put a prompt-derived title back on the row.
+      !internalTitle &&
       // Title generation uses a second hosted request. Starting it beside the
       // first answer competes with the user's chat for the account-wide hosted
       // request slot, so wait until that answer has actually settled.

@@ -3463,7 +3463,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                 {connectionPreview.source_url ? (
                   <button
                     type="button"
-                    onClick={() => window.open(connectionPreview.source_url, "_blank")}
+                    onClick={() => window.open(connectionPreview.source_url ?? undefined, "_blank")}
                     className="ml-auto inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                   >
                     <Plug className="h-3 w-3" />

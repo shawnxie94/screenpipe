@@ -71,7 +71,13 @@ import {
 } from "@/lib/chat-utils";
 import { deriveFallbackConversationTitle } from "@/lib/utils/chat-title";
 import { optimisticAssistantForUserEcho } from "@/lib/chat/cross-window-transcript-sync";
-import { isInternalAgentSession, getInternalSessionCategory, type InternalSessionCategory } from "@/lib/utils/internal-session";
+import {
+  isInternalAgentSession,
+  getInternalSessionCategory,
+  internalSessionTitle,
+  internalSessionRecordTitle,
+  type InternalSessionCategory,
+} from "@/lib/utils/internal-session";
 import { useAcpSessionConfig } from "@/lib/stores/acp-session-config";
 import {
   agentActionMessage,
@@ -187,31 +193,6 @@ function errorMessage(evt: PiInnerEvent): string | null {
     return m.errorMessage || m.error || "未知错误";
   }
   return null;
-}
-
-/**
- * Build the sidebar label for an internal-but-visible session.
- * Internal sessions never receive a user-set title, so the router has to
- * mint a stable, time-based one. The timestamp comes from
- * `Date.now()` at row creation — the underlying session id also embeds
- * the same epoch (`__title:activity-history-<epoch>-<rand>`), so the
- * label and the id stay in sync.
- */
-function internalSessionTitle(
-  category: InternalSessionCategory,
-  createdAt: number,
-): string {
-  const date = new Date(createdAt);
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  switch (category) {
-    case "activity-history":
-      return `活动生成 · ${hh}:${mm}`;
-    case "live-view":
-      return `仪表盘生成 · ${hh}:${mm}`;
-    case "brain-task":
-      return `Knowledge 沉淀 · ${hh}:${mm}`;
-  }
 }
 
 // Per-session throttling: text_delta fires at ~100Hz; rendering the sidebar
@@ -1121,18 +1102,20 @@ async function persistBackgroundSession(
       const derivedTitle: string = deriveFallbackConversationTitle(firstUserMsg);
 
       const storeSession = useChatStore.getState().sessions[sid];
-      // Internal-but-visible runs keep the router-minted time label. Every
+      // Internal-but-visible runs keep the minted time label. Every
       // generation shares one prompt, so the first-message fallback would
       // give every row in the 系统活动 group the identical title; minting
       // from createdAt keeps the label stable across saves and repairs rows
       // whose title an older build already overwrote with the prompt text.
-      const internalCategory = getInternalSessionCategory(sid);
-      const title = internalCategory
-        ? internalSessionTitle(
-            internalCategory,
+      // An explicit user rename survives (only titleSource "user" is kept).
+      const title =
+        internalSessionRecordTitle(sid, {
+          createdAt:
             storeSession?.createdAt ?? existing?.createdAt ?? Date.now(),
-          )
-        : existing?.title || derivedTitle;
+          title: existing?.title,
+          titleSource: existing?.titleSource,
+        }) ??
+        (existing?.title || derivedTitle);
       let computedLastUserMessageAt: number | undefined;
       for (const message of messages as any[]) {
         if (message?.role !== "user" || typeof message.timestamp !== "number") continue;

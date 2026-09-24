@@ -1557,5 +1557,119 @@ describe("chat-store: applyChatSessionActivity", () => {
       expect(recentsIds).toEqual(["user-chat"]);
       expect(internalIds).toEqual(["__title:activity-history-1768-aaaa"]);
     });
+
+    it("caps completed runs per category so old rows don't read as concurrent tasks", () => {
+      // 每次后台生成都留下一条行；堆积的旧行与新运行并排出现时，
+      // 会被误读为同时有多个任务在跑。已完成的运行只保留最近 N 条。
+      const now = Date.now();
+      for (let i = 0; i < 7; i++) {
+        useChatStore.getState().actions.upsert({
+          ...baseRecord({
+            id: `__title:activity-history-run-${i}`,
+            createdAt: now - (i + 1) * 60_000,
+            updatedAt: now - (i + 1) * 60_000,
+          }),
+          internalCategory: "activity-history",
+        });
+      }
+      // 失败的运行不受上限约束——它是用户排查所需的行。
+      useChatStore.getState().actions.upsert({
+        ...baseRecord({
+          id: "__title:activity-history-run-failed",
+          createdAt: now - 8 * 60_000,
+          updatedAt: now - 8 * 60_000,
+          status: "error",
+        }),
+        internalCategory: "activity-history",
+      });
+
+      const ids = selectInternalSystemActivitySessions(
+        useChatStore.getState(),
+      ).map((s) => s.id);
+      expect(ids).toHaveLength(6); // 5 completed + 1 error
+      expect(ids).toContain("__title:activity-history-run-failed");
+      // 最早的已完成运行被挤出分组。
+      expect(ids).not.toContain("__title:activity-history-run-6");
+      // 最新的已完成运行保留。
+      expect(ids).toContain("__title:activity-history-run-0");
+    });
+
+    it("applies the completed-run cap independently per category", () => {
+      const now = Date.now();
+      for (let i = 0; i < 6; i++) {
+        useChatStore.getState().actions.upsert({
+          ...baseRecord({
+            id: `__title:activity-history-run-${i}`,
+            createdAt: now - (i + 1) * 60_000,
+            updatedAt: now - (i + 1) * 60_000,
+          }),
+          internalCategory: "activity-history",
+        });
+        useChatStore.getState().actions.upsert({
+          ...baseRecord({
+            id: `__title:knowledge-run-${i}`,
+            createdAt: now - (i + 1) * 60_000,
+            updatedAt: now - (i + 1) * 60_000,
+          }),
+          internalCategory: "brain-task",
+        });
+      }
+      const byCategory = selectInternalSystemActivitySessions(
+        useChatStore.getState(),
+      );
+      const count = (prefix: string) =>
+        byCategory.filter((s) => s.id.startsWith(prefix)).length;
+      expect(count("__title:activity-history-run-")).toBe(5);
+      expect(count("__title:knowledge-run-")).toBe(5);
+    });
+  });
+});
+
+describe("chat-store: internal session titles survive disk round-trips", () => {
+  it("re-mints a leaked prompt title when an internal row hydrates", () => {
+    // 老版本构建曾把生成提示词原文写成标题；这些会话不会再产生新事件，
+    // 唯一的治愈点是 hydration。标题必须从 createdAt 重铸。
+    const record = sessionRecordFromMeta({
+      id: "__title:activity-history-b4c4caad-a6f8-4b38-89e3-459ade7c83ea",
+      title: "为下面的精确边界构建简洁的活动时间线。",
+      titleSource: "fallback",
+      createdAt: new Date("2026-09-24T01:24:00").getTime(),
+      updatedAt: new Date("2026-09-24T01:25:00").getTime(),
+      messageCount: 7,
+      pinned: false,
+      hidden: false,
+      kind: "chat",
+    });
+    expect(record.title).toMatch(/^活动生成 · \d{2}:\d{2}$/);
+    expect(record.title).not.toContain("为下面的精确边界");
+  });
+
+  it("keeps a deliberate user rename across hydration", () => {
+    const record = sessionRecordFromMeta({
+      id: "__title:activity-history-b4c4caad-a6f8-4b38-89e3-459ade7c83ea",
+      title: "我手动改的名字",
+      titleSource: "user",
+      createdAt: new Date("2026-09-24T01:24:00").getTime(),
+      updatedAt: new Date("2026-09-24T01:25:00").getTime(),
+      messageCount: 7,
+      pinned: false,
+      hidden: false,
+      kind: "chat",
+    });
+    expect(record.title).toBe("我手动改的名字");
+  });
+
+  it("leaves non-internal titles untouched", () => {
+    const record = sessionRecordFromMeta({
+      id: "user-chat",
+      title: "为下面的精确边界构建简洁的活动时间线。",
+      createdAt: 100,
+      updatedAt: 200,
+      messageCount: 2,
+      pinned: false,
+      hidden: false,
+      kind: "chat",
+    });
+    expect(record.title).toBe("为下面的精确边界构建简洁的活动时间线。");
   });
 });

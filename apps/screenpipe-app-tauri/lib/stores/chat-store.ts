@@ -33,6 +33,7 @@ import {
 import {
   isActivityHistoryRepairSession,
   getInternalSessionCategory,
+  internalSessionRecordTitle,
   type InternalSessionCategory,
 } from "@/lib/utils/internal-session";
 
@@ -993,9 +994,19 @@ export const useChatActions = () => useChatStore((s) => s.actions);
  *  the moment a pipe finishes. Legacy rows that predate `lastViewedAt`
  *  restore as read because they have no persisted unread watermark. */
 export function sessionRecordFromMeta(m: ConversationMeta): SessionRecord {
+  // Internal-but-visible rows always re-mint their label at hydration.
+  // Files last written by a build without the minting guard carry the raw
+  // generation prompt as the title ("为下面的精确边界构建简…") and would
+  // otherwise pin that leak in the sidebar forever — those sessions never
+  // emit new events, so no save path ever repairs them after a restart.
   const record: SessionRecord = {
     id: m.id,
-    title: m.title || "未命名",
+    title:
+      internalSessionRecordTitle(m.id, {
+        createdAt: m.createdAt,
+        title: m.title,
+        titleSource: m.titleSource,
+      }) ?? (m.title || "未命名"),
     titleSource: m.titleSource,
     preview: "",
     status: "idle",
@@ -1313,10 +1324,16 @@ export function selectOrderedSessions(
  * pinned/ephemeral filters because internal runs are never pinned and
  * never ephemeral.
  */
+/** Completed runs kept visible per 系统活动 category. Every background run
+ *  leaves a permanent row; uncapped, the group piles up into an archive and
+ *  old rows sit next to a fresh run looking like concurrent duplicate tasks.
+ *  Rows are only hidden from the group, never deleted. */
+const MAX_COMPLETED_PER_CATEGORY = 5;
+
 export function selectInternalSystemActivitySessions(
   state: ChatSessionsState,
 ): SessionRecord[] {
-  return dedupeSessionRecords(Object.values(state.sessions))
+  const candidates = dedupeSessionRecords(Object.values(state.sessions))
     .filter(
       (session) =>
         (session.internalCategory === "activity-history"
@@ -1328,7 +1345,21 @@ export function selectInternalSystemActivitySessions(
         // "activity-history" category — exclude them by id so one
         // generation never shows as two identical timeline rows.
         && !isActivityHistoryRepairSession(session.id),
-    )
+    );
+  // In-progress and failed runs always stay visible (they're what the group
+  // exists for); among finished ones keep only the most recent N per
+  // category.
+  const completedCount = new Map<InternalSessionCategory, number>();
+  const kept = new Set(candidates.map((s) => s.id));
+  for (const session of [...candidates].sort((a, b) => b.createdAt - a.createdAt)) {
+    if (session.status !== "idle") continue;
+    const category = session.internalCategory!;
+    const count = completedCount.get(category) ?? 0;
+    if (count >= MAX_COMPLETED_PER_CATEGORY) kept.delete(session.id);
+    else completedCount.set(category, count + 1);
+  }
+  return candidates
+    .filter((session) => kept.has(session.id))
     .sort(compareForSidebar);
 }
 
