@@ -3,10 +3,12 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  importAudioDocument,
   importLocalDocument,
   sha256Hex,
   summarizeImportResults,
 } from "@/lib/utils/document-import";
+import { isSupportedAudioExt } from "@/lib/pi/extract-document";
 
 // jsdom lacks crypto.subtle — node's webcrypto covers it.
 vi.stubGlobal("crypto", globalThis.crypto);
@@ -136,5 +138,70 @@ describe("summarizeImportResults", () => {
     expect(
       summarizeImportResults([{ name: "a.md", status: "imported" }]),
     ).toEqual({ failed: [], succeeded: 1 });
+  });
+});
+
+describe("importAudioDocument", () => {
+  const audioInput = (over: Partial<Parameters<typeof importAudioDocument>[0]> = {}) => ({
+    name: "录音.m4a",
+    originalPath: "/tmp/rec.m4a",
+    loadBytes: async () => bytes,
+    ...over,
+  });
+
+  it("uploads to import-audio and reports imported without a text submit", async () => {
+    fetchMock.mockResolvedValueOnce(
+      okJson({ sha256: "aud1", status: "imported", segments: 12, duration_secs: 95.5 }),
+    );
+
+    const result = await importAudioDocument(audioInput());
+
+    expect(result).toEqual({ name: "录音.m4a", status: "imported", sha256: "aud1" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [path, init] = fetchMock.mock.calls[0];
+    expect(path).toContain("/documents/import-audio?filename=");
+    expect(path).toContain("original_path=%2Ftmp%2Frec.m4a");
+    expect(init.method).toBe("POST");
+  });
+
+  it("reports duplicates without recording a failure", async () => {
+    fetchMock.mockResolvedValueOnce(okJson({ sha256: "aud1", status: "duplicate" }));
+
+    const result = await importAudioDocument(audioInput());
+    expect(result.status).toBe("duplicate");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces the engine failure reason (e.g. empty transcription)", async () => {
+    fetchMock.mockResolvedValueOnce(errJson(422, "未转写出任何语音内容"));
+
+    const result = await importAudioDocument(audioInput());
+    expect(result.status).toBe("failed");
+    expect(result.reason).toBe("未转写出任何语音内容");
+    // 失败也走 /documents/import-failed，保证用户可见
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toContain("/documents/import-failed");
+  });
+
+  it("rejects empty audio without a network call", async () => {
+    const result = await importAudioDocument(
+      audioInput({ loadBytes: async () => new Uint8Array() }),
+    );
+    expect(result.status).toBe("failed");
+    expect(result.reason).toBe("文件是空的");
+    // 空文件也要在 /documents/import-failed 留一条可见失败
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toContain("/documents/import-failed");
+  });
+});
+
+describe("isSupportedAudioExt", () => {
+  it("accepts the phased-plan audio formats and nothing else", () => {
+    for (const ext of ["mp3", "wav", "m4a", "webm"]) {
+      expect(isSupportedAudioExt(ext)).toBe(true);
+    }
+    for (const ext of ["mp4", "mov", "pdf", "md", ""]) {
+      expect(isSupportedAudioExt(ext)).toBe(false);
+    }
   });
 });

@@ -191,3 +191,56 @@ async function uploadErrorMessage(resp: Response): Promise<string> {
   }
   return `导入失败（HTTP ${resp.status}）`;
 }
+
+/** Audio import (mp3/wav/m4a/webm): the engine stores the managed copy and
+ *  transcribes locally, so this call stays in flight until transcription
+ *  finishes — long files legitimately take minutes. Reuses the same result
+ *  shape so callers can batch audio and document imports together. */
+export async function importAudioDocument(
+  input: LocalDocumentImportInput,
+): Promise<LocalDocumentImportResult> {
+  let bytes: Uint8Array;
+  try {
+    bytes = await input.loadBytes();
+  } catch (err) {
+    const reason = `无法读取文件：${err instanceof Error ? err.message : String(err)}`;
+    await recordFailed(input, reason);
+    return { name: input.name, status: "failed", reason };
+  }
+  if (bytes.byteLength === 0) {
+    await recordFailed(input, "文件是空的", undefined, 0);
+    return { name: input.name, status: "failed", reason: "文件是空的" };
+  }
+
+  try {
+    const params = new URLSearchParams({ filename: input.name });
+    if (input.originalPath) params.set("original_path", input.originalPath);
+    const resp = await localFetch(`/documents/import-audio?${params}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream" },
+      body: bytes as unknown as BodyInit,
+      // Transcription is engine-side and synchronous; 15 min covers a
+      // 200 MB upload on a slow disk without hanging forever.
+      signal: AbortSignal.timeout(15 * 60_000),
+    });
+    const data = (await resp.json().catch(() => null)) as {
+      sha256?: string;
+      status?: string;
+      message?: string;
+    } | null;
+    if (!resp.ok) {
+      const reason = data?.message ?? `导入失败（HTTP ${resp.status}）`;
+      await recordFailed(input, reason, data?.sha256, bytes.byteLength);
+      return { name: input.name, status: "failed", reason, sha256: data?.sha256 };
+    }
+    return {
+      name: input.name,
+      status: data?.status === "duplicate" ? "duplicate" : "imported",
+      sha256: data?.sha256,
+    };
+  } catch (err) {
+    const reason = `转写请求失败：${err instanceof Error ? err.message : String(err)}`;
+    await recordFailed(input, reason);
+    return { name: input.name, status: "failed", reason };
+  }
+}

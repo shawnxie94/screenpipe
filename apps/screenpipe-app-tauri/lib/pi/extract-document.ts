@@ -43,8 +43,17 @@ const TEXT_EXTS_SET = new Set<string>(TEXT_EXTS);
 const BINARY_DOC_EXTS = ["pdf", "docx", "xlsx", "xls"] as const;
 const BINARY_DOC_EXTS_SET = new Set<string>(BINARY_DOC_EXTS);
 
+// Audio files take the engine-side transcription pipeline
+// (POST /documents/import-audio), not the renderer text parsers.
+export const AUDIO_EXTS = ["mp3", "wav", "m4a", "webm"] as const;
+const AUDIO_EXTS_SET = new Set<string>(AUDIO_EXTS);
+
 export function extFromName(name: string): string {
   return (name.split(".").pop() || "").toLowerCase();
+}
+
+export function isSupportedAudioExt(ext: string): boolean {
+  return AUDIO_EXTS_SET.has(ext.toLowerCase());
 }
 
 // True for any non-image file we know how to turn into text.

@@ -36,10 +36,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import {
+  importAudioDocument,
   importLocalDocument,
   summarizeImportResults,
 } from "@/lib/utils/document-import";
-import { DOC_PICKER_EXTENSIONS } from "@/lib/pi/extract-document";
+import {
+  AUDIO_EXTS,
+  DOC_PICKER_EXTENSIONS,
+  extFromName,
+  isSupportedAudioExt,
+} from "@/lib/pi/extract-document";
 import { localFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -142,7 +148,10 @@ export function DocumentSourcesSettings() {
     try {
       picked = await openDialog({
         multiple: true,
-        filters: [{ name: "Documents", extensions: [...DOC_PICKER_EXTENSIONS] }],
+        filters: [
+          { name: "Documents", extensions: [...DOC_PICKER_EXTENSIONS] },
+          { name: "Audio", extensions: [...AUDIO_EXTS] },
+        ],
       });
     } catch (err) {
       console.error("document file picker error:", err);
@@ -155,8 +164,11 @@ export function DocumentSourcesSettings() {
       const results = [];
       for (const path of paths) {
         const name = path.split(/[\\/]/).pop() || path;
+        const importFn = isSupportedAudioExt(extFromName(name))
+          ? importAudioDocument
+          : importLocalDocument;
         results.push(
-          await importLocalDocument({
+          await importFn({
             name,
             originalPath: path,
             loadBytes: () => readFile(path),
@@ -172,7 +184,12 @@ export function DocumentSourcesSettings() {
         });
       }
       if (succeeded > 0) {
-        toast({ title: `已导入 ${succeeded} 个文档，可在搜索中全文检索` });
+        const hasAudio = results.some((r) => r.status === "imported" && isSupportedAudioExt(extFromName(r.name)));
+        toast({
+          title: hasAudio
+            ? `已导入 ${succeeded} 个文件，音频转写完成，可在搜索中全文检索`
+            : `已导入 ${succeeded} 个文档，可在搜索中全文检索`,
+        });
         if (recordsOpen) void loadRecords();
       }
     } finally {

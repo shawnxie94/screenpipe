@@ -297,6 +297,15 @@ impl TranscriptionEngine {
     }
 }
 
+/// One timed transcription segment — the unit of timestamped output for
+/// on-demand file transcription (audio document import).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AudioSegment {
+    pub start_secs: f64,
+    pub end_secs: f64,
+    pub text: String,
+}
+
 /// Per-thread transcription session. Holds `WhisperState` (which is `!Send`)
 /// for Whisper variants, or shared model handles for other engines.
 pub enum TranscriptionSession {
@@ -336,6 +345,68 @@ impl TranscriptionSession {
         self.transcribe(audio, sample_rate, device)
             .await
             .map(TranscriptionOutput::plain)
+    }
+
+    /// Transcribe audio and return per-segment results with timestamps when
+    /// the engine provides them (Qwen3-ASR), or a single whole-audio segment
+    /// otherwise. Used by on-demand file transcription (audio document import).
+    pub async fn transcribe_segments(
+        &mut self,
+        audio: &[f32],
+        sample_rate: u32,
+        device: &str,
+    ) -> Result<Vec<AudioSegment>> {
+        let duration_secs = if sample_rate > 0 {
+            audio.len() as f64 / sample_rate as f64
+        } else {
+            0.0
+        };
+        match self {
+            #[cfg(feature = "qwen3-asr")]
+            Self::Qwen3Asr { model, vocabulary } => {
+                let mut engine =
+                    model.lock().map_err(|e| anyhow!("stt model lock: {}", e))?;
+                let result = engine
+                    .transcribe_with_sample_rate(audio, sample_rate, Default::default())
+                    .map_err(|e| anyhow!("{}", e))?;
+                let mut segments = Vec::with_capacity(result.segments.len());
+                for segment in result.segments {
+                    let mut text = segment.text.trim().to_string();
+                    if text.is_empty()
+                        || text
+                            .strip_prefix("language ")
+                            .is_some_and(|rest| rest.chars().all(|c| c.is_alphabetic()))
+                    {
+                        continue;
+                    }
+                    for entry in vocabulary.iter() {
+                        if let Some(ref replacement) = entry.replacement {
+                            text = text.replace(&entry.word, replacement);
+                        }
+                    }
+                    segments.push(AudioSegment {
+                        start_secs: segment.start_secs,
+                        end_secs: segment.end_secs,
+                        text,
+                    });
+                }
+                Ok(segments)
+            }
+            // Whisper gives no convenient segment handle here — one whole-file
+            // segment keeps the importer working with degraded navigation.
+            _ => {
+                let text = self.transcribe(audio, sample_rate, device).await?;
+                if text.trim().is_empty() {
+                    Ok(Vec::new())
+                } else {
+                    Ok(vec![AudioSegment {
+                        start_secs: 0.0,
+                        end_secs: duration_secs,
+                        text,
+                    }])
+                }
+            }
+        }
     }
 
     /// Transcribe audio samples and apply vocabulary post-processing.

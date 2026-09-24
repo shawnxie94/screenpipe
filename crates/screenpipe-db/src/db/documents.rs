@@ -371,6 +371,61 @@ impl DatabaseManager {
         Ok("ready")
     }
 
+    /// Same contract as [`Self::document_mark_ready`], but the caller
+    /// supplies ready-made chunks. Audio transcription segments carry their
+    /// own `[mm:ss]` time markers, so re-running text chunking over them
+    /// would destroy the timestamp alignment the player navigates by.
+    pub async fn document_mark_ready_chunks(
+        &self,
+        sha256: &str,
+        chunks: &[String],
+        truncated: bool,
+    ) -> Result<(), sqlx::Error> {
+        if chunks.is_empty() {
+            return Err(sqlx::Error::RowNotFound);
+        }
+        let mut tx = self.begin_immediate_with_retry().await?;
+        sqlx::query("DELETE FROM source_document_chunks WHERE sha256 = ?1")
+            .bind(sha256)
+            .execute(&mut **tx.conn())
+            .await?;
+        sqlx::query("DELETE FROM source_documents_fts WHERE sha256 = ?1")
+            .bind(sha256)
+            .execute(&mut **tx.conn())
+            .await?;
+        for (ordinal, body) in chunks.iter().enumerate() {
+            sqlx::query(
+                "INSERT INTO source_document_chunks (sha256, ordinal, body) VALUES (?1, ?2, ?3)",
+            )
+            .bind(sha256)
+            .bind(ordinal as i64)
+            .bind(body)
+            .execute(&mut **tx.conn())
+            .await?;
+            let fts_body = crate::text_normalizer::chinese_project(body);
+            sqlx::query(
+                "INSERT INTO source_documents_fts (body, sha256, ordinal) VALUES (?1, ?2, ?3)",
+            )
+            .bind(&fts_body)
+            .bind(sha256)
+            .bind(ordinal as i64)
+            .execute(&mut **tx.conn())
+            .await?;
+        }
+        sqlx::query(
+            "UPDATE source_documents SET state = 'ready', truncated = ?2, \
+             chunk_count = ?3, error_message = NULL, updated_at = ?4 WHERE sha256 = ?1",
+        )
+        .bind(sha256)
+        .bind(truncated)
+        .bind(chunks.len() as i64)
+        .bind(now_ts())
+        .execute(&mut **tx.conn())
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// Record a failed import (unsupported ext, oversized, unreadable,
     /// parser error). Creates a `failed` row even when no bytes were stored,
     /// so the failure is visible and the user can see why nothing appeared.

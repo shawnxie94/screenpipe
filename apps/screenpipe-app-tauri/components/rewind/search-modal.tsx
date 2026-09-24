@@ -46,9 +46,10 @@ import { NearViewport } from "./near-viewport";
 import { localFetch, getApiBaseUrl, appendAuthToken } from "@/lib/api";
 import { searchInputBehaviorProps } from "@/lib/search-input-behavior";
 import { usePlatform } from "@/lib/hooks/use-platform";
-import { importLocalDocument, summarizeImportResults } from "@/lib/utils/document-import";
+import { importAudioDocument, importLocalDocument, summarizeImportResults } from "@/lib/utils/document-import";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { readFile } from "@tauri-apps/plugin-fs";
+import { extFromName, isSupportedAudioExt } from "@/lib/pi/extract-document";
 import { toast } from "@/components/ui/use-toast";
 
 interface SpeakerResult {
@@ -120,6 +121,9 @@ interface DocumentPreview {
   loading: boolean;
   chunks: Array<{ ordinal: number; body: string }> | null;
   error: string | null;
+  /** Blob URL of the managed audio copy when the document is an imported
+   *  audio file — powers the preview player and timestamp seeking. */
+  audioUrl: string | null;
 }
 
 interface SearchModalProps {
@@ -853,6 +857,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [documentPreview, setDocumentPreview] = useState<DocumentPreview | null>(null);
   const documentPreviewRef = useRef<DocumentPreview | null>(null);
+  const documentAudioRef = useRef<HTMLAudioElement | null>(null);
   documentPreviewRef.current = documentPreview;
   const documentRequestRef = useRef(0);
   const documentResultsRef = useRef<DocumentHit[]>([]);
@@ -872,8 +877,11 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       const results = [];
       for (const path of paths) {
         const name = path.split(/[\\/]/).pop() || path;
+        const importFn = isSupportedAudioExt(extFromName(name))
+          ? importAudioDocument
+          : importLocalDocument;
         results.push(
-          await importLocalDocument({
+          await importFn({
             name,
             originalPath: path,
             loadBytes: () => readFile(path),
@@ -1444,7 +1452,10 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
       setAllTags([]);
       setSelectedSpeaker(null);
       setSelectedApp(null);
-      setDocumentPreview(null);
+      setDocumentPreview((prev) => {
+        if (prev?.audioUrl) URL.revokeObjectURL(prev.audioUrl);
+        return null;
+      });
       setConnectionPreview(null);
       setAppEntities([]);
       appRosterInFlightRef.current = false;
@@ -1830,7 +1841,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
   // comes from the imported chunks, so previewing never requires the original
   // file to still exist on disk.
   const openDocumentPreview = useCallback(async (hit: DocumentHit) => {
-    setDocumentPreview({ hit, loading: true, chunks: null, error: null });
+    setDocumentPreview({ hit, loading: true, chunks: null, error: null, audioUrl: null });
     try {
       const resp = await localFetch(
         `/documents/content?sha256=${encodeURIComponent(hit.sha256)}`,
@@ -1844,17 +1855,39 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
           loading: false,
           chunks: null,
           error: `无法读取文档内容（HTTP ${resp.status}）`,
+        audioUrl: null,
         });
         return;
       }
-      setDocumentPreview({ hit, loading: false, chunks, error: null });
+      setDocumentPreview({ hit, loading: false, chunks, error: null, audioUrl: null });
     } catch (err) {
       setDocumentPreview({
         hit,
         loading: false,
         chunks: null,
         error: err instanceof Error ? err.message : String(err),
+        audioUrl: null,
       });
+    }
+    // Imported audio files stream their managed copy for in-app playback —
+    // a blob URL keeps auth handling identical to every other localFetch.
+    if (isSupportedAudioExt(hit.ext)) {
+      try {
+        const resp = await localFetch(
+          `/documents/audio?sha256=${encodeURIComponent(hit.sha256)}`,
+          { signal: AbortSignal.timeout(30000) },
+        );
+        if (resp.ok) {
+          const blob = await resp.blob();
+          setDocumentPreview((prev) => {
+            if (prev?.hit.sha256 !== hit.sha256) return prev;
+            if (prev.audioUrl) URL.revokeObjectURL(prev.audioUrl);
+            return { ...prev, audioUrl: URL.createObjectURL(blob) };
+          });
+        }
+      } catch {
+        // Playback is best-effort; the transcript preview still works.
+      }
     }
   }, []);
 
@@ -2384,7 +2417,10 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
             handleBackFromApp();
           } else if (documentPreviewRef.current) {
             e.preventDefault();
-            setDocumentPreview(null);
+            setDocumentPreview((prev) => {
+        if (prev?.audioUrl) URL.revokeObjectURL(prev.audioUrl);
+        return null;
+      });
           } else if (connectionPreviewRef.current) {
             e.preventDefault();
             setConnectionPreview(null);
@@ -2774,7 +2810,10 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
               key={key}
               title={key === "input" ? "键盘和剪贴板" : label}
               aria-pressed={isActive}
-              onClick={() => { setContentFilter(key); setDocumentPreview(null); setConnectionPreview(null); setNavIndex(0); }}
+              onClick={() => { setContentFilter(key); setDocumentPreview((prev) => {
+        if (prev?.audioUrl) URL.revokeObjectURL(prev.audioUrl);
+        return null;
+      }); setConnectionPreview(null); setNavIndex(0); }}
               className={cn(
                 "inline-flex h-7 min-w-[58px] items-center justify-center gap-1.5 rounded-md px-2.5 text-xs capitalize transition-colors",
                 isActive
@@ -3560,16 +3599,54 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                   </button>
                 </div>
               )}
+              {!documentPreview.loading && !documentPreview.error && documentPreview.audioUrl && (
+                <audio
+                  ref={documentAudioRef}
+                  controls
+                  src={documentPreview.audioUrl}
+                  className="w-full"
+                  data-testid="document-audio-player"
+                />
+              )}
               {!documentPreview.loading && !documentPreview.error && documentPreview.chunks && (
                 <div className="rounded-md border border-border bg-background px-3 py-2">
-                  {documentPreview.chunks.map((chunk) => (
-                    <pre
-                      key={chunk.ordinal}
-                      className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90 font-sans py-1"
-                    >
-                      {chunk.body}
-                    </pre>
-                  ))}
+                  {documentPreview.chunks.map((chunk) => {
+                    const marker = documentAudioRef.current || documentPreview.audioUrl
+                      ? chunk.body.match(/^\[(\d{2,}):(\d{2})\]/)
+                      : null;
+                    if (!marker) {
+                      return (
+                        <pre
+                          key={chunk.ordinal}
+                          className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90 font-sans py-1"
+                        >
+                          {chunk.body}
+                        </pre>
+                      );
+                    }
+                    const secs = Number(marker[1]) * 60 + Number(marker[2]);
+                    return (
+                      <button
+                        key={chunk.ordinal}
+                        type="button"
+                        onClick={() => {
+                          if (documentAudioRef.current) {
+                            documentAudioRef.current.currentTime = secs;
+                            void documentAudioRef.current.play();
+                          }
+                        }}
+                        className="flex w-full items-start gap-2 py-1 text-left transition-colors hover:bg-muted/50 rounded"
+                        title="跳转到此时间点"
+                      >
+                        <span className="shrink-0 font-mono text-[11px] text-muted-foreground mt-0.5">
+                          {marker[0]}
+                        </span>
+                        <span className="whitespace-pre-wrap break-words text-xs leading-relaxed text-foreground/90 font-sans">
+                          {chunk.body.slice(marker[0].length).trim()}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -3587,7 +3664,7 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                   hint={
                     trimmedQuery
                       ? "换个词试试，或在 设置 → 文档 中导入更多文档"
-                      : "在 设置 → 文档 中选择文件导入，或直接把文件拖进搜索窗口，即可全文搜索"
+                      : "在 设置 → 文档 中选择文件导入，或把文件（支持音频）拖进搜索窗口，即可全文搜索"
                   }
                 />
               )}
