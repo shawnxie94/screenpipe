@@ -3762,6 +3762,23 @@ export function SearchModal({ isOpen, onClose, onNavigateToTimestamp, embedded =
                       selected={isNavActive(`unified:${key}`)}
                       onHover={() => pos !== undefined && setNavIndex(pos)}
                       onClick={() => {
+                        // 文档（含导入音频）在混合结果里也可直达预览/播放：
+                        // 切到文档页并复用同一个预览钻取。
+                        if (result.source_type === "document") {
+                          trackSearchResultSelected("document", "click", "drilldown");
+                          setContentFilter("documents");
+                          void openDocumentPreview({
+                            sha256: result.source_pk,
+                            file_name: result.file_name ?? "",
+                            ext: result.ext ?? "",
+                            ordinal: 0,
+                            snippet: result.text,
+                            original_path: null,
+                            managed_path: null,
+                            imported_at: result.timestamp,
+                          });
+                          return;
+                        }
                         trackSearchResultSelected("unified", "click", "timeline");
                         if (result.timestamp) void navigateToResult(result.timestamp);
                       }}

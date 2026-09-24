@@ -28,6 +28,9 @@ export interface UnifiedSearchResult {
 	text: string;
 	score?: number;
 	legs?: string[];
+	/** Document rows only — powers preview drilldown from mixed results. */
+	file_name?: string;
+	ext?: string;
 }
 
 export interface SearchMatch {
@@ -241,6 +244,8 @@ export function mapRecordsResponse(data: unknown): SearchMapping {
 			if (text || timestamp) {
 				unifiedResults.push({
 					source_type: sourceType || "unknown",
+					file_name: content.file_name ?? undefined,
+					ext: content.ext ?? undefined,
 					source_pk: String(
 						content.chunk_id ??
 						content.sha256 ??
