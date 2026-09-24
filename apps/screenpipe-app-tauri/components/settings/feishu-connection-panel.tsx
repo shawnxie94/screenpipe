@@ -13,7 +13,7 @@ export function FeishuConnectionPanel({ onChanged }: { onChanged?: () => void })
     <OfficeConnectionCard
       provider="feishu"
       displayName="飞书"
-      description="只读导入你明确选择的飞书文档和会话消息，用于本地知识沉淀。不发消息、不改文档。"
+      description="只读导入你明确选择的飞书文档和会话消息，供本地检索与回顾。不发消息、不改文档。"
       onChanged={onChanged}
     >
       {({ scope, onScopeChange }) => (

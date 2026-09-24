@@ -269,7 +269,7 @@ export function OfficeConnectionCard({
                 onClick={() => {
                   if (
                     window.confirm(
-                      `断开并清理 ${displayName} 的全部本地副本？已派生的知识将一并失效，且不会重新导入这些内容。平台原件不受影响。`,
+                      `断开并清理 ${displayName} 的全部本地副本？将删除已导入的本地副本且不会重新导入这些内容。平台原件不受影响。`,
                     )
                   ) {
                     run("erase", () => disconnectOffice(provider, "erase"));
@@ -286,18 +286,15 @@ export function OfficeConnectionCard({
   );
 }
 
-/** Poll until the sync job leaves queued/running, bounded to ~60s. */
-async function pollSyncDone(provider: OfficeProvider, jobId: number) {
+/** Poll the provider status until the sync leaves queued/running, bounded to ~60s. */
+async function pollSyncDone(provider: OfficeProvider, _jobId: number) {
   for (let i = 0; i < 30; i++) {
     await new Promise((r) => setTimeout(r, 2000));
     try {
-      const res = await localFetch(`/knowledge/jobs?kind=office_sync&limit=5`);
+      const res = await localFetch(`/connections/office/${provider}`);
       if (res.ok) {
-        const body = (await res.json()) as {
-          jobs: Array<{ id: number; state: string }>;
-        };
-        const job = body.jobs.find((j) => j.id === jobId);
-        if (job && !["pending", "running", "queued"].includes(job.state)) {
+        const status = (await res.json()) as { sync_status?: string };
+        if (!["queued", "running"].includes(status.sync_status ?? "")) {
           return;
         }
       }
