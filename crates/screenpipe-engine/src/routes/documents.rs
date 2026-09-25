@@ -603,7 +603,8 @@ async fn import_document_video(
             let mut ocred: Vec<(f64, String)> = Vec::with_capacity(frames.len());
             for (secs, frame) in frames.iter() {
                 if let Some(text) = ocr_keyframe(frame) {
-                    ocred.push((*secs, text));
+                    // 「画面：」前缀让搜索结果能区分画外音与屏幕文字
+                    ocred.push((*secs, format!("画面：{text}")));
                 }
             }
             Ok::<_, std::io::Error>(ocred)
