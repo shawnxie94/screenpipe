@@ -397,14 +397,17 @@ async fn import_document_audio(
     }
 }
 
-/// Extract sparse keyframes as JPEGs via a single ffmpeg pass. Timestamp of
-/// frame i is i * interval_secs (the fps filter spaces frames evenly).
+/// Extract sparse keyframes at fixed timestamps via per-point `-ss` seeks.
+/// The fps filter emits at interval END (fps=1/20 on a short video yields
+/// zero frames, and the first frame would land at t=interval rather than 0),
+/// so seeking explicit timestamps keeps the marker math exact and works for
+/// any duration. Returns (timestamp_secs, jpeg_path) pairs.
 fn extract_keyframes_sync(
     path: &std::path::Path,
     out_dir: &std::path::Path,
     interval_secs: u64,
     max_frames: usize,
-) -> std::io::Result<Vec<PathBuf>> {
+) -> std::io::Result<Vec<(f64, PathBuf)>> {
     use screenpipe_core::ffmpeg::find_ffmpeg_path;
 
     let Some(ffmpeg_path) = find_ffmpeg_path() else {
@@ -414,40 +417,64 @@ fn extract_keyframes_sync(
         ));
     };
     std::fs::create_dir_all(out_dir)?;
-    let pattern = out_dir.join("frame%05d.jpg");
-    let mut command = screenpipe_core::ffmpeg_cmd(ffmpeg_path);
-    command
+
+    // Duration bounds the seek loop; a missing/unparsable duration leaves
+    // the frame list empty and the import degrades to audio-only.
+    let ffprobe_path = crate::video_utils::get_ffprobe_path(&ffmpeg_path);
+    let probe = Command::new(ffprobe_path)
         .args([
-            "-i",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "csv=p=0",
             path.to_str().ok_or_else(|| {
                 std::io::Error::new(std::io::ErrorKind::InvalidInput, "non-UTF-8 path")
             })?,
-            "-vf",
-            &format!("fps=1/{}", interval_secs),
-            "-frames:v",
-            &max_frames.to_string(),
-            "-q:v",
-            "2",
-            "-y",
-            pattern.to_str().ok_or_else(|| {
-                std::io::Error::new(std::io::ErrorKind::InvalidInput, "non-UTF-8 pattern")
-            })?,
         ])
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null());
-    let status = command.status()?;
-    if !status.success() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("ffmpeg keyframe extraction failed: {status}"),
-        ));
+        .output()?;
+    let duration: f64 = String::from_utf8_lossy(&probe.stdout)
+        .trim()
+        .parse()
+        .unwrap_or(0.0);
+    if duration <= 0.0 {
+        return Ok(Vec::new());
     }
-    let mut frames: Vec<PathBuf> = std::fs::read_dir(out_dir)?
-        .filter_map(|entry| entry.ok().map(|e| e.path()))
-        .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("jpg"))
-        .collect();
-    frames.sort();
+
+    let path_str = path.to_str().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "non-UTF-8 path")
+    })?;
+    let mut frames: Vec<(f64, PathBuf)> = Vec::new();
+    let mut t = 0.0f64;
+    while t < duration && frames.len() < max_frames {
+        let out = out_dir.join(format!("frame{:04}.jpg", frames.len()));
+        let status = Command::new(&ffmpeg_path)
+            .args([
+                "-ss",
+                &format!("{t:.3}"),
+                "-i",
+                path_str,
+                "-frames:v",
+                "1",
+                "-strict",
+                "unofficial",
+                "-q:v",
+                "2",
+                "-y",
+                out.to_str().ok_or_else(|| {
+                    std::io::Error::new(std::io::ErrorKind::InvalidInput, "non-UTF-8 out path")
+                })?,
+            ])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()?;
+        if status.success() && out.exists() {
+            frames.push((t, out));
+        }
+        t += interval_secs as f64;
+    }
     Ok(frames)
 }
 
@@ -574,9 +601,9 @@ async fn import_document_video(
             let frames =
                 extract_keyframes_sync(&video_path, temp_dir.path(), interval, MAX_KEYFRAMES)?;
             let mut ocred: Vec<(f64, String)> = Vec::with_capacity(frames.len());
-            for (index, frame) in frames.iter().enumerate() {
+            for (secs, frame) in frames.iter() {
                 if let Some(text) = ocr_keyframe(frame) {
-                    ocred.push(((index as u64 * interval) as f64, text));
+                    ocred.push((*secs, text));
                 }
             }
             Ok::<_, std::io::Error>(ocred)
