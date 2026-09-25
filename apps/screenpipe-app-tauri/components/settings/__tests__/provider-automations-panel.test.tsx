@@ -144,18 +144,22 @@ describe("ProviderAutomationsPanel", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the Claude cloud boundary when no local agent tasks exist", async () => {
+  it("renders nothing (no Claude external-link card) when no local agent tasks exist", async () => {
     vi.mocked(commands.listProviderAutomations).mockResolvedValue({
       status: "ok",
       data: [],
     });
 
-    render(<ProviderAutomationsPanel />);
+    const { container } = render(<ProviderAutomationsPanel />);
 
+    // 等异步加载完成后再断言：zh-local 不引导外部服务，空态不渲染任何卡片。
+    await waitFor(() => {
+      expect(commands.listProviderAutomations).toHaveBeenCalled();
+    });
     expect(
-      await screen.findByRole("button", { name: "打开 Claude 定时任务" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("agent schedules")).not.toBeInTheDocument();
+      screen.queryByRole("button", { name: "打开 Claude 定时任务" }),
+    ).not.toBeInTheDocument();
+    expect(container.querySelector("section")).toBeNull();
   });
 
   it("uses inline controls only when the live ACP adapter advertised them", async () => {

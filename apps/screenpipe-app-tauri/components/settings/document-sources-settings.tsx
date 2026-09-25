@@ -32,6 +32,7 @@ import {
   Loader2,
   RefreshCw,
   Trash2,
+  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -134,6 +135,23 @@ export function DocumentSourcesSettings() {
       setRecordsLoading(false);
     }
   }, []);
+
+  const removeRecord = useCallback(
+    async (sha256: string) => {
+      try {
+        await localFetch("/documents/remove", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sha256 }),
+        });
+        setRecords((prev) => (prev ? prev.filter((r) => r.sha256 !== sha256) : prev));
+        toast({ title: "已移除该文档及其可搜索内容" });
+      } catch {
+        toast({ title: "移除失败", variant: "destructive" });
+      }
+    },
+    [toast],
+  );
 
   const toggleRecords = useCallback(() => {
     setRecordsOpen((open) => {
@@ -474,6 +492,20 @@ export function DocumentSourcesSettings() {
                           <p>{formatRelativeTime(record.imported_at)}</p>
                           <p>{formatBytes(record.size_bytes)}</p>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0"
+                          aria-label="移除该文档"
+                          title="移除该文档（同时删除可搜索内容与托管副本）"
+                          onClick={() => {
+                            if (window.confirm(`移除 ${record.file_name}？其可搜索内容与托管副本将一并删除。`)) {
+                              void removeRecord(record.sha256);
+                            }
+                          }}
+                        >
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
                       </li>
                     );
                   })}

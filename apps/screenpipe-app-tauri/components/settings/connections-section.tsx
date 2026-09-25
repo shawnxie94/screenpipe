@@ -2974,6 +2974,7 @@ export function ConnectionsSection({
         { id: "voice-memos", name: "语音备忘录", icon: "voice-memos", connected: false },
       ] : []),
       ...(os === "macos" ? [{ id: "apple-calendar", name: "Apple Calendar", icon: "apple-calendar", connected: appleCalendarConnected }] : []),
+      { id: "feishu-calendar", name: "飞书日历", icon: "feishu", connected: officeStatuses["feishu"]?.auth_status === "authorized", description: "同步飞书日历用于会议检测与会议笔记" },
       { id: "ics-calendar", name: "其他日历", icon: "ics-calendar", connected: false },
       { id: "rss", name: "RSS 订阅", icon: "rss", connected: false, description: "导入 RSS/Atom 条目，可全文检索" },
       { id: "remote-agent", name: "常驻 AI", icon: "remote-agent", connected: false },
@@ -3193,6 +3194,7 @@ export function ConnectionsSection({
       case "browser-url": return <BrowserUrlCard onStatusChange={setBrowserUrlConnected} />;
       case "voice-memos": return <VoiceMemosCard />;
       case "apple-calendar": return <AppleCalendarCard onStatusChange={setAppleCalendarConnected} />;
+      case "feishu-calendar": return <FeishuConnectionPanel onChanged={refreshOfficeStatuses} />;
       case "feishu": return <FeishuConnectionPanel onChanged={refreshOfficeStatuses} />;
       case "tencent-meeting": return <TencentMeetingConnectionPanel onChanged={refreshOfficeStatuses} />;
       case "imap": return <ImapCard onChanged={fetchIntegrations} />;

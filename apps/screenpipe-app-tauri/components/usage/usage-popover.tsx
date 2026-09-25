@@ -37,6 +37,9 @@ export function UsagePopover({
   const [open, setOpen] = useState(false);
   const context = useContextUsage(sessionId);
   const contextPercent = contextUsagePercent(context);
+  // Pi 等不上报上下文窗口的智能体没有用量可显示——整个指示器隐藏，
+  // 而不是显示一个空环加“待报告”提示。
+  if (contextPercent === null) return null;
   const state =
     contextPercent !== null ? contextUsageState(contextPercent) : "ok";
   const accessibleLabel =

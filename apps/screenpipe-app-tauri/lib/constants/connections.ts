@@ -45,6 +45,7 @@ export const CONNECTION_CATEGORY_BY_ID: Record<string, string> = {
 
   // Calendar — all scheduling tools together
   "apple-calendar": "Calendar",
+  "feishu-calendar": "Calendar",
   "apple-calendar-card": "Calendar",
   "ics-calendar": "Calendar",
 

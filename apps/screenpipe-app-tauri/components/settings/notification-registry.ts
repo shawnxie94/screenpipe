@@ -22,7 +22,7 @@ export type NotificationGroupId =
   | "meetings"
   | "system"
   | "automation"
-  | "app";
+;
 
 export interface NotificationGroup {
   id: NotificationGroupId;
@@ -72,11 +72,6 @@ export const NOTIFICATION_GROUPS: NotificationGroup[] = [
     id: "automation",
     label: "定时任务与自动化",
     description: "来自你自动化的建议与提醒",
-  },
-  {
-    id: "app",
-    label: "应用",
-    description: "知迹本身的更新",
   },
 ];
 
@@ -160,14 +155,6 @@ export const NOTIFICATION_CATEGORIES: NotificationCategory[] = [
       "usage",
       "scheduled task limit",
     ],
-  },
-  {
-    id: "appUpdates",
-    label: "应用更新",
-    description: "有新版本可用",
-    group: "app",
-    default: true,
-    keywords: ["update", "upgrade", "what's new", "version"],
   },
 ];
 

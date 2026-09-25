@@ -54,6 +54,7 @@ pub(crate) fn documents_routes() -> Router<std::sync::Arc<AppState>> {
         .route("/import", post(import_document))
         .route("/import-audio", post(import_document_audio))
         .route("/import-video", post(import_document_video))
+        .route("/remove", post(remove_document))
         .route("/import-text", post(import_document_text))
         .route("/import-failed", post(import_document_failed))
         .route("/search", get(search_documents))
@@ -676,6 +677,55 @@ async fn import_document_video(
             "duration_secs": duration_secs,
             "truncated": truncated,
         })),
+    )
+        .into_response()
+}
+
+#[derive(Deserialize)]
+struct RemoveBody {
+    sha256: String,
+}
+
+/// POST /documents/remove — remove an imported document: FTS + chunks +
+/// metadata row, and best-effort delete of the managed copy. Watched
+/// directory sources re-import on the next reconcile by design.
+async fn remove_document(
+    State(state): State<std::sync::Arc<AppState>>,
+    Json(body): Json<RemoveBody>,
+) -> Response {
+    // 先取托管路径再删行——删完就查不到了
+    let managed_path = match state.db.document_get(&body.sha256).await {
+        Ok(Some(doc)) => doc.managed_path,
+        Ok(None) => None,
+        Err(e) => {
+            tracing::warn!("document remove lookup failed: {e}");
+            return err_json(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "remove_failed",
+                format!("移除文档失败：{e}"),
+            );
+        }
+    };
+    let removed = match state.db.document_remove(&body.sha256).await {
+        Ok(removed) => removed,
+        Err(e) => {
+            tracing::warn!("document remove failed: {e}");
+            return err_json(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "remove_failed",
+                format!("移除文档失败：{e}"),
+            );
+        }
+    };
+    if let Some(managed) = managed_path.as_deref().map(std::path::PathBuf::from) {
+        // 最小化竞态：仅删除 documents 托管目录内的文件
+        if managed.starts_with(state.screenpipe_dir.join("documents")) {
+            let _ = tokio::fs::remove_file(&managed).await;
+        }
+    }
+    (
+        StatusCode::OK,
+        Json(json!({ "removed": removed })),
     )
         .into_response()
 }

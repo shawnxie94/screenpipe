@@ -397,37 +397,8 @@ export function ProviderAutomationsPanel({
   );
 
   if (visible.length === 0) {
-    if (query) return null;
-    return (
-      <section
-        className="overflow-hidden border border-border bg-muted/10"
-        data-testid="provider-automations-panel"
-      >
-        <div className="flex min-h-10 items-stretch">
-          <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
-            <ProviderIcon provider="claude" />
-            <span className="truncate text-xs font-medium">Claude</span>
-          </div>
-          <button
-            type="button"
-            aria-label="打开 Claude 定时任务"
-            title="打开 Claude 定时任务"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center border-l border-border text-muted-foreground transition-colors hover:bg-foreground hover:text-background"
-            onClick={() => void manageProvider("claude")}
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </button>
-        </div>
-        {openError && (
-          <p
-            className="border-t border-border px-4 py-2 text-xs text-destructive"
-            role="alert"
-          >
-            {openError}
-          </p>
-        )}
-      </section>
-    );
+    // 无云端定时任务时不再展示 Claude 外跳卡片（zh-local 不引导外部服务）。
+    return null;
   }
 
   const activeProviderLabel = providerLabel(activeProvider ?? "agent");

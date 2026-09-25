@@ -376,7 +376,7 @@ function ListEmpty({
       <Phone className="inline-block h-6 w-6 text-muted-foreground/40 mb-4" />
       <h2 className="text-lg font-medium mb-2">还没有会议</h2>
       <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-        加入 Zoom、Meet 或 Teams 通话，screenpipe 会自动检测。你也可以手动开始，
+        加入任意通话应用，screenpipe 会自动检测。你也可以手动开始，
         为任意对话记录笔记。
       </p>
       <Button

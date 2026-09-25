@@ -426,6 +426,27 @@ impl DatabaseManager {
         Ok(())
     }
 
+    /// Remove an imported document entirely: FTS rows, chunks and the
+    /// source_documents row. Returns false when nothing existed. The managed
+    /// file copy is removed by the route layer (best-effort).
+    pub async fn document_remove(&self, sha256: &str) -> Result<bool, sqlx::Error> {
+        let mut tx = self.begin_immediate_with_retry().await?;
+        sqlx::query("DELETE FROM source_documents_fts WHERE sha256 = ?1")
+            .bind(sha256)
+            .execute(&mut **tx.conn())
+            .await?;
+        sqlx::query("DELETE FROM source_document_chunks WHERE sha256 = ?1")
+            .bind(sha256)
+            .execute(&mut **tx.conn())
+            .await?;
+        let result = sqlx::query("DELETE FROM source_documents WHERE sha256 = ?1")
+            .bind(sha256)
+            .execute(&mut **tx.conn())
+            .await?;
+        tx.commit().await?;
+        Ok(result.rows_affected() > 0)
+    }
+
     /// Record a failed import (unsupported ext, oversized, unreadable,
     /// parser error). Creates a `failed` row even when no bytes were stored,
     /// so the failure is visible and the user can see why nothing appeared.
