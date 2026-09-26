@@ -21,6 +21,7 @@ const AUTH_KEY =
 
 export const MAX_RESULT_TEXT_CHARS = 280;
 export const MAX_RESPONSE_CHARS = 6000;
+export const SEARCH_RESULTS_SCHEMA = "screenpipe.search-results.v1" as const;
 
 /** Inline operator syntax shared with the app's power-user search:
  * `type:` `source:` `tag:` `person:` `date:` — everything else is content. */
@@ -155,6 +156,136 @@ export function formatHybridResults(payload: any): string {
   return lines.join("\n");
 }
 
+function stableSourceId(row: any, content: any, sourceType: string): string {
+  if (typeof row?.source_pk === "string" && row.source_pk) return row.source_pk;
+  const fields: Record<string, unknown> = {};
+  const copy = (key: string, ...aliases: string[]) => {
+    for (const alias of aliases) {
+      const value = content?.[alias];
+      if (typeof value === "string" || typeof value === "number") {
+        fields[key] = value;
+        return;
+      }
+    }
+  };
+  switch (sourceType) {
+    case "ocr":
+    case "ui":
+    case "accessibility":
+      copy("frame_id", "frame_id");
+      copy("id", "id");
+      break;
+    case "audio":
+      copy("chunk_id", "chunk_id", "audio_chunk_id");
+      break;
+    case "input":
+      copy("id", "id");
+      copy("frame_id", "frame_id");
+      break;
+    case "document":
+      copy("sha256", "sha256");
+      copy("ordinal", "ordinal");
+      break;
+    case "connection":
+      copy("connector", "connector");
+      copy("namespace", "namespace");
+      copy("object_kind", "object_kind");
+      copy("object_id", "object_id");
+      break;
+    case "parsed":
+      copy("frame_id", "frame_id");
+      copy("run_id", "run_id");
+      break;
+    default:
+      copy("id", "id", "object_id", "chunk_id", "sha256");
+  }
+  return Object.entries(fields).map(([key, value]) => `${key}=${value}`).join(";") || `result-${sourceType}`;
+}
+
+export function formatStructuredSearchResults(
+  payload: any,
+  mode: "keyword" | "relevance",
+): string {
+  const rows = Array.isArray(payload?.data) ? payload.data : [];
+  const pagination = payload?.pagination ?? {};
+  const total = Number.isFinite(Number(pagination.total)) ? Number(pagination.total) : rows.length;
+  const limit = Math.min(Math.max(Number(pagination.limit) || rows.length, 0), 50);
+  const offset = Math.max(Number(pagination.offset) || 0, 0);
+  const legsUsed = Array.isArray(payload?.legs_used)
+    ? payload.legs_used.filter((leg: unknown): leg is string => typeof leg === "string")
+    : [];
+  const mapHit = (row: any, index: number) => {
+    const content = row?.content && typeof row.content === "object" ? row.content : {};
+    const sourceType = String(row?.source_type || row?.type || "unknown").toLowerCase();
+    const sourceId = stableSourceId(row, content, sourceType);
+    const rawText = String(
+      row?.text ?? content.text ?? content.ocr_text ?? content.transcription ?? content.body_text ??
+      content.snippet ?? content.title ?? content.file_name ?? "",
+    ).replace(/\s+/g, " ").trim();
+    const text = truncate(rawText, MAX_RESULT_TEXT_CHARS);
+    const sourceRef: Record<string, unknown> = { id: sourceId };
+    for (const key of ["frame_id", "chunk_id", "audio_chunk_id", "sha256", "ordinal", "run_id", "connector", "namespace", "object_kind", "object_id"]) {
+      const value = content[key];
+      if (typeof value === "string" || typeof value === "number") sourceRef[key] = value;
+    }
+    const timestamp = row?.ts ?? content.timestamp ?? content.event_at ?? content.imported_at ?? content.fetched_at;
+    const app = row?.app ?? content.app_name ?? content.device_name ?? content.provider ?? content.connector;
+    const windowName = row?.window_name ?? content.window_name ?? content.title ?? content.file_name ?? content.object_kind;
+    const score = typeof row?.score === "number" && Number.isFinite(row.score) ? row.score : undefined;
+    return {
+      id: JSON.stringify([sourceType, sourceId]),
+      source_type: sourceType,
+      source_id: sourceId,
+      rank: index + 1,
+      text,
+      ...(typeof timestamp === "string" ? { timestamp } : {}),
+      ...(typeof app === "string" ? { app } : {}),
+      ...(typeof windowName === "string" ? { window_name: windowName } : {}),
+      source_ref: sourceRef,
+      retrieval: {
+        ...(score === undefined ? {} : { score }),
+        matched_legs: Array.isArray(row?.legs) ? row.legs.filter((leg: unknown) => typeof leg === "string") : [],
+      },
+      truncated: text.length < rawText.length,
+    };
+  };
+
+  const allHits = rows.map(mapHit);
+  let count = allHits.length;
+  let output: Record<string, any>;
+  const makeOutput = (visibleCount: number) => {
+    const results = allHits.slice(0, visibleCount);
+    const degraded = payload?.degraded === true;
+    const truncated = visibleCount < allHits.length || results.some((hit: any) => hit.truncated);
+    const warnings = [
+      ...(degraded ? ["Hybrid retrieval degraded; sparse-only results may be incomplete."] : []),
+      ...(truncated ? ["Some excerpts or results were truncated to fit the response budget."] : []),
+    ];
+    const pageLimit = visibleCount < allHits.length ? visibleCount : limit;
+    return {
+      schema: SEARCH_RESULTS_SCHEMA,
+      schema_version: 1,
+      summary: results.length === 0
+        ? allHits.length > 0
+          ? "Results were omitted to fit the response budget. Use pagination to retrieve a smaller page."
+          : "No results found. Try broader terms or a wider time range."
+        : `Found ${results.length}${total > results.length ? ` of ${total}` : ""} results (${mode}${degraded ? ", sparse-only fallback" : ""}).`,
+      mode,
+      degraded,
+      legs_used: legsUsed,
+      warnings,
+      pagination: { limit: pageLimit, offset, total },
+      results,
+      truncated,
+    };
+  };
+  output = makeOutput(count);
+  while (count > 0 && JSON.stringify(output).length > MAX_RESPONSE_CHARS) {
+    output = makeOutput(--count);
+  }
+  return JSON.stringify(output);
+}
+
 export function formatKeywordResults(payload: any): string {
   const data: any[] = Array.isArray(payload?.data) ? payload.data : [];
   if (data.length === 0) return "No results.";
@@ -252,15 +383,19 @@ export default function (pi: ExtensionAPI) {
           throw new Error("unexpected payload");
         }
         // Canonical `/search/records` responses carry `data` for both modes.
-        if (searchParams.mode === "keyword") return formatKeywordResults(payload);
-        return formatHybridResults(payload);
+        return formatStructuredSearchResults(payload, searchParams.mode);
       } catch (hybridError) {
         // Degrade to the keyword/chronological search rather than failing.
         try {
           const fallback = await fetchJson(
             buildSearchUrl({ ...searchParams, mode: "keyword" }),
           );
-          return `${formatKeywordResults(fallback)}\n(hybrid unavailable: ${hybridError})`;
+          const fallbackPayload = {
+            ...fallback,
+            degraded: true,
+            legs_used: Array.isArray(fallback?.legs_used) ? fallback.legs_used : ["keyword"],
+          };
+          return formatStructuredSearchResults(fallbackPayload, "keyword");
         } catch (fallbackError) {
           return `Search failed: ${fallbackError}`;
         }

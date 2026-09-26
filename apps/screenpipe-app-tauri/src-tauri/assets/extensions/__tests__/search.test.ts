@@ -15,6 +15,7 @@ const {
   buildSearchUrl,
   formatHybridResults,
   formatKeywordResults,
+  formatStructuredSearchResults,
   truncate,
   default: registerSearch,
 } = await import("../search");
@@ -107,7 +108,7 @@ describe("search tool", () => {
     expect(formatted).toContain("degraded");
   });
 
-  it("executes against the hybrid endpoint and returns formatted text", async () => {
+  it("executes against the unified endpoint and returns structured hybrid results", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -125,8 +126,15 @@ describe("search tool", () => {
       }),
     });
     const tool = getTool();
-    const out = await tool.execute("call-1", { q: "合同 付款", mode: "relevance" });
-    expect(out).toContain("document:doc-contract");
+    const out = JSON.parse(await tool.execute("call-1", { q: "合同 付款", mode: "relevance" }));
+    expect(out).toMatchObject({
+      schema: "screenpipe.search-results.v1",
+      mode: "relevance",
+      degraded: false,
+      legs_used: ["documents", "dense_documents"],
+      results: [{ source_type: "document", source_id: "doc-contract", rank: 1, retrieval: { score: 0.02 } }],
+    });
+    expect(out.summary).toContain("Found 1 results");
     expect(fetchMock.mock.calls[0][0]).toContain("mode=relevance");
   });
 
@@ -148,9 +156,10 @@ describe("search tool", () => {
         }),
       });
     const tool = getTool();
-    const out = await tool.execute("call-2", { query: "采购合同" });
-    expect(out).toContain("hybrid unavailable");
-    expect(out).toContain("采购合同要点");
+    const out = JSON.parse(await tool.execute("call-2", { query: "采购合同" }));
+    expect(out).toMatchObject({ schema: "screenpipe.search-results.v1", mode: "keyword", degraded: true });
+    expect(out.results[0].text).toBe("采购合同要点");
+    expect(out.summary).toContain("sparse-only fallback");
     expect(fetchMock.mock.calls[1][0]).not.toContain("mode=relevance");
     expect(fetchMock.mock.calls[1][0]).toContain("/search/records");
   });
@@ -170,5 +179,23 @@ describe("search tool", () => {
     });
     expect(formatted).toContain("[1] OCR");
     expect(formatted).toContain("hello");
+  });
+
+  it("returns valid bounded JSON and marks clipped result sets", () => {
+    const output = formatStructuredSearchResults({
+      data: Array.from({ length: 50 }, (_, index) => ({
+        source_type: "document",
+        source_pk: `doc-${index}`,
+        text: "evidence ".repeat(100),
+      })),
+      pagination: { limit: 50, offset: 0, total: 90 },
+      degraded: true,
+      legs_used: ["documents"],
+    }, "relevance");
+    expect(output.length).toBeLessThanOrEqual(6000);
+    const parsed = JSON.parse(output);
+    expect(parsed.schema).toBe("screenpipe.search-results.v1");
+    expect(parsed.truncated).toBe(true);
+    expect(parsed.results.length).toBeLessThan(50);
   });
 });

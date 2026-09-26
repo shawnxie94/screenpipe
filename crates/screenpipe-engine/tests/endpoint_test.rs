@@ -522,7 +522,70 @@ mod tests {
         assert!(ocr.text.contains("local api sentinel exactmatch"));
         assert_eq!(ocr.app_name, "SearchFixtureApp");
         assert_eq!(ocr.window_name, "Search Fixture Window");
-        assert_eq!(ocr.browser_url.as_deref(), Some("https://docs.example/search"));
+        assert_eq!(
+            ocr.browser_url.as_deref(),
+            Some("https://docs.example/search")
+        );
+    }
+
+    #[tokio::test]
+    async fn unified_search_applies_source_app_and_time_filters_before_pagination() {
+        let (app, db) = setup_test_app().await;
+        let start = DateTime::parse_from_rfc3339("2025-02-01T00:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let inside = start + Duration::hours(1);
+        let outside = start + Duration::days(2);
+        let fixtures = [
+            ("AllowedSearchApp", inside, "filter sentinel allowed"),
+            ("OtherSearchApp", inside, "filter sentinel wrong app"),
+            ("AllowedSearchApp", outside, "filter sentinel outside time"),
+        ];
+
+        let mut expected_frame_id = None;
+        for (index, (app_name, timestamp, text)) in fixtures.into_iter().enumerate() {
+            let device = format!("unified-filter-device-{index}");
+            db.insert_video_chunk(&format!("{device}.mp4"), &device)
+                .await
+                .unwrap();
+            let frame_id = db
+                .insert_frame(
+                    &device,
+                    Some(timestamp),
+                    None,
+                    Some(app_name),
+                    Some("Unified Filter Fixture"),
+                    true,
+                    Some(0),
+                )
+                .await
+                .unwrap();
+            db.insert_ocr_text(frame_id, text, "[]", Arc::new(OcrEngine::Tesseract.into()))
+                .await
+                .unwrap();
+            if index == 0 {
+                expected_frame_id = Some(frame_id);
+            }
+        }
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/search/records?q=filter%20sentinel&content_type=ocr&app_name=AllowedSearchApp&start_time=2025-02-01T00%3A00%3A00Z&end_time=2025-02-01T23%3A59%3A59Z&limit=10")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let page: PaginatedResponse<ContentItem> = serde_json::from_slice(&body).unwrap();
+        assert_eq!(page.data.len(), 1);
+        let ContentItem::OCR(ocr) = &page.data[0] else {
+            panic!("expected OCR result");
+        };
+        assert_eq!(Some(ocr.frame_id), expected_frame_id);
+        assert!(ocr.text.contains("filter sentinel allowed"));
     }
 
     #[tokio::test]
@@ -632,7 +695,9 @@ mod tests {
             .clone()
             .oneshot(
                 Request::builder()
-                    .uri(format!("/search/records?content_type=semantic&frame_id={frame_id}"))
+                    .uri(format!(
+                        "/search/records?content_type=semantic&frame_id={frame_id}"
+                    ))
                     .body(Body::empty())
                     .unwrap(),
             )

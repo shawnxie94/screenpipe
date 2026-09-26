@@ -218,7 +218,7 @@ type ApiRequest = {
   client?: string;
 };
 
-async function searchContentThroughMcp(): Promise<{
+async function searchContentThroughMcp(mode: "keyword" | "relevance" = "keyword"): Promise<{
   requests: ApiRequest[];
   toolResponse: any;
 }> {
@@ -233,23 +233,36 @@ async function searchContentThroughMcp(): Promise<{
 
     response.setHeader("content-type", "application/json");
     if (request.url?.startsWith("/search/records?")) {
-      response.end(
-        JSON.stringify({
-          data: [
-            {
+      response.end(JSON.stringify(mode === "relevance"
+        ? {
+            data: [{
+              source_type: "document",
+              source_pk: "synthetic-doc-1",
+              score: 0.42,
+              legs: ["documents", "dense_documents"],
+              ts: "2026-08-28T12:00:00Z",
+              app: "document",
+              window_name: "synthetic.md",
+              text: "mcp-api-boundary-e2e hybrid",
+            }],
+            pagination: { limit: 1, total: 1, offset: 0 },
+            degraded: true,
+            legs_used: ["documents"],
+          }
+        : {
+            data: [{
               type: "OCR",
               content: {
+                frame_id: 77,
                 app_name: "Codex",
                 window_name: "DB boundary E2E",
                 timestamp: "2026-08-28T12:00:00-07:00",
                 text: "mcp-api-boundary-e2e",
                 text_source: "accessibility",
               },
-            },
-          ],
-          pagination: { total: 1, offset: 0 },
-        }),
-      );
+            }],
+            pagination: { limit: 1, total: 1, offset: 0 },
+          }));
     } else {
       response.end(JSON.stringify({ ok: true }));
     }
@@ -325,7 +338,7 @@ async function searchContentThroughMcp(): Promise<{
                 method: "tools/call",
                 params: {
                   name: "search-content",
-                  arguments: { q: "boundary", start_time: "1h ago", limit: 1 },
+                  arguments: { q: "boundary", start_time: "1h ago", limit: 1, mode },
                 },
               })}\n`,
             );
@@ -450,10 +463,31 @@ describe("stdio startup handshake", { timeout: INIT_DEADLINE_MS + 2_000 }, () =>
     expect(toolResponse.error).toBeUndefined();
     expect(toolResponse.result?.isError).not.toBe(true);
     expect(toolResponse.result?.content?.[0]?.text).toContain("mcp-api-boundary-e2e");
+    expect(toolResponse.result?.structuredContent).toMatchObject({
+      schema: "screenpipe.search-results.v1",
+      schema_version: 1,
+      mode: "keyword",
+      results: [{ source_type: "ocr", source_id: "frame_id=77", source_ref: { frame_id: 77 }, rank: 1 }],
+    });
     expect(searchRequest).toMatchObject({
       method: "GET",
       authorization: "Bearer sp-boundary-e2e-key",
       client: "mcp",
+    });
+  });
+
+  it("preserves relevance metadata in structuredContent", async () => {
+    const { toolResponse } = await searchContentThroughMcp("relevance");
+    expect(toolResponse.result?.structuredContent).toMatchObject({
+      schema: "screenpipe.search-results.v1",
+      mode: "relevance",
+      degraded: true,
+      legs_used: ["documents"],
+      results: [{
+        source_type: "document",
+        source_id: "synthetic-doc-1",
+        retrieval: { score: 0.42, matched_legs: ["documents", "dense_documents"] },
+      }],
     });
   });
 });

@@ -12,6 +12,69 @@ import {
   runFromArgv,
 } from "./http-server";
 import { PKG_VERSION } from "./version";
+import { normalizeSearchResponse } from "./search-results";
+
+describe("normalizeSearchResponse", () => {
+  it("normalizes keyword variants to stable evidence records without private paths", () => {
+    const response = normalizeSearchResponse({
+      data: [
+        { type: "OCR", content: { frame_id: 17, text: "screen evidence", timestamp: "2026-09-01T12:00:00Z", app_name: "Browser", file_path: "/private/capture.mp4" } },
+        { type: "Audio", content: { chunk_id: 23, transcription: "meeting evidence", timestamp: "2026-09-01T12:01:00Z", device_name: "Microphone" } },
+        { type: "Document", content: { sha256: "doc-hash", ordinal: 2, body_text: "document evidence", file_name: "notes.md" } },
+        { type: "Connection", content: { connector: "rss", namespace: "feed-a", object_kind: "article", object_id: "item-5", title: "Article", body_text: "connector evidence" } },
+      ],
+      pagination: { limit: 4, offset: 0, total: 4 },
+    });
+
+    expect(response).toMatchObject({
+      schema: "screenpipe.search-results.v1",
+      schema_version: 1,
+      mode: "keyword",
+      degraded: false,
+      pagination: { limit: 4, offset: 0, total: 4 },
+    });
+    expect(response.results.map((hit) => [hit.source_type, hit.source_id, hit.rank])).toEqual([
+      ["ocr", "frame_id=17", 1],
+      ["audio", "chunk_id=23", 2],
+      ["document", "sha256=doc-hash;ordinal=2", 3],
+      ["connection", "connector=rss;namespace=feed-a;object_kind=article;object_id=item-5", 4],
+    ]);
+    expect(JSON.stringify(response)).not.toContain("/private/capture.mp4");
+  });
+
+  it("preserves hybrid degradation, legs, scores, pagination, and explicit truncation", () => {
+    const response = normalizeSearchResponse({
+      data: [
+        { source_type: "document", source_pk: "doc-1", text: "long excerpt", score: 0.75, legs: ["documents"] },
+        { source_type: "ocr", source_pk: "frame-2", text: "second result", score: 0.5, legs: ["frames", "dense_ocr"] },
+      ],
+      pagination: { limit: 10, offset: 0, total: 20 },
+      degraded: true,
+      legs_used: ["documents", "frames"],
+    }, { mode: "relevance", maxExcerptChars: 4, maxResults: 1 });
+
+    expect(response).toMatchObject({
+      mode: "relevance",
+      degraded: true,
+      legs_used: ["documents", "frames"],
+      warnings: expect.arrayContaining([
+        "Hybrid retrieval degraded; sparse-only results may be incomplete.",
+        "Some excerpts or results were truncated to fit the response budget.",
+      ]),
+      pagination: { limit: 1, offset: 0, total: 20 },
+      truncated: true,
+      results: [{ text: "long…", truncated: true, retrieval: { score: 0.75, matched_legs: ["documents"] } }],
+    });
+  });
+
+  it("returns a valid empty envelope", () => {
+    expect(normalizeSearchResponse({ data: [], pagination: { limit: 8, offset: 16, total: 0 } })).toMatchObject({
+      summary: expect.stringContaining("No results"),
+      results: [],
+      pagination: { limit: 8, offset: 16, total: 0 },
+    });
+  });
+});
 
 describe("parseArgs", () => {
   it("defaults to localhost on 3031 with no api key", () => {

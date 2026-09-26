@@ -39,6 +39,7 @@ import {
   normalizeTimeFields,
 } from "./time-normalization";
 import { resolveScreenpipeApiBase } from "./api-base";
+import { normalizeSearchResponse } from "./search-results";
 
 initMcpTelemetry({ transport: "stdio" });
 
@@ -764,7 +765,7 @@ const TOOLS: Tool[] = [
   {
     name: "keyword-search",
     description:
-      "Deprecated compatibility alias for fast keyword lookup. Prefer search-content with mode=keyword for the unified q/filters/response contract. Fast FTS5 search across OCR + audio returns matches with frame_id, app, timestamp, and text positions. "
+      "Deprecated compatibility alias for fast keyword lookup. Prefer search-content with mode=keyword for the unified q/filters/response contract. Fast FTS5 search across OCR + audio returns matches with frame_id, app, timestamp, and text positions. " +
       "USE WHEN: you have a specific keyword/phrase and want the fastest hit-list (e.g. 'find every screen where I typed \"stripe\"'). " +
       "DO NOT USE for: structured filters by content_type / speaker / window — this endpoint ignores those (use search-content instead). " +
       "DO NOT USE for: broad questions like 'what was I doing' (use activity-summary).",
@@ -1440,16 +1441,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const response = await callAPI(`/search/records?${params.toString()}`);
         const data = await response.json();
         const results = data.data || [];
-        const pagination = data.pagination || {};
+        const structured = normalizeSearchResponse(data, {
+          mode: normalized.mode === "relevance" ? "relevance" : "keyword",
+          maxExcerptChars: effectiveCap,
+        });
 
         if (results.length === 0) {
           return {
-            content: [
-              {
-                type: "text",
-                text: "No results found. Try: broader terms, different content_type, or wider time range.",
-              },
-            ],
+            content: [{ type: "text", text: structured.summary }],
+            structuredContent: structured,
           };
         }
 
@@ -1516,11 +1516,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           }
         }
 
-        const header =
-          `Results: ${results.length}/${pagination.total || "?"}` +
-          (pagination.total > results.length
-            ? ` (use offset=${(pagination.offset || 0) + results.length} for more)`
-            : "");
+        const visibleFormattedResults = formattedResults.slice(0, 5);
+        const omittedCount = Math.max(0, structured.results.length - visibleFormattedResults.length);
+        const omittedResults = omittedCount > 0
+          ? `\n\n${omittedCount} additional results are available in structuredContent.`
+          : "";
+        const header = structured.summary;
 
         // Co-occurring tags (only present when include_related=true + tags set).
         // Compact one-liner per namespace so it's cheap to read.
@@ -1535,7 +1536,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         contentItems.push({
           type: "text",
-          text: header + "\n\n" + formattedResults.join("\n---\n") + relatedStr,
+          text: [header, ...visibleFormattedResults].join("\n\n") + omittedResults + relatedStr,
         });
 
         for (const img of images) {
@@ -1543,7 +1544,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           contentItems.push({ type: "image", data: img.data, mimeType: "image/png" });
         }
 
-        return { content: contentItems };
+        return { content: contentItems, structuredContent: structured };
       }
 
       case "list-meetings": {

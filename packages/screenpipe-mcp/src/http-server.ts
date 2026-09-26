@@ -31,6 +31,7 @@ import {
   initMcpTelemetry,
 } from "./telemetry";
 import { PKG_VERSION } from "./version";
+import { formatSearchSummary, normalizeSearchResponse } from "./search-results";
 import { normalizeTimeFields } from "./time-normalization";
 
 // ── CLI parsing ─────────────────────────────────────────────────────────
@@ -229,72 +230,13 @@ async function handleSearchContent(
   }
 
   const data = await response.json();
-  const results = data.data || [];
-  const pagination = data.pagination || {};
-
-  if (results.length === 0) {
-    return {
-      content: [
-        {
-          type: "text",
-          text: "No results found. Try: broader search terms, different content_type, or wider time range.",
-        },
-      ],
-    };
-  }
-
-  const formattedResults: string[] = [];
-  for (const result of results) {
-    if (result.source_type) {
-      formattedResults.push(
-        `[${result.source_type}] ${[result.app, result.window_name].filter(Boolean).join(" | ")}\n` +
-          `${result.ts || ""}\n${result.text || ""}`,
-      );
-      continue;
-    }
-    const content = result.content;
-    if (!content) continue;
-
-    if (result.type === "OCR") {
-      formattedResults.push(
-        `[OCR] ${content.app_name || "?"} | ${content.window_name || "?"}\n` +
-          `${content.timestamp || ""}\n` +
-          `${content.text || ""}`
-      );
-    } else if (result.type === "Audio") {
-      formattedResults.push(
-        `[Audio] ${content.device_name || "?"}\n` +
-          `${content.timestamp || ""}\n` +
-          `${content.transcription || ""}`
-      );
-    } else if (result.type === "UI" || result.type === "Accessibility") {
-      formattedResults.push(
-        `[Accessibility] ${content.app_name || "?"} | ${content.window_name || "?"}\n` +
-          `${content.timestamp || ""}\n` +
-          `${content.text || ""}`
-      );
-    } else if (result.type === "Parsed") {
-      formattedResults.push(
-        `[Parsed] ${content.app_name || "?"} | ${content.window_name || "?"} | frame ${content.frame_id || "?"}\n` +
-          `${content.timestamp || ""}\n` +
-          `${content.text || ""}`
-      );
-    }
-  }
-
-  const header =
-    `Results: ${results.length}/${pagination.total || "?"}` +
-    (pagination.total > results.length
-      ? ` (use offset=${(pagination.offset || 0) + results.length} for more)`
-      : "");
+  const structured = normalizeSearchResponse(data, {
+    mode: args.mode === "relevance" ? "relevance" : "keyword",
+  });
 
   return {
-    content: [
-      {
-        type: "text",
-        text: header + "\n\n" + formattedResults.join("\n---\n"),
-      },
-    ],
+    content: [{ type: "text", text: formatSearchSummary(structured) }],
+    structuredContent: structured,
   };
 }
 
