@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, ExternalLink, Check, Loader2, Copy, Terminal, LogIn, LogOut, RotateCw, Send, X, HelpCircle, Search, Calendar as CalendarIcon, Eye, EyeOff, FolderOpen, Plus, AlertCircle, MessageSquare, Inbox, ChevronDown, Rss } from "lucide-react";
+import { Download, ExternalLink, Check, Loader2, Copy, Terminal, LogIn, LogOut, RotateCw, Send, X, HelpCircle, Search, Calendar as CalendarIcon, Eye, EyeOff, FolderOpen, Plus, AlertCircle, MessageSquare, Inbox, ChevronDown, Rss, BookOpen } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { commands } from "@/lib/utils/tauri";
 import { useSettings } from "@/lib/hooks/use-settings";
@@ -51,6 +51,8 @@ import { AppleCalendarCard } from "./apple-calendar-card";
 import { ImapCard } from "./imap-card";
 import { IcsCalendarCard } from "./ics-calendar-card";
 import { RssCard } from "./rss-card";
+import { WeReadConnectionPanel } from "./weread-connection-panel";
+import { getWeReadStatus } from "@/lib/connections/weread";
 import { RemoteAgentCard } from "./remote-agent-card";
 import { BrowserUrlCard } from "./browser-url-card";
 import { VoiceMemosCard } from "./voice-memos-card";
@@ -476,6 +478,7 @@ const INTEGRATION_ICONS: Record<string, React.ReactNode> = {
     ),
     "ics-calendar": <CalendarIcon className="h-5 w-5 text-muted-foreground" />,
     "rss": <Rss className="h-5 w-5 text-muted-foreground" />,
+    "weread": <BookOpen className="h-5 w-5 text-muted-foreground" />,
     "remote-agent": <img src="/openclaw-icon.svg" alt="远程代理" className="w-5 h-5" />,
     feishu: (
       <svg viewBox="0 0 24 24" className="w-5 h-5" aria-label="飞书">
@@ -2800,6 +2803,11 @@ export function ConnectionsSection({
   const [importedSkillsCount, setImportedSkillsCount] = useState(0);
   // Office connections (知迹 Local Knowledge read-only imports)
   const [officeStatuses, setOfficeStatuses] = useState<Record<string, OfficeConnectionStatus>>({});
+  const [wereadConnected, setWereadConnected] = useState(false);
+  const refreshWeReadStatus = useCallback(() => {
+    getWeReadStatus().then((status) => setWereadConnected(status.credential_configured)).catch(() => setWereadConnected(false));
+  }, []);
+  useEffect(() => { refreshWeReadStatus(); }, [refreshWeReadStatus]);
   const refreshOfficeStatuses = useCallback(() => {
     listOfficeConnections()
       .then((list) => {
@@ -2977,6 +2985,7 @@ export function ConnectionsSection({
       { id: "feishu-calendar", name: "飞书日历", icon: "feishu", connected: officeStatuses["feishu"]?.auth_status === "authorized", description: "同步飞书日历用于会议检测与会议笔记" },
       { id: "ics-calendar", name: "其他日历", icon: "ics-calendar", connected: false },
       { id: "rss", name: "RSS 订阅", icon: "rss", connected: false, description: "导入 RSS/Atom 条目，可全文检索" },
+      { id: "weread", name: "微信读书", icon: "weread", connected: wereadConnected, description: "导入书架、个人划线和笔记，可本地检索" },
       { id: "remote-agent", name: "常驻 AI", icon: "remote-agent", connected: false },
       { id: "anythingllm", name: "AnythingLLM", icon: "anythingllm", connected: false, detected: detectedConnectionIds.has("anythingllm") },
       { id: "ollama", name: "Ollama", icon: "ollama", connected: false, detected: detectedConnectionIds.has("ollama") },
@@ -3038,7 +3047,7 @@ export function ConnectionsSection({
       category: CONNECTION_CATEGORY_BY_ID[tile.id] ?? tile.category ?? "Other",
       description: tile.description ?? CONNECTION_HARDCODED_DESCRIPTIONS[tile.id],
     }));
-  }, [os, claudeInstalled, cursorInstalled, codexInstalled, grokInstalled, chatgptConnected, browserUrlConnected, browserUrlDetected, integrations, appleCalendarConnected, customMcpConnected, customMcpServerCount, mcpProviderConnected, excalidrawConnected, importedSkillsCount, detectedConnectionIds ]);
+  }, [os, claudeInstalled, cursorInstalled, codexInstalled, grokInstalled, chatgptConnected, browserUrlConnected, browserUrlDetected, integrations, appleCalendarConnected, customMcpConnected, customMcpServerCount, mcpProviderConnected, excalidrawConnected, importedSkillsCount, detectedConnectionIds, wereadConnected ]);
 
   const isDefaultView = !search.trim() && categoryFilter === ALL_CONNECTION_CATEGORIES;
 
@@ -3204,6 +3213,7 @@ export function ConnectionsSection({
       case "gmail": return <CloudServiceRetiredCard name={selectedIntegration?.name ?? selected} />;
       case "ics-calendar": return <IcsCalendarCard />;
       case "rss": return <RssCard />;
+      case "weread": return <WeReadConnectionPanel onChanged={refreshWeReadStatus} />;
       case "remote-agent": return <RemoteAgentCard />;
       case "anythingllm": return <AnythingLLMPanel />;
       case "custom-mcp": return <CustomMcpCard />;

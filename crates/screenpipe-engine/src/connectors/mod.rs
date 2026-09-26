@@ -17,6 +17,7 @@ pub mod auto_sync;
 pub mod office_adapter;
 pub mod routes;
 pub mod rss;
+pub mod weread;
 
 /// Channel-agnostic service error carrying an HTTP status for the REST layer.
 #[derive(Debug, Clone)]

@@ -17,6 +17,7 @@ use screenpipe_db::DatabaseManager;
 use tracing::{debug, info};
 
 use super::rss::RssService;
+use super::weread::WeReadService;
 use crate::office::OfficeService;
 
 /// Poll interval. `SCREENPIPE_AUTO_SYNC_SECS` overrides (0 disables);
@@ -40,7 +41,11 @@ pub(crate) fn should_auto_sync(auth_status: &str, auto_sync: bool, sync_status: 
 
 /// Spawn the loop. One tick sweeps every channel; per-channel failures are
 /// logged and never cancel the sweep.
-pub fn spawn_auto_sync(db: Arc<DatabaseManager>, managed_dir: std::path::PathBuf) {
+pub fn spawn_auto_sync(
+    db: Arc<DatabaseManager>,
+    managed_dir: std::path::PathBuf,
+    secret_store: Option<Arc<screenpipe_secrets::SecretStore>>,
+) {
     let interval = auto_sync_interval();
     if interval.is_zero() {
         info!("auto sync: disabled (SCREENPIPE_AUTO_SYNC_SECS=0)");
@@ -65,6 +70,9 @@ pub fn spawn_auto_sync(db: Arc<DatabaseManager>, managed_dir: std::path::PathBuf
             }
             if let Err(e) = rss_auto_sync_tick(&db).await {
                 debug!("auto sync: rss skipped: {e}");
+            }
+            if let Err(e) = weread_auto_sync_tick(&db, secret_store.clone()).await {
+                debug!("auto sync: weread skipped: {e}");
             }
         }
     });
@@ -100,6 +108,42 @@ async fn office_auto_sync_tick(
         // the row was read; both are ordinary races, wait for the next tick.
         Err(e) if e.http == 429 || e.http == 409 => Ok(()),
         Err(e) => Err(e),
+    }
+}
+
+async fn weread_auto_sync_tick(
+    db: &Arc<DatabaseManager>,
+    secret_store: Option<Arc<screenpipe_secrets::SecretStore>>,
+) -> Result<(), String> {
+    let service = WeReadService::new(db.clone(), secret_store);
+    let row = service.status().await.map_err(|e| e.message.clone())?;
+    let auto_sync = row
+        .get("scope")
+        .and_then(|s| s.get("auto_sync"))
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+    let auth = row
+        .get("auth_status")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("disconnected");
+    let sync_status = row
+        .get("sync_status")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("idle");
+    if !should_auto_sync(auth, auto_sync, sync_status) {
+        return Ok(());
+    }
+    let revision = row
+        .get("scope_revision")
+        .and_then(serde_json::Value::as_i64)
+        .unwrap_or(0);
+    match service.start_sync(revision).await {
+        Ok(run_id) => {
+            info!("auto sync: weread kicked (run {run_id})");
+            Ok(())
+        }
+        Err(e) if e.http == 429 || e.http == 409 => Ok(()),
+        Err(e) => Err(e.message),
     }
 }
 

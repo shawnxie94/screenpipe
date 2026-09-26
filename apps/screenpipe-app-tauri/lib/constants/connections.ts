@@ -55,6 +55,7 @@ export const CONNECTION_CATEGORY_BY_ID: Record<string, string> = {
   imap: "Communication",
 
   // Notes — notes, knowledge bases & read-later
+  weread: "Notes",
   obsidian: "Notes",
   logseq: "Notes",
   notion: "Notes",
@@ -79,6 +80,7 @@ export interface ConnectionSuggestionTile {
 
 const CONNECTION_SEARCH_ALIASES_BY_ID: Record<string, readonly string[]> = {
   claude: ["anthropic", "claude desktop", "claude code"],
+  weread: ["微信读书", "wechat reading", "we read", "reading highlights"],
 };
 
 export function connectionMatchesSearch(
@@ -97,6 +99,7 @@ export function connectionMatchesSearch(
 }
 
 export const CONNECTION_HARDCODED_DESCRIPTIONS: Record<string, string> = {
+  weread: "只读导入微信读书书架、划线和笔记到本地索引",
   "claude": "让 Claude 搜索你的屏幕和音频历史",
   "cursor": "让 Cursor 搜索你的屏幕和音频历史",
   "codex": "让 Codex 搜索你的屏幕和音频历史",
@@ -134,6 +137,7 @@ export const FEATURED_CONNECTION_IDS = [
   "feishu",
   "tencent-meeting",
   "rss",
+  "weread",
   "obsidian",
   "claude",
   "claude-code",
@@ -147,6 +151,7 @@ export const DEVICE_CONNECTION_ORDER = [
   "feishu",
   "tencent-meeting",
   "rss",
+  "weread",
   "email",
   "imap",
   // Then the rest of the daily-context surface.

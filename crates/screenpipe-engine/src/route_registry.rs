@@ -162,6 +162,7 @@ impl crate::server::SCServer {
         crate::connectors::auto_sync::spawn_auto_sync(
             self.db.clone(),
             self.screenpipe_dir.join("office-cli"),
+            self.secret_store.clone(),
         );
 
         // Unified hybrid retrieval background worker: drives the CJK FTS
@@ -628,6 +629,10 @@ impl crate::server::SCServer {
             crate::office::routes::office_routes(),
         );
         let router = router.nest("/connections/rss", crate::connectors::routes::rss_routes());
+        let router = router.nest(
+            "/connections/weread",
+            crate::connectors::routes::weread_routes(),
+        );
         let router = router.nest(
             "/connections/channels",
             crate::connectors::routes::channels_routes(),
