@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.26,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["src/screenpipe_graphiti"]
+sources = ["src"]
+
+[project]
+name = "screenpipe-graphiti-adapter"
+version = "0.1.0"
+description = "Optional Graphiti adapter for screenpipe Activity Ledger exports"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "graphiti-core==0.30.2",
+  # graphiti-core 0.30.2 imports httpx without declaring it as a dependency.
+  "httpx>=0.28,<1",
+  "pydantic-settings>=2.7,<3",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[project.scripts]
+screenpipe-graphiti = "screenpipe_graphiti.cli:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.24,<2",
+  "ruff>=0.11,<1",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

@@ -1,0 +1,28 @@
+# Reference only; runtime currently reads environment variables, not TOML.
+# Non-secret example only. Confirm local listener addresses on the Mac mini.
+adapter_host = "127.0.0.1"
+adapter_port = 8765
+adapter_url = "https://<mini>.<tailnet>.ts.net"
+
+[graph]
+uri = "bolt://127.0.0.1:7687"
+user = "neo4j"
+group_id = "screenpipe-personal"
+password_keychain_service = "graphiti-neo4j"
+password_keychain_account = "neo4j"
+
+[llm]
+base_url = "http://127.0.0.1:3000/v1"
+model = "deepseek-v4-flash-0731"
+keychain_service = "kb-model"
+keychain_account = "<keychain-account>"
+
+[embedding]
+base_url = "http://127.0.0.1:8000/v1"
+model = "qwen3-embedding-0.6b-8bit"
+dimension = 1024
+# Optional Keychain selectors if oMLX authentication is enabled:
+keychain_service = "omlx-embedding"
+keychain_account = "<keychain-account>"
+
+telemetry_enabled = false
