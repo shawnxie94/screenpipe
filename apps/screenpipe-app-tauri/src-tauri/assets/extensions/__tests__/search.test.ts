@@ -74,6 +74,12 @@ describe("search tool", () => {
     expect(url.searchParams.get("content_type")).toBe("ocr");
   });
 
+  it("builds bounded Graphiti-only searches without an offset fallback", () => {
+    const url = new URL(buildSearchUrl({ q: "synthetic", mode: "graphiti", limit: 40 }));
+    expect(url.searchParams.get("mode")).toBe("graphiti");
+    expect(url.searchParams.get("limit")).toBe("20");
+  });
+
   it("builds provider-scoped connector searches with exact IDs", () => {
     const url = new URL(
       buildSearchUrl({ q: "微信读书笔记", content_type: "connection", connector: "weread" }),
@@ -171,6 +177,18 @@ describe("search tool", () => {
     expect(fetchMock.mock.calls[0][0]).toContain("mode=relevance");
   });
 
+  it("does not fall back to local search when Graphiti mode fails", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 503 });
+    const out = await getTool().execute("call-graphiti-error", {
+      q: "synthetic query",
+      mode: "graphiti",
+    });
+    expect(out).toContain("Graphiti search failed (HTTP 503)");
+    expect(out).toContain("no local fallback");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toContain("mode=graphiti");
+  });
+
   it("falls back to the legacy search when hybrid fails", async () => {
     fetchMock
       .mockRejectedValueOnce(new Error("boom"))
@@ -192,7 +210,7 @@ describe("search tool", () => {
     const out = JSON.parse(await tool.execute("call-2", { query: "采购合同" }));
     expect(out).toMatchObject({ schema: "screenpipe.search-results.v1", mode: "keyword", degraded: true });
     expect(out.results[0].text).toBe("采购合同要点");
-    expect(out.summary).toContain("sparse-only fallback");
+    expect(out.summary).toContain("degraded");
     expect(fetchMock.mock.calls[1][0]).not.toContain("mode=relevance");
     expect(fetchMock.mock.calls[1][0]).toContain("/search/records");
   });
@@ -212,6 +230,36 @@ describe("search tool", () => {
     });
     expect(formatted).toContain("[1] OCR");
     expect(formatted).toContain("hello");
+  });
+
+  it("preserves Graphiti citations and strips URL secrets", () => {
+    const output = formatStructuredSearchResults({
+      data: [{
+        source_type: "graphiti",
+        source_pk: "fact-1",
+        text: "Synthetic fact",
+        legs: ["graphiti"],
+        source_refs: [{
+          source_type: "frame",
+          source_id: 17,
+          occurred_at: "2026-09-20T08:00:00Z",
+          app_name: "Browser",
+          browser_url: "https://user:pass@example.com/path?token=secret#fragment",
+        }],
+      }],
+      pagination: { limit: 8, offset: 0, total: 1 },
+      legs_used: ["graphiti"],
+    }, "graphiti");
+    const parsed = JSON.parse(output);
+    expect(parsed).toMatchObject({ mode: "graphiti", degraded: false, legs_used: ["graphiti"] });
+    expect(parsed.results[0].source_refs).toEqual([{
+      source_type: "frame",
+      source_id: 17,
+      occurred_at: "2026-09-20T08:00:00Z",
+      app_name: "Browser",
+      browser_url: "https://example.com/path",
+    }]);
+    expect(output).not.toContain("secret");
   });
 
   it("returns valid bounded JSON and marks clipped result sets", () => {

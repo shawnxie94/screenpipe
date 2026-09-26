@@ -351,7 +351,7 @@ const TOOLS: Tool[] = [
       "USE WHEN: you need the actual text/content of a moment — quotes, screen text, transcript lines, or compact parsed messages, emails, tasks, documents, and code review — or want to filter by speaker/window. " +
       "DO NOT USE for: broad questions like 'what was I doing?' (use activity-summary, it pre-summarizes apps + windows + transcripts). " +
       "Also DO NOT USE for: targeted UI controls (use search-elements). " +
-      "Start with limit=5, increase only if needed. Use mode=keyword for literal keyword lookup and mode=relevance for paraphrases or related content. Per-result text is auto-truncated to 1000 chars; pass max_content_length=0 to opt out, or a custom integer to override.",
+      "Start with limit=5, increase only if needed. Use mode=keyword for literal lookup, mode=relevance for fused local retrieval, or explicitly select mode=graphiti for Graphiti-only retrieval. Graphiti requires q, supports only limit/time/app/window filters, and never falls back to local search. Per-result text is auto-truncated to 1000 chars; pass max_content_length=0 to opt out, or a custom integer to override.",
     annotations: { title: "Search Content", readOnlyHint: true, openWorldHint: false, idempotentHint: true },
     inputSchema: {
       type: "object",
@@ -371,7 +371,7 @@ const TOOLS: Tool[] = [
           type: "string",
           description: "Optional exact canonical connector/provider ID from list-connectors; requires content_type=connection. Never use a display-name fragment.",
         },
-        mode: { type: "string", enum: ["keyword", "relevance"], description: "Search mode; keyword uses FTS with chronological ordering, relevance uses hybrid ranking.", default: "keyword" },
+        mode: { type: "string", enum: ["keyword", "relevance", "graphiti"], description: "Search mode; graphiti returns Graphiti-only results and errors instead of falling back. It requires q and supports only limit/time/app/window filters.", default: "keyword" },
         limit: { type: "integer", description: "Max results (default 10, max 20). Start with 5 for exploration.", default: 10 },
         offset: { type: "integer", description: "Pagination offset. Use when results say 'use offset=N for more'.", default: 0 },
         start_time: {
@@ -1470,7 +1470,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const data = await response.json();
         const results = data.data || [];
         const structured = normalizeSearchResponse(data, {
-          mode: normalized.mode === "relevance" ? "relevance" : "keyword",
+          mode: normalized.mode === "graphiti" ? "graphiti" : normalized.mode === "relevance" ? "relevance" : "keyword",
           maxExcerptChars: effectiveCap,
         });
 

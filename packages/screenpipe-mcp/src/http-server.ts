@@ -165,7 +165,7 @@ const TOOLS = [
     name: "search_content",
     description:
       "Search screenpipe's recorded content: screen text, audio transcriptions, input events, and parsed app data. " +
-      "Returns timestamped results with app context. Use q with mode=keyword for literal terms or mode=relevance for related/paraphrased content. " +
+      "Returns timestamped results with app context. Use mode=keyword for literal terms, mode=relevance for fused local retrieval, or explicitly select mode=graphiti for Graphiti-only results (requires q; failures do not fall back). " +
       "Call with no parameters to get recent activity.",
     inputSchema: {
       type: "object" as const,
@@ -185,7 +185,7 @@ const TOOLS = [
           type: "string",
           description: "Optional exact canonical connector/provider ID from list_connectors; requires content_type=connection.",
         },
-        mode: { type: "string", enum: ["keyword", "relevance"], description: "Search mode. keyword uses FTS with chronological ordering. Default: keyword" },
+        mode: { type: "string", enum: ["keyword", "relevance", "graphiti"], description: "Search mode. Graphiti mode requires a non-empty q and supports only JSON, limit, time range, and app/window filters; it never falls back to local search. Default: keyword" },
         limit: { type: "integer", description: "Max results. Default: 10" },
         offset: { type: "integer", description: "Skip N results for pagination. Default: 0" },
         start_time: {
@@ -255,7 +255,7 @@ async function handleSearchContent(
 
   const data = await response.json();
   const structured = normalizeSearchResponse(data, {
-    mode: args.mode === "relevance" ? "relevance" : "keyword",
+    mode: args.mode === "graphiti" ? "graphiti" : args.mode === "relevance" ? "relevance" : "keyword",
   });
 
   return {

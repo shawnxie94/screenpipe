@@ -58,13 +58,47 @@ describe("normalizeSearchResponse", () => {
       degraded: true,
       legs_used: ["documents", "frames"],
       warnings: expect.arrayContaining([
-        "Hybrid retrieval degraded; sparse-only results may be incomplete.",
+        "Hybrid retrieval degraded; optional legs may be incomplete.",
         "Some excerpts or results were truncated to fit the response budget.",
       ]),
       pagination: { limit: 1, offset: 0, total: 20 },
       truncated: true,
       results: [{ text: "long…", truncated: true, retrieval: { score: 0.75, matched_legs: ["documents"] } }],
     });
+  });
+
+  it("preserves Graphiti citations while stripping URL secrets", () => {
+    const response = normalizeSearchResponse({
+      data: [{
+        source_type: "graphiti",
+        source_pk: "fact-1",
+        text: "Synthetic fact",
+        legs: ["graphiti"],
+        source_refs: [{
+          source_type: "frame",
+          source_id: 17,
+          occurred_at: "2026-09-01T12:00:00Z",
+          frame_id: 17,
+          app_name: "Browser",
+          window_title: "Issue",
+          browser_url: "https://user:pass@example.com/issue?token=secret#private",
+        }],
+      }],
+      pagination: { limit: 8, offset: 0, total: 1 },
+      legs_used: ["graphiti"],
+    }, { mode: "graphiti" });
+
+    expect(response).toMatchObject({ mode: "graphiti", degraded: false, legs_used: ["graphiti"] });
+    expect(response.results[0].source_refs).toEqual([{
+      source_type: "frame",
+      source_id: 17,
+      occurred_at: "2026-09-01T12:00:00Z",
+      frame_id: 17,
+      app_name: "Browser",
+      window_title: "Issue",
+      browser_url: "https://example.com/issue",
+    }]);
+    expect(JSON.stringify(response)).not.toContain("secret");
   });
 
   it("returns a valid empty envelope", () => {
@@ -273,7 +307,15 @@ describe("buildHttpServer", () => {
       }
       if (url.startsWith("http://localhost:3030/search/records?")) {
         apiRequests.push(url);
-        return new Response(JSON.stringify({ data: [], pagination: { limit: 10, offset: 0, total: 0 } }), { status: 200 });
+        const payload = url.includes("mode=graphiti")
+          ? {
+              data: [{ source_type: "graphiti", source_pk: "fact-1", text: "synthetic fact", legs: ["graphiti"] }],
+              pagination: { limit: 1, offset: 0, total: 1 },
+              degraded: false,
+              legs_used: ["graphiti"],
+            }
+          : { data: [], pagination: { limit: 10, offset: 0, total: 0 } };
+        return new Response(JSON.stringify(payload), { status: 200 });
       }
       return originalFetch(input, init);
     };
@@ -339,6 +381,7 @@ describe("buildHttpServer", () => {
       expect(toolsBody).toContain('"parsed"');
       expect(toolsBody).toContain('"frame_id"');
       expect(toolsBody).toContain('"actor_id"');
+      expect(toolsBody).toContain('"graphiti"');
 
       const connectorListResponse = await fetch(`${baseUrl}/mcp`, {
         method: "POST",
@@ -381,6 +424,30 @@ describe("buildHttpServer", () => {
         }),
       });
       expect(apiRequests.some((url) => url.includes("connector=weread"))).toBe(true);
+
+      const graphitiResponse = await fetch(`${baseUrl}/mcp`, {
+        method: "POST",
+        headers: {
+          authorization: "Bearer secret",
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          "mcp-session-id": sessionId!,
+          "mcp-protocol-version": "2024-11-05",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 5,
+          method: "tools/call",
+          params: {
+            name: "search_content",
+            arguments: { q: "synthetic", mode: "graphiti" },
+          },
+        }),
+      });
+      const graphitiBody = await graphitiResponse.text();
+      expect(graphitiBody).toContain('"mode":"graphiti"');
+      expect(graphitiBody).toContain('"legs_used":["graphiti"]');
+      expect(apiRequests.filter((url) => url.includes("mode=graphiti"))).toHaveLength(1);
     } finally {
       globalThis.fetch = originalFetch;
       await new Promise<void>((resolve, reject) => {

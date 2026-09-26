@@ -219,7 +219,7 @@ type ApiRequest = {
 };
 
 async function searchContentThroughMcp(
-  mode: "keyword" | "relevance" = "keyword",
+  mode: "keyword" | "relevance" | "graphiti" = "keyword",
   connector?: string,
 ): Promise<{
   requests: ApiRequest[];
@@ -236,7 +236,30 @@ async function searchContentThroughMcp(
 
     response.setHeader("content-type", "application/json");
     if (request.url?.startsWith("/search/records?")) {
-      response.end(JSON.stringify(mode === "relevance"
+      response.end(JSON.stringify(mode === "graphiti"
+        ? {
+            data: [{
+              source_type: "graphiti",
+              source_pk: "synthetic-fact-1",
+              score: 1,
+              legs: ["graphiti"],
+              ts: "2026-08-28T12:00:00Z",
+              app: "Browser",
+              window_name: "Synthetic issue",
+              text: "mcp-api-boundary-e2e graphiti",
+              source_refs: [{
+                source_type: "frame",
+                source_id: 77,
+                occurred_at: "2026-08-28T12:00:00Z",
+                app_name: "Browser",
+                window_title: "Synthetic issue",
+              }],
+            }],
+            pagination: { limit: 1, total: 1, offset: 0 },
+            degraded: false,
+            legs_used: ["graphiti"],
+          }
+        : mode === "relevance"
         ? {
             data: [{
               source_type: "document",
@@ -501,6 +524,22 @@ describe("stdio startup handshake", { timeout: INIT_DEADLINE_MS + 2_000 }, () =>
     expect(toolResponse.error).toBeUndefined();
     expect(searchRequest?.url).toContain("content_type=connection");
     expect(searchRequest?.url).toContain("connector=office%3Afeishu");
+  });
+
+  it("forwards Graphiti-only mode and preserves its source citations", async () => {
+    const { requests, toolResponse } = await searchContentThroughMcp("graphiti");
+    const searchRequest = requests.find((request) => request.url.startsWith("/search/records?"));
+    expect(searchRequest?.url).toContain("mode=graphiti");
+    expect(toolResponse.result?.structuredContent).toMatchObject({
+      mode: "graphiti",
+      degraded: false,
+      legs_used: ["graphiti"],
+      results: [{
+        source_type: "graphiti",
+        source_id: "synthetic-fact-1",
+        source_refs: [{ source_type: "frame", source_id: 77 }],
+      }],
+    });
   });
 
   it("preserves relevance metadata in structuredContent", async () => {

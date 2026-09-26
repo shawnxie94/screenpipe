@@ -5,7 +5,17 @@
 export const SEARCH_RESULTS_SCHEMA = "screenpipe.search-results.v1" as const;
 export const DEFAULT_SEARCH_EXCERPT_CHARS = 280;
 
-export type SearchMode = "keyword" | "relevance";
+export type SearchMode = "keyword" | "relevance" | "graphiti";
+
+export interface SearchCitation {
+  source_type: string;
+  source_id: number;
+  occurred_at: string;
+  frame_id?: number;
+  app_name?: string;
+  window_title?: string;
+  browser_url?: string;
+}
 
 export interface StructuredSearchHit {
   id: string;
@@ -17,6 +27,7 @@ export interface StructuredSearchHit {
   app?: string;
   window_name?: string;
   source_ref: Record<string, string | number | string[]>;
+  source_refs?: SearchCitation[];
   retrieval: {
     score?: number;
     matched_legs: string[];
@@ -141,6 +152,59 @@ function textOf(row: Record<string, any>, content: Record<string, any>): string 
   return typeof value === "string" ? value : String(value ?? "");
 }
 
+function citationUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return undefined;
+    url.username = "";
+    url.password = "";
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeCitations(
+  value: unknown,
+): { citations: SearchCitation[]; truncated: boolean } {
+  if (!Array.isArray(value)) return { citations: [], truncated: false };
+  const citations: SearchCitation[] = [];
+  let truncated = value.length > 3;
+  for (const candidate of value.slice(0, 3)) {
+    const row = object(candidate);
+    if (
+      typeof row.source_type !== "string" ||
+      !Number.isSafeInteger(row.source_id) ||
+      typeof row.occurred_at !== "string"
+    ) {
+      truncated = true;
+      continue;
+    }
+    const browserUrl = citationUrl(row.browser_url);
+    if (row.source_type.length > 40 || row.occurred_at.length > 64) truncated = true;
+    if (typeof row.app_name === "string" && row.app_name.length > 128) truncated = true;
+    if (typeof row.window_title === "string" && row.window_title.length > 160) truncated = true;
+    if (typeof row.browser_url === "string" && (!browserUrl || browserUrl.length > 512)) {
+      truncated = true;
+    }
+    citations.push({
+      source_type: row.source_type.slice(0, 40),
+      source_id: row.source_id,
+      occurred_at: row.occurred_at.slice(0, 64),
+      ...(Number.isSafeInteger(row.frame_id) ? { frame_id: row.frame_id } : {}),
+      ...(typeof row.app_name === "string" ? { app_name: row.app_name.slice(0, 128) } : {}),
+      ...(typeof row.window_title === "string"
+        ? { window_title: row.window_title.slice(0, 160) }
+        : {}),
+      ...(browserUrl && browserUrl.length <= 512 ? { browser_url: browserUrl } : {}),
+    });
+  }
+  return { citations, truncated };
+}
+
 function normalizeHit(
   rowValue: unknown,
   rank: number,
@@ -162,6 +226,7 @@ function normalizeHit(
     ? rawLegs.filter((leg: unknown): leg is string => typeof leg === "string")
     : [];
   const score = typeof row.score === "number" && Number.isFinite(row.score) ? row.score : undefined;
+  const normalizedCitations = normalizeCitations(row.source_refs);
 
   return {
     id: JSON.stringify([type, source.id]),
@@ -177,7 +242,10 @@ function normalizeHit(
       ...(score === undefined ? {} : { score }),
       matched_legs: matchedLegs,
     },
-    truncated: text.length < fullText.length,
+    ...(normalizedCitations.citations.length > 0
+      ? { source_refs: normalizedCitations.citations }
+      : {}),
+    truncated: text.length < fullText.length || normalizedCitations.truncated,
   };
 }
 
@@ -205,10 +273,18 @@ export function normalizeSearchResponse(
   );
   const offset = typeof pagination.offset === "number" ? pagination.offset : 0;
   const degraded = payload.degraded === true;
+  const upstreamWarnings = Array.isArray(payload.warnings)
+    ? payload.warnings.filter((warning: unknown): warning is string => typeof warning === "string")
+    : [];
   const makeResponse = (): StructuredSearchResponse => {
     const truncated = rows.length > results.length || results.some((hit) => hit.truncated);
     const warnings = [
-      ...(degraded ? ["Hybrid retrieval degraded; sparse-only results may be incomplete."] : []),
+      ...new Set([
+        ...upstreamWarnings,
+        ...(degraded && upstreamWarnings.length === 0
+          ? ["Hybrid retrieval degraded; optional legs may be incomplete."]
+          : []),
+      ]),
       ...(truncated ? ["Some excerpts or results were truncated to fit the response budget."] : []),
     ];
     const count = results.length;
@@ -216,7 +292,7 @@ export function normalizeSearchResponse(
       ? rows.length > 0
         ? "Results were omitted to fit the response budget. Use pagination to retrieve a smaller page."
         : "No results found. Try broader terms or a wider time range."
-      : `Found ${count}${total > count ? ` of ${total}` : ""} results (${mode}${degraded ? ", sparse-only fallback" : ""}).`;
+      : `Found ${count}${total > count ? ` of ${total}` : ""} results (${mode}${degraded ? ", degraded" : ""}).`;
     return {
       schema: SEARCH_RESULTS_SCHEMA,
       schema_version: 1,
