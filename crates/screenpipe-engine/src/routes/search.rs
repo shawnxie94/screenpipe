@@ -152,8 +152,8 @@ pub(crate) struct SearchQuery {
     #[serde(default)]
     connector: Option<String>,
     /// `keyword` (default FTS path), `relevance` (hybrid RRF fusion), or
-    /// legacy `time` (alias of `keyword`). Relevance combines sparse FTS
-    /// legs with the dense embedding leg; SPEC S3.
+    /// `graphiti` (Graphiti-only retrieval with explicit errors and no local
+    /// fallback); legacy `time` aliases `keyword`.
     #[serde(default)]
     mode: Option<String>,
     /// Result ordering. Defaults to newest-first for existing callers; sync
@@ -1096,12 +1096,10 @@ async fn unified_time_search(
         query.order,
         query.input_context_only,
     );
-    let document_query = state.db.document_search_in_range(
-        text,
-        fetch_limit,
-        query.start_time,
-        query.end_time,
-    );
+    let document_query =
+        state
+            .db
+            .document_search_in_range(text, fetch_limit, query.start_time, query.end_time);
     let connector_query = state.db.connector_search_time_page_filtered(
         text,
         query.start_time,
@@ -1109,12 +1107,8 @@ async fn unified_time_search(
         fetch_limit,
         query.connector.as_deref(),
     );
-    let (capture, inputs, documents, connections) = tokio::try_join!(
-        capture_query,
-        input_query,
-        document_query,
-        connector_query,
-    )?;
+    let (capture, inputs, documents, connections) =
+        tokio::try_join!(capture_query, input_query, document_query, connector_query,)?;
 
     let mut items: Vec<UnifiedTimedItem> = capture
         .iter()
@@ -1158,7 +1152,10 @@ async fn unified_time_search(
             snippet: document.snippet,
             text,
         });
-        UnifiedTimedItem { timestamp: content_item_time(&item), item }
+        UnifiedTimedItem {
+            timestamp: content_item_time(&item),
+            item,
+        }
     }));
     items.extend(connections.into_iter().map(|row| {
         let connector = row.connector.clone();
@@ -1186,7 +1183,10 @@ async fn unified_time_search(
             fetched_at,
             source_url: row.source_url,
         });
-        UnifiedTimedItem { timestamp: content_item_time(&item), item }
+        UnifiedTimedItem {
+            timestamp: content_item_time(&item),
+            item,
+        }
     }));
 
     let mut items = dedupe_unified_items(items);
@@ -1195,9 +1195,8 @@ async fn unified_time_search(
             Order::Ascending => a.timestamp.cmp(&b.timestamp),
             Order::Descending => b.timestamp.cmp(&a.timestamp),
         };
-        time_order.then_with(|| {
-            unified_source_identity(&a.item).cmp(&unified_source_identity(&b.item))
-        })
+        time_order
+            .then_with(|| unified_source_identity(&a.item).cmp(&unified_source_identity(&b.item)))
     });
     let total = state
         .db
@@ -1301,11 +1300,12 @@ pub(crate) async fn search(
         if !mode.eq_ignore_ascii_case("keyword")
             && !mode.eq_ignore_ascii_case("time")
             && !mode.eq_ignore_ascii_case("relevance")
+            && !mode.eq_ignore_ascii_case("graphiti")
         {
             return Err((
                 StatusCode::BAD_REQUEST,
                 JsonResponse(json!({
-                    "error": "mode must be keyword, relevance, or legacy time",
+                    "error": "mode must be keyword, relevance, graphiti, or legacy time",
                 })),
             ));
         }
@@ -1380,6 +1380,13 @@ pub(crate) async fn search(
         return search_relevance(&state, &query).await;
     }
 
+    let graphiti_mode = query
+        .mode
+        .as_deref()
+        .is_some_and(|mode| mode.eq_ignore_ascii_case("graphiti"));
+    if graphiti_mode {
+        return search_graphiti_only(&state, &query, wholly_before_history_cutoff).await;
+    }
     if wholly_before_history_cutoff {
         return Ok(empty_search_response(&query, format, &fields));
     }
@@ -1393,7 +1400,9 @@ pub(crate) async fn search(
         let response = unified_time_search(&state, &query).await.map_err(|error| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                JsonResponse(json!({ "error": format!("failed to perform unified search: {error}") })),
+                JsonResponse(
+                    json!({ "error": format!("failed to perform unified search: {error}") }),
+                ),
             )
         })?;
         return Ok(render_search(format, &fields, &response));
@@ -1840,7 +1849,6 @@ pub(crate) async fn search(
         related,
     };
 
-
     let cache_entry = if !history_restricted
         && !query.include_frames
         && cacheable_render
@@ -1920,8 +1928,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::Value;
     use screenpipe_core::pipes::permissions::PermissionRule;
+    use serde_json::Value;
 
     fn restricted_pipe_permissions(
         allow_rules: Vec<PermissionRule>,
@@ -1976,6 +1984,85 @@ mod tests {
             format: None,
             fields: None,
         }
+    }
+
+    #[test]
+    fn graphiti_response_is_exclusive_and_never_degraded() {
+        let response = graphiti_search_response(20, Vec::new());
+        assert!(response.data.is_empty());
+        assert!(!response.degraded);
+        assert_eq!(response.legs_used, ["graphiti"]);
+        assert!(response.warnings.is_empty());
+    }
+
+    #[tokio::test]
+    async fn graphiti_only_mock_search_returns_exclusive_graphiti_results() {
+        let mut query = search_query(SearchContentType::All, None);
+        query.q = Some("synthetic query".into());
+        let reference_time = "2026-09-26T10:00:00Z".parse().unwrap();
+        let response = search_graphiti_only_with(&query, false, true, move |text, limit, _, _| {
+            assert_eq!(text, "synthetic query");
+            assert_eq!(limit, 20);
+            async move {
+                Ok(vec![crate::graphiti::GraphitiSearchHit {
+                    uuid: "synthetic-fact".into(),
+                    fact: "Graphiti-only fact".into(),
+                    reference_time,
+                    source_refs: vec![crate::graphiti::GraphitiSourceRef {
+                        source_type: "frame".into(),
+                        source_id: 17,
+                        occurred_at: reference_time,
+                        frame_id: Some(17),
+                        app_name: Some("Browser".into()),
+                        window_title: Some("Issue".into()),
+                        browser_url: None,
+                    }],
+                }])
+            }
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(response.legs_used, ["graphiti"]);
+        assert!(!response.degraded);
+        assert_eq!(response.data.len(), 1);
+        assert_eq!(response.data[0].source_type, "graphiti");
+        assert_eq!(response.data[0].text.as_deref(), Some("Graphiti-only fact"));
+    }
+
+    #[tokio::test]
+    async fn graphiti_only_adapter_failure_returns_error_without_fallback() {
+        let mut query = search_query(SearchContentType::All, None);
+        query.q = Some("synthetic query".into());
+        let result =
+            search_graphiti_only_with(&query, false, true, |_, _, _, _| async { Err(()) }).await;
+
+        match result {
+            Err((status, _)) => assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE),
+            Ok(_) => panic!("Graphiti adapter failure must not return local results"),
+        }
+    }
+
+    #[test]
+    fn graphiti_mode_accepts_only_explicit_graphiti_filters() {
+        let mut query = search_query(SearchContentType::All, Some("Browser"));
+        query.q = Some("synthetic query".into());
+        query.window_name = Some("Issue".into());
+        query.start_time = Some("2026-09-26T10:00:00Z".parse().unwrap());
+        assert!(graphiti_query_supported(&query));
+
+        let mut unsupported = query;
+        unsupported.pagination.offset = 1;
+        assert!(!graphiti_query_supported(&unsupported));
+
+        let mut unsupported = search_query(SearchContentType::Audio, None);
+        unsupported.q = Some("query".into());
+        assert!(!graphiti_query_supported(&unsupported));
+
+        let mut unsupported = search_query(SearchContentType::All, None);
+        unsupported.q = Some("query".into());
+        unsupported.filter_pii = true;
+        assert!(!graphiti_query_supported(&unsupported));
     }
 
     fn fixed_now() -> DateTime<Utc> {
@@ -2900,8 +2987,12 @@ mod tests {
         };
         let items = dedupe_unified_items(vec![document(0, "best"), document(1, "other"), ocr]);
         assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|entry| unified_source_identity(&entry.item) == "document:sha-one"));
-        assert!(items.iter().any(|entry| unified_source_identity(&entry.item) == "ocr:1"));
+        assert!(items
+            .iter()
+            .any(|entry| unified_source_identity(&entry.item) == "document:sha-one"));
+        assert!(items
+            .iter()
+            .any(|entry| unified_source_identity(&entry.item) == "ocr:1"));
         let selected = items.iter().find_map(|entry| match &entry.item {
             ContentItem::Document(content) => Some(content.snippet.as_str()),
             _ => None,
@@ -2912,10 +3003,176 @@ mod tests {
 
 use crate::retrieval::embedder::{embed_texts, EmbedderConfig};
 use crate::retrieval::fusion::{
-    rrf_fuse, rank_with_decay, HybridHit, HybridPagination, HybridSearchResponse, RankedLeg,
+    rank_with_decay, rrf_fuse, HybridHit, HybridPagination, HybridSearchResponse, RankedLeg,
     DEFAULT_LAMBDA, DEFAULT_TAU_DAYS, RRF_K,
 };
 use std::collections::HashMap;
+
+/// Search-mode handler for `/search/records?mode=graphiti`. This is an
+/// explicit backend selection: unsupported filters and adapter failures are
+/// errors, never a reason to return local-search results.
+async fn search_graphiti_only(
+    state: &AppState,
+    query: &SearchQuery,
+    wholly_before_history_cutoff: bool,
+) -> Result<Response<Body>, (StatusCode, JsonResponse<serde_json::Value>)> {
+    let data_dir = state.screenpipe_dir.clone();
+    let enabled = crate::graphiti::search_enabled(&data_dir);
+    let response = search_graphiti_only_with(
+        query,
+        wholly_before_history_cutoff,
+        enabled,
+        move |text, limit, start, end| {
+            let data_dir = data_dir.clone();
+            async move { crate::graphiti::search(&data_dir, &text, limit, start, end).await }
+        },
+    )
+    .await?;
+    Ok((
+        StatusCode::OK,
+        axum::Json(serde_json::to_value(response).unwrap_or_default()),
+    )
+        .into_response())
+}
+
+async fn search_graphiti_only_with<F, Fut>(
+    query: &SearchQuery,
+    wholly_before_history_cutoff: bool,
+    enabled: bool,
+    search: F,
+) -> Result<
+    crate::retrieval::fusion::HybridSearchResponse,
+    (StatusCode, JsonResponse<serde_json::Value>),
+>
+where
+    F: FnOnce(String, u32, Option<DateTime<Utc>>, Option<DateTime<Utc>>) -> Fut,
+    Fut: Future<Output = Result<Vec<crate::graphiti::GraphitiSearchHit>, ()>>,
+{
+    let text = query.q.as_deref().unwrap_or_default().trim();
+    if text.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            JsonResponse(json!({"error": "mode=graphiti requires a non-empty q"})),
+        ));
+    }
+    if !graphiti_query_supported(query) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            JsonResponse(json!({
+                "error": "mode=graphiti supports content_type=all, JSON output, limit, time range, and app/window filters only"
+            })),
+        ));
+    }
+    let limit = query.pagination.limit.clamp(1, 20);
+    if wholly_before_history_cutoff {
+        return Ok(graphiti_search_response(limit, Vec::new()));
+    }
+    if !enabled {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            JsonResponse(json!({"error": "graphiti_search_unavailable"})),
+        ));
+    }
+    let hits = search(text.to_string(), limit, query.start_time, query.end_time)
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                JsonResponse(json!({"error": "graphiti_search_unavailable"})),
+            )
+        })?;
+
+    let mut results = Vec::new();
+    for (index, hit) in hits.into_iter().enumerate() {
+        let source_refs: Vec<crate::retrieval::fusion::SearchSourceRef> =
+            hit.source_refs
+                .into_iter()
+                .filter(|source| {
+                    query
+                        .start_time
+                        .as_ref()
+                        .is_none_or(|start| &source.occurred_at >= start)
+                        && query
+                            .end_time
+                            .as_ref()
+                            .is_none_or(|end| &source.occurred_at <= end)
+                        && query.app_name.as_deref().is_none_or(|app| {
+                            source.app_name.as_deref().is_some_and(|value| {
+                                value.to_lowercase().contains(&app.to_lowercase())
+                            })
+                        })
+                        && query.window_name.as_deref().is_none_or(|window| {
+                            source.window_title.as_deref().is_some_and(|value| {
+                                value.to_lowercase().contains(&window.to_lowercase())
+                            })
+                        })
+                })
+                .map(Into::into)
+                .collect();
+        if source_refs.is_empty() {
+            continue;
+        }
+        let first_ref = &source_refs[0];
+        results.push(crate::retrieval::fusion::HybridHit {
+            source_type: "graphiti".into(),
+            source_pk: hit.uuid,
+            score: 1.0 / (index as f32 + 1.0),
+            legs: vec!["graphiti".into()],
+            ts: Some(hit.reference_time.to_rfc3339()),
+            app: first_ref.app_name.clone(),
+            window_name: first_ref.window_title.clone(),
+            text: Some(hit.fact),
+            source_refs: Some(source_refs),
+        });
+    }
+    Ok(graphiti_search_response(limit, results))
+}
+
+fn graphiti_search_response(
+    limit: u32,
+    data: Vec<crate::retrieval::fusion::HybridHit>,
+) -> crate::retrieval::fusion::HybridSearchResponse {
+    crate::retrieval::fusion::HybridSearchResponse {
+        pagination: crate::retrieval::fusion::HybridPagination {
+            limit,
+            offset: 0,
+            total: data.len() as i64,
+        },
+        data,
+        degraded: false,
+        legs_used: vec!["graphiti".into()],
+        warnings: Vec::new(),
+    }
+}
+
+fn graphiti_query_supported(query: &SearchQuery) -> bool {
+    query.content_type == SearchContentType::All
+        && query.connector.is_none()
+        && query.frame_id.is_none()
+        && query.actor_id.is_none()
+        && query.frame_name.is_none()
+        && !query.include_frames
+        && query.min_length.is_none()
+        && query.max_length.is_none()
+        && query.speaker_ids.as_ref().is_none_or(Vec::is_empty)
+        && query.focused.is_none()
+        && query.on_screen.is_none()
+        && query.browser_url.is_none()
+        && query.speaker_name.is_none()
+        && query.max_content_length.is_none()
+        && query.device_name.is_none()
+        && query.machine_id.is_none()
+        && !query.filter_pii
+        && query.tags.as_ref().is_none_or(Vec::is_empty)
+        && !query.include_related
+        && !query.input_context_only
+        && query.pagination.offset == 0
+        && query
+            .format
+            .as_deref()
+            .is_none_or(|format| format.eq_ignore_ascii_case("json"))
+        && query.fields.is_none()
+}
 
 /// Search-mode handler for `/search/records?mode=relevance`. Gathers ranked
 /// candidates from the sparse FTS legs and the dense KNN leg, fuses them
@@ -2936,6 +3193,7 @@ pub(crate) async fn search_relevance(
     let mut legs_used: Vec<String> = Vec::new();
     let mut legs: Vec<RankedLeg> = Vec::new();
     let mut degraded = false;
+    let mut warnings: Vec<String> = Vec::new();
 
     fn push_hit(
         display: &mut HashMap<String, HybridHit>,
@@ -2946,19 +3204,20 @@ pub(crate) async fn search_relevance(
         ts_epoch: Option<f64>,
         hit: HybridHit,
     ) {
-        timestamps.entry(key.clone()).or_insert(ts_epoch.unwrap_or(0.0));
-        display
+        timestamps
             .entry(key.clone())
-            .or_insert_with(|| HybridHit {
-                source_type: source_type.to_string(),
-                source_pk: source_pk.to_string(),
-                score: 0.0,
-                legs: Vec::new(),
-                ts: hit.ts,
-                app: hit.app,
-                window_name: hit.window_name,
-                text: hit.text,
-            });
+            .or_insert(ts_epoch.unwrap_or(0.0));
+        display.entry(key.clone()).or_insert_with(|| HybridHit {
+            source_type: source_type.to_string(),
+            source_pk: source_pk.to_string(),
+            score: 0.0,
+            legs: Vec::new(),
+            ts: hit.ts,
+            app: hit.app,
+            window_name: hit.window_name,
+            text: hit.text,
+            source_refs: hit.source_refs,
+        });
     }
 
     // --- Sparse legs -------------------------------------------------------
@@ -3030,6 +3289,7 @@ pub(crate) async fn search_relevance(
                             app,
                             window_name: window,
                             text: text_out,
+                            source_refs: None,
                         },
                     );
                     if let Some(t) = ts_epoch {
@@ -3048,99 +3308,101 @@ pub(crate) async fn search_relevance(
             match state
                 .db
                 .search_audio_ordered(
-                &text,
-                leg_limit,
-                0,
-                query.start_time,
-                query.end_time,
-                query.min_length,
-                query.max_length,
-                query.speaker_ids.clone(),
-                query.speaker_name.as_deref(),
-                query.device_name.as_deref(),
-                query.machine_id.as_deref(),
-                &query.tags.clone().unwrap_or_default(),
-                Order::Descending,
-            )
-            .await
-        {
-            Ok(results) => {
-                legs_used.push("audio".into());
-                let mut ranked: Vec<String> = Vec::new();
-                for a in results {
-                    let key = format!("audio:{}", a.audio_chunk_id);
-                    ranked.push(key.clone());
-                    let ts_epoch = Some(a.timestamp.timestamp_millis() as f64 / 1000.0);
-                    push_hit(
-                        &mut display,
-                        &mut timestamps,
-                        key.clone(),
-                        "audio",
-                        &a.audio_chunk_id.to_string(),
-                        ts_epoch,
-                        HybridHit {
-                            source_type: "audio".into(),
-                            source_pk: a.audio_chunk_id.to_string(),
-                            score: 0.0,
-                            legs: Vec::new(),
-                            ts: Some(a.timestamp.to_rfc3339()),
-                            app: Some(a.device_name.clone()),
-                            window_name: None,
-                            text: Some(snippet(&a.transcription)),
-                        },
-                    );
-                    timestamps.entry(key).or_insert(ts_epoch.unwrap_or(0.0));
+                    &text,
+                    leg_limit,
+                    0,
+                    query.start_time,
+                    query.end_time,
+                    query.min_length,
+                    query.max_length,
+                    query.speaker_ids.clone(),
+                    query.speaker_name.as_deref(),
+                    query.device_name.as_deref(),
+                    query.machine_id.as_deref(),
+                    &query.tags.clone().unwrap_or_default(),
+                    Order::Descending,
+                )
+                .await
+            {
+                Ok(results) => {
+                    legs_used.push("audio".into());
+                    let mut ranked: Vec<String> = Vec::new();
+                    for a in results {
+                        let key = format!("audio:{}", a.audio_chunk_id);
+                        ranked.push(key.clone());
+                        let ts_epoch = Some(a.timestamp.timestamp_millis() as f64 / 1000.0);
+                        push_hit(
+                            &mut display,
+                            &mut timestamps,
+                            key.clone(),
+                            "audio",
+                            &a.audio_chunk_id.to_string(),
+                            ts_epoch,
+                            HybridHit {
+                                source_type: "audio".into(),
+                                source_pk: a.audio_chunk_id.to_string(),
+                                score: 0.0,
+                                legs: Vec::new(),
+                                ts: Some(a.timestamp.to_rfc3339()),
+                                app: Some(a.device_name.clone()),
+                                window_name: None,
+                                text: Some(snippet(&a.transcription)),
+                                source_refs: None,
+                            },
+                        );
+                        timestamps.entry(key).or_insert(ts_epoch.unwrap_or(0.0));
+                    }
+                    legs.push(("audio", ranked));
                 }
-                legs.push(("audio", ranked));
-            }
-            Err(error) => {
-                tracing::warn!(%error, "audio sparse leg failed");
-            }
+                Err(error) => {
+                    tracing::warn!(%error, "audio sparse leg failed");
+                }
             }
         }
 
         // Imported documents leg.
         if query.content_type.relevance_documents() {
             match state.db.document_search(&text, leg_limit).await {
-            Ok(docs) => {
-                legs_used.push("documents".into());
-                let mut ranked: Vec<String> = Vec::new();
-                for d in docs {
-                    let key = format!("document:{}", d.sha256);
-                    if ranked.contains(&key) {
-                        continue;
+                Ok(docs) => {
+                    legs_used.push("documents".into());
+                    let mut ranked: Vec<String> = Vec::new();
+                    for d in docs {
+                        let key = format!("document:{}", d.sha256);
+                        if ranked.contains(&key) {
+                            continue;
+                        }
+                        ranked.push(key.clone());
+                        let ts_epoch = parse_epoch_secs(&d.imported_at);
+                        push_hit(
+                            &mut display,
+                            &mut timestamps,
+                            key.clone(),
+                            "document",
+                            &d.sha256.clone(),
+                            ts_epoch,
+                            HybridHit {
+                                source_type: "document".into(),
+                                source_pk: d.sha256.clone(),
+                                score: 0.0,
+                                legs: Vec::new(),
+                                ts: Some(d.imported_at.clone()),
+                                app: Some("document".into()),
+                                window_name: Some(d.file_name.clone()),
+                                text: Some(if d.snippet.is_empty() {
+                                    d.file_name.clone()
+                                } else {
+                                    d.snippet.clone()
+                                }),
+                                source_refs: None,
+                            },
+                        );
+                        timestamps.entry(key).or_insert(ts_epoch.unwrap_or(0.0));
                     }
-                    ranked.push(key.clone());
-                    let ts_epoch = parse_epoch_secs(&d.imported_at);
-                    push_hit(
-                        &mut display,
-                        &mut timestamps,
-                        key.clone(),
-                        "document",
-                        &d.sha256.clone(),
-                        ts_epoch,
-                        HybridHit {
-                            source_type: "document".into(),
-                            source_pk: d.sha256.clone(),
-                            score: 0.0,
-                            legs: Vec::new(),
-                            ts: Some(d.imported_at.clone()),
-                            app: Some("document".into()),
-                            window_name: Some(d.file_name.clone()),
-                            text: Some(if d.snippet.is_empty() {
-                                d.file_name.clone()
-                            } else {
-                                d.snippet.clone()
-                            }),
-                        },
-                    );
-                    timestamps.entry(key).or_insert(ts_epoch.unwrap_or(0.0));
+                    legs.push(("documents", ranked));
                 }
-                legs.push(("documents", ranked));
-            }
-            Err(error) => {
-                tracing::warn!(%error, "documents sparse leg failed");
-            }
+                Err(error) => {
+                    tracing::warn!(%error, "documents sparse leg failed");
+                }
             }
         }
     }
@@ -3150,54 +3412,55 @@ pub(crate) async fn search_relevance(
         match state
             .db
             .search_ui_events_ordered(
-            Some(&text),
-            None,
-            query.app_name.as_deref(),
-            query.window_name.as_deref(),
-            query.start_time,
-            query.end_time,
-            leg_limit,
-            0,
-            Order::Descending,
-            query.input_context_only,
-        )
-        .await
-    {
-        Ok(results) => {
-            legs_used.push("input".into());
-            let mut ranked = Vec::new();
-            for input in results {
-                let key = format!("input:{}", input.id);
-                ranked.push(key.clone());
-                let text = input
-                    .text_content
-                    .clone()
-                    .or_else(|| input.window_title.clone())
-                    .or_else(|| input.app_name.clone())
-                    .unwrap_or_else(|| input.event_type.to_string());
-                let ts = input.timestamp;
-                push_hit(
-                    &mut display,
-                    &mut timestamps,
-                    key,
-                    "input",
-                    &input.id.to_string(),
-                    Some(ts.timestamp_millis() as f64 / 1000.0),
-                    HybridHit {
-                        source_type: "input".into(),
-                        source_pk: input.id.to_string(),
-                        score: 0.0,
-                        legs: Vec::new(),
-                        ts: Some(ts.to_rfc3339()),
-                        app: input.app_name.clone(),
-                        window_name: input.window_title.clone(),
-                        text: Some(snippet(&text)),
-                    },
-                );
+                Some(&text),
+                None,
+                query.app_name.as_deref(),
+                query.window_name.as_deref(),
+                query.start_time,
+                query.end_time,
+                leg_limit,
+                0,
+                Order::Descending,
+                query.input_context_only,
+            )
+            .await
+        {
+            Ok(results) => {
+                legs_used.push("input".into());
+                let mut ranked = Vec::new();
+                for input in results {
+                    let key = format!("input:{}", input.id);
+                    ranked.push(key.clone());
+                    let text = input
+                        .text_content
+                        .clone()
+                        .or_else(|| input.window_title.clone())
+                        .or_else(|| input.app_name.clone())
+                        .unwrap_or_else(|| input.event_type.to_string());
+                    let ts = input.timestamp;
+                    push_hit(
+                        &mut display,
+                        &mut timestamps,
+                        key,
+                        "input",
+                        &input.id.to_string(),
+                        Some(ts.timestamp_millis() as f64 / 1000.0),
+                        HybridHit {
+                            source_type: "input".into(),
+                            source_pk: input.id.to_string(),
+                            score: 0.0,
+                            legs: Vec::new(),
+                            ts: Some(ts.to_rfc3339()),
+                            app: input.app_name.clone(),
+                            window_name: input.window_title.clone(),
+                            text: Some(snippet(&text)),
+                            source_refs: None,
+                        },
+                    );
+                }
+                legs.push(("input", ranked));
             }
-            legs.push(("input", ranked));
-        }
-        Err(error) => tracing::warn!(%error, "input sparse leg failed"),
+            Err(error) => tracing::warn!(%error, "input sparse leg failed"),
         }
     }
 
@@ -3215,52 +3478,53 @@ pub(crate) async fn search_relevance(
             )
             .await
         {
-        Ok((results, _)) => {
-            legs_used.push("connections".into());
-            let mut ranked = Vec::new();
-            for row in results {
-                let key = format!(
-                    "connection:{}:{}:{}:{}",
-                    row.connector, row.namespace, row.object_kind, row.object_id
-                );
-                ranked.push(key.clone());
-                let source_pk = key.strip_prefix("connection:").unwrap_or(&key).to_string();
-                let event_at = row
-                    .event_at
-                    .as_deref()
-                    .and_then(|value| DateTime::parse_from_rfc3339(value).ok())
-                    .map(|value| value.with_timezone(&Utc));
-                let fetched_at = DateTime::parse_from_rfc3339(&row.fetched_at)
-                    .map(|value| value.with_timezone(&Utc))
-                    .unwrap_or_else(|_| Utc::now());
-                let timestamp = event_at.unwrap_or(fetched_at);
-                let text = row
-                    .title
-                    .clone()
-                    .map(|title| format!("{} {}", title, row.body_text))
-                    .unwrap_or_else(|| row.body_text.clone());
-                push_hit(
-                    &mut display,
-                    &mut timestamps,
-                    key,
-                    "connection",
-                    &source_pk.clone(),
-                    Some(timestamp.timestamp_millis() as f64 / 1000.0),
-                    HybridHit {
-                        source_type: "connection".into(),
-                        source_pk,
-                        score: 0.0,
-                        legs: Vec::new(),
-                        ts: Some(timestamp.to_rfc3339()),
-                        app: Some(row.connector),
-                        window_name: row.title,
-                        text: Some(snippet(&text)),
-                    },
-                );
+            Ok((results, _)) => {
+                legs_used.push("connections".into());
+                let mut ranked = Vec::new();
+                for row in results {
+                    let key = format!(
+                        "connection:{}:{}:{}:{}",
+                        row.connector, row.namespace, row.object_kind, row.object_id
+                    );
+                    ranked.push(key.clone());
+                    let source_pk = key.strip_prefix("connection:").unwrap_or(&key).to_string();
+                    let event_at = row
+                        .event_at
+                        .as_deref()
+                        .and_then(|value| DateTime::parse_from_rfc3339(value).ok())
+                        .map(|value| value.with_timezone(&Utc));
+                    let fetched_at = DateTime::parse_from_rfc3339(&row.fetched_at)
+                        .map(|value| value.with_timezone(&Utc))
+                        .unwrap_or_else(|_| Utc::now());
+                    let timestamp = event_at.unwrap_or(fetched_at);
+                    let text = row
+                        .title
+                        .clone()
+                        .map(|title| format!("{} {}", title, row.body_text))
+                        .unwrap_or_else(|| row.body_text.clone());
+                    push_hit(
+                        &mut display,
+                        &mut timestamps,
+                        key,
+                        "connection",
+                        &source_pk.clone(),
+                        Some(timestamp.timestamp_millis() as f64 / 1000.0),
+                        HybridHit {
+                            source_type: "connection".into(),
+                            source_pk,
+                            score: 0.0,
+                            legs: Vec::new(),
+                            ts: Some(timestamp.to_rfc3339()),
+                            app: Some(row.connector),
+                            window_name: row.title,
+                            text: Some(snippet(&text)),
+                            source_refs: None,
+                        },
+                    );
+                }
+                legs.push(("connections", ranked));
             }
-            legs.push(("connections", ranked));
-        }
-        Err(error) => tracing::warn!(%error, "connector sparse leg failed"),
+            Err(error) => tracing::warn!(%error, "connector sparse leg failed"),
         }
     }
 
@@ -3268,6 +3532,7 @@ pub(crate) async fn search_relevance(
     let config = EmbedderConfig::from_env();
     if config.is_none() {
         degraded = true;
+        warnings.push("Semantic retrieval unavailable; local candidates remain available.".into());
     }
     if let Some(config) = &config {
         match embed_texts(config, &[text.clone()]).await {
@@ -3299,9 +3564,8 @@ pub(crate) async fn search_relevance(
                                     if let Some((chunk_id, chunk_text, ts)) = chunk_id {
                                         let fused_key = format!("audio:{chunk_id}");
                                         transcript_ranked.push(fused_key.clone());
-                                        display
-                                            .entry(fused_key.clone())
-                                            .or_insert_with(|| HybridHit {
+                                        display.entry(fused_key.clone()).or_insert_with(|| {
+                                            HybridHit {
                                                 source_type: "audio".into(),
                                                 source_pk: chunk_id.to_string(),
                                                 score: 0.0,
@@ -3310,7 +3574,9 @@ pub(crate) async fn search_relevance(
                                                 app: Some("audio".into()),
                                                 window_name: None,
                                                 text: Some(snippet(&chunk_text)),
-                                            });
+                                                source_refs: None,
+                                            }
+                                        });
                                         continue;
                                     }
                                     transcript_ranked.push(key.clone());
@@ -3376,6 +3642,7 @@ pub(crate) async fn search_relevance(
                 app: None,
                 window_name: None,
                 text: None,
+                source_refs: None,
             });
             hit.score = score;
             hit.legs = legs;
@@ -3383,6 +3650,12 @@ pub(crate) async fn search_relevance(
         })
         .collect();
 
+    if degraded && warnings.is_empty() {
+        warnings.push(
+            "One or more optional retrieval legs were unavailable; local results were returned."
+                .into(),
+        );
+    }
     let response = HybridSearchResponse {
         data: results,
         pagination: HybridPagination {
@@ -3392,6 +3665,7 @@ pub(crate) async fn search_relevance(
         },
         degraded,
         legs_used,
+        warnings,
     };
     Ok((
         StatusCode::OK,
@@ -3426,7 +3700,11 @@ fn dense_hit_matches_query(
         }
     }
     if let Some(window_name) = query.window_name.as_deref() {
-        if !hit.window_name.to_lowercase().contains(&window_name.to_lowercase()) {
+        if !hit
+            .window_name
+            .to_lowercase()
+            .contains(&window_name.to_lowercase())
+        {
             return false;
         }
     }
@@ -3483,11 +3761,13 @@ pub(crate) async fn storage_snapshot_middleware(
     use axum::response::IntoResponse;
     let path = request.uri().path();
     let read = (request.method() == axum::http::Method::GET
-        && (matches!(path, "/search" | "/search/keyword" | "/search/records" | "/elements")
-            || (path.starts_with("/frames/")
-                && ["/text", "/ocr", "/context", "/metadata", "/elements"]
-                    .iter()
-                    .any(|suffix| path.ends_with(suffix)))))
+        && (matches!(
+            path,
+            "/search" | "/search/keyword" | "/search/records" | "/elements"
+        ) || (path.starts_with("/frames/")
+            && ["/text", "/ocr", "/context", "/metadata", "/elements"]
+                .iter()
+                .any(|suffix| path.ends_with(suffix)))))
         || (request.method() == axum::http::Method::POST && path == "/raw_sql");
     if !read {
         return next.run(request).await;

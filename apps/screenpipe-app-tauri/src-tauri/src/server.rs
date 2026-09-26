@@ -5,7 +5,8 @@
 use crate::get_store;
 use crate::window::ShowRewindWindow;
 use axum::body::Bytes;
-use axum::response::IntoResponse;
+use axum::extract::DefaultBodyLimit;
+use axum::response::{IntoResponse, Response};
 use axum::{
     extract::{Query, State},
     http::{Method, StatusCode},
@@ -13,6 +14,8 @@ use axum::{
 };
 use http::header::{HeaderValue, CONTENT_TYPE, HOST, ORIGIN};
 use serde::{Deserialize, Serialize};
+use std::fs::{self, OpenOptions};
+use std::io::{self, Write};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use tauri::Emitter;
@@ -21,6 +24,7 @@ use tokio::sync::mpsc;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing::{error, info};
+use url::Url;
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct LogEntry {
@@ -277,7 +281,13 @@ where
 {
     let cors = CorsLayer::new()
         .allow_origin("*".parse::<HeaderValue>().unwrap())
-        .allow_methods([Method::GET, Method::POST, Method::DELETE, Method::OPTIONS])
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
         .allow_headers(Any)
         .allow_credentials(false);
 
@@ -287,12 +297,238 @@ where
         .layer(axum::middleware::from_fn(control_server_origin_guard))
 }
 
+const GRAPHITI_SETTINGS_FILE: &str = "graphiti-settings.json";
+const GRAPHITI_SETTINGS_BODY_LIMIT: usize = 16 * 1024;
+const GRAPHITI_SYNC_INTERVAL_MIN_SECONDS: u64 = 30;
+const GRAPHITI_SYNC_INTERVAL_MAX_SECONDS: u64 = 24 * 60 * 60;
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct GraphitiSettings {
+    adapter_url: Option<String>,
+    allow_http_localhost: bool,
+    auto_sync_enabled: bool,
+    search_enabled: bool,
+    sync_interval_seconds: u64,
+}
+
+impl Default for GraphitiSettings {
+    fn default() -> Self {
+        Self {
+            adapter_url: None,
+            allow_http_localhost: graphiti_env_flag("SCREENPIPE_GRAPHITI_ALLOW_HTTP_LOCALHOST"),
+            auto_sync_enabled: false,
+            search_enabled: false,
+            sync_interval_seconds: 30,
+        }
+    }
+}
+
+impl GraphitiSettings {
+    fn from_env() -> Self {
+        let allow_http_localhost = graphiti_env_flag("SCREENPIPE_GRAPHITI_ALLOW_HTTP_LOCALHOST");
+        let adapter_url = std::env::var("SCREENPIPE_GRAPHITI_ADAPTER_URL")
+            .ok()
+            .and_then(|raw| validate_graphiti_adapter_url(&raw, allow_http_localhost).ok())
+            .flatten();
+        Self {
+            adapter_url,
+            auto_sync_enabled: graphiti_env_flag("SCREENPIPE_GRAPHITI_AUTO_SYNC_ENABLED"),
+            search_enabled: graphiti_env_flag("SCREENPIPE_GRAPHITI_SEARCH_ENABLED"),
+            ..Self::default()
+        }
+    }
+}
+
+fn graphiti_env_flag(name: &str) -> bool {
+    std::env::var(name).is_ok_and(|value| {
+        matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        )
+    })
+}
+
+fn validate_graphiti_adapter_url(
+    raw: &str,
+    allow_http_localhost: bool,
+) -> Result<Option<String>, ()> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return Ok(None);
+    }
+    let url = Url::parse(raw).map_err(|_| ())?;
+    if !url.username().is_empty()
+        || url.password().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
+        || !matches!(url.path(), "" | "/")
+    {
+        return Err(());
+    }
+    let host = url.host_str().ok_or(())?.to_ascii_lowercase();
+    let secure_tailnet =
+        url.scheme() == "https" && host.len() > ".ts.net".len() && host.ends_with(".ts.net");
+    let allowed_loopback = allow_http_localhost
+        && url.scheme() == "http"
+        && matches!(host.as_str(), "localhost" | "127.0.0.1" | "[::1]" | "::1");
+    if secure_tailnet || allowed_loopback {
+        Ok(Some(url.to_string()))
+    } else {
+        Err(())
+    }
+}
+
+fn validate_graphiti_settings(
+    settings: GraphitiSettings,
+    allow_http_localhost: bool,
+) -> Result<GraphitiSettings, ()> {
+    if !(GRAPHITI_SYNC_INTERVAL_MIN_SECONDS..=GRAPHITI_SYNC_INTERVAL_MAX_SECONDS)
+        .contains(&settings.sync_interval_seconds)
+    {
+        return Err(());
+    }
+    let adapter_url = validate_graphiti_adapter_url(
+        settings.adapter_url.as_deref().unwrap_or_default(),
+        settings.allow_http_localhost || allow_http_localhost,
+    )?;
+    if (settings.auto_sync_enabled || settings.search_enabled) && adapter_url.is_none() {
+        return Err(());
+    }
+    Ok(GraphitiSettings {
+        adapter_url,
+        ..settings
+    })
+}
+
+fn graphiti_settings_path(data_dir: &Path) -> PathBuf {
+    data_dir.join(GRAPHITI_SETTINGS_FILE)
+}
+
+fn read_graphiti_settings(data_dir: &Path) -> io::Result<GraphitiSettings> {
+    let path = graphiti_settings_path(data_dir);
+    let contents = match fs::read(path) {
+        Ok(contents) => contents,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            return Ok(GraphitiSettings::from_env());
+        }
+        Err(error) => return Err(error),
+    };
+    let settings: GraphitiSettings = serde_json::from_slice(&contents)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    validate_graphiti_settings(settings, false)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "invalid Graphiti settings"))
+}
+
+fn write_graphiti_settings(
+    data_dir: &Path,
+    settings: GraphitiSettings,
+) -> io::Result<GraphitiSettings> {
+    let settings = validate_graphiti_settings(settings, false)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid Graphiti settings"))?;
+    fs::create_dir_all(data_dir)?;
+    let path = graphiti_settings_path(data_dir);
+    let temp_path = path.with_file_name(format!(
+        "{GRAPHITI_SETTINGS_FILE}.{}.tmp",
+        std::process::id()
+    ));
+    let mut options = OpenOptions::new();
+    options.create(true).truncate(true).write(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(&temp_path)?;
+    serde_json::to_writer(&mut file, &settings)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    file.write_all(b"\n")?;
+    file.sync_all()?;
+    fs::rename(&temp_path, &path)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(settings)
+}
+
+fn is_allowed_graphiti_settings_origin(headers: &http::HeaderMap) -> bool {
+    headers.get(ORIGIN).is_some_and(is_allowed_local_origin)
+}
+
+async fn get_graphiti_settings(State(state): State<ServerState>) -> Response {
+    let data_dir = match crate::log_files::get_data_dir(&state.app_handle) {
+        Ok(path) => path,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "graphiti_settings_unavailable"})),
+            )
+                .into_response();
+        }
+    };
+    match read_graphiti_settings(&data_dir) {
+        Ok(settings) => Json(settings).into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "graphiti_settings_unavailable"})),
+        )
+            .into_response(),
+    }
+}
+
+async fn put_graphiti_settings(
+    State(state): State<ServerState>,
+    headers: http::HeaderMap,
+    Json(settings): Json<GraphitiSettings>,
+) -> Response {
+    if !is_allowed_graphiti_settings_origin(&headers) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "first_party_origin_required"})),
+        )
+            .into_response();
+    }
+    let data_dir = match crate::log_files::get_data_dir(&state.app_handle) {
+        Ok(path) => path,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "graphiti_settings_unavailable"})),
+            )
+                .into_response();
+        }
+    };
+    match write_graphiti_settings(&data_dir, settings) {
+        Ok(settings) => Json(settings).into_response(),
+        Err(error) if error.kind() == io::ErrorKind::InvalidInput => (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"error": "invalid_graphiti_settings"})),
+        )
+            .into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "graphiti_settings_unavailable"})),
+        )
+            .into_response(),
+    }
+}
+
 pub async fn run_server(app_handle: tauri::AppHandle, port: u16) {
     let state = ServerState {
         app_handle: app_handle.clone(),
     };
 
+    let graphiti_settings_routes = Router::new()
+        .route(
+            "/graphiti/settings",
+            axum::routing::get(get_graphiti_settings).put(put_graphiti_settings),
+        )
+        .layer(DefaultBodyLimit::max(GRAPHITI_SETTINGS_BODY_LIMIT));
+
     let app = Router::new()
+        .merge(graphiti_settings_routes)
         .route(
             "/notify",
             axum::routing::post(crate::notifications::routes::send_notification),
@@ -602,8 +838,10 @@ curl -X POST http://localhost:11435/notify \
 #[cfg(test)]
 mod tests {
     use super::{
-        focus_handoff_matches_current_exe, is_allowed_local_host, is_allowed_local_origin,
-        with_control_server_boundary,
+        focus_handoff_matches_current_exe, is_allowed_graphiti_settings_origin,
+        is_allowed_local_host, is_allowed_local_origin, read_graphiti_settings,
+        validate_graphiti_adapter_url, validate_graphiti_settings, with_control_server_boundary,
+        write_graphiti_settings, GraphitiSettings, GRAPHITI_SYNC_INTERVAL_MAX_SECONDS,
     };
     use axum::{
         body::Body,
@@ -670,6 +908,95 @@ mod tests {
         for h in ["evil.com", "evil.com:11435", "attacker.example"] {
             assert!(!is_allowed_local_host(&origin(h)), "should reject {h}");
         }
+    }
+
+    #[test]
+    fn graphiti_adapter_url_validation_is_fail_closed() {
+        assert_eq!(
+            validate_graphiti_adapter_url("https://graphiti.example.ts.net", false).unwrap(),
+            Some("https://graphiti.example.ts.net/".to_string())
+        );
+        assert_eq!(
+            validate_graphiti_adapter_url("http://127.0.0.1:18765", true).unwrap(),
+            Some("http://127.0.0.1:18765/".to_string())
+        );
+        for url in [
+            "http://graphiti.example.ts.net",
+            "https://example.com",
+            "https://user:secret@graphiti.example.ts.net",
+            "https://graphiti.example.ts.net/?token=secret",
+            "https://graphiti.example.ts.net/path",
+        ] {
+            assert!(
+                validate_graphiti_adapter_url(url, false).is_err(),
+                "accepted {url}"
+            );
+        }
+        assert!(validate_graphiti_adapter_url("http://127.0.0.1:18765", false).is_err());
+    }
+
+    #[test]
+    fn graphiti_settings_require_a_valid_endpoint_and_bounded_interval() {
+        let base = GraphitiSettings {
+            adapter_url: Some("https://graphiti.example.ts.net".into()),
+            allow_http_localhost: false,
+            auto_sync_enabled: true,
+            search_enabled: false,
+            sync_interval_seconds: 300,
+        };
+        assert!(validate_graphiti_settings(base.clone(), false).is_ok());
+        assert!(validate_graphiti_settings(
+            GraphitiSettings {
+                adapter_url: None,
+                ..base.clone()
+            },
+            false,
+        )
+        .is_err());
+        assert!(validate_graphiti_settings(
+            GraphitiSettings {
+                sync_interval_seconds: GRAPHITI_SYNC_INTERVAL_MAX_SECONDS + 1,
+                ..base
+            },
+            false,
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn graphiti_settings_round_trip_atomically_with_restricted_permissions() {
+        let directory = tempfile::tempdir().unwrap();
+        let settings = GraphitiSettings {
+            adapter_url: Some("https://graphiti.example.ts.net".into()),
+            allow_http_localhost: false,
+            auto_sync_enabled: false,
+            search_enabled: true,
+            sync_interval_seconds: 300,
+        };
+        let written = write_graphiti_settings(directory.path(), settings).unwrap();
+        assert_eq!(read_graphiti_settings(directory.path()).unwrap(), written);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let path = directory.path().join("graphiti-settings.json");
+            assert_eq!(
+                std::fs::metadata(path).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+        }
+    }
+
+    #[test]
+    fn graphiti_settings_mutation_requires_a_first_party_origin() {
+        for value in ["http://localhost:1420", "tauri://localhost"] {
+            let mut headers = http::HeaderMap::new();
+            headers.insert(ORIGIN, HeaderValue::from_static(value));
+            assert!(is_allowed_graphiti_settings_origin(&headers));
+        }
+        let mut headers = http::HeaderMap::new();
+        headers.insert(ORIGIN, HeaderValue::from_static("https://evil.example"));
+        assert!(!is_allowed_graphiti_settings_origin(&headers));
+        assert!(!is_allowed_graphiti_settings_origin(&http::HeaderMap::new()));
     }
 
     #[test]
