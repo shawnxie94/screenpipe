@@ -81,6 +81,7 @@ export function buildSearchUrl(params: {
   end_time?: string;
   app_name?: string;
   window_name?: string;
+  connector?: string;
 }): string {
   const parsed = parseOperators(params.q);
   // `/search/records` is the canonical surface: q, content_type, mode,
@@ -97,6 +98,14 @@ export function buildSearchUrl(params: {
   if (type && ["ocr", "audio", "all", "input", "accessibility", "parsed", "connection"].includes(type)) {
     url.searchParams.set("content_type", type);
   }
+  const connector = params.connector?.trim();
+  if (params.connector !== undefined && !connector) {
+    throw new Error("connector must be a non-empty canonical ID");
+  }
+  if (connector && type !== "connection") {
+    throw new Error("connector requires content_type=connection");
+  }
+  if (connector) url.searchParams.set("connector", connector);
   const app = params.app_name ?? parsed.app;
   if (app) url.searchParams.set("app_name", app);
   if (params.window_name) url.searchParams.set("window_name", params.window_name);
@@ -322,7 +331,7 @@ export default function (pi: ExtensionAPI) {
     name: "search",
     description:
       "Search everything screenpipe collected: screen text (OCR/accessibility), " +
-      "meeting and audio transcripts, imported documents, AI outputs. Hybrid " +
+      "meeting and audio transcripts, imported documents, AI outputs, and imported connector records. For connector data, first call screenpipe_list_connectors and pass the exact canonical ID with content_type=connection. Hybrid " +
       "retrieval: keyword FTS + semantic vector recall fused by relevance, so " +
       "paraphrases and Chinese queries work. Prefer structured filters; legacy inline operators remain supported: type:<ocr|audio|all>, " +
       "app:<name>, date:<YYYY-MM-DD>. Returns ranked hits with source references.",
@@ -333,12 +342,16 @@ export default function (pi: ExtensionAPI) {
           type: "string",
           description:
             "The search query. Natural language or keywords, Chinese or English. " +
-            "Optional operators: type:audio, app:Chrome, date:2026-09-01.",
+            "Optional operators: type:audio, app:Chrome, date:2026-09-01. For connector records, set content_type=connection and pass the exact ID returned by screenpipe_list_connectors.",
+        },
+        connector: {
+          type: "string",
+          description: "Optional exact canonical connector/provider ID from screenpipe_list_connectors; requires content_type=connection.",
         },
         content_type: {
           type: "string",
           enum: ["all", "ocr", "audio", "input", "accessibility", "parsed", "connection"],
-          description: "Optional content scope.",
+          description: "Optional content scope. Use connection for imported connector data (not included in all); scope it with the exact connector ID returned by screenpipe_list_connectors.",
         },
         mode: {
           type: "string",
@@ -374,6 +387,7 @@ export default function (pi: ExtensionAPI) {
         end_time: typeof params.end_time === "string" ? params.end_time : undefined,
         app_name: typeof params.app_name === "string" ? params.app_name : undefined,
         window_name: typeof params.window_name === "string" ? params.window_name : undefined,
+        connector: typeof params.connector === "string" ? params.connector : undefined,
       } as const;
       const url = buildSearchUrl(searchParams);
       let payload: any;

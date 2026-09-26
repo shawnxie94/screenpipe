@@ -20,7 +20,7 @@ type ToolDef = {
   ) => Promise<any>;
 };
 
-function getConnectApp(): ToolDef {
+function getTool(name: string): ToolDef {
   const tools: Record<string, ToolDef> = {};
   const pi = {
     registerTool: (tool: ToolDef) => {
@@ -28,7 +28,11 @@ function getConnectApp(): ToolDef {
     },
   } as any;
   registerConnectionGate(pi);
-  return tools.screenpipe_connect_app;
+  return tools[name];
+}
+
+function getConnectApp(): ToolDef {
+  return getTool("screenpipe_connect_app");
 }
 
 // "slack" is intentionally NOT in MCP_OAUTH_PROVIDERS, so enrichConnection short
@@ -49,6 +53,67 @@ const originalFetch = globalThis.fetch;
 afterEach(() => {
   globalThis.fetch = originalFetch;
   vi.restoreAllMocks();
+});
+
+describe("screenpipe_list_connectors", () => {
+  it("returns only canonical connector IDs, names, and minimal status", async () => {
+    const fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        channels: [
+          {
+            connector: "office",
+            entries: [
+              {
+                provider: "feishu",
+                auth_status: "authorized",
+                scope: { messages: "all" },
+                client_secret: "must-not-leak",
+              },
+            ],
+          },
+          {
+            connector: "weread",
+            entries: [
+              {
+                connector: "weread",
+                auth_status: "disconnected",
+                api_key: "secret-wrk-token",
+                scope: { books: ["private"] },
+              },
+            ],
+          },
+          {
+            connector: "rss",
+            entries: [{ connector: "rss", error: { message: "private error" } }],
+          },
+        ],
+      }),
+    }));
+    globalThis.fetch = fetch as any;
+
+    const result = await getTool("screenpipe_list_connectors").execute(
+      "list-call",
+      {},
+      new AbortController().signal,
+    );
+    const text = result.content[0].text;
+    const parsed = JSON.parse(text);
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/connections\/channels$/),
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(parsed.connectors).toEqual([
+      { id: "office:feishu", name: "飞书", status: "connected" },
+      { id: "rss", name: "RSS", status: "unknown" },
+      { id: "weread", name: "微信读书", status: "disconnected" },
+    ]);
+    expect(text).not.toContain("must-not-leak");
+    expect(text).not.toContain("secret-wrk-token");
+    expect(text).not.toContain("scope");
+    expect(text).not.toContain("private error");
+  });
 });
 
 describe("screenpipe_connect_app", () => {

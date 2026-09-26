@@ -70,7 +70,8 @@ curl -H "Authorization: Bearer $SCREENPIPE_LOCAL_API_KEY" \
 |-----------|------|----------|-------------|
 | `q` | string | No | Keyword or phrase query. Use structured filters instead of inline operators where possible. Do NOT use for audio searches — transcriptions are noisy, q filters too aggressively. |
 | `mode` | `keyword` or `relevance` | No | `keyword` (default) uses FTS and chronological ordering; `relevance` uses hybrid FTS + dense retrieval with RRF. Legacy `time` is accepted as an alias of `keyword`. |
-| `content_type` | string | No | `all` (default), `accessibility`, `audio`, `input`, `ocr`, `parsed`, `connection`. Use `parsed` for compact app-specific messages, emails, tasks, documents, and code review. Parsed capture is experimental, may be empty when disabled/unsupported, and is not included in `all`. `connection` searches imported connector content (Feishu messages/docs/calendar events, Tencent Meeting transcripts, RSS entries) and is also not part of `all`. Screen text is primarily captured via the OS accessibility tree (`accessibility`); OCR is a fallback for apps without accessibility support. |
+| `content_type` | string | No | `all` (default), `accessibility`, `audio`, `input`, `ocr`, `parsed`, `connection`. Use `parsed` for compact app-specific messages, emails, tasks, documents, and code review. Parsed capture is experimental, may be empty when disabled/unsupported, and is not included in `all`. `connection` searches imported connector content (Feishu messages/docs/calendar events, Tencent Meeting transcripts, RSS entries, WeRead notes) and is also not part of `all`. Screen text is primarily captured via the OS accessibility tree (`accessibility`); OCR is a fallback for apps without accessibility support. |
+| `connector` | string | No | Exact canonical provider ID from MCP `list-connectors` (for example, `office:feishu`, `rss`, `weread`); valid only with `content_type=connection`. This restricts the data source, not the record kind. Do not fuzzy-match display names. |
 | `limit` | integer | No | Max 1-20. Default: 10 |
 | `offset` | integer | No | Pagination. Default: 0 |
 | `start_time` | ISO 8601, relative, or local calendar | **Yes** | Accepts `2024-01-15T10:00:00Z`, `16h ago`, `today`, `yesterday`, or `YYYY-MM-DD` |
@@ -105,7 +106,7 @@ Decision tree:
 - "Which apps today?" → Step 1 (do NOT use frame counts or raw SQLite)
 - "What button did I click?" → Step 3 (`/elements` with role=AXButton)
 - "Show me what I saw" → Step 2 (find frame_id) → Step 4
-- "那封飞书消息 / 会上说的 / 订阅里的" → Step 2 with `content_type=connection`
+- “那封飞书消息 / 会上说的 / 订阅里的 / 微信读书划线” → first call MCP `list-connectors`, then Step 2 with `content_type=connection` and its exact canonical ID as `connector`. If no ID matches, clarify; never fall back to screen OCR/recordings. Inspect `object_kind` to distinguish highlights (`highlight`) from reviews/comments (`review`).
 
 ### Attached activity episodes
 

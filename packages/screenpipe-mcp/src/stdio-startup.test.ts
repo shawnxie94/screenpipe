@@ -218,7 +218,10 @@ type ApiRequest = {
   client?: string;
 };
 
-async function searchContentThroughMcp(mode: "keyword" | "relevance" = "keyword"): Promise<{
+async function searchContentThroughMcp(
+  mode: "keyword" | "relevance" = "keyword",
+  connector?: string,
+): Promise<{
   requests: ApiRequest[];
   toolResponse: any;
 }> {
@@ -338,7 +341,13 @@ async function searchContentThroughMcp(mode: "keyword" | "relevance" = "keyword"
                 method: "tools/call",
                 params: {
                   name: "search-content",
-                  arguments: { q: "boundary", start_time: "1h ago", limit: 1, mode },
+                  arguments: {
+                    q: "boundary",
+                    start_time: "1h ago",
+                    limit: 1,
+                    mode,
+                    ...(connector ? { content_type: "connection", connector } : {}),
+                  },
                 },
               })}\n`,
             );
@@ -401,6 +410,16 @@ describe("stdio startup handshake", { timeout: INIT_DEADLINE_MS + 2_000 }, () =>
       SCREENPIPE_LOCAL_API_KEY: "sp-smoke-test-key",
     });
     expect(response.result?.serverInfo?.version).toBe(expected);
+  });
+
+  it("exposes list-connectors and the exact connector search filter", async () => {
+    const tools = await listToolsHandshake();
+    const list = tools.find((tool) => tool.name === "list-connectors");
+    const search = tools.find((tool) => tool.name === "search-content");
+    expect(list?.annotations?.readOnlyHint).toBe(true);
+    expect(search?.inputSchema?.properties?.connector?.description).toContain(
+      "exact canonical connector/provider ID",
+    );
   });
 
   it("exposes parsed data through search-content without a second read tool", async () => {
@@ -474,6 +493,14 @@ describe("stdio startup handshake", { timeout: INIT_DEADLINE_MS + 2_000 }, () =>
       authorization: "Bearer sp-boundary-e2e-key",
       client: "mcp",
     });
+  });
+
+  it("forwards the exact provider ID to the existing connection search", async () => {
+    const { requests, toolResponse } = await searchContentThroughMcp("keyword", "office:feishu");
+    const searchRequest = requests.find((request) => request.url.startsWith("/search/records?"));
+    expect(toolResponse.error).toBeUndefined();
+    expect(searchRequest?.url).toContain("content_type=connection");
+    expect(searchRequest?.url).toContain("connector=office%3Afeishu");
   });
 
   it("preserves relevance metadata in structuredContent", async () => {

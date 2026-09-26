@@ -33,6 +33,7 @@ import {
 import { PKG_VERSION } from "./version";
 import { formatSearchSummary, normalizeSearchResponse } from "./search-results";
 import { normalizeTimeFields } from "./time-normalization";
+import { handleListConnectors } from "./connector-list-tool";
 
 // ── CLI parsing ─────────────────────────────────────────────────────────
 
@@ -151,6 +152,16 @@ function constantTimeEq(a: string, b: string): boolean {
 
 const TOOLS = [
   {
+    name: "list_connectors",
+    description:
+      "List imported local connector sources with canonical IDs, display names, and minimal connection status. Does not return credentials, scopes, or authorization details. Call before searching connector data, then pass an exact returned ID to search_content with content_type=connection.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
     name: "search_content",
     description:
       "Search screenpipe's recorded content: screen text, audio transcriptions, input events, and parsed app data. " +
@@ -167,8 +178,12 @@ const TOOLS = [
           type: "string",
           enum: ["all", "ocr", "audio", "input", "accessibility", "parsed", "connection"],
           description:
-            "Content type filter: 'ocr' (screen text), 'audio' (transcriptions), 'input' (clicks, keystrokes, clipboard, app switches), 'accessibility' (accessibility tree text), 'parsed' (compact messages, emails, tasks, documents, and code review), 'all'. Default: 'all'",
+            "Content type filter: 'ocr' (screen text), 'audio' (transcriptions), 'input' (clicks, keystrokes, clipboard, app switches), 'accessibility' (accessibility tree text), 'parsed' (compact messages, emails, tasks, documents, and code review), 'connection' (imported connector data, not included in 'all'), 'all'. Use list_connectors and an exact source ID with connector for provider-scoped searches. Default: 'all'",
           default: "all",
+        },
+        connector: {
+          type: "string",
+          description: "Optional exact canonical connector/provider ID from list_connectors; requires content_type=connection.",
         },
         mode: { type: "string", enum: ["keyword", "relevance"], description: "Search mode. keyword uses FTS with chronological ordering. Default: keyword" },
         limit: { type: "integer", description: "Max results. Default: 10" },
@@ -224,6 +239,15 @@ async function handleSearchContent(
     }
   }
 
+  if (args.connector !== undefined) {
+    const connector = String(args.connector).trim();
+    if (!connector) throw new Error("connector must be a non-empty canonical ID");
+    if (String(args.content_type || "all").toLowerCase() !== "connection") {
+      throw new Error("connector requires content_type=connection");
+    }
+    params.set("connector", connector);
+  }
+
   const response = await fetchAPI(`/search/records?${params.toString()}`);
   if (!response.ok) {
     throw new Error(`HTTP error: ${response.status}`);
@@ -259,6 +283,7 @@ function createMcpServer(fetchAPI: ReturnType<typeof makeFetchAPI>): Server {
   s.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     if (!args) throw new Error("Missing arguments");
+    if (name === "list_connectors") return handleListConnectors(fetchAPI);
     if (name === "search_content") return handleSearchContent(fetchAPI, args);
     throw new Error(`Unknown tool: ${name}`);
   });

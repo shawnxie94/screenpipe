@@ -40,6 +40,7 @@ import {
 } from "./time-normalization";
 import { resolveScreenpipeApiBase } from "./api-base";
 import { normalizeSearchResponse } from "./search-results";
+import { handleListConnectors } from "./connector-list-tool";
 
 initMcpTelemetry({ transport: "stdio" });
 
@@ -333,6 +334,17 @@ const TOOLS: Tool[] = [
     },
   },
   {
+    name: "list-connectors",
+    description:
+      "List imported local connector sources with canonical IDs, display names, and minimal connection status. Does not return credentials, scopes, or authorization details. Call before searching connector data, then pass an exact returned ID to search-content with content_type=connection.",
+    annotations: { title: "List Connectors", readOnlyHint: true, openWorldHint: false, idempotentHint: true },
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
     name: "search-content",
     description:
       "Search screen text, audio transcriptions, input events, and parsed app data. Returns timestamped results with app context. " +
@@ -352,8 +364,12 @@ const TOOLS: Tool[] = [
           type: "string",
           enum: ["all", "ocr", "audio", "input", "accessibility", "parsed", "connection"],
           description:
-            "Filter by content type. Use 'parsed' for compact app-specific records such as messages, emails, tasks, documents, and code review; it is experimental and may be empty when parsing is disabled or unsupported. NOTE on screen text: 'ocr' is a legacy label — it returns ALL screen-text rows, which are accessibility-derived for most apps (the result tag [Screen·a11y] vs [Screen·ocr] tells you which). Use 'ocr' for screen text (covers both paths), 'audio' for transcriptions, or 'input' for keyboard/mouse events. Default: 'all'.",
+            "Filter by content type. Use 'parsed' for compact app-specific records such as messages, emails, tasks, documents, and code review; it is experimental and may be empty when parsing is disabled or unsupported. Use 'connection' for imported connector content (not included in 'all'); list-connectors provides exact source IDs for the connector filter. NOTE on screen text: 'ocr' is a legacy label — it returns ALL screen-text rows, which are accessibility-derived for most apps (the result tag [Screen·a11y] vs [Screen·ocr] tells you which). Use 'ocr' for screen text (covers both paths), 'audio' for transcriptions, or 'input' for keyboard/mouse events. Default: 'all'.",
           default: "all",
+        },
+        connector: {
+          type: "string",
+          description: "Optional exact canonical connector/provider ID from list-connectors; requires content_type=connection. Never use a display-name fragment.",
         },
         mode: { type: "string", enum: ["keyword", "relevance"], description: "Search mode; keyword uses FTS with chronological ordering, relevance uses hybrid ranking.", default: "keyword" },
         limit: { type: "integer", description: "Max results (default 10, max 20). Start with 5 for exploration.", default: 10 },
@@ -1389,6 +1405,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
       }
 
+      case "list-connectors": {
+        return await handleListConnectors(callAPI);
+      }
+
       case "get-knowledge-source": {
         const sourceUid = String(args.source_uid || "").trim();
         if (!sourceUid) throw new Error("source_uid is required");
@@ -1436,6 +1456,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           if (value !== null && value !== undefined) {
             params.append(key, String(value));
           }
+        }
+        if (args.connector !== undefined) {
+          const connector = String(args.connector).trim();
+          if (!connector) throw new Error("connector must be a non-empty canonical ID");
+          if (String(args.content_type || "all").toLowerCase() !== "connection") {
+            throw new Error("connector requires content_type=connection");
+          }
+          params.set("connector", connector);
         }
 
         const response = await callAPI(`/search/records?${params.toString()}`);

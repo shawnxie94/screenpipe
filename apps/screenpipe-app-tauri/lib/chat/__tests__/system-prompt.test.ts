@@ -63,6 +63,16 @@ describe("buildSystemPrompt", () => {
     expect(prompt).not.toContain("First search: time only — no q, no app_name, no content_type");
   });
 
+  it("routes connector questions through the exact provider and connector index", () => {
+    expect(prompt).toContain("先调用 screenpipe_list_connectors");
+    expect(prompt).toContain("content_type=connection");
+    expect(prompt).toContain("准确 connector ID");
+    expect(prompt).toContain("不按显示名模糊匹配");
+    expect(prompt).toContain("不回退到 OCR/录屏");
+    expect(prompt).toContain("highlight");
+    expect(prompt).toContain("review");
+  });
+
   it("routes attached activity questions to bounded content instead of title keywords", () => {
     expect(prompt).toContain("[Context from activity episode:");
     expect(prompt).toContain("是生成的标签，不是证据，也不是搜索关键词");

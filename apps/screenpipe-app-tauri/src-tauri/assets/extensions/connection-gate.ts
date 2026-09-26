@@ -34,6 +34,78 @@ type McpServerItem = {
   enabled?: boolean;
 };
 
+type ConnectorListItem = {
+  id: string;
+  name: string;
+  status: "connected" | "disconnected" | "unknown";
+};
+
+type ConnectorChannelEntry = {
+  connector?: unknown;
+  provider?: unknown;
+  key?: unknown;
+  auth_status?: unknown;
+  connected?: unknown;
+};
+
+const CONNECTOR_NAMES: Record<string, string> = {
+  "office:feishu": "飞书",
+  "office:tencent-meeting": "腾讯会议",
+  rss: "RSS",
+  weread: "微信读书",
+};
+
+function connectorListItem(
+  channelId: string,
+  entry: ConnectorChannelEntry,
+): ConnectorListItem | undefined {
+  const entryConnector = typeof entry.connector === "string" ? entry.connector : undefined;
+  const officeProvider =
+    typeof entry.provider === "string"
+      ? entry.provider
+      : typeof entry.key === "string" && entry.key
+        ? entry.key
+        : undefined;
+  const id = entryConnector ||
+    (channelId === "office" && officeProvider ? `office:${officeProvider}` : channelId);
+  if (!id) return undefined;
+
+  const authStatus = typeof entry.auth_status === "string"
+    ? entry.auth_status.toLowerCase()
+    : "";
+  const status = entry.connected === true || authStatus === "authorized"
+    ? "connected"
+    : entry.connected === false || authStatus === "disconnected"
+      ? "disconnected"
+      : "unknown";
+  return { id, name: CONNECTOR_NAMES[id] ?? id, status };
+}
+
+async function fetchConnectorList(signal?: AbortSignal): Promise<ConnectorListItem[]> {
+  const res = await fetch(`${API_BASE.replace(/\/+$/, "")}/connections/channels`, {
+    method: "GET",
+    headers: authHeaders(),
+    signal,
+  });
+  if (!res.ok) throw new Error(`GET /connections/channels returned ${res.status}`);
+  const body = (await res.json()) as { channels?: unknown };
+  if (!Array.isArray(body.channels)) return [];
+
+  const byId = new Map<string, ConnectorListItem>();
+  for (const rawChannel of body.channels) {
+    if (!rawChannel || typeof rawChannel !== "object") continue;
+    const channel = rawChannel as { connector?: unknown; entries?: unknown };
+    if (typeof channel.connector !== "string") continue;
+    const entries = Array.isArray(channel.entries) ? channel.entries : [];
+    for (const rawEntry of entries) {
+      if (!rawEntry || typeof rawEntry !== "object") continue;
+      const item = connectorListItem(channel.connector, rawEntry as ConnectorChannelEntry);
+      if (item) byId.set(item.id, item);
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
+}
+
 const MCP_OAUTH_PROVIDERS: Record<string, string> = {
   linear: "https://mcp.linear.app/mcp",
   stripe: "https://mcp.stripe.com",
@@ -231,6 +303,31 @@ function connectionLabel(connection: ConnectionItem | undefined, id: string): st
 }
 
 export default function (pi: ExtensionAPI) {
+  pi.registerTool({
+    name: "screenpipe_list_connectors",
+    label: "List Screenpipe connectors",
+    description:
+      "List imported content connectors available for local search. Returns canonical connector IDs, display names, and a minimal connection status; it never exposes credentials, scopes, or authorization details. Use this before searching imported notes or other connector data, then pass the exact returned ID to search with content_type=connection.",
+    promptSnippet:
+      "List imported Screenpipe connectors and use the exact connector ID to scope connection searches",
+    parameters: listParams,
+
+    async execute(_toolCallId: string, _params: Record<string, never>, signal: AbortSignal) {
+      try {
+        const connectors = await fetchConnectorList(signal);
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify({ connectors }) }],
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          content: [{ type: "text" as const, text: `Failed to list connectors: ${message}` }],
+          isError: true,
+        };
+      }
+    },
+  });
+
   pi.registerTool({
     name: "screenpipe_list_connections",
     label: "List Screenpipe connections",

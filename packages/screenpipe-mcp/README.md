@@ -42,7 +42,8 @@ HTTP 服务默认绑定回环地址，不应为了远程访问而把个人知识
 
 ## 可用工具
 
-- `search-content`：统一搜索入口。使用 `q` 和结构化过滤参数；`mode=keyword`（默认，FTS + 时间排序）或 `mode=relevance`（混合相关度检索）。历史 `time` 值仍兼容。
+- `list-connectors`：列出本地已导入的连接器，返回稳定 canonical ID、显示名和最小连接状态；不暴露凭证、scope 或授权详情。连接器内容查询前先调用它。
+- `search-content`：统一搜索入口。使用 `q` 和结构化过滤参数；`mode=keyword`（默认，FTS + 时间排序）或 `mode=relevance`（混合相关度检索）。历史 `time` 值仍兼容。查询导入内容时使用 `content_type=connection`，并将 `list-connectors` 返回的准确 ID 传给可选 `connector` 参数；该参数限定来源，不限定记录类型。
 - `activity-summary`：获取一段时间内的活动概览、应用分布和辅助上下文。
 - `list-meetings` / `get-meeting`：查看会议记录和转写。
 - `search-elements` / `get-frame-elements` / `frame-context`：查询结构化界面元素和指定帧上下文。
@@ -54,7 +55,7 @@ HTTP 服务默认绑定回环地址，不应为了远程访问而把个人知识
 - `list-pipes` / `create-pipe` / `run-pipe` / `pipe-logs`：管理个人 Pipes。
 - `export-video`：按时间范围导出本地屏幕记录。
 
-工具的实际参数和返回结构以 `src/index.ts` 与本地引擎 API 为准。搜索 HTTP API 的规范入口是 `GET /search/records?q=...&mode=keyword|relevance`；`query` 与 `/search` 仅为兼容旧调用保留。
+工具的实际参数和返回结构以 `src/index.ts` 与本地引擎 API 为准。搜索 HTTP API 的规范入口是 `GET /search/records?q=...&mode=keyword|relevance`；连接器查询可增加 `content_type=connection&connector=<canonical-id>`。精确 ID 不匹配时结果为空，不应改用显示名模糊匹配或回退到 OCR/录屏。连接器记录的 `object_kind` 用于区分个人划线（如 `highlight`）和想法/点评（如 `review`）。`query` 与 `/search` 仅为兼容旧调用保留。
 
 ## 示例问题
 

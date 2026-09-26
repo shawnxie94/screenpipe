@@ -597,6 +597,19 @@ impl DatabaseManager {
         limit: u32,
         offset: u32,
     ) -> Result<(Vec<ConnectorObjectRow>, i64), SqlxError> {
+        self.connector_search_page_filtered(query, start_time, end_time, limit, offset, None)
+            .await
+    }
+
+    pub async fn connector_search_page_filtered(
+        &self,
+        query: &str,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        limit: u32,
+        offset: u32,
+        connector: Option<&str>,
+    ) -> Result<(Vec<ConnectorObjectRow>, i64), SqlxError> {
         let limit = limit.clamp(1, 200) as i64;
         let offset = offset.max(0) as i64;
         let trimmed = query.trim();
@@ -610,21 +623,24 @@ impl DatabaseManager {
                 "SELECT o.connector, o.namespace, o.object_kind, o.object_id, o.revision, \
                  o.title, o.body_text, o.event_at, o.fetched_at, o.source_url, o.state \
                  FROM connector_objects o WHERE o.state = 'active' {time_pred} \
+                 AND (?3 IS NULL OR o.connector = ?3) \
                  ORDER BY strftime('%s', COALESCE(o.event_at, o.fetched_at)) DESC \
                  LIMIT {limit} OFFSET {offset}"
             );
             let count_sql = format!(
-                "SELECT COUNT(*) FROM connector_objects o WHERE o.state = 'active' {time_pred}"
+                "SELECT COUNT(*) FROM connector_objects o WHERE o.state = 'active' {time_pred} AND (?3 IS NULL OR o.connector = ?3)"
             );
             let rows =
                 sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(page_sql.as_str()))
                     .bind(start_time)
                     .bind(end_time)
+                    .bind(connector)
                     .fetch_all(&self.pool)
                     .await?;
             let total = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(count_sql.as_str()))
                 .bind(start_time)
                 .bind(end_time)
+                .bind(connector)
                 .fetch_one(&self.pool)
                 .await?;
             (rows, total)
@@ -641,6 +657,7 @@ impl DatabaseManager {
                      AND o.object_kind = f.object_kind \
                      AND o.object_id = f.object_id \
                  WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} \
+                 AND (?4 IS NULL OR o.connector = ?4) \
                  GROUP BY o.connector, o.namespace, o.object_kind, o.object_id \
                  ORDER BY strftime('%s', COALESCE(o.event_at, o.fetched_at)) DESC \
                  LIMIT {limit} OFFSET {offset}"
@@ -653,6 +670,7 @@ impl DatabaseManager {
                      AND o.object_kind = f.object_kind \
                      AND o.object_id = f.object_id \
                  WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} \
+                 AND (?4 IS NULL OR o.connector = ?4) \
                  GROUP BY o.connector, o.namespace, o.object_kind, o.object_id)"
             );
             let rows =
@@ -660,12 +678,14 @@ impl DatabaseManager {
                     .bind(start_time)
                     .bind(end_time)
                     .bind(&projected)
+                    .bind(connector)
                     .fetch_all(&self.pool)
                     .await?;
             let total = sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(count_sql.as_str()))
                 .bind(start_time)
                 .bind(end_time)
                 .bind(&projected)
+                .bind(connector)
                 .fetch_one(&self.pool)
                 .await?;
             (rows, total)
@@ -683,16 +703,29 @@ impl DatabaseManager {
         end_time: Option<DateTime<Utc>>,
         limit: u32,
     ) -> Result<Vec<ConnectorObjectRow>, SqlxError> {
+        self.connector_search_time_page_filtered(query, start_time, end_time, limit, None)
+            .await
+    }
+
+    pub async fn connector_search_time_page_filtered(
+        &self,
+        query: &str,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        limit: u32,
+        connector: Option<&str>,
+    ) -> Result<Vec<ConnectorObjectRow>, SqlxError> {
         let limit = limit.clamp(1, 200) as i64;
         let time_pred = "AND (?1 IS NULL OR strftime('%s', COALESCE(o.event_at, o.fetched_at)) >= strftime('%s', ?1)) AND (?2 IS NULL OR strftime('%s', COALESCE(o.event_at, o.fetched_at)) <= strftime('%s', ?2))";
         let trimmed = query.trim();
         if trimmed.is_empty() {
             let sql = format!(
-                "SELECT o.connector, o.namespace, o.object_kind, o.object_id, o.revision, o.title, o.body_text, o.event_at, o.fetched_at, o.source_url, o.state FROM connector_objects o WHERE o.state = 'active' {time_pred} ORDER BY strftime('%s', COALESCE(o.event_at, o.fetched_at)) DESC LIMIT ?3",
+                "SELECT o.connector, o.namespace, o.object_kind, o.object_id, o.revision, o.title, o.body_text, o.event_at, o.fetched_at, o.source_url, o.state FROM connector_objects o WHERE o.state = 'active' {time_pred} AND (?3 IS NULL OR o.connector = ?3) ORDER BY strftime('%s', COALESCE(o.event_at, o.fetched_at)) DESC LIMIT ?4",
             );
             return sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(sql.as_str()))
                 .bind(start_time)
                 .bind(end_time)
+                .bind(connector)
                 .bind(limit)
                 .fetch_all(&self.pool)
                 .await;
@@ -701,12 +734,13 @@ impl DatabaseManager {
             &crate::text_normalizer::chinese_project(trimmed),
         );
         let sql = format!(
-            "SELECT o.connector, o.namespace, o.object_kind, o.object_id, o.revision, o.title, o.body_text, o.event_at, o.fetched_at, o.source_url, o.state FROM connector_objects_fts f JOIN connector_objects o ON o.connector = f.connector AND o.namespace = f.namespace AND o.object_kind = f.object_kind AND o.object_id = f.object_id WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} GROUP BY o.connector, o.namespace, o.object_kind, o.object_id ORDER BY strftime('%s', COALESCE(o.event_at, o.fetched_at)) DESC LIMIT ?4",
+            "SELECT o.connector, o.namespace, o.object_kind, o.object_id, o.revision, o.title, o.body_text, o.event_at, o.fetched_at, o.source_url, o.state FROM connector_objects_fts f JOIN connector_objects o ON o.connector = f.connector AND o.namespace = f.namespace AND o.object_kind = f.object_kind AND o.object_id = f.object_id WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} AND (?4 IS NULL OR o.connector = ?4) GROUP BY o.connector, o.namespace, o.object_kind, o.object_id ORDER BY strftime('%s', COALESCE(o.event_at, o.fetched_at)) DESC LIMIT ?5",
         );
         sqlx::query_as::<_, ConnectorObjectRow>(sqlx::AssertSqlSafe(sql.as_str()))
             .bind(start_time)
             .bind(end_time)
             .bind(projected)
+            .bind(connector)
             .bind(limit)
             .fetch_all(&self.pool)
             .await
@@ -718,15 +752,27 @@ impl DatabaseManager {
         start_time: Option<DateTime<Utc>>,
         end_time: Option<DateTime<Utc>>,
     ) -> Result<i64, SqlxError> {
+        self.connector_search_time_count_filtered(query, start_time, end_time, None)
+            .await
+    }
+
+    pub async fn connector_search_time_count_filtered(
+        &self,
+        query: &str,
+        start_time: Option<DateTime<Utc>>,
+        end_time: Option<DateTime<Utc>>,
+        connector: Option<&str>,
+    ) -> Result<i64, SqlxError> {
         let time_pred = "AND (?1 IS NULL OR strftime('%s', COALESCE(o.event_at, o.fetched_at)) >= strftime('%s', ?1)) AND (?2 IS NULL OR strftime('%s', COALESCE(o.event_at, o.fetched_at)) <= strftime('%s', ?2))";
         let trimmed = query.trim();
         if trimmed.is_empty() {
             let sql = format!(
-                "SELECT COUNT(*) FROM connector_objects o WHERE o.state = 'active' {time_pred}",
+                "SELECT COUNT(*) FROM connector_objects o WHERE o.state = 'active' {time_pred} AND (?3 IS NULL OR o.connector = ?3)",
             );
             return sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(sql.as_str()))
                 .bind(start_time)
                 .bind(end_time)
+                .bind(connector)
                 .fetch_one(&self.pool)
                 .await;
         }
@@ -734,12 +780,13 @@ impl DatabaseManager {
             &crate::text_normalizer::chinese_project(trimmed),
         );
         let sql = format!(
-            "SELECT COUNT(*) FROM (SELECT o.connector, o.namespace, o.object_kind, o.object_id FROM connector_objects_fts f JOIN connector_objects o ON o.connector = f.connector AND o.namespace = f.namespace AND o.object_kind = f.object_kind AND o.object_id = f.object_id WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} GROUP BY o.connector, o.namespace, o.object_kind, o.object_id)",
+            "SELECT COUNT(*) FROM (SELECT o.connector, o.namespace, o.object_kind, o.object_id FROM connector_objects_fts f JOIN connector_objects o ON o.connector = f.connector AND o.namespace = f.namespace AND o.object_kind = f.object_kind AND o.object_id = f.object_id WHERE o.state = 'active' AND connector_objects_fts MATCH ?3 {time_pred} AND (?4 IS NULL OR o.connector = ?4) GROUP BY o.connector, o.namespace, o.object_kind, o.object_id)",
         );
         sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(sql.as_str()))
             .bind(start_time)
             .bind(end_time)
             .bind(projected)
+            .bind(connector)
             .fetch_one(&self.pool)
             .await
     }
@@ -1117,5 +1164,55 @@ mod tests {
         assert_eq!(runs[0].status, "failed");
         assert_eq!(runs[0].error_code.as_deref(), Some("interrupted"));
         assert!(runs[0].finished_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn connector_search_provider_filter_scopes_keyword_browse_and_time_searches() {
+        let db = db().await;
+        db.connector_upsert_object(&draft("rss", "feed-a", "r1", "Shared", "shared-token body"))
+            .await
+            .unwrap();
+        db.connector_upsert_object(&draft(
+            "weread",
+            "books",
+            "w1",
+            "Shared",
+            "shared-token body",
+        ))
+        .await
+        .unwrap();
+
+        let (keyword_rows, keyword_total) = db
+            .connector_search_page_filtered("shared-token", None, None, 10, 0, Some("weread"))
+            .await
+            .unwrap();
+        assert_eq!(keyword_total, 1);
+        assert_eq!(keyword_rows[0].connector, "weread");
+
+        let (browse_rows, browse_total) = db
+            .connector_search_page_filtered("", None, None, 10, 0, Some("weread"))
+            .await
+            .unwrap();
+        assert_eq!(browse_total, 1);
+        assert_eq!(browse_rows[0].connector, "weread");
+
+        let time_rows = db
+            .connector_search_time_page_filtered("shared-token", None, None, 10, Some("weread"))
+            .await
+            .unwrap();
+        assert_eq!(time_rows.len(), 1);
+        assert_eq!(time_rows[0].connector, "weread");
+        assert_eq!(
+            db.connector_search_time_count_filtered("shared-token", None, None, Some("weread"))
+                .await
+                .unwrap(),
+            1
+        );
+
+        let (_, unfiltered_total) = db
+            .connector_search_page_filtered("shared-token", None, None, 10, 0, None)
+            .await
+            .unwrap();
+        assert_eq!(unfiltered_total, 2);
     }
 }

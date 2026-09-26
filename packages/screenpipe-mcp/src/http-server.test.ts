@@ -261,6 +261,22 @@ describe("buildHttpServer", () => {
     }
 
     const baseUrl = `http://127.0.0.1:${address.port}`;
+    const originalFetch = globalThis.fetch;
+    const apiRequests: string[] = [];
+    globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (url.startsWith("http://localhost:3030/connections/channels")) {
+        apiRequests.push(url);
+        return new Response(JSON.stringify({
+          channels: [{ connector: "weread", entries: [{ connector: "weread", auth_status: "authorized", api_key: "must-not-leak" }] }],
+        }), { status: 200 });
+      }
+      if (url.startsWith("http://localhost:3030/search/records?")) {
+        apiRequests.push(url);
+        return new Response(JSON.stringify({ data: [], pagination: { limit: 10, offset: 0, total: 0 } }), { status: 200 });
+      }
+      return originalFetch(input, init);
+    };
 
     try {
       const initResponse = await fetch(`${baseUrl}/mcp`, {
@@ -318,10 +334,55 @@ describe("buildHttpServer", () => {
       expect(toolsResponse.status).toBe(200);
       const toolsBody = await toolsResponse.text();
       expect(toolsBody).toContain('"name":"search_content"');
+      expect(toolsBody).toContain('"name":"list_connectors"');
+      expect(toolsBody).toContain('"connector"');
       expect(toolsBody).toContain('"parsed"');
       expect(toolsBody).toContain('"frame_id"');
       expect(toolsBody).toContain('"actor_id"');
+
+      const connectorListResponse = await fetch(`${baseUrl}/mcp`, {
+        method: "POST",
+        headers: {
+          authorization: "Bearer secret",
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          "mcp-session-id": sessionId!,
+          "mcp-protocol-version": "2024-11-05",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 3,
+          method: "tools/call",
+          params: { name: "list_connectors", arguments: {} },
+        }),
+      });
+      const connectorListBody = await connectorListResponse.text();
+      expect(connectorListBody).toContain('"id":"weread"');
+      expect(connectorListBody).not.toContain("must-not-leak");
+      expect(apiRequests.some((url) => url.endsWith("/connections/channels"))).toBe(true);
+
+      await fetch(`${baseUrl}/mcp`, {
+        method: "POST",
+        headers: {
+          authorization: "Bearer secret",
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          "mcp-session-id": sessionId!,
+          "mcp-protocol-version": "2024-11-05",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 4,
+          method: "tools/call",
+          params: {
+            name: "search_content",
+            arguments: { q: "note", content_type: "connection", connector: "weread" },
+          },
+        }),
+      });
+      expect(apiRequests.some((url) => url.includes("connector=weread"))).toBe(true);
     } finally {
+      globalThis.fetch = originalFetch;
       await new Promise<void>((resolve, reject) => {
         server.close((err) => {
           if (err) reject(err);

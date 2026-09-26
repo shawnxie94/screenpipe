@@ -27,8 +27,12 @@
   },
   "tools": [
     {
+      "name": "list-connectors",
+      "description": "List imported local connector sources with canonical IDs and minimal status; never returns credentials or authorization details"
+    },
+    {
       "name": "search-content",
-      "description": "Search recorded screen content, audio, and parsed app data through one filtering surface (q + keyword or relevance mode)"
+      "description": "Search recorded screen, audio, parsed app, and imported connector content; use list-connectors and an exact connector ID to scope connection searches"
     },
     {
       "name": "export-video",

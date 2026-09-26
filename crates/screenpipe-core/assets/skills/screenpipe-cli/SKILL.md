@@ -263,7 +263,7 @@ The manifest is stored locally at `~/.screenpipe/project-sync-v1.json` by defaul
 
 ## Connection Management
 
-Manage local integrations (Obsidian vault, Logseq vault, IMAP mailbox) from the CLI. Imported channel content (Feishu messages, Tencent Meeting transcripts, RSS) is served by the engine's `/connections/office/*` and `/connections/rss` API instead — see the screenpipe-api skill.
+Manage local integrations (Obsidian vault, Logseq vault, IMAP mailbox) from the CLI. This `connection list` surface is distinct from imported-content connector sources (Feishu, Tencent Meeting, RSS, WeRead), which are searched through `/search/records?content_type=connection`. For agent/MCP searches, enumerate sources with `list-connectors` first and pass its exact canonical ID as `connector`; do not use a display-name fragment or fall back to screen recordings. See the screenpipe-api skill for search semantics.
 
 ### Commands
 

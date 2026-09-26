@@ -149,6 +149,8 @@ pub(crate) struct SearchQuery {
     pagination: PaginationQuery,
     #[serde(default)]
     content_type: SearchContentType,
+    #[serde(default)]
+    connector: Option<String>,
     /// `keyword` (default FTS path), `relevance` (hybrid RRF fusion), or
     /// legacy `time` (alias of `keyword`). Relevance combines sparse FTS
     /// legs with the dense embedding leg; SPEC S3.
@@ -839,6 +841,7 @@ pub(crate) fn compute_search_cache_key(query: &SearchQuery) -> u64 {
     query.pagination.limit.hash(&mut hasher);
     query.pagination.offset.hash(&mut hasher);
     format!("{:?}", query.content_type).hash(&mut hasher);
+    query.connector.hash(&mut hasher);
     format!("{:?}", query.order).hash(&mut hasher);
     query.input_context_only.hash(&mut hasher);
     query.start_time.map(|t| t.timestamp()).hash(&mut hasher);
@@ -1099,11 +1102,12 @@ async fn unified_time_search(
         query.start_time,
         query.end_time,
     );
-    let connector_query = state.db.connector_search_time_page(
+    let connector_query = state.db.connector_search_time_page_filtered(
         text,
         query.start_time,
         query.end_time,
         fetch_limit,
+        query.connector.as_deref(),
     );
     let (capture, inputs, documents, connections) = tokio::try_join!(
         capture_query,
@@ -1255,7 +1259,12 @@ async fn unified_time_search(
             .await?
         + state
             .db
-            .connector_search_time_count(text, query.start_time, query.end_time)
+            .connector_search_time_count_filtered(
+                text,
+                query.start_time,
+                query.end_time,
+                query.connector.as_deref(),
+            )
             .await?;
     let offset = query.pagination.offset as usize;
     let data = items
@@ -1328,6 +1337,12 @@ pub(crate) async fn search(
 
     let parsed_search = query.content_type == SearchContentType::Parsed;
     let connection_search = query.content_type == SearchContentType::Connection;
+    if query.connector.is_some() && !connection_search {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            JsonResponse(json!({ "error": "connector requires content_type=connection" })),
+        ));
+    }
     if !parsed_search && (query.frame_id.is_some() || query.actor_id.is_some()) {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -1455,12 +1470,13 @@ pub(crate) async fn search(
         if connection_search {
             let (results, total) = state
                 .db
-                .connector_search_page(
+                .connector_search_page_filtered(
                     query_str,
                     query.start_time,
                     query.end_time,
                     query.pagination.limit,
                     query.pagination.offset,
+                    query.connector.as_deref(),
                 )
                 .await?;
             return Ok::<_, sqlx::Error>((SearchPage::Connection(results), total as usize));
@@ -1932,6 +1948,7 @@ mod tests {
                 offset: 0,
             },
             content_type,
+            connector: None,
             mode: None,
             order: Order::Descending,
             input_context_only: false,
@@ -2466,6 +2483,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            connector: None,
             mode: None,
             order: Order::Descending,
             input_context_only: false,
@@ -2501,6 +2519,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            connector: None,
             mode: None,
             order: Order::Descending,
             input_context_only: false,
@@ -2544,6 +2563,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            connector: None,
             mode: None,
             order: Order::Descending,
             input_context_only: false,
@@ -2579,6 +2599,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            connector: None,
             mode: None,
             order: Order::Descending,
             input_context_only: false,
@@ -2629,6 +2650,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            connector: None,
             mode: None,
             order: Order::Descending,
             input_context_only: false,
@@ -2675,6 +2697,7 @@ mod tests {
                 offset: 0,
             },
             content_type: SearchContentType::All,
+            connector: None,
             mode: None,
             order: Order::Descending,
             input_context_only: false,
@@ -3182,9 +3205,16 @@ pub(crate) async fn search_relevance(
     if query.content_type.relevance_connections() {
         match state
             .db
-            .connector_search_page(&text, query.start_time, query.end_time, leg_limit, 0)
-        .await
-    {
+            .connector_search_page_filtered(
+                &text,
+                query.start_time,
+                query.end_time,
+                leg_limit,
+                0,
+                query.connector.as_deref(),
+            )
+            .await
+        {
         Ok((results, _)) => {
             legs_used.push("connections".into());
             let mut ranked = Vec::new();

@@ -79,6 +79,7 @@ export function buildSystemPrompt(): string {
 - “会议 / 通话 / 对话 / 我或他们说了什么” → 对过去录制的会议/通话使用 content_type: “audio” 搜索，不带 q 参数
 - “多久 / 花了多少时间 / 哪些应用 / 用得最多” → 使用 activity-summary，不要使用原始画面计数或 SQL
 - “屏幕上有什么 / 我在读什么” → 使用 content_type: “all” 或 “accessibility” 搜索
+- 用户明确提到某个连接器服务中的笔记、划线、消息等，或泛指已连接来源的数据 → 先调用 screenpipe_list_connectors，再用 search 的 content_type=connection 和清单中的准确 connector ID 限源；不按显示名模糊匹配，不回退到 OCR/录屏。来源不唯一时先问用户。依据 object_kind 区分划线（highlight）与想法/点评（review），不要混称书签或屏幕捕获。
 - “我在做什么 / 最近的活动 / 总结我的一天” → 先用 activity-summary。检查 data_status 后再声称“没有数据”；只有用户要求逐字引用或画面 ID 时才使用 /search/records。
 - “今天 / 昨天 / YYYY-MM-DD” → 使用用户本地时区中的日历日，不要使用 UTC 日或滚动 24 小时范围
 

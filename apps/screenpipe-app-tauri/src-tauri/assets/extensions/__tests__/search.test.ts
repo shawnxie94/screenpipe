@@ -74,6 +74,39 @@ describe("search tool", () => {
     expect(url.searchParams.get("content_type")).toBe("ocr");
   });
 
+  it("builds provider-scoped connector searches with exact IDs", () => {
+    const url = new URL(
+      buildSearchUrl({ q: "微信读书笔记", content_type: "connection", connector: "weread" }),
+    );
+    expect(url.searchParams.get("content_type")).toBe("connection");
+    expect(url.searchParams.get("connector")).toBe("weread");
+  });
+
+  it("rejects connector filters outside connection searches", () => {
+    expect(() => buildSearchUrl({ q: "notes", connector: "weread" })).toThrow(
+      "connector requires content_type=connection",
+    );
+    expect(() =>
+      buildSearchUrl({ q: "notes", content_type: "all", connector: "weread" }),
+    ).toThrow("connector requires content_type=connection");
+  });
+
+  it("forwards the exact connector ID to the existing search endpoint", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: [], pagination: { limit: 8, offset: 0, total: 0 } }),
+    });
+    await getTool().execute("call-connector", {
+      q: "note",
+      content_type: "connection",
+      connector: "office:feishu",
+    });
+    const requested = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(requested.pathname).toBe("/search/records");
+    expect(requested.searchParams.get("connector")).toBe("office:feishu");
+    expect(requested.searchParams.get("content_type")).toBe("connection");
+  });
+
   it("truncates long result text", () => {
     const long = "字".repeat(500);
     const out = truncate(long);
