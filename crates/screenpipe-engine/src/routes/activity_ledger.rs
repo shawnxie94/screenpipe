@@ -141,6 +141,7 @@ pub async fn get_activity_ledger(
     if query.end_time - query.start_time > Duration::days(31) {
         return Err(bad_request("活动历史查询范围最多 31 天"));
     }
+    crate::graphiti::ensure_auto_sync(&state);
     if query.refresh {
         crate::activity_ledger::reconcile_range(&state.db, query.start_time, query.end_time)
             .await
@@ -434,6 +435,7 @@ pub async fn get_activity_intervals_missing_summary(
         ));
     }
     let limit = query.limit.clamp(1, 1000);
+    crate::graphiti::ensure_auto_sync(&state);
     let records = state
         .db
         .activity_intervals_missing_summary(start_time, end_time, None, limit)

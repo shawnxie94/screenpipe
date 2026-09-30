@@ -235,6 +235,29 @@ struct RawEvidence {
 /// read models; `into_record` normalizes the keyword JSON and attaches
 /// per-source retention counts.
 #[derive(FromRow)]
+struct RawSummaryExport {
+    updated_at: String,
+    interval_id: i64,
+    summary: String,
+    keywords: String,
+    band: String,
+    evidence_refs: String,
+    id: i64,
+    task_id: i64,
+    parent_task_id: Option<i64>,
+    kind: String,
+    title: String,
+    parent_title: Option<String>,
+    app_name: Option<String>,
+    start_at: String,
+    end_at: String,
+    state: String,
+    confidence: f64,
+    producer: String,
+    evidence_count: i64,
+}
+
+#[derive(FromRow)]
 struct RawIntervalDetail {
     id: i64,
     task_id: i64,
@@ -1307,6 +1330,60 @@ impl DatabaseManager {
             .collect())
     }
 
+    /// Read only the cited metadata rows for one finalized summary. This is
+    /// deliberately separate from the full evidence recall API so exporters
+    /// cannot accidentally turn an episode into a raw-evidence dump.
+    pub async fn activity_evidence_for_summary_refs(
+        &self,
+        interval_id: i64,
+        refs: &[ActivitySummaryEvidenceRef],
+    ) -> Result<Vec<ActivityEvidenceRecord>, SqlxError> {
+        let mut evidence = Vec::with_capacity(refs.len().min(3));
+        for reference in refs.iter().take(3) {
+            let row = sqlx::query_as::<_, RawEvidence>(
+                r#"SELECT e.interval_id, e.source_type, e.source_id, e.occurred_at,
+                          CASE
+                            WHEN e.source_type = 'frame' THEN source_frame.id
+                            WHEN e.source_type = 'ui_event' THEN event_frame.id
+                            ELSE NULL
+                          END AS frame_id,
+                          COALESCE(NULLIF(event.app_name, ''),
+                                   NULLIF(source_frame.app_name, ''),
+                                   NULLIF(event_frame.app_name, '')) AS app_name,
+                          COALESCE(NULLIF(event.window_title, ''),
+                                   NULLIF(source_frame.window_name, ''),
+                                   NULLIF(event_frame.window_name, '')) AS window_title,
+                          COALESCE(NULLIF(event.browser_url, ''),
+                                   NULLIF(source_frame.browser_url, ''),
+                                   NULLIF(event_frame.browser_url, '')) AS browser_url
+                   FROM activity_evidence e
+                   LEFT JOIN frames source_frame
+                     ON e.source_type = 'frame' AND source_frame.id = e.source_id
+                   LEFT JOIN ui_events event
+                     ON e.source_type = 'ui_event' AND event.id = e.source_id
+                   LEFT JOIN frames event_frame ON event_frame.id = event.frame_id
+                   WHERE e.interval_id = ?1 AND e.source_type = ?2 AND e.source_id = ?3"#,
+            )
+            .bind(interval_id)
+            .bind(&reference.source_type)
+            .bind(reference.source_id)
+            .fetch_optional(&self.pool)
+            .await?;
+            if let Some(row) = row {
+                evidence.push(ActivityEvidenceRecord {
+                    source_type: row.source_type,
+                    source_id: row.source_id,
+                    occurred_at: row.occurred_at,
+                    frame_id: row.frame_id,
+                    app_name: row.app_name,
+                    window_title: row.window_title,
+                    browser_url: row.browser_url,
+                });
+            }
+        }
+        Ok(evidence)
+    }
+
     /// On-demand raw evidence recall for one interval (the B03
     /// "summarize first, recall later" reader), newest-range order preserved.
     pub async fn activity_evidence_for_interval(
@@ -1434,6 +1511,99 @@ impl DatabaseManager {
             .into_iter()
             .map(|row| row.into_record(Vec::new()))
             .collect())
+    }
+
+    /// Highest currently finalized summary cursor, used to establish the
+    /// no-backfill boundary when the optional exporter is first enabled.
+    pub async fn activity_summary_export_latest_cursor(
+        &self,
+    ) -> Result<Option<(String, i64)>, SqlxError> {
+        let row: Option<(String, i64)> = sqlx::query_as(
+            r#"SELECT s.updated_at, s.interval_id
+               FROM activity_interval_summaries s
+               JOIN activity_intervals_active i ON i.id = s.interval_id
+               WHERE i.state = 'final'
+               ORDER BY s.updated_at DESC, s.interval_id DESC
+               LIMIT 1"#,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row)
+    }
+
+    /// Incremental finalized-summary read for the optional Graphiti exporter.
+    /// It uses the existing summary update index, bounds each page, and returns
+    /// only metadata for the 1–3 evidence rows actually cited by each summary.
+    pub async fn activity_summary_exports_after(
+        &self,
+        cursor: Option<(&str, i64)>,
+        limit: i64,
+    ) -> Result<
+        Vec<(
+            ActivityIntervalRecord,
+            String,
+            Vec<ActivitySummaryEvidenceRef>,
+            Vec<ActivityEvidenceRecord>,
+        )>,
+        SqlxError,
+    > {
+        let after_updated_at = cursor.map(|cursor| cursor.0);
+        let after_interval_id = cursor.map_or(0, |cursor| cursor.1);
+        let rows = sqlx::query_as::<_, RawSummaryExport>(
+            r#"SELECT s.updated_at, s.interval_id, s.summary, s.keywords, s.band,
+                      s.evidence_refs,
+                      i.id, t.id AS task_id, t.parent_task_id, t.kind, t.title,
+                      parent.title AS parent_title, t.app_name,
+                      i.start_at, i.end_at, i.state, i.confidence, i.producer,
+                      (SELECT COUNT(*) FROM activity_evidence e
+                        WHERE e.interval_id = i.id) AS evidence_count
+               FROM activity_interval_summaries s
+               JOIN activity_intervals_active i ON i.id = s.interval_id
+               JOIN activity_tasks t ON t.id = i.task_id
+               LEFT JOIN activity_tasks parent ON parent.id = t.parent_task_id
+               WHERE i.state = 'final'
+                 AND (?1 IS NULL OR s.updated_at > ?1
+                      OR (s.updated_at = ?1 AND s.interval_id > ?2))
+               ORDER BY s.updated_at, s.interval_id
+               LIMIT ?3"#,
+        )
+        .bind(after_updated_at)
+        .bind(after_interval_id)
+        .bind(limit.clamp(1, 100))
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut exports = Vec::with_capacity(rows.len());
+        for row in rows {
+            let refs: Vec<ActivitySummaryEvidenceRef> =
+                serde_json::from_str(&row.evidence_refs).unwrap_or_default();
+            let source_refs = self
+                .activity_evidence_for_summary_refs(row.interval_id, &refs)
+                .await?;
+            let interval = ActivityIntervalRecord {
+                id: row.id,
+                task_id: row.task_id,
+                parent_task_id: row.parent_task_id,
+                kind: row.kind,
+                title: row.title,
+                parent_title: row.parent_title,
+                app_name: row.app_name,
+                start_at: row.start_at,
+                end_at: row.end_at,
+                state: row.state,
+                confidence: row.confidence,
+                producer: row.producer,
+                evidence_count: row.evidence_count,
+                actions: Vec::new(),
+                evidence: Vec::new(),
+                summary: Some(row.summary),
+                keywords: Some(serde_json::from_str(&row.keywords).unwrap_or_default()),
+                summary_band: Some(row.band),
+                retention: Vec::new(),
+            };
+            exports.push((interval, row.updated_at, refs, source_refs));
+        }
+        Ok(exports)
     }
 
     /// The stored summary for one interval when its `input_hash` still
@@ -3436,6 +3606,21 @@ mod tests {
                 .filter(|c| !c.is_whitespace())
                 .count()
         );
+        let cursor = db
+            .activity_summary_export_latest_cursor()
+            .await
+            .unwrap()
+            .expect("summary export cursor");
+        let exports = db.activity_summary_exports_after(None, 10).await.unwrap();
+        assert_eq!(exports.len(), 1);
+        assert_eq!(exports[0].0.id, interval_id);
+        assert_eq!(exports[0].3.len(), 1);
+        assert_eq!(exports[0].3[0].source_id, source_id);
+        assert!(db
+            .activity_summary_exports_after(Some((&cursor.0, cursor.1)), 10)
+            .await
+            .unwrap()
+            .is_empty());
 
         // Same input hash: nothing is rewritten.
         let second_id = db

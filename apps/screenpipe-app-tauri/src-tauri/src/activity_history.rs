@@ -278,6 +278,18 @@ struct ActivityGenerationResult {
     generated_activity_count: usize,
 }
 
+#[derive(Serialize)]
+struct ActivityHistorySyncBatch<'a> {
+    entries: &'a [ActivityHistoryEntry],
+}
+
+#[derive(Deserialize)]
+struct ActivityHistorySyncAck {
+    enabled: bool,
+    queued_count: usize,
+    skipped_count: usize,
+}
+
 impl QualityAudit {
     fn is_complete(&self) -> bool {
         self.rejected_entries == 0
@@ -1110,6 +1122,81 @@ async fn get_local_json<T: DeserializeOwned>(
     unreachable!("local API request loop always returns")
 }
 
+async fn handoff_activity_history_entries(app: &AppHandle, entries: &[ActivityHistoryEntry]) {
+    if entries.is_empty() {
+        return;
+    }
+    let batch = ActivityHistorySyncBatch { entries };
+    match post_local_json::<ActivityHistorySyncAck, _>(
+        app,
+        "/graphiti/activity-history:batch",
+        &batch,
+    )
+    .await
+    {
+        Ok(ack) if ack.enabled => info!(
+            queued_count = ack.queued_count,
+            skipped_count = ack.skipped_count,
+            "new Activity History entries handed to Graphiti sync"
+        ),
+        Ok(_) => info!("Graphiti auto-sync is disabled; generated Activity History remains local"),
+        Err(error) => warn!(
+            entry_count = entries.len(),
+            %error,
+            "Activity History was saved but Graphiti handoff failed"
+        ),
+    }
+}
+
+async fn post_local_json<T: DeserializeOwned, B: Serialize>(
+    app: &AppHandle,
+    path: &str,
+    body: &B,
+) -> Result<T, String> {
+    for attempt in 0..=1 {
+        let api = local_api_context_from_app(app);
+        let url = reqwest::Url::parse(&api.url(path))
+            .map_err(|error| format!("Could not build {path} URL: {error}"))?;
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(3))
+            .build()
+            .map_err(|error| format!("Could not build local API client: {error}"))?;
+        let request = api.apply_auth(client.post(url).json(body));
+        let response = match request.send().await {
+            Ok(response) => response,
+            Err(_error) if should_retry_local_api(attempt, None) => {
+                tokio::time::sleep(Duration::from_millis(250)).await;
+                continue;
+            }
+            Err(error) => {
+                return Err(format!(
+                    "{path} transport failed: {}",
+                    local_api_error_chain(&error)
+                ));
+            }
+        };
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            if should_retry_local_api(attempt, Some(status)) {
+                tokio::time::sleep(Duration::from_millis(250)).await;
+                continue;
+            }
+            let detail = bounded_response_detail(&body);
+            return Err(if detail.is_empty() {
+                format!("{path} request failed ({status})")
+            } else {
+                format!("{path} request failed ({status}): {detail}")
+            });
+        }
+        return response
+            .json::<T>()
+            .await
+            .map_err(|error| format!("{path} response was invalid: {error}"));
+    }
+    unreachable!("local API request loop always returns")
+}
+
 async fn preflight_activity(
     app: &AppHandle,
     start: DateTime<Utc>,
@@ -1552,8 +1639,7 @@ fn expand_v3_evidence(
         return false;
     };
     for entry in entries {
-        let Some(evidence_items) = entry.get_mut("evidence").and_then(Value::as_array_mut)
-        else {
+        let Some(evidence_items) = entry.get_mut("evidence").and_then(Value::as_array_mut) else {
             continue;
         };
         for item in evidence_items {
@@ -1655,7 +1741,10 @@ fn parse_document_with_manifest(
     let mut rejection_reasons = BTreeMap::new();
     for value in entries {
         if require_v2_semantics
-            && !has_semantic_fields(value, schema_version == ACTIVITY_HISTORY_JSON_SCHEMA_VERSION)
+            && !has_semantic_fields(
+                value,
+                schema_version == ACTIVITY_HISTORY_JSON_SCHEMA_VERSION,
+            )
         {
             rejected_entries += 1;
             *rejection_reasons
@@ -2249,12 +2338,7 @@ async fn generate_inner(
         generation_prompt_with_context(start, end, minimum_entries, Some(&evidence_snapshot)),
     )
     .await?;
-    let first = parse_or_rejected_with_manifest(
-        &first_raw,
-        start,
-        end,
-        Some(&evidence_manifest),
-    );
+    let first = parse_or_rejected_with_manifest(&first_raw, start, end, Some(&evidence_manifest));
     let first_audit = audit_document(
         &first,
         minimum_entries,
@@ -2367,6 +2451,7 @@ async fn generate_inner(
         degraded_error,
     } = generated;
     let generated_activity_count = entries.len();
+    let newly_generated_entries = entries.clone();
     let mut stored = read_all(app)?;
     if coverage_complete {
         stored.entries.retain(|entry| !overlaps(entry, start, end));
@@ -2387,6 +2472,7 @@ async fn generate_inner(
     }
     stored.coverage = merge_coverage(stored.coverage);
     write_all(app, &stored)?;
+    handoff_activity_history_entries(app, &newly_generated_entries).await;
     if source == "manual" {
         let settings = SettingsStore::get(app)?.ok_or("设置不可用")?;
         set_next_run(
@@ -3060,7 +3146,10 @@ mod tests {
         )]);
 
         let document = parse_document_with_manifest(&raw, start, end, Some(&manifest)).unwrap();
-        assert_eq!(document.entries[0].evidence[0].app_name.as_deref(), Some("Cursor"));
+        assert_eq!(
+            document.entries[0].evidence[0].app_name.as_deref(),
+            Some("Cursor")
+        );
     }
 
     #[test]
@@ -3293,6 +3382,26 @@ mod tests {
                 label: "Source-backed work was visible".to_string(),
             }],
         }
+    }
+
+    #[test]
+    fn graphiti_handoff_payload_contains_only_the_new_generation_batch() {
+        let fresh = vec![work_entry(
+            "fresh-generated-entry",
+            "2026-08-24T10:00:00Z",
+            "2026-08-24T10:05:00Z",
+        )];
+        let persisted_legacy = work_entry(
+            "existing-history-not-backfilled",
+            "2026-08-23T10:00:00Z",
+            "2026-08-23T10:05:00Z",
+        );
+        let batch = ActivityHistorySyncBatch { entries: &fresh };
+        let payload = serde_json::to_value(batch).unwrap();
+
+        assert_eq!(payload["entries"].as_array().unwrap().len(), 1);
+        assert_eq!(payload["entries"][0]["id"], "fresh-generated-entry");
+        assert_ne!(payload["entries"][0]["id"], persisted_legacy.id);
     }
 
     #[test]

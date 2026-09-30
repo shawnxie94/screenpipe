@@ -4,13 +4,13 @@
 //! Optional Graphiti transport. This module only runs when explicitly opted in;
 //! capture and SQLite write paths never wait for these network requests.
 
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use chrono::{DateTime, Utc};
 use reqwest::{redirect::Policy, Client, Url};
-use screenpipe_db::{ActivityEvidenceRecord, ActivityIntervalRecord, ActivitySummaryEvidenceRef};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs::{self, OpenOptions},
     future::Future,
     io::{self, Write},
@@ -18,16 +18,20 @@ use std::{
     sync::{Arc, Mutex, OnceLock, Weak},
     time::Duration,
 };
-use tokio::time::sleep;
+use tokio::{sync::Notify, time::sleep};
 
-const AUTO_SYNC_PAGE_SIZE: i64 = 1;
 const AUTO_SYNC_PER_CYCLE: usize = 3;
+const MAX_ACTIVITY_HISTORY_BATCH: usize = 64;
+const MAX_AUTO_SYNC_QUEUE: usize = 1_000;
+const MAX_ACTIVITY_HISTORY_EVIDENCE: usize = 3;
+const MAX_ACTIVITY_HISTORY_INPUT_EVIDENCE: usize = 64;
 const AUTO_SYNC_INTERVAL: Duration = Duration::from_secs(30);
 const AUTO_SYNC_MAX_BACKOFF: Duration = Duration::from_secs(15 * 60);
 const AUTO_SYNC_HTTP_TIMEOUT: Duration = Duration::from_secs(310);
 const SEARCH_HTTP_TIMEOUT: Duration = Duration::from_secs(2);
 const STATE_CHECK_INTERVAL: Duration = Duration::from_secs(5);
-const CHECKPOINT_FILE: &str = "graphiti-auto-sync-state.json";
+const AUTO_SYNC_QUEUE_FILE: &str = "graphiti-auto-sync-queue.json";
+const AUTO_SYNC_STATUS_FILE: &str = "graphiti-auto-sync-status.json";
 const SETTINGS_FILE: &str = "graphiti-settings.json";
 const SETTINGS_SYNC_INTERVAL_DEFAULT_SECONDS: u64 = 30;
 const SETTINGS_SYNC_INTERVAL_MIN_SECONDS: u64 = 30;
@@ -170,7 +174,7 @@ impl GraphitiClient {
 }
 
 static GRAPHITI_CLIENT: OnceLock<GraphitiClient> = OnceLock::new();
-static AUTO_SYNC_WORKERS: OnceLock<Mutex<HashSet<PathBuf>>> = OnceLock::new();
+static AUTO_SYNC_WORKERS: OnceLock<Mutex<HashMap<PathBuf, Arc<Notify>>>> = OnceLock::new();
 
 fn graphiti_client() -> &'static GraphitiClient {
     GRAPHITI_CLIENT.get_or_init(GraphitiClient::from_env)
@@ -202,16 +206,21 @@ pub(crate) fn ensure_auto_sync(state: &Arc<crate::server::AppState>) {
     };
     let data_dir = state.screenpipe_dir.clone();
     let key = data_dir.clone();
-    let workers = AUTO_SYNC_WORKERS.get_or_init(|| Mutex::new(HashSet::new()));
-    let mut workers = workers
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    if !workers.insert(key.clone()) {
-        return;
-    }
+    let workers = AUTO_SYNC_WORKERS.get_or_init(|| Mutex::new(HashMap::new()));
+    let notification = {
+        let mut workers = workers
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if workers.contains_key(&key) {
+            return;
+        }
+        let notification = Arc::new(Notify::new());
+        workers.insert(key.clone(), notification.clone());
+        notification
+    };
     let state = Arc::downgrade(state);
     tokio::spawn(async move {
-        auto_sync_loop(state, data_dir, client).await;
+        auto_sync_loop(state, data_dir, client, notification).await;
         if let Some(workers) = AUTO_SYNC_WORKERS.get() {
             workers
                 .lock()
@@ -219,6 +228,20 @@ pub(crate) fn ensure_auto_sync(state: &Arc<crate::server::AppState>) {
                 .remove(&key);
         }
     });
+}
+
+fn wake_auto_sync_if_running(data_dir: &Path) {
+    let Some(workers) = AUTO_SYNC_WORKERS.get() else {
+        return;
+    };
+    let notification = workers
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .get(data_dir)
+        .cloned();
+    if let Some(notification) = notification {
+        notification.notify_one();
+    }
 }
 
 fn env_flag(name: &str) -> bool {
@@ -250,21 +273,106 @@ fn validate_adapter_url(raw: &str, allow_http_localhost: bool) -> Option<Url> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-struct AutoSyncCheckpoint {
-    version: u8,
-    cursor: Option<GraphitiCursor>,
+#[serde(rename_all = "snake_case")]
+enum AutoSyncOutcome {
+    Success,
+    Partial,
+    Failed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-struct GraphitiCursor {
-    updated_at: String,
-    interval_id: i64,
+struct AutoSyncStatus {
+    version: u8,
+    last_attempt_at: Option<String>,
+    status: Option<AutoSyncOutcome>,
+    delivered_count: u64,
 }
 
-struct SummaryExport {
-    interval: ActivityIntervalRecord,
-    evidence_refs: Vec<ActivitySummaryEvidenceRef>,
-    source_refs: Vec<ActivityEvidenceRecord>,
+impl Default for AutoSyncStatus {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            last_attempt_at: None,
+            status: None,
+            delivered_count: 0,
+        }
+    }
+}
+
+fn completed_sync_status(delivered_count: u64, had_failure: bool) -> AutoSyncStatus {
+    let status = match (had_failure, delivered_count > 0) {
+        (false, _) => AutoSyncOutcome::Success,
+        (true, true) => AutoSyncOutcome::Partial,
+        (true, false) => AutoSyncOutcome::Failed,
+    };
+    AutoSyncStatus {
+        version: 1,
+        last_attempt_at: Some(Utc::now().to_rfc3339()),
+        status: Some(status),
+        delivered_count,
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ActivityHistorySyncBatch {
+    entries: Vec<ActivityHistorySyncEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ActivityHistorySyncEntry {
+    id: String,
+    kind: String,
+    meeting_id: Option<i64>,
+    start_at: String,
+    end_at: String,
+    title: String,
+    summary: String,
+    confidence: f64,
+    activity_type: Option<String>,
+    project_refs: Vec<String>,
+    outcomes: Vec<ActivityHistorySyncOutcome>,
+    semantic_status: Option<String>,
+    evidence: Vec<ActivityHistorySyncEvidence>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+struct ActivityHistorySyncOutcome {
+    #[serde(rename = "type", alias = "outcome_type")]
+    outcome_type: String,
+    status: String,
+    confidence: f64,
+    provenance: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ActivityHistorySyncEvidence {
+    kind: String,
+    at: String,
+    source_type: Option<String>,
+    source_id: Option<i64>,
+    occurred_at: Option<String>,
+    frame_id: Option<i64>,
+    meeting_id: Option<i64>,
+    app_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AutoSyncQueue {
+    version: u8,
+    episodes: Vec<GraphitiEpisode>,
+}
+
+impl Default for AutoSyncQueue {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            episodes: Vec::new(),
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -319,37 +427,35 @@ impl From<GraphitiSourceRef> for super::retrieval::fusion::SearchSourceRef {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct GraphitiEpisode {
     episode_id: String,
     name: String,
     reference_time: String,
-    source_description: &'static str,
+    source_description: String,
     episode_body: GraphitiEpisodeBody,
     source_refs: Vec<GraphitiEpisodeSourceRef>,
-    privacy: &'static str,
+    privacy: String,
     payload_hash: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct GraphitiEpisodeBody {
-    interval_id: i64,
+    activity_id: String,
     kind: String,
+    meeting_id: Option<i64>,
     activity_type: String,
     start_at: String,
     end_at: String,
     title: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    summary: Option<String>,
-    keywords: Vec<String>,
+    summary: String,
     project_refs: Vec<String>,
-    outcomes: Vec<serde_json::Value>,
+    outcomes: Vec<ActivityHistorySyncOutcome>,
     confidence: f64,
     status: String,
-    producer: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 struct GraphitiEpisodeSourceRef {
     source_type: String,
     source_id: i64,
@@ -358,111 +464,274 @@ struct GraphitiEpisodeSourceRef {
     frame_id: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     app_name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    window_title: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    browser_url: Option<String>,
 }
 
-fn build_episode(export: &SummaryExport) -> Option<GraphitiEpisode> {
-    let interval = &export.interval;
-    let summary = interval
-        .summary
-        .clone()
-        .filter(|summary| !summary.trim().is_empty())?;
-    if interval.state != "final"
-        || export.evidence_refs.is_empty()
-        || export.evidence_refs.len() > 3
-        || export.source_refs.len() != export.evidence_refs.len()
+fn build_episode(entry: &ActivityHistorySyncEntry) -> Option<GraphitiEpisode> {
+    let start = DateTime::parse_from_rfc3339(&entry.start_at)
+        .ok()?
+        .with_timezone(&Utc);
+    let end = DateTime::parse_from_rfc3339(&entry.end_at)
+        .ok()?
+        .with_timezone(&Utc);
+    if start >= end
+        || entry.id.trim().is_empty()
+        || entry.id.len() > 160
+        || !matches!(entry.kind.as_str(), "work" | "meeting")
+        || entry.title.trim().is_empty()
+        || entry.summary.trim().is_empty()
+        || !entry.confidence.is_finite()
+        || !(0.0..=1.0).contains(&entry.confidence)
+        || !matches!(
+            entry.semantic_status.as_deref(),
+            Some("summarized" | "inferred")
+        )
+        || (entry.kind == "meeting" && entry.meeting_id.is_none())
+        || entry.evidence.is_empty()
+        || entry.evidence.len() > MAX_ACTIVITY_HISTORY_INPUT_EVIDENCE
+        || entry.project_refs.len() > 32
+        || entry.outcomes.len() > 12
     {
         return None;
     }
-    let cited: HashSet<(String, i64)> = export
-        .evidence_refs
-        .iter()
-        .map(|reference| (reference.source_type.clone(), reference.source_id))
-        .collect();
-    let mut source_refs = Vec::with_capacity(export.source_refs.len());
-    for source in &export.source_refs {
-        if !cited.contains(&(source.source_type.clone(), source.source_id)) {
-            return None;
+
+    let activity_type = entry.activity_type.as_deref()?.trim();
+    if !matches!(
+        activity_type,
+        "meeting"
+            | "research"
+            | "implementation"
+            | "planning"
+            | "communication"
+            | "learning"
+            | "administrative"
+            | "unknown"
+    ) {
+        return None;
+    }
+    let mut cited = HashSet::with_capacity(MAX_ACTIVITY_HISTORY_EVIDENCE);
+    let mut source_refs = Vec::with_capacity(MAX_ACTIVITY_HISTORY_EVIDENCE);
+    for evidence in &entry.evidence {
+        let source_type = evidence
+            .source_type
+            .as_deref()
+            .unwrap_or_else(|| match evidence.kind.as_str() {
+                "screen" => "frame",
+                "audio" => "audio",
+                "meeting" => "meeting",
+                _ => "",
+            })
+            .trim();
+        let Some(source_id) = evidence
+            .source_id
+            .or(evidence.frame_id)
+            .or(evidence.meeting_id)
+            .filter(|id| *id > 0)
+        else {
+            continue;
+        };
+        let occurred_at = evidence.occurred_at.as_deref().unwrap_or(&evidence.at);
+        let Ok(occurred) = DateTime::parse_from_rfc3339(occurred_at) else {
+            continue;
+        };
+        let occurred = occurred.with_timezone(&Utc);
+        if !matches!(
+            source_type,
+            "frame" | "audio" | "meeting" | "ui_event" | "parsed"
+        ) || occurred < start
+            || occurred > end
+            || !cited.insert((source_type.to_string(), source_id))
+        {
+            continue;
         }
         source_refs.push(GraphitiEpisodeSourceRef {
-            source_type: source.source_type.clone(),
-            source_id: source.source_id,
-            occurred_at: source.occurred_at.clone(),
-            frame_id: source.frame_id,
-            app_name: source.app_name.clone(),
-            window_title: source.window_title.clone(),
-            browser_url: source.browser_url.as_deref().and_then(redact_url),
+            source_type: source_type.to_string(),
+            source_id,
+            occurred_at: occurred.to_rfc3339(),
+            frame_id: evidence.frame_id,
+            app_name: evidence
+                .app_name
+                .as_deref()
+                .map(|name| name.chars().take(160).collect()),
         });
+        if source_refs.len() == MAX_ACTIVITY_HISTORY_EVIDENCE {
+            break;
+        }
     }
-    let activity_type = activity_type(interval, &summary);
+    if source_refs.is_empty() {
+        return None;
+    }
+
+    let project_refs: Vec<String> = entry
+        .project_refs
+        .iter()
+        .map(|project| project.trim())
+        .filter(|project| !project.is_empty() && project.len() <= 120)
+        .map(str::to_string)
+        .collect();
+    if project_refs.len() != entry.project_refs.len() {
+        return None;
+    }
+    let outcomes = entry
+        .outcomes
+        .iter()
+        .map(|outcome| {
+            if !matches!(
+                outcome.outcome_type.as_str(),
+                "decision" | "deliverable" | "commitment" | "blocker" | "next_step" | "unknown"
+            ) || !matches!(
+                outcome.status.as_str(),
+                "observed" | "summarized" | "inferred" | "confirmed"
+            ) || !outcome.confidence.is_finite()
+                || !(0.0..=1.0).contains(&outcome.confidence)
+                || outcome.provenance.trim().is_empty()
+                || outcome.provenance.len() > 200
+            {
+                None
+            } else {
+                Some(outcome.clone())
+            }
+        })
+        .collect::<Option<Vec<_>>>()?;
     let body = GraphitiEpisodeBody {
-        interval_id: interval.id,
-        kind: interval.kind.clone(),
-        activity_type: activity_type.clone(),
-        start_at: interval.start_at.clone(),
-        end_at: interval.end_at.clone(),
-        title: interval.title.clone(),
-        summary: Some(summary),
-        keywords: interval.keywords.clone().unwrap_or_default(),
-        project_refs: Vec::new(),
-        outcomes: Vec::new(),
-        confidence: interval.confidence.clamp(0.0, 1.0),
-        status: "summarized".to_string(),
-        producer: interval.producer.clone(),
+        activity_id: entry.id.clone(),
+        kind: entry.kind.clone(),
+        meeting_id: entry.meeting_id,
+        activity_type: activity_type.to_string(),
+        start_at: start.to_rfc3339(),
+        end_at: end.to_rfc3339(),
+        title: entry.title.trim().chars().take(240).collect(),
+        summary: entry.summary.trim().chars().take(8_000).collect(),
+        project_refs,
+        outcomes,
+        confidence: entry.confidence,
+        status: entry.semantic_status.clone()?,
     };
     let unsigned = serde_json::to_vec(&(&body, &source_refs, "private")).ok()?;
     let payload_hash = format!("sha256:{}", hex::encode(Sha256::digest(unsigned)));
-    let name = if body.title.trim().is_empty() {
-        activity_type
-    } else {
-        body.title.clone()
-    };
     Some(GraphitiEpisode {
-        episode_id: format!("screenpipe:activity:{}", interval.id),
-        name,
-        reference_time: interval.end_at.clone(),
-        source_description: "screenpipe.activity_ledger",
+        episode_id: format!("screenpipe:activity:{}", entry.id),
+        name: body.title.clone(),
+        reference_time: body.end_at.clone(),
+        source_description: "screenpipe.activity_history".to_string(),
         episode_body: body,
         source_refs,
-        privacy: "private",
+        privacy: "private".to_string(),
         payload_hash,
     })
 }
 
-fn activity_type(interval: &ActivityIntervalRecord, summary: &str) -> String {
-    let text = format!("{} {summary}", interval.title).to_lowercase();
-    if interval.kind.eq_ignore_ascii_case("meeting")
-        || text.contains("会议")
-        || text.contains("meeting")
-    {
-        "meeting"
-    } else if ["research", "研究", "调研", "阅读", "read"]
-        .iter()
-        .any(|word| text.contains(word))
-    {
-        "research"
-    } else if ["plan", "planning", "计划", "规划"]
-        .iter()
-        .any(|word| text.contains(word))
-    {
-        "planning"
-    } else if ["code", "coding", "开发", "修复", "实现", "编程"]
-        .iter()
-        .any(|word| text.contains(word))
-    {
-        "implementation"
-    } else if ["沟通", "邮件", "email", "chat", "消息"]
-        .iter()
-        .any(|word| text.contains(word))
-    {
-        "communication"
-    } else {
-        "unknown"
+#[derive(Debug, Serialize)]
+struct ActivityHistoryEnqueueResponse {
+    enabled: bool,
+    queued_count: usize,
+    skipped_count: usize,
+}
+
+static AUTO_SYNC_QUEUE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+pub(crate) async fn enqueue_activity_history(
+    State(state): State<Arc<crate::server::AppState>>,
+    Json(batch): Json<ActivityHistorySyncBatch>,
+) -> axum::response::Response {
+    if batch.entries.len() > MAX_ACTIVITY_HISTORY_BATCH {
+        return StatusCode::PAYLOAD_TOO_LARGE.into_response();
     }
-    .to_string()
+    let settings = GraphitiSettings::load(&state.screenpipe_dir);
+    if !settings.auto_sync_enabled || settings.endpoint.is_none() {
+        return Json(ActivityHistoryEnqueueResponse {
+            enabled: false,
+            queued_count: 0,
+            skipped_count: batch.entries.len(),
+        })
+        .into_response();
+    }
+
+    let data_dir = state.screenpipe_dir.clone();
+    match enqueue_activity_history_entries(&data_dir, batch.entries) {
+        Ok((queued_count, skipped_count)) => {
+            if skipped_count > 0 {
+                tracing::info!(
+                    skipped_count,
+                    "Graphiti skipped ineligible Activity History entries"
+                );
+            }
+            wake_auto_sync_if_running(&data_dir);
+            ensure_auto_sync(&state);
+            Json(ActivityHistoryEnqueueResponse {
+                enabled: true,
+                queued_count,
+                skipped_count,
+            })
+            .into_response()
+        }
+        Err(_) => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({ "error": "graphiti_sync_queue_unavailable" })),
+        )
+            .into_response(),
+    }
+}
+
+fn enqueue_activity_history_entries(
+    data_dir: &Path,
+    entries: Vec<ActivityHistorySyncEntry>,
+) -> io::Result<(usize, usize)> {
+    let lock = AUTO_SYNC_QUEUE_LOCK.get_or_init(|| Mutex::new(()));
+    let _guard = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let episodes: Vec<_> = entries.iter().filter_map(build_episode).collect();
+    let skipped_count = entries.len().saturating_sub(episodes.len());
+    let path = data_dir.join(AUTO_SYNC_QUEUE_FILE);
+    let mut queue = load_auto_sync_queue(&path)?;
+
+    let mut next = queue.episodes.clone();
+    for episode in &episodes {
+        if let Some(existing) = next
+            .iter_mut()
+            .find(|queued| queued.episode_id == episode.episode_id)
+        {
+            *existing = episode.clone();
+        } else {
+            next.push(episode.clone());
+        }
+    }
+    if next.len() > MAX_AUTO_SYNC_QUEUE {
+        return Err(io::Error::new(
+            io::ErrorKind::WouldBlock,
+            "Graphiti auto-sync queue is full",
+        ));
+    }
+    queue.episodes = next;
+    write_private_json_atomic(&path, AUTO_SYNC_QUEUE_FILE, &queue)?;
+    Ok((episodes.len(), skipped_count))
+}
+
+fn load_auto_sync_queue(path: &Path) -> io::Result<AutoSyncQueue> {
+    let contents = match fs::read(path) {
+        Ok(contents) => contents,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            return Ok(AutoSyncQueue::default());
+        }
+        Err(error) => return Err(error),
+    };
+    let queue: AutoSyncQueue = serde_json::from_slice(&contents)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    if queue.version != 1 || queue.episodes.len() > MAX_AUTO_SYNC_QUEUE {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "unsupported or oversized Graphiti auto-sync queue",
+        ));
+    }
+    Ok(queue)
+}
+
+fn acknowledge_queued_episode(path: &Path, episode_id: &str, payload_hash: &str) -> io::Result<()> {
+    let lock = AUTO_SYNC_QUEUE_LOCK.get_or_init(|| Mutex::new(()));
+    let _guard = lock.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut queue = load_auto_sync_queue(path)?;
+    queue
+        .episodes
+        .retain(|episode| episode.episode_id != episode_id || episode.payload_hash != payload_hash);
+    write_private_json_atomic(path, AUTO_SYNC_QUEUE_FILE, &queue)
 }
 
 fn redact_url(raw: &str) -> Option<String> {
@@ -477,6 +746,15 @@ fn redact_url(raw: &str) -> Option<String> {
     Some(url.to_string())
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum DeliveryFailure {
+    EndpointConstruction,
+    Transport,
+    HttpStatus(u16),
+    InvalidResponse,
+    UnexpectedAcknowledgement,
+}
+
 #[derive(Deserialize)]
 struct IngestResult {
     episode_id: String,
@@ -488,19 +766,13 @@ struct IngestResponse {
     results: Vec<IngestResult>,
 }
 
-async fn auto_sync_loop(state: Weak<crate::server::AppState>, data_dir: PathBuf, client: Client) {
-    let checkpoint_path = data_dir.join(CHECKPOINT_FILE);
-    let mut checkpoint = match load_checkpoint(&checkpoint_path) {
-        Ok(Some(checkpoint)) if checkpoint.version == 1 => Some(checkpoint),
-        Ok(None) => None,
-        Ok(Some(_)) | Err(_) => {
-            tracing::warn!(
-                "Graphiti auto-sync checkpoint is invalid; worker stopped without sending data"
-            );
-            return;
-        }
-    };
-
+async fn auto_sync_loop(
+    state: Weak<crate::server::AppState>,
+    data_dir: PathBuf,
+    client: Client,
+    notification: Arc<Notify>,
+) {
+    let queue_path = data_dir.join(AUTO_SYNC_QUEUE_FILE);
     let mut backoff = AUTO_SYNC_INTERVAL;
     loop {
         let Some(app_state) = state.upgrade() else {
@@ -517,44 +789,8 @@ async fn auto_sync_loop(state: Weak<crate::server::AppState>, data_dir: PathBuf,
         let Some(base_url) = settings.endpoint.clone() else {
             continue;
         };
-        if checkpoint.is_none() {
-            let Some(app_state) = state.upgrade() else {
-                return;
-            };
-            let cursor = app_state
-                .db
-                .activity_summary_export_latest_cursor()
-                .await
-                .map(|cursor| {
-                    cursor.map(|(updated_at, interval_id)| GraphitiCursor {
-                        updated_at,
-                        interval_id,
-                    })
-                });
-            drop(app_state);
-            let checkpoint_value = match cursor {
-                Ok(cursor) => AutoSyncCheckpoint { version: 1, cursor },
-                Err(_) => {
-                    tracing::warn!(
-                        "Graphiti auto-sync could not establish a local no-backfill cursor"
-                    );
-                    if !wait_while_state_alive(&state, settings.sync_interval).await {
-                        return;
-                    }
-                    continue;
-                }
-            };
-            if write_checkpoint(&checkpoint_path, &checkpoint_value).is_err() {
-                tracing::warn!(
-                    "Graphiti auto-sync could not persist its local checkpoint; worker stopped"
-                );
-                return;
-            }
-            checkpoint = Some(checkpoint_value);
-            continue;
-        }
-        let checkpoint = checkpoint.as_mut().expect("checkpoint initialized");
         let mut had_failure = false;
+        let mut delivered_count = 0;
         for _ in 0..AUTO_SYNC_PER_CYCLE {
             let current_settings = GraphitiSettings::load(&data_dir);
             if !current_settings.auto_sync_enabled
@@ -562,93 +798,65 @@ async fn auto_sync_loop(state: Weak<crate::server::AppState>, data_dir: PathBuf,
             {
                 break;
             }
-            let Some(app_state) = state.upgrade() else {
-                return;
-            };
-            let cursor = checkpoint
-                .cursor
-                .as_ref()
-                .map(|cursor| (cursor.updated_at.as_str(), cursor.interval_id));
-            let exports = app_state
-                .db
-                .activity_summary_exports_after(cursor, AUTO_SYNC_PAGE_SIZE)
-                .await;
-            drop(app_state);
-            let exports = match exports {
-                Ok(exports) => exports,
+            let queue = match load_auto_sync_queue(&queue_path) {
+                Ok(queue) => queue,
                 Err(_) => {
-                    tracing::warn!("Graphiti auto-sync local summary read failed");
+                    tracing::warn!("Graphiti auto-sync queue is unreadable; no data was sent");
                     had_failure = true;
                     break;
                 }
             };
-            let Some((interval, updated_at, evidence_refs, source_refs)) =
-                exports.into_iter().next()
-            else {
+            let Some(episode) = queue.episodes.first().cloned() else {
                 break;
             };
-            let next_cursor = GraphitiCursor {
-                updated_at: updated_at.clone(),
-                interval_id: interval.id,
-            };
-            let export = SummaryExport {
-                interval,
-                evidence_refs,
-                source_refs,
-            };
-            let Some(episode) = build_episode(&export) else {
-                checkpoint.cursor = Some(next_cursor);
-                if write_checkpoint(&checkpoint_path, &checkpoint).is_err() {
-                    tracing::warn!("Graphiti auto-sync checkpoint write failed; worker stopped");
-                    return;
-                }
-                continue;
-            };
-            let Ok(endpoint) = base_url.join("v1/episodes:batch") else {
-                return;
-            };
             let request_client = client.clone();
+            let request_base = base_url.clone();
+            let request_episode = episode.clone();
             let request = async move {
-                let response = request_client
-                    .post(endpoint)
-                    .json(&[episode])
-                    .send()
-                    .await
-                    .map_err(|_| ())?
-                    .error_for_status()
-                    .map_err(|_| ())?;
-                let body = response.json::<IngestResponse>().await.map_err(|_| ())?;
-                Ok::<bool, ()>(body.results.into_iter().any(|result| {
-                    result.episode_id == format!("screenpipe:activity:{}", export.interval.id)
-                        && matches!(result.status.as_str(), "inserted" | "updated" | "noop")
-                }))
+                deliver_episode(&request_client, &request_base, &request_episode).await
             };
-            let accepted = match await_while_state_alive(&state, request).await {
-                Some(Ok(accepted)) => accepted,
-                Some(Err(())) => false,
+            let failure = match await_while_state_alive(&state, request).await {
+                Some(Ok(())) => None,
+                Some(Err(failure)) => Some(failure),
                 None => return,
             };
-            if !accepted {
+            if let Some(failure) = failure {
                 tracing::warn!(
-                    "Graphiti auto-sync request failed; the local summary remains queued for retry"
+                    ?failure,
+                    "Graphiti auto-sync delivery failed; queued Activity History remains for retry"
                 );
                 had_failure = true;
                 break;
             }
-            checkpoint.cursor = Some(next_cursor);
-            if write_checkpoint(&checkpoint_path, &checkpoint).is_err() {
-                tracing::warn!("Graphiti auto-sync checkpoint write failed; duplicate-safe retry will occur after restart");
+            if acknowledge_queued_episode(&queue_path, &episode.episode_id, &episode.payload_hash)
+                .is_err()
+            {
+                tracing::warn!("Graphiti auto-sync could not acknowledge a delivered queue item; duplicate-safe retry will occur");
                 had_failure = true;
                 break;
             }
+            delivered_count += 1;
             backoff = AUTO_SYNC_INTERVAL;
+        }
+        let status = completed_sync_status(delivered_count, had_failure);
+        if write_auto_sync_status(&data_dir.join(AUTO_SYNC_STATUS_FILE), &status).is_err() {
+            tracing::warn!("Graphiti auto-sync status could not be persisted");
         }
         let delay = if had_failure {
             backoff
         } else {
             settings.sync_interval
         };
-        if !wait_for_sync_delay(&state, &data_dir, &settings, delay).await {
+        if !wait_for_sync_delay(
+            &state,
+            &data_dir,
+            &settings,
+            delay,
+            &notification,
+            !had_failure,
+        )
+        .await
+        {
             return;
         }
         if had_failure {
@@ -656,6 +864,38 @@ async fn auto_sync_loop(state: Weak<crate::server::AppState>, data_dir: PathBuf,
         } else {
             backoff = AUTO_SYNC_INTERVAL;
         }
+    }
+}
+
+async fn deliver_episode(
+    client: &Client,
+    base_url: &Url,
+    episode: &GraphitiEpisode,
+) -> Result<(), DeliveryFailure> {
+    let endpoint = base_url
+        .join("v1/episodes:batch")
+        .map_err(|_| DeliveryFailure::EndpointConstruction)?;
+    let response = client
+        .post(endpoint)
+        .json(std::slice::from_ref(episode))
+        .send()
+        .await
+        .map_err(|_| DeliveryFailure::Transport)?;
+    let status = response.status();
+    if !status.is_success() {
+        return Err(DeliveryFailure::HttpStatus(status.as_u16()));
+    }
+    let body = response
+        .json::<IngestResponse>()
+        .await
+        .map_err(|_| DeliveryFailure::InvalidResponse)?;
+    if body.results.into_iter().any(|result| {
+        result.episode_id == episode.episode_id
+            && matches!(result.status.as_str(), "inserted" | "updated" | "noop")
+    }) {
+        Ok(())
+    } else {
+        Err(DeliveryFailure::UnexpectedAcknowledgement)
     }
 }
 
@@ -692,11 +932,27 @@ async fn wait_while_state_alive(state: &Weak<crate::server::AppState>, duration:
     state.upgrade().is_some()
 }
 
+async fn wait_for_auto_sync_notification(
+    notification: &Notify,
+    queue_path: &Path,
+    timeout: Duration,
+) -> io::Result<Option<bool>> {
+    tokio::select! {
+        _ = sleep(timeout) => Ok(None),
+        _ = notification.notified() => {
+            let queue = load_auto_sync_queue(queue_path)?;
+            Ok(Some(!queue.episodes.is_empty()))
+        }
+    }
+}
+
 async fn wait_for_sync_delay(
     state: &Weak<crate::server::AppState>,
     data_dir: &Path,
     expected: &GraphitiSettings,
     duration: Duration,
+    notification: &Notify,
+    wake_on_enqueue: bool,
 ) -> bool {
     let mut remaining = duration;
     while !remaining.is_zero() {
@@ -711,31 +967,62 @@ async fn wait_for_sync_delay(
             return true;
         }
         let interval = remaining.min(STATE_CHECK_INTERVAL);
-        sleep(interval).await;
+        if wake_on_enqueue {
+            match wait_for_auto_sync_notification(
+                notification,
+                &data_dir.join(AUTO_SYNC_QUEUE_FILE),
+                interval,
+            )
+            .await
+            {
+                Ok(Some(true)) | Err(_) => return true,
+                Ok(Some(false)) => continue,
+                Ok(None) => {}
+            }
+        } else {
+            sleep(interval).await;
+        }
         remaining = remaining.saturating_sub(interval);
     }
     state.upgrade().is_some()
 }
 
-fn load_checkpoint(path: &Path) -> io::Result<Option<AutoSyncCheckpoint>> {
+#[cfg(test)]
+fn load_auto_sync_status(path: &Path) -> io::Result<AutoSyncStatus> {
     let contents = match fs::read(path) {
         Ok(contents) => contents,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            return Ok(AutoSyncStatus::default());
+        }
         Err(error) => return Err(error),
     };
-    serde_json::from_slice(&contents)
-        .map(Some)
-        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+    let status: AutoSyncStatus = serde_json::from_slice(&contents)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    if status.version != 1 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "unsupported Graphiti sync status version",
+        ));
+    }
+    Ok(status)
 }
 
-fn write_checkpoint(path: &Path, checkpoint: &AutoSyncCheckpoint) -> io::Result<()> {
+fn write_auto_sync_status(path: &Path, status: &AutoSyncStatus) -> io::Result<()> {
+    write_private_json_atomic(path, AUTO_SYNC_STATUS_FILE, status)
+}
+
+fn write_private_json_atomic<T: Serialize>(
+    path: &Path,
+    fallback_name: &str,
+    value: &T,
+) -> io::Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
     }
     let file_name = path
         .file_name()
         .and_then(|name| name.to_str())
-        .unwrap_or(CHECKPOINT_FILE);
+        .unwrap_or(fallback_name);
     let temp_path = path.with_file_name(format!("{file_name}.{}.tmp", std::process::id()));
     let mut options = OpenOptions::new();
     options.create(true).truncate(true).write(true);
@@ -745,7 +1032,7 @@ fn write_checkpoint(path: &Path, checkpoint: &AutoSyncCheckpoint) -> io::Result<
         options.mode(0o600);
     }
     let mut file = options.open(&temp_path)?;
-    serde_json::to_writer(&mut file, checkpoint)
+    serde_json::to_writer(&mut file, value)
         .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
     file.write_all(b"\n")?;
     file.sync_all()?;
@@ -781,19 +1068,105 @@ mod tests {
         assert!(validate_adapter_url("http://127.0.0.1:18765", false).is_none());
     }
 
+    fn sample_activity_history_entry() -> ActivityHistorySyncEntry {
+        ActivityHistorySyncEntry {
+            id: "history-synthetic-1".into(),
+            kind: "work".into(),
+            meeting_id: None,
+            start_at: "2026-09-22T10:00:00Z".into(),
+            end_at: "2026-09-22T10:01:00Z".into(),
+            title: "Synthetic research".into(),
+            summary: "A bounded synthetic activity summary".into(),
+            confidence: 0.9,
+            activity_type: Some("research".into()),
+            project_refs: vec!["synthetic-project".into()],
+            outcomes: vec![ActivityHistorySyncOutcome {
+                outcome_type: "decision".into(),
+                status: "inferred".into(),
+                confidence: 0.8,
+                provenance: "synthetic evidence".into(),
+            }],
+            semantic_status: Some("inferred".into()),
+            evidence: vec![ActivityHistorySyncEvidence {
+                kind: "screen".into(),
+                at: "2026-09-22T10:00:30Z".into(),
+                source_type: Some("frame".into()),
+                source_id: Some(17),
+                occurred_at: Some("2026-09-22T10:00:30Z".into()),
+                frame_id: Some(17),
+                meeting_id: None,
+                app_name: Some("Synthetic Browser".into()),
+            }],
+        }
+    }
+
     #[test]
-    fn checkpoint_round_trips_atomically_with_restricted_permissions() {
+    fn activity_history_episode_contains_only_summary_and_cited_metadata() {
+        let entry = sample_activity_history_entry();
+        let episode = build_episode(&entry).expect("valid synthetic Activity History");
+        let payload = serde_json::to_value(&episode).unwrap();
+        assert_eq!(
+            episode.episode_id,
+            "screenpipe:activity:history-synthetic-1"
+        );
+        assert_eq!(episode.source_description, "screenpipe.activity_history");
+        assert_eq!(payload["episode_body"]["summary"], entry.summary);
+        assert_eq!(payload["episode_body"]["activity_type"], "research");
+        assert_eq!(payload["episode_body"]["outcomes"][0]["type"], "decision");
+        assert_eq!(payload["source_refs"][0]["source_id"], 17);
+        assert!(payload["source_refs"][0].get("label").is_none());
+        assert!(payload.get("evidence").is_none());
+        assert!(payload.get("ocr").is_none());
+        assert!(payload.get("audio").is_none());
+    }
+
+    #[test]
+    fn activity_history_episode_rejects_ineligible_structure() {
+        let mut entry = sample_activity_history_entry();
+        entry.evidence.clear();
+        assert!(build_episode(&entry).is_none());
+
+        let mut entry = sample_activity_history_entry();
+        entry.semantic_status = Some("rejected".into());
+        assert!(build_episode(&entry).is_none());
+
+        let mut entry = sample_activity_history_entry();
+        entry.evidence[0].occurred_at = Some("not-a-time".into());
+        assert!(build_episode(&entry).is_none());
+
+        let mut entry = sample_activity_history_entry();
+        entry.evidence.push(entry.evidence[0].clone());
+        let episode = build_episode(&entry).expect("duplicate refs collapse safely");
+        assert_eq!(episode.source_refs.len(), 1);
+
+        let mut entry = sample_activity_history_entry();
+        for source_id in 18..22 {
+            let mut evidence = entry.evidence[0].clone();
+            evidence.source_id = Some(source_id);
+            evidence.frame_id = Some(source_id);
+            entry.evidence.push(evidence);
+        }
+        let episode = build_episode(&entry).expect("valid refs are bounded");
+        assert_eq!(episode.source_refs.len(), MAX_ACTIVITY_HISTORY_EVIDENCE);
+    }
+
+    #[test]
+    fn auto_sync_queue_is_atomic_private_and_never_backfills_stored_history() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join(CHECKPOINT_FILE);
-        let state = AutoSyncCheckpoint {
-            version: 1,
-            cursor: Some(GraphitiCursor {
-                updated_at: "2026-09-26T12:00:00.000Z".into(),
-                interval_id: 42,
-            }),
-        };
-        write_checkpoint(&path, &state).unwrap();
-        assert_eq!(load_checkpoint(&path).unwrap(), Some(state));
+        let path = dir.path().join(AUTO_SYNC_QUEUE_FILE);
+        assert!(load_auto_sync_queue(&path).unwrap().episodes.is_empty());
+        fs::write(
+            dir.path().join("graphiti-auto-sync-state.json"),
+            b"legacy cursor",
+        )
+        .unwrap();
+
+        let (queued, skipped) =
+            enqueue_activity_history_entries(dir.path(), vec![sample_activity_history_entry()])
+                .unwrap();
+        assert_eq!((queued, skipped), (1, 0));
+        let queue = load_auto_sync_queue(&path).unwrap();
+        assert_eq!(queue.episodes.len(), 1);
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -805,59 +1178,170 @@ mod tests {
     }
 
     #[test]
-    fn auto_sync_payload_contains_only_summary_and_cited_metadata() {
-        let export = SummaryExport {
-            interval: ActivityIntervalRecord {
-                id: 42,
-                task_id: 1,
-                parent_task_id: None,
-                kind: "task".into(),
-                title: "Synthetic task".into(),
-                parent_title: None,
-                app_name: Some("Browser".into()),
-                start_at: "2026-09-22T10:00:00Z".into(),
-                end_at: "2026-09-22T10:01:00Z".into(),
-                state: "final".into(),
-                confidence: 0.9,
-                producer: "deterministic-v2".into(),
-                evidence_count: 99,
-                actions: Vec::new(),
-                evidence: Vec::new(),
-                summary: Some("Synthetic summary".into()),
-                keywords: Some(vec!["safe".into()]),
-                summary_band: Some("short".into()),
-                retention: Vec::new(),
-            },
-            evidence_refs: vec![ActivitySummaryEvidenceRef {
-                source_type: "frame".into(),
-                source_id: 17,
-            }],
-            source_refs: vec![ActivityEvidenceRecord {
-                source_type: "frame".into(),
-                source_id: 17,
-                occurred_at: "2026-09-22T10:00:30Z".into(),
-                frame_id: Some(17),
-                app_name: Some("Browser".into()),
-                window_title: Some("Issue".into()),
-                browser_url: Some("https://user:pass@example.com/issue?token=x#frag".into()),
-            }],
-        };
-        let episode = build_episode(&export).expect("valid synthetic summary");
-        let payload = serde_json::to_value(&episode).unwrap();
+    fn auto_sync_queue_upserts_by_stable_activity_id() {
+        let dir = tempfile::tempdir().unwrap();
+        let first = sample_activity_history_entry();
+        enqueue_activity_history_entries(dir.path(), vec![first.clone()]).unwrap();
+        let mut revised = first;
+        revised.summary = "Updated synthetic summary".into();
+        enqueue_activity_history_entries(dir.path(), vec![revised]).unwrap();
+
+        let queue = load_auto_sync_queue(&dir.path().join(AUTO_SYNC_QUEUE_FILE)).unwrap();
+        assert_eq!(queue.episodes.len(), 1);
         assert_eq!(
-            payload["source_refs"][0]["browser_url"],
-            "https://example.com/issue"
+            queue.episodes[0].episode_body.summary,
+            "Updated synthetic summary"
         );
-        assert!(payload.get("evidence").is_none());
-        assert!(payload.get("frame").is_none());
-        assert!(payload.get("ocr").is_none());
-        assert!(payload.get("audio").is_none());
-        assert_eq!(payload["episode_body"]["summary"], "Synthetic summary");
-        assert_eq!(payload["episode_body"]["status"], "summarized");
+    }
+
+    #[tokio::test]
+    async fn auto_sync_notification_only_wakes_for_pending_queue_work() {
+        let dir = tempfile::tempdir().unwrap();
+        let queue_path = dir.path().join(AUTO_SYNC_QUEUE_FILE);
+        let notification = Notify::new();
+
+        notification.notify_one();
         assert_eq!(
-            payload["payload_hash"],
-            "sha256:0b604f2ef0fa9580e8395584251aa54ede626a472956b47e2ec2336fde28812a"
+            wait_for_auto_sync_notification(&notification, &queue_path, Duration::from_secs(1),)
+                .await
+                .unwrap(),
+            Some(false)
         );
+
+        enqueue_activity_history_entries(dir.path(), vec![sample_activity_history_entry()])
+            .unwrap();
+        notification.notify_one();
+        assert_eq!(
+            wait_for_auto_sync_notification(&notification, &queue_path, Duration::from_secs(1),)
+                .await
+                .unwrap(),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn auto_sync_status_is_atomic_private_and_contains_only_summary_metadata() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(AUTO_SYNC_STATUS_FILE);
+        let status = completed_sync_status(2, true);
+        assert_eq!(status.status, Some(AutoSyncOutcome::Partial));
+        assert_eq!(status.delivered_count, 2);
+        assert!(DateTime::parse_from_rfc3339(status.last_attempt_at.as_deref().unwrap()).is_ok());
+
+        write_auto_sync_status(&path, &status).unwrap();
+        assert_eq!(load_auto_sync_status(&path).unwrap(), status);
+        let value: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        assert_eq!(value.as_object().unwrap().len(), 4);
+        assert!(value.get("summary").is_none());
+        assert!(value.get("source_refs").is_none());
+        assert!(value.get("error").is_none());
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(
+                fs::metadata(path).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+        }
+    }
+
+    #[test]
+    fn auto_sync_status_distinguishes_no_attempt_success_and_failure() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(
+            load_auto_sync_status(&dir.path().join(AUTO_SYNC_STATUS_FILE)).unwrap(),
+            AutoSyncStatus::default()
+        );
+        assert_eq!(
+            completed_sync_status(0, false).status,
+            Some(AutoSyncOutcome::Success)
+        );
+        assert_eq!(
+            completed_sync_status(0, true).status,
+            Some(AutoSyncOutcome::Failed)
+        );
+        assert_eq!(
+            completed_sync_status(1, true).status,
+            Some(AutoSyncOutcome::Partial)
+        );
+    }
+
+    #[tokio::test]
+    async fn delivery_failures_expose_only_safe_categories() {
+        use axum::{http::StatusCode, routing::post, Json, Router};
+        use serde_json::json;
+
+        let episode = build_episode(&sample_activity_history_entry()).unwrap();
+
+        let app = Router::new().route(
+            "/v1/episodes:batch",
+            post(|| async { (StatusCode::SERVICE_UNAVAILABLE, "private adapter detail") }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = Url::parse(&format!("http://{}", listener.local_addr().unwrap())).unwrap();
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let client = Client::builder().redirect(Policy::none()).build().unwrap();
+        assert_eq!(
+            deliver_episode(&client, &endpoint, &episode).await,
+            Err(DeliveryFailure::HttpStatus(503))
+        );
+        server.abort();
+
+        let app = Router::new().route(
+            "/v1/episodes:batch",
+            post(|| async {
+                Json(json!({
+                    "results": [{"episode_id": "unmatched-synthetic-id", "status": "inserted"}]
+                }))
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = Url::parse(&format!("http://{}", listener.local_addr().unwrap())).unwrap();
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        assert_eq!(
+            deliver_episode(&client, &endpoint, &episode).await,
+            Err(DeliveryFailure::UnexpectedAcknowledgement)
+        );
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn activity_history_episode_delivery_accepts_only_matching_adapter_ack() {
+        use axum::{routing::post, Json, Router};
+        use serde_json::{json, Value};
+
+        let captured = Arc::new(Mutex::new(None));
+        let captured_for_route = captured.clone();
+        let app = Router::new().route(
+            "/v1/episodes:batch",
+            post(move |Json(body): Json<Value>| {
+                let captured = captured_for_route.clone();
+                async move {
+                    *captured.lock().unwrap() = Some(body);
+                    Json(json!({
+                        "results": [{
+                            "episode_id": "screenpipe:activity:history-synthetic-1",
+                            "status": "inserted"
+                        }]
+                    }))
+                }
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = Url::parse(&format!("http://{}", listener.local_addr().unwrap())).unwrap();
+        let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let client = Client::builder().redirect(Policy::none()).build().unwrap();
+        let episode = build_episode(&sample_activity_history_entry()).unwrap();
+
+        assert_eq!(deliver_episode(&client, &endpoint, &episode).await, Ok(()));
+        server.abort();
+        let body = captured.lock().unwrap().clone().unwrap();
+        assert_eq!(body[0]["source_description"], "screenpipe.activity_history");
+        assert_eq!(
+            body[0]["episode_body"]["activity_id"],
+            "history-synthetic-1"
+        );
+        assert!(body[0]["source_refs"][0].get("label").is_none());
     }
 
     #[tokio::test]

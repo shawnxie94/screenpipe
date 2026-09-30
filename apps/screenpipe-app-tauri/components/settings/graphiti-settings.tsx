@@ -3,8 +3,8 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-import { Network } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Network, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { appServerFetch } from "@/lib/notifications/app-server";
@@ -17,6 +17,20 @@ export interface GraphitiSettingsValue {
   search_enabled: boolean;
   sync_interval_seconds: number;
 }
+
+interface GraphitiSyncStatusValue {
+  version: number;
+  last_attempt_at: string | null;
+  status: "success" | "partial" | "failed" | null;
+  delivered_count: number;
+}
+
+const EMPTY_SYNC_STATUS: GraphitiSyncStatusValue = {
+  version: 1,
+  last_attempt_at: null,
+  status: null,
+  delivered_count: 0,
+};
 
 const DEFAULT_SETTINGS: GraphitiSettingsValue = {
   adapter_url: null,
@@ -57,6 +71,33 @@ function validateAdapterUrl(raw: string, allowHttpLocalhost: boolean): string | 
   return null;
 }
 
+function validSyncStatus(value: unknown): value is GraphitiSyncStatusValue {
+  if (!value || typeof value !== "object") return false;
+  const status = value as Partial<GraphitiSyncStatusValue>;
+  return (
+    status.version === 1 &&
+    (status.last_attempt_at === null || typeof status.last_attempt_at === "string") &&
+    (status.status === null || status.status === "success" || status.status === "partial" || status.status === "failed") &&
+    typeof status.delivered_count === "number" &&
+    Number.isInteger(status.delivered_count) &&
+    status.delivered_count >= 0
+  );
+}
+
+async function readSyncStatus(): Promise<GraphitiSyncStatusValue> {
+  const response = await appServerFetch("/graphiti/sync-status");
+  if (!response.ok) throw new Error(`读取最近同步状态失败（${response.status}）`);
+  const value: unknown = await response.json();
+  if (!validSyncStatus(value)) throw new Error("最近同步状态响应格式无效。");
+  return value;
+}
+
+function formatSyncTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "时间无效";
+  return new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
 function validResponse(value: unknown): value is GraphitiSettingsValue {
   if (!value || typeof value !== "object") return false;
   const settings = value as Partial<GraphitiSettingsValue>;
@@ -83,6 +124,25 @@ export function GraphitiSettings() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState(EMPTY_SYNC_STATUS);
+  const [syncStatusLoading, setSyncStatusLoading] = useState(true);
+  const [syncStatusError, setSyncStatusError] = useState<string | null>(null);
+
+  const refreshSyncStatus = useCallback(async () => {
+    setSyncStatusLoading(true);
+    setSyncStatusError(null);
+    try {
+      setSyncStatus(await readSyncStatus());
+    } catch (cause) {
+      setSyncStatusError(cause instanceof Error ? cause.message : "读取最近同步状态失败。");
+    } finally {
+      setSyncStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshSyncStatus();
+  }, [refreshSyncStatus]);
 
   useEffect(() => {
     let active = true;
@@ -231,6 +291,40 @@ export function GraphitiSettings() {
               disabled={busy}
             />
             <p className="text-[11px] text-muted-foreground">范围：30 秒至 86400 秒（24 小时）。</p>
+          </div>
+
+          <div className="space-y-3 rounded-md border border-border p-3" aria-label="最近一次自动同步">
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="text-xs font-medium">最近一次自动同步</h4>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void refreshSyncStatus()}
+                disabled={syncStatusLoading}
+                aria-label="刷新同步状态"
+              >
+                <RefreshCw className="mr-1 h-3 w-3" aria-hidden="true" />
+                {syncStatusLoading ? "读取中…" : "刷新"}
+              </Button>
+            </div>
+            {syncStatusLoading ? (
+              <p className="text-xs text-muted-foreground">正在读取同步状态…</p>
+            ) : syncStatusError ? (
+              <p className="text-xs text-destructive" role="alert">{syncStatusError}</p>
+            ) : syncStatus.status && syncStatus.last_attempt_at ? (
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                <dt className="text-muted-foreground">时间</dt>
+                <dd>{formatSyncTime(syncStatus.last_attempt_at)}</dd>
+                <dt className="text-muted-foreground">结果</dt>
+                <dd>{syncStatus.status === "success" ? "成功" : syncStatus.status === "partial" ? "部分成功" : "失败"}</dd>
+                <dt className="text-muted-foreground">成功送达</dt>
+                <dd>{syncStatus.delivered_count} 条</dd>
+              </dl>
+            ) : (
+              <p className="text-xs text-muted-foreground">尚无自动同步记录</p>
+            )}
+            <p className="text-[11px] text-muted-foreground">仅显示最近一轮自动同步；成功 0 条表示本轮没有摘要送达适配器。</p>
           </div>
 
           <div className="flex items-center gap-3">

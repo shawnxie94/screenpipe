@@ -379,6 +379,10 @@ impl crate::server::SCServer {
         // Build the main router with all routes
         let router = Router::new()
             .merge(server.into_router())
+            .route(
+                "/graphiti/activity-history:batch",
+                axum::routing::post(crate::graphiti::enqueue_activity_history),
+            )
             // Agent self-improvement lives behind one validated local API so
             // native Pi and ACP share profile safety, prompt rendering, skill
             // provenance, optimistic concurrency, and bundled protection.
@@ -638,10 +642,7 @@ impl crate::server::SCServer {
             crate::connectors::routes::channels_routes(),
         );
         let router = router.nest("/tasks", crate::tasks::routes());
-        let router = router.nest(
-            "/documents",
-            crate::routes::documents::documents_routes(),
-        );
+        let router = router.nest("/documents", crate::routes::documents::documents_routes());
         let router = router.nest(
             "/connections",
             crate::connections_api::router(

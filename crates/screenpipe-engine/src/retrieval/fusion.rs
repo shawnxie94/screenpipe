@@ -27,7 +27,9 @@ pub fn rrf_fuse(legs: Vec<RankedLeg>, k: f32) -> Vec<(String, f32, Vec<String>)>
     let mut scores: HashMap<String, (f32, Vec<String>)> = HashMap::new();
     for (leg_name, candidates) in &legs {
         for (position, key) in candidates.iter().enumerate() {
-            let entry = scores.entry(key.clone()).or_insert_with(|| (0.0, Vec::new()));
+            let entry = scores
+                .entry(key.clone())
+                .or_insert_with(|| (0.0, Vec::new()));
             entry.0 += 1.0 / (k + position as f32 + 1.0);
             if !entry.1.iter().any(|l| l == leg_name) {
                 entry.1.push((*leg_name).to_string());
@@ -76,7 +78,10 @@ pub fn rank_with_decay(
     let mut ranked: Vec<(String, f32, Vec<String>)> = fused
         .into_iter()
         .map(|(key, score, legs)| {
-            let age = timestamps.get(&key).map(|ts| now_epoch - *ts).unwrap_or(0.0);
+            let age = timestamps
+                .get(&key)
+                .map(|ts| now_epoch - *ts)
+                .unwrap_or(0.0);
             let bonus = lambda * decay_bonus(age, tau as f64);
             let normalized = if max > 0.0 { score / max } else { score };
             (key, normalized + bonus, legs)
@@ -101,6 +106,21 @@ pub enum SearchMode {
 /// chat tool consumes this directly, and each hit carries its projection
 /// contract fields so callers can jump back to the origin.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchSourceRef {
+    pub source_type: String,
+    pub source_id: i64,
+    pub occurred_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub frame_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub app_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub window_title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub browser_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HybridHit {
     pub source_type: String,
     pub source_pk: String,
@@ -114,6 +134,8 @@ pub struct HybridHit {
     pub window_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_refs: Option<Vec<SearchSourceRef>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,10 +143,11 @@ pub struct HybridSearchResponse {
     /// Canonical `/search/records` response field shared by APP and agent tools.
     pub data: Vec<HybridHit>,
     pub pagination: HybridPagination,
-    /// True when the dense leg could not run (provider unconfigured or
-    /// failed) — the response then reflects sparse legs only.
+    /// True when any optional retrieval leg could not run.
     pub degraded: bool,
     pub legs_used: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -179,7 +202,10 @@ mod tests {
             ("new".to_string(), 0.015, vec!["ocr".into()]),
         ];
         let ranked = rank_with_decay(fused, &timestamps, now, 0.3, 30.0);
-        assert_eq!(ranked[0].0, "new", "large lambda: recency flips close scores");
+        assert_eq!(
+            ranked[0].0, "new",
+            "large lambda: recency flips close scores"
+        );
     }
 
     #[test]
@@ -194,7 +220,10 @@ mod tests {
             ("new_weak".to_string(), 0.01, vec!["ocr".into()]),
         ];
         let ranked = rank_with_decay(fused, &timestamps, now, DEFAULT_LAMBDA, DEFAULT_TAU_DAYS);
-        assert_eq!(ranked[0].0, "old_strong", "gentle default decay keeps relevance on top");
+        assert_eq!(
+            ranked[0].0, "old_strong",
+            "gentle default decay keeps relevance on top"
+        );
     }
 
     #[test]

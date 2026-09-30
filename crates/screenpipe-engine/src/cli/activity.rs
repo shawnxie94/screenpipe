@@ -56,6 +56,9 @@ pub struct ActivityExportArgs {
     /// Resume after an interval id. The id is also the stable Episode key.
     #[arg(long)]
     pub cursor: Option<String>,
+    /// Export only the most recent N intervals, ordered by end time.
+    #[arg(long)]
+    pub limit: Option<usize>,
     /// Absolute JSONL destination. Without it, JSONL is written to stdout.
     #[arg(long, value_hint = ValueHint::FilePath)]
     pub out: Option<PathBuf>,
@@ -245,6 +248,9 @@ pub async fn handle_project_command(command: &ProjectCommand) -> Result<()> {
 
 async fn handle_activity_export(args: &ActivityExportArgs) -> Result<()> {
     let ActivityExportFormat::GraphitiEpisodeV1 = args.format;
+    if args.limit == Some(0) {
+        bail!("--limit must be greater than zero");
+    }
     let start = parse_time(&args.start, "--start")?;
     let end = parse_time(&args.end, "--end")?;
     if start >= end {
@@ -267,32 +273,43 @@ async fn handle_activity_export(args: &ActivityExportArgs) -> Result<()> {
         .clone()
         .unwrap_or_else(paths::default_screenpipe_data_dir);
     let manifest = load_manifest(&data_dir);
-    let (records, db) = match load_activity_records_from_api(&data_dir, args.port, start, end).await
-    {
-        Ok(records) => (records, None),
-        Err(api_error) => {
-            eprintln!("activity API unavailable; falling back to local DB: {api_error:#}");
-            let db_path = data_dir.join("db.sqlite");
-            if !db_path.exists() {
-                bail!("no screenpipe database at {}", db_path.display());
+    let (records, db) =
+        match load_activity_records_from_api(&data_dir, args.port, start, end, args.limit).await {
+            Ok(records) => (records, None),
+            Err(api_error) => {
+                eprintln!("activity API unavailable; falling back to local DB: {api_error:#}");
+                let db_path = data_dir.join("db.sqlite");
+                if !has_database_root(&data_dir) {
+                    bail!(
+                        "no screenpipe database in {} (expected db.sqlite or storage.json)",
+                        data_dir.display()
+                    );
+                }
+                let db = DatabaseManager::new(&db_path.to_string_lossy(), Default::default())
+                    .await
+                    .with_context(|| {
+                        format!("failed to open database rooted at {}", data_dir.display())
+                    })?;
+                let mut interval_records = db
+                    .activity_intervals_between(start, end)
+                    .await
+                    .context("activity interval query failed")?;
+                if let Some(limit) = args.limit {
+                    retain_most_recent(&mut interval_records, limit, |record| {
+                        (&record.end_at, record.id)
+                    });
+                }
+                let records = interval_records
+                    .into_iter()
+                    .map(|record| ExportInterval {
+                        record,
+                        activity_type: None,
+                        project_refs: Vec::new(),
+                    })
+                    .collect();
+                (records, Some(db))
             }
-            let db = DatabaseManager::new(&db_path.to_string_lossy(), Default::default())
-                .await
-                .with_context(|| format!("failed to open {}", db_path.display()))?;
-            let records = db
-                .activity_intervals_between(start, end)
-                .await
-                .context("activity interval query failed")?
-                .into_iter()
-                .map(|record| ExportInterval {
-                    record,
-                    activity_type: None,
-                    project_refs: Vec::new(),
-                })
-                .collect();
-            (records, Some(db))
-        }
-    };
+        };
 
     let mut lines = Vec::new();
     let mut next_cursor = cursor;
@@ -359,6 +376,7 @@ async fn load_activity_records_from_api(
     port: u16,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
+    limit: Option<usize>,
 ) -> Result<Vec<ExportInterval>> {
     let base_url = std::env::var("SCREENPIPE_LOCAL_API_URL")
         .unwrap_or_else(|_| format!("http://127.0.0.1:{port}"))
@@ -391,8 +409,14 @@ async fn load_activity_records_from_api(
         .json()
         .await
         .context("decode /activity-intervals response")?;
-    let mut records = Vec::with_capacity(payload.intervals.len());
-    for interval in payload.intervals {
+    let mut intervals = payload.intervals;
+    if let Some(limit) = limit {
+        retain_most_recent(&mut intervals, limit, |interval| {
+            (&interval.end_at, interval.id)
+        });
+    }
+    let mut records = Vec::with_capacity(intervals.len());
+    for interval in intervals {
         let mut evidence_request = client
             .get(format!(
                 "{base_url}/activity-intervals/{}/evidence",
@@ -523,6 +547,33 @@ fn require_absolute(path: &Path, flag: &str) -> Result<()> {
         bail!("{flag} must be an absolute path");
     }
     Ok(())
+}
+
+fn has_database_root(data_dir: &Path) -> bool {
+    data_dir.join("db.sqlite").is_file() || data_dir.join("storage.json").is_file()
+}
+
+fn retain_most_recent<T>(
+    records: &mut Vec<T>,
+    limit: usize,
+    interval_key: impl for<'a> Fn(&'a T) -> (&'a str, i64),
+) {
+    records.sort_by(|left, right| {
+        let (left_end, left_id) = interval_key(left);
+        let (right_end, right_id) = interval_key(right);
+        let left_end = DateTime::parse_from_rfc3339(left_end)
+            .ok()
+            .map(|value| value.with_timezone(&Utc));
+        let right_end = DateTime::parse_from_rfc3339(right_end)
+            .ok()
+            .map(|value| value.with_timezone(&Utc));
+        left_end
+            .cmp(&right_end)
+            .then_with(|| left_id.cmp(&right_id))
+    });
+    if records.len() > limit {
+        records.drain(..records.len() - limit);
+    }
 }
 
 fn load_manifest(data_dir: &Path) -> Option<ProjectManifest> {
@@ -719,6 +770,40 @@ mod tests {
             summary_band: Some("short".to_string()),
             retention: Vec::new(),
         }
+    }
+
+    #[test]
+    fn export_limit_keeps_the_most_recent_intervals_in_time_order() {
+        let mut older = record("older", "task");
+        older.id = 1;
+        older.end_at = "2026-09-22T10:10:00Z".to_string();
+        let mut newest = record("newest", "task");
+        newest.id = 3;
+        newest.end_at = "2026-09-22T10:30:00Z".to_string();
+        let mut middle = record("middle", "task");
+        middle.id = 2;
+        middle.end_at = "2026-09-22T10:20:00Z".to_string();
+        let mut records = vec![newest, older, middle];
+
+        retain_most_recent(&mut records, 2, |record| (&record.end_at, record.id));
+
+        assert_eq!(
+            records.iter().map(|record| record.id).collect::<Vec<_>>(),
+            [2, 3]
+        );
+    }
+
+    #[test]
+    fn database_root_detection_accepts_legacy_and_storage_v2_layouts() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(!has_database_root(dir.path()));
+
+        std::fs::write(dir.path().join("storage.json"), b"{}").unwrap();
+        assert!(has_database_root(dir.path()));
+
+        std::fs::remove_file(dir.path().join("storage.json")).unwrap();
+        std::fs::write(dir.path().join("db.sqlite"), b"").unwrap();
+        assert!(has_database_root(dir.path()));
     }
 
     #[test]

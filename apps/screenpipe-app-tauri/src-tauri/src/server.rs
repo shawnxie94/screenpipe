@@ -298,9 +298,38 @@ where
 }
 
 const GRAPHITI_SETTINGS_FILE: &str = "graphiti-settings.json";
+const GRAPHITI_SYNC_STATUS_FILE: &str = "graphiti-auto-sync-status.json";
 const GRAPHITI_SETTINGS_BODY_LIMIT: usize = 16 * 1024;
 const GRAPHITI_SYNC_INTERVAL_MIN_SECONDS: u64 = 30;
 const GRAPHITI_SYNC_INTERVAL_MAX_SECONDS: u64 = 24 * 60 * 60;
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum GraphitiSyncStatusOutcome {
+    Success,
+    Partial,
+    Failed,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
+#[serde(deny_unknown_fields)]
+struct GraphitiSyncStatus {
+    version: u8,
+    last_attempt_at: Option<String>,
+    status: Option<GraphitiSyncStatusOutcome>,
+    delivered_count: u64,
+}
+
+impl Default for GraphitiSyncStatus {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            last_attempt_at: None,
+            status: None,
+            delivered_count: 0,
+        }
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -405,6 +434,25 @@ fn graphiti_settings_path(data_dir: &Path) -> PathBuf {
     data_dir.join(GRAPHITI_SETTINGS_FILE)
 }
 
+fn read_graphiti_sync_status(data_dir: &Path) -> io::Result<GraphitiSyncStatus> {
+    let contents = match fs::read(data_dir.join(GRAPHITI_SYNC_STATUS_FILE)) {
+        Ok(contents) => contents,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            return Ok(GraphitiSyncStatus::default());
+        }
+        Err(error) => return Err(error),
+    };
+    let status: GraphitiSyncStatus = serde_json::from_slice(&contents)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+    if status.version != 1 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "unsupported Graphiti sync status version",
+        ));
+    }
+    Ok(status)
+}
+
 fn read_graphiti_settings(data_dir: &Path) -> io::Result<GraphitiSettings> {
     let path = graphiti_settings_path(data_dir);
     let contents = match fs::read(path) {
@@ -478,6 +526,27 @@ async fn get_graphiti_settings(State(state): State<ServerState>) -> Response {
     }
 }
 
+async fn get_graphiti_sync_status(State(state): State<ServerState>) -> Response {
+    let data_dir = match crate::log_files::get_data_dir(&state.app_handle) {
+        Ok(path) => path,
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({"error": "graphiti_sync_status_unavailable"})),
+            )
+                .into_response();
+        }
+    };
+    match read_graphiti_sync_status(&data_dir) {
+        Ok(status) => Json(status).into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "graphiti_sync_status_unavailable"})),
+        )
+            .into_response(),
+    }
+}
+
 async fn put_graphiti_settings(
     State(state): State<ServerState>,
     headers: http::HeaderMap,
@@ -524,6 +593,10 @@ pub async fn run_server(app_handle: tauri::AppHandle, port: u16) {
         .route(
             "/graphiti/settings",
             axum::routing::get(get_graphiti_settings).put(put_graphiti_settings),
+        )
+        .route(
+            "/graphiti/sync-status",
+            axum::routing::get(get_graphiti_sync_status),
         )
         .layer(DefaultBodyLimit::max(GRAPHITI_SETTINGS_BODY_LIMIT));
 
@@ -840,8 +913,9 @@ mod tests {
     use super::{
         focus_handoff_matches_current_exe, is_allowed_graphiti_settings_origin,
         is_allowed_local_host, is_allowed_local_origin, read_graphiti_settings,
-        validate_graphiti_adapter_url, validate_graphiti_settings, with_control_server_boundary,
-        write_graphiti_settings, GraphitiSettings, GRAPHITI_SYNC_INTERVAL_MAX_SECONDS,
+        read_graphiti_sync_status, validate_graphiti_adapter_url, validate_graphiti_settings,
+        with_control_server_boundary, write_graphiti_settings, GraphitiSettings,
+        GraphitiSyncStatus, GraphitiSyncStatusOutcome, GRAPHITI_SYNC_INTERVAL_MAX_SECONDS,
     };
     use axum::{
         body::Body,
@@ -984,6 +1058,50 @@ mod tests {
                 0o600
             );
         }
+    }
+
+    #[test]
+    fn graphiti_sync_status_reads_empty_and_private_metadata_only() {
+        let directory = tempfile::tempdir().unwrap();
+        assert_eq!(
+            read_graphiti_sync_status(directory.path()).unwrap(),
+            GraphitiSyncStatus::default()
+        );
+        let status = GraphitiSyncStatus {
+            version: 1,
+            last_attempt_at: Some("2026-09-27T12:00:00Z".into()),
+            status: Some(GraphitiSyncStatusOutcome::Partial),
+            delivered_count: 2,
+        };
+        std::fs::write(
+            directory.path().join("graphiti-auto-sync-status.json"),
+            serde_json::to_vec(&status).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(read_graphiti_sync_status(directory.path()).unwrap(), status);
+        let response = serde_json::to_value(status).unwrap();
+        assert_eq!(response.as_object().unwrap().len(), 4);
+        assert!(response.get("summary").is_none());
+        assert!(response.get("source_refs").is_none());
+        assert!(response.get("error").is_none());
+    }
+
+    #[test]
+    fn graphiti_sync_status_rejects_unknown_or_unsupported_records() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("graphiti-auto-sync-status.json");
+        std::fs::write(
+            &path,
+            br#"{"version":1,"last_attempt_at":null,"status":null,"delivered_count":0,"summary":"private"}"#,
+        )
+        .unwrap();
+        assert!(read_graphiti_sync_status(directory.path()).is_err());
+        std::fs::write(
+            path,
+            br#"{"version":2,"last_attempt_at":null,"status":null,"delivered_count":0}"#,
+        )
+        .unwrap();
+        assert!(read_graphiti_sync_status(directory.path()).is_err());
     }
 
     #[test]
