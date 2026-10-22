@@ -6,6 +6,7 @@
 import React from "react";
 import { emit } from "@tauri-apps/api/event";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import type { Options as ReactMarkdownOptions } from "react-markdown";
 import {
@@ -24,6 +25,41 @@ import { useTimelineStore } from "@/lib/hooks/use-timeline-store";
 import { cn } from "@/lib/utils";
 import { sanitizeToolCallXml } from "@/lib/utils/sanitize-tool-call-xml";
 import { LinkPreviewAnchor } from "@/components/chat/link-preview-anchor";
+
+// Treat captured content and model replies as untrusted HTML. Preserve safe
+// formatting, but never allow active documents, forms, styles or event handlers.
+// href/src remain owned by chatUrlTransform, including local viewer links.
+const CLOBBER_PREFIX = "user-content-";
+const chatSanitizeSchema = {
+  ...defaultSchema,
+  tagNames: [...(defaultSchema.tagNames ?? []), "u", "mark", "small"],
+  protocols: { ...defaultSchema.protocols, href: [], src: [] },
+  clobberPrefix: CLOBBER_PREFIX,
+  strip: [...(defaultSchema.strip ?? []), "style"],
+};
+
+type HastNode = {
+  type: string;
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
+};
+function prefixInPageLinks(node: HastNode) {
+  const href = node.properties?.href;
+  if (node.tagName === "a" && typeof href === "string" && href.length > 1 && href.startsWith("#")) {
+    node.properties!.href = `#${CLOBBER_PREFIX}${href.slice(1)}`;
+  }
+  node.children?.forEach(prefixInPageLinks);
+}
+const rehypePrefixInPageLinks = () => prefixInPageLinks;
+const chatRemarkRehypeOptions: ReactMarkdownOptions["remarkRehypeOptions"] = {
+  clobberPrefix: "",
+};
+const chatRehypePlugins: NonNullable<ReactMarkdownOptions["rehypePlugins"]> = [
+  rehypeRaw,
+  [rehypeSanitize, chatSanitizeSchema],
+  rehypePrefixInPageLinks,
+];
 
 // The transport snapshots text every 80 ms. Parse only complete blocks
 // (blank-line / closed-fence boundaries) and commit each one on the same
@@ -290,7 +326,8 @@ export function MarkdownBlock({
       className={markdownClassName}
       remarkPlugins={remarkPlugins}
       urlTransform={resolvedUrlTransform}
-      rehypePlugins={[rehypeRaw]}
+      remarkRehypeOptions={chatRemarkRehypeOptions}
+      rehypePlugins={chatRehypePlugins}
       components={markdownComponents}
     >
       {block}
