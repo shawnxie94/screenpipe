@@ -352,6 +352,31 @@ pub(crate) async fn upgrade_recording(
     Ok(true)
 }
 
+pub(crate) async fn ensure_cleanup_indexes(
+    conn: &mut SqliteConnection,
+    has_bulk: bool,
+) -> Result<bool, sqlx::Error> {
+    // Installed hybrid roots deliberately skip ordinary SQLx migrations.
+    // Apply this additive index here as well, without changing capture rows or
+    // the identity/checksum of an already installed recording migration.
+    let parsed_index_existed: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_frames_parsed_timestamp')",
+    )
+    .fetch_one(&mut *conn)
+    .await?;
+    sqlx::raw_sql(include_str!(
+        "../migrations/20261021170000_parsed_frame_time_index.sql"
+    ))
+    .execute(&mut *conn)
+    .await?;
+    let tombstone_index_changed = if has_bulk {
+        super::bulk::ensure_cleanup_indexes(conn).await?
+    } else {
+        false
+    };
+    Ok(!parsed_index_existed || tombstone_index_changed)
+}
+
 pub(crate) async fn bootstrap(
     conn: &mut SqliteConnection,
     descriptor: &StorageDescriptor,

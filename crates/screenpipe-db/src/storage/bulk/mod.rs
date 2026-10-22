@@ -17,7 +17,7 @@ mod tests;
 use super::{storage_error, HybridStorage};
 pub(crate) use connection::pool_options;
 pub(crate) use connection::{register_hash, register_hash_extension};
-pub(super) use schema::{bootstrap, upgrade_recording};
+pub(super) use schema::{bootstrap, ensure_cleanup_indexes, upgrade_recording};
 use std::sync::{atomic::AtomicUsize, Arc, Mutex};
 
 pub const CAPABILITY: &str = "parquet-bulk-v1";

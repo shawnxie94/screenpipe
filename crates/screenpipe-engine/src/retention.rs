@@ -471,7 +471,19 @@ async fn do_local_cleanup(
     let mut any_deleted = false;
 
     while batch_start < cutoff {
-        let batch_end = (batch_start + batch_size).min(cutoff);
+        let hour_end = (batch_start + batch_size).min(cutoff);
+        let batch_end = if mode == RetentionMode::All {
+            match db.next_retention_timestamp(batch_start, hour_end).await {
+                Ok(next) => next.unwrap_or(hour_end),
+                Err(error) => {
+                    warn!(%batch_start, %hour_end, %error,
+                        "retention: timestamp selection failed; range remains pending");
+                    break;
+                }
+            }
+        } else {
+            hour_end
+        };
         // Set on any per-batch DB error below. Before the watermark-resume
         // fix, a failed batch was retried "for free" on the very next cycle
         // because `batch_start` was always re-derived from
@@ -486,7 +498,7 @@ async fn do_local_cleanup(
         match mode {
             RetentionMode::All => {
                 match db
-                    .delete_time_range_batch(batch_start, batch_end, true)
+                    .delete_retention_time_slice(start, batch_start, batch_end)
                     .await
                 {
                     Ok(result) => {
@@ -637,8 +649,13 @@ async fn do_local_cleanup(
 
         batch_start = batch_end;
 
-        // Yield between batches so other writes can acquire the semaphore
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        // All-mode slices follow recording timestamps. The FIFO writer admits
+        // waiting captures between slices without a fixed sleep per recording.
+        if mode == RetentionMode::All {
+            tokio::task::yield_now().await;
+        } else {
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
     }
 
     if any_deleted {
@@ -675,6 +692,181 @@ async fn do_local_cleanup(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn all_retention_yields_archived_history_to_durable_capture() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("db.sqlite");
+        let config = screenpipe_config::DbConfig {
+            write_pool_max: 1,
+            ..Default::default()
+        };
+        let db = DatabaseManager::new_hybrid(root.path(), config.clone(), Default::default())
+            .await
+            .unwrap();
+        db.execute_raw_sql_write("WITH RECURSIVE n(i) AS (VALUES(1) UNION ALL SELECT i+1 FROM n WHERE i<1000) INSERT INTO frames(id,timestamp,full_text) SELECT i,strftime('%Y-%m-%dT%H:%M:%fZ','2026-10-12T20:00:00Z','+'||i||' seconds'),'retention fixture' FROM n; WITH RECURSIVE n(i) AS (VALUES(1) UNION ALL SELECT i+1 FROM n WHERE i<100000) INSERT INTO elements(id,frame_id,source,role,text,sort_order) SELECT i,1+(i-1)/100,'accessibility','AXText','old element '||i,i FROM n; INSERT INTO display_layout(timestamp,layout_json) SELECT timestamp,'[]' FROM frames;").await.unwrap();
+        // Local hybrid roots are explicit fresh databases, not an in-place
+        // legacy migration. Seal the fixture through the existing writer.
+        while db.seal_payloads().await.unwrap() > 0 {}
+        db.close().await;
+        let db = Arc::new(
+            DatabaseManager::new(path.to_str().unwrap(), config.clone())
+                .await
+                .unwrap(),
+        );
+        let entered = Arc::new(tokio::sync::Notify::new());
+        // Observe real SQL work after retention owns the writer, rather than
+        // racing a sleep against fixture startup. The connection owns the hook.
+        {
+            let writer = db.coordinated_writer().lock().await.unwrap();
+            let mut conn = writer.pool().acquire().await.unwrap();
+            let mut handle = conn.lock_handle().await.unwrap();
+            let entered = entered.clone();
+            handle.set_progress_handler(1000, move || {
+                entered.notify_one();
+                true
+            });
+        }
+        let old = db.clone();
+        let cleanup = tokio::spawn(async move {
+            do_local_cleanup(
+                &old,
+                "2026-10-12T20:00:00Z".parse().unwrap(),
+                "2026-10-12T21:00:00Z".parse().unwrap(),
+                RetentionMode::All,
+            )
+            .await
+            .unwrap()
+        });
+        entered.notified().await;
+        let mut longest = std::time::Duration::ZERO;
+        let mut captured = 0;
+        // Keep recording throughout the entire cleanup, including later
+        // archive files and commits, rather than testing only its first slice.
+        while !cleanup.is_finished() {
+            let started = std::time::Instant::now();
+            // Match event-driven capture's existing 15-second request deadline.
+            tokio::time::timeout(
+                std::time::Duration::from_secs(15),
+                db.insert_snapshot_frame(
+                    "live-test",
+                    Utc::now(),
+                    "",
+                    None,
+                    None,
+                    None,
+                    true,
+                    None,
+                    Some("new durable capture"),
+                    None,
+                    None,
+                    None,
+                    None,
+                ),
+            )
+            .await
+            .expect("retention blocked live capture past its deadline")
+            .unwrap();
+            longest = longest.max(started.elapsed());
+            captured += 1;
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        }
+        assert!(captured > 0);
+        let (deleted, watermark) = cleanup.await.unwrap();
+        assert_eq!(deleted, 1000);
+        assert_eq!(
+            watermark,
+            "2026-10-12T21:00:00Z".parse::<DateTime<Utc>>().unwrap()
+        );
+        println!("retention over 100000 archived elements: maximum concurrent capture latency={longest:?}; durable captures={captured}");
+        {
+            let writer = db.coordinated_writer().lock().await.unwrap();
+            let mut conn = writer.pool().acquire().await.unwrap();
+            let mut handle = conn.lock_handle().await.unwrap();
+            handle.remove_progress_handler();
+        }
+        db.close().await;
+        let reopened = DatabaseManager::new(path.to_str().unwrap(), config)
+            .await
+            .unwrap();
+        let captures: i64 = sqlx::query_scalar("SELECT count(*) FROM frames")
+            .fetch_one(&reopened.pool)
+            .await
+            .unwrap();
+        assert_eq!(captures, captured);
+        let elements: i64 = sqlx::query_scalar("SELECT count(*) FROM elements")
+            .fetch_one(&reopened.pool)
+            .await
+            .unwrap();
+        assert_eq!(elements, 0);
+        let layouts: i64 = sqlx::query_scalar("SELECT count(*) FROM display_layout")
+            .fetch_one(&reopened.pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            layouts, 1,
+            "slicing must preserve the existing latest-layout rule"
+        );
+        reopened.close().await;
+    }
+
+    #[tokio::test]
+    async fn all_retention_failure_is_reported_and_retried_after_reopening() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("db.sqlite");
+        let db = Arc::new(
+            DatabaseManager::new_hybrid(root.path(), Default::default(), Default::default())
+                .await
+                .unwrap(),
+        );
+        db.execute_raw_sql_write("INSERT INTO frames(timestamp,full_text) VALUES('2026-10-12T20:01:00Z','retained old capture'); ALTER TABLE video_chunks RENAME TO temporarily_unavailable_video_chunks;").await.unwrap();
+        let report = root.path().join("screenpipe.2026-10-21.log");
+        let subscriber = tracing_subscriber::fmt()
+            .with_ansi(false)
+            .without_time()
+            .with_target(false)
+            .with_writer(std::sync::Mutex::new(std::fs::File::create(&report).unwrap()))
+            .finish();
+        let guard = tracing::subscriber::set_default(subscriber);
+        let start = "2026-10-12T20:00:00Z".parse().unwrap();
+        let cutoff = "2026-10-12T21:00:00Z".parse().unwrap();
+        let (deleted, pending) = do_local_cleanup(&db, start, cutoff, RetentionMode::All)
+            .await
+            .unwrap();
+        assert_eq!(deleted, 0);
+        assert_eq!(pending, start, "failed history must remain pending");
+        drop(guard);
+        let diagnostic = std::fs::read_to_string(&report).unwrap();
+        assert!(diagnostic.contains("retention: batch delete failed"));
+        assert!(diagnostic.contains("no such table: video_chunks"));
+        db.execute_raw_sql_write(
+            "ALTER TABLE temporarily_unavailable_video_chunks RENAME TO video_chunks",
+        )
+        .await
+        .unwrap();
+        db.close().await;
+        let db = Arc::new(
+            DatabaseManager::new(path.to_str().unwrap(), Default::default())
+                .await
+                .unwrap(),
+        );
+        let old: i64 = sqlx::query_scalar("SELECT count(*) FROM frames")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+        assert_eq!(old, 1);
+        let (deleted, completed) = do_local_cleanup(&db, pending, cutoff, RetentionMode::All)
+            .await
+            .unwrap();
+        assert_eq!(deleted, 1);
+        assert_eq!(completed, cutoff);
+        let remaining: i64 = sqlx::query_scalar("SELECT count(*) FROM frames")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+        assert_eq!(remaining, 0);
+        db.close().await;
+    }
 
     #[test]
     fn enabled_policy_change_restarts_cleanup_before_new_settings_apply() {

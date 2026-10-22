@@ -28,6 +28,42 @@ pub(super) const TABLE: Table = Table {
     fts_condition: "text IS NOT NULL AND text!=''",
 };
 
+pub(super) const TOMBSTONE_INDEX: &str = "_bulk_element_resident_tombstones";
+pub(super) const TOMBSTONE_PREDICATE: &str = "_archive_deleted=1 AND _archive_file IS NULL";
+pub(super) fn tombstone_index_sql() -> String {
+    format!(
+        "CREATE INDEX IF NOT EXISTS {TOMBSTONE_INDEX} \
+         ON _bulk_element_rows(id) WHERE {TOMBSTONE_PREDICATE}"
+    )
+}
+
+pub(super) fn cleanup_sql() -> String {
+    format!(
+        "DELETE FROM _bulk_element_rows
+         INDEXED BY {TOMBSTONE_INDEX}
+         WHERE {TOMBSTONE_PREDICATE} AND id IN (
+         SELECT id FROM _bulk_element_rows
+         INDEXED BY {TOMBSTONE_INDEX}
+         WHERE {TOMBSTONE_PREDICATE} LIMIT {})",
+        super::FILE_ROWS
+    )
+}
+
+pub(super) async fn ensure_cleanup_index(conn: &mut SqliteConnection) -> Result<bool, sqlx::Error> {
+    let existed: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='index' AND name=?)",
+    )
+    .bind(TOMBSTONE_INDEX)
+    .fetch_one(&mut *conn)
+    .await?;
+    // Normal startup may share a WAL with readers. Do not require the offline
+    // construction checkpoint while adding a missing index to an installed DB.
+    sqlx::query(sqlx::AssertSqlSafe(tombstone_index_sql()))
+        .execute(&mut *conn)
+        .await?;
+    Ok(!existed)
+}
+
 pub(super) fn names() -> String {
     TABLE
         .columns
@@ -122,6 +158,7 @@ pub(super) async fn bootstrap_mode(conn: &mut SqliteConnection) -> Result<(), sq
          INSERT INTO elements_fts(rowid,text,role,frame_id) SELECT id,text,role,frame_id FROM _bulk_element_rows WHERE text IS NOT NULL AND text!='';
          UPDATE storage_metadata SET staging_bytes=staging_bytes+COALESCE((SELECT SUM({bytes}) FROM _bulk_element_rows),0);",
         bytes=TABLE.all_bytes(""))).await?;
+    crate::storage::schema::construction_sql(conn, &tombstone_index_sql()).await?;
     if let Some((rowid, seq)) = seq {
         sqlx::query("INSERT INTO sqlite_sequence(rowid,name,seq) VALUES(?,'elements',?)")
             .bind(rowid)

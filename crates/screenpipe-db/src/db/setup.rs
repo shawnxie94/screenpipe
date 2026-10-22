@@ -525,10 +525,15 @@ impl DatabaseManager {
                 let upgraded =
                     crate::storage::schema::upgrade_recording(&mut conn, storage.has_bulk())
                         .await?;
+                // Installed hybrid databases may already carry recording v6.
+                // Add cleanup indexes independently of that versioned migration.
+                let cleanup_indexes_changed =
+                    crate::storage::schema::ensure_cleanup_indexes(&mut conn, storage.has_bulk())
+                        .await?;
                 crate::storage::read_schema::upgrade(&mut conn, storage).await?;
                 storage.verify_catalog(&db_manager.pool).await?;
                 drop(conn);
-                if upgraded {
+                if upgraded || cleanup_indexes_changed {
                     // Connections opened before the trigger migration need a
                     // schema read before their first DML preparation. Refresh
                     // every existing writer while startup still owns admission.
