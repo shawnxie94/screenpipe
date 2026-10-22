@@ -35,14 +35,9 @@ pub async fn prepare_segments(
         filter_music_frames(&mut audio_data);
     }
 
-    // Silero VAD v5 expects continuous 512-sample chunks at 16kHz (32ms).
-    // On Windows, WASAPI delivers lower audio levels than CoreAudio, so we
-    // must feed Silero at its native frame size to preserve its LSTM temporal
-    // state — using 1600 caused 68ms gaps that broke speech detection.
-    #[cfg(target_os = "windows")]
-    let frame_size = 512;
-    #[cfg(not(target_os = "windows"))]
-    let frame_size = 1600;
+    // Feed every sample to the selected engine at its native window size.
+    // Oversized Silero input is truncated internally, creating detection gaps.
+    let frame_size = vad_engine.lock().await.frame_size();
     let vad_engine = vad_engine.clone();
 
     // Use a lower speech threshold for output/system audio devices.
@@ -59,17 +54,29 @@ pub async fn prepare_segments(
     let mut audio_frames = Vec::new();
     let mut total_frames = 0;
     let mut speech_frame_count = 0;
+    let mut speech_frames = Vec::new();
 
+    let mut final_frame = vec![0.0; frame_size];
     for chunk in audio_data.chunks(frame_size) {
         total_frames += 1;
 
         let mut new_chunk = chunk.to_vec();
-        let status = vad_engine.lock().await.audio_type(chunk);
+        // Pad only the final analysis window. Keep the original samples and
+        // duration for persistence/transcription, including a short final cue.
+        let vad_frame = if chunk.len() < frame_size {
+            final_frame[..chunk.len()].copy_from_slice(chunk);
+            &final_frame[..]
+        } else {
+            chunk
+        };
+        let status = vad_engine.lock().await.audio_type(vad_frame);
+        let mut is_speech = false;
         match status {
             Ok(VadStatus::Speech) => {
                 if let Ok(processed_audio) = spectral_subtraction(chunk, noise) {
                     new_chunk = processed_audio;
                     speech_frame_count += 1;
+                    is_speech = true;
                 }
             }
             Ok(VadStatus::Unknown) => {
@@ -77,6 +84,7 @@ pub async fn prepare_segments(
             }
             _ => {}
         }
+        speech_frames.push(is_speech);
         audio_frames.extend(new_chunk);
     }
 
@@ -85,7 +93,25 @@ pub async fn prepare_segments(
         vad_engine.lock().await.set_speech_threshold(None);
     }
 
-    let speech_ratio = speech_frame_count as f32 / total_frames as f32;
+    // Measure density over a fixed window so a short word is admitted the same
+    // way whether it lands in a 5 s chunk or a 30 s one.
+    let window_frames = (5 * 16000usize).div_ceil(frame_size);
+    let chunk_ratio = speech_frame_count as f32 / total_frames as f32;
+    let speech_ratio = if speech_frames.len() <= window_frames {
+        chunk_ratio
+    } else {
+        let mut window_speech = speech_frames[..window_frames]
+            .iter()
+            .filter(|speech| **speech)
+            .count();
+        let mut densest = window_speech;
+        for frame in window_frames..speech_frames.len() {
+            window_speech += usize::from(speech_frames[frame]);
+            window_speech -= usize::from(speech_frames[frame - window_frames]);
+            densest = densest.max(window_speech);
+        }
+        chunk_ratio.max(densest as f32 / window_frames as f32)
+    };
     let current_min_ratio = crate::vad::min_speech_ratio();
     debug!(
         "device: {}, speech ratio: {}, min_speech_ratio: {}, audio_frames: {}, speech_frames: {}",
