@@ -99,6 +99,8 @@ pub mod video;
 pub mod video_cache;
 pub mod video_utils;
 pub mod vision_manager;
+#[cfg(target_os = "macos")]
+pub mod macos_run_loop;
 mod visual_probe;
 pub use auto_destruct::watch_pid;
 pub use axum::Json as JsonResponse;

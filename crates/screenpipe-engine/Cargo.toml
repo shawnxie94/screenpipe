@@ -197,6 +197,10 @@ jemalloc = ["tikv-jemallocator"]
 name = "screenpipe"
 path = "src/bin/screenpipe-engine.rs"
 
+[[test]]
+name = "native_multi_monitor"
+harness = false
+
 [[bench]]
 name = "hot_frame_cache"
 harness = false

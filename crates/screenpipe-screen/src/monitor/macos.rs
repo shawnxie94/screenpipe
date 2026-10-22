@@ -256,13 +256,53 @@ fn core_graphics_fallback_allowed(excluded_window_ids: &[u32]) -> bool {
     excluded_window_ids.is_empty()
 }
 
+// CoreGraphics returns native pixels. Respect the same explicit width budget
+// as SCK without resizing images that already fit.
+fn cap_fallback_image(image: DynamicImage, max_width: u32) -> DynamicImage {
+    if max_width == 0 || image.width() <= max_width {
+        image
+    } else {
+        image.resize(max_width, u32::MAX, image::imageops::FilterType::Triangle)
+    }
+}
+
+/// Immutable capture geometry, compared only during topology scans.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CaptureConfiguration {
+    logical: (i32, i32, u32, u32),
+    backing: (u32, u32),
+    primary: bool,
+    sck: bool,
+}
+impl CaptureConfiguration {
+    /// Refresh recovered SCK or changed geometry, never downgrade a working
+    /// SCK task because discovery temporarily fell back to CoreGraphics.
+    pub fn should_replace(self, active: Self) -> bool {
+        self.sck && self != active
+    }
+}
+
 impl SafeMonitor {
+    pub fn capture_configuration(&self) -> CaptureConfiguration {
+        CaptureConfiguration {
+            logical: (self.x(), self.y(), self.width(), self.height()),
+            backing: self
+                .cached_sck
+                .as_ref()
+                .map(|m| (m.raw_width(), m.raw_height()))
+                .unwrap_or((self.width(), self.height())),
+            primary: self.is_primary(),
+            sck: self.use_sck,
+        }
+    }
+
     // macOS: Create from sck-rs monitor
     pub fn from_sck(monitor: SckMonitor) -> Self {
         let monitor_id = monitor.id();
         let monitor_data = Arc::new(MonitorData {
-            width: monitor.width().unwrap_or(0),
-            height: monitor.height().unwrap_or(0),
+            // Focus bounds share the cursor's logical coordinate space.
+            width: monitor.logical_width(),
+            height: monitor.logical_height(),
             x: monitor.x(),
             y: monitor.y(),
             name: monitor.name().to_string(),
@@ -365,7 +405,12 @@ impl SafeMonitor {
                     }
                     monitor
                         .capture_image()
-                        .map(DynamicImage::ImageRgba8)
+                        .map(|image| {
+                            cap_fallback_image(
+                                DynamicImage::ImageRgba8(image),
+                                sck_capture_max_width(),
+                            )
+                        })
                         .map_err(|e| e.to_string())
                 })
                 .map_err(anyhow::Error::msg)
@@ -977,9 +1022,14 @@ impl SafeMonitor {
     /// private windows never reach the recorder. Blocks briefly while the
     /// stream starts; call from a blocking context.
     pub fn start_hd_capture(&self, fps: u32, excluded_window_ids: &[u32]) -> Result<HdCapture> {
+        // Logical focus coordinates are points; encode sizing uses pixels.
+        let (native_width, native_height) = self.cached_sck.as_ref().map_or(
+            (self.monitor_data.width, self.monitor_data.height),
+            |monitor| (monitor.raw_width(), monitor.raw_height()),
+        );
         let (width, height) = hd_scaled_dims(
-            self.monitor_data.width,
-            self.monitor_data.height,
+            native_width,
+            native_height,
             hd_capture_max_width(sck_capture_max_width()),
         );
         let (stream, frames) =
@@ -999,6 +1049,47 @@ impl SafeMonitor {
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
+
+    #[test]
+    fn fallback_respects_width_budget_without_upscaling() {
+        for (cap, expected) in [
+            (0, (256, 144)),
+            (128, (128, 72)),
+            (192, (192, 108)),
+            (512, (256, 144)),
+        ] {
+            let image = cap_fallback_image(DynamicImage::new_rgba8(256, 144), cap);
+            assert_eq!((image.width(), image.height()), expected);
+        }
+    }
+
+    #[test]
+    fn capture_task_refreshes_for_scale_layout_and_backend_recovery() {
+        let standard = CaptureConfiguration {
+            logical: (0, 0, 1280, 720),
+            backing: (1280, 720),
+            primary: false,
+            sck: true,
+        };
+        let retina = CaptureConfiguration {
+            backing: (2560, 1440),
+            ..standard
+        };
+        let fallback = CaptureConfiguration {
+            sck: false,
+            ..standard
+        };
+        assert!(retina.should_replace(standard));
+        assert!(standard.should_replace(retina));
+        assert!(standard.should_replace(fallback));
+        assert!(!fallback.should_replace(standard));
+        assert!(!standard.should_replace(standard));
+        assert!(CaptureConfiguration {
+            logical: (-1280, 0, 1280, 720),
+            ..standard
+        }
+        .should_replace(standard));
+    }
 
     /// `MONITOR_LOOKUP_CACHE` is process-global, so the cache tests below must
     /// not interleave with each other.
